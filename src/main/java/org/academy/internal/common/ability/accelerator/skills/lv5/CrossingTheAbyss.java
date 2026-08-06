@@ -267,7 +267,7 @@ public final class CrossingTheAbyss extends Skill {
             var source = SkillDamageSource.of(
                     attacker,
                     Skills.CROSSING_THE_ABYSS.get(),
-                    DamageTypes.GENERIC_KILL
+                    org.academy.internal.common.world.damagesource.DamageTypes.CTA
             );
             var trueHealth = CTAEntityActuallyHurt.readTrueHealth(target);
             new CTAEntityActuallyHurt(target).actuallyHurt(

@@ -43,6 +43,10 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class LaminarCutter extends Skill {
+    private static final double BLADE_LENGTH = 5.0;
+    private static final double BLADE_HALF_WIDTH = BLADE_LENGTH * 0.5;
+    private static final double BLADE_HALF_THICKNESS = 0.55;
+
     public LaminarCutter() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL3).energyCost(30_000)
                 .cpCost(30).iterationTicks(25).maxStacks(1).dependsOn(Skills.PNEUMATIC_GRASP)
@@ -72,7 +76,11 @@ public final class LaminarCutter extends Skill {
                 var length = (24.0 + cutterLevel * 4.0) * AeromanipFieldManager.rangeMultiplier(player)
                         * AeromanipConfig.rangeMultiplier(player, SkillNames.LAMINAR_CUTTER);
                 var end = eye.add(direction.scale(length));
-                var box = new AABB(eye, end).inflate(0.35);
+                var bladeRight = new Vec3(-direction.z, 0.0, direction.x);
+                if (bladeRight.lengthSqr() < 1.0E-8) bladeRight = new Vec3(1.0, 0.0, 0.0);
+                bladeRight = bladeRight.normalize();
+                var bladeNormal = direction.cross(bladeRight).normalize();
+                var box = new AABB(eye, end).inflate(BLADE_HALF_WIDTH, 1.5, BLADE_HALF_WIDTH);
                 var source = SkillDamageSource.of(player, Skills.LAMINAR_CUTTER.get());
                 level.playSound(null, player.blockPosition(),
                         org.academy.internal.common.sounds.SoundEvents.AIRFLOW_IMPACT.get(),
@@ -80,29 +88,74 @@ public final class LaminarCutter extends Skill {
                 var damage = 6.0f * AeromanipConfig.damageMultiplier(player, SkillNames.LAMINAR_CUTTER)
                         * context.system().getPlayerAbilityPowerMultiplier(player.getUUID())
                         * context.system().getPlayerDamageMultiplier(player.getUUID());
-                for (var target : level.getEntitiesOfClass(LivingEntity.class, box, living -> living != player && living.isAlive() && player.hasLineOfSight(living) && living.getBoundingBox().clip(eye, end).isPresent())) {
+                var finalBladeRight = bladeRight;
+                var finalBladeNormal = bladeNormal;
+                for (var target : level.getEntitiesOfClass(LivingEntity.class, box,
+                        living -> living != player
+                                && living.isAlive()
+                                && player.hasLineOfSight(living)
+                                && intersectsBlade(
+                                living,
+                                eye,
+                                direction,
+                                finalBladeRight,
+                                finalBladeNormal,
+                                length
+                        ))) {
                     if (target.hurtServer(level, source, damage)) Skills.LAMINAR_CUTTER.get().onHurt(player, target, damage);
                 }
-                clearSoftBlocks(player, level, eye, end);
-                level.sendParticles(ParticleTypes.CLOUD, eye.x, eye.y, eye.z, 24, 0.2, 0.2, 0.2, 0.04);
+                clearSoftBlocks(player, level, eye, end, direction, bladeRight, bladeNormal);
+                spawnBladeVisual(level, eye, direction, bladeRight, length);
             });
         }
 
+        private static boolean intersectsBlade(LivingEntity target, Vec3 start, Vec3 direction,
+                                               Vec3 bladeRight, Vec3 bladeNormal, double range) {
+            var relative = target.getBoundingBox().getCenter().subtract(start);
+            var forward = relative.dot(direction);
+            if (forward < -target.getBbWidth() || forward > range + target.getBbWidth()) return false;
+            var lateral = Math.abs(relative.dot(bladeRight));
+            if (lateral > BLADE_HALF_WIDTH + target.getBbWidth() * 0.5) return false;
+            return Math.abs(relative.dot(bladeNormal))
+                    <= BLADE_HALF_THICKNESS + target.getBbHeight() * 0.5;
+        }
+
+        private static void spawnBladeVisual(ServerLevel level, Vec3 start, Vec3 direction,
+                                             Vec3 bladeRight, double range) {
+            for (var step = 0; step <= 12; step++) {
+                var center = start.add(direction.scale(range * step / 12.0));
+                for (var across = -2; across <= 2; across++) {
+                    var point = center.add(bladeRight.scale(across * BLADE_HALF_WIDTH / 2.0));
+                    level.sendParticles(ParticleTypes.CLOUD,
+                            point.x, point.y, point.z, 1, 0.03, 0.03, 0.03, 0.0);
+                }
+            }
+            var tip = start.add(direction.scale(range));
+            for (var across = -2; across <= 2; across++) {
+                var point = tip.add(bladeRight.scale(across * BLADE_HALF_WIDTH / 2.0));
+                level.sendParticles(ParticleTypes.SWEEP_ATTACK,
+                        point.x, point.y, point.z, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+        }
+
         private static void clearSoftBlocks(net.minecraft.server.level.ServerPlayer player, ServerLevel level,
-                                             Vec3 start, Vec3 end) {
+                                             Vec3 start, Vec3 end, Vec3 direction,
+                                             Vec3 bladeRight, Vec3 bladeNormal) {
             var settings = AeromanipConfig.settings(player);
             if (!settings.allowSoftBlockInteraction
                     || !DestroyBlocksSetting.canDestroyBlocks(player, Skills.LAMINAR_CUTTER.get())) return;
             var min = new Vec3(Math.min(start.x, end.x), Math.min(start.y, end.y), Math.min(start.z, end.z));
             var max = new Vec3(Math.max(start.x, end.x), Math.max(start.y, end.y), Math.max(start.z, end.z));
-            var from = BlockPos.containing(min).offset(-1, -1, -1);
-            var to = BlockPos.containing(max).offset(1, 1, 1);
+            var padding = (int) Math.ceil(BLADE_HALF_WIDTH) + 1;
+            var from = BlockPos.containing(min).offset(-padding, -2, -padding);
+            var to = BlockPos.containing(max).offset(padding, 2, padding);
             for (var pos : BlockPos.betweenClosed(from, to)) {
                 var center = Vec3.atCenterOf(pos);
-                var projection = center.subtract(start).dot(end.subtract(start).normalize());
+                var relative = center.subtract(start);
+                var projection = relative.dot(direction);
                 if (projection < -0.5 || projection > start.distanceTo(end) + 0.5) continue;
-                var nearest = start.add(end.subtract(start).normalize().scale(Math.max(0.0, projection)));
-                if (center.distanceToSqr(nearest) > 0.6 * 0.6) continue;
+                if (Math.abs(relative.dot(bladeRight)) > BLADE_HALF_WIDTH + 0.5) continue;
+                if (Math.abs(relative.dot(bladeNormal)) > BLADE_HALF_THICKNESS + 0.5) continue;
                 var state = level.getBlockState(pos);
                 if (state.is(Blocks.FIRE) || state.is(Blocks.SOUL_FIRE)) {
                     level.removeBlock(pos, false);

@@ -15,18 +15,22 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.util.QuantumUtil;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAbyss;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
+import org.academy.internal.common.ability.aeromanip.skills.AtmosphereShield;
+import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
+import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -36,6 +40,31 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEntity {
+    @Inject(
+            method = "hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$routeDirectSkillDamage(
+            ServerLevel level,
+            DamageSource source,
+            float damage,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if ((Object) this instanceof Player player && DamageTypes.isImmunePlayer(player, source)) {
+            cir.setReturnValue(false);
+            return;
+        }
+        if (source instanceof SkillDamageSource skillSource && DamageTypes.usesDirectActuallyHurt(source)) {
+            cir.setReturnValue(SkillDamageUtil.applyDirect(
+                    level,
+                    (LivingEntity) (Object) this,
+                    skillSource,
+                    damage
+            ));
+        }
+    }
+
     @Inject(
             method = "hasLineOfSight(Lnet/minecraft/world/entity/Entity;)Z",
             at = @At("HEAD"),
@@ -76,12 +105,36 @@ public abstract class MixinLivingEntity {
     @ModifyVariable(method = "setHealth", at = @At("HEAD"), argsOnly = true)
     private float academy$protectVectorReflectionHealth(float health) {
         var entity = (LivingEntity) (Object) this;
+        if ((Object) this instanceof Player player) {
+            health = PlayerAttributeRuntime.modifyHealthWrite(player, health);
+        }
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isActive(player)) {
             return VectorReflection.Server
                     .protectHealthWrite(player, health);
         }
         return EntityControlApi.clampHealthWrite(entity, health);
+    }
+
+    @Inject(
+            method = "actuallyHurt(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$beginDamageContext(ServerLevel level, DamageSource source, float damage, CallbackInfo ci) {
+        if ((Object) this instanceof Player player && DamageTypes.isImmunePlayer(player, source)) {
+            ci.cancel();
+            return;
+        }
+        PlayerAttributeRuntime.pushDamageContext(source);
+    }
+
+    @Inject(
+            method = "actuallyHurt(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)V",
+            at = @At("RETURN")
+    )
+    private void academy$endDamageContext(ServerLevel level, DamageSource source, float damage, CallbackInfo ci) {
+        PlayerAttributeRuntime.popDamageContext();
     }
 
     @Inject(method = "getHealth", at = @At("RETURN"), cancellable = true)
@@ -248,7 +301,8 @@ public abstract class MixinLivingEntity {
             boolean comesFromEffect,
             CallbackInfo ci
     ) {
-        if ((Object) this instanceof ServerPlayer player && VectorReflection.Server.isActive(player)) {
+        if ((Object) this instanceof ServerPlayer player
+                && (VectorReflection.Server.isActive(player) || AtmosphereShield.Server.isActive(player))) {
             ci.cancel();
         }
     }
@@ -317,6 +371,7 @@ public abstract class MixinLivingEntity {
             BlackWing.Server.onEntitySwing(player, hand);
             WhiteWing.Server.onEntitySwing(player, hand);
             PlatinumWing.Server.onEntitySwing(player, hand);
+            IronSandArsenal.Server.onEntitySwing(player, hand);
         }
     }
 }

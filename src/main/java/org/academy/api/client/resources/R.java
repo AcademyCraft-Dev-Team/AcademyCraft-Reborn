@@ -685,6 +685,8 @@ public final class R {
         public static final Identifier railgun_icon = academy("textures/ability/electromaster/skill/railgun/icon.png");
         public static final Identifier thunderclap_icon = academy("textures/ability/electromaster/skill/thunderclap/icon.png");
         public static final Identifier iron_sand_arsenal_icon = academy("textures/ability/electromaster/skill/iron_sand_arsenal/icon.png");
+        public static final Identifier iron_sand_arsenal_effect = academy("textures/ability/electromaster/skill/iron_sand_arsenal/effect/iron_sand.png");
+        public static final Identifier ball_lightning_icon = academy("textures/ability/electromaster/skill/ball_lightning/icon.png");
         /**
          * Meltdowner
          */

@@ -3,9 +3,9 @@ package org.academy.internal.common.ability.meltdowner.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -15,20 +15,19 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
-import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -37,9 +36,22 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 public class Disintegrate extends Skill {
+    private static final double PRIMARY_RANGE = 30.0;
+    private static final double SCATTER_RADIUS = 12.0;
+
     public Disintegrate() {
-        super(Builder.of(AbilityCategories.MELTDOWNER.get()).level(AbilityLevel.LEVEL5).energyCost(100_000).cpCost(200).iterationTicks(60).maxStacks(1));
+        super(Builder.of(AbilityCategories.MELTDOWNER.get())
+                .level(AbilityLevel.LEVEL5)
+                .energyCost(100_000)
+                .cpCost(200)
+                .iterationTicks(60)
+                .maxStacks(1));
     }
 
     @Override
@@ -47,36 +59,30 @@ public class Disintegrate extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
-        RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_K, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
-                , ctx -> Client.onUse());
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_K,
+                                InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)),
+                _ -> Client.onUse());
     }
 
     @Override
-    public void initServer(MinecraftServerContext c) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    @Override
+    public void onKill(ServerPlayer killer, LivingEntity target) {
+        super.onKill(killer, target);
+        Server.onKilled(killer, target);
     }
 
     public static final class Client {
         public static final String KEY = SkillNames.DISINTEGRATE + "_use";
         public static Config CONFIG = new Config();
 
-        public static void onUse() {
+        private static void onUse() {
             if (!AbilitySystemClient.canUseSkill(Skills.DISINTEGRATE.get())) return;
-            var p = Minecraft.getInstance().player;
-            if (p != null) {
-                var trail = TrailEffectWrapper.INSTANCE.createTrail(0.6f, 0.03f, 0.2f, 1.0f, 0.3f);
-                trail.addPoint((float) p.getX(), (float) p.getEyeY(), (float) p.getZ());
-                var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
-                        (float) p.getX(), (float) p.getEyeY(), (float) p.getZ());
-                emitter.setColor(0.2f, 0.9f, 0.3f);
-                emitter.setEmissionRate(0);
-                emitter.burst(20);
-                emitter.setLifetime(0.8f, 0.3f);
-            }
-            MisakaNetworkClient.send(UsePacket.INSTANCE);
+            if (Minecraft.getInstance().player != null) MisakaNetworkClient.send(UsePacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -87,7 +93,7 @@ public class Disintegrate extends Skill {
                 }
 
                 @Override
-                public Disintegrate.Client.Config getDefault() {
+                public Config getDefault() {
                     return new Config();
                 }
 
@@ -100,54 +106,134 @@ public class Disintegrate extends Skill {
     }
 
     public static final class Server {
-        public static float calculateDamage(float currentHealth, float playerMultiplier) {
-            return Math.max(0.0f, currentHealth) * 0.99f * Math.max(0.0f, playerMultiplier);
+        private static final Map<UUID, PendingStage> PENDING_STAGES = new HashMap<>();
+
+        private Server() {
+        }
+
+        public static float calculateDamage(float maxHealth, float playerMultiplier) {
+            return Math.max(0.0f, maxHealth) * 0.20f * Math.max(0.0f, playerMultiplier);
         }
 
         @SubscribePacket
-        public static void handle(UsePacket p) {
-            var player = p.getPacketListener().getPlayer();
-            Skills.DISINTEGRATE.get().executeActive(player, (ctx, c) -> {
-                var l = player.level();
-                var eye = player.getEyePosition();
-                var look = player.getLookAngle();
-                var range = LevelUtil.getValidViewDistance(player, 30);
-                var target = eye.add(look.scale(range));
-                if (l instanceof ServerLevel sl) {
-                    if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.DISINTEGRATE.get())) {
-                        LevelUtil.destroyBlocksAlongPath(
-                                sl, eye, target, 0.2f, 999,
-                                true, true, true, false, player
-                        );
-                    }
-                    var multiplier = ctx.system().getPlayerDamageMultiplier(player.getUUID());
-                    var source = SkillDamageSource.of(player, Skills.DISINTEGRATE.get());
-                    var box = new AABB(eye, target).inflate(1.0);
-                    for (var entity : sl.getEntitiesOfClass(LivingEntity.class, box,
-                            entity -> entity != player && entity.isAlive()
-                                    && !player.isAlliedTo(entity)
-                                    && distanceToSegmentSqr(entity.getBoundingBox().getCenter(), eye, target) <= 1.0)) {
-                        entity.hurtServer(sl, source,
-                                calculateDamage(entity.getHealth(), multiplier));
-                    }
-                    var delta = target.subtract(eye);
-                    for (var i = 0; i <= 24; i++) {
-                        var point = eye.add(delta.scale(i / 24.0));
-                        sl.sendParticles(ParticleTypes.END_ROD,
-                                point.x, point.y, point.z, 1, 0.02, 0.02, 0.02, 0.0);
-                    }
+        public static void handle(UsePacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            Skills.DISINTEGRATE.get().executeActive(player, (context, _) -> {
+                var level = player.level();
+                cleanup(level.getGameTime());
+                var start = player.getEyePosition();
+                var range = LevelUtil.getValidViewDistance(player, PRIMARY_RANGE);
+                var end = start.add(player.getLookAngle().scale(range));
+                var target = findFirstTarget(level, player, start, end);
+                if (target != null) {
+                    end = target.getBoundingBox().getCenter();
                 }
+                spawnBeam(player, start, end, 0,
+                        DestroyBlocksSetting.canDestroyBlocks(player, Skills.DISINTEGRATE.get()));
             });
         }
 
-        private static double distanceToSegmentSqr(Vec3 point,
-                                                   Vec3 start,
-                                                   Vec3 end) {
+        private static void onKilled(ServerPlayer player, LivingEntity killed) {
+            var level = player.level();
+            var pending = PENDING_STAGES.remove(killed.getUUID());
+            if (pending == null || !pending.owner().equals(player.getUUID())
+                    || pending.expiresAt() < level.getGameTime() || pending.stage() >= 2) return;
+
+            var count = pending.stage() == 0 ? 3 : 1;
+            var center = killed.getBoundingBox().getCenter();
+            var targets = level.getEntitiesOfClass(
+                            LivingEntity.class,
+                            new AABB(center, center).inflate(SCATTER_RADIUS),
+                            target -> target != player && target != killed && target.isAlive()
+                                    && !player.isAlliedTo(target)
+                                    && (!(target instanceof ServerPlayer serverPlayer)
+                                    || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
+                    ).stream()
+                    .sorted(Comparator.comparingDouble(target -> target.distanceToSqr(center)))
+                    .limit(count)
+                    .toList();
+            for (var target : targets) {
+                var stage = pending.stage() + 1;
+                spawnBeam(player, center, target.getBoundingBox().getCenter(), stage, false);
+            }
+        }
+
+        private static LivingEntity findFirstTarget(ServerLevel level, ServerPlayer player,
+                                                    Vec3 start, Vec3 end) {
+            return level.getEntitiesOfClass(
+                            LivingEntity.class,
+                            new AABB(start, end).inflate(1.0),
+                            target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                                    && (!(target instanceof ServerPlayer serverPlayer)
+                                    || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
+                                    && distanceToSegmentSqr(target.getBoundingBox().getCenter(), start, end) <= 1.0
+                    ).stream()
+                    .min(Comparator.comparingDouble(target -> target.distanceToSqr(start)))
+                    .orElse(null);
+        }
+
+        private static void spawnBeam(ServerPlayer player, Vec3 start, Vec3 end,
+                                      int stage, boolean destroysBlocks) {
+            var level = player.level();
+            var delta = end.subtract(start);
+            if (delta.lengthSqr() <= 1.0e-8) return;
+            if (stage < 2) markTargetsAlongBeam(player, start, end, stage, level.getGameTime());
+            var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+            var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
+            var multiplier = AbilitySystemServer.getSystem(player)
+                    .getPlayerDamageMultiplier(player.getUUID());
+            beam.configure(
+                    player,
+                    Skills.DISINTEGRATE.get(),
+                    0.0f,
+                    0.20f,
+                    multiplier,
+                    Skills.RADIATION_INTENSIFY.get().isEnabled(player),
+                    destroysBlocks
+            );
+            beam.setAttackDelayTicks(0);
+            beam.setBeamLength((float) delta.length() + 0.8f);
+            beam.setBeamScale(stage == 0 ? 1.45f : 1.05f);
+            beam.setBetaTrailOnFire(true);
+            beam.setPos(start);
+            beam.setYRot((float) Math.toDegrees(Math.atan2(-delta.x, delta.z)));
+            beam.setXRot((float) Math.toDegrees(Math.atan2(-delta.y, horizontal)));
+            level.addFreshEntity(beam);
+        }
+
+        private static void markTargetsAlongBeam(ServerPlayer player, Vec3 start, Vec3 end,
+                                                 int stage, long now) {
+            var search = new AABB(start, end).inflate(0.125);
+            for (var candidate : player.level().getEntitiesOfClass(
+                    LivingEntity.class,
+                    search,
+                    target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                            && (!(target instanceof ServerPlayer serverPlayer)
+                            || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
+                            && (target.getBoundingBox().inflate(0.125).contains(start)
+                            || target.getBoundingBox().inflate(0.125).clip(start, end).isPresent())
+            )) {
+                mark(player, candidate, stage, now);
+            }
+        }
+
+        private static void mark(ServerPlayer player, LivingEntity target, int stage, long now) {
+            PENDING_STAGES.put(target.getUUID(), new PendingStage(player.getUUID(), stage, now + 40));
+        }
+
+        private static void cleanup(long now) {
+            PENDING_STAGES.values().removeIf(stage -> stage.expiresAt() < now);
+        }
+
+        private static double distanceToSegmentSqr(Vec3 point, Vec3 start, Vec3 end) {
             var segment = end.subtract(start);
             var lengthSqr = segment.lengthSqr();
             if (lengthSqr < 1.0e-9) return point.distanceToSqr(start);
-            var t = Math.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
-            return point.distanceToSqr(start.add(segment.scale(t)));
+            var progress = Math.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
+            return point.distanceToSqr(start.add(segment.scale(progress)));
+        }
+
+        private record PendingStage(UUID owner, int stage, long expiresAt) {
         }
     }
 

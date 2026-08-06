@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.jspecify.annotations.Nullable;
@@ -102,6 +103,8 @@ public final class SelfTeleport extends Skill {
             Skills.SELF_TELEPORT.get().executeActive(serverPlayer, (ctx, actualCost) -> {
                 var dimensions = serverPlayer.getDimensions(Pose.STANDING);
                 var teleportY = targetCenter.y() - dimensions.height() / 2.0;
+                var destination = new Vec3(targetCenter.x(), teleportY, targetCenter.z());
+                SpatialSynergy.Server.teleportNearbyTeam(serverPlayer, serverPlayer.level(), destination);
                 serverPlayer.teleportTo(targetCenter.x(), teleportY, targetCenter.z());
                 serverPlayer.resetFallDistance();
                 serverPlayer.setDeltaMovement(0, 0.25, 0);

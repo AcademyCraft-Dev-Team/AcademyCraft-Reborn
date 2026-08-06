@@ -22,6 +22,7 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.server.config.AbilityConfig;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkServer;
 import org.slf4j.Logger;
 
@@ -180,6 +181,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         }
 
         var recoveryRate = getCpIterationRate(isSkillDebugMode(player.getUUID()))
+                * PlayerAttributeRuntime.neuralIterationMultiplier(player)
                 * (1.0f + getBonuses(player.getUUID()).recovery());
         var progress = cpIterationProgress.merge(player.getUUID(), recoveryRate, Float::sum);
         var recoverySteps = (int) Math.floor(progress / TICKS_PER_ITERATION_POINT);

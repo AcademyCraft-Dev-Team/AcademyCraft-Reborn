@@ -106,7 +106,7 @@ public class BallLightning extends Skill {
                 new AbilitySystemClient.SkillInfo(
                         Skills.BALL_LIGHTNING.get(),
                         List.of(CurrentSymbiosis.Client.SKILL_INFO),
-                        R.textures.ICON_ELECTROMASTER,
+                        R.textures.ball_lightning_icon,
                         184,
                         72
                 )

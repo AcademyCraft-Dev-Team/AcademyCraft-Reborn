@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.aeromanip.skills;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -15,6 +16,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -28,6 +30,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -51,6 +54,12 @@ public final class AtmosphericDominion extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.RELEASE, InputConstants.MOD_ALT)), _ -> Client.cast());
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.ATMOSPHERIC_DOMINION.get(), List.of(AtmosphereBlastGun.Client.SKILL_INFO, VortexPull.Client.SKILL_INFO), R.textures.atmospheric_dominion_icon, 150, 168));
+        ToggleStatusHud.registerStateProvider(Skills.ATMOSPHERIC_DOMINION.get(), () -> {
+            var player = Minecraft.getInstance().player;
+            return player != null && AeromanipFieldSyncPacket.Client.snapshot().values().stream()
+                    .anyMatch(field -> field.ownerId().equals(player.getUUID())
+                            && field.type() == AirflowField.Type.ATMOSPHERIC_DOMINION);
+        });
     }
     @Override public void initServer(MinecraftServerContext context) { MisakaNetworkServer.NETWORK_MANAGER.register(Server.class); }
     public static final class Client {

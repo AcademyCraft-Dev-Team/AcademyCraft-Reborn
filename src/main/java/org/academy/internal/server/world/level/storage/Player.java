@@ -28,7 +28,9 @@ public final class Player {
             Map.entry("electron_barrier", "light_shield")
     );
     private static final Set<String> RETIRED_SKILLS = Set.of(
-            "academy:hell_flare"
+            "academy:hell_flare",
+            "academy:hyper_accelerate",
+            "academy:chain_fusion"
     );
 
     @SerializedName("skills")

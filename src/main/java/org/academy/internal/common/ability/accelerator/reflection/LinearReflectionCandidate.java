@@ -11,11 +11,20 @@ public record LinearReflectionCandidate(
         double progress,
         double expandedEntryProgress,
         float expectedDamage,
-        Vec3 incomingDirection
+        Vec3 incomingDirection,
+        Mode mode
 ) {
     public LinearReflectionCandidate {
         Objects.requireNonNull(reflector, "reflector");
         Objects.requireNonNull(mirrorPoint, "mirrorPoint");
         Objects.requireNonNull(incomingDirection, "incomingDirection");
+        Objects.requireNonNull(mode, "mode");
+    }
+
+    public enum Mode {
+        REFLECTION,
+        REFRACTION,
+        ELECTROMAGNETIC_SHIELD_REFRACTION,
+        LIGHT_SHIELD_REFRACTION
     }
 }

@@ -20,4 +20,10 @@ public class ParticleTypes {
             () -> new SimpleParticleType(false));
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> VECTOR_BLAST = PARTICLE_TYPES.register("vector_blast",
             () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> BLOOD_SPLASH = PARTICLE_TYPES.register("blood_splash",
+            () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> BLOOD_SPRAY_GROUND = PARTICLE_TYPES.register("blood_spray_ground",
+            () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> BLOOD_SPRAY_WALL = PARTICLE_TYPES.register("blood_spray_wall",
+            () -> new SimpleParticleType(false));
 }

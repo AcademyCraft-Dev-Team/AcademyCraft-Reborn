@@ -62,6 +62,8 @@ import org.academy.internal.client.gui.debug.UiDebugSession;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.particle.VectorBlastParticle;
+import org.academy.internal.client.particle.BloodSplashParticle;
+import org.academy.internal.client.particle.BloodSprayParticle;
 import org.academy.internal.client.renderer.effect.*;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
@@ -70,6 +72,7 @@ import org.academy.internal.client.renderer.vfx.ArcVfxClient;
 import org.academy.internal.client.renderer.vfx.BeamVfxClient;
 import org.academy.internal.client.renderer.vfx.SmokeVfxClient;
 import org.academy.internal.client.renderer.vfx.StormWingVfxClient;
+import org.academy.internal.client.renderer.vfx.PlasmaVfxClient;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -105,6 +108,7 @@ public final class AcademyCraftClient {
         SmokeVfxClient.register();
         ArcVfxClient.register();
         StormWingVfxClient.register();
+        PlasmaVfxClient.register();
     }
 
     public static void initRender() {
@@ -345,6 +349,14 @@ public final class AcademyCraftClient {
                         LightShieldEffectRenderer.CONTEXT_KEY,
                         avatar.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE)
                 );
+                renderState.setRenderData(
+                        ElectromasterWeaponEffectRenderer.MAGNETIC_CONTEXT,
+                        avatar.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA)
+                );
+                renderState.setRenderData(
+                        ElectromasterWeaponEffectRenderer.IRON_SAND_CONTEXT,
+                        avatar.getData(AttachmentTypes.IRON_SAND_DATA)
+                );
             }
         });
         event.registerEntityModifier(
@@ -365,6 +377,9 @@ public final class AcademyCraftClient {
     @SubscribeEvent
     public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(ParticleTypes.VECTOR_BLAST.get(), VectorBlastParticle.Provider::new);
+        event.registerSpriteSet(ParticleTypes.BLOOD_SPLASH.get(), BloodSplashParticle.Provider::new);
+        event.registerSpriteSet(ParticleTypes.BLOOD_SPRAY_GROUND.get(), BloodSprayParticle.Provider::new);
+        event.registerSpriteSet(ParticleTypes.BLOOD_SPRAY_WALL.get(), BloodSprayParticle.Provider::new);
     }
 
     @SubscribeEvent

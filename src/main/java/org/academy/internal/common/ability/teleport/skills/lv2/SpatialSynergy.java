@@ -3,12 +3,13 @@ package org.academy.internal.common.ability.teleport.skills.lv2;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.EntityTeleportEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -16,6 +17,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
@@ -25,6 +27,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportSync;
+import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -35,7 +38,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 public class SpatialSynergy extends Skill {
-    private static final float RADIUS = 2.0f;
+    private static final float RADIUS = 4.0f;
 
     public SpatialSynergy() {
         super(Builder
@@ -59,6 +62,8 @@ public class SpatialSynergy extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0)
         ), ctx -> Client.onToggle());
+        ToggleStatusHud.registerStateProvider(Skills.SPATIAL_SYNERGY.get(),
+                () -> AbilitySystemClient.canUseSkill(Skills.SPATIAL_SYNERGY.get()));
     }
 
     @Override
@@ -101,6 +106,31 @@ public class SpatialSynergy extends Skill {
             var player = packet.getPacketListener().getPlayer();
             Skills.SPATIAL_SYNERGY.get().toggle(player);
         }
+
+        public static void teleportNearbyTeam(ServerPlayer owner, ServerLevel destinationLevel,
+                                              Vec3 ownerDestination) {
+            if (!Skills.SPATIAL_SYNERGY.get().isEnabled(owner) || owner.getTeam() == null) return;
+            var origin = owner.position();
+            var nearby = owner.level().getEntitiesOfClass(
+                    ServerPlayer.class,
+                    owner.getBoundingBox().inflate(RADIUS),
+                    player -> player != owner && player.isAlive()
+                            && player.getTeam() == owner.getTeam()
+                            && player.distanceToSqr(owner) <= RADIUS * RADIUS
+            );
+            for (var teammate : nearby) {
+                var desired = ownerDestination.add(teammate.position().subtract(origin));
+                var safe = TeleportSafety.findSafe(teammate, destinationLevel, desired);
+                if (safe == null) continue;
+                if (teammate.level() == destinationLevel) {
+                    TeleportSync.teleportInstantly(teammate, safe);
+                } else {
+                    teammate.teleportTo(destinationLevel, safe.x, safe.y, safe.z,
+                            java.util.Set.of(), teammate.getYRot(), teammate.getXRot(), false);
+                }
+                teammate.resetFallDistance();
+            }
+        }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -121,27 +151,6 @@ public class SpatialSynergy extends Skill {
             }
         }
 
-        @SubscribeEvent
-        public static void onEntityTeleport(EntityTeleportEvent event) {
-            if (!(event.getEntity() instanceof ServerPlayer player)) return;
-            var skill = Skills.SPATIAL_SYNERGY.get();
-            if (!skill.isEnabled(player)) return;
-
-            var targetPos = event.getTarget();
-            var level = player.level();
-
-            var box = player.getBoundingBox().inflate(RADIUS);
-            var nearbyPlayers = level.getEntitiesOfClass(ServerPlayer.class, box,
-                    p -> p != player && p.isAlive());
-
-            if (nearbyPlayers.isEmpty()) return;
-
-            for (var nearby : nearbyPlayers) {
-                var teleportY = targetPos.y() - (nearby.getBbHeight() / 2.0);
-                TeleportSync.teleportInstantly(nearby, new Vec3(targetPos.x(), teleportY, targetPos.z()));
-                nearby.resetFallDistance();
-            }
-        }
     }
 
     @PacketTarget(ThreadType.SERVER)

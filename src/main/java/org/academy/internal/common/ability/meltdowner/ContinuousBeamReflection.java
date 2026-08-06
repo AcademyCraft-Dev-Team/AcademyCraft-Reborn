@@ -23,20 +23,27 @@ public final class ContinuousBeamReflection {
             boolean damagePulse
     ) {
         var leasedReflectorId = session.reflectorId();
-        var candidate = LinearReflectionResolver.findCandidate(
-                level,
-                segment,
-                payload,
-                player -> {
-                    var active = VectorReflection.Server.isActive(player);
-                    return isCandidateEligible(
-                            leasedReflectorId,
-                            player.getUUID(),
-                            active,
-                            !active && VectorReflection.Server.canMaintainLinearReflectionLease(player)
-                    );
-                }
-        );
+        // Use the complete mode resolver first so Vector Reduction and both shield refractions
+        // participate in continuous beams just like they do in one-shot linear attacks.
+        var candidate = LinearReflectionResolver.findCandidate(level, segment, payload);
+        // Preserve the paid Vector Reflection lease when its CP has fallen below the threshold
+        // required to start a new reflection.
+        if (candidate.isEmpty() && leasedReflectorId != null) {
+            candidate = LinearReflectionResolver.findCandidate(
+                    level,
+                    segment,
+                    payload,
+                    player -> {
+                        var active = VectorReflection.Server.isActive(player);
+                        return isCandidateEligible(
+                                leasedReflectorId,
+                                player.getUUID(),
+                                active,
+                                !active && VectorReflection.Server.canMaintainLinearReflectionLease(player)
+                        );
+                    }
+            );
+        }
         if (candidate.isEmpty()) return ResolvedLinearAttack.unreflected(segment);
 
         var reflection = candidate.get();

@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
+import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.LocationTeleportData;
 import org.academy.internal.common.skilldata.LocationTeleportData.Mark;
@@ -196,6 +197,7 @@ public final class LocationTeleport extends Skill {
             Skills.LOCATION_TELEPORT.get().executeActive(player, (ctx, actualCost) -> {
                 forceDestinationChunk(level, mark.x(), mark.z(), "location_" + player.getStringUUID());
                 level.getChunk(mark.x() >> 4, mark.z() >> 4);
+                SpatialSynergy.Server.teleportNearbyTeam(player, level, destination);
                 player.teleportTo(level, destination.x, destination.y, destination.z,
                         Set.of(), player.getYRot(), player.getXRot(), false);
                 player.resetFallDistance();

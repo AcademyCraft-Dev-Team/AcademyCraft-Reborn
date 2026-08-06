@@ -65,9 +65,9 @@ public final class BeamVfx implements Vfx {
 
         var reflectedLength = Math.clamp(beam.getReflectionDistance(), 0.0f, originalLength);
         var reflectionPoint = origin.add(logicalDirection.scale(reflectedLength));
-        var returnEnd = ReflectedBeamVisualGeometry.fullReturnEnd(
+        var returnEnd = ReflectedBeamVisualGeometry.directionalEnd(
                 reflectionPoint,
-                logicalDirection,
+                beam.getReflectionReturnDirection(),
                 beam.getReflectionReturnLength()
         );
         pushSegment(sink, visualStart, reflectionPoint, progress, isCharging, widthScale, 1.0f);

@@ -17,7 +17,6 @@ import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyA
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
-import org.academy.internal.common.ability.accelerator.skills.lv3.HyperAccelerate;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
@@ -67,7 +66,6 @@ import org.academy.internal.common.ability.meltdowner.skills.lv3.Cloudroom;
 import org.academy.internal.common.ability.meltdowner.skills.lv3.LightShield;
 import org.academy.internal.common.ability.meltdowner.skills.lv4.JetStrike;
 import org.academy.internal.common.ability.meltdowner.skills.lv4.ParticleWaveCannon;
-import org.academy.internal.common.ability.meltdowner.skills.lv5.ChainFusion;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.AutoCruiseBeamCannon;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
 import org.academy.internal.common.ability.mentalout.skills.MentalStupor;
@@ -498,12 +496,6 @@ public final class PacketTypes {
     /**
      * Phase 3 - Charged and Context Skills
      */
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, HyperAccelerate.StartPacket>>
-            HYPER_ACCELERATE_START = PACKET_TYPES.register("hyper_accelerate_start",
-            () -> new PacketType<>(HyperAccelerate.StartPacket.class, HyperAccelerate.StartPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, HyperAccelerate.LaunchPacket>>
-            HYPER_ACCELERATE_LAUNCH = PACKET_TYPES.register("hyper_accelerate_launch",
-            () -> new PacketType<>(HyperAccelerate.LaunchPacket.class, HyperAccelerate.LaunchPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlasmaGeneration.StartPacket>>
             PLASMA_GENERATION_START = PACKET_TYPES.register("plasma_generation_start",
             () -> new PacketType<>(PlasmaGeneration.StartPacket.class, PlasmaGeneration.StartPacket.CODEC));
@@ -576,9 +568,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Thunderclap.UsePacket>>
             THUNDERCLAP_USE = PACKET_TYPES.register("thunderclap_use",
             () -> new PacketType<>(Thunderclap.UsePacket.class, Thunderclap.UsePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChainFusion.ActivatePacket>>
-            CHAIN_FUSION_ACTIVATE = PACKET_TYPES.register("chain_fusion_activate",
-            () -> new PacketType<>(ChainFusion.ActivatePacket.class, ChainFusion.ActivatePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Disintegrate.UsePacket>>
             DISINTEGRATE_USE = PACKET_TYPES.register("disintegrate_use",
             () -> new PacketType<>(Disintegrate.UsePacket.class, Disintegrate.UsePacket.CODEC));

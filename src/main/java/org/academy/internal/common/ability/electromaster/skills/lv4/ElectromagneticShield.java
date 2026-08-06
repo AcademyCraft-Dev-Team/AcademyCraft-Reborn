@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -24,11 +25,13 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetManipulation;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.ElectromagneticShieldData;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -45,6 +48,8 @@ public final class ElectromagneticShield extends Skill {
     static final float BASE_COOLING = 10.0f;
     static final float BASE_COOLING_CP_COST = 20.0f;
     private static final int COOLING_INTERVAL_TICKS = 20;
+    private static final Identifier TRUE_RESISTANCE_MODIFIER_ID =
+            AcademyCraft.academy("electromagnetic_shield_true_resistance");
 
     public ElectromagneticShield() {
         super(Builder
@@ -246,7 +251,18 @@ public final class ElectromagneticShield extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
             var skill = Skills.ELECTROMAGNETIC_SHIELD.get();
-            if (!skill.isEnabled(player)) return;
+            var active = skill.isEnabled(player);
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player,
+                    TRUE_RESISTANCE_MODIFIER_ID,
+                    2.0,
+                    active
+            );
+            if (!active) return;
+
+            if (player.tickCount % 5 == 0 && player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+                ElectromasterArcEffects.spawnShieldArcs(level, player.position(), player.tickCount);
+            }
 
             var system = AbilitySystemServer.getSystem(player);
             var uuid = player.getUUID();
@@ -262,6 +278,12 @@ public final class ElectromagneticShield extends Skill {
             )) {
                 system.toggleSkill(uuid, skill.getKeyString());
                 Server.setStoredDamage(player, 0);
+                PlayerAttributeRuntime.syncTrueResistanceModifier(
+                        player,
+                        TRUE_RESISTANCE_MODIFIER_ID,
+                        2.0,
+                        false
+                );
                 return;
             }
 

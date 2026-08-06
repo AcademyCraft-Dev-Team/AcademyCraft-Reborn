@@ -37,6 +37,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -255,7 +256,11 @@ public class Disarm extends Skill {
                 if (!target.isAlive() || target.level() != player.level()
                         || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
                 disarmTarget(target);
-                target.hurtServer(player.level(), player.damageSources().playerAttack(player), 1.0f);
+                target.hurtServer(
+                        player.level(),
+                        SkillDamageSource.of(player, Skills.DISARM.get()),
+                        1.0f
+                );
             });
         }
     }

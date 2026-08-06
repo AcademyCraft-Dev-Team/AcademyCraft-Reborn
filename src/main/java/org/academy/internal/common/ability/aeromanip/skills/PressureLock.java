@@ -8,6 +8,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -27,6 +28,8 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -62,28 +65,83 @@ public final class PressureLock extends Skill {
     public static final class Server {
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
         @SubscribePacket public static void handle(StartPacket packet) { var player = packet.getPacketListener().getPlayer(); if (ACTIVE.containsKey(player) || !Skills.PRESSURE_LOCK.get().isEnabled(player)) return; var context = new Context(player); ACTIVE.put(player, context); AbilitySystemServer.registerContext(context); }
-        @SubscribePacket public static void handle(StopPacket packet) { var context = ACTIVE.get(packet.getPacketListener().getPlayer()); if (context != null) context.end(); }
+        @SubscribePacket public static void handle(StopPacket packet) {
+            var context = ACTIVE.get(packet.getPacketListener().getPlayer());
+            if (context != null && context.target == null) context.end();
+        }
         private static final class Context extends ServerContext {
-            private int age; private boolean ended; private boolean pvpEngaged;
+            private int age;
+            private int lockAge;
+            private boolean ended;
+            private LivingEntity target;
+            private Vec3 anchor;
             private Context(ServerPlayer player) { super(player); }
             private void end() { if (!ended) { ended = true; unregister(); } }
             @SubscribeEvent public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Pre event) {
                 age++;
-                var duration = Math.max(1, Math.round(50 * AeromanipConfig.durationMultiplier(player, SkillNames.PRESSURE_LOCK)));
-                if (ended || age > (pvpEngaged ? Math.min(duration, 16) : duration)
-                        || !player.isAlive() || !Skills.PRESSURE_LOCK.get().isEnabled(player)) { end(); return; }
-                if ((age & 1) != 0) return;
-                var eye = player.getEyePosition(); var look = player.getLookAngle().normalize(); var box = new AABB(eye, eye.add(look.scale(18))).inflate(1.0);
-                var target = player.level().getEntities(player, box, entity -> entity instanceof LivingEntity living && living.isAlive() && !AeromanipTargeting.isBoss(living) && player.hasLineOfSight(living) && AeromanipTargeting.canAffectNegatively(player, living)).stream().min((a, b) -> Double.compare(a.distanceToSqr(eye), b.distanceToSqr(eye))).orElse(null);
-                if (target == null) return;
-                var pvpTarget = target instanceof net.minecraft.world.entity.player.Player;
-                if (pvpTarget) pvpEngaged = true;
-                var multiplier = pvpTarget ? AeromanipConfig.pvpForce(player) : 0.15;
-                var current = target.getDeltaMovement();
-                AeromanipTargeting.addClampedVelocity(target, current.scale(multiplier - 1.0));
-                if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player.getUUID(),
-                        5.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PRESSURE_LOCK),
-                        Skills.PRESSURE_LOCK.get(), 10)) end();
+                if (ended || !player.isAlive() || player.hasDisconnected()
+                        || !Skills.PRESSURE_LOCK.get().isEnabled(player)) {
+                    end();
+                    return;
+                }
+                if (target == null) {
+                    if ((age & 1) != 0) return;
+                    target = findTarget();
+                    if (target == null) return;
+                    if (isProtected(target)) {
+                        end();
+                        return;
+                    }
+                    var skill = Skills.PRESSURE_LOCK.get();
+                    if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                            player.getUUID(),
+                            skill.getCpCost(skill.getLevel(player))
+                                    * AeromanipConfig.cpMultiplier(player, SkillNames.PRESSURE_LOCK),
+                            skill,
+                            10
+                    )) {
+                        end();
+                        return;
+                    }
+                    anchor = target.position();
+                    target.stopRiding();
+                }
+                var duration = Math.max(1, Math.round(200
+                        * AeromanipConfig.durationMultiplier(player, SkillNames.PRESSURE_LOCK)));
+                if (lockAge++ >= duration || !target.isAlive() || target.isRemoved()
+                        || target.level() != player.level() || isProtected(target)) {
+                    end();
+                    return;
+                }
+                target.setDeltaMovement(Vec3.ZERO);
+                target.snapTo(anchor);
+                target.resetFallDistance();
+                target.hurtMarked = true;
+            }
+
+            private LivingEntity findTarget() {
+                var eye = player.getEyePosition();
+                var look = player.getLookAngle().normalize();
+                var box = new AABB(eye, eye.add(look.scale(18.0))).inflate(1.0);
+                return player.level().getEntitiesOfClass(
+                        LivingEntity.class,
+                        box,
+                        living -> living != player
+                                && living.isAlive()
+                                && !AeromanipTargeting.isBoss(living)
+                                && player.hasLineOfSight(living)
+                                && AeromanipTargeting.canAffectNegatively(player, living)
+                ).stream().min((a, b) -> Double.compare(
+                        a.distanceToSqr(eye),
+                        b.distanceToSqr(eye)
+                )).orElse(null);
+            }
+
+            private static boolean isProtected(LivingEntity target) {
+                if (!(target instanceof ServerPlayer player)) return false;
+                return VectorReflection.Server.isActive(player)
+                        || DarkmatterSixWings.Server.isActive(player)
+                        || AtmosphereShield.Server.isActive(player);
             }
             @Override protected void onUnregistered() { ACTIVE.remove(player, this); }
         }

@@ -5,6 +5,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 
 import java.util.Comparator;
@@ -12,6 +16,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Predicate;
+import java.util.function.Function;
 
 public final class LinearReflectionResolver {
     public static final double RETURN_EPSILON = 1.0E-4;
@@ -37,7 +42,23 @@ public final class LinearReflectionResolver {
             LinearSegment segment,
             LinearAttackPayload payload
     ) {
-        return findCandidate(level, segment, payload, VectorReflection.Server::isActive);
+        return findCandidateWithMode(level, segment, payload, player -> {
+            if (VectorReflection.Server.isActive(player)) {
+                return LinearReflectionCandidate.Mode.REFLECTION;
+            }
+            if (VectorReduction.Server.isActive(player)) {
+                return LinearReflectionCandidate.Mode.REFRACTION;
+            }
+            if (payload.skill().getCategory() == AbilityCategories.MELTDOWNER.get()
+                    && ElectromagneticShield.Server.isActive(player)) {
+                return LinearReflectionCandidate.Mode.ELECTROMAGNETIC_SHIELD_REFRACTION;
+            }
+            if (payload.skill().getCategory() == AbilityCategories.ELECTROMASTER.get()
+                    && player.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get())) {
+                return LinearReflectionCandidate.Mode.LIGHT_SHIELD_REFRACTION;
+            }
+            return null;
+        });
     }
 
     public static Optional<LinearReflectionCandidate> findCandidate(
@@ -46,10 +67,23 @@ public final class LinearReflectionResolver {
             LinearAttackPayload payload,
             Predicate<ServerPlayer> reflectionEligibility
     ) {
+        return findCandidateWithMode(level, segment, payload, player ->
+                reflectionEligibility != null && reflectionEligibility.test(player)
+                        ? LinearReflectionCandidate.Mode.REFLECTION
+                        : null
+        );
+    }
+
+    private static Optional<LinearReflectionCandidate> findCandidateWithMode(
+            ServerLevel level,
+            LinearSegment segment,
+            LinearAttackPayload payload,
+            Function<ServerPlayer, LinearReflectionCandidate.Mode> modeResolver
+    ) {
         if (level == null || segment == null || payload == null || !segment.isFinite()) {
             return Optional.empty();
         }
-        if (reflectionEligibility == null) return Optional.empty();
+        if (modeResolver == null) return Optional.empty();
         if (payload.outgoingDamageSource() instanceof ReflectedSkillDamageSource) {
             return Optional.empty();
         }
@@ -60,21 +94,39 @@ public final class LinearReflectionResolver {
                         ServerPlayer.class,
                         pathBounds,
                         player -> payload.canTarget(player, false, null)
-                                && reflectionEligibility.test(player)
+                                && modeResolver.apply(player) != null
                 ).stream()
-                .map(player -> createCandidate(segment, radius, payload, player))
+                .map(player -> createCandidate(
+                        segment,
+                        radius,
+                        payload,
+                        player,
+                        modeResolver.apply(player)
+                ))
                 .flatMap(Optional::stream)
                 .min(Comparator.comparingDouble(LinearReflectionCandidate::expandedEntryProgress));
     }
 
     public static boolean tryActivate(LinearReflectionCandidate candidate) {
         if (candidate == null) return false;
-        return VectorReflection.Server.tryReflectLinearAttack(
-                candidate.reflector(),
-                candidate.expectedDamage(),
-                candidate.mirrorPoint(),
-                candidate.incomingDirection()
-        );
+        return switch (candidate.mode()) {
+            case REFLECTION -> VectorReflection.Server.tryReflectLinearAttack(
+                    candidate.reflector(),
+                    candidate.expectedDamage(),
+                    candidate.mirrorPoint(),
+                    candidate.incomingDirection()
+            );
+            case REFRACTION -> VectorReduction.Server.tryRefractLinearAttack(
+                    candidate.reflector(),
+                    candidate.expectedDamage(),
+                    candidate.mirrorPoint(),
+                    candidate.incomingDirection()
+            );
+            case ELECTROMAGNETIC_SHIELD_REFRACTION ->
+                    ElectromagneticShield.Server.isActive(candidate.reflector());
+            case LIGHT_SHIELD_REFRACTION ->
+                    candidate.reflector().getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get());
+        };
     }
 
     public static ResolvedLinearAttack createReflected(
@@ -85,7 +137,23 @@ public final class LinearReflectionResolver {
         Objects.requireNonNull(candidate, "candidate");
         if (!original.isFinite()) return ResolvedLinearAttack.unreflected(original);
         var mirrorPoint = candidate.mirrorPoint();
-        var returned = fullRangeReturnSegment(original, mirrorPoint);
+        var returned = switch (candidate.mode()) {
+            case REFLECTION -> fullRangeReturnSegment(original, mirrorPoint);
+            case REFRACTION -> fullRangeRefractedSegment(
+                    original,
+                    mirrorPoint,
+                    VectorReduction.refractedDirection(
+                            candidate.reflector().getLookAngle(),
+                            candidate.incomingDirection()
+                    )
+            );
+            case ELECTROMAGNETIC_SHIELD_REFRACTION -> fullRangeRefractedSegment(
+                    original, mirrorPoint, randomShieldDirection(candidate.reflector())
+            );
+            case LIGHT_SHIELD_REFRACTION -> fullRangeRefractedSegment(
+                    original, mirrorPoint, randomSideDirection(candidate.reflector())
+            );
+        };
         if (returned.isEmpty()) return ResolvedLinearAttack.unreflected(original);
         var outbound = new LinearSegment(original.start(), mirrorPoint);
         return ResolvedLinearAttack.reflected(original, outbound, returned.get(), candidate);
@@ -106,12 +174,48 @@ public final class LinearReflectionResolver {
         return Optional.of(new LinearSegment(returnStart, fullRangeReturnEnd(original, mirrorPoint)));
     }
 
+    static Optional<LinearSegment> fullRangeRefractedSegment(
+            LinearSegment original,
+            Vec3 mirrorPoint,
+            Vec3 refractedDirection
+    ) {
+        if (original == null
+                || !original.isFinite()
+                || !finite(mirrorPoint)
+                || !finite(refractedDirection)
+                || refractedDirection.lengthSqr() < 1.0E-12) {
+            return Optional.empty();
+        }
+        var direction = refractedDirection.normalize();
+        var start = mirrorPoint.add(direction.scale(RETURN_EPSILON));
+        var end = mirrorPoint.add(direction.scale(original.length()));
+        return Optional.of(new LinearSegment(start, end));
+    }
+
+    private static Vec3 randomShieldDirection(ServerPlayer player) {
+        var random = player.getRandom();
+        var yaw = random.nextDouble() * Math.PI * 2.0;
+        var y = random.nextDouble() * 0.7 - 0.2;
+        return new Vec3(Math.cos(yaw), y, Math.sin(yaw)).normalize();
+    }
+
+    private static Vec3 randomSideDirection(ServerPlayer player) {
+        var look = player.getLookAngle().normalize();
+        var right = look.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
+        else right = right.normalize();
+        if (player.getRandom().nextBoolean()) right = right.scale(-1);
+        return right.scale(0.94).add(look.scale(0.34)).normalize();
+    }
+
     static Optional<LinearReflectionCandidate> createCandidate(
             LinearSegment segment,
             float radius,
             LinearAttackPayload payload,
-            ServerPlayer player
+            ServerPlayer player,
+            LinearReflectionCandidate.Mode mode
     ) {
+        if (mode == null) return Optional.empty();
         var expandedEntry = intersectionProgress(segment.start(), segment.end(),
                 player.getBoundingBox().inflate(radius));
         if (expandedEntry.isEmpty()) return Optional.empty();
@@ -129,7 +233,8 @@ public final class LinearReflectionResolver {
                 visualProgress,
                 expandedEntry.getAsDouble(),
                 damage,
-                segment.direction()
+                segment.direction(),
+                mode
         ));
     }
 

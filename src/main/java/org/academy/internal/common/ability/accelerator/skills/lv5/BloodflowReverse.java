@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -14,7 +13,9 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -38,6 +39,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
@@ -55,6 +57,11 @@ public class BloodflowReverse extends Skill {
     public static final double TARGET_BOX_INFLATE = 0.2;
     public static final double SEARCH_HALF_WIDTH = 0.85;
     public static final double SEARCH_HALF_HEIGHT = 1.15;
+    private static final double BLOOD_SPRAY_RANGE = 5.0;
+    private static final double BLOOD_SPRAY_SURFACE_OFFSET = 0.015;
+    private static final float[] BLOOD_SPRAY_PITCHES = {
+            0.0f, 30.0f, 45.0f, 60.0f, 80.0f, -30.0f, -45.0f, -60.0f, -80.0f
+    };
 
     public BloodflowReverse() {
         super(Builder
@@ -202,24 +209,67 @@ public class BloodflowReverse extends Skill {
                 var amplifier = Math.min(newStacks - 1, 4);
                 var duration = 200;
 
+                var multiplier = AbilitySystemServer.getSystem(player)
+                        .getPlayerDamageMultiplier(player.getUUID());
+                var damage = calculateDamage(target.getHealth(), multiplier);
+                var damaged = target.hurtServer(serverLevel,
+                        SkillDamageSource.of(
+                                player,
+                                Skills.BLOODFLOW_REVERSE.get(),
+                                org.academy.internal.common.world.damagesource.DamageTypes.VEC
+                        ), damage);
+                if (!damaged) return;
+
                 target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, amplifier));
                 target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, amplifier));
                 target.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, duration, amplifier));
 
-                var multiplier = AbilitySystemServer.getSystem(player)
-                        .getPlayerDamageMultiplier(player.getUUID());
-                var damage = calculateDamage(target.getHealth(), multiplier);
-                target.hurtServer(serverLevel,
-                        SkillDamageSource.of(player, Skills.BLOODFLOW_REVERSE.get()), damage);
-
-                serverLevel.sendParticles(ParticleTypes.DAMAGE_INDICATOR,
+                serverLevel.sendParticles(ParticleTypes.BLOOD_SPLASH.get(),
                         target.getX(), target.getY(0.6), target.getZ(),
-                        16, 0.45, 0.6, 0.45, 0.08);
-                serverLevel.playSound(null, target.blockPosition(), SoundEvents.BLOODFLOW_REVERSE.get(),
-                        SoundSource.PLAYERS, 1.0f, 1.0f);
+                        12, 0.4, 0.55, 0.4, 0.12);
+                spawnSurfaceBloodSprays(serverLevel, player, target);
+                serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.BLOODFLOW_REVERSE.get(), SoundSource.AMBIENT, 1.0f, 1.0f);
 
                 setBloodflowStacks(target, newStacks);
             });
+        }
+
+        private static void spawnSurfaceBloodSprays(ServerLevel level, ServerPlayer player, LivingEntity target) {
+            var origin = new Vec3(target.getX(), target.getY(0.6), target.getZ());
+            for (var pitch : BLOOD_SPRAY_PITCHES) {
+                var yaw = player.getYRot() + level.getRandom().nextFloat() * 40.0f - 20.0f;
+                var direction = Vec3.directionFromRotation(pitch, yaw).normalize();
+                var from = origin.subtract(direction.scale(0.5));
+                var to = origin.add(direction.scale(BLOOD_SPRAY_RANGE));
+                var hit = level.clip(new ClipContext(
+                        from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, target
+                ));
+                if (hit.getType() != HitResult.Type.BLOCK) continue;
+
+                var face = hit.getDirection();
+                var normal = new Vec3(face.getStepX(), face.getStepY(), face.getStepZ());
+                var position = hit.getLocation().add(normal.scale(BLOOD_SPRAY_SURFACE_OFFSET));
+                var particle = face.getAxis().isVertical()
+                        ? ParticleTypes.BLOOD_SPRAY_GROUND.get()
+                        : ParticleTypes.BLOOD_SPRAY_WALL.get();
+                var count = 2 + level.getRandom().nextInt(2);
+                for (var i = 0; i < count; i++) {
+                    var markPosition = position.add(randomSurfaceOffset(level, face));
+                    level.sendParticles(particle, markPosition.x, markPosition.y, markPosition.z,
+                            0, normal.x, normal.y, normal.z, 1.0);
+                }
+            }
+        }
+
+        private static Vec3 randomSurfaceOffset(ServerLevel level, net.minecraft.core.Direction face) {
+            var first = (level.getRandom().nextDouble() - 0.5) * 0.18;
+            var second = (level.getRandom().nextDouble() - 0.5) * 0.18;
+            return switch (face.getAxis()) {
+                case X -> new Vec3(0.0, first, second);
+                case Y -> new Vec3(first, 0.0, second);
+                case Z -> new Vec3(first, second, 0.0);
+            };
         }
 
         private static LivingEntity findTarget(ServerPlayer player) {

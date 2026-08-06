@@ -25,6 +25,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
@@ -132,15 +133,8 @@ public class LightningNova extends Skill {
 
             if (level() instanceof ServerLevel serverLevel) {
                 if ((ticks & 1) == 0) {
-                    var center = player.position().add(0, 1.0, 0);
-                    for (var i = 0; i < 16; i++) {
-                        var angle = i * Math.PI * 2.0 / 16.0;
-                        serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                                center.x + Math.cos(angle) * currentRadius,
-                                center.y,
-                                center.z + Math.sin(angle) * currentRadius,
-                                1, 0.02, 0.08, 0.02, 0.01);
-                    }
+                    ElectromasterArcEffects.spawnNovaRing(
+                            serverLevel, player.position().add(0, 1.0, 0), currentRadius, ticks);
                 }
                 var targets = level().getEntitiesOfClass(LivingEntity.class,
                         player.getBoundingBox().inflate(currentRadius + 1),
@@ -151,7 +145,7 @@ public class LightningNova extends Skill {
                         system.getPlayerDamageMultiplier(player.getUUID())
                 );
                 var source = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
-                        DamageTypes.LIGHTNING_BOLT);
+                        org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE);
                 for (var target : targets) {
                     var dist = target.distanceTo(player);
                     if (dist <= currentRadius && dist >= innerRadius) {

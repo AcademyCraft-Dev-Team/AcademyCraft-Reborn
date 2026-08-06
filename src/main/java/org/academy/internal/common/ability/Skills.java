@@ -9,7 +9,6 @@ import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyA
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
-import org.academy.internal.common.ability.accelerator.skills.lv3.HyperAccelerate;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
@@ -60,7 +59,6 @@ import org.academy.internal.common.ability.meltdowner.skills.lv3.Cloudroom;
 import org.academy.internal.common.ability.meltdowner.skills.lv3.LightShield;
 import org.academy.internal.common.ability.meltdowner.skills.lv4.JetStrike;
 import org.academy.internal.common.ability.meltdowner.skills.lv4.ParticleWaveCannon;
-import org.academy.internal.common.ability.meltdowner.skills.lv5.ChainFusion;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.AutoCruiseBeamCannon;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
 import org.academy.internal.common.ability.mentalout.skills.MentalStupor;
@@ -122,7 +120,6 @@ public final class Skills {
     public static final DeferredHolder<Skill, VectorBlast> VECTOR_BLAST = SKILLS.register(SkillNames.VECTOR_BLAST, VectorBlast::new);
     public static final DeferredHolder<Skill, VectorAccel> VECTOR_ACCEL = SKILLS.register(SkillNames.VECTOR_ACCEL, VectorAccel::new);
     public static final DeferredHolder<Skill, VectorReduction> VECTOR_REDUCTION = SKILLS.register(SkillNames.VECTOR_REDUCTION, VectorReduction::new);
-    public static final DeferredHolder<Skill, HyperAccelerate> HYPER_ACCELERATE = SKILLS.register(SkillNames.HYPER_ACCELERATE, HyperAccelerate::new);
     public static final DeferredHolder<Skill, KineticEnergyApplied> KINETIC_ENERGY_APPLIED = SKILLS.register(SkillNames.KINETIC_ENERGY_APPLIED, KineticEnergyApplied::new);
     public static final DeferredHolder<Skill, DirStrike> DIR_STRIKE = SKILLS.register(SkillNames.DIR_STRIKE, DirStrike::new);
     public static final DeferredHolder<Skill, BloodflowReverse> BLOODFLOW_REVERSE = SKILLS.register(SkillNames.BLOODFLOW_REVERSE, BloodflowReverse::new);
@@ -217,7 +214,6 @@ public final class Skills {
     public static final DeferredHolder<Skill, ParticleWaveCannon> PARTICLE_WAVE_CANNON = SKILLS.register(SkillNames.PARTICLE_WAVE_CANNON, ParticleWaveCannon::new);
     public static final DeferredHolder<Skill, Cloudroom> CLOUDROOM = SKILLS.register(SkillNames.CLOUDROOM, Cloudroom::new);
     public static final DeferredHolder<Skill, JetStrike> JET_STRIKE = SKILLS.register(SkillNames.JET_STRIKE, JetStrike::new);
-    public static final DeferredHolder<Skill, ChainFusion> CHAIN_FUSION = SKILLS.register(SkillNames.CHAIN_FUSION, ChainFusion::new);
     public static final DeferredHolder<Skill, Disintegrate> DISINTEGRATE = SKILLS.register(SkillNames.DISINTEGRATE, Disintegrate::new);
     public static final DeferredHolder<Skill, AutoCruiseBeamCannon> AUTO_CRUISE_BEAM_CANNON = SKILLS.register(SkillNames.AUTO_CRUISE_BEAM_CANNON, AutoCruiseBeamCannon::new);
     /**

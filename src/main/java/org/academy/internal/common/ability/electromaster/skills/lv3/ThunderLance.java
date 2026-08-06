@@ -23,6 +23,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
@@ -169,28 +170,11 @@ public class ThunderLance extends Skill {
                     payload
             );
 
-            var right = look.cross(new Vec3(0, 1, 0));
-            if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
-            else right = right.normalize();
-            var up = right.cross(look).normalize();
-            var endOffset = 0.65;
-            var offsets = List.of(
-                    right.scale(endOffset).add(up.scale(endOffset)),
-                    right.scale(endOffset).add(up.scale(-endOffset)),
-                    right.scale(-endOffset).add(up.scale(endOffset)),
-                    right.scale(-endOffset).add(up.scale(-endOffset))
-            );
-            var strandSeeds = offsets.stream().map(_ -> MathUtil.RANDOM.nextLong()).toList();
-            var arcs = resolved.isReflected()
-                    ? createReflectedQuickArcPaths(
-                    handPos,
-                    resolved.mirrorPoint(),
-                    resolved.returnSegment().orElseThrow().end(),
-                    resolved.reflectionProgress(),
-                    offsets,
-                    strandSeeds
-            )
-                    : createUnreflectedQuickArcPaths(handPos, targetPos, offsets, strandSeeds);
+            var arcs = new ArrayList<>(ElectromasterArcEffects.intertwinedBundle(
+                    resolved.outbound().start(), resolved.outbound().end(), 7, 0.34f));
+            resolved.returnSegment().ifPresent(segment -> arcs.addAll(
+                    ElectromasterArcEffects.intertwinedBundle(
+                            segment.start(), segment.end(), 7, 0.34f)));
             var arc = new ArcEffect(level, 10);
             arc.setPos(handPos);
             arc.setArcPaths(arcs);

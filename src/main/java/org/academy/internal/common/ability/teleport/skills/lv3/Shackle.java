@@ -6,6 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import org.academy.api.common.damage.SkillDamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import org.academy.AcademyCraftClient;
@@ -106,7 +107,11 @@ public class Shackle extends Skill {
                     target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, DEBUFF_DURATION, 3, false, false));
                     target.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, DEBUFF_DURATION, 2, false, false));
                     target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, DEBUFF_DURATION, 1, false, false));
-                    target.hurtServer(player.level(), player.damageSources().playerAttack(player), 3.0f);
+                    target.hurtServer(
+                            player.level(),
+                            SkillDamageSource.of(player, Skills.SHACKLE.get()),
+                            3.0f
+                    );
                 }
             });
         }

@@ -1,0 +1,104 @@
+package org.academy.internal.common.world.damagesource;
+
+import net.minecraft.advancements.triggers.CriteriaTriggers;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
+import org.academy.AcademyCraft;
+import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.mixin.common.LivingEntityDamageInvoker;
+
+/** Central entry point for AcademyCraft category damage. */
+public final class SkillDamageUtil {
+    private static final float EPSILON = 0.0001f;
+
+    private SkillDamageUtil() {
+    }
+
+    public static boolean apply(ServerPlayer attacker, LivingEntity target, Skill skill,
+                                ResourceKey<DamageType> type, float amount) {
+        if (attacker == null || target == null || skill == null || type == null) return false;
+        if (!(amount > 0.0f) || !Float.isFinite(amount) || !target.isAlive()) return false;
+        if (target == attacker || DamageTypes.isImmunePlayer(target instanceof net.minecraft.world.entity.player.Player p ? p : null)) {
+            return false;
+        }
+        if (!(target.level() instanceof ServerLevel level)) return false;
+
+        var source = SkillDamageSource.of(attacker, skill, type);
+        if (DamageTypes.usesDirectActuallyHurt(type)) {
+            return applyDirectWithFallback(level, attacker, target, skill, source, amount);
+        }
+        return target.hurtServer(level, source, amount);
+    }
+
+    public static boolean applyDirect(ServerLevel level, LivingEntity target,
+                                      SkillDamageSource source, float amount) {
+        if (!(source.getEntity() instanceof ServerPlayer attacker)) return false;
+        if (DamageTypes.isImmunePlayer(target instanceof net.minecraft.world.entity.player.Player p ? p : null)) {
+            return false;
+        }
+        return applyDirectWithFallback(level, attacker, target, source.getSkill(), source, amount);
+    }
+
+    private static boolean applyDirectWithFallback(ServerLevel level, ServerPlayer attacker,
+                                                   LivingEntity target, Skill skill,
+                                                   DamageSource source, float amount) {
+        var beforeHealth = target.getHealth();
+        var beforeAbsorption = target.getAbsorptionAmount();
+        var invoker = (LivingEntityDamageInvoker) target;
+        var containers = invoker.academy$getDamageContainers();
+        var container = new DamageContainer(source, amount);
+        containers.push(container);
+
+        var completed = false;
+        try {
+            invoker.academy$actuallyHurt(level, source, amount);
+            completed = true;
+        } catch (Throwable error) {
+            AcademyCraft.getLogger().warn(
+                    "Direct actuallyHurt failed for {}; falling back when no damage was committed",
+                    target.getStringUUID(),
+                    error
+            );
+            PlayerAttributeRuntime.clearDamageContext();
+        } finally {
+            if (!containers.isEmpty() && containers.peek() == container) containers.pop();
+            else containers.remove(container);
+        }
+
+        var healthDamage = Math.max(0.0f, beforeHealth - target.getHealth());
+        var absorptionDamage = Math.max(0.0f, beforeAbsorption - target.getAbsorptionAmount());
+        var committed = healthDamage > EPSILON || absorptionDamage > EPSILON;
+        if (!completed && !committed) {
+            return target.hurtServer(level, attacker.damageSources().playerAttack(attacker), amount);
+        }
+        if (!committed) {
+            return target.hurtServer(level, attacker.damageSources().playerAttack(attacker), amount);
+        }
+
+        target.setLastHurtByPlayer(attacker, 100);
+        target.setLastHurtByMob(attacker);
+        level.broadcastDamageEvent(target, source);
+        skill.onHurt(attacker, target, healthDamage + absorptionDamage);
+
+        if (target instanceof ServerPlayer hurtPlayer) {
+            CriteriaTriggers.ENTITY_HURT_PLAYER.trigger(
+                    hurtPlayer, source, amount, healthDamage + absorptionDamage, false
+            );
+        }
+        CriteriaTriggers.PLAYER_HURT_ENTITY.trigger(
+                attacker, target, source, amount, healthDamage + absorptionDamage, false
+        );
+
+        if (target.isDeadOrDying() && !invoker.academy$checkTotemDeathProtection(source)) {
+            target.die(source);
+        }
+        return true;
+    }
+}

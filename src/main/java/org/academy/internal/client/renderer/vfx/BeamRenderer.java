@@ -236,11 +236,8 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
             ballVertexCount = icosphere.length;
             ballBuffer = buildPosColor(device, () -> "VFX Beam Ball", toPositions(icosphere), PrimitiveTopology.TRIANGLES);
 
-            var faces = VertexUtil.Box.getBoxVertices(RAY);
-            var positions = new float[faces.length * 4][3];
-            for (var f = 0; f < faces.length; f++) {
-                System.arraycopy(faces[f], 0, positions, f * 4, 4);
-            }
+            var cylinder = VertexUtil.Cylinder.getCylinderVertexBuffer(0.0f, 1.0f, 0.5f, 16, false);
+            var positions = toPositions(cylinder);
             boxVertexCount = positions.length;
             boxBuffer = buildPosColor(device, () -> "VFX Beam Box", positions, PrimitiveTopology.QUADS);
 

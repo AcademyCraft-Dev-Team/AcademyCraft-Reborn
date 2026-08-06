@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class AirflowJet extends Skill {
+    private static final double SPEED_MULTIPLIER = 1.5;
     private static final double LAUNCH_SPEED = 1.4;
     private static final int CP_INTERVAL_TICKS = 10;
 
@@ -216,7 +217,7 @@ public final class AirflowJet extends Skill {
                             player,
                             direction,
                             response,
-                            LAUNCH_SPEED + skillLevel * 0.1
+                            (LAUNCH_SPEED + skillLevel * 0.1) * SPEED_MULTIPLIER
                     );
                 }
                 player.resetFallDistance();

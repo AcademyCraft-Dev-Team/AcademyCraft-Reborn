@@ -60,6 +60,11 @@ public final class ResolvedLinearAttack {
         return returnSegment != null && reflectionCandidate != null;
     }
 
+    public boolean isRefracted() {
+        return isReflected()
+                && reflectionCandidate.mode() != LinearReflectionCandidate.Mode.REFLECTION;
+    }
+
     public double reflectionProgress() {
         return reflectionCandidate == null ? 1.0 : reflectionCandidate.progress();
     }

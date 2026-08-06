@@ -58,12 +58,14 @@ import java.util.Map;
 import java.util.UUID;
 
 public class PlasmaGeneration extends Skill {
-    public static final int MAX_CHARGE_TICKS = 60;
+    public static final int TICKS_PER_STAGE = 40;
+    public static final int MAX_STAGE = 6;
+    public static final int MAX_CHARGE_TICKS = TICKS_PER_STAGE * MAX_STAGE;
     public static final double MAX_TARGET_RANGE = 128.0;
     public static final double TRAVEL_SPEED = 2.5;
-    public static final float AOE_RADIUS = 20.0f;
-    public static final float BASE_DAMAGE = 200.0f;
-    public static final float EXPLOSION_POWER = 20.0f;
+    public static final float RADIUS_PER_STAGE = 5.0f;
+    public static final float DAMAGE_PER_STAGE = 50.0f;
+    public static final float BLOCK_BLAST_RADIUS_PER_STAGE = 2.5f;
     public static final int CP_PER_SECOND = 20;
 
     public PlasmaGeneration() {
@@ -81,11 +83,15 @@ public class PlasmaGeneration extends Skill {
     }
 
     public static float calculateDamage(long chargeTicks) {
-        return BASE_DAMAGE;
+        return calculateStage(chargeTicks) * DAMAGE_PER_STAGE;
     }
 
     public static float calculateExplosionRadius(long chargeTicks) {
-        return AOE_RADIUS;
+        return calculateStage(chargeTicks) * RADIUS_PER_STAGE;
+    }
+
+    public static int calculateStage(long chargeTicks) {
+        return Math.clamp((int) (Math.max(0L, chargeTicks) / TICKS_PER_STAGE), 0, MAX_STAGE);
     }
 
     public static float getChargeProgress(long startTick, long currentTick) {
@@ -196,12 +202,18 @@ public class PlasmaGeneration extends Skill {
                     || !(level.getEntity(state.plasmaEntityId()) instanceof Plasma plasma)) {
                 return;
             }
-            launch(player, plasma);
+            var chargeTicks = Math.max(0L, level.getGameTime() - state.startTick());
+            var stage = calculateStage(chargeTicks);
+            if (stage == 0) {
+                plasma.discard();
+                return;
+            }
+            launch(player, plasma, stage);
         }
 
-        private static void launch(ServerPlayer player, Plasma plasma) {
+        private static void launch(ServerPlayer player, Plasma plasma, int stage) {
             var targetPos = findTarget(player);
-            var damage = BASE_DAMAGE
+            var damage = stage * DAMAGE_PER_STAGE
                     * AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
                     * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
             var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player, Skills.PLASMA_GENERATION.get());
@@ -210,8 +222,8 @@ public class PlasmaGeneration extends Skill {
                     targetPos,
                     TRAVEL_SPEED,
                     damage,
-                    AOE_RADIUS,
-                    destroyBlocks ? EXPLOSION_POWER : 0.0f,
+                    stage * RADIUS_PER_STAGE,
+                    destroyBlocks ? stage * BLOCK_BLAST_RADIUS_PER_STAGE : 0.0f,
                     destroyBlocks
             );
         }

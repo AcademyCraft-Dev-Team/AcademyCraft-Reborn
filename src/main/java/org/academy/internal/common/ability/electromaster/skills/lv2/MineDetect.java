@@ -201,8 +201,10 @@ public final class MineDetect extends Skill {
             matrixStack.translate((float) -cameraPos.x, (float) -cameraPos.y, (float) -cameraPos.z);
             event.submitCustomGeometry(renderType, (snapshot, consumer) -> {
                 for (var iterator = ORES.iterator(); iterator.hasNext(); ) {
+                    var pos = BlockPos.of(iterator.nextLong());
+                    var color = oreColor(minecraft.level.getBlockState(pos));
                     renderBox(snapshot, consumer,
-                            new AABB(BlockPos.of(iterator.nextLong())).inflate(0.002), lineWidth);
+                            new AABB(pos).inflate(0.002), lineWidth, color);
                 }
             });
             matrixStack.popPose();
@@ -277,11 +279,37 @@ public final class MineDetect extends Skill {
             return result;
         }
 
+        static float[] oreColor(BlockState state) {
+            var id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+            var path = id == null ? "unknown" : id.getPath();
+            if (path.contains("redstone")) return new float[]{1.0f, 0.12f, 0.08f, 0.92f};
+            if (path.contains("lapis")) return new float[]{0.18f, 0.35f, 1.0f, 0.92f};
+            if (path.contains("diamond")) return new float[]{0.15f, 1.0f, 0.95f, 0.92f};
+            if (path.contains("emerald")) return new float[]{0.12f, 1.0f, 0.28f, 0.92f};
+            if (path.contains("gold")) return new float[]{1.0f, 0.78f, 0.08f, 0.92f};
+            if (path.contains("iron")) return new float[]{0.86f, 0.84f, 0.80f, 0.92f};
+            if (path.contains("copper")) return new float[]{0.95f, 0.42f, 0.18f, 0.92f};
+            if (path.contains("coal")) return new float[]{0.24f, 0.26f, 0.30f, 0.92f};
+            if (path.contains("quartz")) return new float[]{1.0f, 0.92f, 0.82f, 0.92f};
+            if (path.contains("debris")) return new float[]{0.52f, 0.25f, 0.32f, 0.92f};
+
+            var hash = path.hashCode();
+            var hue = Math.floorMod(hash, 360) / 360.0f;
+            var rgb = java.awt.Color.HSBtoRGB(hue, 0.72f, 1.0f);
+            return new float[]{
+                    ((rgb >> 16) & 0xff) / 255.0f,
+                    ((rgb >> 8) & 0xff) / 255.0f,
+                    (rgb & 0xff) / 255.0f,
+                    0.92f
+            };
+        }
+
         private static void renderBox(
                 MatrixStack matrixStack,
                 VertexConsumer consumer,
                 AABB box,
-                float lineWidth
+                float lineWidth,
+                float[] color
         ) {
             var vertices = new float[][]{
                     {(float) box.minX, (float) box.minY, (float) box.minZ},
@@ -298,11 +326,11 @@ public final class MineDetect extends Skill {
                 var first = vertices[edge[0]];
                 var second = vertices[edge[1]];
                 consumer.addVertex(matrix, first[0], first[1], first[2])
-                        .setColor(0.25f, 0.60f, 1.0f, 0.85f)
+                        .setColor(color[0], color[1], color[2], color[3])
                         .setNormal(0, 1, 0)
                         .setLineWidth(lineWidth);
                 consumer.addVertex(matrix, second[0], second[1], second[2])
-                        .setColor(0.25f, 0.60f, 1.0f, 0.85f)
+                        .setColor(color[0], color[1], color[2], color[3])
                         .setNormal(0, 1, 0)
                         .setLineWidth(lineWidth);
             }

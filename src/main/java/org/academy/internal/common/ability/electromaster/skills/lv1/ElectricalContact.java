@@ -143,7 +143,7 @@ public class ElectricalContact extends Skill {
 
             if (!(level instanceof ServerLevel serverLevel)) return;
             var damageSource = SkillDamageSource.of(player, skill,
-                    DamageTypes.LIGHTNING_BOLT);
+                    org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE);
             var system = AbilitySystemServer.getSystem(player);
             var damage = calculateDamage(
                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
@@ -175,7 +175,7 @@ public class ElectricalContact extends Skill {
                     );
                     livingAttacker.hurtServer(serverLevel,
                             SkillDamageSource.of(player, skill,
-                                    DamageTypes.LIGHTNING_BOLT),
+                                    org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE),
                             damage);
                 }
             }

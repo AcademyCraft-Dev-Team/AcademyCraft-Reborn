@@ -8,6 +8,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
+import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -118,6 +120,18 @@ public final class AttachmentTypes {
             () -> AttachmentType
                     .builder(Railgun.Data::getDefault)
                     .sync(Railgun.Data.CODEC)
+                    .build()
+    );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<MagneticWeapon.Data>> MAGNETIC_WEAPON_DATA = REGISTER.register(
+            "magnetic_weapon_data",
+            () -> AttachmentType.builder(() -> MagneticWeapon.Data.DEFAULT)
+                    .sync(MagneticWeapon.Data.CODEC)
+                    .build()
+    );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<IronSandArsenal.Data>> IRON_SAND_DATA = REGISTER.register(
+            "iron_sand_data",
+            () -> AttachmentType.builder(() -> IronSandArsenal.Data.DEFAULT)
+                    .sync(IronSandArsenal.Data.CODEC)
                     .build()
     );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<QuantumData>> QUANTUM_DATA = REGISTER.register(

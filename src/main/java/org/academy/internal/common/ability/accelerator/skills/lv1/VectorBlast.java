@@ -315,7 +315,11 @@ public final class VectorBlast extends Skill {
             var damage = BASE_DAMAGE
                     * system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     * system.getPlayerDamageMultiplier(player.getUUID());
-            var source = SkillDamageSource.of(player, Skills.VECTOR_BLAST.get());
+            var source = SkillDamageSource.of(
+                    player,
+                    Skills.VECTOR_BLAST.get(),
+                    org.academy.internal.common.world.damagesource.DamageTypes.VEC
+            );
             var search = new AABB(origin, end).inflate(BEAM_RADIUS);
             for (var target : level.getEntitiesOfClass(
                     LivingEntity.class, search, entity -> entity != player && entity.isAlive())) {
@@ -353,7 +357,16 @@ public final class VectorBlast extends Skill {
             var area = new AABB(center, center).inflate(ABYSS_RADIUS);
             for (var target : level.getEntitiesOfClass(
                     LivingEntity.class, area, entity -> entity != player && entity.isAlive())) {
-                CTADamageUtil.applyCompositeDamage(target, player, source, damage);
+                CTADamageUtil.applyCompositeDamage(
+                        target,
+                        player,
+                        SkillDamageSource.of(
+                                player,
+                                Skills.VECTOR_BLAST.get(),
+                                org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                        ),
+                        damage
+                );
             }
         }
 

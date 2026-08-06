@@ -1,0 +1,145 @@
+package org.academy.internal.common.ability.electromaster;
+
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.arc.ArcPath;
+import org.academy.api.common.arc.PathModifier;
+import org.academy.api.common.arc.modifier.HelixModifier;
+import org.academy.api.common.arc.modifier.JaggedModifier;
+import org.academy.api.common.arc.modifier.TaperModifier;
+import org.academy.api.common.arc.path.CirclePath;
+import org.academy.api.common.arc.path.LinePath;
+import org.academy.api.common.arc.property.AttributeCurve;
+import org.academy.api.common.arc.property.Knot;
+import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.world.entity.skill.ArcEffect;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** Lightweight builders for the shared VFX-backed electric arc renderer. */
+public final class ElectromasterArcEffects {
+    private static final AttributeCurve FULL_THICKNESS = new AttributeCurve(List.of(
+            new Knot(0.0f, 1.0f),
+            new Knot(0.82f, 1.0f),
+            new Knot(1.0f, 0.05f)
+    ));
+
+    private ElectromasterArcEffects() {
+    }
+
+    public static List<ArcPath> intertwinedBundle(Vec3 start, Vec3 end, int strands, float radius) {
+        var paths = new ArrayList<ArcPath>(Math.max(1, strands));
+        var length = Math.max(1.0, start.distanceTo(end));
+        var turns = (float) Math.clamp(length / 3.5, 2.0, 8.0);
+        for (var i = 0; i < Math.max(1, strands); i++) {
+            var phase = (float) (Math.PI * 2.0 * i / Math.max(1, strands));
+            paths.add(new ArcPath(
+                    new LinePath(start.toVector3f(), end.toVector3f()),
+                    List.of(
+                            new HelixModifier(radius * (0.72f + (i & 1) * 0.28f),
+                                    turns + i * 0.18f, phase),
+                            new JaggedModifier(0.16f, 3, randomSeed()),
+                            new TaperModifier(FULL_THICKNESS, 0.72f)
+                    ),
+                    2.4f,
+                    List.of()
+            ));
+        }
+        return paths;
+    }
+
+    public static void spawnBeamCoils(ServerLevel level, LinearSegment segment) {
+        if (segment == null || !segment.isFinite() || segment.length() < 1.0) return;
+        var direction = segment.direction();
+        var paths = new ArrayList<ArcPath>();
+        for (var distance = 2.5; distance < segment.length(); distance += 3.5) {
+            var center = segment.start().add(direction.scale(distance));
+            paths.add(new ArcPath(
+                    new CirclePath(center.toVector3f(), direction.toVector3f(), 0.34f),
+                    List.of(
+                            new JaggedModifier(0.10f, 2, randomSeed()),
+                            new TaperModifier(FULL_THICKNESS, 0.42f)
+                    ),
+                    6.0f,
+                    List.of()
+            ));
+        }
+        spawn(level, paths, 8, segment.start());
+    }
+
+    public static void spawnShieldArcs(ServerLevel level, Vec3 center, long age) {
+        var paths = new ArrayList<ArcPath>();
+        for (var i = 0; i < 6; i++) {
+            var angle0 = age * 0.17 + i * Math.PI / 3.0;
+            var angle1 = angle0 + 0.82;
+            var y0 = 0.25 + (i % 3) * 0.62;
+            var y1 = 0.25 + ((i + 1) % 3) * 0.62;
+            var start = center.add(Math.cos(angle0) * 0.78, y0, Math.sin(angle0) * 0.78);
+            var end = center.add(Math.cos(angle1) * 0.78, y1, Math.sin(angle1) * 0.78);
+            paths.add(thickArc(start, end, 0.30f, 1.0f));
+        }
+        spawn(level, paths, 5, center);
+    }
+
+    public static void spawnNovaRing(ServerLevel level, Vec3 center, double radius, long age) {
+        var paths = new ArrayList<ArcPath>();
+        var segments = 16;
+        for (var i = 0; i < segments; i++) {
+            var angle0 = i * Math.PI * 2.0 / segments + age * 0.08;
+            var angle1 = (i + 1) * Math.PI * 2.0 / segments + age * 0.08;
+            var start = center.add(Math.cos(angle0) * radius, Math.sin(angle0 * 3.0) * 0.16,
+                    Math.sin(angle0) * radius);
+            var end = center.add(Math.cos(angle1) * radius, Math.sin(angle1 * 3.0) * 0.16,
+                    Math.sin(angle1) * radius);
+            paths.add(thickArc(start, end, 0.24f, 0.75f));
+        }
+        spawn(level, paths, 4, center);
+    }
+
+    public static void spawnSkyStrike(ServerLevel level, Vec3 impact) {
+        var paths = new ArrayList<ArcPath>();
+        var random = level.getRandom();
+        for (var i = 0; i < 6; i++) {
+            var start = impact.add(
+                    random.nextGaussian() * 2.2,
+                    18.0 + random.nextDouble() * 10.0,
+                    random.nextGaussian() * 2.2
+            );
+            var end = impact.add(random.nextGaussian() * 0.34, 0.15, random.nextGaussian() * 0.34);
+            paths.add(thickArc(start, end, 0.48f, 2.8f));
+        }
+        for (var i = 0; i < 12; i++) {
+            var angle = Math.PI * 2.0 * i / 12.0 + random.nextDouble() * 0.18;
+            var radius = 2.0 + random.nextDouble() * 3.5;
+            var end = impact.add(Math.cos(angle) * radius, 0.12, Math.sin(angle) * radius);
+            paths.add(thickArc(impact.add(0, 0.18, 0), end, 0.32f, 1.25f));
+        }
+        spawn(level, paths, 10, impact);
+    }
+
+    private static ArcPath thickArc(Vec3 start, Vec3 end, float jaggedness, float thickness) {
+        return new ArcPath(
+                new LinePath(start.toVector3f(), end.toVector3f()),
+                List.<PathModifier>of(
+                        new JaggedModifier(jaggedness, 4, randomSeed()),
+                        new TaperModifier(FULL_THICKNESS, thickness)
+                ),
+                2.5f,
+                List.of()
+        );
+    }
+
+    private static void spawn(ServerLevel level, List<ArcPath> paths, int lifetime, Vec3 origin) {
+        if (paths.isEmpty()) return;
+        var effect = new ArcEffect(level, lifetime);
+        effect.setPos(origin);
+        effect.setArcPaths(paths);
+        level.addFreshEntity(effect);
+    }
+
+    private static long randomSeed() {
+        return RandomSource.create().nextLong();
+    }
+}

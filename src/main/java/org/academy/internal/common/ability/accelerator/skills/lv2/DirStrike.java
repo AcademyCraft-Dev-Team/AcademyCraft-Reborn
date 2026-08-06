@@ -6,7 +6,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -16,6 +18,11 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -47,18 +54,24 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DirStrike extends Skill {
     public static final int EFFECT_RADIUS = 12;
     public static final int ATTACK_RADIUS = 12;
-    private static final int EFFECT_RADIUS_SQUARED = EFFECT_RADIUS * EFFECT_RADIUS;
+    private static final int AIRBORNE_RADIUS_BONUS = 6;
     private static final int EFFECT_MIN_Y_OFFSET = -3;
     private static final int EFFECT_MAX_Y_OFFSET = 5;
     private static final int MAX_EFFECT_BLOCKS = 96;
     private static final int EFFECT_BASE_DURATION = 18;
     private static final int EFFECT_PEAK_HOLD_TICKS = 20;
+    private static final int AIRBORNE_PEAK_HOLD_TICKS = 60;
     private static final float EFFECT_BASE_PEAK = 0.38f;
     private static final float BASE_DAMAGE = 12.0f;
+    private static final double DIVE_SPEED = 2.5;
+    private static final double GROUND_SECTOR_COS = Math.cos(Math.toRadians(45.0));
 
     public DirStrike() {
         super(Builder
@@ -87,11 +100,16 @@ public class DirStrike extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME,
-                Client.CONFIG.getKeyBinding(Client.KEY_NAME,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_S,
-                                InputConstants.PRESS, InputConstants.MOD_ALT)),
-                ctx -> Client.onAction());
+        InputSystem.addKeyBinding(Client.KEY_NAME_PRESS,
+                Client.CONFIG.getKeyBinding(Client.KEY_NAME_PRESS,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                                InputConstants.PRESS, 0)),
+                ctx -> Client.onAction(true));
+        InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE,
+                Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                                InputConstants.RELEASE, 0)),
+                ctx -> Client.onAction(false));
     }
 
     @Override
@@ -110,14 +128,15 @@ public class DirStrike extends Skill {
                         110
                 )
         );
-        public static final String KEY_NAME = SkillNames.DIR_STRIKE + "_use";
+        public static final String KEY_NAME_PRESS = SkillNames.DIR_STRIKE + "_press";
+        public static final String KEY_NAME_RELEASE = SkillNames.DIR_STRIKE + "_release";
         public static Config CONFIG = new Config();
 
         private Client() {
         }
 
-        public static void onAction() {
-            MisakaNetworkClient.send(ActionPacket.INSTANCE);
+        public static void onAction(boolean pressed) {
+            MisakaNetworkClient.send(new ActionPacket(pressed));
         }
 
         public static class Config extends KeyBindingConfig {
@@ -141,32 +160,82 @@ public class DirStrike extends Skill {
     }
 
     public static final class Server {
+        private static final Set<UUID> DIVING_PLAYERS = ConcurrentHashMap.newKeySet();
+
         private Server() {
         }
 
         @SubscribePacket
         public static void onAction(ActionPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            if (!packet.pressed()) {
+                if (DIVING_PLAYERS.remove(player.getUUID())) {
+                    player.setDeltaMovement(Vec3.ZERO);
+                    player.hurtMarked = true;
+                    player.fallDistance = 0.0;
+                }
+                return;
+            }
+            if (!Skills.DIR_STRIKE.get().isEnabled(player)) return;
+            if (!player.onGround()) {
+                DIVING_PLAYERS.add(player.getUUID());
+                dive(player);
+                return;
+            }
+            executeStrike(player, false);
+        }
+
+        private static void tick(ServerPlayer player) {
+            if (!DIVING_PLAYERS.contains(player.getUUID())) return;
+            if (!player.isAlive() || player.hasDisconnected()
+                    || !Skills.DIR_STRIKE.get().isEnabled(player)) {
+                DIVING_PLAYERS.remove(player.getUUID());
+                return;
+            }
+            if (player.onGround() || player.verticalCollision) {
+                DIVING_PLAYERS.remove(player.getUUID());
+                player.setDeltaMovement(Vec3.ZERO);
+                player.hurtMarked = true;
+                player.fallDistance = 0.0;
+                executeStrike(player, true);
+                return;
+            }
+            dive(player);
+        }
+
+        private static void dive(ServerPlayer player) {
+            player.setDeltaMovement(0.0, -DIVE_SPEED, 0.0);
+            player.hurtMarked = true;
+            player.fallDistance = 0.0;
+        }
+
+        private static void executeStrike(ServerPlayer player, boolean airborne) {
             var skill = Skills.DIR_STRIKE.get();
             skill.executeActive(player, (ctx, actualCost) -> {
                 var level = player.level();
                 var playerPos = player.blockPosition();
+                var radius = airborne ? ATTACK_RADIUS + AIRBORNE_RADIUS_BONUS : ATTACK_RADIUS;
+                var look = horizontalLook(player);
                 level.playSound(null, playerPos, SoundEvents.DIR_STRIKE.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
-                spawnGroundFx(level, player.position(), playerPos);
+                spawnGroundFx(level, player.position(), playerPos, radius, airborne, look);
 
                 var minY = playerPos.getY() + EFFECT_MIN_Y_OFFSET;
                 var maxY = playerPos.getY() + EFFECT_MAX_Y_OFFSET + 1;
                 var center = player.position();
                 var area = new AABB(
-                        center.x - ATTACK_RADIUS, minY, center.z - ATTACK_RADIUS,
-                        center.x + ATTACK_RADIUS, maxY, center.z + ATTACK_RADIUS
+                        center.x - radius, minY, center.z - radius,
+                        center.x + radius, maxY, center.z + radius
                 );
                 var damage = getDamage(
                         ctx.system().getPlayerAbilityPowerMultiplier(player.getUUID()),
                         ctx.system().getPlayerDamageMultiplier(player.getUUID())
                 );
-                var source = SkillDamageSource.of(player, skill);
+                var source = SkillDamageSource.of(
+                        player,
+                        skill,
+                        org.academy.internal.common.world.damagesource.DamageTypes.VEC
+                );
                 var targets = level.getEntitiesOfClass(LivingEntity.class, area,
                         target -> target != player
                                 && target.isAlive()
@@ -174,19 +243,36 @@ public class DirStrike extends Skill {
                                 && !player.isAlliedTo(target)
                                 && target.getY() >= minY
                                 && target.getY() <= maxY
-                                && isInsideAttackRadius(target.getX() - center.x, target.getZ() - center.z));
+                                && isInsideStrikeArea(
+                                target.getX() - center.x,
+                                target.getZ() - center.z,
+                                radius,
+                                airborne,
+                                look
+                        ));
                 for (var target : targets) {
                     target.hurtServer(level, source, damage);
+                    var velocity = target.getDeltaMovement();
+                    target.setDeltaMovement(velocity.x, 0.5, velocity.z);
+                    target.hurtMarked = true;
                 }
             });
         }
 
-        private static void spawnGroundFx(ServerLevel level, Vec3 playerCenter, BlockPos playerPos) {
+        private static void spawnGroundFx(ServerLevel level, Vec3 playerCenter, BlockPos playerPos,
+                                          int radius, boolean airborne, Vec3 look) {
             var candidates = new ArrayList<BlockPos>();
-            for (var xOffset = -EFFECT_RADIUS; xOffset <= EFFECT_RADIUS; xOffset++) {
-                for (var zOffset = -EFFECT_RADIUS; zOffset <= EFFECT_RADIUS; zOffset++) {
+            for (var xOffset = -radius; xOffset <= radius; xOffset++) {
+                for (var zOffset = -radius; zOffset <= radius; zOffset++) {
                     var distanceSquared = xOffset * xOffset + zOffset * zOffset;
-                    if (distanceSquared > EFFECT_RADIUS_SQUARED) continue;
+                    if (distanceSquared > radius * radius) continue;
+                    if (!airborne && !isInsideStrikeArea(
+                            xOffset + 0.5,
+                            zOffset + 0.5,
+                            radius,
+                            false,
+                            look
+                    )) continue;
                     if (((xOffset + zOffset) & 1) != 0 && level.getRandom().nextFloat() < 0.45f) continue;
                     var surface = findSurfaceBlock(level, playerPos, xOffset, zOffset);
                     if (surface != null) candidates.add(surface);
@@ -194,7 +280,8 @@ public class DirStrike extends Skill {
             }
 
             candidates.sort(Comparator.comparingDouble(pos -> pos.distToCenterSqr(playerCenter)));
-            var limit = Math.min(MAX_EFFECT_BLOCKS, candidates.size());
+            var maxEffectBlocks = airborne ? MAX_EFFECT_BLOCKS * 2 : MAX_EFFECT_BLOCKS;
+            var limit = Math.min(maxEffectBlocks, candidates.size());
             for (var index = 0; index < limit; index++) {
                 var pos = candidates.get(index);
                 var blockState = level.getBlockState(pos);
@@ -209,17 +296,37 @@ public class DirStrike extends Skill {
                 var duration = EFFECT_BASE_DURATION + level.getRandom().nextInt(3);
                 var peak = EFFECT_BASE_PEAK
                         + level.getRandom().nextFloat() * 0.2f
-                        + Math.max(0.0f, 1.0f - distance / EFFECT_RADIUS) * 0.08f;
+                        + Math.max(0.0f, 1.0f - distance / radius) * 0.08f
+                        - (airborne ? 0.2f : 0.0f);
 
                 var effect = new DirStrikeBlockFx(
                         EntityTypes.DIR_STRIKE_BLOCK_FX.get(), level,
-                        pos, blockState, delay, duration, EFFECT_PEAK_HOLD_TICKS, peak);
+                        pos, blockState, delay, duration,
+                        airborne ? AIRBORNE_PEAK_HOLD_TICKS : EFFECT_PEAK_HOLD_TICKS,
+                        peak);
                 effect.setYRot((float) Math.toDegrees(Math.atan2(outward.x, outward.z)));
                 level.addFreshEntity(effect);
                 level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, blockState),
                         pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5,
                         4, 0.18, 0.08, 0.18, 0.02);
             }
+        }
+
+        private static boolean isInsideStrikeArea(double xOffset, double zOffset, double radius,
+                                                  boolean airborne, Vec3 look) {
+            var distanceSquared = xOffset * xOffset + zOffset * zOffset;
+            if (distanceSquared > radius * radius) return false;
+            if (airborne || distanceSquared <= 1.0e-8) return true;
+            var inverseDistance = 1.0 / Math.sqrt(distanceSquared);
+            return (xOffset * look.x + zOffset * look.z) * inverseDistance >= GROUND_SECTOR_COS;
+        }
+
+        private static Vec3 horizontalLook(ServerPlayer player) {
+            var look = player.getLookAngle();
+            var horizontal = new Vec3(look.x, 0.0, look.z);
+            return horizontal.lengthSqr() <= 1.0e-8
+                    ? new Vec3(0.0, 0.0, 1.0)
+                    : horizontal.normalize();
         }
 
         private static BlockPos findSurfaceBlock(Level level, BlockPos playerPos, int xOffset, int zOffset) {
@@ -244,12 +351,34 @@ public class DirStrike extends Skill {
         }
     }
 
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.tick(player);
+        }
+
+        @SubscribeEvent
+        public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+            Server.DIVING_PLAYERS.remove(event.getEntity().getUUID());
+        }
+    }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class ActionPacket extends Packet<ServerGamePacketListenerImpl, ActionPacket> {
-        public static final ActionPacket INSTANCE = new ActionPacket();
-        public static final StreamCodec<ByteBuf, ActionPacket> CODEC = StreamCodec.unit(INSTANCE);
+        public static final StreamCodec<ByteBuf, ActionPacket> CODEC = ByteBufCodecs.BOOL
+                .map(ActionPacket::new, ActionPacket::pressed);
+        private final boolean pressed;
 
-        private ActionPacket() {
+        public ActionPacket(boolean pressed) {
+            this.pressed = pressed;
+        }
+
+        public boolean pressed() {
+            return pressed;
         }
 
         @Override
