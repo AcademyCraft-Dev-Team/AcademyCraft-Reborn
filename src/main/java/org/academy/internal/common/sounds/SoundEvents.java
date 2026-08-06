@@ -61,6 +61,12 @@ public class SoundEvents {
             () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("airflow_impact")));
     public static final DeferredHolder<SoundEvent, SoundEvent> AIRFLOW_DOMAIN = SOUND_EVENTS.register("airflow_domain",
             () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("airflow_domain")));
+    public static final DeferredHolder<SoundEvent, SoundEvent> MENTAL_INTRUSION = SOUND_EVENTS.register("mental_intrusion",
+            () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("mental_intrusion")));
+    public static final DeferredHolder<SoundEvent, SoundEvent> SENSORY_DISTORTION = SOUND_EVENTS.register("sensory_distortion",
+            () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("sensory_distortion")));
+    public static final DeferredHolder<SoundEvent, SoundEvent> PRECISION_OPERATION = SOUND_EVENTS.register("precision_operation",
+            () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("precision_operation")));
 
     private SoundEvents() {
     }

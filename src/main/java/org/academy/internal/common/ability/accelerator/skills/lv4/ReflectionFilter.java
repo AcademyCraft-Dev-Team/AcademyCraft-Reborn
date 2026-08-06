@@ -6,7 +6,6 @@ import io.netty.handler.codec.DecoderException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -24,6 +23,12 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.screen.UiScreen;
+import org.academy.api.client.gui.widget.EmptyWidget;
+import org.academy.api.client.gui.widget.FrameLayoutWidget;
+import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
@@ -37,6 +42,8 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.client.gui.SerializedUiLayout;
+import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -346,7 +353,7 @@ public final class ReflectionFilter extends Skill {
         }
     }
 
-    private static final class ReflectionFilterScreen extends Screen {
+    private static final class ReflectionFilterScreen extends UiScreen implements SerializedUiDebugHost {
         private static final int PANEL_BG = 0xE60E1216;
         private static final int BORDER = 0xFF2E9CCB;
         private static final int ACCENT = 0xFF34BFE8;
@@ -394,6 +401,12 @@ public final class ReflectionFilter extends Skill {
         private int blackScroll;
         private String selectedEffect;
         private String lastSearch = "";
+        private Widget panelLayout;
+        private Widget leftColumnLayout;
+        private Widget middleColumnLayout;
+        private Widget rightColumnLayout;
+        private FrameLayoutWidget serializedLayout;
+        private String serializedLayoutId;
 
         private ReflectionFilterScreen(Data data) {
             super(Component.translatable("screen.academy.reflection_filter.title"));
@@ -402,7 +415,21 @@ public final class ReflectionFilter extends Skill {
         }
 
         @Override
-        protected void init() {
+        protected void onInit() {
+            var compact = width < PREFERRED_W + 24 || height < PREFERRED_H + 24;
+            serializedLayoutId = "reflection_filter_" + (compact ? "compact" : "wide");
+            var layout = SerializedUiLayout.load(
+                    AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
+                    List.of("panel", "left_column", "middle_column", "right_column"),
+                    () -> fallbackLayout(compact)
+            );
+            serializedLayout = layout;
+            getRoot().addChild("serialized_layout", layout);
+            panelLayout = SerializedUiLayout.require(layout, "panel");
+            leftColumnLayout = SerializedUiLayout.require(layout, "left_column");
+            middleColumnLayout = SerializedUiLayout.require(layout, "middle_column");
+            rightColumnLayout = SerializedUiLayout.require(layout, "right_column");
+
             panelW = Math.min(PREFERRED_W, Math.max(MIN_W, width - 24));
             panelW = Math.min(panelW, width - 12);
             panelH = Math.min(PREFERRED_H, Math.max(MIN_H, height - 24));
@@ -431,6 +458,67 @@ public final class ReflectionFilter extends Skill {
             sideListY = panelY + 108;
             sideListBottom = panelY + panelH - 16;
             rebuildFilteredEffects();
+        }
+
+        private FrameLayoutWidget fallbackLayout(boolean compact) {
+            var layout = new FrameLayoutWidget();
+            layout.setLayoutParams(new FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT));
+            var panel = new FrameLayoutWidget();
+            var fallbackWidth = compact ? MIN_W : PREFERRED_W;
+            var fallbackHeight = compact ? MIN_H : PREFERRED_H;
+            panel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                    .size(fallbackWidth, fallbackHeight).gravity(Gravity.CENTER));
+            var columnsW = fallbackWidth - INNER_PAD * 2 - MIDDLE_W - COLUMN_GAP * 2;
+            var leftWidth = Math.min(170, Math.max(120, (int) (columnsW * 0.4f)));
+            var rightWidth = Math.max(1, columnsW - leftWidth);
+            addLayoutSlot(panel, "left_column", INNER_PAD, 30, leftWidth, fallbackHeight - 30);
+            addLayoutSlot(panel, "middle_column", INNER_PAD + leftWidth + COLUMN_GAP,
+                    30, MIDDLE_W, fallbackHeight - 30);
+            addLayoutSlot(panel, "right_column",
+                    INNER_PAD + leftWidth + MIDDLE_W + COLUMN_GAP * 2,
+                    30, rightWidth, fallbackHeight - 30);
+            layout.addChild("panel", panel);
+            return layout;
+        }
+
+        private static void addLayoutSlot(
+                FrameLayoutWidget panel,
+                String name,
+                int x,
+                int y,
+                int width,
+                int height
+        ) {
+            var slot = new EmptyWidget();
+            slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
+            panel.addChild(name, slot);
+        }
+
+        private void syncSerializedLayout() {
+            if (panelLayout == null || panelLayout.getWidth() <= 0.0f) return;
+            var panel = rect(panelLayout);
+            var left = rect(leftColumnLayout);
+            var middle = rect(middleColumnLayout);
+            var right = rect(rightColumnLayout);
+            panelX = panel.x;
+            panelY = panel.y;
+            panelW = panel.width;
+            panelH = panel.height;
+            leftX = left.x;
+            leftW = left.width;
+            midX = middle.x;
+            rightX = right.x;
+            rightW = right.width;
+            listBottom = panelY + panelH - 16;
+            searchBox.setX(leftX + 5);
+            searchBox.setY(panelY + 34);
+            searchBox.setWidth(Math.max(1, leftW - 10));
+            var sideListW = Math.max(1, (rightW - 8) / 2);
+            whiteX = rightX;
+            blackX = rightX + sideListW + 8;
+            listY = panelY + 66;
+            sideListY = panelY + 108;
+            sideListBottom = panelY + panelH - 16;
         }
 
         private void rebuildAllEffects() {
@@ -466,16 +554,16 @@ public final class ReflectionFilter extends Skill {
         @Override
         public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             super.extractBackground(graphics, mouseX, mouseY, partialTick);
-            graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL_BG);
-            border(graphics, panelX, panelY, panelW, panelH, BORDER);
-            graphics.fill(panelX + 10, panelY + 24, panelX + panelW - 10, panelY + 25, ACCENT);
-            fillSection(graphics, leftX, panelY + 30, leftW, panelH - 44);
-            fillSection(graphics, rightX - 5, panelY + 30, rightW + 5, panelH - 44);
         }
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+            syncSerializedLayout();
+            border(graphics, panelX, panelY, panelW, panelH, BORDER);
+            fillSection(graphics, leftX, panelY + 30, leftW, panelH - 44);
+            fillSection(graphics, rightX - 5, panelY + 30, rightW + 5, panelH - 44);
+            searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
             var query = searchBox == null ? "" : searchBox.getValue().strip().toLowerCase(Locale.ROOT);
             if (!query.equals(lastSearch)) rebuildFilteredEffects();
             graphics.centeredText(font, title, panelX + panelW / 2, panelY + 8, TEXT);
@@ -577,6 +665,7 @@ public final class ReflectionFilter extends Skill {
 
         @Override
         public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+            syncSerializedLayout();
             if (event.button() == 0) {
                 var mouseX = event.x();
                 var mouseY = event.y();
@@ -764,6 +853,25 @@ public final class ReflectionFilter extends Skill {
             return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
         }
 
+        @Override
+        public String debugLayoutId() {
+            return serializedLayoutId;
+        }
+
+        @Override
+        public FrameLayoutWidget debugLayoutRoot() {
+            return serializedLayout;
+        }
+
+        private static Rect rect(Widget widget) {
+            return new Rect(
+                    Math.round(widget.getAbsoluteX()),
+                    Math.round(widget.getAbsoluteY()),
+                    Math.round(widget.getWidth()),
+                    Math.round(widget.getHeight())
+            );
+        }
+
         private static void border(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
             graphics.fill(x, y, x + width, y + 1, color);
             graphics.fill(x, y + height - 1, x + width, y + height, color);
@@ -772,6 +880,9 @@ public final class ReflectionFilter extends Skill {
         }
 
         private record EffectEntry(String id, String name, MobEffectCategory category) {
+        }
+
+        private record Rect(int x, int y, int width, int height) {
         }
     }
 

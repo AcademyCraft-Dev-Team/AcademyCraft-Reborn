@@ -19,6 +19,8 @@
     "common.MixinProjectile",
     "common.MixinServerEntity",
     "common.MixinServerPlayer",
+    "common.MixinSensing",
+    "common.MixinPlayerMentalPerception",
     "common.MixinSignalGetter",
     "common.MixinVibrationSystemListener",
     "common.MixinWarden",
@@ -29,6 +31,7 @@
   "client": [
     "client.MixinAvatarRenderer",
     "client.MixinGameRenderer",
+    "client.MixinEntityRenderDispatcher",
     "client.MixinHud",
     "client.MixinClientEntity",
     "client.MixinClientLivingEntity",

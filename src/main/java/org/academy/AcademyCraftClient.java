@@ -29,6 +29,7 @@ import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.gui.editor.UiLayoutEditor;
@@ -54,6 +55,10 @@ import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.HudLayoutConfig;
+import org.academy.internal.client.hud.HudDebugScreen;
+import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
+import org.academy.internal.client.gui.debug.UiDebugLayoutRegistry;
+import org.academy.internal.client.gui.debug.UiDebugSession;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.particle.VectorBlastParticle;
@@ -79,6 +84,10 @@ import static org.academy.AcademyCraft.academy;
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 public final class AcademyCraftClient {
     private static boolean renderInitialized = false;
+
+    public static boolean isUiDebugEnvironment() {
+        return Dev.HAS_IM_GUI && Boolean.parseBoolean(System.getenv("IS_DEV"));
+    }
 
     public static void initMain() {
         HudLayoutConfig.init();
@@ -129,16 +138,70 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
+        if (!isUiDebugEnvironment()) return;
         event.getDispatcher().register(
                 Commands.literal("academy")
                         .then(
+                                Commands.literal("debug")
+                                        .then(
+                                                Commands.literal("ui")
+                                                        .executes(ctx -> {
+                                                            UiDebugBrowserScreen.open();
+                                                            return 1;
+                                                        })
+                                                        .then(
+                                                                Commands.argument(
+                                                                                "layout",
+                                                                                com.mojang.brigadier.arguments.StringArgumentType.word()
+                                                                        )
+                                                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                                                                UiDebugLayoutRegistry.gui().stream()
+                                                                                        .map(definition -> definition.getId())
+                                                                                        .toList(),
+                                                                                builder
+                                                                        ))
+                                                                        .executes(ctx -> {
+                                                                            var layout = com.mojang.brigadier.arguments.StringArgumentType
+                                                                                    .getString(ctx, "layout");
+                                                                            if (UiDebugLayoutRegistry.gui().stream()
+                                                                                    .noneMatch(definition -> definition.getId().equals(layout))) {
+                                                                                return 0;
+                                                                            }
+                                                                            org.academy.api.client.gui.editor.UiLayoutEditorScreen
+                                                                                    .openDebug(layout);
+                                                                            return 1;
+                                                                        })
+                                                        )
+                                        )
+                                        .then(
+                                                Commands.literal("hud")
+                                                        .executes(ctx -> {
+                                                            HudDebugScreen.open();
+                                                            return 1;
+                                                        })
+                                        )
+                                        .then(
+                                                Commands.literal("save")
+                                                        .executes(ctx -> {
+                                                            UiDebugBrowserScreen.notifyPublish(UiDebugSession.publish());
+                                                            return 1;
+                                                        })
+                                        )
+                        )
+                        .then(
                                 Commands.literal("uieditor")
                                         .executes(ctx -> {
-                                            UiLayoutEditor.INSTANCE.open();
+                                            UiDebugBrowserScreen.open();
                                             return 1;
                                         })
                                         .then(
                                                 Commands.argument("file", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                                                UiDebugLayoutRegistry.all().stream()
+                                                                        .map(definition -> definition.getId())
+                                                                        .toList(),
+                                                                builder
+                                                        ))
                                                         .executes(ctx -> {
                                                             String file = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "file");
                                                             UiLayoutEditor.INSTANCE.open(file);
@@ -168,6 +231,7 @@ public final class AcademyCraftClient {
     @SubscribeEvent
     public static void onClientStopped(ClientStoppedEvent event) {
         MentaloutRosterClientState.clearLocal();
+        if (isUiDebugEnvironment()) UiDebugSession.close();
         ImGuiUtilApi.INSTANCE.close();
         MsdfFontService.INSTANCE.close();
         MsdfAtlasManager.closeAll();

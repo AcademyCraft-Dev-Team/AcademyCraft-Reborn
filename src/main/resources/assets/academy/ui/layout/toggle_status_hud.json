@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "root": {
+    "type": "frame_layout",
+    "name": "layout_root",
+    "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" },
+    "children": [
+      {
+        "type": "linear_layout",
+        "name": "toggle_statuses",
+        "layout": { "width_mode": "FIXED", "height_mode": "FIXED", "width": 140, "height": 75, "gravity": 51 },
+        "common": { "origin_x": 0, "origin_y": 0 },
+        "props": { "orientation": "VERTICAL", "spacing": 2 }
+      }
+    ]
+  }
+}

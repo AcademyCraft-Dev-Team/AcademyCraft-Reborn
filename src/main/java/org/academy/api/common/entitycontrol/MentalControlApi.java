@@ -7,6 +7,7 @@ import net.minecraft.world.entity.Mob;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public final class MentalControlApi {
     private MentalControlApi() {
@@ -71,5 +72,18 @@ public final class MentalControlApi {
 
     public static boolean isBossCost(LivingEntity subject) {
         return MentalControlRuntime.isBossCost(subject);
+    }
+
+    public static boolean hasActiveControl(LivingEntity subject) {
+        return MentalControlRuntime.hasActiveControl(subject);
+    }
+
+    public static void releaseByControllerSourceAndSubject(
+            net.minecraft.server.MinecraftServer server,
+            UUID controllerId,
+            Identifier source,
+            UUID subjectId
+    ) {
+        MentalControlRuntime.releaseByControllerSourceAndSubject(server, controllerId, source, subjectId);
     }
 }

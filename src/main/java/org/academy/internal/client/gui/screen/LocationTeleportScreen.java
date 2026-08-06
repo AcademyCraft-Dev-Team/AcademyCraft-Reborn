@@ -2,9 +2,17 @@ package org.academy.internal.client.gui.screen;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.academy.AcademyCraft;
+import org.academy.api.client.gui.layout.Gravity;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.screen.UiScreen;
+import org.academy.api.client.gui.widget.EmptyWidget;
+import org.academy.api.client.gui.widget.FrameLayoutWidget;
+import org.academy.api.client.gui.widget.Widget;
+import org.academy.internal.client.gui.SerializedUiLayout;
+import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.skilldata.LocationTeleportData.Mark;
 import org.misaka.MisakaNetworkClient;
@@ -12,7 +20,7 @@ import org.misaka.MisakaNetworkClient;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class LocationTeleportScreen extends Screen {
+public final class LocationTeleportScreen extends UiScreen implements SerializedUiDebugHost {
     private static final int PANEL_BG = 0xE60E1216;
     private static final int BORDER = 0xFF2E9CCB;
     private static final int TEXT = 0xFFC1CFD5;
@@ -36,13 +44,38 @@ public final class LocationTeleportScreen extends Screen {
     private int listBottom;
     private int selectedIndex = -1;
     private int scroll;
+    private Widget panelLayout;
+    private Widget nameInputLayout;
+    private Widget coordinatesLayout;
+    private Widget markCurrentLayout;
+    private Widget addMarkLayout;
+    private Widget marksLayout;
+    private Widget refreshLayout;
+    private Widget doneLayout;
+    private FrameLayoutWidget serializedLayout;
 
     public LocationTeleportScreen() {
         super(Component.translatable("skill.academy.location_teleport"));
     }
 
     @Override
-    protected void init() {
+    protected void onInit() {
+        var layout = SerializedUiLayout.load(
+                AcademyCraft.academy("ui/layout/location_teleport.json"),
+                List.of("panel", "name_input", "coordinates", "mark_current", "add_mark", "marks", "refresh", "done"),
+                this::fallbackLayout
+        );
+        serializedLayout = layout;
+        getRoot().addChild("serialized_layout", layout);
+        panelLayout = SerializedUiLayout.require(layout, "panel");
+        nameInputLayout = SerializedUiLayout.require(layout, "name_input");
+        coordinatesLayout = SerializedUiLayout.require(layout, "coordinates");
+        markCurrentLayout = SerializedUiLayout.require(layout, "mark_current");
+        addMarkLayout = SerializedUiLayout.require(layout, "add_mark");
+        marksLayout = SerializedUiLayout.require(layout, "marks");
+        refreshLayout = SerializedUiLayout.require(layout, "refresh");
+        doneLayout = SerializedUiLayout.require(layout, "done");
+
         panelX = (width - PANEL_W) / 2;
         panelY = (height - PANEL_H) / 2;
         var left = panelX + 12;
@@ -61,6 +94,54 @@ public final class LocationTeleportScreen extends Screen {
         MisakaNetworkClient.send(LocationTeleport.RequestMarksPacket.INSTANCE);
     }
 
+    private FrameLayoutWidget fallbackLayout() {
+        var layout = new FrameLayoutWidget();
+        layout.setLayoutParams(new FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT));
+        var panel = new FrameLayoutWidget();
+        panel.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(PANEL_W, PANEL_H).gravity(Gravity.CENTER));
+        addSlot(panel, "name_input", 12, 25, 276, 16);
+        addSlot(panel, "coordinates", 12, 47, 276, 16);
+        addSlot(panel, "mark_current", 12, 69, 132, 16);
+        addSlot(panel, "add_mark", 156, 69, 132, 16);
+        addSlot(panel, "marks", 12, 91, 276, 93);
+        addSlot(panel, "refresh", 12, 190, 132, 16);
+        addSlot(panel, "done", 156, 190, 132, 16);
+        layout.addChild("panel", panel);
+        return layout;
+    }
+
+    private static void addSlot(FrameLayoutWidget panel, String name, int x, int y, int width, int height) {
+        var slot = new EmptyWidget();
+        slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
+        panel.addChild(name, slot);
+    }
+
+    private void syncSerializedLayout() {
+        if (panelLayout == null || panelLayout.getWidth() <= 0.0f) return;
+        var panel = rect(panelLayout);
+        panelX = panel.x;
+        panelY = panel.y;
+        var name = rect(nameInputLayout);
+        nameBox.setX(name.x);
+        nameBox.setY(name.y);
+        nameBox.setWidth(name.width);
+        var coordinates = rect(coordinatesLayout);
+        var coordWidth = (coordinates.width - 8) / 3;
+        place(xBox, coordinates.x, coordinates.y, coordWidth);
+        place(yBox, coordinates.x + coordWidth + 4, coordinates.y, coordWidth);
+        place(zBox, coordinates.x + (coordWidth + 4) * 2, coordinates.y,
+                coordinates.width - (coordWidth + 4) * 2);
+        var marks = rect(marksLayout);
+        listTop = marks.y;
+        listBottom = marks.y + marks.height;
+    }
+
+    private static void place(EditBox box, int x, int y, int width) {
+        box.setX(x);
+        box.setY(y);
+        box.setWidth(width);
+    }
+
     private EditBox coordinateBox(int x, int y, int width, String hint) {
         var box = new EditBox(font, x, y, width, 16, Component.empty());
         box.setHint(Component.literal(hint));
@@ -72,22 +153,25 @@ public final class LocationTeleportScreen extends Screen {
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.fill(panelX, panelY, panelX + PANEL_W, panelY + PANEL_H, PANEL_BG);
-        border(graphics, panelX, panelY, PANEL_W, PANEL_H, BORDER);
-        graphics.fill(panelX + 8, panelY + 18, panelX + PANEL_W - 8, panelY + 19, BORDER);
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        graphics.centeredText(font, title, panelX + PANEL_W / 2, panelY + 6, TEXT);
-        button(graphics, panelX + 12, panelY + 69, 132, 16,
+        syncSerializedLayout();
+        nameBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        xBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        yBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        zBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        var panel = rect(panelLayout);
+        graphics.centeredText(font, title, panel.x + panel.width / 2, panel.y + 6, TEXT);
+        button(graphics, rect(markCurrentLayout),
                 Component.translatable("academy.location_teleport.mark_current"), mouseX, mouseY);
-        button(graphics, panelX + 156, panelY + 69, 132, 16,
+        button(graphics, rect(addMarkLayout),
                 Component.translatable("academy.location_teleport.add_mark"), mouseX, mouseY);
-        button(graphics, panelX + 12, panelY + PANEL_H - 22, 132, 16,
+        button(graphics, rect(refreshLayout),
                 Component.translatable("academy.location_teleport.refresh"), mouseX, mouseY);
-        button(graphics, panelX + 156, panelY + PANEL_H - 22, 132, 16,
+        button(graphics, rect(doneLayout),
                 Component.translatable("gui.done"), mouseX, mouseY);
         renderMarks(graphics, mouseX, mouseY);
     }
@@ -123,8 +207,11 @@ public final class LocationTeleportScreen extends Screen {
         }
     }
 
-    private void button(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
-                        Component text, int mouseX, int mouseY) {
+    private void button(GuiGraphicsExtractor graphics, Rect bounds, Component text, int mouseX, int mouseY) {
+        var x = bounds.x;
+        var y = bounds.y;
+        var width = bounds.width;
+        var height = bounds.height;
         var hover = inside(mouseX, mouseY, x, y, width, height);
         graphics.fill(x, y, x + width, y + height, hover ? 0x40C1CFD5 : 0x1AFFFFFF);
         border(graphics, x, y, width, height, hover ? BORDER : 0x552E9CCB);
@@ -135,21 +222,22 @@ public final class LocationTeleportScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         var mouseX = event.x();
         var mouseY = event.y();
+        syncSerializedLayout();
         if (event.button() == 0) {
-            if (inside(mouseX, mouseY, panelX + 12, panelY + 69, 132, 16)) {
+            if (inside(mouseX, mouseY, rect(markCurrentLayout))) {
                 MisakaNetworkClient.send(new LocationTeleport.SaveMarkPacket(true, nameBox.getValue(), 0, 0, 0));
                 return true;
             }
-            if (inside(mouseX, mouseY, panelX + 156, panelY + 69, 132, 16)) {
+            if (inside(mouseX, mouseY, rect(addMarkLayout))) {
                 MisakaNetworkClient.send(new LocationTeleport.SaveMarkPacket(false, nameBox.getValue(),
                         integer(xBox.getValue()), integer(yBox.getValue()), integer(zBox.getValue())));
                 return true;
             }
-            if (inside(mouseX, mouseY, panelX + 12, panelY + PANEL_H - 22, 132, 16)) {
+            if (inside(mouseX, mouseY, rect(refreshLayout))) {
                 MisakaNetworkClient.send(LocationTeleport.RequestMarksPacket.INSTANCE);
                 return true;
             }
-            if (inside(mouseX, mouseY, panelX + 156, panelY + PANEL_H - 22, 132, 16)) {
+            if (inside(mouseX, mouseY, rect(doneLayout))) {
                 onClose();
                 return true;
             }
@@ -194,6 +282,29 @@ public final class LocationTeleportScreen extends Screen {
         return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
     }
 
+    @Override
+    public String debugLayoutId() {
+        return "location_teleport";
+    }
+
+    @Override
+    public FrameLayoutWidget debugLayoutRoot() {
+        return serializedLayout;
+    }
+
+    private static boolean inside(double mouseX, double mouseY, Rect bounds) {
+        return inside(mouseX, mouseY, bounds.x, bounds.y, bounds.width, bounds.height);
+    }
+
+    private static Rect rect(Widget widget) {
+        return new Rect(
+                Math.round(widget.getAbsoluteX()),
+                Math.round(widget.getAbsoluteY()),
+                Math.round(widget.getWidth()),
+                Math.round(widget.getHeight())
+        );
+    }
+
     private static int integer(String value) {
         try {
             return Integer.parseInt(value.strip());
@@ -207,5 +318,8 @@ public final class LocationTeleportScreen extends Screen {
         graphics.fill(x, y + height - 1, x + width, y + height, color);
         graphics.fill(x, y, x + 1, y + height, color);
         graphics.fill(x + width - 1, y, x + width, y + height, color);
+    }
+
+    private record Rect(int x, int y, int width, int height) {
     }
 }

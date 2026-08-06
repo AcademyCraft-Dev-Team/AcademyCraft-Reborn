@@ -36,7 +36,6 @@ import org.academy.api.client.gui.event.MouseEvent.Companion.createPressEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createReleaseEvent
 import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.event.ScrollEvent
-import org.academy.api.client.gui.imgui.ImGuiUIDebugger
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
@@ -231,7 +230,6 @@ class TerminalHud private constructor() {
 
         try {
             uiContext.upload(terminalTarget, false)
-            ImGuiUIDebugger.render(terminalTarget, context.get())
 
             val terminalView = terminalTarget.getColorTextureView() ?: return
 

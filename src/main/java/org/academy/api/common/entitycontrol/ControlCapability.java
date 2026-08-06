@@ -7,7 +7,9 @@ import java.util.Set;
 public enum ControlCapability {
     FORCE_TARGET(ControlDomain.TARGET),
     FREEZE_AI(ControlDomain.MOVEMENT, ControlDomain.ACTION),
-    RELATION_CONTROL(ControlDomain.RELATION);
+    RELATION_CONTROL(ControlDomain.RELATION),
+    PATH_CONTROL(ControlDomain.MOVEMENT, ControlDomain.ACTION),
+    VIEW_CONTROL(ControlDomain.ACTION);
 
     private final Set<ControlDomain> domains;
 

@@ -15,13 +15,18 @@ import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.internal.client.gui.debug.UiDebugSession
 
 /**
  * UI 布局编辑器 - 预览屏. 只负责把 [WidgetNode] 文档实时渲染为真实控件树 (可视化),
  * 增删改查等编辑操作全部由 ImGui 窗口 ([UiLayoutImGuiEditor]) 完成.
  * 文档状态在 ImGui (渲染线程) 与预览 (主线程) 之间通过 [lock] 同步.
  */
-class UiLayoutEditorScreen(initialDoc: JsonObject? = null) : UiScreen(Component.literal("UI Layout Editor")) {
+class UiLayoutEditorScreen(
+    initialDoc: JsonObject? = null,
+    val debugLayoutId: String? = null,
+    val structureLocked: Boolean = false
+) : UiScreen(Component.literal("UI Layout Editor")) {
     private val lock = Object()
 
     private var docNode: WidgetNode = initialDoc?.let { WidgetNode.fromJson(it.getAsJsonObject("root") ?: it) }
@@ -42,6 +47,9 @@ class UiLayoutEditorScreen(initialDoc: JsonObject? = null) : UiScreen(Component.
 
     @Volatile
     var jsonText: String = ""
+
+    @Volatile
+    var validationError: String? = null
 
     override fun isPauseScreen(): Boolean = false
 
@@ -84,6 +92,7 @@ class UiLayoutEditorScreen(initialDoc: JsonObject? = null) : UiScreen(Component.
             action(docNode)
             selectedNode = if (selectedPath.isEmpty()) null else findNodeByPath(docNode, selectedPath)
             dirty = true
+            updateDebugDocument()
         }
     }
 
@@ -93,6 +102,7 @@ class UiLayoutEditorScreen(initialDoc: JsonObject? = null) : UiScreen(Component.
             selectedPath = emptyList()
             selectedNode = null
             dirty = true
+            updateDebugDocument()
         }
     }
 
@@ -106,6 +116,7 @@ class UiLayoutEditorScreen(initialDoc: JsonObject? = null) : UiScreen(Component.
 
     fun notifyChanged() {
         dirty = true
+        synchronized(lock) { updateDebugDocument() }
     }
 
     fun renameSelectedNode(newName: String) {
@@ -116,18 +127,36 @@ class UiLayoutEditorScreen(initialDoc: JsonObject? = null) : UiScreen(Component.
                 selectedPath = selectedPath.dropLast(1) + newName
             }
             dirty = true
+            updateDebugDocument()
         }
+    }
+
+    fun revertDebugDocument() {
+        val id = debugLayoutId ?: return
+        UiDebugSession.revert(id)
+        setDoc(WidgetNode.fromJson(UiDebugSession.documentJson(id).getAsJsonObject("root")))
+    }
+
+    fun reloadDebugDocument() {
+        val id = debugLayoutId ?: return
+        UiDebugSession.reload(id)
+        setDoc(WidgetNode.fromJson(UiDebugSession.documentJson(id).getAsJsonObject("root")))
+    }
+
+    private fun updateDebugDocument() {
+        val id = debugLayoutId ?: return
+        val result = UiDebugSession.update(id, documentJson())
+        validationError = result.error
     }
 
     // ============ 预览 ============
 
     private fun rebuildPreview() {
-        val node = synchronized(lock) { docNode }
         val path = synchronized(lock) { selectedPath }
         synchronized(lock) {
-            previewHost.clearChildren()
             try {
                 val decoded = WidgetSerializer.decode(documentJson())
+                previewHost.clearChildren()
                 previewRoot = decoded
                 previewHost.addChild("preview", decoded)
                 if (path.isNotEmpty()) {
@@ -226,6 +255,14 @@ class UiLayoutEditorScreen(initialDoc: JsonObject? = null) : UiScreen(Component.
         @JvmStatic
         fun open(json: JsonObject? = null) {
             Minecraft.getInstance().execute { Minecraft.getInstance().gui.setScreen(UiLayoutEditorScreen(json)) }
+        }
+
+        @JvmStatic
+        fun openDebug(layoutId: String) {
+            val json = UiDebugSession.documentJson(layoutId)
+            Minecraft.getInstance().execute {
+                Minecraft.getInstance().gui.setScreen(UiLayoutEditorScreen(json, layoutId, true))
+            }
         }
     }
 }

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "root": {
+    "type": "frame_layout",
+    "name": "layout_root",
+    "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" },
+    "children": [
+      {
+        "type": "frame_layout",
+        "name": "mental_control",
+        "layout": { "width_mode": "FIXED", "height_mode": "FIXED", "width": 168, "height": 184, "gravity": 51 },
+        "common": { "visibility": "GONE", "origin_x": 0, "origin_y": 0 },
+        "children": [
+          {
+            "type": "fill",
+            "name": "background",
+            "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" },
+            "props": { "color": -1730815528 }
+          },
+          {
+            "type": "linear_layout",
+            "name": "content",
+            "layout": {
+              "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT",
+              "padding_left": 5, "padding_top": 4, "padding_right": 5, "padding_bottom": 4
+            },
+            "props": { "orientation": "VERTICAL", "spacing": 1 }
+          }
+        ]
+      }
+    ]
+  }
+}

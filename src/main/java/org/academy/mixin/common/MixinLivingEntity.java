@@ -22,6 +22,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.api.common.entitycontrol.MentalPerceptionApi;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
@@ -35,6 +36,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEntity {
+    @Inject(
+            method = "hasLineOfSight(Lnet/minecraft/world/entity/Entity;)Z",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$filterMentalPerceptionLineOfSight(
+            Entity target,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (target instanceof LivingEntity living
+                && !MentalPerceptionApi.canPerceive((LivingEntity) (Object) this, living)) {
+            cir.setReturnValue(false);
+        }
+    }
+
     @Inject(method = "canAttack", at = @At("HEAD"), cancellable = true)
     private void academy$allowMentalControlTarget(
             LivingEntity target,
