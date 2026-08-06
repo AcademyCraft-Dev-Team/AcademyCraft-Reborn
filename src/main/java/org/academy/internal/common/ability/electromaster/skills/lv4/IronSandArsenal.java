@@ -250,7 +250,10 @@ public class IronSandArsenal extends Skill {
         }
 
         private void syncData() {
-            player.setData(AttachmentTypes.IRON_SAND_DATA.get(), new Data(true, swingTicks));
+            var data = new Data(true, swingTicks);
+            if (data.equals(player.getData(AttachmentTypes.IRON_SAND_DATA.get()))) return;
+            player.setData(AttachmentTypes.IRON_SAND_DATA.get(), data);
+            player.syncData(AttachmentTypes.IRON_SAND_DATA.get());
         }
 
         private void end(boolean disableSkill) {

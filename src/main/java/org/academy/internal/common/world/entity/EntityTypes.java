@@ -42,6 +42,11 @@ public class EntityTypes {
                     "high_speed_electron_beam", HighSpeedElectronBeam::new, MobCategory.MISC,
                     builder -> builder.clientTrackingRange(10).updateInterval(1)
             );
+    public static final DeferredHolder<EntityType<?>, EntityType<MagneticWeaponBlade>> MAGNETIC_WEAPON_BLADE =
+            ENTITY_TYPES.registerEntityType(
+                    "magnetic_weapon_blade", MagneticWeaponBlade::new, MobCategory.MISC,
+                    builder -> builder.sized(0.25f, 0.25f).clientTrackingRange(48).updateInterval(1)
+            );
     public static final DeferredHolder<EntityType<?>, EntityType<LightOrb>> LIGHT_ORB =
             ENTITY_TYPES.registerEntityType(
                     "light_orb", LightOrb::new, MobCategory.MISC

@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.electromaster;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.ArcPath;
@@ -101,25 +103,45 @@ public final class ElectromasterArcEffects {
     public static void spawnSkyStrike(ServerLevel level, Vec3 impact) {
         var paths = new ArrayList<ArcPath>();
         var random = level.getRandom();
-        for (var i = 0; i < 6; i++) {
-            var start = impact.add(
-                    random.nextGaussian() * 2.2,
-                    18.0 + random.nextDouble() * 10.0,
-                    random.nextGaussian() * 2.2
-            );
-            var end = impact.add(random.nextGaussian() * 0.34, 0.15, random.nextGaussian() * 0.34);
-            paths.add(thickArc(start, end, 0.48f, 2.8f));
-        }
         for (var i = 0; i < 12; i++) {
-            var angle = Math.PI * 2.0 * i / 12.0 + random.nextDouble() * 0.18;
+            var start = impact.add(
+                    random.nextGaussian() * 2.8,
+                    18.0 + random.nextDouble() * 10.0,
+                    random.nextGaussian() * 2.8
+            );
+            var end = impact.add(random.nextGaussian() * 0.48, 0.15, random.nextGaussian() * 0.48);
+            paths.add(thickArc(start, end, 0.56f, 5.2f));
+        }
+        for (var i = 0; i < 24; i++) {
+            var angle = Math.PI * 2.0 * i / 24.0 + random.nextDouble() * 0.16;
             var radius = 2.0 + random.nextDouble() * 3.5;
             var end = impact.add(Math.cos(angle) * radius, 0.12, Math.sin(angle) * radius);
-            paths.add(thickArc(impact.add(0, 0.18, 0), end, 0.32f, 1.25f));
+            paths.add(thickArc(impact.add(0, 0.18, 0), end, 0.36f, 2.2f));
         }
         spawn(level, paths, 10, impact);
+        level.playSound(
+                null,
+                impact.x,
+                impact.y,
+                impact.z,
+                SoundEvents.LIGHTNING_BOLT_THUNDER,
+                SoundSource.WEATHER,
+                5.0f,
+                0.8f + random.nextFloat() * 0.2f
+        );
+        level.playSound(
+                null,
+                impact.x,
+                impact.y,
+                impact.z,
+                SoundEvents.LIGHTNING_BOLT_IMPACT,
+                SoundSource.WEATHER,
+                2.0f,
+                0.9f + random.nextFloat() * 0.2f
+        );
     }
 
-    private static ArcPath thickArc(Vec3 start, Vec3 end, float jaggedness, float thickness) {
+    public static ArcPath thickArc(Vec3 start, Vec3 end, float jaggedness, float thickness) {
         return new ArcPath(
                 new LinePath(start.toVector3f(), end.toVector3f()),
                 List.<PathModifier>of(
