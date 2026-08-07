@@ -52,6 +52,9 @@ import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
+import org.academy.internal.client.app.props.PropsApp;
+import org.academy.internal.client.app.props.PropsClientState;
+import org.academy.internal.client.app.props.PropsIcon;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.HudLayoutConfig;
@@ -98,6 +101,9 @@ public final class AcademyCraftClient {
         TerminalHud.Companion.addApp(SettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(SkillSettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(MusicApp.INSTANCE);
+        PropsIcon.INSTANCE.init();
+        TerminalHud.Companion.addApp(PropsApp.INSTANCE);
+        PropsClientState.init();
 
         MusicPlayerBackend.Companion.init();
         Screens.register();

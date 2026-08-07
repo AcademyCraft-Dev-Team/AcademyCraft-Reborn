@@ -562,15 +562,15 @@ class TerminalHud private constructor() {
 
                             apps.addChild("app_rows", appRows)
                             run {
-                                val rowOne = LinearLayoutWidget()
-                                rowOne.orientation = Orientation.HORIZONTAL
-                                rowOne.layoutParams = LinearLayoutWidget.LayoutParams()
-                                    .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                                APPS.chunked(APPS_PER_ROW).forEachIndexed { rowIndex, rowApps ->
+                                    val row = LinearLayoutWidget()
+                                    row.orientation = Orientation.HORIZONTAL
+                                    row.layoutParams = LinearLayoutWidget.LayoutParams()
+                                        .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
-                                appRows.addChild("row_one", rowOne)
-                                run {
-                                    for (app in APPS) {
-                                        rowOne.addChild(app.name(), createApp(app))
+                                    appRows.addChild("app_row_$rowIndex", row)
+                                    rowApps.forEach { app ->
+                                        row.addChild(app.name(), createApp(app))
                                     }
                                 }
                             }
@@ -762,6 +762,7 @@ class TerminalHud private constructor() {
         const val MAIN_WIDTH: Float = 150f
         const val UNFOLDED_MAIN_WIDTH: Float = 384f
         const val MAIN_HEIGHT: Float = 200f
+        const val APPS_PER_ROW: Int = 3
         const val CONFIG_KEY: String = "terminal_hud_config"
         const val KEY_NAME_TOGGLE: String = "terminal_hud_config_toggle"
 

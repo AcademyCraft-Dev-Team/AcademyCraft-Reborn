@@ -12,6 +12,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.enchanting.EnchantedEntityLootEvent;
+import net.neoforged.neoforge.event.enchanting.EnchantedBlockLootEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerXpEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
@@ -21,13 +22,14 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-/** Applies the logarithmic bonuses derived from AcademyCraft's player attributes. */
+/** Applies the linear bonuses derived from effective P.R.O.P.S player attributes. */
 @EventBusSubscriber
 public final class PlayerAttributeRuntime {
     private static final Identifier MUSCLE_DAMAGE = AcademyCraft.academy("attribute_bonus.muscle_damage");
     private static final Identifier ENDURANCE_HEALTH = AcademyCraft.academy("attribute_bonus.endurance_health");
     private static final Identifier DEXTERITY_SPEED = AcademyCraft.academy("attribute_bonus.dexterity_speed");
-    private static final Identifier ENDURANCE_JUMP = AcademyCraft.academy("attribute_bonus.endurance_jump");
+    private static final Identifier LEGACY_ENDURANCE_JUMP = AcademyCraft.academy("attribute_bonus.endurance_jump");
+    private static final Identifier DEXTERITY_JUMP = AcademyCraft.academy("attribute_bonus.dexterity_jump");
     private static final ThreadLocal<Deque<DamageSource>> DAMAGE_CONTEXT =
             ThreadLocal.withInitial(ArrayDeque::new);
     private static final ThreadLocal<Integer> RESISTANCE_BYPASS_DEPTH =
@@ -64,9 +66,15 @@ public final class PlayerAttributeRuntime {
         );
         syncModifier(
                 player.getAttribute(Attributes.JUMP_STRENGTH),
-                ENDURANCE_JUMP,
-                enduranceJumpBonus(endurance),
+                LEGACY_ENDURANCE_JUMP,
+                0.0,
                 AttributeModifier.Operation.ADD_VALUE
+        );
+        syncModifier(
+                player.getAttribute(Attributes.JUMP_STRENGTH),
+                DEXTERITY_JUMP,
+                dexterityJumpStrengthBonus(dexterity),
+                AttributeModifier.Operation.ADD_MULTIPLIED_BASE
         );
 
         if (player.getHealth() > player.getMaxHealth()) player.setHealth(player.getMaxHealth());
@@ -75,9 +83,9 @@ public final class PlayerAttributeRuntime {
     @SubscribeEvent
     public static void onExperienceGain(PlayerXpEvent.XpChange event) {
         if (event.getAmount() <= 0) return;
-        var bonus = perceptionBonus(event.getEntity());
-        if (bonus <= 0) return;
-        var scaled = (long) event.getAmount() * (1L + bonus);
+        var multiplier = perceptionExperienceMultiplier(event.getEntity());
+        if (multiplier <= 1.0) return;
+        var scaled = (long) Math.floor(event.getAmount() * multiplier);
         event.setAmount((int) Math.min(Integer.MAX_VALUE, scaled));
     }
 
@@ -89,33 +97,44 @@ public final class PlayerAttributeRuntime {
         event.setEnchantmentLevel(event.getEnchantmentLevel() + perceptionBonus(player));
     }
 
+    @SubscribeEvent
+    public static void onEnchantedBlockLoot(EnchantedBlockLootEvent event) {
+        if (!event.getEnchantment().is(Enchantments.FORTUNE)) return;
+        var player = BlockLootPlayerContext.current();
+        if (player == null) return;
+        event.setEnchantmentLevel(event.getEnchantmentLevel() + perceptionBonus(player));
+    }
+
     public static int perceptionBonus(Player player) {
         return logarithmicLevel(value(player, PlayerAttributes.PERCEPTION));
     }
 
-    public static int neuralIterationMultiplier(Player player) {
-        var bonus = logarithmicLevel(value(player, PlayerAttributes.NEURAL_ACTIVITY));
-        return 1 + Math.max(0, bonus);
+    public static double perceptionExperienceMultiplier(Player player) {
+        return PropsMath.perceptionExperienceMultiplier(value(player, PlayerAttributes.PERCEPTION));
+    }
+
+    public static double neuralIterationMultiplier(Player player) {
+        return PropsMath.neuralIterationMultiplier(value(player, PlayerAttributes.NEURAL_ACTIVITY));
     }
 
     public static double muscleDamageBonus(double value) {
-        return Math.ceil(Math.log1p(nonNegative(value)));
+        return PropsMath.muscleDamageBonus(value);
     }
 
     public static double enduranceHealthBonus(double value) {
-        return Math.ceil(Math.log1p(nonNegative(value)) * 2.0);
+        return PropsMath.enduranceHealthBonus(value);
     }
 
     public static double dexteritySpeedBonus(double value) {
-        return Math.log1p(nonNegative(value)) * 0.2;
+        return PropsMath.dexteritySpeedBonus(value);
     }
 
-    public static double enduranceJumpBonus(double value) {
-        return Math.log1p(nonNegative(value));
+    public static double dexterityJumpStrengthBonus(double value) {
+        return PropsMath.dexterityJumpStrengthBonus(value);
     }
 
     public static int logarithmicLevel(double value) {
-        return (int) Math.floor(Math.log1p(nonNegative(value)) * 0.5);
+        return PropsMath.perceptionEnchantmentBonus(value);
     }
 
     public static double trueResistance(Player player) {
