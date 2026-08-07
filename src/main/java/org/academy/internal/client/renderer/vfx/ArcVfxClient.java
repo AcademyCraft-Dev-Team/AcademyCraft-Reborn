@@ -9,6 +9,7 @@ import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.render.vfx.VfxPhase;
 import org.academy.api.client.render.vfx.VfxRegistry;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
+import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class ArcVfxClient {
@@ -26,6 +27,8 @@ public final class ArcVfxClient {
         var entity = event.getEntity();
         if (entity instanceof ArcEffect arcEffect) {
             VfxManager.INSTANCE.spawn(new ArcEffectVfx(arcEffect));
+        } else if (entity instanceof MagneticWeaponBlade blade) {
+            VfxManager.INSTANCE.spawn(new MagneticWeaponBladeArcVfx(blade));
         }
     }
 }

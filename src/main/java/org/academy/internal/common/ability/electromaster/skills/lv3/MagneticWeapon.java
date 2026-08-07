@@ -7,6 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -38,8 +39,10 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
+import org.academy.internal.common.world.entity.skill.MagneticWeaponBladeMotion;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -209,6 +212,8 @@ public class MagneticWeapon extends Skill {
         private final MagneticWeaponBlade blade;
         private int weaponSlot;
         private int attackCooldown;
+        private int attackSequence;
+        private PendingAttack pendingAttack;
         private boolean ended;
 
         private Context(ServerPlayer player, int weaponSlot) {
@@ -230,13 +235,6 @@ public class MagneticWeapon extends Skill {
                 end(true);
                 return;
             }
-            weaponSlot = Server.findFirstHotbarSwordSlot(player);
-            if (weaponSlot < 0) {
-                end(true);
-                return;
-            }
-            var stack = player.getInventory().getItem(weaponSlot);
-            blade.setWeapon(stack);
 
             var system = AbilitySystemServer.getSystem(player);
             if (!system.ensurePermanentOccupation(
@@ -245,10 +243,27 @@ public class MagneticWeapon extends Skill {
                 return;
             }
 
-            player.getCooldowns().addCooldown(stack, 3);
             if (attackCooldown > 0) attackCooldown--;
+            if (pendingAttack != null && player.level() instanceof ServerLevel level) {
+                advanceAttack(level, system);
+            }
 
-            if (attackCooldown <= 0 && player.level() instanceof ServerLevel level) {
+            if (pendingAttack == null) {
+                weaponSlot = Server.findFirstHotbarSwordSlot(player);
+                if (weaponSlot < 0) {
+                    end(true);
+                    return;
+                }
+                blade.setWeapon(player.getInventory().getItem(weaponSlot));
+            }
+
+            var stack = player.getInventory().getItem(weaponSlot);
+            if (!stack.isEmpty()) {
+                player.getCooldowns().addCooldown(stack, 3);
+            }
+
+            if (pendingAttack == null && attackCooldown <= 0
+                    && player.level() instanceof ServerLevel level) {
                 var target = level.getEntitiesOfClass(
                                 LivingEntity.class,
                                 player.getBoundingBox().inflate(RADIUS),
@@ -256,7 +271,7 @@ public class MagneticWeapon extends Skill {
                         ).stream()
                         .min(Comparator.comparingDouble(player::distanceToSqr))
                         .orElse(null);
-                if (target != null) attack(level, target, system, stack);
+                if (target != null) startAttack(target, stack);
             }
             syncData();
         }
@@ -270,8 +285,59 @@ public class MagneticWeapon extends Skill {
                     || entity instanceof Mob mob && mob.getTarget() == player;
         }
 
-        private void attack(ServerLevel level, LivingEntity target,
-                            AbilitySystemServer system, ItemStack stack) {
+        private void startAttack(LivingEntity target, ItemStack stack) {
+            attackSequence++;
+            pendingAttack = new PendingAttack(
+                    target.getId(),
+                    weaponSlot,
+                    stack.copyWithCount(1)
+            );
+            attackCooldown = ATTACK_COOLDOWN;
+            blade.startAttack(target.getId(), attackSequence);
+        }
+
+        private void advanceAttack(ServerLevel level, AbilitySystemServer system) {
+            var pending = pendingAttack;
+            if (pending == null) return;
+
+            var attackTick = pending.timeline.advance();
+            if (pending.timeline.isFinished()) {
+                blade.finishAttack();
+                pendingAttack = null;
+                return;
+            }
+
+            blade.setAttackTick(attackTick);
+            if (attackTick <= MagneticWeaponBladeMotion.IMPACT_TICK
+                    && !matchesBoundWeapon(pending)) {
+                pending.timeline.cancel();
+            }
+            if (attackTick == MagneticWeaponBladeMotion.PREP_END_TICK + 1) {
+                playArcSound(level, blade.position(), 0.35f, 1.3f);
+            }
+            if (attackTick == MagneticWeaponBladeMotion.IMPACT_TICK) {
+                resolveImpact(level, system, pending);
+            }
+        }
+
+        private boolean matchesBoundWeapon(PendingAttack pending) {
+            var current = player.getInventory().getItem(pending.weaponSlot);
+            return isSword(current)
+                    && ItemStack.isSameItemSameComponents(current, pending.weaponSnapshot);
+        }
+
+        private void resolveImpact(ServerLevel level, AbilitySystemServer system, PendingAttack pending) {
+            if (!matchesBoundWeapon(pending)) pending.timeline.cancel();
+            if (!pending.timeline.claimImpact()) return;
+            var entity = level.getEntity(pending.targetId);
+            if (!(entity instanceof LivingEntity target)
+                    || target.level() != level
+                    || !isEnemy(player, target)
+                    || !player.hasLineOfSight(target)) {
+                return;
+            }
+
+            var stack = player.getInventory().getItem(pending.weaponSlot);
             var damage = Server.calculateDamage(
                     Server.calculateWeaponAttackDamage(player, stack),
                     system.getPlayerDamageMultiplier(player.getUUID())
@@ -281,12 +347,28 @@ public class MagneticWeapon extends Skill {
                 stack.hurtEnemy(target, player);
                 stack.postHurtEnemy(target, player);
             }
-            attackCooldown = ATTACK_COOLDOWN;
-            blade.startAttack(target.getId());
+            playArcSound(level, target.getBoundingBox().getCenter(), 0.55f, 0.95f);
+        }
+
+        private static void playArcSound(ServerLevel level, net.minecraft.world.phys.Vec3 position,
+                                         float volume, float pitch) {
+            level.playSound(
+                    null,
+                    position.x,
+                    position.y,
+                    position.z,
+                    SoundEvents.ARC_WEAK.get(),
+                    SoundSource.PLAYERS,
+                    volume,
+                    pitch
+            );
         }
 
         private void syncData() {
-            var data = new Data(true, -1, 0);
+            var hideMainHand = weaponSlot >= 0
+                    && player.getInventory().getSelectedSlot() == weaponSlot
+                    && isSword(player.getInventory().getItem(weaponSlot));
+            var data = new Data(true, weaponSlot, hideMainHand);
             if (data.equals(player.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get()))) return;
             player.setData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get(), data);
             player.syncData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get());
@@ -303,14 +385,27 @@ public class MagneticWeapon extends Skill {
             Server.clearData(player);
             unregister();
         }
+
+        private static final class PendingAttack {
+            private final int targetId;
+            private final int weaponSlot;
+            private final ItemStack weaponSnapshot;
+            private final MagneticWeaponAttackTimeline timeline = new MagneticWeaponAttackTimeline();
+
+            private PendingAttack(int targetId, int weaponSlot, ItemStack weaponSnapshot) {
+                this.targetId = targetId;
+                this.weaponSlot = weaponSlot;
+                this.weaponSnapshot = weaponSnapshot;
+            }
+        }
     }
 
-    public record Data(boolean active, int targetId, int animationTicks) {
-        public static final Data DEFAULT = new Data(false, -1, 0);
+    public record Data(boolean active, int weaponSlot, boolean hideMainHand) {
+        public static final Data DEFAULT = new Data(false, -1, false);
         public static final StreamCodec<ByteBuf, Data> CODEC = StreamCodec.composite(
                 ByteBufCodecs.BOOL, Data::active,
-                ByteBufCodecs.INT, Data::targetId,
-                ByteBufCodecs.VAR_INT, Data::animationTicks,
+                ByteBufCodecs.INT, Data::weaponSlot,
+                ByteBufCodecs.BOOL, Data::hideMainHand,
                 Data::new
         );
     }
