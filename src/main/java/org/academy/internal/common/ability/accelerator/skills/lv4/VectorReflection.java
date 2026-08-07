@@ -40,6 +40,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -162,6 +163,9 @@ public class VectorReflection extends Skill {
         public static void toggleReflection(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.VECTOR_REFLECTION.get();
+            if (!skill.isEnabled(player)) {
+                VectorReduction.Server.forceDeactivate(player);
+            }
             skill.toggle(player);
             if (skill.isEnabled(player)) maintainProtection(player);
             else clearProtection(player);
@@ -191,6 +195,18 @@ public class VectorReflection extends Skill {
             if (!(player instanceof ServerPlayer serverPlayer) || player.isSpectator()) return false;
             if (!isActive(serverPlayer)) return false;
             return canReflectSource(serverPlayer, damageSource);
+        }
+
+        public static void forceDeactivate(ServerPlayer player) {
+            if (player == null) return;
+            var skill = Skills.VECTOR_REFLECTION.get();
+            var data = skill.getRuntimeData(player).orElse(null);
+            if (data != null && data.isEnabled()) {
+                var system = AbilitySystemServer.getSystem(player);
+                system.toggleSkill(player.getUUID(), skill.getKeyString());
+                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+            }
+            clearProtection(player);
         }
 
         private static boolean canReflectSource(ServerPlayer player, DamageSource damageSource) {
@@ -275,7 +291,7 @@ public class VectorReflection extends Skill {
 
         public static Pair<Boolean, Float> hurtServer(Player player, ServerLevel level, DamageSource source, float originalDamage) {
             if (!(player instanceof ServerPlayer serverPlayer)) return Pair.of(false, originalDamage);
-            var coordinated = VectorIncomingDamageCoordinator.interceptReflection(
+            var coordinated = VectorIncomingDamageCoordinator.interceptVectorDefense(
                     serverPlayer, source, originalDamage);
             return Pair.of(coordinated.handled(), coordinated.remainingDamage());
         }
@@ -573,6 +589,9 @@ public class VectorReflection extends Skill {
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var skill = Skills.VECTOR_REFLECTION.get();
+            if (skill.isEnabled(player) && Skills.VECTOR_REDUCTION.get().isEnabled(player)) {
+                VectorReduction.Server.forceDeactivate(player);
+            }
             if (skill.isEnabled(player)) {
                 var system = AbilitySystemServer.getSystem(player);
                 var maintained = system.ensurePermanentOccupation(
@@ -581,7 +600,7 @@ public class VectorReflection extends Skill {
                         skill
                 );
                 if (!maintained) {
-                    skill.toggle(player);
+                    Server.forceDeactivate(player);
                 }
             }
             if (!Server.isActive(player)) {

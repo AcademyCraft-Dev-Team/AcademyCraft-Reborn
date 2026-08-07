@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
@@ -37,6 +38,11 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorC
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityEffectLimiter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackFingerprint;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageCoordinator;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorMotionRedirects;
+import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -174,17 +180,17 @@ public class VectorReduction extends Skill {
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.VECTOR_REDUCTION.get().toggle(player);
-            if (!Skills.VECTOR_REDUCTION.get().isEnabled(player)) {
-                VectorContinuousInterceptionLeases.clear(player);
-                VectorInterceptionTickets.clear(player);
-                VectorCompatibilityEffectLimiter.clear(player);
-                VectorDefenseFeedbackTickets.clear(player);
+            var skill = Skills.VECTOR_REDUCTION.get();
+            if (!skill.isEnabled(player)) {
+                VectorReflection.Server.forceDeactivate(player);
             }
+            skill.toggle(player);
+            if (!skill.isEnabled(player)) clearState(player);
         }
 
         public static boolean isActive(ServerPlayer player) {
             return canMaintain(player)
+                    && !VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     && AbilitySystemServer.getSystem(player)
                     .getPlayerAvailableCP(player.getUUID()) > 0.0f;
         }
@@ -194,6 +200,93 @@ public class VectorReduction extends Skill {
                     && player.connection != null
                     && !player.isSpectator()
                     && Skills.VECTOR_REDUCTION.get().isEnabled(player);
+        }
+
+        public static void forceDeactivate(ServerPlayer player) {
+            if (player == null) return;
+            var skill = Skills.VECTOR_REDUCTION.get();
+            var data = skill.getRuntimeData(player).orElse(null);
+            if (data != null && data.isEnabled()) {
+                var system = AbilitySystemServer.getSystem(player);
+                system.toggleSkill(player.getUUID(), skill.getKeyString());
+                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+            }
+            clearState(player);
+        }
+
+        private static void clearState(ServerPlayer player) {
+            VectorContinuousInterceptionLeases.clear(player);
+            VectorInterceptionTickets.clear(player);
+            VectorCompatibilityEffectLimiter.clear(player);
+            VectorDefenseFeedbackTickets.clear(player);
+        }
+
+        public static boolean canRefractSource(ServerPlayer player, DamageSource source) {
+            if (player == null || source == null
+                    || VectorRedirectedDamageSourceInfo.isRedirected(source)) return false;
+            var direct = source.getDirectEntity();
+            if (source.getEntity() == player || direct == player) return false;
+            if (direct instanceof Projectile projectile
+                    && VectorProjectileRedirects.isRedirected(projectile)) return false;
+            return direct == null || !VectorMotionRedirects.isRedirected(direct);
+        }
+
+        public static boolean tryAbsorbDamage(
+                ServerPlayer player,
+                DamageSource source,
+                float incomingDamage
+        ) {
+            if (!isActive(player)
+                    || VectorReflection.Server.canMaintainLinearReflectionLease(player)
+                    || !canRefractSource(player, source)
+                    || !(incomingDamage > 0.0f)
+                    || !Float.isFinite(incomingDamage)) {
+                return false;
+            }
+            var attribution = VectorAttackAttributionResolver.resolve(player, source);
+            var incoming = attribution.effectDirection().scale(-1.0);
+            if (normalizeOrZero(incoming) == Vec3.ZERO) incoming = player.getLookAngle().scale(-1.0);
+            var direction = refractedDirection(player.getLookAngle(), incoming);
+            if (normalizeOrZero(direction) == Vec3.ZERO) direction = player.getLookAngle();
+            var mirrorPoint = player.getBoundingBox().getCenter();
+            var finalDirection = direction;
+            var effectKey = VectorAttackFingerprint.computeLeaseKey(
+                    player.getId(), source, incoming);
+            var executed = Skills.VECTOR_REDUCTION.get().executeActive(
+                    player,
+                    _ -> Math.max(1.0f, incomingDamage),
+                    (_, _) -> VectorCompatibilityEffectLimiter.emit(
+                            player, effectKey, finalDirection, mirrorPoint)
+            );
+            if (!executed) return false;
+            player.invulnerableTime = 0;
+            VectorDefenseFeedbackTickets.commitFull(player, source);
+            return true;
+        }
+
+        public static boolean absorbAnomalousDamage(
+                ServerPlayer player,
+                DamageSource source,
+                float incomingDamage
+        ) {
+            if (!VectorIncomingDamageCoordinator.isAnomalousDamage(incomingDamage)
+                    || !canMaintain(player)
+                    || VectorReflection.Server.canMaintainLinearReflectionLease(player)
+                    || !canRefractSource(player, source)) {
+                return false;
+            }
+            var attribution = VectorAttackAttributionResolver.resolve(player, source);
+            var incoming = attribution.effectDirection().scale(-1.0);
+            if (normalizeOrZero(incoming) == Vec3.ZERO) incoming = player.getLookAngle().scale(-1.0);
+            var direction = refractedDirection(player.getLookAngle(), incoming);
+            if (normalizeOrZero(direction) == Vec3.ZERO) direction = player.getLookAngle();
+            var effectKey = VectorAttackFingerprint.computeLeaseKey(
+                    player.getId(), source, incoming);
+            VectorCompatibilityEffectLimiter.emit(
+                    player, effectKey, direction, player.getBoundingBox().getCenter());
+            player.invulnerableTime = 0;
+            VectorDefenseFeedbackTickets.commitFull(player, source);
+            return true;
         }
 
         public static boolean tryRefractLinearAttack(
@@ -213,7 +306,7 @@ public class VectorReduction extends Skill {
                 boolean emitFeedback
         ) {
             if (!isActive(player)
-                    || VectorReflection.Server.isActive(player)
+                    || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || !(incomingDamage > 0.0f)
                     || !Float.isFinite(incomingDamage)
                     || !isFiniteVector(mirrorPoint)
@@ -243,7 +336,7 @@ public class VectorReduction extends Skill {
 
         public static boolean shouldRefractProjectileFor(ServerPlayer player, Projectile projectile) {
             if (!isActive(player)
-                    || VectorReflection.Server.isActive(player)
+                    || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || projectile == null
                     || projectile.isRemoved()
                     || VectorProjectileRedirects.isRedirected(projectile)) {
@@ -288,10 +381,11 @@ public class VectorReduction extends Skill {
             if (!skill.isEnabled(player)) return;
             if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
                     player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
-                if (skill.isEnabled(player)) skill.toggle(player);
+                Server.forceDeactivate(player);
                 return;
             }
-            if (!Server.isActive(player) || VectorReflection.Server.isActive(player)) return;
+            if (!Server.isActive(player)
+                    || VectorReflection.Server.canMaintainLinearReflectionLease(player)) return;
             var box = player.getBoundingBox().inflate(INTERCEPT_MARGIN);
             for (var projectile : player.level().getEntitiesOfClass(Projectile.class, box, Entity::isAlive)) {
                 if (VectorProjectileInterceptionService.intercept(player, projectile)) break;

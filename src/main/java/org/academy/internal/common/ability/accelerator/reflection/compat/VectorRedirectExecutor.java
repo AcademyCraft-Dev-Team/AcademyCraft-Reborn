@@ -50,6 +50,10 @@ public final class VectorRedirectExecutor {
             if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
         }
 
+        if (!plan.kind().dealsRedirectedEntityDamage()) {
+            return new ExecutionResult(0, start.distanceTo(end));
+        }
+
         var radius = plan.attack().radius();
         var pathBox = new AABB(start, end).inflate(radius);
         var finalEnd = end;
@@ -85,6 +89,7 @@ public final class VectorRedirectExecutor {
     }
 
     public static int executeDamageFallback(VectorRedirectPlan plan) {
+        if (!plan.kind().dealsRedirectedEntityDamage()) return 0;
         var target = plan.attack().attribution().originalAttacker();
         LivingEntity living = target instanceof LivingEntity candidate && candidate.isAlive()
                 ? candidate

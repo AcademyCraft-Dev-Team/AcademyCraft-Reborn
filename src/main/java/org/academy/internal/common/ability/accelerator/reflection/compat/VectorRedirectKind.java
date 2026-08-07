@@ -2,5 +2,9 @@ package org.academy.internal.common.ability.accelerator.reflection.compat;
 
 public enum VectorRedirectKind {
     REFLECTION,
-    REFRACTION
+    REFRACTION;
+
+    public boolean dealsRedirectedEntityDamage() {
+        return this == REFLECTION;
+    }
 }
