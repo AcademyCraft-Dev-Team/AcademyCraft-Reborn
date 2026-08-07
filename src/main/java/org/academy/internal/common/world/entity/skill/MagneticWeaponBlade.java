@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 public final class MagneticWeaponBlade extends RenderOnlyEntity {
-    public static final int ATTACK_ANIMATION_TICKS = 10;
+    public static final int ATTACK_ANIMATION_TICKS = MagneticWeaponBladeMotion.ATTACK_END_TICK;
 
     private static final EntityDataAccessor<ItemStack> WEAPON = SynchedEntityData.defineId(
             MagneticWeaponBlade.class, EntityDataSerializers.ITEM_STACK
@@ -25,6 +25,13 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
     private static final EntityDataAccessor<Integer> ATTACK_TICKS = SynchedEntityData.defineId(
             MagneticWeaponBlade.class, EntityDataSerializers.INT
     );
+    private static final EntityDataAccessor<Integer> ATTACK_SEQUENCE = SynchedEntityData.defineId(
+            MagneticWeaponBlade.class, EntityDataSerializers.INT
+    );
+
+    private Vec3 attackOrigin = Vec3.ZERO;
+    private Vec3 lastTargetPosition = Vec3.ZERO;
+    private Vec3 impactPosition = Vec3.ZERO;
 
     public MagneticWeaponBlade(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -38,13 +45,15 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
         builder.define(OWNER_ID, -1);
         builder.define(TARGET_ID, -1);
         builder.define(ATTACK_TICKS, 0);
+        builder.define(ATTACK_SEQUENCE, 0);
     }
 
     public void configure(ServerPlayer owner, ItemStack weapon) {
         entityData.set(OWNER_ID, owner.getId());
         setWeapon(weapon);
         setPos(idlePosition(owner));
-        setYRot(owner.getYRot());
+        setYRot(owner.getYRot() - 90.0f);
+        setXRot(75.0f);
     }
 
     public ItemStack getWeapon() {
@@ -61,13 +70,43 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
         entityData.set(WEAPON, copy);
     }
 
-    public void startAttack(int targetId) {
+    public void startAttack(int targetId, int attackSequence) {
         entityData.set(TARGET_ID, targetId);
+        entityData.set(ATTACK_SEQUENCE, attackSequence);
         entityData.set(ATTACK_TICKS, 1);
+        attackOrigin = position();
+        var target = level().getEntity(targetId);
+        lastTargetPosition = target == null ? attackOrigin : target.getBoundingBox().getCenter();
+        impactPosition = lastTargetPosition;
+    }
+
+    public void setAttackTick(int attackTick) {
+        entityData.set(ATTACK_TICKS, Math.clamp(attackTick, 0, ATTACK_ANIMATION_TICKS));
+    }
+
+    public void finishAttack() {
+        entityData.set(TARGET_ID, -1);
+        entityData.set(ATTACK_TICKS, 0);
     }
 
     public boolean isAttacking() {
         return entityData.get(ATTACK_TICKS) > 0;
+    }
+
+    public int getOwnerId() {
+        return entityData.get(OWNER_ID);
+    }
+
+    public int getTargetId() {
+        return entityData.get(TARGET_ID);
+    }
+
+    public int getAttackTick() {
+        return entityData.get(ATTACK_TICKS);
+    }
+
+    public int getAttackSequence() {
+        return entityData.get(ATTACK_SEQUENCE);
     }
 
     @Override
@@ -84,44 +123,49 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
         }
 
         var idle = idlePosition(owner);
-        var position = idle;
-        var attackTicks = entityData.get(ATTACK_TICKS);
-        if (attackTicks > 0) {
-            var target = level().getEntity(entityData.get(TARGET_ID));
-            if (target == null || !target.isAlive()) {
-                finishAttack();
-            } else {
-                var progress = Math.clamp(
-                        (attackTicks - 1.0) / (ATTACK_ANIMATION_TICKS - 1.0),
-                        0.0,
-                        1.0
-                );
-                var flight = Math.sin(progress * Math.PI);
-                position = idle.lerp(target.getBoundingBox().getCenter(), flight);
-                if (attackTicks >= ATTACK_ANIMATION_TICKS) {
-                    finishAttack();
-                } else {
-                    entityData.set(ATTACK_TICKS, attackTicks + 1);
-                }
+        var attackTick = getAttackTick();
+        if (attackTick <= 0) {
+            setPos(idle);
+            setYRot(owner.getYRot() - 90.0f);
+            setXRot(75.0f);
+            setDeltaMovement(Vec3.ZERO);
+            return;
+        }
+
+        if (attackTick <= MagneticWeaponBladeMotion.IMPACT_TICK) {
+            var target = level().getEntity(getTargetId());
+            if (target != null && target.isAlive()) {
+                lastTargetPosition = target.getBoundingBox().getCenter();
+            }
+            if (attackTick == MagneticWeaponBladeMotion.IMPACT_TICK) {
+                impactPosition = lastTargetPosition;
             }
         }
 
-        setPos(position);
-        setYRot(owner.getYRot());
+        var targetPosition = attackTick <= MagneticWeaponBladeMotion.IMPACT_TICK
+                ? lastTargetPosition
+                : impactPosition;
+        var motion = MagneticWeaponBladeMotion.sample(
+                attackOrigin,
+                targetPosition,
+                idle,
+                attackTick,
+                getAttackSequence()
+        );
+        setPos(motion.position());
+        orientAlong(motion.tangent());
         setDeltaMovement(Vec3.ZERO);
     }
 
-    private void finishAttack() {
-        entityData.set(TARGET_ID, -1);
-        entityData.set(ATTACK_TICKS, 0);
+    private void orientAlong(Vec3 tangent) {
+        if (tangent.lengthSqr() < 1.0E-8) return;
+        var direction = tangent.normalize();
+        var horizontal = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+        setYRot((float) Math.toDegrees(Math.atan2(-direction.x, direction.z)));
+        setXRot((float) Math.toDegrees(Math.atan2(-direction.y, horizontal)));
     }
 
-    private static Vec3 idlePosition(ServerPlayer owner) {
-        var forward = Vec3.directionFromRotation(0.0f, owner.getYRot()).normalize();
-        var right = new Vec3(-forward.z, 0.0, forward.x);
-        return owner.position()
-                .subtract(forward.scale(0.72))
-                .add(right.scale(0.42))
-                .add(0.0, 1.35, 0.0);
+    public static Vec3 idlePosition(ServerPlayer owner) {
+        return MagneticWeaponBladeMotion.idlePosition(owner.position(), owner.getYRot(), owner.tickCount);
     }
 }

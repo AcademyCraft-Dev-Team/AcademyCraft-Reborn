@@ -37,6 +37,7 @@
     "client.MixinGameRenderer",
     "client.MixinEntityRenderDispatcher",
     "client.MixinHud",
+    "client.MixinItemInHandRenderer",
     "client.MixinClientEntity",
     "client.MixinClientLivingEntity",
     "client.MixinKeyboardHandler",

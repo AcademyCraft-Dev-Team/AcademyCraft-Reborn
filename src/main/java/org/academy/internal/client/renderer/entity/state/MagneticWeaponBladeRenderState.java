@@ -6,4 +6,7 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 public final class MagneticWeaponBladeRenderState extends EntityRenderState {
     public final ItemStackRenderState weapon = new ItemStackRenderState();
     public boolean attacking;
+    public float yRot;
+    public float xRot;
+    public float roll;
 }
