@@ -28,6 +28,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAby
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGeneration;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
 import org.academy.internal.common.ability.aeromanip.skills.AirflowJet;
 import org.academy.internal.common.ability.aeromanip.skills.BreathingFilm;
 import org.academy.internal.common.ability.aeromanip.FlowSensePacket;
@@ -424,6 +425,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingSweepPacket>>
             ADVANCED_WING_SWEEP = PACKET_TYPES.register("advanced_wing_sweep",
             () -> new PacketType<>(AdvancedWingSweepPacket.class, AdvancedWingSweepPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, VectorRedirectEffectPacket>>
+            VECTOR_REDIRECT_EFFECT = PACKET_TYPES.register("vector_redirect_effect",
+            () -> new PacketType<>(VectorRedirectEffectPacket.class, VectorRedirectEffectPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlatinumWing.ExecutionVisualPacket>>
             PLATINUM_WING_EXECUTION_VISUAL = PACKET_TYPES.register("platinum_wing_execution_visual",

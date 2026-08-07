@@ -9,9 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -30,7 +28,12 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -116,6 +119,7 @@ public class VectorReduction extends Skill {
 
     @Override
     public void initClient() {
+        VectorRedirectEffectPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -168,15 +172,23 @@ public class VectorReduction extends Skill {
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             Skills.VECTOR_REDUCTION.get().toggle(player);
+            if (!Skills.VECTOR_REDUCTION.get().isEnabled(player)) {
+                VectorContinuousInterceptionLeases.clear(player);
+                VectorInterceptionTickets.clear(player);
+            }
         }
 
         public static boolean isActive(ServerPlayer player) {
+            return canMaintain(player)
+                    && AbilitySystemServer.getSystem(player)
+                    .getPlayerAvailableCP(player.getUUID()) > 0.0f;
+        }
+
+        public static boolean canMaintain(ServerPlayer player) {
             return player != null
                     && player.connection != null
                     && !player.isSpectator()
-                    && Skills.VECTOR_REDUCTION.get().isEnabled(player)
-                    && AbilitySystemServer.getSystem(player)
-                    .getPlayerAvailableCP(player.getUUID()) > 0.0f;
+                    && Skills.VECTOR_REDUCTION.get().isEnabled(player);
         }
 
         public static boolean tryRefractLinearAttack(
@@ -217,7 +229,7 @@ public class VectorReduction extends Skill {
                     || VectorReflection.Server.isActive(player)
                     || projectile == null
                     || projectile.isRemoved()
-                    || projectile.getData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get())) {
+                    || VectorProjectileRedirects.isRedirected(projectile)) {
                 return false;
             }
             var owner = projectile.getOwner();
@@ -238,7 +250,7 @@ public class VectorReduction extends Skill {
 
             var skill = Skills.VECTOR_REDUCTION.get();
             return skill.executeActive(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
-                projectile.setData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get(), true);
+                VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFRACTION);
                 projectile.setOwner(player);
                 projectile.setDeltaMovement(refracted);
                 var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
@@ -253,14 +265,6 @@ public class VectorReduction extends Skill {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        @SubscribeEvent(priority = EventPriority.HIGHEST)
-        public static void onIncomingProjectileDamage(LivingIncomingDamageEvent event) {
-            if (event.isCanceled()
-                    || !(event.getEntity() instanceof ServerPlayer player)
-                    || !(event.getSource().getDirectEntity() instanceof Projectile projectile)) return;
-            if (Server.refractProjectile(player, projectile)) event.setCanceled(true);
-        }
-
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
@@ -274,7 +278,7 @@ public class VectorReduction extends Skill {
             if (!Server.isActive(player) || VectorReflection.Server.isActive(player)) return;
             var box = player.getBoundingBox().inflate(INTERCEPT_MARGIN);
             for (var projectile : player.level().getEntitiesOfClass(Projectile.class, box, Entity::isAlive)) {
-                if (Server.refractProjectile(player, projectile)) break;
+                if (VectorProjectileInterceptionService.intercept(player, projectile)) break;
             }
         }
     }
