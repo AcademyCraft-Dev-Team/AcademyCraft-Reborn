@@ -92,6 +92,7 @@ import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportStart
 import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.ability.teleport.skills.lv5.DefensiveTeleport;
+import org.academy.internal.common.attribute.PropsPackets;
 import org.academy.internal.common.ability.darkmatter.skills.DarkmatterShaping;
 import org.academy.internal.common.ability.darkmatter.skills.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.DarkmatterCut;
@@ -125,6 +126,13 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillDataPacket>>
             SYNC_SKILL_DATA = PACKET_TYPES.register("sync_skill_data",
             () -> new PacketType<>(SyncSkillDataPacket.class, SyncSkillDataPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PropsPackets.SyncPacket>>
+            PROPS_SYNC = PACKET_TYPES.register("props_sync",
+            () -> new PacketType<>(PropsPackets.SyncPacket.class, PropsPackets.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PropsPackets.SetLockPacket>>
+            PROPS_SET_LOCK = PACKET_TYPES.register("props_set_lock",
+            () -> new PacketType<>(PropsPackets.SetLockPacket.class, PropsPackets.SetLockPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ConnectNodePacket>>
             CONNECT_NODE = PACKET_TYPES.register("connect_node",

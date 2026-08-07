@@ -39,6 +39,8 @@ public final class Player {
     private final Map<String, SkillData> skillDataMap = new HashMap<>();
     @SerializedName("abilityCategory")
     private String abilityCategory;
+    @SerializedName("propsData")
+    private PropsData propsData = new PropsData();
 
     // CP
     @SerializedName("cpOccupations")
@@ -121,6 +123,11 @@ public final class Player {
         }
     }
 
+    public PropsData getPropsData() {
+        if (propsData == null) propsData = new PropsData();
+        return propsData;
+    }
+
     boolean migrateLegacyData() {
         var changed = migrateAbilityCategory();
         changed |= migrateSkillData();
@@ -128,6 +135,7 @@ public final class Player {
         changed |= removeRetiredSkills();
         changed |= migrateOccupations();
         changed |= migrateLegacyAbilityData();
+        changed |= getPropsData().repair();
         if (changed) markDirty();
         return changed;
     }

@@ -23,6 +23,7 @@
     "common.MixinServerEntity",
     "common.MixinServerLevelVectorDefenseFeedback",
     "common.MixinServerPlayer",
+    "common.MixinServerPlayerGameMode",
     "common.MixinSensing",
     "common.MixinPlayerMentalPerception",
     "common.MixinSignalGetter",

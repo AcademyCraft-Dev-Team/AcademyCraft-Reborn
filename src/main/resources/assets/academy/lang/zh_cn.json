@@ -976,5 +976,15 @@
   "message.academy.precision_operation.insufficient_cp": "CP 不足以维持全部活动槽位。",
   "message.academy.precision_operation.action_failed": "动作失败，整次程序执行已回滚。",
   "message.academy.precision_operation.skill_unavailable": "精密操作当前不可用。",
-  "message.academy.precision_operation.flow_cycle": "流程不能首尾相连；请保留首行动的空输入和末行动的空输出。"
+  "message.academy.precision_operation.flow_cycle": "流程不能首尾相连；请保留首行动的空输入和末行动的空输出。",
+  "app.academy.props.name": "P.R.O.P.S",
+  "app.academy.props.title": "P.R.O.P.S 个人现实定向预开发系统",
+  "app.academy.props.neural_lock_warning": "神经活跃度已锁定：结构探索与首杀奖励仍会被永久消耗",
+  "app.academy.props.footer": "能力因子 %s / 2000   获取系数 %s%%",
+  "app.academy.props.footer.full": "能力因子 %s / 2000   获取冻结 0%%",
+  "app.academy.props.effect.muscle": "近战伤害 +%s",
+  "app.academy.props.effect.endurance": "最大生命 +%s",
+  "app.academy.props.effect.dexterity": "移速 +%s%% / 跳高 +%s%%",
+  "app.academy.props.effect.perception": "抢夺/时运 +%d / 经验 +%s%%",
+  "app.academy.props.effect.neural": "CP 迭代 +%s%%"
 }

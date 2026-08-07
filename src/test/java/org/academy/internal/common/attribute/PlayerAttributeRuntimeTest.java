@@ -6,16 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PlayerAttributeRuntimeTest {
     @Test
-    void logarithmicBonusesUseTheRequestedRounding() {
+    void linearBonusesUseThePropsConversions() {
         assertEquals(0.0, PlayerAttributeRuntime.muscleDamageBonus(0.0));
-        assertEquals(1.0, PlayerAttributeRuntime.muscleDamageBonus(1.0));
-        assertEquals(2.0, PlayerAttributeRuntime.enduranceHealthBonus(1.0));
-        assertEquals(Math.log(2.0) * 0.2,
+        assertEquals(0.05, PlayerAttributeRuntime.muscleDamageBonus(1.0));
+        assertEquals(0.1, PlayerAttributeRuntime.enduranceHealthBonus(1.0));
+        assertEquals(0.002,
                 PlayerAttributeRuntime.dexteritySpeedBonus(1.0), 1.0E-12);
-        assertEquals(Math.log(2.0),
-                PlayerAttributeRuntime.enduranceJumpBonus(1.0), 1.0E-12);
-        assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(Math.exp(2.0) - 1.01));
-        assertEquals(1, PlayerAttributeRuntime.logarithmicLevel(Math.exp(2.0) - 1.0));
+        assertEquals(Math.sqrt(1.005) - 1.0,
+                PlayerAttributeRuntime.dexterityJumpStrengthBonus(1.0), 1.0E-12);
+        assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(199.99));
+        assertEquals(1, PlayerAttributeRuntime.logarithmicLevel(200.0));
     }
 
     @Test
