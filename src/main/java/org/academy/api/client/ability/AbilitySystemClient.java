@@ -258,8 +258,16 @@ public final class AbilitySystemClient {
 
     private static boolean canUseSkill(Skill skill, boolean showFailureMessage) {
         var status = getSkillUseStatus(skill);
-        if (!status.allowed() && showFailureMessage) notifySkillUseDenied(skill, status);
+        if (!status.allowed() && showFailureMessage && shouldNotifySkillUseDenied(skill, status)) {
+            notifySkillUseDenied(skill, status);
+        }
         return status.allowed();
+    }
+
+    private static boolean shouldNotifySkillUseDenied(Skill skill, SkillUseStatus status) {
+        if (skill == null || !canToggleSkill(skill)) return false;
+        return status.failure() != SkillUseFailure.UNAVAILABLE
+                && status.failure() != SkillUseFailure.DISABLED;
     }
 
     public static SkillUseStatus getSkillUseStatus(Skill skill) {
