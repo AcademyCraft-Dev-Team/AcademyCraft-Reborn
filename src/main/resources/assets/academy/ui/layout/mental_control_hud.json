@@ -15,8 +15,13 @@
             "type": "fill",
             "name": "background",
             "layout": { "width_mode": "MATCH_PARENT", "height_mode": "MATCH_PARENT" },
-            "props": { "color": -1730815528 }
+            "props": { "color": -652995566 }
           },
+          { "type": "fill", "name": "border_top", "layout": { "width_mode": "MATCH_PARENT", "height_mode": "FIXED", "height": 1, "gravity": 48 }, "props": { "color": -638982953 } },
+          { "type": "fill", "name": "border_bottom", "layout": { "width_mode": "MATCH_PARENT", "height_mode": "FIXED", "height": 1, "gravity": 80 }, "props": { "color": -638982953 } },
+          { "type": "fill", "name": "border_left", "layout": { "width_mode": "FIXED", "height_mode": "MATCH_PARENT", "width": 1, "gravity": 3 }, "props": { "color": -638982953 } },
+          { "type": "fill", "name": "border_right", "layout": { "width_mode": "FIXED", "height_mode": "MATCH_PARENT", "width": 1, "gravity": 5 }, "props": { "color": -638982953 } },
+          { "type": "fill", "name": "header_divider", "layout": { "width_mode": "MATCH_PARENT", "height_mode": "FIXED", "height": 1, "margin_left": 5, "margin_top": 16, "margin_right": 5 }, "props": { "color": -1713317172 } },
           {
             "type": "linear_layout",
             "name": "content",
