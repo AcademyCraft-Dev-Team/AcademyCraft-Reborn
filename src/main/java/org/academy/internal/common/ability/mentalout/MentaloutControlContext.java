@@ -94,6 +94,10 @@ public final class MentaloutControlContext extends ServerContext {
         return !entries.isEmpty();
     }
 
+    public boolean contains(UUID subjectId) {
+        return subjectId != null && entries.containsKey(subjectId);
+    }
+
     public boolean isStuporEnabled() {
         return stuporEnabled;
     }
@@ -110,6 +114,7 @@ public final class MentaloutControlContext extends ServerContext {
         var existing = get(player);
         if (existing != null && target != null && existing.entries.containsKey(target.getUUID())) {
             existing.remove(target.getUUID());
+            if (target instanceof Mob mob) MentalControlRecall.suppressUntilExit(player, mob);
             return ToggleResult.REMOVED;
         }
         if (!(target instanceof Mob mob)
@@ -122,10 +127,33 @@ public final class MentaloutControlContext extends ServerContext {
         var added = context.add(mob);
         if (added != ToggleResult.ADDED || existing != null) return added;
 
+        registerNewContext(player, context, mob);
+        return ToggleResult.ADDED;
+    }
+
+    public static ToggleResult recallTarget(ServerPlayer player, Mob mob) {
+        if (player == null || mob == null) return ToggleResult.INVALID;
+        var existing = get(player);
+        if (existing != null && existing.entries.containsKey(mob.getUUID())) return ToggleResult.INVALID;
+        if (!MentaloutTargetValidation.isValidRosterTarget(player, mob)) return ToggleResult.INVALID;
+        if (!supportsAnyControl(mob)) return ToggleResult.UNSUPPORTED;
+
+        var context = existing == null ? new MentaloutControlContext(player) : existing;
+        var added = context.add(mob);
+        if (added == ToggleResult.ADDED && existing == null) {
+            registerNewContext(player, context, mob);
+        }
+        return added;
+    }
+
+    private static void registerNewContext(
+            ServerPlayer player,
+            MentaloutControlContext context,
+            Mob firstSubject
+    ) {
         BY_CONTROLLER.put(player.getUUID(), context);
         AbilitySystemServer.registerContext(context);
-        context.sendUpsert(context.entries.get(mob.getUUID()));
-        return ToggleResult.ADDED;
+        context.sendUpsert(context.entries.get(firstSubject.getUUID()));
     }
 
     public static boolean isImpressionAlly(UUID controllerUuid, UUID subjectUuid, UUID otherUuid) {
@@ -467,6 +495,8 @@ public final class MentaloutControlContext extends ServerContext {
 
         entries.put(subject.getUUID(), entry);
         BY_SUBJECT.computeIfAbsent(subject.getUUID(), _ -> new HashSet<>()).add(this);
+        MentalControlMemory.remember(player, subject);
+        MentalControlRecall.allow(player, subject);
         if (BY_CONTROLLER.containsKey(player.getUUID())) sendUpsert(entry);
         return ToggleResult.ADDED;
     }

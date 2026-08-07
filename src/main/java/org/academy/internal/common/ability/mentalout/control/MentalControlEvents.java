@@ -17,6 +17,7 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.MentalControlRecall;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
@@ -35,6 +36,11 @@ public final class MentalControlEvents {
         if (forcedTarget != null) {
             event.setNewAboutToBeSetTarget(forcedTarget);
         } else {
+            var guardTarget = MentalControlRuntime.getGuardTarget(subject);
+            if (guardTarget != null) {
+                event.setNewAboutToBeSetTarget(guardTarget);
+                return;
+            }
             var proposedTarget = event.getNewAboutToBeSetTarget();
             if (proposedTarget != null
                     && MentalControlRuntime.attackDecision(subject, proposedTarget)
@@ -75,6 +81,7 @@ public final class MentalControlEvents {
         MentalControlRuntime.tick(event.getServer());
         MentalIntrusionManager.tick(event.getServer());
         PrecisionOperationRuntime.tick(event.getServer());
+        MentalControlRecall.tick(event.getServer());
     }
 
     @SubscribeEvent
@@ -87,6 +94,7 @@ public final class MentalControlEvents {
         MentalIntrusionManager.releaseEntity(entityId);
         PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
         if (event.getEntity() instanceof ServerPlayer) {
+            MentalControlRecall.releaseController(entityId);
             MentaloutControlContext.releaseController(entityId);
             MentalControlRuntime.releaseByController(level.getServer(), entityId);
             MentalIntrusionManager.releaseController(entityId);
@@ -104,6 +112,7 @@ public final class MentalControlEvents {
         MentalIntrusionManager.releaseEntity(entityId);
         PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
         if (event.getEntity() instanceof ServerPlayer) {
+            MentalControlRecall.releaseController(entityId);
             MentaloutControlContext.releaseController(entityId);
             MentalControlRuntime.releaseByController(level.getServer(), entityId);
             MentalIntrusionManager.releaseController(entityId);
@@ -115,6 +124,7 @@ public final class MentalControlEvents {
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         MentaloutRequestGuard.release(player.getUUID());
+        MentalControlRecall.releaseController(player.getUUID());
         MentaloutControlContext.releaseController(player.getUUID());
         MentalControlRuntime.releaseByController(player.level().getServer(), player.getUUID());
         MentalIntrusionManager.releaseEntity(player.getUUID());
@@ -127,6 +137,7 @@ public final class MentalControlEvents {
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         MentaloutControlContext.releaseMisidentificationTarget(player.getUUID());
+        MentalControlRecall.releaseController(player.getUUID());
         MentaloutControlContext.releaseController(player.getUUID());
         MentalControlRuntime.releaseByController(player.level().getServer(), player.getUUID());
         MentalControlRuntime.releaseBySubject(player.level().getServer(), player.getUUID());
@@ -139,6 +150,7 @@ public final class MentalControlEvents {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         MentaloutRequestGuard.clear();
+        MentalControlRecall.clear();
         MentaloutControlContext.clearAll();
         MentalControlRuntime.clear(event.getServer());
         MentalIntrusionManager.clear();

@@ -35,6 +35,14 @@ public final class PrecisionOperationManager {
     private PrecisionOperationManager() {
     }
 
+    public enum FeedbackType {
+        SAVE,
+        STARTED,
+        CANCELLED,
+        COMPLETED,
+        ERROR
+    }
+
     public static synchronized void initClient() {
         if (clientInitialized) return;
         clientInitialized = true;
@@ -96,7 +104,7 @@ public final class PrecisionOperationManager {
         MisakaNetworkServer.send(player, new SyncPacket(data.revision(), encoded));
     }
 
-    private static CompiledPrecisionProgram compiled(ServerPlayer player, int slot) {
+    private static CompiledPrecisionProgram.CompileResult compiled(ServerPlayer player, int slot) {
         var data = getOrCreateData(player);
         var cache = COMPILED.computeIfAbsent(player.getUUID(), _ -> new CachedPrograms());
         if (cache.revision != data.revision()) {
@@ -104,11 +112,30 @@ public final class PrecisionOperationManager {
             java.util.Arrays.fill(cache.programs, null);
         }
         var program = cache.programs[slot];
-        if (program != null) return program;
+        if (program != null) {
+            return new CompiledPrecisionProgram.CompileResult(
+                    program, PrecisionGraph.Diagnostic.OK, -1, -1);
+        }
         var result = CompiledPrecisionProgram.compile(data.slot(slot));
-        if (!result.valid()) return null;
+        if (!result.valid()) return result;
         cache.programs[slot] = result.program();
-        return result.program();
+        return result;
+    }
+
+    static void runtimeError(
+            ServerPlayer player,
+            int slot,
+            PrecisionGraph.Diagnostic diagnostic,
+            int nodeId,
+            int affectedCount
+    ) {
+        Server.result(player, slot, FeedbackType.ERROR, getOrCreateData(player).revision(),
+                diagnostic, nodeId, -1, affectedCount);
+    }
+
+    static void runtimeCompleted(ServerPlayer player, int slot) {
+        Server.result(player, slot, FeedbackType.COMPLETED, getOrCreateData(player).revision(),
+                PrecisionGraph.Diagnostic.OK, -1, -1, 0);
     }
 
     public static final class Server {
@@ -126,30 +153,35 @@ public final class PrecisionOperationManager {
         public static void save(SavePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (!Skills.PRECISION_OPERATION.get().isEnabled(player)) {
-                result(player, packet.slot, false, 0L, PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
+                result(player, packet.slot, FeedbackType.ERROR, 0L,
+                        PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE, -1, -1, 0);
                 return;
             }
             var data = getOrCreateData(player);
             if (packet.slot < 0 || packet.slot >= 4 || packet.expectedRevision != data.revision()) {
-                result(player, packet.slot, false, data.revision(), PrecisionGraph.Diagnostic.REVISION_CONFLICT);
+                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
+                        PrecisionGraph.Diagnostic.REVISION_CONFLICT, -1, -1, 0);
                 sync(player, data);
                 return;
             }
             var decoded = PrecisionGraphCodec.decode(packet.graph);
             if (!decoded.valid()) {
-                result(player, packet.slot, false, data.revision(), decoded.diagnostic());
+                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
+                        decoded.diagnostic(), -1, -1, 0);
                 return;
             }
             var compiled = CompiledPrecisionProgram.compile(decoded.graph());
             if (!decoded.graph().nodes().isEmpty() && !compiled.valid()) {
-                result(player, packet.slot, false, data.revision(), compiled.diagnostic());
+                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
+                        compiled.diagnostic(), compiled.nodeId(), compiled.port(), 0);
                 return;
             }
             data.replaceSlot(packet.slot, decoded.graph());
             var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
             if (playerData != null) playerData.markDirty();
             COMPILED.remove(player.getUUID());
-            result(player, packet.slot, true, data.revision(), PrecisionGraph.Diagnostic.OK);
+            result(player, packet.slot, FeedbackType.SAVE, data.revision(),
+                    PrecisionGraph.Diagnostic.OK, -1, -1, 0);
             sync(player, data);
         }
 
@@ -162,39 +194,56 @@ public final class PrecisionOperationManager {
             )) return;
             var player = packet.getPacketListener().getPlayer();
             if (packet.slot < 0 || packet.slot >= 4) return;
-            var program = compiled(player, packet.slot);
-            if (program == null) {
+            var compiled = compiled(player, packet.slot);
+            if (!compiled.valid()) {
                 result(
                         player,
                         packet.slot,
-                        false,
+                        FeedbackType.ERROR,
                         getOrCreateData(player).revision(),
-                        PrecisionGraph.Diagnostic.EMPTY_PROGRAM
+                        compiled.diagnostic(),
+                        compiled.nodeId(),
+                        compiled.port(),
+                        0
                 );
                 return;
             }
-            var execution = PrecisionOperationRuntime.toggle(player, packet.slot, program);
+            var execution = PrecisionOperationRuntime.execute(player, packet.slot, compiled.program());
             result(
                     player,
                     packet.slot,
-                    execution.changed(),
+                    switch (execution.state()) {
+                        case STARTED -> FeedbackType.STARTED;
+                        case CANCELLED -> FeedbackType.CANCELLED;
+                        case COMPLETED -> FeedbackType.COMPLETED;
+                        case FAILED -> FeedbackType.ERROR;
+                    },
                     getOrCreateData(player).revision(),
-                    execution.diagnostic()
+                    execution.diagnostic(),
+                    execution.nodeId(),
+                    execution.port(),
+                    execution.affectedCount()
             );
         }
 
         private static void result(
                 ServerPlayer player,
                 int slot,
-                boolean accepted,
+                FeedbackType type,
                 long revision,
-                PrecisionGraph.Diagnostic diagnostic
+                PrecisionGraph.Diagnostic diagnostic,
+                int nodeId,
+                int port,
+                int affectedCount
         ) {
             MisakaNetworkServer.send(player, new ResultPacket(
                     Math.clamp(slot, 0, 3),
-                    accepted,
+                    type,
                     revision,
-                    diagnostic
+                    diagnostic,
+                    nodeId,
+                    port,
+                    affectedCount
             ));
         }
     }
@@ -212,9 +261,12 @@ public final class PrecisionOperationManager {
         public static void result(ResultPacket packet) {
             PrecisionOperationClient.handleResult(
                     packet.slot,
-                    packet.accepted,
+                    packet.type,
                     packet.revision,
-                    packet.diagnostic
+                    packet.diagnostic,
+                    packet.nodeId,
+                    packet.port,
+                    packet.affectedCount
             );
         }
     }
@@ -322,32 +374,75 @@ public final class PrecisionOperationManager {
         public static final StreamCodec<ByteBuf, ResultPacket> CODEC = StreamCodec.of(
                 (buf, packet) -> {
                     ByteBufCodecs.VAR_INT.encode(buf, packet.slot);
-                    buf.writeBoolean(packet.accepted);
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.type.ordinal());
                     buf.writeLong(packet.revision);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.diagnostic.ordinal());
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.nodeId);
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.port);
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.affectedCount);
                 },
                 buf -> new ResultPacket(
                         ByteBufCodecs.VAR_INT.decode(buf),
-                        buf.readBoolean(),
+                        feedbackType(ByteBufCodecs.VAR_INT.decode(buf)),
                         buf.readLong(),
-                        diagnostic(ByteBufCodecs.VAR_INT.decode(buf))
+                        PrecisionOperationManager.diagnostic(ByteBufCodecs.VAR_INT.decode(buf)),
+                        ByteBufCodecs.VAR_INT.decode(buf),
+                        ByteBufCodecs.VAR_INT.decode(buf),
+                        ByteBufCodecs.VAR_INT.decode(buf)
                 )
         );
         private final int slot;
-        private final boolean accepted;
+        private final FeedbackType type;
         private final long revision;
         private final PrecisionGraph.Diagnostic diagnostic;
+        private final int nodeId;
+        private final int port;
+        private final int affectedCount;
 
         public ResultPacket(
                 int slot,
-                boolean accepted,
+                FeedbackType type,
                 long revision,
-                PrecisionGraph.Diagnostic diagnostic
+                PrecisionGraph.Diagnostic diagnostic,
+                int nodeId,
+                int port,
+                int affectedCount
         ) {
             this.slot = slot;
-            this.accepted = accepted;
+            this.type = type == null ? FeedbackType.ERROR : type;
             this.revision = revision;
             this.diagnostic = diagnostic == null ? PrecisionGraph.Diagnostic.MALFORMED : diagnostic;
+            this.nodeId = nodeId;
+            this.port = port;
+            this.affectedCount = Math.max(0, affectedCount);
+        }
+
+        int slot() {
+            return slot;
+        }
+
+        FeedbackType type() {
+            return type;
+        }
+
+        long revision() {
+            return revision;
+        }
+
+        PrecisionGraph.Diagnostic diagnostic() {
+            return diagnostic;
+        }
+
+        int nodeId() {
+            return nodeId;
+        }
+
+        int port() {
+            return port;
+        }
+
+        int affectedCount() {
+            return affectedCount;
         }
 
         @Override
@@ -379,6 +474,11 @@ public final class PrecisionOperationManager {
         return ordinal >= 0 && ordinal < values.length
                 ? values[ordinal]
                 : PrecisionGraph.Diagnostic.MALFORMED;
+    }
+
+    private static FeedbackType feedbackType(int ordinal) {
+        var values = FeedbackType.values();
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : FeedbackType.ERROR;
     }
 
     private static final class CachedPrograms {

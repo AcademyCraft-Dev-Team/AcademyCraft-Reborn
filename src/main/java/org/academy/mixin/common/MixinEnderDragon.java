@@ -25,6 +25,11 @@ public abstract class MixinEnderDragon {
         ci.cancel();
     }
 
+    @Inject(method = "aiStep", at = @At("TAIL"))
+    private void academy$reassertMentalViewAfterDragonPhase(CallbackInfo ci) {
+        MentalControlRuntime.beforeLookControlTick((EnderDragon) (Object) this);
+    }
+
     @Inject(method = "canAttack", at = @At("HEAD"), cancellable = true)
     private void academy$applyMentalControlRelation(
             LivingEntity target,

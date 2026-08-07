@@ -17,14 +17,19 @@ import org.academy.api.common.entitycontrol.ControlBinding;
 import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.api.common.entitycontrol.ControlContext;
 import org.academy.api.common.entitycontrol.ControlDirective;
+import org.academy.api.common.entitycontrol.ControlDestination;
 import org.academy.api.common.entitycontrol.ControlDomain;
 import org.academy.api.common.entitycontrol.ControlEvaluation;
+import org.academy.api.common.entitycontrol.ControlFailureReason;
 import org.academy.api.common.entitycontrol.ControlHandle;
 import org.academy.api.common.entitycontrol.ControlInspection;
 import org.academy.api.common.entitycontrol.ControlRejectionReason;
 import org.academy.api.common.entitycontrol.ControlRequest;
 import org.academy.api.common.entitycontrol.ControlSupport;
 import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import org.academy.internal.common.ability.mentalout.MentalControlMemory;
+import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
@@ -161,7 +166,12 @@ public final class MentalControlRuntime {
         if (subject instanceof Mob mob && directives.containsKey(ControlDomain.RELATION)) {
             enforceTargetWhitelist(mob);
         }
-        return new RuntimeHandle(server, leaseId);
+        MentalControlMemory.remember(controller, subject);
+        var handle = new RuntimeHandle(server, leaseId);
+        synchronized (state) {
+            state.handles.put(leaseId, new WeakReference<>(handle));
+        }
+        return handle;
     }
 
     public static void registerAdapter(Identifier id, int priority, MentalControlAdapter adapter) {
@@ -257,6 +267,71 @@ public final class MentalControlRuntime {
         return state != null && state.leases.isFrozen(subject.getUUID(), subject.level().getGameTime());
     }
 
+    /**
+     * Returns whether vanilla target acquisition must yield to an explicit mental-control policy.
+     * Relation control keeps the normal goal selector available for permitted retaliation; its
+     * special Brain targeting is filtered separately by {@link #suppressesAutonomousBrain(Mob)}.
+     */
+    public static boolean suppressesAutonomousTargeting(Mob subject) {
+        Objects.requireNonNull(subject, "subject");
+        var state = stateIfPresent(subject.level().getServer());
+        if (state == null) return false;
+        var now = subject.level().getGameTime();
+        return state.leases.effective(subject.getUUID(), ControlCapability.FORCE_TARGET, now) != null
+                || state.leases.effective(subject.getUUID(), ControlCapability.PATH_CONTROL, now) != null
+                || state.leases.effective(subject.getUUID(), ControlCapability.GUARD_CONTROL, now) != null
+                || state.leases.effective(subject.getUUID(), ControlCapability.FREEZE_AI, now) != null;
+    }
+
+    /**
+     * Returns whether a movement command owns the mob's complete action loop. While this is true,
+     * vanilla goals and entity-specific server AI must not tick; navigation and movement controls
+     * are still ticked by {@code Mob} so the active control binding can drive them continuously.
+     */
+    public static boolean suppressesAutonomousActions(Mob subject) {
+        Objects.requireNonNull(subject, "subject");
+        var state = stateIfPresent(subject.level().getServer());
+        if (state == null) return false;
+        return state.leases.effective(
+                subject.getUUID(),
+                ControlCapability.PATH_CONTROL,
+                subject.level().getGameTime()
+        ) != null;
+    }
+
+    public static boolean suppressesAutonomousBrain(Mob subject) {
+        var state = stateIfPresent(subject.level().getServer());
+        if (state == null) return false;
+        var now = subject.level().getGameTime();
+        var hasExclusivePolicy = suppressesAutonomousTargeting(subject);
+        if (!hasExclusivePolicy) return false;
+        var explicitTarget = getForcedTarget(subject);
+        if (explicitTarget == null) explicitTarget = getGuardTarget(subject);
+        if (explicitTarget != null) return false;
+        var brainTarget = subject.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
+        return brainTarget == null || brainTarget.isEmpty()
+                || attackDecision(subject, brainTarget.get()) == AttackDecision.DENY;
+    }
+
+    public static boolean suppressesAutonomousCombat(Mob subject) {
+        if (suppressesAutonomousTargeting(subject)) return true;
+        var state = stateIfPresent(subject.level().getServer());
+        if (state == null) return false;
+        var relation = state.leases.effective(
+                subject.getUUID(),
+                ControlCapability.RELATION_CONTROL,
+                subject.level().getGameTime()
+        );
+        if (relation == null
+                || !(relation.directive() instanceof ControlDirective.ImpressionAlliance)) return false;
+        var target = getRawTarget(subject);
+        if (target == null) {
+            var memory = subject.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
+            if (memory != null && memory.isPresent()) target = memory.get();
+        }
+        return target == null || attackDecision(subject, target) == AttackDecision.DENY;
+    }
+
     public static @Nullable LivingEntity getForcedTarget(Mob mob) {
         return getForcedTarget((LivingEntity) mob);
     }
@@ -269,6 +344,36 @@ public final class MentalControlRuntime {
         if (targetId == null) return null;
         var target = level.getEntity(targetId);
         return target instanceof LivingEntity living && living.isAlive() && !living.isRemoved() ? living : null;
+    }
+
+    public static @Nullable LivingEntity getGuardTarget(LivingEntity subject) {
+        Objects.requireNonNull(subject, "subject");
+        var server = subject.level().getServer();
+        var state = stateIfPresent(server);
+        if (server == null || state == null) return null;
+        synchronized (state) {
+            var targetId = state.guardTargets.get(subject.getUUID());
+            if (targetId == null) return null;
+            var target = findLivingEntity(server, targetId);
+            if (target == null || target.level() != subject.level() || !target.isAlive() || target.isRemoved()) {
+                state.guardTargets.remove(subject.getUUID(), targetId);
+                return null;
+            }
+            return target;
+        }
+    }
+
+    static void updateGuardTarget(Mob subject, @Nullable LivingEntity target) {
+        Objects.requireNonNull(subject, "subject");
+        var state = stateIfPresent(subject.level().getServer());
+        if (state == null) return;
+        synchronized (state) {
+            if (target == null) {
+                state.guardTargets.remove(subject.getUUID());
+            } else {
+                state.guardTargets.put(subject.getUUID(), target.getUUID());
+            }
+        }
     }
 
     public static boolean canForceAttack(LivingEntity attacker, LivingEntity target) {
@@ -293,6 +398,23 @@ public final class MentalControlRuntime {
                     : AttackDecision.PASS;
         }
         var now = attacker.level().getGameTime();
+        var guard = state.leases.effective(attacker.getUUID(), ControlCapability.GUARD_CONTROL, now);
+        if (guard != null && guard.directive() instanceof ControlDirective.Guard guardDirective) {
+            UUID selectedGuardTarget;
+            synchronized (state) {
+                selectedGuardTarget = state.guardTargets.get(attacker.getUUID());
+            }
+            var controller = attacker.level().getServer().getPlayerList().getPlayer(guard.controllerId());
+            var protectsDestination = guardDirective.destination() instanceof ControlDestination.Entity entity
+                    && entity.uuid().equals(target.getUUID());
+            var protectsController = controller != null && (target == controller
+                    || controller.isAlliedTo(target)
+                    || FriendlyFireSetting.shouldPrevent(controller, target));
+            if (protectsDestination || protectsController) return AttackDecision.DENY;
+            return target.getUUID().equals(selectedGuardTarget)
+                    ? AttackDecision.ALLOW
+                    : AttackDecision.DENY;
+        }
         var controlledDecision = controlledAttackDecision(
                 state.leases,
                 state.targetWhitelist,
@@ -307,6 +429,29 @@ public final class MentalControlRuntime {
         }
 
         return allianceDecision(attacker, target);
+    }
+
+    /**
+     * Damage and autonomous hostility deliberately use different policies. A controller may hurt
+     * a roster subject when friendly fire is enabled, even though the same alliance relation keeps
+     * the subject from treating its controller as an AI target.
+     */
+    public static AttackDecision damageDecision(LivingEntity attacker, LivingEntity target) {
+        var decision = attackDecision(attacker, target);
+        if (!(attacker instanceof ServerPlayer controller)
+                || !isControlledBy(controller, target)) return decision;
+        if (!FriendlyFireSetting.isFriendlyFireEnabled(controller)) return AttackDecision.DENY;
+        return allianceDecision(attacker, target) == AttackDecision.DENY
+                ? AttackDecision.PASS
+                : decision;
+    }
+
+    private static boolean isControlledBy(ServerPlayer controller, LivingEntity target) {
+        var context = MentaloutControlContext.get(controller);
+        if (context != null && context.contains(target.getUUID())) return true;
+        var state = stateIfPresent(controller.level().getServer());
+        return state != null && state.leases.hasActiveControl(
+                controller.getUUID(), target.getUUID(), target.level().getGameTime());
     }
 
     public static AttackDecision allianceDecision(LivingEntity attacker, LivingEntity target) {
@@ -384,6 +529,7 @@ public final class MentalControlRuntime {
         }
         var state = stateIfPresent(subject.level().getServer());
         if (state == null) return true;
+        if (subject instanceof Mob mob && suppressesAutonomousTargeting(mob)) return false;
         var relation = state.leases.effective(
                 subject.getUUID(),
                 ControlCapability.RELATION_CONTROL,
@@ -403,6 +549,10 @@ public final class MentalControlRuntime {
         var forcedTarget = leases.forcedTarget(attackerId, now);
         if (forcedTarget != null) {
             return targetId.equals(forcedTarget) ? AttackDecision.ALLOW : AttackDecision.DENY;
+        }
+        if (leases.effective(attackerId, ControlCapability.PATH_CONTROL, now) != null
+                || leases.effective(attackerId, ControlCapability.FREEZE_AI, now) != null) {
+            return AttackDecision.DENY;
         }
         var relation = leases.effective(attackerId, ControlCapability.RELATION_CONTROL, now);
         if (relation == null
@@ -530,6 +680,20 @@ public final class MentalControlRuntime {
         var state = stateIfPresent(mob.level().getServer());
         if (state == null) return;
         var now = mob.level().getGameTime();
+        var forcedTarget = getForcedTarget(mob);
+        var guardTarget = getGuardTarget(mob);
+        var commandedTarget = forcedTarget != null ? forcedTarget : guardTarget;
+        if (suppressesAutonomousTargeting(mob)) {
+            enforceAngerWhitelist(mob);
+            if (commandedTarget != null) {
+                if (getRawTarget(mob) != commandedTarget) mob.setTarget(commandedTarget);
+                mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, commandedTarget);
+            } else {
+                if (getRawTarget(mob) != null) mob.setTarget(null);
+                mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                mob.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+            }
+        }
         var relation = state.leases.effective(
                 mob.getUUID(),
                 ControlCapability.RELATION_CONTROL,
@@ -538,7 +702,6 @@ public final class MentalControlRuntime {
         if (relation == null
                 || !(relation.directive() instanceof ControlDirective.ImpressionAlliance)) return;
         enforceAngerWhitelist(mob);
-        var forcedTarget = getForcedTarget(mob);
         if (forcedTarget != null) {
             maintainTarget(mob);
             return;
@@ -549,10 +712,37 @@ public final class MentalControlRuntime {
             mob.setTarget(null);
         }
         var brainTarget = mob.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
+        var clearedCombatTarget = false;
         if (brainTarget != null && brainTarget.isPresent()
                 && attackDecision(mob, brainTarget.get()) == AttackDecision.DENY) {
             mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+            clearedCombatTarget = true;
         }
+        clearedCombatTarget |= clearDeniedBrainTarget(mob, MemoryModuleType.NEAREST_ATTACKABLE);
+        clearedCombatTarget |= clearDeniedBrainTarget(mob, MemoryModuleType.ROAR_TARGET);
+        clearedCombatTarget |= clearDeniedBrainTarget(
+                mob, MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER);
+        clearedCombatTarget |= clearDeniedBrainTarget(
+                mob, MemoryModuleType.NEAREST_VISIBLE_NEMESIS);
+        if (clearedCombatTarget) {
+            mob.setAggressive(false);
+            var brain = mob.getBrain();
+            brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+            brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+            brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+            if (!suppressesAutonomousActions(mob)) mob.getNavigation().stop();
+        }
+    }
+
+    private static <T extends LivingEntity> boolean clearDeniedBrainTarget(
+            Mob mob,
+            MemoryModuleType<T> memoryType
+    ) {
+        var memory = mob.getBrain().getMemoryInternal(memoryType);
+        if (memory == null || memory.isEmpty()
+                || attackDecision(mob, memory.get()) != AttackDecision.DENY) return false;
+        mob.getBrain().eraseMemory(memoryType);
+        return true;
     }
 
     private static void enforceAngerWhitelist(Mob mob) {
@@ -591,6 +781,7 @@ public final class MentalControlRuntime {
             var removal = state.leases.expire(effectiveNow);
             state.targetWhitelist.expire(effectiveNow);
             var invalidLeaseIds = new HashSet<UUID>();
+            var unavailableTargetLeaseIds = new HashSet<UUID>();
             for (var lease : state.leases.snapshot()) {
                 var controller = server.getPlayerList().getPlayer(lease.controllerId());
                 var subject = findLivingEntity(server, lease.subjectId());
@@ -609,14 +800,16 @@ public final class MentalControlRuntime {
                     invalidLeaseIds.add(lease.id());
                     continue;
                 }
-                for (var targetId : lease.forcedTargets()) {
+                for (var targetId : lease.referencedTargets()) {
                     var target = findLivingEntity(server, targetId);
                     if (target == null || !target.isAlive() || target.isRemoved() || target.level() != subject.level()) {
                         invalidLeaseIds.add(lease.id());
+                        unavailableTargetLeaseIds.add(lease.id());
                         break;
                     }
                 }
             }
+            recordFailures(state, unavailableTargetLeaseIds, ControlFailureReason.TARGET_UNAVAILABLE);
             removal.merge(state.leases.removeAll(invalidLeaseIds));
             reconcileRecovering(server, state, removal);
 
@@ -634,14 +827,128 @@ public final class MentalControlRuntime {
                 }
             }
             if (!failedBindings.isEmpty()) {
+                recordFailures(state, failedBindings, ControlFailureReason.ADAPTER_ERROR);
                 var failures = state.leases.removeAll(failedBindings);
                 reconcileRecovering(server, state, failures);
+            }
+
+            var completionStates = new HashMap<UUID, Boolean>();
+            var completionFailures = new HashSet<UUID>();
+            for (var active : List.copyOf(state.activeBindings.values())) {
+                try {
+                    completionStates.merge(
+                            active.leaseId(),
+                            active.binding().isComplete(),
+                            Boolean::logicalAnd
+                    );
+                } catch (Throwable throwable) {
+                    AcademyCraft.LOGGER.error(
+                            "Mental control binding {} failed during completion check",
+                            active.leaseId(),
+                            throwable
+                    );
+                    completionFailures.add(active.leaseId());
+                }
+            }
+            if (!completionFailures.isEmpty()) {
+                recordFailures(state, completionFailures, ControlFailureReason.ADAPTER_ERROR);
+                var failures = state.leases.removeAll(completionFailures);
+                reconcileRecovering(server, state, failures);
+            }
+            var completedLeases = completionStates.entrySet().stream()
+                    .filter(Map.Entry::getValue)
+                    .map(Map.Entry::getKey)
+                    .filter(leaseId -> !completionFailures.contains(leaseId))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            if (!completedLeases.isEmpty()) {
+                for (var active : state.activeBindings.values()) {
+                    if (!completedLeases.contains(active.leaseId())) continue;
+                    active.binding().failureReason().ifPresent(reason ->
+                            recordFailure(state, active.leaseId(), reason));
+                }
+                var completed = state.leases.removeAll(completedLeases);
+                reconcileRecovering(server, state, completed);
             }
 
             for (var subjectId : state.leases.subjectIds()) {
                 if (findLivingEntity(server, subjectId) instanceof Mob mob) {
                     enforceTargetWhitelist(mob);
                 }
+            }
+        }
+        removeEmptyState(server, state);
+    }
+
+    public static void beforeNavigationTick(Mob mob) {
+        runMovementHook(mob, false);
+    }
+
+    public static void beforeMoveControlTick(Mob mob) {
+        runMovementHook(mob, true);
+    }
+
+    public static void beforeLookControlTick(LivingEntity subject) {
+        Objects.requireNonNull(subject, "subject");
+        var server = subject.level().getServer();
+        var state = stateIfPresent(server);
+        if (server == null || state == null) return;
+        var failedLeases = new HashSet<UUID>();
+        synchronized (state) {
+            for (var entry : List.copyOf(state.activeBindings.entrySet())) {
+                if (!entry.getKey().subjectId().equals(subject.getUUID())
+                        || entry.getValue().capability() != ControlCapability.VIEW_CONTROL) continue;
+                try {
+                    entry.getValue().binding().beforeLookControlTick();
+                } catch (Throwable throwable) {
+                    AcademyCraft.LOGGER.error(
+                            "Mental control binding {} failed before look control tick",
+                            entry.getValue().leaseId(),
+                            throwable
+                    );
+                    failedLeases.add(entry.getValue().leaseId());
+                }
+            }
+            if (!failedLeases.isEmpty()) {
+                recordFailures(state, failedLeases, ControlFailureReason.ADAPTER_ERROR);
+                var failures = state.leases.removeAll(failedLeases);
+                reconcileRecovering(server, state, failures);
+            }
+        }
+        removeEmptyState(server, state);
+    }
+
+    private static void runMovementHook(Mob mob, boolean moveControlHook) {
+        Objects.requireNonNull(mob, "mob");
+        var server = mob.level().getServer();
+        var state = stateIfPresent(server);
+        if (server == null || state == null) return;
+        var failedLeases = new HashSet<UUID>();
+        synchronized (state) {
+            for (var entry : List.copyOf(state.activeBindings.entrySet())) {
+                if (!entry.getKey().subjectId().equals(mob.getUUID())
+                        || !entry.getValue().capability().domains().contains(ControlDomain.MOVEMENT)) {
+                    continue;
+                }
+                try {
+                    if (moveControlHook) {
+                        entry.getValue().binding().beforeMoveControlTick();
+                    } else {
+                        entry.getValue().binding().beforeNavigationTick();
+                    }
+                } catch (Throwable throwable) {
+                    AcademyCraft.LOGGER.error(
+                            "Mental control binding {} failed before {} tick",
+                            entry.getValue().leaseId(),
+                            moveControlHook ? "move control" : "navigation",
+                            throwable
+                    );
+                    failedLeases.add(entry.getValue().leaseId());
+                }
+            }
+            if (!failedLeases.isEmpty()) {
+                recordFailures(state, failedLeases, ControlFailureReason.ADAPTER_ERROR);
+                var failures = state.leases.removeAll(failedLeases);
+                reconcileRecovering(server, state, failures);
             }
         }
         removeEmptyState(server, state);
@@ -677,6 +984,8 @@ public final class MentalControlRuntime {
         if (state == null) return;
         synchronized (state) {
             state.targetWhitelist.releaseEntity(subjectId);
+            state.guardTargets.remove(subjectId);
+            state.guardTargets.entrySet().removeIf(entry -> entry.getValue().equals(subjectId));
             var removal = state.leases.removeBySubject(subjectId);
             reconcileRecovering(server, state, removal);
         }
@@ -889,9 +1198,43 @@ public final class MentalControlRuntime {
         if (directive instanceof ControlDirective.ForceTarget forceTarget) {
             validateTarget(server, subject, forceTarget.targetUuid(), directive.capability());
         } else if (directive instanceof ControlDirective.MoveTo moveTo) {
-            validateTarget(server, subject, moveTo.targetUuid(), directive.capability());
+            validateDestination(server, subject, moveTo.destination(), directive.capability());
         } else if (directive instanceof ControlDirective.LookAt lookAt) {
             validateTarget(server, subject, lookAt.targetUuid(), directive.capability());
+        } else if (directive instanceof ControlDirective.Guard guard) {
+            validateDestination(server, subject, guard.destination(), directive.capability());
+        }
+    }
+
+    private static @Nullable UUID referencedTarget(ControlDirective directive) {
+        return switch (directive) {
+            case ControlDirective.ForceTarget forceTarget -> forceTarget.targetUuid();
+            case ControlDirective.LookAt lookAt -> lookAt.targetUuid();
+            case ControlDirective.MoveTo moveTo -> moveTo.destination() instanceof ControlDestination.Entity entity
+                    ? entity.uuid() : null;
+            case ControlDirective.Guard guard -> guard.destination() instanceof ControlDestination.Entity entity
+                    ? entity.uuid() : null;
+            default -> null;
+        };
+    }
+
+    private static void validateDestination(
+            MinecraftServer server,
+            LivingEntity subject,
+            ControlDestination destination,
+            ControlCapability capability
+    ) {
+        switch (destination) {
+            case ControlDestination.Entity entity -> validateTarget(server, subject, entity.uuid(), capability);
+            case ControlDestination.Position position -> {
+                if (!subject.level().dimension().identifier().equals(position.dimension())) {
+                    throw new ControlApplyException(
+                            ControlRejectionReason.INVALID_DIRECTIVE,
+                            capability,
+                            "Fixed destination must be in the subject level"
+                    );
+                }
+            }
         }
     }
 
@@ -924,6 +1267,24 @@ public final class MentalControlRuntime {
     private static boolean isLeaseActive(MinecraftServer server, UUID leaseId) {
         var state = stateIfPresent(server);
         return state != null && state.leases.isActive(leaseId);
+    }
+
+    private static void recordFailures(
+            ServerState state,
+            Iterable<UUID> leaseIds,
+            ControlFailureReason reason
+    ) {
+        for (var leaseId : leaseIds) recordFailure(state, leaseId, reason);
+    }
+
+    private static void recordFailure(
+            ServerState state,
+            UUID leaseId,
+            ControlFailureReason reason
+    ) {
+        var reference = state.handles.get(leaseId);
+        var handle = reference == null ? null : reference.get();
+        if (handle != null) handle.recordFailure(reason);
     }
 
     private static void reconcileRecovering(
@@ -1138,6 +1499,8 @@ public final class MentalControlRuntime {
         private final LeaseTable leases = new LeaseTable();
         private final Map<BindingKey, ActiveBinding> activeBindings = new HashMap<>();
         private final TargetWhitelist targetWhitelist = new TargetWhitelist();
+        private final Map<UUID, UUID> guardTargets = new HashMap<>();
+        private final Map<UUID, WeakReference<RuntimeHandle>> handles = new HashMap<>();
     }
 
     static final class TargetWhitelist {
@@ -1212,6 +1575,31 @@ public final class MentalControlRuntime {
         }
 
         @Override
+        public boolean isComplete() {
+            return closed || delegate.isComplete();
+        }
+
+        @Override
+        public void beforeNavigationTick() {
+            if (!closed) delegate.beforeNavigationTick();
+        }
+
+        @Override
+        public void beforeMoveControlTick() {
+            if (!closed) delegate.beforeMoveControlTick();
+        }
+
+        @Override
+        public void beforeLookControlTick() {
+            if (!closed) delegate.beforeLookControlTick();
+        }
+
+        @Override
+        public Optional<ControlFailureReason> failureReason() {
+            return closed ? Optional.empty() : delegate.failureReason();
+        }
+
+        @Override
         public void close() {
             if (closed) return;
             closed = true;
@@ -1242,6 +1630,7 @@ public final class MentalControlRuntime {
         private final WeakReference<MinecraftServer> server;
         private final UUID id;
         private final AtomicBoolean closed = new AtomicBoolean();
+        private volatile ControlFailureReason failureReason;
 
         private RuntimeHandle(MinecraftServer server, UUID id) {
             this.server = new WeakReference<>(server);
@@ -1257,6 +1646,15 @@ public final class MentalControlRuntime {
         public boolean isClosed() {
             var currentServer = server.get();
             return closed.get() || currentServer == null || !isLeaseActive(currentServer, id);
+        }
+
+        @Override
+        public Optional<ControlFailureReason> failureReason() {
+            return Optional.ofNullable(failureReason);
+        }
+
+        private void recordFailure(ControlFailureReason reason) {
+            if (failureReason == null) failureReason = reason;
         }
 
         @Override
@@ -1346,7 +1744,7 @@ public final class MentalControlRuntime {
             Identifier source,
             Identifier controllerDimension,
             Identifier subjectDimension,
-            Set<UUID> forcedTargets,
+            Set<UUID> referencedTargets,
             @Nullable UUID guardianRelationLeaseId
     ) {
     }
@@ -1429,6 +1827,14 @@ public final class MentalControlRuntime {
             var relation = effective(subjectId, ControlCapability.RELATION_CONTROL, now);
             return relation != null && relation.controllerId().equals(controllerId)
                     && relation.directive() instanceof ControlDirective.ImpressionAlliance;
+        }
+
+        synchronized boolean hasActiveControl(UUID controllerId, UUID subjectId, long now) {
+            return leases.values().stream().anyMatch(lease ->
+                    lease.input().controllerId().equals(controllerId)
+                            && lease.input().subjectId().equals(subjectId)
+                            && lease.input().expiresAt() > now
+                            && !lease.entries().isEmpty());
         }
 
         synchronized boolean hasImpressionAlliance(
@@ -1557,9 +1963,8 @@ public final class MentalControlRuntime {
                     lease.input().subjectDimension(),
                     lease.entries().values().stream()
                             .map(DomainLease::directive)
-                             .filter(ControlDirective.ForceTarget.class::isInstance)
-                             .map(ControlDirective.ForceTarget.class::cast)
-                             .map(ControlDirective.ForceTarget::targetUuid)
+                            .map(MentalControlRuntime::referencedTarget)
+                            .filter(Objects::nonNull)
                             .collect(java.util.stream.Collectors.toUnmodifiableSet()),
                     lease.input().guardianRelationLeaseId()
             )).toList();

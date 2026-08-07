@@ -68,6 +68,7 @@ import org.academy.internal.common.ability.mentalout.skills.TargetMisidentificat
 import org.academy.internal.common.ability.mentalout.skills.MentalIntrusion;
 import org.academy.internal.common.ability.mentalout.skills.SensoryDistortion;
 import org.academy.internal.common.ability.mentalout.skills.PrecisionOperation;
+import org.academy.internal.common.ability.mentalout.skills.CommandPositioning;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv1.SpaceFoldingTheorem;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
@@ -195,6 +196,8 @@ public final class Skills {
             SKILLS.register(SkillNames.MENTAL_INTRUSION, MentalIntrusion::new);
     public static final DeferredHolder<Skill, SensoryDistortion> SENSORY_DISTORTION =
             SKILLS.register(SkillNames.SENSORY_DISTORTION, SensoryDistortion::new);
+    public static final DeferredHolder<Skill, CommandPositioning> COMMAND_POSITIONING =
+            SKILLS.register(SkillNames.COMMAND_POSITIONING, CommandPositioning::new);
     public static final DeferredHolder<Skill, PrecisionOperation> PRECISION_OPERATION =
             SKILLS.register(SkillNames.PRECISION_OPERATION, PrecisionOperation::new);
     /**

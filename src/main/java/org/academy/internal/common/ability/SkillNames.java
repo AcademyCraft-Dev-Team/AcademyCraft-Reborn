@@ -85,6 +85,7 @@ public final class SkillNames {
     public static final String TARGET_MISIDENTIFICATION = "target_misidentification";
     public static final String IMPRESSION_MANIPULATION = "impression_manipulation";
     public static final String MENTAL_STUPOR = "mental_stupor";
+    public static final String COMMAND_POSITIONING = "command_positioning";
     public static final String PRECISION_OPERATION = "precision_operation";
     public static final String LEVEL0_PASSIVE_LV1 = "level0_passive_lv1";
     public static final String LEVEL0_PASSIVE_LV2 = "level0_passive_lv2";

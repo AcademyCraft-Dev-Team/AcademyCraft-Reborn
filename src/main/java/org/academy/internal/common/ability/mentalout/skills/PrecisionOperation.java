@@ -101,6 +101,7 @@ public final class PrecisionOperation extends Skill {
 
     public static Data normalizeData(Data data) {
         if (data == null) data = new Data();
+        var migrateFlow = data.schemaVersion == 1;
         var legacy = data.schemaVersion > 0 && data.schemaVersion < Data.SCHEMA_VERSION;
         data.revision = Math.max(0L, data.revision);
         var normalized = new ArrayList<PrecisionGraph>(4);
@@ -109,7 +110,7 @@ public final class PrecisionOperation extends Skill {
             var graph = slot < source.size() && source.get(slot) != null
                     ? source.get(slot)
                     : PrecisionGraph.EMPTY;
-            if (legacy) {
+            if (migrateFlow) {
                 var migration = PrecisionGraph.migrateLegacy(graph);
                 normalized.add(migration.valid() ? migration.graph() : PrecisionGraph.EMPTY);
             } else {
@@ -124,7 +125,7 @@ public final class PrecisionOperation extends Skill {
     }
 
     public static final class Data extends SkillData {
-        public static final int SCHEMA_VERSION = 2;
+        public static final int SCHEMA_VERSION = 3;
         public static final Identifier ID = AcademyCraft.academy("precision_operation");
 
         @SerializedName("schemaVersion")

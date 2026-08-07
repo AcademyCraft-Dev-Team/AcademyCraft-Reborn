@@ -1,7 +1,10 @@
 package org.academy.mixin.common;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.internal.common.ability.mentalout.control.MentalControlMobAccess;
@@ -11,6 +14,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -18,6 +22,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MixinMob implements MentalControlMobAccess {
     @Shadow
     private @Nullable LivingEntity target;
+
+    @Shadow
+    protected abstract void customServerAiStep(ServerLevel level);
 
     @Override
     public @Nullable LivingEntity academy$getRawMentalControlTarget() {
@@ -35,6 +42,15 @@ public abstract class MixinMob implements MentalControlMobAccess {
             ci.cancel();
             return;
         }
+        var suppressesBrain = MentalControlRuntime.suppressesAutonomousBrain(mob);
+        if (MentalControlRuntime.suppressesAutonomousTargeting(mob) || suppressesBrain) {
+            mob.setPersistenceRequired();
+            MentalControlRuntime.enforceTargetWhitelist(mob);
+        }
+        if (MentalControlRuntime.suppressesAutonomousActions(mob)) {
+            mob.setAggressive(false);
+        }
+        academy$clearSuppressedCombatPose(mob);
         academy$maintainForcedTarget(mob);
     }
 
@@ -42,6 +58,7 @@ public abstract class MixinMob implements MentalControlMobAccess {
     private void academy$applyMentalControlAfterAi(CallbackInfo ci) {
         var mob = (Mob) (Object) this;
         MentalControlRuntime.enforceTargetWhitelist(mob);
+        academy$clearSuppressedCombatPose(mob);
         academy$maintainForcedTarget(mob);
     }
 
@@ -69,6 +86,7 @@ public abstract class MixinMob implements MentalControlMobAccess {
     @Inject(method = "getTarget", at = @At("HEAD"), cancellable = true)
     private void academy$getForcedMentalTarget(CallbackInfoReturnable<LivingEntity> cir) {
         var target = MentalControlRuntime.getForcedTarget((Mob) (Object) this);
+        if (target == null) target = MentalControlRuntime.getGuardTarget((Mob) (Object) this);
         if (target != null) {
             cir.setReturnValue(target);
         }
@@ -77,6 +95,7 @@ public abstract class MixinMob implements MentalControlMobAccess {
     @Inject(method = "getTargetUnchecked", at = @At("HEAD"), cancellable = true)
     private void academy$getUncheckedForcedMentalTarget(CallbackInfoReturnable<LivingEntity> cir) {
         var target = MentalControlRuntime.getForcedTarget((Mob) (Object) this);
+        if (target == null) target = MentalControlRuntime.getGuardTarget((Mob) (Object) this);
         if (target != null) {
             cir.setReturnValue(target);
         }
@@ -84,9 +103,137 @@ public abstract class MixinMob implements MentalControlMobAccess {
 
     private static void academy$maintainForcedTarget(Mob mob) {
         var target = MentalControlRuntime.getForcedTarget(mob);
+        var forced = target != null;
+        if (target == null) target = MentalControlRuntime.getGuardTarget(mob);
         if (target == null || !target.isAlive() || target.level() != mob.level()) return;
 
-        MentalControlRuntime.maintainTarget(mob);
+        if (forced) {
+            MentalControlRuntime.maintainTarget(mob);
+        } else {
+            mob.setTarget(target);
+            mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+        }
         mob.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+    }
+
+    private static void academy$clearSuppressedCombatPose(Mob mob) {
+        if (!MentalControlRuntime.suppressesAutonomousCombat(mob)) return;
+        if (mob.hasPose(Pose.DIGGING)
+                || mob.hasPose(Pose.EMERGING)
+                || mob.hasPose(Pose.ROARING)
+                || mob.hasPose(Pose.SNIFFING)) {
+            mob.setPose(Pose.STANDING);
+        }
+    }
+
+    @Redirect(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/goal/GoalSelector;tick()V",
+                    ordinal = 0
+            )
+    )
+    private void academy$suppressVanillaTargetSelection(GoalSelector selector) {
+        if (!MentalControlRuntime.suppressesAutonomousTargeting((Mob) (Object) this)) {
+            selector.tick();
+        }
+    }
+
+    @Redirect(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/goal/GoalSelector;tickRunningGoals(Z)V",
+                    ordinal = 0
+            )
+    )
+    private void academy$suppressRunningVanillaTargetSelection(
+            GoalSelector selector,
+            boolean tickAllRunning
+    ) {
+        if (!MentalControlRuntime.suppressesAutonomousTargeting((Mob) (Object) this)) {
+            selector.tickRunningGoals(tickAllRunning);
+        }
+    }
+
+    @Redirect(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/goal/GoalSelector;tick()V",
+                    ordinal = 1
+            )
+    )
+    private void academy$suppressVanillaActions(GoalSelector selector) {
+        if (!MentalControlRuntime.suppressesAutonomousActions((Mob) (Object) this)) {
+            selector.tick();
+        }
+    }
+
+    @Redirect(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/goal/GoalSelector;tickRunningGoals(Z)V",
+                    ordinal = 1
+            )
+    )
+    private void academy$suppressRunningVanillaActions(
+            GoalSelector selector,
+            boolean tickAllRunning
+    ) {
+        if (!MentalControlRuntime.suppressesAutonomousActions((Mob) (Object) this)) {
+            selector.tickRunningGoals(tickAllRunning);
+        }
+    }
+
+    @Redirect(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/Mob;customServerAiStep(Lnet/minecraft/server/level/ServerLevel;)V"
+            )
+    )
+    private void academy$suppressEntitySpecificActions(Mob instance, ServerLevel level) {
+        if (!MentalControlRuntime.suppressesAutonomousActions(instance)) {
+            customServerAiStep(level);
+        }
+    }
+
+    @Inject(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/navigation/PathNavigation;tick()V",
+                    shift = At.Shift.BEFORE
+            )
+    )
+    private void academy$reassertMentalNavigation(CallbackInfo ci) {
+        MentalControlRuntime.beforeNavigationTick((Mob) (Object) this);
+    }
+
+    @Inject(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/control/MoveControl;tick()V",
+                    shift = At.Shift.BEFORE
+            )
+    )
+    private void academy$reassertMentalMovementAfterSpecialBrain(CallbackInfo ci) {
+        MentalControlRuntime.beforeMoveControlTick((Mob) (Object) this);
+    }
+
+    @Inject(
+            method = "serverAiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/ai/control/LookControl;tick()V",
+                    shift = At.Shift.BEFORE
+            )
+    )
+    private void academy$reassertMentalViewAfterSpecialBrain(CallbackInfo ci) {
+        MentalControlRuntime.beforeLookControlTick((Mob) (Object) this);
     }
 }
