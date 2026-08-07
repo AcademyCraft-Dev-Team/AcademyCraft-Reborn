@@ -37,13 +37,14 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.gui.DataTerminalTheme;
+import org.academy.internal.client.gui.SerializedUiLayout;
+import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
-import org.academy.internal.client.gui.SerializedUiLayout;
-import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -354,18 +355,15 @@ public final class ReflectionFilter extends Skill {
     }
 
     private static final class ReflectionFilterScreen extends UiScreen implements SerializedUiDebugHost {
-        private static final int PANEL_BG = 0xE60E1216;
-        private static final int BORDER = 0xFF2E9CCB;
-        private static final int ACCENT = 0xFF34BFE8;
-        private static final int SECTION_BG = 0x80151D22;
-        private static final int ROW = 0x221D2930;
-        private static final int ROW_HOVER = 0x4434BFE8;
-        private static final int ROW_SELECTED = 0x6634BFE8;
-        private static final int TEXT = 0xFFE2EEF3;
-        private static final int DIM = 0xFFA6B5BC;
-        private static final int GOOD = 0xFF6DDE8A;
-        private static final int BAD = 0xFFFF7777;
-        private static final int NEUTRAL = 0xFFE4D06B;
+        private static final int ACCENT = DataTerminalTheme.FILTER_ACCENT;
+        private static final int ROW = DataTerminalTheme.ROW_BACKGROUND;
+        private static final int ROW_HOVER = DataTerminalTheme.HOVER;
+        private static final int ROW_SELECTED = DataTerminalTheme.FILTER_SELECTED;
+        private static final int TEXT = DataTerminalTheme.TEXT;
+        private static final int DIM = DataTerminalTheme.TEXT_DIM;
+        private static final int GOOD = DataTerminalTheme.GOOD;
+        private static final int BAD = DataTerminalTheme.DANGER;
+        private static final int NEUTRAL = DataTerminalTheme.WARNING;
         private static final int ROW_H = 18;
         private static final int GAP = 3;
         private static final int MIN_W = 460;
@@ -418,9 +416,9 @@ public final class ReflectionFilter extends Skill {
         protected void onInit() {
             var compact = width < PREFERRED_W + 24 || height < PREFERRED_H + 24;
             serializedLayoutId = "reflection_filter_" + (compact ? "compact" : "wide");
-            var layout = SerializedUiLayout.load(
+            var layout = SerializedUiLayout.loadBundled(
                     AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
-                    List.of("panel", "left_column", "middle_column", "right_column"),
+                    List.of("panel", "left_column", "middle_column", "right_column", "title_accent"),
                     () -> fallbackLayout(compact)
             );
             serializedLayout = layout;
@@ -449,6 +447,8 @@ public final class ReflectionFilter extends Skill {
             searchBox = new EditBox(font, leftX + 5, panelY + 34, leftW - 10, 16, Component.empty());
             searchBox.setHint(Component.translatable("screen.academy.reflection_filter.search"));
             searchBox.setMaxLength(64);
+            searchBox.setBordered(false);
+            searchBox.setTextColor(TEXT);
             addRenderableWidget(searchBox);
 
             var sideListW = (rightW - 8) / 2;
@@ -560,9 +560,11 @@ public final class ReflectionFilter extends Skill {
         public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             super.extractRenderState(graphics, mouseX, mouseY, partialTick);
             syncSerializedLayout();
-            border(graphics, panelX, panelY, panelW, panelH, BORDER);
+            DataTerminalTheme.panel(graphics, panelX, panelY, panelW, panelH, 24);
             fillSection(graphics, leftX, panelY + 30, leftW, panelH - 44);
             fillSection(graphics, rightX - 5, panelY + 30, rightW + 5, panelH - 44);
+            DataTerminalTheme.input(graphics, searchBox.getX(), searchBox.getY(),
+                    searchBox.getWidth(), 16, searchBox.isFocused(), ACCENT);
             searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
             var query = searchBox == null ? "" : searchBox.getValue().strip().toLowerCase(Locale.ROOT);
             if (!query.equals(lastSearch)) rebuildFilteredEffects();
@@ -652,7 +654,7 @@ public final class ReflectionFilter extends Skill {
                 graphics.text(font, font.plainSubstrByWidth(id, width - 22),
                         x + 5, y + 10, DIM, false);
                 graphics.text(font, "x", x + width - 12, y + 5,
-                        hover ? 0xFFFFFFFF : 0xFFCC6666, false);
+                        hover ? 0xFFFFFFFF : DataTerminalTheme.DANGER, false);
             }
             graphics.disableScissor();
             if (ids.isEmpty()) {
@@ -817,32 +819,22 @@ public final class ReflectionFilter extends Skill {
         }
 
         private void fillSection(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
-            graphics.fill(x, y, x + width, y + height, SECTION_BG);
-            border(graphics, x, y, width, height, 0x663A92B3);
+            DataTerminalTheme.section(graphics, x, y, width, height);
         }
 
         private void drawButton(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
                                 Component label, int mouseX, int mouseY, boolean enabled, boolean selected) {
             var hover = enabled && inside(mouseX, mouseY, x, y, width, height);
-            var background = selected ? 0x6634BFE8 : hover ? 0x40C1CFD5 : 0x1AFFFFFF;
-            if (!enabled) background = 0x12000000;
-            graphics.fill(x, y, x + width, y + height, background);
-            border(graphics, x, y, width, height, selected || hover ? ACCENT : 0x55C1CFD5);
-            var color = enabled ? selected ? 0xFFFFFFFF : TEXT : 0xFF66727A;
+            DataTerminalTheme.button(graphics, x, y, width, height, enabled, selected, hover,
+                    ACCENT, ROW_SELECTED);
+            var color = enabled ? TEXT : DataTerminalTheme.TEXT_DISABLED;
             graphics.centeredText(font, font.plainSubstrByWidth(label.getString(), Math.max(1, width - 6)),
                     x + width / 2, y + (height - 8) / 2, color);
         }
 
         private static void drawScrollBar(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
                                           int scroll, int maxScroll) {
-            graphics.fill(x, y, x + width, y + height, 0x331D2930);
-            if (maxScroll <= 0) {
-                graphics.fill(x, y, x + width, y + height, 0x5534BFE8);
-                return;
-            }
-            var thumbHeight = Math.max(12, height / 4);
-            var thumbY = y + (int) ((height - thumbHeight) * (scroll / (float) maxScroll));
-            graphics.fill(x, thumbY, x + width, thumbY + thumbHeight, 0xAA34BFE8);
+            DataTerminalTheme.scrollBar(graphics, x, y, width, height, scroll, maxScroll, ACCENT);
         }
 
         private static int maxScroll(int size, int visible) {
@@ -870,13 +862,6 @@ public final class ReflectionFilter extends Skill {
                     Math.round(widget.getWidth()),
                     Math.round(widget.getHeight())
             );
-        }
-
-        private static void border(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
-            graphics.fill(x, y, x + width, y + 1, color);
-            graphics.fill(x, y + height - 1, x + width, y + height, color);
-            graphics.fill(x, y, x + 1, y + height, color);
-            graphics.fill(x + width - 1, y, x + width, y + height, color);
         }
 
         private record EffectEntry(String id, String name, MobEffectCategory category) {
