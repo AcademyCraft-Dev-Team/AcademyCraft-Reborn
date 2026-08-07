@@ -24,8 +24,9 @@ import org.academy.api.client.gui.widget.WidgetContext
 import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState.Entry
-import org.academy.internal.client.hud.HudLayout
+import org.academy.internal.client.gui.DataTerminalTheme
 import org.academy.internal.client.gui.SerializedUiLayout
+import org.academy.internal.client.hud.HudLayout
 import org.academy.internal.common.ability.AbilityCategories
 import java.util.Locale
 
@@ -78,7 +79,7 @@ class ControlledTargetsHud private constructor() {
         init {
             val layout = SerializedUiLayout.load(
                 AcademyCraft.academy("ui/layout/mental_control_hud.json"),
-                listOf("mental_control", "content")
+                listOf("mental_control", "content", "header_divider")
             ) { fallbackLayout() }
             panel = SerializedUiLayout.require(layout, "mental_control") as FrameLayoutWidget
             content = SerializedUiLayout.require(layout, "content") as LinearLayoutWidget
@@ -184,13 +185,19 @@ class ControlledTargetsHud private constructor() {
         private fun createHeader(total: Int): Widget {
             val header = LinearLayoutWidget()
             header.orientation = Orientation.HORIZONTAL
+            header.spacing = 3f
             header.layoutParams = LinearLayoutWidget.LayoutParams().size(CONTENT_WIDTH, HEADER_HEIGHT)
+            header.addChild("status", FillWidget(ACCENT).also {
+                it.layoutParams = LinearLayoutWidget.LayoutParams()
+                    .size(2f, 8f)
+                    .gravity(Gravity.CENTER_VERTICAL)
+            })
             header.addChild(
                 "title",
                 label(
                     text("hud.academy.mental_control.title"),
                     8f,
-                    CONTENT_WIDTH - 32f,
+                    CONTENT_WIDTH - 37f,
                     HEADER_HEIGHT,
                     TEXT_PRIMARY
                 )
@@ -210,13 +217,18 @@ class ControlledTargetsHud private constructor() {
             row.addChild("background", FillWidget(if (index % 2 == 0) ROW_EVEN else ROW_ODD).also {
                 it.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             })
+            row.addChild("support_signal", FillWidget(supportColor(entry.support())).also {
+                it.layoutParams = FrameLayoutWidget.LayoutParams()
+                    .width(2f)
+                    .heightMode(SizeMode.MATCH_PARENT)
+            })
 
             val body = LinearLayoutWidget()
             body.orientation = Orientation.VERTICAL
             body.spacing = 0f
             body.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(3f, 1f, 3f, 1f)
+                .padding(4f, 1f, 3f, 1f)
             row.addChild("body", body)
 
             val top = LinearLayoutWidget()
@@ -282,17 +294,17 @@ class ControlledTargetsHud private constructor() {
             .thenBy(String.CASE_INSENSITIVE_ORDER) { it.displayName() }
             .thenBy { it.targetUuid().toString() }
 
-        private const val PANEL_BACKGROUND = 0x98D5D9D8.toInt()
-        private const val ROW_EVEN = 0x98F1F3F2.toInt()
-        private const val ROW_ODD = 0x90E4E9E7.toInt()
-        private const val ROW_EMPTY = 0x70EBEEED.toInt()
-        private const val HEALTH_BACKGROUND = 0xA0BBC4C1.toInt()
-        private const val TEXT_PRIMARY = 0xFF18201E.toInt()
-        private const val TEXT_SECONDARY = 0xFF43514D.toInt()
-        private const val TEXT_MUTED = 0xFF53635F.toInt()
-        private const val ACCENT = 0xFF006D55.toInt()
-        private const val WARNING = 0xFF9A6200.toInt()
-        private const val DANGER = 0xFFB52F3B.toInt()
+        private const val PANEL_BACKGROUND = DataTerminalTheme.PANEL_BACKGROUND
+        private const val ROW_EVEN = DataTerminalTheme.ROW_BACKGROUND
+        private const val ROW_ODD = DataTerminalTheme.ROW_ALTERNATE
+        private const val ROW_EMPTY = DataTerminalTheme.EMPTY_BACKGROUND
+        private const val HEALTH_BACKGROUND = DataTerminalTheme.HEALTH_BACKGROUND
+        private const val TEXT_PRIMARY = DataTerminalTheme.TEXT
+        private const val TEXT_SECONDARY = DataTerminalTheme.TEXT_DIM
+        private const val TEXT_MUTED = DataTerminalTheme.TEXT_MUTED
+        private const val ACCENT = DataTerminalTheme.ACCENT
+        private const val WARNING = DataTerminalTheme.WARNING
+        private const val DANGER = DataTerminalTheme.DANGER
 
         private lateinit var INSTANCE: ControlledTargetsHud
 

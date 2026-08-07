@@ -13,6 +13,7 @@ import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.Widget;
+import org.academy.internal.client.gui.DataTerminalTheme;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
@@ -35,13 +36,11 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     static final double MIN_ZOOM = 0.5;
     static final double MAX_ZOOM = 1.6;
     private static final float SMALL_TEXT_SCALE = 0.75f;
-    private static final int PANEL_BG = 0xF0121820;
-    private static final int SECTION_BG = 0xF01B252E;
-    private static final int BORDER = 0xAA4FA6C4;
-    private static final int ACCENT = 0xFF53C7E8;
-    private static final int TEXT = 0xFFE5F1F5;
-    private static final int DIM = 0xFF91A4AD;
-    private static final int ERROR = 0xFFFF7C72;
+    private static final int BORDER = DataTerminalTheme.BORDER;
+    private static final int ACCENT = DataTerminalTheme.ACCENT;
+    private static final int TEXT = DataTerminalTheme.TEXT;
+    private static final int DIM = DataTerminalTheme.TEXT_DIM;
+    private static final int ERROR = DataTerminalTheme.DANGER;
     private static final int TOP_H = 20;
     private static final int STATUS_H = 16;
     private static final int RAIL_W = 18;
@@ -127,7 +126,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         serializedLayoutId = "precision_operation_" + layoutVariant;
         var serialized = SerializedUiLayout.load(
                 AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
-                List.of("panel", "palette", "canvas", "inspector"),
+                List.of("panel", "palette", "canvas", "inspector", "title_accent"),
                 () -> fallbackLayout(layout)
         );
         serializedLayout = serialized;
@@ -141,6 +140,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 Component.empty());
         search.setHint(Component.translatable("screen.academy.precision_operation.search"));
         search.setMaxLength(48);
+        search.setBordered(false);
+        search.setTextColor(TEXT);
         search.visible = paletteVisible();
         addRenderableWidget(search);
         if (initialView) {
@@ -225,14 +226,15 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private void renderSerializedOverlays(GuiGraphicsExtractor graphics) {
-        border(graphics, panelX, panelY, panelW, panelH, BORDER);
-        if (compactLeft && leftDrawerOpen) {
-            graphics.fill(paletteX(), canvasY, paletteX() + paletteWidth(), canvasY + canvasH, SECTION_BG);
-            border(graphics, paletteX(), canvasY, paletteWidth(), canvasH, BORDER);
+        DataTerminalTheme.panel(graphics, panelX, panelY, panelW, panelH, TOP_H);
+        graphics.fill(canvasX, canvasY, canvasX + canvasW, canvasY + canvasH,
+                DataTerminalTheme.CANVAS_BACKGROUND);
+        border(graphics, canvasX, canvasY, canvasW, canvasH, DataTerminalTheme.BORDER_MUTED);
+        if (!compactLeft || leftDrawerOpen) {
+            DataTerminalTheme.section(graphics, paletteX(), canvasY, paletteWidth(), canvasH);
         }
-        if (compactRight && rightDrawerOpen) {
-            graphics.fill(inspectorX(), canvasY, inspectorX() + inspectorWidth(), canvasY + canvasH, SECTION_BG);
-            border(graphics, inspectorX(), canvasY, inspectorWidth(), canvasH, BORDER);
+        if (!compactRight || rightDrawerOpen) {
+            DataTerminalTheme.section(graphics, inspectorX(), canvasY, inspectorWidth(), canvasH);
         }
     }
 
@@ -252,7 +254,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private void renderTopBar(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        var x = panelX + 4;
+        var x = panelX + 12;
         if (panelW >= 620) {
             smallText(graphics, title.getString(), x, panelY + 6, TEXT, 92);
             x += 96;
@@ -300,6 +302,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 graphics.setTooltipForNextFrame(Component.translatable(groupKey(group)), mouseX, mouseY);
             }
         }
+        DataTerminalTheme.input(graphics, search.getX(), search.getY(), search.getWidth(), 15,
+                search.isFocused());
         var kinds = visibleKinds();
         var listY = canvasY + 44;
         var listBottom = canvasY + canvasH - 3;
@@ -310,7 +314,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             var y = listY + row * ROW_H;
             var hover = inside(mouseX, mouseY, x + 3, y, w - 6, ROW_H - 1);
             graphics.fill(x + 3, y, x + w - 3, y + ROW_H - 1,
-                    hover ? 0x664FA6C4 : 0x22FFFFFF);
+                    hover ? DataTerminalTheme.HOVER : DataTerminalTheme.ROW_BACKGROUND);
             graphics.fill(x + 3, y, x + 6, y + ROW_H - 1, categoryColor(kind.category()));
             smallText(graphics, groupGlyph(kind.group()), x + 8, y + 3,
                     categoryColor(kind.category()), 8);
@@ -327,7 +331,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             var thumbH = Math.max(8, trackH * visibleRows / kinds.size());
             var maxScroll = kinds.size() - visibleRows;
             var thumbY = listY + (trackH - thumbH) * paletteScroll / Math.max(1, maxScroll);
-            graphics.fill(x + w - 3, listY, x + w - 1, listBottom, 0x442D3E48);
+            graphics.fill(x + w - 3, listY, x + w - 1, listBottom,
+                    DataTerminalTheme.CONTROL_BACKGROUND);
             graphics.fill(x + w - 3, thumbY, x + w - 1, thumbY + thumbH, ACCENT);
         }
     }
@@ -365,11 +370,12 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var y = (int) Math.round(node.y());
         var h = nodeHeight(node);
         var selected = node.id() == selectedNode;
-        graphics.fill(x, y, x + NODE_W, y + h, selected ? 0xF02A4552 : 0xF0243039);
-        border(graphics, x, y, NODE_W, h, selected ? ACCENT : 0xAA66818D);
+        graphics.fill(x, y, x + NODE_W, y + h,
+                selected ? 0xE04A3D20 : DataTerminalTheme.SECTION_BACKGROUND);
+        border(graphics, x, y, NODE_W, h, selected ? ACCENT : DataTerminalTheme.BORDER_MUTED);
         graphics.fill(x, y, x + NODE_W, y + NODE_HEADER_H, categoryColor(node.kind().category()));
-        smallText(graphics, groupGlyph(node.kind().group()), x + 3, y + 2, 0xFF081015, 8);
-        smallText(graphics, nodeLabel(node.kind()).getString(), x + 12, y + 2, 0xFF081015, NODE_W - 15);
+        smallText(graphics, groupGlyph(node.kind().group()), x + 3, y + 2, 0xFF15120C, 8);
+        smallText(graphics, nodeLabel(node.kind()).getString(), x + 12, y + 2, 0xFF15120C, NODE_W - 15);
         for (var port = 0; port < node.kind().inputDefinitions().size(); port++) {
             var definition = node.kind().inputDefinitions().get(port);
             var color = highlightedPort(node.id(), port, true, definition.type())
@@ -403,7 +409,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     ) {
         graphics.fill(centerX - 3, centerY - 3, centerX + 3, centerY + 3, color);
         if (openEnd) {
-            graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2, 0xFF182229);
+            graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2,
+                    DataTerminalTheme.CANVAS_BACKGROUND);
         }
     }
 
@@ -481,7 +488,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             var min = 1.0;
             var max = kind == PrecisionGraph.ParameterKind.RANGE ? 32.0 : 100.0;
             var trackY = y + 13;
-            graphics.fill(x, trackY, x + width, trackY + 2, 0xFF40535D);
+            graphics.fill(x, trackY, x + width, trackY + 2, DataTerminalTheme.BORDER_MUTED);
             var knob = x + (int) Math.round((node.parameter() - min) / (max - min) * (width - 4));
             graphics.fill(knob, trackY - 2, knob + 4, trackY + 4, ACCENT);
         } else {
@@ -495,7 +502,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 : diagnostic != PrecisionGraph.Diagnostic.OK ? diagnostic : graph.validate().diagnostic();
         smallText(graphics, Component.translatable(shown.translationKey()).getString(),
                 panelX + 4, panelY + panelH - 11,
-                shown == PrecisionGraph.Diagnostic.OK ? 0xFF7FD8A0 : ERROR, panelW - 8);
+                shown == PrecisionGraph.Diagnostic.OK ? DataTerminalTheme.GOOD : ERROR, panelW - 8);
     }
 
     private void renderQuickInsert(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -505,13 +512,14 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var h = rows * ROW_H + 4;
         var x = Math.clamp(quickInsert.x, panelX + 2, panelX + panelW - w - 2);
         var y = Math.clamp(quickInsert.y, canvasY + 2, canvasY + canvasH - h - 2);
-        graphics.fill(x, y, x + w, y + h, 0xFA17232B);
+        graphics.fill(x, y, x + w, y + h, DataTerminalTheme.PANEL_BACKGROUND);
         border(graphics, x, y, w, h, BORDER);
         for (var row = 0; row < rows; row++) {
             var kind = quickInsert.kinds.get(row);
             var rowY = y + 2 + row * ROW_H;
             var hover = inside(mouseX, mouseY, x + 2, rowY, w - 4, ROW_H - 1);
-            if (hover) graphics.fill(x + 2, rowY, x + w - 2, rowY + ROW_H - 1, 0x664FA6C4);
+            if (hover) graphics.fill(x + 2, rowY, x + w - 2, rowY + ROW_H - 1,
+                    DataTerminalTheme.HOVER);
             smallText(graphics, nodeLabel(kind).getString(), x + 5, rowY + 3, TEXT, w - 10);
         }
     }
@@ -1401,9 +1409,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             boolean small
     ) {
         var hover = inside(mouseX, mouseY, x, y, width, height);
-        graphics.fill(x, y, x + width, y + height,
-                selected ? 0xAA2E6D83 : hover ? 0x664FA6C4 : 0x22FFFFFF);
-        border(graphics, x, y, width, height, selected || hover ? ACCENT : 0x5566818D);
+        DataTerminalTheme.button(graphics, x, y, width, height, true, selected, hover);
         if (small) {
             smallText(graphics, label.getString(), x + 3, y + 5, TEXT, width - 6);
         } else {
@@ -1422,19 +1428,18 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             boolean disabled
     ) {
         var hover = !disabled && inside(mouseX, mouseY, x, y, TOOL_SIZE, TOOL_SIZE);
-        graphics.fill(x, y, x + TOOL_SIZE, y + TOOL_SIZE, disabled ? 0x112F3D45
-                : hover ? 0x664FA6C4 : 0x223F5560);
-        border(graphics, x, y, TOOL_SIZE, TOOL_SIZE, hover ? ACCENT : 0x5566818D);
-        smallText(graphics, glyph, x + 4, y + 4, disabled ? 0x556F7C82 : TEXT, 8);
+        DataTerminalTheme.button(graphics, x, y, TOOL_SIZE, TOOL_SIZE, !disabled, false, hover);
+        smallText(graphics, glyph, x + 4, y + 4,
+                disabled ? DataTerminalTheme.TEXT_DISABLED : TEXT, 8);
     }
 
     private static int categoryColor(PrecisionGraph.NodeCategory category) {
         return switch (category) {
-            case SOURCE -> 0xFF5BA4C9;
-            case COLLECTION -> 0xFFB69B62;
+            case SOURCE -> 0xFFE2C85D;
+            case COLLECTION -> 0xFFB8955F;
             case FILTER -> 0xFF78B77A;
-            case ACTION -> 0xFFD89258;
-            case CONTROL -> 0xFFC87686;
+            case ACTION -> 0xFFD98250;
+            case CONTROL -> 0xFFC86F7D;
         };
     }
 
@@ -1465,10 +1470,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private static void border(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
-        graphics.fill(x, y, x + width, y + 1, color);
-        graphics.fill(x, y + height - 1, x + width, y + height, color);
-        graphics.fill(x, y, x + 1, y + height, color);
-        graphics.fill(x + width - 1, y, x + width, y + height, color);
+        DataTerminalTheme.border(graphics, x, y, width, height, color);
     }
 
     private static boolean inside(double x, double y, double left, double top, double width, double height) {
