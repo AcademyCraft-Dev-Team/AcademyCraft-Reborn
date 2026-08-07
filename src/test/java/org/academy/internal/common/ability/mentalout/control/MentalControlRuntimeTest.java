@@ -354,6 +354,33 @@ class MentalControlRuntimeTest {
     }
 
     @Test
+    void pathControlDeniesAutonomousTargetsButExplicitTargetStillWins() {
+        var table = new MentalControlRuntime.LeaseTable();
+        var whitelist = new MentalControlRuntime.TargetWhitelist();
+        var controller = UUID.randomUUID();
+        var subject = UUID.randomUUID();
+        var outsider = UUID.randomUUID();
+        var explicitTarget = UUID.randomUUID();
+        table.add(input(controller, subject, SOURCE_A, 100, 200, path(UUID.randomUUID())));
+
+        assertEquals(
+                AttackDecision.DENY,
+                MentalControlRuntime.controlledAttackDecision(table, whitelist, subject, outsider, 0)
+        );
+
+        table.add(input(controller, subject, SOURCE_B, 100, 200, target(explicitTarget)));
+        assertEquals(
+                AttackDecision.ALLOW,
+                MentalControlRuntime.controlledAttackDecision(
+                        table, whitelist, subject, explicitTarget, 0)
+        );
+        assertEquals(
+                AttackDecision.DENY,
+                MentalControlRuntime.controlledAttackDecision(table, whitelist, subject, outsider, 0)
+        );
+    }
+
+    @Test
     void replacingAllianceInvalidatesOldRetaliationAuthorization() {
         var table = new MentalControlRuntime.LeaseTable();
         var whitelist = new MentalControlRuntime.TargetWhitelist();
@@ -508,6 +535,14 @@ class MentalControlRuntimeTest {
         var freeze = new ControlDirective.FreezeAi();
         directives.put(ControlDomain.MOVEMENT, freeze);
         directives.put(ControlDomain.ACTION, freeze);
+        return directives;
+    }
+
+    private static EnumMap<ControlDomain, ControlDirective> path(UUID target) {
+        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
+        var moveTo = new ControlDirective.MoveTo(target);
+        directives.put(ControlDomain.MOVEMENT, moveTo);
+        directives.put(ControlDomain.ACTION, moveTo);
         return directives;
     }
 

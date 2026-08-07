@@ -18,9 +18,7 @@ public final class WardenMentalControlAdapter implements MentalControlAdapter {
     @Override
     public ControlSupport support(LivingEntity subject, ControlCapability capability) {
         if (!matches(subject)) return ControlSupport.UNSUPPORTED;
-        return capability == ControlCapability.PATH_CONTROL || capability == ControlCapability.VIEW_CONTROL
-                ? ControlSupport.UNSUPPORTED
-                : ControlSupport.FULL;
+        return ControlSupport.FULL;
     }
 
     @Override
@@ -28,6 +26,6 @@ public final class WardenMentalControlAdapter implements MentalControlAdapter {
         if (!(context.subject() instanceof Warden warden)) {
             throw new IllegalArgumentException("Warden adapter requires a Warden subject");
         }
-        return StandardMobControlBindings.create(warden, directive);
+        return StandardMobControlBindings.create(context, warden, directive);
     }
 }

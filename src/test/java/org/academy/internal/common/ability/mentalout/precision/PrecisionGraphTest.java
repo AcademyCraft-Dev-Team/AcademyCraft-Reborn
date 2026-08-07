@@ -57,9 +57,17 @@ class PrecisionGraphTest {
                 )
         );
 
-        assertEquals(PrecisionGraph.Diagnostic.TYPE_MISMATCH, typeMismatch.validate().diagnostic());
-        assertEquals(PrecisionGraph.Diagnostic.MISSING_INPUT, missingInput.validate().diagnostic());
-        assertEquals(PrecisionGraph.Diagnostic.CYCLE, cycle.validate().diagnostic());
+        var typeValidation = typeMismatch.validate();
+        var inputValidation = missingInput.validate();
+        var cycleValidation = cycle.validate();
+        assertEquals(PrecisionGraph.Diagnostic.TYPE_MISMATCH, typeValidation.diagnostic());
+        assertEquals(2, typeValidation.nodeId());
+        assertEquals(0, typeValidation.port());
+        assertEquals(PrecisionGraph.Diagnostic.MISSING_INPUT, inputValidation.diagnostic());
+        assertEquals(1, inputValidation.nodeId());
+        assertEquals(0, inputValidation.port());
+        assertEquals(PrecisionGraph.Diagnostic.CYCLE, cycleValidation.diagnostic());
+        assertEquals(2, cycleValidation.nodeId());
     }
 
     @Test
@@ -162,14 +170,16 @@ class PrecisionGraphTest {
 
     @Test
     void catalogUsesStableUniqueWireIds() {
-        assertEquals(43, PrecisionGraph.NodeKind.values().length);
-        assertEquals(43, Arrays.stream(PrecisionGraph.NodeKind.values())
+        assertEquals(45, PrecisionGraph.NodeKind.values().length);
+        assertEquals(45, Arrays.stream(PrecisionGraph.NodeKind.values())
                 .map(PrecisionGraph.NodeKind::wireId)
                 .distinct()
                 .count());
         assertEquals(0, PrecisionGraph.NodeKind.CASTER.wireId());
         assertEquals(31, PrecisionGraph.NodeKind.REMOVE_CONTROL.wireId());
         assertEquals(42, PrecisionGraph.NodeKind.VISIBLE_FROM.wireId());
+        assertEquals(43, PrecisionGraph.NodeKind.SIGHT_POSITION.wireId());
+        assertEquals(44, PrecisionGraph.NodeKind.GUARD_MODE.wireId());
     }
 
     @Test
@@ -272,7 +282,59 @@ class PrecisionGraphTest {
 
         assertTrue(decoded.valid());
         assertEquals(PrecisionGraph.NodeKind.MENTAL_STUPOR, decoded.graph().nodes().get(1).kind());
-        assertEquals(2, PrecisionGraphCodec.encode(decoded.graph())[0]);
+        assertEquals(3, PrecisionGraphCodec.encode(decoded.graph())[0]);
+    }
+
+    @Test
+    void durationParametersAndEntityDestinationsAreValidated() {
+        assertTrue(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(0.0));
+        assertTrue(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(1.0));
+        assertTrue(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(3600.0));
+        assertEquals(false, PrecisionGraph.NodeKind.PATH_TO.isParameterValid(0.5));
+        assertEquals(false, PrecisionGraph.NodeKind.PATH_TO.isParameterValid(3601.0));
+
+        var graph = new PrecisionGraph(
+                List.of(
+                        node(1, PrecisionGraph.NodeKind.ROSTER),
+                        node(2, PrecisionGraph.NodeKind.CASTER),
+                        node(3, PrecisionGraph.NodeKind.PATH_TO)
+                ),
+                List.of(
+                        new PrecisionGraph.Edge(1, 0, 3, 0),
+                        new PrecisionGraph.Edge(2, 0, 3, 1)
+                )
+        );
+
+        assertTrue(graph.validate().valid());
+        assertTrue(PrecisionGraph.isPortCompatible(
+                PrecisionGraph.PortType.ENTITY,
+                PrecisionGraph.PortType.DESTINATION
+        ));
+        assertEquals(Long.MAX_VALUE, PrecisionOperationRuntime.actionExpiresAt(40L, 0.0));
+        assertEquals(60L, PrecisionOperationRuntime.actionExpiresAt(40L, 1.0));
+        assertEquals(72_040L, PrecisionOperationRuntime.actionExpiresAt(40L, 3600.0));
+    }
+
+    @Test
+    void codecReadsVersionTwoAndWritesVersionThree() throws Exception {
+        var output = new ByteArrayOutputStream();
+        try (var data = new DataOutputStream(output)) {
+            data.writeByte(2);
+            data.writeByte(2);
+            writeStableNode(data, 1, PrecisionGraph.NodeKind.ROSTER, 0.0);
+            writeStableNode(data, 2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0);
+            data.writeByte(1);
+            data.writeInt(1);
+            data.writeByte(0);
+            data.writeInt(2);
+            data.writeByte(0);
+        }
+
+        var decoded = PrecisionGraphCodec.decode(output.toByteArray());
+
+        assertTrue(decoded.valid());
+        assertEquals(0.0, decoded.graph().nodes().get(1).parameter());
+        assertEquals(3, PrecisionGraphCodec.encode(decoded.graph())[0]);
     }
 
     private static void writeLegacyNode(
@@ -283,6 +345,19 @@ class PrecisionGraphTest {
     ) throws Exception {
         data.writeInt(id);
         data.writeByte(kind.ordinal());
+        data.writeDouble(parameter);
+        data.writeFloat(0.0f);
+        data.writeFloat(0.0f);
+    }
+
+    private static void writeStableNode(
+            DataOutputStream data,
+            int id,
+            PrecisionGraph.NodeKind kind,
+            double parameter
+    ) throws Exception {
+        data.writeInt(id);
+        data.writeByte(kind.wireId());
         data.writeDouble(parameter);
         data.writeFloat(0.0f);
         data.writeFloat(0.0f);

@@ -32,6 +32,11 @@ public final class MentaloutConfig {
     public static float precisionViewCost(ServerPlayer player) {
         return nonNegative(settings(player).precisionViewCostPerTarget, 8.0f);
     }
+
+    public static float precisionGuardCost(ServerPlayer player) {
+        return nonNegative(settings(player).precisionGuardCostPerTarget, 20.0f);
+    }
+
     public static float bossCostMultiplier(ServerPlayer player) {
         return Math.max(1.0f, finite(settings(player).bossCostMultiplier, 2.0f));
     }

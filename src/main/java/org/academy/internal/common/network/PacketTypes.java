@@ -74,6 +74,7 @@ import org.academy.internal.common.ability.mentalout.skills.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.MentalIntervention;
 import org.academy.internal.common.ability.mentalout.skills.ImpressionManipulation;
 import org.academy.internal.common.ability.mentalout.skills.TargetMisidentification;
+import org.academy.internal.common.ability.mentalout.skills.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
@@ -126,7 +127,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillDataPacket>>
             SYNC_SKILL_DATA = PACKET_TYPES.register("sync_skill_data",
             () -> new PacketType<>(SyncSkillDataPacket.class, SyncSkillDataPacket.CODEC));
-
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PropsPackets.SyncPacket>>
             PROPS_SYNC = PACKET_TYPES.register("props_sync",
             () -> new PacketType<>(PropsPackets.SyncPacket.class, PropsPackets.SyncPacket.CODEC));
@@ -608,6 +608,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ImpressionManipulation.UsePacket>>
             IMPRESSION_MANIPULATION_USE = PACKET_TYPES.register("impression_manipulation_use",
             () -> new PacketType<>(ImpressionManipulation.UsePacket.class, ImpressionManipulation.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CommandPositioning.UsePacket>>
+            COMMAND_POSITIONING_USE = PACKET_TYPES.register("command_positioning_use",
+            () -> new PacketType<>(CommandPositioning.UsePacket.class, CommandPositioning.UsePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.TogglePacket>>
             MENTAL_INTRUSION_TOGGLE = PACKET_TYPES.register("mental_intrusion_toggle",

@@ -52,6 +52,13 @@ public abstract class MixinLivingEntity {
             float damage,
             CallbackInfoReturnable<Boolean> cir
     ) {
+        var victim = (LivingEntity) (Object) this;
+        if (source.getEntity() instanceof LivingEntity attacker
+                && attacker != victim
+                && MentalControlRuntime.damageDecision(attacker, victim) == AttackDecision.DENY) {
+            cir.setReturnValue(false);
+            return;
+        }
         if ((Object) this instanceof Player player && DamageTypes.isImmunePlayer(player, source)) {
             cir.setReturnValue(false);
             return;

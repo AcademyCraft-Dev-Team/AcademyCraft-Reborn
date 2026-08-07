@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.mojang.authlib.GameProfile;
+import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -12,8 +14,11 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,7 +33,9 @@ import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.AttackDecision;
+import org.academy.api.common.entitycontrol.ControlDestination;
 import org.academy.api.common.entitycontrol.ControlDirective;
+import org.academy.api.common.entitycontrol.ControlFailureReason;
 import org.academy.api.common.entitycontrol.ControlHandle;
 import org.academy.api.common.entitycontrol.ControlRequest;
 import org.academy.api.common.entitycontrol.MentalControlApi;
@@ -36,17 +43,20 @@ import org.academy.api.common.entitycontrol.MentalPerceptionApi;
 import org.academy.api.common.entitycontrol.PerceptionDecision;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
+import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class MentaloutGameTests {
-    private static final Identifier TEST_ENVIRONMENT = AcademyCraft.academy("mentalout");
     private static final Identifier TEST_INSTANCE_TYPE = AcademyCraft.academy("mentalout_function");
     private static final Identifier SOURCE = AcademyCraft.academy("gametest_mental_control");
     private static final Identifier PERCEPTION_SOURCE = AcademyCraft.academy("gametest_mental_perception");
     private static final Identifier IMPRESSION_GUARD_SOURCE = AcademyCraft.academy("impression_guard_target");
+    private static final AtomicInteger NEXT_CONTROLLER_ID = new AtomicInteger();
 
     private MentaloutGameTests() {
     }
@@ -62,11 +72,14 @@ public final class MentaloutGameTests {
 
     @SubscribeEvent
     private static void registerTests(RegisterGameTestsEvent event) {
-        var environment = event.registerEnvironment(
-                TEST_ENVIRONMENT,
-                new TestEnvironmentDefinition.AllOf(List.of())
-        );
         for (var scenario : Scenario.values()) {
+            // Each scenario owns its environment batch. The vanilla runner executes tests in the
+            // same environment concurrently, which makes server-player and entity-ticking tests
+            // interfere with one another even when their structures are spatially separated.
+            var environment = event.registerEnvironment(
+                    AcademyCraft.academy("mentalout/" + scenario.serializedName),
+                    new TestEnvironmentDefinition.AllOf(List.of())
+            );
             var data = new TestData<>(
                     environment,
                     Identifier.withDefaultNamespace("empty"),
@@ -138,6 +151,23 @@ public final class MentaloutGameTests {
         ));
     }
 
+    private static ControlHandle moveTo(
+            ServerPlayer controller,
+            LivingEntity subject,
+            net.minecraft.world.phys.Vec3 destination
+    ) {
+        return MentalControlApi.apply(ControlRequest.permanent(
+                controller,
+                subject,
+                SOURCE,
+                100,
+                new ControlDirective.MoveTo(new ControlDestination.Position(
+                        subject.level().dimension().identifier(),
+                        destination
+                ))
+        ));
+    }
+
     private static ControlHandle impressionGuardTarget(
             ServerPlayer controller,
             LivingEntity subject,
@@ -154,13 +184,31 @@ public final class MentaloutGameTests {
         ));
     }
 
-    @SuppressWarnings("removal")
     private static ServerPlayer createController(GameTestHelper helper) {
-        var player = helper.makeMockServerPlayerInLevel();
+        var profile = new GameProfile(
+                UUID.randomUUID(),
+                "ac-test-" + NEXT_CONTROLLER_ID.incrementAndGet()
+        );
+        var cookie = CommonListenerCookie.createInitial(profile, false);
+        var player = new ServerPlayer(
+                helper.getLevel().getServer(),
+                helper.getLevel(),
+                profile,
+                cookie.clientInformation()
+        ) {
+            @Override
+            public GameType gameMode() {
+                return GameType.CREATIVE;
+            }
+        };
         var position = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
                 new net.minecraft.core.BlockPos(1, 2, 1)
         ));
         player.snapTo(position.x, position.y, position.z, 0.0F, 0.0F);
+        var connection = new Connection(PacketFlow.SERVERBOUND);
+        new EmbeddedChannel(connection);
+        helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        GameType.CREATIVE.updatePlayerAbilities(player.getAbilities());
         return player;
     }
 
@@ -234,12 +282,320 @@ public final class MentaloutGameTests {
                 });
             }
         },
+        SIGHT_DESTINATION_ENTITY_AND_BLOCK("sight_destination_entity_and_block", 30) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var target = helper.spawn(EntityTypes.ZOMBIE, 1, 2, 3);
+                target.setPersistenceRequired();
+                controller.snapTo(controller.getX(), controller.getY(), controller.getZ(), 0.0f, 0.0f);
+
+                helper.runAtTickTime(2L, () -> {
+                    var entityHit = MentaloutTargeting.findSightDestination(
+                            controller, MentaloutTargeting.MAX_SIGHT_RANGE);
+                    helper.assertTrue(
+                            entityHit instanceof ControlDestination.Entity entity
+                                    && entity.uuid().equals(target.getUUID()),
+                            "Sight destination did not select the looked-at entity"
+                    );
+
+                    var moved = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                            new net.minecraft.core.BlockPos(12, 2, 3)
+                    ));
+                    target.snapTo(moved.x, moved.y, moved.z, 0.0f, 0.0f);
+                    helper.setBlock(1, 3, 4, Blocks.STONE);
+                });
+                helper.runAtTickTime(4L, () -> {
+                    var blockHit = MentaloutTargeting.findSightDestination(
+                            controller, MentaloutTargeting.MAX_SIGHT_RANGE);
+                    var expected = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                            new net.minecraft.core.BlockPos(1, 3, 3)
+                    ));
+                    helper.assertTrue(
+                            blockHit instanceof ControlDestination.Position position
+                                    && position.dimension().equals(helper.getLevel().dimension().identifier())
+                                    && position.value().distanceToSqr(expected) < 1.0e-6,
+                            "Sight destination did not return the outside face position"
+                    );
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        PATH_POSITION_COMPLETES_IN_RADIUS("path_position_completes_in_radius", 160) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var zombie = helper.spawn(EntityTypes.ZOMBIE, 2, 2, 1);
+                zombie.setPersistenceRequired();
+                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(4, 2, 1)
+                ));
+                var handle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller,
+                        zombie,
+                        SOURCE,
+                        100,
+                        new ControlDirective.MoveTo(new ControlDestination.Position(
+                                helper.getLevel().dimension().identifier(),
+                                destination
+                        ))
+                ));
+                var closestDistanceSqr = new double[]{zombie.position().distanceToSqr(destination)};
+                helper.onEachTick(() -> closestDistanceSqr[0] = Math.min(
+                        closestDistanceSqr[0], zombie.position().distanceToSqr(destination)));
+
+                helper.runAtTickTime(3L, () -> {
+                    helper.assertFalse(handle.isClosed(), "Move-to lease completed outside the one-block radius");
+                    helper.assertTrue(
+                            zombie.position().distanceToSqr(destination) > 1.0,
+                            "Controlled mob began inside the one-block arrival radius"
+                    );
+                });
+                helper.runAtTickTime(80L, () -> {
+                    helper.assertTrue(handle.isClosed(), "Move-to lease did not complete after navigation");
+                    helper.assertTrue(
+                            closestDistanceSqr[0] <= 1.0,
+                            "Controlled mob never entered the one-block arrival radius: closestDistanceSqr="
+                                    + closestDistanceSqr[0]
+                    );
+                    finish(helper, controller, handle);
+                });
+            }
+        },
+        PATH_CONTROL_REJECTS_VANILLA_TARGET_AND_ROUTE("path_control_rejects_vanilla_target_and_route", 180) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var zombie = helper.spawn(EntityTypes.ZOMBIE, 4, 2, 1);
+                var villager = helper.spawn(EntityTypes.VILLAGER, 1, 2, 1);
+                zombie.setPersistenceRequired();
+                villager.setPersistenceRequired();
+                villager.setNoAi(true);
+                zombie.setTarget(villager);
+                zombie.getNavigation().moveTo(villager, 1.0);
+
+                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(10, 2, 1)
+                ));
+                var handle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller,
+                        zombie,
+                        SOURCE,
+                        100,
+                        new ControlDirective.MoveTo(new ControlDestination.Position(
+                                helper.getLevel().dimension().identifier(),
+                                destination
+                        ))
+                ));
+                var minimumXWhileControlled = new double[]{zombie.getX()};
+                var closestDistanceSqr = new double[]{zombie.position().distanceToSqr(destination)};
+                helper.onEachTick(() -> {
+                    if (handle.isClosed()) return;
+                    minimumXWhileControlled[0] = Math.min(minimumXWhileControlled[0], zombie.getX());
+                    closestDistanceSqr[0] = Math.min(
+                            closestDistanceSqr[0], zombie.position().distanceToSqr(destination));
+                });
+
+                helper.runAtTickTime(10L, () -> {
+                    helper.assertTrue(zombie.getTarget() == null,
+                            "Path control retained the vanilla villager target");
+                    var attackTarget = zombie.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
+                    helper.assertTrue(attackTarget == null || attackTarget.isEmpty(),
+                            "Path control retained a vanilla ATTACK_TARGET memory");
+                });
+                helper.runAtTickTime(150L, () -> {
+                    helper.assertTrue(handle.isClosed(),
+                            "Exclusive mental route did not complete: distanceSqr="
+                                    + zombie.position().distanceToSqr(destination)
+                                    + ", failure=" + handle.failureReason().orElse(null));
+                    helper.assertTrue(handle.failureReason().isEmpty(),
+                            "Exclusive mental route failed: " + handle.failureReason().orElse(null));
+                    helper.assertTrue(closestDistanceSqr[0] <= 1.0,
+                            "Zombie never reached the mental destination before the lease completed");
+                    helper.assertTrue(minimumXWhileControlled[0]
+                                    >= helper.absolutePos(new net.minecraft.core.BlockPos(3, 2, 1)).getX(),
+                            "Zombie moved back toward its vanilla target during mental navigation");
+                    finish(helper, controller, handle);
+                });
+            }
+        },
+        CUBE_MOB_PATH_AND_CUBE_DAMAGE("cube_mob_path_and_cube_damage", 180) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var attacker = helper.spawn(EntityTypes.SLIME, 2, 2, 1);
+                var victim = helper.spawn(EntityTypes.SLIME, 3, 2, 3);
+                attacker.setSize(2, true);
+                victim.setSize(2, true);
+                attacker.setPersistenceRequired();
+                victim.setPersistenceRequired();
+                victim.setNoAi(true);
+                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(6, 2, 1)
+                ));
+                var pathHandle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller,
+                        attacker,
+                        SOURCE,
+                        100,
+                        new ControlDirective.MoveTo(new ControlDestination.Position(
+                                helper.getLevel().dimension().identifier(),
+                                destination
+                        ))
+                ));
+                var closestDistanceSqr = new double[]{attacker.position().distanceToSqr(destination)};
+                helper.onEachTick(() -> closestDistanceSqr[0] = Math.min(
+                        closestDistanceSqr[0], attacker.position().distanceToSqr(destination)));
+
+                helper.runAtTickTime(3L, () -> helper.assertTrue(
+                        attacker.getMoveControl() instanceof org.academy.internal.common.ability.mentalout.control.CubeMobMoveControlAccess,
+                        "Cube move control bridge was not applied"
+                ));
+
+                helper.runAtTickTime(170L, () -> {
+                    helper.assertTrue(pathHandle.isClosed(),
+                            "Slime move-to lease did not complete: distanceSqr="
+                                    + attacker.position().distanceToSqr(destination)
+                                    + ", failure=" + pathHandle.failureReason().orElse(null));
+                    helper.assertTrue(pathHandle.failureReason().isEmpty(),
+                            "Slime movement ended abnormally: distanceSqr="
+                                    + attacker.position().distanceToSqr(destination)
+                                    + ", failure=" + pathHandle.failureReason().orElse(null));
+                    helper.assertTrue(closestDistanceSqr[0] <= 1.0,
+                            "Slime never entered the one-block arrival radius: closestDistanceSqr="
+                                    + closestDistanceSqr[0]);
+
+                    var targetHandle = forceTargetPermanently(controller, attacker, victim);
+                    victim.snapTo(
+                            attacker.getX() + 0.25,
+                            attacker.getY(),
+                            attacker.getZ(),
+                            victim.getYRot(),
+                            victim.getXRot()
+                    );
+                    var oldHealth = victim.getHealth();
+                    attacker.push(victim);
+                    helper.assertTrue(
+                            victim.getHealth() < oldHealth,
+                            "Controlled slime could not damage another slime on contact"
+                    );
+                    targetHandle.close();
+                    finish(helper, controller, pathHandle);
+                });
+            }
+        },
+        PATH_UNREACHABLE_REPORTS_FAILURE("path_unreachable_reports_failure", 80) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var zombie = helper.spawn(EntityTypes.ZOMBIE, 6, 2, 1);
+                zombie.setPersistenceRequired();
+                for (var x = 9; x <= 11; x++) {
+                    for (var z = 0; z <= 2; z++) {
+                        if (x == 10 && z == 1) continue;
+                        for (var y = 1; y <= 5; y++) {
+                            helper.setBlock(x, y, z, Blocks.STONE);
+                        }
+                    }
+                }
+                helper.setBlock(10, 2, 1, Blocks.STONE);
+                helper.setBlock(10, 5, 1, Blocks.STONE);
+                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(10, 2, 1)
+                ));
+                var handle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller,
+                        zombie,
+                        SOURCE,
+                        100,
+                        new ControlDirective.MoveTo(new ControlDestination.Position(
+                                helper.getLevel().dimension().identifier(),
+                                destination
+                        ))
+                ));
+
+                helper.runAtTickTime(3L, () ->
+                        helper.assertFalse(handle.isClosed(), "Unreachable path failed before three attempts"));
+                helper.runAtTickTime(45L, () -> {
+                    var path = zombie.getNavigation().getPath();
+                    helper.assertTrue(handle.isClosed(), "Unreachable path remained active after three attempts; "
+                            + "canOccupy=" + helper.getLevel().noCollision(zombie,
+                            zombie.getBoundingBox().move(destination.subtract(zombie.position())))
+                            + ", path=" + path + ", canReach="
+                            + (path == null ? null : path.canReach()));
+                    helper.assertValueEqual(
+                            handle.failureReason().orElse(null),
+                            ControlFailureReason.UNREACHABLE_DESTINATION,
+                            "Unreachable path failure reason"
+                    );
+                    finish(helper, controller, handle);
+                });
+            }
+        },
+        GUARD_REACTIVE_TARGET_AND_RETURN("guard_reactive_target_and_return", 80) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var guardian = helper.spawn(EntityTypes.ZOMBIE, 3, 2, 1);
+                var threat = helper.spawn(EntityTypes.SKELETON, 6, 2, 1);
+                guardian.setPersistenceRequired();
+                threat.setPersistenceRequired();
+                threat.setInvulnerable(true);
+                var threatHandle = forceTarget(controller, threat, controller, 40L);
+                var handle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller,
+                        guardian,
+                        SOURCE,
+                        100,
+                        new ControlDirective.Guard(new ControlDestination.Entity(controller.getUUID()))
+                ));
+
+                helper.runAtTickTime(10L, () -> {
+                    helper.assertFalse(handle.isClosed(), "Guard lease closed before threat selection");
+                    helper.assertTrue(
+                            MentalControlRuntime.effectiveDirective(guardian, org.academy.api.common.entitycontrol.ControlCapability.GUARD_CONTROL)
+                                    .orElse(null) instanceof ControlDirective.Guard,
+                            "Guard directive was not effective"
+                    );
+                    helper.assertTrue(
+                            MentalControlRuntime.getForcedTarget(threat) == controller,
+                            "Threat did not retain its forced controller target"
+                    );
+                    helper.assertTrue(
+                            MentalControlRuntime.getGuardTarget(guardian) == threat,
+                            "Guard binding did not retain the selected threat"
+                    );
+                    helper.assertTrue(guardian.getTarget() == threat, "Guard did not select the active threat");
+                    helper.assertValueEqual(
+                            MentalControlApi.attackDecision(guardian, controller),
+                            AttackDecision.DENY,
+                            "Guard protection decision"
+                    );
+                    threat.setInvulnerable(false);
+                    threat.kill(helper.getLevel());
+                    threatHandle.close();
+                });
+                helper.runAtTickTime(60L, () -> {
+                    helper.assertTrue(
+                            guardian.getTarget() != controller,
+                            "Guard attacked its controller while returning to the anchor"
+                    );
+                    helper.assertTrue(
+                            guardian.position().distanceToSqr(controller.position()) <= 1.0,
+                            "Guard did not stop within the one-block dynamic anchor radius: distanceSqr="
+                                    + guardian.position().distanceToSqr(controller.position())
+                    );
+                    finish(helper, controller, handle);
+                });
+            }
+        },
         MOB_FREEZE_RECOVERY("mob_freeze_recovery", 50) {
             @Override
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
                 var zombie = helper.spawn(EntityTypes.ZOMBIE, 1, 2, 1);
-                var villager = helper.spawn(EntityTypes.VILLAGER, 12, 2, 1);
+                var villager = helper.spawn(EntityTypes.VILLAGER, 8, 2, 1);
                 zombie.setPersistenceRequired();
                 villager.setPersistenceRequired();
                 var handle = freeze(controller, zombie, 8L);
@@ -406,7 +762,7 @@ public final class MentaloutGameTests {
                 });
             }
         },
-        IMPRESSION_STRICT_HOSTILITY_CHAIN("impression_strict_hostility_chain", 200) {
+        IMPRESSION_STRICT_HOSTILITY_CHAIN("impression_strict_hostility_chain", 400) {
             @Override
             void run(GameTestHelper helper) {
                 var level = helper.getLevel();
@@ -640,6 +996,84 @@ public final class MentaloutGameTests {
                 });
             }
         },
+        DIRECT_FLYING_MOBS_PATH("direct_flying_mobs_path", 220) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var ghast = helper.spawn(EntityTypes.GHAST, 2, 10, 0);
+                var phantom = helper.spawn(EntityTypes.PHANTOM, 2, 16, 1);
+                var blaze = helper.spawn(EntityTypes.BLAZE, 2, 5, 3);
+                var vex = helper.spawn(EntityTypes.VEX, 2, 21, 4);
+                var subjects = new net.minecraft.world.entity.Mob[]{ghast, phantom, blaze, vex};
+                for (var subject : subjects) subject.setPersistenceRequired();
+
+                var destinations = new net.minecraft.world.phys.Vec3[]{
+                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 10.0, 0.5)),
+                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 16.0, 1.5)),
+                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 8.0, 3.5)),
+                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 21.0, 4.5))
+                };
+                var handles = new ControlHandle[subjects.length];
+                var closestDistanceSqr = new double[subjects.length];
+                for (var i = 0; i < subjects.length; i++) {
+                    handles[i] = moveTo(controller, subjects[i], destinations[i]);
+                    closestDistanceSqr[i] = subjects[i].position().distanceToSqr(destinations[i]);
+                }
+                helper.onEachTick(() -> {
+                    for (var i = 0; i < subjects.length; i++) {
+                        closestDistanceSqr[i] = Math.min(
+                                closestDistanceSqr[i],
+                                subjects[i].position().distanceToSqr(destinations[i])
+                        );
+                    }
+                });
+
+                helper.runAtTickTime(200L, () -> {
+                    var names = new String[]{"Ghast", "Phantom", "Blaze", "Vex"};
+                    for (var i = 0; i < subjects.length; i++) {
+                        helper.assertTrue(handles[i].isClosed(), names[i]
+                                + " move-to lease remained active: closestDistanceSqr="
+                                + closestDistanceSqr[i] + ", failure="
+                                + handles[i].failureReason().orElse(null));
+                        helper.assertTrue(handles[i].failureReason().isEmpty(), names[i]
+                                + " movement failed: " + handles[i].failureReason().orElse(null)
+                                + ", closestDistanceSqr=" + closestDistanceSqr[i]);
+                        helper.assertTrue(closestDistanceSqr[i] <= 1.0, names[i]
+                                + " never entered the one-block arrival radius: closestDistanceSqr="
+                                + closestDistanceSqr[i]);
+                        handles[i].close();
+                    }
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WITHER_FLIGHT_PATH("wither_flight_path", 180) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var wither = helper.spawn(EntityTypes.WITHER, 2, 8, 1);
+                wither.setPersistenceRequired();
+                wither.setInvulnerableTicks(0);
+                var destination = helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 10.0, 1.5));
+                var handle = moveTo(controller, wither, destination);
+                var closestDistanceSqr = new double[]{wither.position().distanceToSqr(destination)};
+                helper.onEachTick(() -> closestDistanceSqr[0] = Math.min(
+                        closestDistanceSqr[0], wither.position().distanceToSqr(destination)));
+
+                helper.runAtTickTime(160L, () -> {
+                    helper.assertTrue(handle.isClosed(), "Wither move-to lease remained active: closestDistanceSqr="
+                            + closestDistanceSqr[0] + ", failure=" + handle.failureReason().orElse(null));
+                    helper.assertTrue(handle.failureReason().isEmpty(),
+                            "Wither movement failed: " + handle.failureReason().orElse(null)
+                                    + ", closestDistanceSqr=" + closestDistanceSqr[0]);
+                    helper.assertTrue(closestDistanceSqr[0] <= 1.0,
+                            "Wither never entered the one-block arrival radius: closestDistanceSqr="
+                                    + closestDistanceSqr[0]);
+                    finish(helper, controller, handle);
+                });
+            }
+        },
         WARDEN_FORCE_TARGET("warden_force_target", 40) {
             @Override
             void run(GameTestHelper helper) {
@@ -660,6 +1094,70 @@ public final class MentaloutGameTests {
                             "Warden brain did not retain ATTACK_TARGET"
                     );
                     finish(helper, controller, handle);
+                });
+            }
+        },
+        WARDEN_PATH_RELATION_AND_DIG_GUARD("warden_path_relation_and_dig_guard", 220) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var warden = helper.spawn(EntityTypes.WARDEN, 2, 2, 1);
+                var cow = helper.spawn(EntityTypes.COW, 2, 2, 4);
+                cow.setPersistenceRequired();
+                cow.setNoAi(true);
+                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(6, 2, 1)
+                ));
+                var pathHandle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller,
+                        warden,
+                        SOURCE,
+                        100,
+                        new ControlDirective.MoveTo(new ControlDestination.Position(
+                                helper.getLevel().dimension().identifier(),
+                                destination
+                        ))
+                ));
+                var closestDistanceSqr = new double[]{warden.position().distanceToSqr(destination)};
+                helper.onEachTick(() -> closestDistanceSqr[0] = Math.min(
+                        closestDistanceSqr[0], warden.position().distanceToSqr(destination)));
+
+                helper.runAtTickTime(100L, () -> {
+                    helper.assertTrue(pathHandle.isClosed(), "Warden move-to lease did not complete: distanceSqr="
+                            + warden.position().distanceToSqr(destination)
+                            + ", failure=" + pathHandle.failureReason().orElse(null));
+                    helper.assertTrue(
+                            closestDistanceSqr[0] <= 1.0,
+                            "Warden never entered the one-block arrival radius: closestDistanceSqr="
+                                    + closestDistanceSqr[0]
+                    );
+
+                    var relation = impression(controller, warden);
+                    warden.increaseAngerAt(cow, 150, false);
+                    var oldHealth = cow.getHealth();
+                    var hurt = cow.hurtServer(
+                            helper.getLevel(),
+                            helper.getLevel().damageSources().sonicBoom(warden),
+                            10.0F
+                    );
+                    helper.assertFalse(hurt, "Impression-controlled Warden damaged an unauthorized creature");
+                    helper.assertValueEqual(cow.getHealth(), oldHealth, "Unauthorized Warden damage changed health");
+
+                    warden.getBrain().eraseMemory(MemoryModuleType.DIG_COOLDOWN);
+                    warden.setPose(net.minecraft.world.entity.Pose.DIGGING);
+                    var relationStart = warden.position();
+                    helper.runAtTickTime(170L, () -> {
+                        helper.assertTrue(warden.isAlive() && !warden.isRemoved(),
+                                "Controlled Warden disappeared through its digging activity");
+                        helper.assertFalse(warden.hasPose(net.minecraft.world.entity.Pose.DIGGING),
+                                "Controlled Warden remained in the digging pose");
+                        helper.assertTrue(warden.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).isEmpty(),
+                                "Impression-controlled Warden retained its special AI attack target");
+                        helper.assertTrue(warden.position().distanceToSqr(relationStart) < 1.0,
+                                "Impression-controlled Warden followed its original special AI route");
+                        relation.close();
+                        finish(helper, controller, pathHandle);
+                    });
                 });
             }
         },
@@ -686,14 +1184,19 @@ public final class MentaloutGameTests {
                 });
             }
         },
-        DRAGON_PHASE_CONTROL("dragon_phase_control", 50) {
+        DRAGON_PHASE_CONTROL("dragon_phase_control", 400) {
             @Override
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
-                var dragon = helper.spawn(EntityTypes.ENDER_DRAGON, 1, 8, 1);
+                var dragon = helper.spawn(EntityTypes.ENDER_DRAGON, 1, 20, 1);
                 var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
                 cow.setPersistenceRequired();
                 var handle = forceTarget(controller, dragon, cow, 35L);
+                var destination = helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 20.0, 1.5));
+                var moveHandle = new ControlHandle[1];
+                var closestDistanceSqr = new double[]{dragon.position().distanceToSqr(destination)};
+                helper.onEachTick(() -> closestDistanceSqr[0] = Math.min(
+                        closestDistanceSqr[0], dragon.position().distanceToSqr(destination)));
 
                 helper.runAtTickTime(5L, () -> {
                     helper.assertValueEqual(
@@ -702,13 +1205,41 @@ public final class MentaloutGameTests {
                             "Dragon forced-target phase"
                     );
                     handle.close();
-                    helper.assertValueEqual(
-                            dragon.getPhaseManager().getCurrentPhase().getPhase(),
-                            EnderDragonPhase.HOLDING_PATTERN,
-                            "Dragon release phase"
-                    );
-                    helper.getLevel().getServer().getPlayerList().remove(controller);
-                    helper.succeed();
+                    moveHandle[0] = moveTo(controller, dragon, destination);
+                });
+                helper.runAtTickTime(360L, () -> {
+                    helper.assertTrue(moveHandle[0] != null && moveHandle[0].isClosed(),
+                            "Dragon move-to lease remained active: closestDistanceSqr="
+                                    + closestDistanceSqr[0] + ", failure="
+                                    + (moveHandle[0] == null ? null
+                                    : moveHandle[0].failureReason().orElse(null))
+                                    + ", alive=" + dragon.isAlive()
+                                    + ", noAi=" + dragon.isNoAi()
+                                    + ", phase=" + dragon.getPhaseManager().getCurrentPhase().getPhase()
+                                    + ", movement=" + dragon.getDeltaMovement());
+                    helper.assertTrue(moveHandle[0].failureReason().isEmpty(),
+                            "Dragon movement failed: " + moveHandle[0].failureReason().orElse(null));
+                    helper.assertTrue(closestDistanceSqr[0] <= 1.0,
+                            "Dragon never entered the one-block arrival radius: closestDistanceSqr="
+                                    + closestDistanceSqr[0]);
+                    var viewHandle = MentalControlApi.apply(ControlRequest.permanent(
+                            controller,
+                            dragon,
+                            SOURCE,
+                            100,
+                            new ControlDirective.LookAt(cow.getUUID())
+                    ));
+                    helper.runAtTickTime(370L, () -> {
+                        var delta = cow.getEyePosition().subtract(dragon.getEyePosition());
+                        var expectedYaw = (float) (Math.atan2(delta.z, delta.x) * 180.0 / Math.PI) - 90.0F;
+                        helper.assertTrue(net.minecraft.util.Mth.degreesDifferenceAbs(
+                                        dragon.getYRot(), expectedYaw) <= 5.0F,
+                                "Dragon view control was overwritten by its phase AI");
+                        viewHandle.close();
+                        moveHandle[0].close();
+                        helper.getLevel().getServer().getPlayerList().remove(controller);
+                        helper.succeed();
+                    });
                 });
             }
         };

@@ -67,6 +67,24 @@ class PrecisionOperationDataTest {
         assertEquals(List.of(2, 3), data.slot(0).validate().actionOrder());
     }
 
+    @Test
+    void versionTwoDataKeepsExistingFlowAndMigratesPermanentDurations() throws ReflectiveOperationException {
+        var data = new PrecisionOperation.Data();
+        setField(data, "schemaVersion", 2);
+        setField(data, "revision", 7L);
+        setField(data, "slots", new ArrayList<>(List.of(flowGraph())));
+
+        PrecisionOperation.normalizeData(data);
+        PrecisionOperation.normalizeData(data);
+
+        assertEquals(PrecisionOperation.Data.SCHEMA_VERSION, data.schemaVersion());
+        assertEquals(8L, data.revision());
+        assertEquals(flowGraph().validate().normalized(), data.slot(0));
+        assertEquals(0.0, data.slot(0).nodes().stream()
+                .filter(node -> node.kind() == PrecisionGraph.NodeKind.MENTAL_STUPOR)
+                .findFirst().orElseThrow().parameter());
+    }
+
     private static PrecisionGraph validGraph() {
         return new PrecisionGraph(
                 List.of(
@@ -100,6 +118,21 @@ class PrecisionOperationDataTest {
                 List.of(
                         new PrecisionGraph.Edge(1, 0, 2, 0),
                         new PrecisionGraph.Edge(1, 0, 3, 0)
+                )
+        );
+    }
+
+    private static PrecisionGraph flowGraph() {
+        return new PrecisionGraph(
+                List.of(
+                        new PrecisionGraph.Node(1, PrecisionGraph.NodeKind.ROSTER, 0.0, 8.0, 8.0),
+                        new PrecisionGraph.Node(2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0, 24.0, 8.0),
+                        new PrecisionGraph.Node(3, PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, 20.0, 40.0, 8.0)
+                ),
+                List.of(
+                        new PrecisionGraph.Edge(1, 0, 2, 0),
+                        new PrecisionGraph.Edge(1, 0, 3, 0),
+                        new PrecisionGraph.Edge(2, 0, 3, 1)
                 )
         );
     }
