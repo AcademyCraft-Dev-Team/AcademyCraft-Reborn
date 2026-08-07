@@ -39,10 +39,6 @@ public final class VectorExternalAttackClassifier {
             "stalagmite",
             "outside_border",
             "thorns",
-            "mob",
-            "mob_attack",
-            "player",
-            "player_attack",
             "sting",
             "lightning_bolt",
             "anvil",
@@ -70,6 +66,7 @@ public final class VectorExternalAttackClassifier {
         var profileEntry = VectorCompatProfileRegistry.find(source).orElse(null);
         if (profileEntry != null && profileEntry.profile().deny()) return Optional.empty();
         var nativeExact = source instanceof SkillDamageSource;
+        var resolvedAttribution = VectorAttackAttributionResolver.resolve(defender, source);
         if (!nativeExact
                 && profileEntry == null
                 && VectorCompatProfileRegistry.mode() == VectorCompatibilityMode.STRICT) {
@@ -79,6 +76,19 @@ public final class VectorExternalAttackClassifier {
         var inference = profile == null
                 ? inferDirection(defender, source)
                 : inferProfileDirection(defender, source, profile.direction());
+        if (inference.confidence() == VectorAttackConfidence.NONE
+                && resolvedAttribution.attacker() != null) {
+            var origin = resolvedAttribution.attacker().getBoundingBox().getCenter();
+            var direction = normalizeFinite(defender.getBoundingBox().getCenter().subtract(origin));
+            if (direction != Vec3.ZERO) {
+                inference = new VectorDirectionInference(
+                        origin,
+                        direction,
+                        VectorAttackConfidence.LOW,
+                        "resolved_attribution_fallback"
+                );
+            }
+        }
         if (inference.confidence() == VectorAttackConfidence.NONE) return Optional.empty();
         var tier = nativeExact
                 ? VectorCompatibilityTier.NATIVE_EXACT
@@ -106,7 +116,7 @@ public final class VectorExternalAttackClassifier {
                 profile == null ? 0.25 : profile.radius(),
                 damage,
                 new VectorAttackAttribution(
-                        source.getEntity(),
+                        resolvedAttribution.attacker(),
                         source.getDirectEntity(),
                         VectorCompatProfile.damageTypeId(source),
                         nativeExact
@@ -139,7 +149,7 @@ public final class VectorExternalAttackClassifier {
         if (source.is(DamageTypeTags.IS_FALL)) return "excluded_fall";
         if (source.is(DamageTypeTags.IS_FIRE)) return "excluded_fire";
         var name = source.getMsgId().toLowerCase(Locale.ROOT);
-        if (DENIED_DAMAGE_NAMES.contains(name)) return "excluded_damage_type=" + name;
+        if (isExplicitlyDeniedDamageName(name)) return "excluded_damage_type=" + name;
         var causing = source.getEntity();
         if (source.getDirectEntity() == causing
                 && causing instanceof LivingEntity
@@ -158,17 +168,6 @@ public final class VectorExternalAttackClassifier {
         return inferDirection(defender, source).confidence() == VectorAttackConfidence.NONE
                 ? "no_direction_evidence"
                 : "unclassified";
-    }
-
-    public static boolean canUseLegacyDamageFallback(ServerPlayer defender, DamageSource source) {
-        if (source instanceof SkillDamageSource) return true;
-        var profile = VectorCompatProfileRegistry.find(source).orElse(null);
-        if (profile != null && profile.profile().deny()) return false;
-        if (profile == null && VectorCompatProfileRegistry.mode() == VectorCompatibilityMode.STRICT) {
-            return false;
-        }
-        return !isDenied(defender, source)
-                && inferDirection(defender, source).confidence() != VectorAttackConfidence.NONE;
     }
 
     static boolean isDenied(ServerPlayer defender, DamageSource source) {
@@ -190,13 +189,17 @@ public final class VectorExternalAttackClassifier {
             return true;
         }
         var name = source.getMsgId().toLowerCase(Locale.ROOT);
-        if (DENIED_DAMAGE_NAMES.contains(name)) return true;
+        if (isExplicitlyDeniedDamageName(name)) return true;
         if (direct == causing
                 && causing instanceof LivingEntity
                 && causing.distanceToSqr(defender) <= MELEE_DISTANCE_SQR) {
             return true;
         }
         return false;
+    }
+
+    static boolean isExplicitlyDeniedDamageName(String name) {
+        return name != null && DENIED_DAMAGE_NAMES.contains(name.toLowerCase(Locale.ROOT));
     }
 
     static VectorDirectionInference inferDirection(ServerPlayer defender, DamageSource source) {

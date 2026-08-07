@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -44,13 +43,20 @@ import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyA
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageCoordinator;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageResult;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorReflectedDamageAccumulator;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalAttackClassifier;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorMotionRedirects;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackPacket;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityEffectLimiter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -90,6 +96,7 @@ public class VectorReflection extends Skill {
     @Override
     public void initClient() {
         VectorRedirectEffectPacket.initClient();
+        VectorDefenseFeedbackPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -183,12 +190,36 @@ public class VectorReflection extends Skill {
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
             if (!(player instanceof ServerPlayer serverPlayer) || player.isSpectator()) return false;
             if (!isActive(serverPlayer)) return false;
+            return canReflectSource(serverPlayer, damageSource);
+        }
+
+        private static boolean canReflectSource(ServerPlayer player, DamageSource damageSource) {
+            if (player == null || damageSource == null) return false;
             if (ReflectedSkillDamageSource.isReflected(damageSource)) return false;
             if (damageSource instanceof SkillDamageSource skillSource
                     && skillSource.getSkill() == Skills.VECTOR_REFLECTION.get()) return false;
-            if (!VectorExternalAttackClassifier.canUseLegacyDamageFallback(serverPlayer, damageSource)) {
+            if (damageSource.getDirectEntity() instanceof Projectile projectile
+                    && VectorProjectileRedirects.isRedirected(projectile)) return false;
+            if (damageSource.getDirectEntity() != null
+                    && VectorMotionRedirects.isRedirected(damageSource.getDirectEntity())) return false;
+            return true;
+        }
+
+        public static boolean reflectAnomalousDamage(
+                ServerPlayer player,
+                DamageSource source,
+                float damage
+        ) {
+            if (!(damage > VectorIncomingDamageCoordinator.ANOMALOUS_DAMAGE_THRESHOLD)
+                    || !Float.isFinite(damage)
+                    || !canMaintainLinearReflectionLease(player)
+                    || !canReflectSource(player, source)) {
                 return false;
             }
+            playReflectionSound(player);
+            applyReflection(player, (ServerLevel) player.level(), source, damage);
+            player.invulnerableTime = 0;
+            VectorDefenseFeedbackTickets.commitFull(player, source);
             return true;
         }
 
@@ -197,6 +228,16 @@ public class VectorReflection extends Skill {
                 float incomingDamage,
                 Vec3 mirrorPoint,
                 Vec3 incomingDirection
+        ) {
+            return tryReflectLinearAttack(player, incomingDamage, mirrorPoint, incomingDirection, true);
+        }
+
+        public static boolean tryReflectLinearAttack(
+                ServerPlayer player,
+                float incomingDamage,
+                Vec3 mirrorPoint,
+                Vec3 incomingDirection,
+                boolean emitFeedback
         ) {
             if (!isActive(player)
                     || !(incomingDamage > 0.0f)
@@ -221,8 +262,10 @@ public class VectorReflection extends Skill {
             }
 
             var executed = skill.executeActive(player, _ -> result.baseCpCost(), (_, _) -> {
-                playReflectionSound(player);
-                spawnGlowCircle(player, incomingDirection.scale(-1.0), mirrorPoint);
+                if (emitFeedback) {
+                    playReflectionSound(player);
+                    spawnGlowCircle(player, incomingDirection.scale(-1.0), mirrorPoint);
+                }
             });
             if (!executed) return false;
             player.invulnerableTime = 0;
@@ -231,15 +274,29 @@ public class VectorReflection extends Skill {
         }
 
         public static Pair<Boolean, Float> hurtServer(Player player, ServerLevel level, DamageSource source, float originalDamage) {
-            if (!shouldReflection(player, source)) return Pair.of(false, originalDamage);
-            if (!(originalDamage > 0.0f) || !Float.isFinite(originalDamage)) return Pair.of(true, 0.0f);
-            var serverPlayer = (ServerPlayer) player;
+            if (!(player instanceof ServerPlayer serverPlayer)) return Pair.of(false, originalDamage);
+            var coordinated = VectorIncomingDamageCoordinator.interceptReflection(
+                    serverPlayer, source, originalDamage);
+            return Pair.of(coordinated.handled(), coordinated.remainingDamage());
+        }
+
+        public static VectorIncomingDamageResult applyPartialReflection(
+                ServerPlayer serverPlayer,
+                ServerLevel level,
+                DamageSource source,
+                float originalDamage
+        ) {
+            if (!shouldReflection(serverPlayer, source)
+                    || !(originalDamage > 0.0f)
+                    || !Float.isFinite(originalDamage)) {
+                return VectorIncomingDamageResult.passThrough(originalDamage);
+            }
             var skill = Skills.VECTOR_REFLECTION.get();
             var system = AbilitySystemServer.getSystem(serverPlayer);
             var result = calculateReflection(
                     originalDamage,
-                    system.getPlayerAvailableCP(player.getUUID()),
-                    system.getPlayerCalculationIntensity(player.getUUID()),
+                    system.getPlayerAvailableCP(serverPlayer.getUUID()),
+                    system.getPlayerCalculationIntensity(serverPlayer.getUUID()),
                     false
             );
             var reflectedDamage = result.reflectedDamage();
@@ -251,9 +308,14 @@ public class VectorReflection extends Skill {
                             applyReflection(serverPlayer, level, source, reflectedDamage);
                         });
             }
-            player.invulnerableTime = 0;
+            serverPlayer.invulnerableTime = 0;
             maintainProtection(serverPlayer);
-            return Pair.of(true, executed ? result.remainingDamage() : originalDamage);
+            var remaining = executed ? result.remainingDamage() : originalDamage;
+            if (executed && !(remaining > 0.0f)) {
+                VectorDefenseFeedbackTickets.commitFull(serverPlayer, source);
+                return VectorIncomingDamageResult.fullRedirect();
+            }
+            return VectorIncomingDamageResult.partial(remaining);
         }
 
         static float calculateReflectedDamage(float damage, float availableCP,
@@ -327,10 +389,9 @@ public class VectorReflection extends Skill {
             var redirect = (Runnable) () -> {
                 VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFLECTION);
                 projectile.setOwner(player);
-                projectile.setDeltaMovement(reflected);
                 var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
                 projectile.setPos(player.getBoundingBox().getCenter().add(reflected.normalize().scale(pushDistance)));
-                projectile.hurtMarked = true;
+                VectorProjectileStateAdapter.applyRedirect(projectile, reflected);
                 if (spawnEffect) {
                     spawnGlowCircle(player, projectile.getBoundingBox().getCenter()
                             .subtract(player.getBoundingBox().getCenter()));
@@ -424,6 +485,10 @@ public class VectorReflection extends Skill {
             VectorInterceptionTickets.clear(player);
             PROTECTED_HEALTH.remove(player.getUUID());
             LAST_SOUND_TICK.remove(player.getUUID());
+            VectorDefenseFeedbackTickets.clear(player);
+            VectorReflectedDamageAccumulator.clear(player);
+            VectorAttackAttributionResolver.clear(player);
+            VectorCompatibilityEffectLimiter.clear(player);
         }
 
         private static float protectedHealth(ServerPlayer player, float fallback) {
@@ -433,18 +498,16 @@ public class VectorReflection extends Skill {
 
         private static void applyReflection(ServerPlayer player, ServerLevel level,
                                             DamageSource source, float reflectedDamage) {
-            var causingEntity = source.getEntity();
-            var directEntity = source.getDirectEntity();
-            if ((causingEntity == null && directEntity == null)
-                    || directEntity == player || causingEntity == player) return;
-
-            playReflectionSound(player);
-            var sourceEntity = directEntity != null ? directEntity : causingEntity;
-            var playerCenter = player.getBoundingBox().getCenter();
-            var sourcePos = sourceEntity.getBoundingBox().getCenter();
-            var direction = sourcePos.subtract(playerCenter);
+            var attribution = VectorAttackAttributionResolver.resolve(player, source);
+            var directEntity = attribution.directEntity();
+            var attacker = attribution.attacker();
+            var direction = attribution.effectDirection();
             if (direction.lengthSqr() < 1.0E-6) direction = player.getLookAngle();
             direction = direction.normalize();
+            var playerCenter = player.getBoundingBox().getCenter();
+            var sourcePos = directEntity == null
+                    ? playerCenter.add(direction)
+                    : directEntity.getBoundingBox().getCenter();
             var offset = Math.max(player.getBbWidth() * 0.95, 0.75);
             var pos = directEntity instanceof Projectile && sourcePos.distanceToSqr(playerCenter) < 4.0
                     ? sourcePos
@@ -457,17 +520,13 @@ public class VectorReflection extends Skill {
                 reflectProjectile(player, projectile, false, false);
             }
 
-            if (causingEntity instanceof LivingEntity attacker
-                    && attacker != player
-                    && attacker.isAlive()) {
-                CTADamageUtil.applyCompositeDamage(
-                        attacker,
+            if (attacker != null) {
+                VectorReflectedDamageAccumulator.submit(
                         player,
-                        SkillDamageSource.of(
-                                player,
-                                Skills.VECTOR_REFLECTION.get(),
-                                org.academy.internal.common.world.damagesource.DamageTypes.CTA
-                        ),
+                        attacker,
+                        source,
+                        attacker,
+                        VectorRedirectKind.REFLECTION,
                         reflectedDamage
                 );
             }
@@ -535,6 +594,7 @@ public class VectorReflection extends Skill {
         @SubscribeEvent
         public static void onServerTick(ServerTickEvent.Post event) {
             VectorReflectionRuntime.onServerTick();
+            VectorReflectedDamageAccumulator.tick();
         }
 
         @SubscribeEvent

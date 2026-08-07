@@ -8,7 +8,6 @@ import net.minecraft.world.phys.HitResult;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
-import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSource;
 
 import java.util.Comparator;
 
@@ -69,18 +68,44 @@ public final class VectorRedirectExecutor {
                 .limit(plan.attack().executionPolicy().maximumTargets())
                 .toList();
 
-        var source = VectorRedirectedDamageSource.from(
-                plan.attack().source(),
-                plan.redirector(),
-                plan.attack().attribution().originalAttacker(),
-                plan.kind()
-        );
         var hitCount = 0;
         for (var target : targets) {
-            if (target.hurtServer(level, source, plan.attack().damage())) hitCount++;
+            if (VectorReflectedDamageAccumulator.submit(
+                    plan.redirector(),
+                    target,
+                    plan.attack().source(),
+                    plan.attack().attribution().originalAttacker(),
+                    plan.kind(),
+                    plan.attack().damage())) {
+                hitCount++;
+            }
             if (!plan.attack().executionPolicy().piercing()) break;
         }
         return new ExecutionResult(hitCount, start.distanceTo(end));
+    }
+
+    public static int executeDamageFallback(VectorRedirectPlan plan) {
+        var target = plan.attack().attribution().originalAttacker();
+        LivingEntity living = target instanceof LivingEntity candidate && candidate.isAlive()
+                ? candidate
+                : null;
+        if (living == null) {
+            target = plan.attack().attribution().directEntity();
+            if (!(target instanceof LivingEntity directLiving) || !directLiving.isAlive()) return 0;
+            living = directLiving;
+        }
+        if (living == plan.redirector()
+                || plan.redirector().isAlliedTo(living)
+                || CtaFriendlyFireWhitelist.shouldProtect(plan.redirector(), living)) {
+            return 0;
+        }
+        return VectorReflectedDamageAccumulator.submit(
+                plan.redirector(),
+                living,
+                plan.attack().source(),
+                plan.attack().attribution().originalAttacker(),
+                plan.kind(),
+                plan.attack().damage()) ? 1 : 0;
     }
 
     public record ExecutionResult(int hitCount, double redirectedLength) {

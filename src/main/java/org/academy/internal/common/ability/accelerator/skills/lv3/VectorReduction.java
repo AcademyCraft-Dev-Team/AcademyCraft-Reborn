@@ -30,10 +30,13 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityEffectLimiter;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -175,6 +178,8 @@ public class VectorReduction extends Skill {
             if (!Skills.VECTOR_REDUCTION.get().isEnabled(player)) {
                 VectorContinuousInterceptionLeases.clear(player);
                 VectorInterceptionTickets.clear(player);
+                VectorCompatibilityEffectLimiter.clear(player);
+                VectorDefenseFeedbackTickets.clear(player);
             }
         }
 
@@ -197,6 +202,16 @@ public class VectorReduction extends Skill {
                 Vec3 mirrorPoint,
                 Vec3 incomingDirection
         ) {
+            return tryRefractLinearAttack(player, incomingDamage, mirrorPoint, incomingDirection, true);
+        }
+
+        public static boolean tryRefractLinearAttack(
+                ServerPlayer player,
+                float incomingDamage,
+                Vec3 mirrorPoint,
+                Vec3 incomingDirection,
+                boolean emitFeedback
+        ) {
             if (!isActive(player)
                     || VectorReflection.Server.isActive(player)
                     || !(incomingDamage > 0.0f)
@@ -210,9 +225,11 @@ public class VectorReduction extends Skill {
                     player,
                     _ -> Math.max(1.0f, incomingDamage),
                     (_, _) -> {
-                        var direction = refractedDirection(player.getLookAngle(), incomingDirection);
-                        VectorReflection.Server.spawnGlowCircle(player, direction, mirrorPoint);
-                        VectorReflection.Server.playReflectionSound(player);
+                        if (emitFeedback) {
+                            var direction = refractedDirection(player.getLookAngle(), incomingDirection);
+                            VectorReflection.Server.spawnGlowCircle(player, direction, mirrorPoint);
+                            VectorReflection.Server.playReflectionSound(player);
+                        }
                     }
             );
         }
@@ -252,11 +269,10 @@ public class VectorReduction extends Skill {
             return skill.executeActive(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
                 VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFRACTION);
                 projectile.setOwner(player);
-                projectile.setDeltaMovement(refracted);
                 var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
                 projectile.setPos(player.getBoundingBox().getCenter()
                         .add(refracted.normalize().scale(pushDistance)));
-                projectile.hurtMarked = true;
+                VectorProjectileStateAdapter.applyRedirect(projectile, refracted);
                 VectorReflection.Server.spawnGlowCircle(player, refracted, projectile.position());
                 VectorReflection.Server.playReflectionSound(player);
             });
