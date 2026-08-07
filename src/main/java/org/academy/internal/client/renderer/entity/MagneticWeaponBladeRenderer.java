@@ -8,9 +8,11 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.entity.state.MagneticWeaponBladeRenderState;
 import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
+import org.academy.internal.common.world.entity.skill.MagneticWeaponBladeMotion;
 
 public final class MagneticWeaponBladeRenderer
         extends EntityRenderer<MagneticWeaponBlade, MagneticWeaponBladeRenderState> {
@@ -39,6 +41,9 @@ public final class MagneticWeaponBladeRenderer
                 entity
         );
         state.attacking = entity.isAttacking();
+        state.yRot = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
+        state.xRot = Mth.rotLerp(partialTick, entity.xRotO, entity.getXRot());
+        state.roll = MagneticWeaponBladeMotion.rollAt(entity.getAttackTick(), entity.getAttackSequence());
     }
 
     @Override
@@ -49,11 +54,11 @@ public final class MagneticWeaponBladeRenderer
         if (state.weapon.isEmpty()) return;
 
         poseStack.pushPose();
-        if (!state.attacking) {
-            poseStack.translate(0.0, Math.sin(state.ageInTicks * 0.16f) * 0.08f, 0.0);
-        }
-        poseStack.mulPose(Axis.YP.rotationDegrees(state.ageInTicks * 10.0f));
-        poseStack.mulPose(Axis.ZP.rotationDegrees(138.0f));
+        poseStack.mulPose(Axis.YN.rotationDegrees(state.yRot));
+        poseStack.mulPose(Axis.XP.rotationDegrees(state.xRot));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(state.roll));
+        poseStack.mulPose(Axis.XP.rotationDegrees(90.0f));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(-45.0f));
         poseStack.scale(1.45f, 1.45f, 1.45f);
         state.weapon.submit(
                 poseStack,
