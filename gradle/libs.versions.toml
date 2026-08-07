@@ -21,7 +21,7 @@ jmsdfgen = "0.0.2"
 auto = "1.1.1"
 jflac = "1.5.2"
 jlayer = "1.0.3"
-imgui = "1.92.7.1"
+imgui = "1.90.0"
 
 kotlin = "2.4.0"
 plugin-moddevgradle = "2.0.141"
