@@ -6,5 +6,9 @@ public enum VectorCompatibilityTier {
     PROFILED_LINEAR,
     INFERRED_HITSCAN,
     DAMAGE_FALLBACK,
-    PASS_THROUGH
+    PASS_THROUGH;
+
+    public boolean usesFallbackVisuals() {
+        return this == INFERRED_HITSCAN || this == DAMAGE_FALLBACK;
+    }
 }
