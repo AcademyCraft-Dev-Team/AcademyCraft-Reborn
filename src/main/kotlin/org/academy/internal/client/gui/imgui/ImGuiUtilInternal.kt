@@ -18,8 +18,12 @@ import imgui.type.ImInt
 import net.minecraft.client.Minecraft
 import org.academy.api.client.render.Render
 import org.jetbrains.annotations.ApiStatus
+import java.io.IOException
+import java.lang.ref.Reference
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.*
 
 @ApiStatus.Internal
@@ -34,6 +38,9 @@ object ImGuiUtilInternal {
     private lateinit var projMatrixUniform: GpuBuffer
     private var vertexBufferSize: Long = 0
     private var indexBufferSize: Long = 0
+    private var fontAtlasPixels: ByteBuffer? = null
+    private var fontAtlasWidth = 0
+    private var fontAtlasHeight = 0
 
     private val projMatrixBuffer = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder())
     private val reusableClipRect = ImVec4()
@@ -52,15 +59,81 @@ object ImGuiUtilInternal {
     }
 
     private fun loadLocalizedFont() {
-        val fontBytes = ImGuiUtilInternal::class.java
+        val logger = org.academy.AcademyCraft.getLogger()
+        val fonts = ImGui.getIO().fonts
+        val fontResource = ImGuiUtilInternal::class.java
             .getResourceAsStream("/assets/academy/fonts/wqy-microhei-modified.ttf")
-            ?.use { it.readAllBytes() }
-        if (fontBytes == null) {
-            org.academy.AcademyCraft.getLogger().warn("[ImGui] Localized font resource is missing")
+        if (fontResource == null) {
+            logger.warn("[ImGui] Localized font resource is missing; using the built-in font")
+            fonts.addFontDefault()
+            cacheFontAtlas()
             return
         }
+
+        val temporaryFont = try {
+            Files.createTempFile("academy-imgui-font-", ".ttf")
+        } catch (exception: IOException) {
+            fontResource.close()
+            logger.error("[ImGui] Failed to create a temporary localized font; using the built-in font", exception)
+            fonts.addFontDefault()
+            cacheFontAtlas()
+            return
+        }
+        try {
+            try {
+                fontResource.use {
+                    Files.copy(it, temporaryFont, StandardCopyOption.REPLACE_EXISTING)
+                }
+            } catch (exception: IOException) {
+                logger.error("[ImGui] Failed to stage the localized font; using the built-in font", exception)
+                fonts.addFontDefault()
+                cacheFontAtlas()
+                return
+            }
+
+            // imgui-java's memory-font overload exposes Java array addresses to native code.
+            // Those addresses are no longer valid after JNI releases the arrays, while ImGui
+            // keeps them for deferred atlas construction. A file font gives ImGui native-owned
+            // font data; building immediately keeps the remaining glyph-range pointer scoped to
+            // this initialization transaction instead of the first GUI render minutes later.
+            val glyphRanges = fonts.glyphRangesChineseSimplifiedCommon
+            fonts.addFontFromFileTTF(temporaryFont.toString(), 14f, glyphRanges)
+            cacheFontAtlas()
+            Reference.reachabilityFence(glyphRanges)
+        } finally {
+            try {
+                Files.deleteIfExists(temporaryFont)
+            } catch (exception: IOException) {
+                logger.warn("[ImGui] Failed to delete temporary font {}", temporaryFont, exception)
+            }
+        }
+    }
+
+    private fun cacheFontAtlas() {
         val fonts = ImGui.getIO().fonts
-        fonts.addFontFromMemoryTTF(fontBytes, 14f, fonts.glyphRangesChineseSimplifiedCommon)
+        val width = ImInt()
+        val height = ImInt()
+        val pixels = fonts.getTexDataAsRGBA32(width, height)
+        val atlasWidth = width.get()
+        val atlasHeight = height.get()
+        val expectedSize = Math.multiplyExact(Math.multiplyExact(atlasWidth, atlasHeight), 4)
+
+        require(atlasWidth > 0 && atlasHeight > 0 && pixels.capacity() >= expectedSize) {
+            "ImGui produced an invalid font atlas: ${atlasWidth}x$atlasHeight, ${pixels.capacity()} bytes"
+        }
+
+        fontAtlasPixels = pixels
+        fontAtlasWidth = atlasWidth
+        fontAtlasHeight = atlasHeight
+
+        // The custom renderer uses the legacy, fully-built atlas path. Once pixels have been
+        // copied into Java-owned direct memory, native font inputs must not retain JNI pointers.
+        fonts.clearInputData()
+        org.academy.AcademyCraft.getLogger().info(
+            "[ImGui] Prepared font atlas {}x{} during client initialization",
+            atlasWidth,
+            atlasHeight
+        )
     }
 
     fun render(renderTarget: RenderTarget, renderCommand: () -> Unit) {
@@ -109,10 +182,11 @@ object ImGuiUtilInternal {
     private fun createFontsTexture() {
         val device = RenderSystem.getDevice()
         val fontAtlas = ImGui.getIO().fonts
-
-        val width = ImInt()
-        val height = ImInt()
-        val pixels = fontAtlas.getTexDataAsRGBA32(width, height)
+        val pixels = checkNotNull(fontAtlasPixels) { "ImGui font atlas was not prepared during initialization" }
+            .duplicate()
+        val expectedSize = Math.multiplyExact(Math.multiplyExact(fontAtlasWidth, fontAtlasHeight), 4)
+        pixels.clear()
+        pixels.limit(expectedSize)
 
         disposeFontResources()
 
@@ -120,7 +194,7 @@ object ImGuiUtilInternal {
             { "ImGui Font" },
             GpuTexture.USAGE_TEXTURE_BINDING or GpuTexture.USAGE_COPY_DST,
             GpuFormat.RGBA8_UNORM,
-            width.get(), height.get(), 1, 1
+            fontAtlasWidth, fontAtlasHeight, 1, 1
         )
         fontTexture = texture
         fontTextureView = device.createTextureView(texture)
@@ -131,7 +205,7 @@ object ImGuiUtilInternal {
         )
 
         val encoder = device.createCommandEncoder()
-        encoder.writeToTexture(texture, pixels, 0, 0, 0, 0, width.get(), height.get())
+        encoder.writeToTexture(texture, pixels, 0, 0, 0, 0, fontAtlasWidth, fontAtlasHeight)
         encoder.submit()
 
         fontAtlas.setTexID(1)
@@ -315,6 +389,9 @@ object ImGuiUtilInternal {
 
         vertexBufferSize = 0
         indexBufferSize = 0
+        fontAtlasPixels = null
+        fontAtlasWidth = 0
+        fontAtlasHeight = 0
 
         imGuiImplGlfw.shutdown()
         ImPlot.destroyContext()
