@@ -8,9 +8,9 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
-import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,8 +23,9 @@ public abstract class MixinProjectile {
     @Inject(method = "tick", at = @At("HEAD"))
     private void academy$reflectNearProtectedPlayer(CallbackInfo ci) {
         var projectile = (Projectile) (Object) this;
-        if (projectile.level().isClientSide()
-                || VectorProjectileRedirects.isRedirected(projectile)) return;
+        if (projectile.level().isClientSide()) return;
+        VectorAttackAttributionResolver.captureProjectileOwner(projectile);
+        if (VectorProjectileRedirects.isRedirected(projectile)) return;
         var velocity = projectile.getDeltaMovement();
         var path = projectile.getBoundingBox()
                 .minmax(projectile.getBoundingBox().move(velocity))

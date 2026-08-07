@@ -26,6 +26,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalControlRuntim
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
@@ -126,6 +127,28 @@ public abstract class MixinLivingEntity {
             ci.cancel();
             return;
         }
+        if ((Object) this instanceof ServerPlayer player
+                && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
+            var reflection = VectorReflection.Server.hurtServer(player, level, source, damage);
+            if (reflection.getLeft()) {
+                ci.cancel();
+                var remaining = reflection.getRight();
+                if (remaining > 0.0f && Float.isFinite(remaining)) {
+                    VectorReflection.Server.beginLegitimateHealthMutation(player);
+                    try {
+                        ((LivingEntityDamageInvoker) (Object) this)
+                                .academy$actuallyHurt(level, source, remaining);
+                    } finally {
+                        VectorReflection.Server.endLegitimateHealthMutation(player, true);
+                    }
+                }
+                return;
+            }
+            if (VectorExternalInterceptionService.tryDirectRefraction(player, source, damage)) {
+                ci.cancel();
+                return;
+            }
+        }
         PlayerAttributeRuntime.pushDamageContext(source);
     }
 
@@ -203,26 +226,6 @@ public abstract class MixinLivingEntity {
 
     @Inject(method = "die", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionDeath(DamageSource source, CallbackInfo ci) {
-        if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
-                && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
-            VectorReflection.Server.maintainProtection(player);
-            ci.cancel();
-        }
-    }
-
-    @Inject(
-            method = "actuallyHurt(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)V",
-            at = @At("HEAD"),
-            cancellable = true
-    )
-    private void academy$protectVectorReflectionDirectDamage(
-            ServerLevel level,
-            DamageSource source,
-            float damage,
-            CallbackInfo ci
-    ) {
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isActive(player)
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)) {

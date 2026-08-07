@@ -56,6 +56,8 @@ public final class VectorMotionRedirects {
         direct.setDeltaMovement(direction.scale(speed));
         direct.setPos(plan.mirrorPoint().add(direction.scale(pushDistance)));
         direct.hurtMarked = true;
+        direct.needsSync = true;
+        direct.syncPosition = true;
         var originalAttacker = plan.attack().attribution().originalAttacker();
         mark(
                 direct,
