@@ -73,6 +73,20 @@ class VectorCompatibilityModelTest {
     }
 
     @Test
+    void inferredAndDamageFallbackTiersDoNotRenderReturnBeams() {
+        assertTrue(VectorCompatibilityTier.INFERRED_HITSCAN.usesFallbackVisuals());
+        assertTrue(VectorCompatibilityTier.DAMAGE_FALLBACK.usesFallbackVisuals());
+        assertFalse(VectorCompatibilityTier.PROFILED_LINEAR.usesFallbackVisuals());
+        assertFalse(VectorCompatibilityTier.NATIVE_EXACT.usesFallbackVisuals());
+    }
+
+    @Test
+    void refractionAbsorbsWithoutSubmittingRedirectedEntityDamage() {
+        assertTrue(VectorRedirectKind.REFLECTION.dealsRedirectedEntityDamage());
+        assertFalse(VectorRedirectKind.REFRACTION.dealsRedirectedEntityDamage());
+    }
+
+    @Test
     void vanillaAttackerDamageTypesAreNotRejectedAsMeleeByName() {
         assertFalse(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("player"));
         assertFalse(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("player_attack"));
