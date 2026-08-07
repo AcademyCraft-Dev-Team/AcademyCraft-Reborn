@@ -1,4 +1,9 @@
 {
+  "message.academy.skill_use.unavailable": "%s 当前不可用。",
+  "message.academy.skill_use.overload": "能力过载期间无法使用 %s。",
+  "message.academy.skill_use.insufficient_cp": "%s 需要 %s CP，当前仅有 %s CP。",
+  "message.academy.skill_use.stack_limit": "%s 已达到堆栈上限（%s/%s）。",
+  "message.academy.skill_use.server_cooldown": "%s 仍处于服务端迭代冷却：剩余 %s 点（堆栈 %s/%s）。",
   "attribute.name.academy.muscle_strength": "肌肉力量",
   "attribute.name.academy.endurance": "耐受力",
   "attribute.name.academy.dexterity": "灵巧度",

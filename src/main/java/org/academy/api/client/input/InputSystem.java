@@ -31,6 +31,7 @@ public final class InputSystem {
     private static final Map<String, BiConsumer<Double, Double>> MOUSE_MOVE_HANDLERS = new HashMap<>();
     private static final Map<Integer, Integer> KEYBOARD_STATE = new HashMap<>();
     private static final Map<Integer, Integer> MOUSE_STATE = new HashMap<>();
+    private static final Map<InputKey, Integer> PRESS_MODIFIER_SNAPSHOTS = new HashMap<>();
     private static final Set<InputKey> SUPPRESSED_RELEASES = new HashSet<>();
     private static Config config;
     private static RebindSession rebindSession;
@@ -283,6 +284,8 @@ public final class InputSystem {
 
         if (handleRebindInput(InputType.KEYBOARD, key, action, event.modifiers(), ci)) return;
 
+        var dispatchModifiers = modifiersForDispatch(InputType.KEYBOARD, key, action, event.modifiers());
+
         var inputEvent = new KeyInputEvent(key, event.scancode(), action, event.modifiers());
         NeoForge.EVENT_BUS.post(inputEvent);
 
@@ -292,7 +295,7 @@ public final class InputSystem {
             return;
         }
 
-        dispatch(InputType.KEYBOARD, key, action, event.modifiers());
+        dispatch(InputType.KEYBOARD, key, action, dispatchModifiers);
     }
 
     public static void handleMouseButton(int button, int action, int modifiers, CallbackInfo ci) {
@@ -302,6 +305,8 @@ public final class InputSystem {
         MOUSE_STATE.put(button, action);
 
         if (handleRebindInput(InputType.MOUSE, button, action, modifiers, ci)) return;
+
+        var dispatchModifiers = modifiersForDispatch(InputType.MOUSE, button, action, modifiers);
 
         var event = new MouseButtonEvent(button, action, modifiers);
         NeoForge.EVENT_BUS.post(event);
@@ -314,7 +319,7 @@ public final class InputSystem {
             return;
         }
 
-        dispatch(InputType.MOUSE, button, action, modifiers);
+        dispatch(InputType.MOUSE, button, action, dispatchModifiers);
     }
 
     public static void handleMouseScroll(double xOffset, double yOffset, CallbackInfo ci) {
@@ -338,6 +343,24 @@ public final class InputSystem {
             if (!matches(combo, eventType, input, action, modifiers)) continue;
             binding.handler.accept(new BindingContext(eventType, input, action, modifiers));
         }
+    }
+
+    static int modifiersForDispatch(InputType type, int input, int action, int modifiers) {
+        var inputKey = new InputKey(type, input);
+        var normalized = normalizeModifiers(modifiers);
+        if (action == InputConstants.PRESS) {
+            PRESS_MODIFIER_SNAPSHOTS.put(inputKey, normalized);
+            return normalized;
+        }
+        if (action == InputConstants.RELEASE) {
+            var pressedModifiers = PRESS_MODIFIER_SNAPSHOTS.remove(inputKey);
+            return pressedModifiers == null ? normalized : pressedModifiers;
+        }
+        return PRESS_MODIFIER_SNAPSHOTS.getOrDefault(inputKey, normalized);
+    }
+
+    static void clearModifierSnapshotsForTesting() {
+        PRESS_MODIFIER_SNAPSHOTS.clear();
     }
 
     private static boolean handleRebindInput(

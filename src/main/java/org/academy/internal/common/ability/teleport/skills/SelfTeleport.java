@@ -63,7 +63,7 @@ public final class SelfTeleport extends Skill {
                 .energyCost(10_000)
                 .cpCost(10)
                 .iterationTicks(4)
-                .maxStacks(1)
+                .maxStacks(20)
                 .dependsOn(Skills.THREATENING_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition(

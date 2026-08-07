@@ -57,7 +57,7 @@ public final class FleshRipping extends Skill {
                 .energyCost(30_000)
                 .cpCost(30)
                 .iterationTicks(10)
-                .maxStacks(1)
+                .maxStacks(20)
                 .dependsOn(Skills.CUT_THROUGH)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:cut_through"))
