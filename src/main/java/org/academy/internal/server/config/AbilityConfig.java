@@ -53,6 +53,8 @@ public class AbilityConfig {
         public float precisionPathCostPerTarget = 10.0f;
         @SerializedName("precisionViewCostPerTarget")
         public float precisionViewCostPerTarget = 8.0f;
+        @SerializedName("precisionGuardCostPerTarget")
+        public float precisionGuardCostPerTarget = 20.0f;
         @SerializedName("bossCostMultiplier")
         public float bossCostMultiplier = 2.0f;
         @SerializedName("mentalIntrusionMaintenanceCost")

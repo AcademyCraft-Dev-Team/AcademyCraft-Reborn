@@ -165,6 +165,12 @@ public final class MentalIntrusionManager {
         }
     }
 
+    public static boolean isPrecisionActive(ServerPlayer player, UUID sessionId) {
+        if (player == null || sessionId == null) return false;
+        var session = SESSIONS.get(player.getUUID());
+        return session != null && !session.ownsOccupation && session.id.equals(sessionId);
+    }
+
     public static void stopAny(ServerPlayer player) {
         if (player != null) stop(player.getUUID(), true);
     }

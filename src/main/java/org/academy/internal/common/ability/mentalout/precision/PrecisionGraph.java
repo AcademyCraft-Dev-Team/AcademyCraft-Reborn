@@ -63,16 +63,16 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         var actionIds = new HashSet<Integer>();
         for (var node : nodes) {
             if (node == null || node.kind == null || node.id < 0 || node.id > 1_000_000) {
-                return Validation.error(Diagnostic.INVALID_NODE);
+                return Validation.error(Diagnostic.INVALID_NODE, node == null ? -1 : node.id, -1);
             }
             if (!Double.isFinite(node.parameter) || !Double.isFinite(node.x) || !Double.isFinite(node.y)) {
-                return Validation.error(Diagnostic.NON_FINITE_VALUE);
+                return Validation.error(Diagnostic.NON_FINITE_VALUE, node.id, -1);
             }
             if (byId.putIfAbsent(node.id, node) != null) {
-                return Validation.error(Diagnostic.DUPLICATE_NODE);
+                return Validation.error(Diagnostic.DUPLICATE_NODE, node.id, -1);
             }
             if (!node.kind.isParameterValid(node.parameter)) {
-                return Validation.error(Diagnostic.INVALID_PARAMETER);
+                return Validation.error(Diagnostic.INVALID_PARAMETER, node.id, -1);
             }
             if (node.kind.isAction()) actionIds.add(node.id);
         }
@@ -89,31 +89,41 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         var dataEdges = 0;
         var flowEdges = 0;
         for (var edge : edges) {
-            if (edge == null || !uniqueEdges.add(edge)) return Validation.error(Diagnostic.DUPLICATE_EDGE);
+            if (edge == null || !uniqueEdges.add(edge)) {
+                return Validation.error(
+                        Diagnostic.DUPLICATE_EDGE,
+                        edge == null ? -1 : edge.toNode,
+                        edge == null ? -1 : edge.toPort
+                );
+            }
             var from = byId.get(edge.fromNode);
             var to = byId.get(edge.toNode);
             if (from == null || to == null || edge.fromNode == edge.toNode) {
-                return Validation.error(Diagnostic.INVALID_EDGE);
+                return Validation.error(Diagnostic.INVALID_EDGE, to == null ? -1 : to.id, edge.toPort);
             }
             if (edge.fromPort < 0 || edge.fromPort >= from.kind.outputs.size()
                     || edge.toPort < 0 || edge.toPort >= to.kind.inputs.size()) {
-                return Validation.error(Diagnostic.INVALID_PORT);
+                return Validation.error(Diagnostic.INVALID_PORT, to.id, edge.toPort);
             }
             var output = from.kind.outputDefinitions.get(edge.fromPort);
             var input = to.kind.inputDefinitions.get(edge.toPort);
-            if (output.type != input.type) return Validation.error(Diagnostic.TYPE_MISMATCH);
+            if (!isPortCompatible(output.type, input.type)) {
+                return Validation.error(Diagnostic.TYPE_MISMATCH, to.id, edge.toPort);
+            }
             var ports = incoming.computeIfAbsent(edge.toNode, _ -> new HashMap<>());
             if (ports.putIfAbsent(edge.toPort, edge) != null) {
-                return Validation.error(Diagnostic.MULTIPLE_INPUTS);
+                return Validation.error(Diagnostic.MULTIPLE_INPUTS, to.id, edge.toPort);
             }
             if (output.type == PortType.FLOW) {
                 flowEdges++;
                 if (!from.kind.isAction() || !to.kind.isAction()) {
-                    return Validation.error(Diagnostic.INVALID_FLOW);
+                    return Validation.error(Diagnostic.INVALID_FLOW, to.id, edge.toPort);
                 }
-                if (flowOutgoing.merge(from.id, 1, Integer::sum) > 1
-                        || flowIncoming.merge(to.id, 1, Integer::sum) > 1) {
-                    return Validation.error(Diagnostic.BRANCHED_FLOW);
+                if (flowOutgoing.merge(from.id, 1, Integer::sum) > 1) {
+                    return Validation.error(Diagnostic.BRANCHED_FLOW, from.id, edge.fromPort);
+                }
+                if (flowIncoming.merge(to.id, 1, Integer::sum) > 1) {
+                    return Validation.error(Diagnostic.BRANCHED_FLOW, to.id, edge.toPort);
                 }
                 flowTargets.put(from.id, to.id);
             } else {
@@ -125,8 +135,9 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         if (dataEdges > MAX_DATA_EDGES || flowEdges > MAX_FLOW_EDGES) {
             return Validation.error(Diagnostic.TOO_MANY_EDGES);
         }
-        if (hasFlowCycle(actionIds, flowTargets)) {
-            return Validation.error(Diagnostic.FLOW_CYCLE);
+        var flowCycleNode = findFlowCycleNode(actionIds, flowTargets);
+        if (flowCycleNode >= 0) {
+            return Validation.error(Diagnostic.FLOW_CYCLE, flowCycleNode, -1);
         }
 
         for (var node : nodes) {
@@ -134,7 +145,7 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
             for (var port = 0; port < node.kind.inputDefinitions.size(); port++) {
                 var definition = node.kind.inputDefinitions.get(port);
                 if (definition.required && !connected.containsKey(port)) {
-                    return Validation.error(Diagnostic.MISSING_INPUT);
+                    return Validation.error(Diagnostic.MISSING_INPUT, node.id, port);
                 }
             }
         }
@@ -152,15 +163,23 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
                 if (next != null && next == 0) ready.add(target);
             }
         }
-        if (order.size() != nodes.size()) return Validation.error(Diagnostic.CYCLE);
+        if (order.size() != nodes.size()) {
+            var ordered = Set.copyOf(order);
+            var cycleNode = nodes.stream().mapToInt(Node::id).filter(id -> !ordered.contains(id)).min().orElse(-1);
+            return Validation.error(Diagnostic.CYCLE, cycleNode, -1);
+        }
 
         var actionOrder = new ArrayList<Integer>();
         if (requireFlow && !actionIds.isEmpty()) {
             if (flowEdges != actionIds.size() - 1) {
-                return Validation.error(Diagnostic.DISCONNECTED_FLOW);
+                return Validation.error(Diagnostic.DISCONNECTED_FLOW,
+                        actionIds.stream().mapToInt(Integer::intValue).min().orElse(-1), -1);
             }
             var roots = actionIds.stream().filter(id -> !flowIncoming.containsKey(id)).toList();
-            if (roots.size() != 1) return Validation.error(Diagnostic.DISCONNECTED_FLOW);
+            if (roots.size() != 1) {
+                return Validation.error(Diagnostic.DISCONNECTED_FLOW,
+                        actionIds.stream().mapToInt(Integer::intValue).min().orElse(-1), -1);
+            }
             var current = roots.getFirst();
             var visited = new HashSet<Integer>();
             while (visited.add(current)) {
@@ -170,7 +189,9 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
                 current = next;
             }
             if (visited.size() != actionIds.size()) {
-                return Validation.error(Diagnostic.DISCONNECTED_FLOW);
+                var disconnected = actionIds.stream().filter(id -> !visited.contains(id))
+                        .mapToInt(Integer::intValue).min().orElse(current);
+                return Validation.error(Diagnostic.DISCONNECTED_FLOW, disconnected, -1);
             }
         } else {
             order.stream().filter(actionIds::contains).forEach(actionOrder::add);
@@ -189,6 +210,8 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         return new Validation(
                 true,
                 Diagnostic.OK,
+                -1,
+                -1,
                 new PrecisionGraph(normalizedNodes, normalizedEdges),
                 List.copyOf(order),
                 List.copyOf(actionOrder)
@@ -205,19 +228,19 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         return new FlowPosition(true, incoming, outgoing);
     }
 
-    private static boolean hasFlowCycle(Set<Integer> actionIds, Map<Integer, Integer> flowTargets) {
+    private static int findFlowCycleNode(Set<Integer> actionIds, Map<Integer, Integer> flowTargets) {
         var complete = new HashSet<Integer>();
         for (var start : actionIds) {
             if (complete.contains(start)) continue;
             var path = new HashSet<Integer>();
             var current = start;
             while (current != null && actionIds.contains(current) && !complete.contains(current)) {
-                if (!path.add(current)) return true;
+                if (!path.add(current)) return current;
                 current = flowTargets.get(current);
             }
             complete.addAll(path);
         }
-        return false;
+        return -1;
     }
 
     private static Integer flowTarget(
@@ -237,7 +260,12 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
     public enum PortType {
         ENTITY,
         ENTITY_SET,
+        DESTINATION,
         FLOW
+    }
+
+    public static boolean isPortCompatible(PortType output, PortType input) {
+        return output == input || output == PortType.ENTITY && input == PortType.DESTINATION;
     }
 
     public enum PortDirection {
@@ -268,7 +296,8 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         CAPABILITY,
         SORT_DIRECTION,
         ENTITY_TYPE,
-        HEALTH_PERCENT
+        HEALTH_PERCENT,
+        DURATION_SECONDS
     }
 
     public record PortDefinition(
@@ -308,11 +337,11 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         NEAREST(11, NodeCategory.COLLECTION, NodeGroup.COLLECTION, in(set("entities")), out(entity("entity"))),
         LIMIT(12, NodeCategory.COLLECTION, NodeGroup.COLLECTION, in(set("entities")), out(set("entities")), ParameterKind.COUNT),
 
-        TARGET_MISIDENTIFICATION(13, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("subjects"), entity("target")), ParameterKind.NONE),
-        MENTAL_STUPOR(14, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("subjects")), ParameterKind.NONE),
-        IMPRESSION_MANIPULATION(15, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("subjects")), ParameterKind.NONE),
-        PERCEPTION_MASK(16, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("observers"), entity("hidden")), ParameterKind.NONE),
-        START_INTRUSION(17, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(entity("target")), ParameterKind.NONE),
+        TARGET_MISIDENTIFICATION(13, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("subjects"), entity("target")), ParameterKind.DURATION_SECONDS),
+        MENTAL_STUPOR(14, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("subjects")), ParameterKind.DURATION_SECONDS),
+        IMPRESSION_MANIPULATION(15, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("subjects")), ParameterKind.DURATION_SECONDS),
+        PERCEPTION_MASK(16, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(set("observers"), entity("hidden")), ParameterKind.DURATION_SECONDS),
+        START_INTRUSION(17, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(entity("target")), ParameterKind.DURATION_SECONDS),
         END_INTRUSION(18, NodeCategory.ACTION, NodeGroup.MENTAL_ACTION, in(), ParameterKind.NONE),
 
         TARGETED_BY(19, NodeCategory.FILTER, NodeGroup.FILTER, in(set("entities"), entity("target")), out(set("entities"))),
@@ -325,8 +354,8 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         HEALTH_FILTER(26, NodeCategory.FILTER, NodeGroup.FILTER, in(set("entities")), out(set("entities")), ParameterKind.HEALTH_PERCENT),
         HAS_TARGET(27, NodeCategory.FILTER, NodeGroup.FILTER, in(set("entities")), out(set("entities"))),
         AFFECTED(28, NodeCategory.FILTER, NodeGroup.FILTER, in(set("entities")), out(set("entities"))),
-        PATH_TO(29, NodeCategory.CONTROL, NodeGroup.CONTROL_ACTION, in(set("subjects"), entity("target")), ParameterKind.NONE),
-        VIEW_CONTROL(30, NodeCategory.CONTROL, NodeGroup.CONTROL_ACTION, in(set("subjects"), entity("target")), ParameterKind.NONE),
+        PATH_TO(29, NodeCategory.CONTROL, NodeGroup.CONTROL_ACTION, in(set("subjects"), destination("destination")), ParameterKind.DURATION_SECONDS),
+        VIEW_CONTROL(30, NodeCategory.CONTROL, NodeGroup.CONTROL_ACTION, in(set("subjects"), entity("target")), ParameterKind.DURATION_SECONDS),
         REMOVE_CONTROL(31, NodeCategory.CONTROL, NodeGroup.CONTROL_ACTION, in(set("subjects")), ParameterKind.NONE),
 
         CURRENT_TARGET(32, NodeCategory.SOURCE, NodeGroup.TARGET, in(entity("subject")), out(entity("entity"))),
@@ -339,7 +368,11 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         LOWEST_HEALTH(39, NodeCategory.COLLECTION, NodeGroup.COLLECTION, in(set("entities")), out(entity("entity"))),
         HIGHEST_HEALTH(40, NodeCategory.COLLECTION, NodeGroup.COLLECTION, in(set("entities")), out(entity("entity"))),
         HEALTH_BELOW(41, NodeCategory.FILTER, NodeGroup.FILTER, in(set("entities")), out(set("entities")), ParameterKind.HEALTH_PERCENT),
-        VISIBLE_FROM(42, NodeCategory.FILTER, NodeGroup.FILTER, in(set("entities"), entity("observer")), out(set("entities")));
+        VISIBLE_FROM(42, NodeCategory.FILTER, NodeGroup.FILTER, in(set("entities"), entity("observer")), out(set("entities"))),
+        SIGHT_POSITION(43, NodeCategory.SOURCE, NodeGroup.TARGET,
+                in(entity("observer")), out(destination("destination"))),
+        GUARD_MODE(44, NodeCategory.CONTROL, NodeGroup.CONTROL_ACTION,
+                in(set("subjects"), destination("destination")), ParameterKind.DURATION_SECONDS);
 
         private static final Map<Integer, NodeKind> BY_WIRE_ID = new HashMap<>();
 
@@ -469,6 +502,8 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
                 case SORT_DIRECTION -> value >= 0.0 && value <= 1.0 && value == Math.rint(value);
                 case ENTITY_TYPE -> value >= 0.0 && value <= 3.0 && value == Math.rint(value);
                 case HEALTH_PERCENT -> value >= 1.0 && value <= 100.0 && value == Math.rint(value);
+                case DURATION_SECONDS -> value == 0.0
+                        || value >= 1.0 && value <= 3600.0 && value == Math.rint(value);
                 case NONE -> value == 0.0;
             };
         }
@@ -478,6 +513,7 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
                 case RANGE -> 16.0;
                 case COUNT -> 4.0;
                 case HEALTH_PERCENT -> 50.0;
+                case DURATION_SECONDS -> 0.0;
                 default -> 0.0;
             };
         }
@@ -510,6 +546,10 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
 
         private static PortDefinition set(String key) {
             return new PortDefinition(key, PortType.ENTITY_SET, PortDirection.INPUT, true, 1);
+        }
+
+        private static PortDefinition destination(String key) {
+            return new PortDefinition(key, PortType.DESTINATION, PortDirection.INPUT, true, 1);
         }
     }
 
@@ -557,7 +597,12 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         INSUFFICIENT_CP,
         ACTION_FAILED,
         SKILL_UNAVAILABLE,
-        FLOW_CYCLE;
+        FLOW_CYCLE,
+        NO_SIGHT_TARGET,
+        NO_EFFECTIVE_SUBJECTS,
+        UNREACHABLE_DESTINATION,
+        TARGET_UNAVAILABLE,
+        ADAPTER_ERROR;
 
         public String translationKey() {
             return "message.academy.precision_operation." + name().toLowerCase(java.util.Locale.ROOT);
@@ -567,12 +612,18 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
     public record Validation(
             boolean valid,
             Diagnostic diagnostic,
+            int nodeId,
+            int port,
             PrecisionGraph normalized,
             List<Integer> topologicalOrder,
             List<Integer> actionOrder
     ) {
         private static Validation error(Diagnostic diagnostic) {
-            return new Validation(false, diagnostic, EMPTY, List.of(), List.of());
+            return error(diagnostic, -1, -1);
+        }
+
+        private static Validation error(Diagnostic diagnostic, int nodeId, int port) {
+            return new Validation(false, diagnostic, nodeId, port, EMPTY, List.of(), List.of());
         }
     }
 

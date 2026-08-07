@@ -16,10 +16,10 @@ public record CompiledPrecisionProgram(
                 ? PrecisionGraph.EMPTY.validate()
                 : graph.validate();
         if (!validation.valid()) {
-            return new CompileResult(null, validation.diagnostic());
+            return new CompileResult(null, validation.diagnostic(), validation.nodeId(), validation.port());
         }
         if (validation.normalized().nodes().isEmpty()) {
-            return new CompileResult(null, PrecisionGraph.Diagnostic.EMPTY_PROGRAM);
+            return new CompileResult(null, PrecisionGraph.Diagnostic.EMPTY_PROGRAM, -1, -1);
         }
         var byId = new HashMap<Integer, PrecisionGraph.Node>();
         validation.normalized().nodes().forEach(node -> byId.put(node.id(), node));
@@ -42,7 +42,9 @@ public record CompiledPrecisionProgram(
                         List.copyOf(actionOrder),
                         Map.copyOf(inputs)
                 ),
-                PrecisionGraph.Diagnostic.OK
+                PrecisionGraph.Diagnostic.OK,
+                -1,
+                -1
         );
     }
 
@@ -53,7 +55,12 @@ public record CompiledPrecisionProgram(
     public record InputKey(int nodeId, int port) {
     }
 
-    public record CompileResult(CompiledPrecisionProgram program, PrecisionGraph.Diagnostic diagnostic) {
+    public record CompileResult(
+            CompiledPrecisionProgram program,
+            PrecisionGraph.Diagnostic diagnostic,
+            int nodeId,
+            int port
+    ) {
         public boolean valid() {
             return program != null && diagnostic == PrecisionGraph.Diagnostic.OK;
         }

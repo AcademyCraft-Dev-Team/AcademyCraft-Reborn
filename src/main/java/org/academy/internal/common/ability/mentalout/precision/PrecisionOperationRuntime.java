@@ -7,10 +7,12 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.sounds.SoundSource;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.ControlCapability;
+import org.academy.api.common.entitycontrol.ControlDestination;
 import org.academy.api.common.entitycontrol.ControlDirective;
+import org.academy.api.common.entitycontrol.ControlFailureReason;
+import org.academy.api.common.entitycontrol.ControlHandle;
 import org.academy.api.common.entitycontrol.ControlRequest;
 import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -40,7 +42,7 @@ public final class PrecisionOperationRuntime {
     private PrecisionOperationRuntime() {
     }
 
-    public static ExecutionResult toggle(
+    public static ExecutionResult execute(
             ServerPlayer player,
             int slot,
             CompiledPrecisionProgram program
@@ -49,67 +51,75 @@ public final class PrecisionOperationRuntime {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
         }
         var slots = ACTIVE.computeIfAbsent(player.getUUID(), _ -> new ActiveContext[4]);
-        if (slots[slot] != null) {
-            stop(player, slot);
-            return new ExecutionResult(true, false, PrecisionGraph.Diagnostic.OK);
-        }
+        var previous = slots[slot];
         var skill = Skills.PRECISION_OPERATION.get();
         if (!skill.isEnabled(player)) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
         }
         var level = Math.clamp(skill.getLevel(player), 0, 2);
-        var duration = switch (level) {
-            case 0 -> 80;
-            case 1 -> 140;
-            default -> 200;
-        };
         var targetLimit = switch (level) {
             case 0 -> 4;
             case 1 -> 6;
             default -> 8;
         };
-        var evaluated = evaluate(player, program, targetLimit, player.level().getGameTime() + duration);
-        if (!evaluated.valid()) return ExecutionResult.failed(evaluated.diagnostic);
+        var evaluated = evaluate(player, program, targetLimit, player.level().getGameTime());
+        if (!evaluated.valid()) {
+            return ExecutionResult.failed(
+                    evaluated.diagnostic, evaluated.nodeId, evaluated.port, evaluated.affectedCount);
+        }
 
-        releaseSubjects(player, removedSubjects(evaluated.actions));
         var existingCost = activeCost(slots);
-        var totalCost = existingCost + evaluated.cost;
+        var removedSubjects = removedSubjects(evaluated.actions);
+        var previousCost = previous == null ? 0.0f : previous.cost();
+        var projectedCost = Math.max(
+                0.0f,
+                existingCost - previousCost - subjectCostExceptSlot(slots, slot, removedSubjects)
+        )
+                + evaluated.cost;
         var system = AbilitySystemServer.getSystem(player);
         if (!system.canCastWithPermanentOccupations(
                 player,
                 skill,
                 0.0f,
-                Map.of(skill, totalCost)
+                Map.of(skill, projectedCost)
         )) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.INSUFFICIENT_CP);
         }
 
-        var subjectHandles = new HashMap<UUID, List<AutoCloseable>>();
-        var subjectCosts = new HashMap<UUID, Float>();
-        var fixedCost = 0.0f;
-        UUID intrusionSession = null;
+        var activeActions = new ArrayList<ActiveAction>();
+        var applyingNodeId = -1;
         try {
+            // A repeated cast refreshes this slot. Every action has its own completion condition,
+            // so clicking the skill is never interpreted as a manual off switch.
+            slots[slot] = null;
+            if (previous != null) previous.close(player);
             for (var action : evaluated.actions) {
-                switch (action.kind) {
+                applyingNodeId = action.nodeId;
+                var subjectHandles = new HashMap<UUID, List<AutoCloseable>>();
+                var subjectCosts = new HashMap<UUID, Float>();
+                var fixedCost = 0.0f;
+                UUID intrusionSession = null;
+                try {
+                    switch (action.kind) {
                     case TARGET_MISIDENTIFICATION -> applyMisidentification(
-                            player, action.entities, action.entity, evaluated.expiresAt,
+                            player, action.entities, action.entity, action.expiresAt,
                             subjectHandles, subjectCosts);
                     case MENTAL_STUPOR -> applyDirective(
                             player, action.entities, new ControlDirective.FreezeAi(),
-                            PrecisionGraph.NodeKind.MENTAL_STUPOR, evaluated.expiresAt,
+                            PrecisionGraph.NodeKind.MENTAL_STUPOR, action.expiresAt,
                             subjectHandles, subjectCosts);
                     case IMPRESSION_MANIPULATION -> applyDirective(
                             player, action.entities, new ControlDirective.ImpressionAlliance(),
-                            PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, evaluated.expiresAt,
+                            PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, action.expiresAt,
                             subjectHandles, subjectCosts);
                     case PERCEPTION_MASK -> applyPerception(
-                            player, action.entities, action.entity, evaluated.expiresAt,
+                            player, action.entities, action.entity, action.expiresAt,
                             subjectHandles, subjectCosts);
                     case START_INTRUSION -> {
                         intrusionSession = MentalIntrusionManager.startPrecision(
                                 player,
                                 action.entity,
-                                evaluated.expiresAt
+                                action.expiresAt
                         );
                         if (intrusionSession == null) throw new IllegalStateException("Intrusion rejected");
                         fixedCost += MentaloutConfig.mentalIntrusionCost(
@@ -120,36 +130,55 @@ public final class PrecisionOperationRuntime {
                     case END_INTRUSION, REMOVE_CONTROL -> {
                     }
                     case PATH_TO -> applyDirective(
-                            player, action.entities, new ControlDirective.MoveTo(action.entity.getUUID()),
-                            PrecisionGraph.NodeKind.PATH_TO, evaluated.expiresAt,
+                            player, action.entities, new ControlDirective.MoveTo(action.destination),
+                            PrecisionGraph.NodeKind.PATH_TO, action.expiresAt,
                             subjectHandles, subjectCosts);
                     case VIEW_CONTROL -> applyDirective(
                             player, action.entities, new ControlDirective.LookAt(action.entity.getUUID()),
-                            PrecisionGraph.NodeKind.VIEW_CONTROL, evaluated.expiresAt,
+                            PrecisionGraph.NodeKind.VIEW_CONTROL, action.expiresAt,
                             subjectHandles, subjectCosts);
+                    case GUARD_MODE -> applyDirective(
+                            player, action.entities, new ControlDirective.Guard(action.destination),
+                            PrecisionGraph.NodeKind.GUARD_MODE, action.expiresAt,
+                            subjectHandles, subjectCosts);
+                    }
+                } catch (RuntimeException exception) {
+                    subjectHandles.values().forEach(PrecisionOperationRuntime::closeReverse);
+                    if (intrusionSession != null) {
+                        MentalIntrusionManager.stopPrecision(player, intrusionSession);
+                    }
+                    throw exception;
+                }
+                if (!subjectHandles.isEmpty() || fixedCost > 0.0f || intrusionSession != null) {
+                    activeActions.add(new ActiveAction(
+                            action.nodeId,
+                            action.kind,
+                            action.expiresAt,
+                            new HashMap<>(subjectHandles),
+                            new HashMap<>(subjectCosts),
+                            fixedCost,
+                            intrusionSession,
+                            action.dependencyIds()
+                    ));
                 }
             }
-            if (!system.replacePermanentOccupation(player.getUUID(), totalCost, skill)) {
+            releaseSubjects(player, removedSubjects);
+            existingCost = activeCost(slots);
+            var appliedCost = existingCost;
+            for (var action : activeActions) appliedCost += action.cost();
+            if (!system.replacePermanentOccupation(player.getUUID(), appliedCost, skill)) {
                 throw new IllegalStateException("CP occupation rejected");
             }
-            slots[slot] = new ActiveContext(
-                    evaluated.expiresAt,
-                    Map.copyOf(subjectHandles),
-                    Map.copyOf(subjectCosts),
-                    fixedCost,
-                    intrusionSession,
-                    evaluated.targetIds
-            );
+            slots[slot] = activeActions.isEmpty() ? null : new ActiveContext(activeActions);
             if (evaluated.endIntrusion) MentalIntrusionManager.stopAny(player);
-            player.level().playSound(null, player.blockPosition(),
-                    org.academy.internal.common.sounds.SoundEvents.PRECISION_OPERATION.get(),
-                    SoundSource.PLAYERS, 0.75f, 1.0f);
-            return new ExecutionResult(true, true, PrecisionGraph.Diagnostic.OK);
+            if (java.util.Arrays.stream(slots).allMatch(java.util.Objects::isNull)) {
+                ACTIVE.remove(player.getUUID());
+            }
+            return activeActions.isEmpty() ? ExecutionResult.completed() : ExecutionResult.started();
         } catch (RuntimeException exception) {
-            closeReverse(subjectHandles.values().stream().flatMap(List::stream).toList());
-            if (intrusionSession != null) MentalIntrusionManager.stopPrecision(player, intrusionSession);
-            system.replacePermanentOccupation(player.getUUID(), existingCost, skill);
-            return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
+            activeActions.forEach(action -> action.close(player));
+            system.replacePermanentOccupation(player.getUUID(), activeCost(slots), skill);
+            return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED, applyingNodeId, -1, 0);
         }
     }
 
@@ -161,9 +190,36 @@ public final class PrecisionOperationRuntime {
                 releaseController(entry.getKey(), player);
                 continue;
             }
+            var changed = false;
             for (var slot = 0; slot < entry.getValue().length; slot++) {
                 var context = entry.getValue()[slot];
-                if (context != null && now >= context.expiresAt) stop(player, slot);
+                if (context == null) continue;
+                var tick = context.tick(player, now);
+                changed |= tick.changed();
+                for (var failure : tick.failures()) {
+                    PrecisionOperationManager.runtimeError(
+                            player, slot, failure.diagnostic(), failure.nodeId(), failure.affectedCount());
+                }
+                if (context.empty()) {
+                    entry.getValue()[slot] = null;
+                    if (tick.failures().isEmpty()) {
+                        PrecisionOperationManager.runtimeCompleted(player, slot);
+                    }
+                }
+            }
+            if (changed) {
+                var remaining = activeCost(entry.getValue());
+                var system = AbilitySystemServer.getSystem(player);
+                if (remaining <= 0.0f) {
+                    system.releaseMaintenanceOccupation(
+                            player.getUUID(), Skills.PRECISION_OPERATION.get().getKeyString());
+                } else {
+                    system.replacePermanentOccupation(
+                            player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
+                }
+            }
+            if (java.util.Arrays.stream(entry.getValue()).allMatch(java.util.Objects::isNull)) {
+                ACTIVE.remove(entry.getKey());
             }
         }
     }
@@ -180,9 +236,26 @@ public final class PrecisionOperationRuntime {
         for (var entry : List.copyOf(ACTIVE.entrySet())) {
             var player = server.getPlayerList().getPlayer(entry.getKey());
             if (player == null) continue;
+            var changed = false;
             for (var slot = 0; slot < entry.getValue().length; slot++) {
                 var context = entry.getValue()[slot];
-                if (context != null && context.references(entityId)) stop(player, slot);
+                if (context == null) continue;
+                changed |= context.releaseEntity(player, entityId);
+                if (context.empty()) entry.getValue()[slot] = null;
+            }
+            if (changed) {
+                var remaining = activeCost(entry.getValue());
+                var system = AbilitySystemServer.getSystem(player);
+                if (remaining <= 0.0f) {
+                    system.releaseMaintenanceOccupation(
+                            player.getUUID(), Skills.PRECISION_OPERATION.get().getKeyString());
+                } else {
+                    system.replacePermanentOccupation(
+                            player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
+                }
+            }
+            if (java.util.Arrays.stream(entry.getValue()).allMatch(java.util.Objects::isNull)) {
+                ACTIVE.remove(entry.getKey());
             }
         }
     }
@@ -198,7 +271,7 @@ public final class PrecisionOperationRuntime {
             ServerPlayer player,
             CompiledPrecisionProgram program,
             int targetLimit,
-            long expiresAt
+            long now
     ) {
         var values = new HashMap<Integer, Object>();
         var actions = new ArrayList<PendingAction>();
@@ -211,7 +284,22 @@ public final class PrecisionOperationRuntime {
                     case CASTER -> values.put(node.id(), player);
                     case ROSTER -> values.put(node.id(), livingSet(MentaloutControlContext.subjects(player)));
                     case INTRUSION_TARGET -> values.put(node.id(), MentalIntrusionManager.target(player));
-                    case LOOK_TARGET -> values.put(node.id(), MentaloutTargeting.findLookedAtLiving(player, 16.0));
+                    case LOOK_TARGET -> {
+                        var target = MentaloutTargeting.findPrecisionLookedAtLiving(player);
+                        if (target == null) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.NO_SIGHT_TARGET, node.id());
+                        }
+                        values.put(node.id(), target);
+                    }
+                    case SIGHT_POSITION -> {
+                        var observer = requireEntity(input(program, values, node, 0));
+                        var destination = MentaloutTargeting.findSightDestination(
+                                observer, MentaloutTargeting.MAX_SIGHT_RANGE);
+                        if (destination == null) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.NO_SIGHT_TARGET, node.id());
+                        }
+                        values.put(node.id(), destination);
+                    }
                     case NEARBY_ENTITIES -> values.put(node.id(), nearby(player, node.parameter()));
                     case PLAYER_TARGET -> {
                         var target = player.getLastHurtMob();
@@ -336,33 +424,45 @@ public final class PrecisionOperationRuntime {
                                 .toList());
                     }
                     case TARGET_MISIDENTIFICATION -> {
-                        var subjects = supportedSet(input(program, values, node, 0), ControlCapability.FORCE_TARGET);
-                        if (subjects.isEmpty()) return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET);
+                        var subjects = supportedSet(
+                                input(program, values, node, 0), ControlCapability.FORCE_TARGET, player);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                        }
                         var target = requireEntity(input(program, values, node, 1));
                         requireSkill(Skills.TARGET_MISIDENTIFICATION.get(), player);
                         cost += MentaloutConfig.targetMisidentificationCost(player) * subjects.size();
                         addTargets(uniqueTargets, subjects, target);
-                        actions.add(PendingAction.withBoth(node.kind(), subjects, target));
+                        actions.add(PendingAction.withBoth(
+                                node.id(), node.kind(), subjects, target, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case MENTAL_STUPOR -> {
-                        var subjects = supportedSet(input(program, values, node, 0), ControlCapability.FREEZE_AI);
-                        if (subjects.isEmpty()) return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET);
+                        var subjects = supportedSet(
+                                input(program, values, node, 0), ControlCapability.FREEZE_AI, player);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                        }
                         requireSkill(Skills.MENTAL_STUPOR.get(), player);
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.mentalStuporCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, null);
-                        actions.add(PendingAction.withSet(node.kind(), subjects));
+                        addTargets(uniqueTargets, subjects, (LivingEntity) null);
+                        actions.add(PendingAction.withSet(
+                                node.id(), node.kind(), subjects, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case IMPRESSION_MANIPULATION -> {
-                        var subjects = supportedSet(input(program, values, node, 0), ControlCapability.RELATION_CONTROL);
-                        if (subjects.isEmpty()) return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET);
+                        var subjects = supportedSet(
+                                input(program, values, node, 0), ControlCapability.RELATION_CONTROL, player);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                        }
                         requireSkill(Skills.IMPRESSION_MANIPULATION.get(), player);
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.impressionManipulationCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, null);
-                        actions.add(PendingAction.withSet(node.kind(), subjects));
+                        addTargets(uniqueTargets, subjects, (LivingEntity) null);
+                        actions.add(PendingAction.withSet(
+                                node.id(), node.kind(), subjects, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case PERCEPTION_MASK -> {
@@ -372,7 +472,8 @@ public final class PrecisionOperationRuntime {
                         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.sensoryDistortionCost(player, sensoryLevel) * observers.size();
                         addTargets(uniqueTargets, observers, hidden);
-                        actions.add(PendingAction.withBoth(node.kind(), observers, hidden));
+                        actions.add(PendingAction.withBoth(
+                                node.id(), node.kind(), observers, hidden, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case START_INTRUSION -> {
@@ -381,46 +482,83 @@ public final class PrecisionOperationRuntime {
                         var intrusionLevel = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.mentalIntrusionCost(player, intrusionLevel);
                         addTargets(uniqueTargets, List.of(), target);
-                        actions.add(PendingAction.withEntity(node.kind(), target));
+                        actions.add(PendingAction.withEntity(
+                                node.id(), node.kind(), target, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case PATH_TO -> {
-                        var subjects = supportedSet(input(program, values, node, 0), ControlCapability.PATH_CONTROL);
-                        if (subjects.isEmpty()) return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET);
-                        var target = requireEntity(input(program, values, node, 1));
+                        var subjects = supportedSet(
+                                input(program, values, node, 0), ControlCapability.PATH_CONTROL, player);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                        }
+                        var destination = requireDestination(input(program, values, node, 1));
+                        subjects = excludeDestinationTarget(subjects, destination);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
+                        }
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.precisionPathCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, target);
-                        actions.add(PendingAction.withBoth(node.kind(), subjects, target));
+                        addTargets(uniqueTargets, subjects, destination);
+                        actions.add(PendingAction.withDestination(
+                                node.id(), node.kind(), subjects, destination, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case VIEW_CONTROL -> {
-                        var subjects = supportedSet(input(program, values, node, 0), ControlCapability.VIEW_CONTROL);
-                        if (subjects.isEmpty()) return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET);
+                        var subjects = supportedSet(
+                                input(program, values, node, 0), ControlCapability.VIEW_CONTROL, player);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                        }
                         var target = requireEntity(input(program, values, node, 1));
+                        subjects = subjects.stream().filter(subject -> subject != target).toList();
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
+                        }
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.precisionViewCost(player))).sum();
                         addTargets(uniqueTargets, subjects, target);
-                        actions.add(PendingAction.withBoth(node.kind(), subjects, target));
+                        actions.add(PendingAction.withBoth(
+                                node.id(), node.kind(), subjects, target, actionExpiresAt(now, node.parameter())));
+                        values.put(node.id(), Boolean.TRUE);
+                    }
+                    case GUARD_MODE -> {
+                        var subjects = supportedSet(
+                                input(program, values, node, 0), ControlCapability.GUARD_CONTROL, player);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                        }
+                        var destination = requireDestination(input(program, values, node, 1));
+                        subjects = excludeDestinationTarget(subjects, destination);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
+                        }
+                        cost += subjects.stream().mapToDouble(entity -> controlledCost(
+                                player, entity, MentaloutConfig.precisionGuardCost(player))).sum();
+                        addTargets(uniqueTargets, subjects, destination);
+                        actions.add(PendingAction.withDestination(
+                                node.id(), node.kind(), subjects, destination, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case REMOVE_CONTROL -> {
-                        var subjects = usableSet(input(program, values, node, 0));
-                        if (subjects.isEmpty()) return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET);
-                        actions.add(PendingAction.withSet(node.kind(), subjects));
+                        var subjects = usableSet(input(program, values, node, 0), player);
+                        if (subjects.isEmpty()) {
+                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                        }
+                        actions.add(PendingAction.withSet(node.id(), node.kind(), subjects, now + 1L));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case END_INTRUSION -> {
                         endIntrusion = true;
-                        actions.add(PendingAction.empty(node.kind()));
+                        actions.add(PendingAction.empty(node.id(), node.kind(), now + 1L));
                         values.put(node.id(), Boolean.TRUE);
                     }
                 }
             } catch (RuntimeException exception) {
-                return Evaluation.error(PrecisionGraph.Diagnostic.ACTION_FAILED);
+                return Evaluation.error(PrecisionGraph.Diagnostic.ACTION_FAILED, node.id());
             }
             if (uniqueTargets.size() > targetLimit) {
-                return Evaluation.error(PrecisionGraph.Diagnostic.TARGET_LIMIT);
+                return Evaluation.error(PrecisionGraph.Diagnostic.TARGET_LIMIT, node.id());
             }
         }
         if (actions.isEmpty()) return Evaluation.error(PrecisionGraph.Diagnostic.EMPTY_PROGRAM);
@@ -428,10 +566,12 @@ public final class PrecisionOperationRuntime {
         return new Evaluation(
                 actions,
                 cost,
-                expiresAt,
                 endIntrusion,
                 Set.copyOf(uniqueTargets),
-                PrecisionGraph.Diagnostic.OK
+                PrecisionGraph.Diagnostic.OK,
+                -1,
+                -1,
+                0
         );
     }
 
@@ -505,6 +645,19 @@ public final class PrecisionOperationRuntime {
         return value instanceof LivingEntity living ? living : null;
     }
 
+    private static ControlDestination requireDestination(Object value) {
+        if (value instanceof LivingEntity living) {
+            requireUsable(living);
+            return new ControlDestination.Entity(living.getUUID());
+        }
+        if (value instanceof ControlDestination destination) return destination;
+        throw new IllegalStateException("Unavailable destination");
+    }
+
+    static long actionExpiresAt(long now, double seconds) {
+        return seconds == 0.0 ? Long.MAX_VALUE : now + (long) seconds * 20L;
+    }
+
     private static List<LivingEntity> requireSet(Object value) {
         var entities = entitySet(value);
         if (entities.isEmpty()) throw new IllegalStateException("Empty entity set");
@@ -543,18 +696,40 @@ public final class PrecisionOperationRuntime {
         if (entity != null) targetIds.add(entity.getUUID());
     }
 
-    private static List<LivingEntity> usableSet(Object value) {
+    private static void addTargets(
+            Set<UUID> targetIds,
+            List<LivingEntity> entities,
+            ControlDestination destination
+    ) {
+        entities.forEach(target -> targetIds.add(target.getUUID()));
+        if (destination instanceof ControlDestination.Entity entity) targetIds.add(entity.uuid());
+    }
+
+    private static List<LivingEntity> usableSet(Object value, ServerPlayer player) {
         return entitySet(value).stream()
                 .filter(LivingEntity::isAlive)
                 .filter(entity -> !entity.isRemoved())
+                .filter(entity -> entity.level() == player.level())
                 .toList();
     }
 
-    private static List<LivingEntity> supportedSet(Object value, ControlCapability capability) {
-        return usableSet(value).stream()
+    private static List<LivingEntity> supportedSet(
+            Object value,
+            ControlCapability capability,
+            ServerPlayer player
+    ) {
+        return usableSet(value, player).stream()
                 .filter(entity -> !MentalControlRuntime.isProtectedTarget(entity))
                 .filter(entity -> MentalControlRuntime.evaluate(entity, capability).supported())
                 .toList();
+    }
+
+    private static List<LivingEntity> excludeDestinationTarget(
+            List<LivingEntity> subjects,
+            ControlDestination destination
+    ) {
+        if (!(destination instanceof ControlDestination.Entity entity)) return subjects;
+        return subjects.stream().filter(subject -> !subject.getUUID().equals(entity.uuid())).toList();
     }
 
     private static LivingEntity effectiveTarget(LivingEntity entity) {
@@ -601,15 +776,6 @@ public final class PrecisionOperationRuntime {
                 if (context != null) context.releaseSubjects(subjects);
             }
         }
-        var source = Skills.PRECISION_OPERATION.get().getKey();
-        for (var subjectId : subjects) {
-            MentalControlApi.releaseByControllerSourceAndSubject(
-                    player.level().getServer(),
-                    player.getUUID(),
-                    source,
-                    subjectId
-            );
-        }
         if (slots == null) return;
         var remaining = activeCost(slots);
         var system = AbilitySystemServer.getSystem(player);
@@ -627,6 +793,29 @@ public final class PrecisionOperationRuntime {
         }
     }
 
+    private static float subjectCost(ActiveContext[] slots, Set<UUID> subjects) {
+        if (subjects.isEmpty()) return 0.0f;
+        var result = 0.0f;
+        for (var context : slots) {
+            if (context != null) result += context.subjectCost(subjects);
+        }
+        return result;
+    }
+
+    private static float subjectCostExceptSlot(
+            ActiveContext[] slots,
+            int excludedSlot,
+            Set<UUID> subjects
+    ) {
+        if (subjects.isEmpty()) return 0.0f;
+        var result = 0.0f;
+        for (var slot = 0; slot < slots.length; slot++) {
+            if (slot == excludedSlot || slots[slot] == null) continue;
+            result += slots[slot].subjectCost(subjects);
+        }
+        return result;
+    }
+
     private static float actionCost(ServerPlayer player, LivingEntity subject, PrecisionGraph.NodeKind kind) {
         return switch (kind) {
             case TARGET_MISIDENTIFICATION -> MentaloutConfig.targetMisidentificationCost(player);
@@ -635,6 +824,7 @@ public final class PrecisionOperationRuntime {
                     player, subject, MentaloutConfig.impressionManipulationCost(player));
             case PATH_TO -> (float) controlledCost(player, subject, MentaloutConfig.precisionPathCost(player));
             case VIEW_CONTROL -> (float) controlledCost(player, subject, MentaloutConfig.precisionViewCost(player));
+            case GUARD_MODE -> (float) controlledCost(player, subject, MentaloutConfig.precisionGuardCost(player));
             default -> 0.0f;
         };
     }
@@ -766,22 +956,72 @@ public final class PrecisionOperationRuntime {
         }
     }
 
-    public record ExecutionResult(boolean changed, boolean active, PrecisionGraph.Diagnostic diagnostic) {
+    public enum ExecutionState {
+        STARTED,
+        CANCELLED,
+        COMPLETED,
+        FAILED
+    }
+
+    public record ExecutionResult(
+            ExecutionState state,
+            PrecisionGraph.Diagnostic diagnostic,
+            int nodeId,
+            int port,
+            int affectedCount
+    ) {
         private static ExecutionResult failed(PrecisionGraph.Diagnostic diagnostic) {
-            return new ExecutionResult(false, false, diagnostic);
+            return failed(diagnostic, -1, -1, 0);
+        }
+
+        private static ExecutionResult failed(
+                PrecisionGraph.Diagnostic diagnostic,
+                int nodeId,
+                int port,
+                int affectedCount
+        ) {
+            return new ExecutionResult(ExecutionState.FAILED, diagnostic, nodeId, port, affectedCount);
+        }
+
+        private static ExecutionResult started() {
+            return new ExecutionResult(ExecutionState.STARTED, PrecisionGraph.Diagnostic.OK, -1, -1, 0);
+        }
+
+        private static ExecutionResult cancelled() {
+            return new ExecutionResult(ExecutionState.CANCELLED, PrecisionGraph.Diagnostic.OK, -1, -1, 0);
+        }
+
+        private static ExecutionResult completed() {
+            return new ExecutionResult(ExecutionState.COMPLETED, PrecisionGraph.Diagnostic.OK, -1, -1, 0);
         }
     }
 
     private record Evaluation(
             List<PendingAction> actions,
             float cost,
-            long expiresAt,
             boolean endIntrusion,
             Set<UUID> targetIds,
-            PrecisionGraph.Diagnostic diagnostic
+            PrecisionGraph.Diagnostic diagnostic,
+            int nodeId,
+            int port,
+            int affectedCount
     ) {
         private static Evaluation error(PrecisionGraph.Diagnostic diagnostic) {
-            return new Evaluation(List.of(), 0.0f, 0L, false, Set.of(), diagnostic);
+            return error(diagnostic, -1, -1, 0);
+        }
+
+        private static Evaluation error(PrecisionGraph.Diagnostic diagnostic, int nodeId) {
+            return error(diagnostic, nodeId, -1, 0);
+        }
+
+        private static Evaluation error(
+                PrecisionGraph.Diagnostic diagnostic,
+                int nodeId,
+                int port,
+                int affectedCount
+        ) {
+            return new Evaluation(List.of(), 0.0f, false, Set.of(), diagnostic,
+                    nodeId, port, affectedCount);
         }
 
         private boolean valid() {
@@ -790,50 +1030,216 @@ public final class PrecisionOperationRuntime {
     }
 
     private record PendingAction(
+            int nodeId,
             PrecisionGraph.NodeKind kind,
             List<LivingEntity> entities,
-            LivingEntity entity
+            LivingEntity entity,
+            ControlDestination destination,
+            long expiresAt
     ) {
-        private static PendingAction empty(PrecisionGraph.NodeKind kind) {
-            return new PendingAction(kind, List.of(), null);
+        private static PendingAction empty(int nodeId, PrecisionGraph.NodeKind kind, long expiresAt) {
+            return new PendingAction(nodeId, kind, List.of(), null, null, expiresAt);
         }
 
-        private static PendingAction withSet(PrecisionGraph.NodeKind kind, List<LivingEntity> entities) {
-            return new PendingAction(kind, List.copyOf(entities), null);
+        private static PendingAction withSet(
+                int nodeId,
+                PrecisionGraph.NodeKind kind,
+                List<LivingEntity> entities,
+                long expiresAt
+        ) {
+            return new PendingAction(nodeId, kind, List.copyOf(entities), null, null, expiresAt);
         }
 
-        private static PendingAction withEntity(PrecisionGraph.NodeKind kind, LivingEntity entity) {
-            return new PendingAction(kind, List.of(), entity);
+        private static PendingAction withEntity(
+                int nodeId,
+                PrecisionGraph.NodeKind kind,
+                LivingEntity entity,
+                long expiresAt
+        ) {
+            return new PendingAction(nodeId, kind, List.of(), entity, null, expiresAt);
         }
 
         private static PendingAction withBoth(
+                int nodeId,
                 PrecisionGraph.NodeKind kind,
                 List<LivingEntity> entities,
-                LivingEntity entity
+                LivingEntity entity,
+                long expiresAt
         ) {
-            return new PendingAction(kind, List.copyOf(entities), entity);
+            return new PendingAction(nodeId, kind, List.copyOf(entities), entity, null, expiresAt);
+        }
+
+        private static PendingAction withDestination(
+                int nodeId,
+                PrecisionGraph.NodeKind kind,
+                List<LivingEntity> entities,
+                ControlDestination destination,
+                long expiresAt
+        ) {
+            return new PendingAction(nodeId, kind, List.copyOf(entities), null, destination, expiresAt);
+        }
+
+        private Set<UUID> dependencyIds() {
+            var result = new HashSet<UUID>();
+            if (entity != null) result.add(entity.getUUID());
+            if (destination instanceof ControlDestination.Entity target) result.add(target.uuid());
+            return Set.copyOf(result);
         }
     }
 
-    private record ActiveContext(
-            long expiresAt,
-            Map<UUID, List<AutoCloseable>> subjectHandles,
-            Map<UUID, Float> subjectCosts,
-            float fixedCost,
-            UUID intrusionSession,
-            Set<UUID> targetIds
-    ) {
+    private static final class ActiveContext {
+        private final List<ActiveAction> actions;
+
+        private ActiveContext(List<ActiveAction> actions) {
+            this.actions = new ArrayList<>(actions);
+        }
+
+        private float cost() {
+            var total = 0.0f;
+            for (var action : actions) total += action.cost();
+            return total;
+        }
+
+        private void close(ServerPlayer player) {
+            actions.forEach(action -> action.close(player));
+            actions.clear();
+        }
+
+        private float releaseSubjects(Set<UUID> subjects) {
+            var released = 0.0f;
+            for (var action : actions) released += action.releaseSubjects(subjects);
+            actions.removeIf(ActiveAction::empty);
+            return released;
+        }
+
+        private float subjectCost(Set<UUID> subjects) {
+            var result = 0.0f;
+            for (var action : actions) result += action.subjectCost(subjects);
+            return result;
+        }
+
+        private boolean releaseEntity(ServerPlayer player, UUID entityId) {
+            var changed = false;
+            var iterator = actions.iterator();
+            while (iterator.hasNext()) {
+                var action = iterator.next();
+                if (!action.releaseEntity(player, entityId)) continue;
+                changed = true;
+                if (action.empty()) iterator.remove();
+            }
+            return changed;
+        }
+
+        private ContextTick tick(ServerPlayer player, long now) {
+            var changed = false;
+            var failures = new HashMap<FailureKey, Integer>();
+            var iterator = actions.iterator();
+            while (iterator.hasNext()) {
+                var action = iterator.next();
+                var tick = action.tick(player, now);
+                changed |= tick.changed();
+                for (var failure : tick.failures()) {
+                    failures.merge(
+                            new FailureKey(failure.diagnostic(), failure.nodeId()),
+                            failure.affectedCount(),
+                            Integer::sum
+                    );
+                }
+                if (action.empty()) iterator.remove();
+            }
+            return new ContextTick(changed, failures.entrySet().stream()
+                    .map(entry -> new ActionFailure(
+                            entry.getKey().diagnostic(),
+                            entry.getKey().nodeId(),
+                            entry.getValue()
+                    )).toList());
+        }
+
+        private boolean empty() {
+            return actions.isEmpty();
+        }
+    }
+
+    private static final class ActiveAction {
+        private final int nodeId;
+        private final PrecisionGraph.NodeKind kind;
+        private final long expiresAt;
+        private final Map<UUID, List<AutoCloseable>> subjectHandles;
+        private final Map<UUID, Float> subjectCosts;
+        private final Set<UUID> targetIds;
+        private float fixedCost;
+        private UUID intrusionSession;
+
+        private ActiveAction(
+                int nodeId,
+                PrecisionGraph.NodeKind kind,
+                long expiresAt,
+                Map<UUID, List<AutoCloseable>> subjectHandles,
+                Map<UUID, Float> subjectCosts,
+                float fixedCost,
+                UUID intrusionSession,
+                Set<UUID> targetIds
+        ) {
+            this.nodeId = nodeId;
+            this.kind = kind;
+            this.expiresAt = expiresAt;
+            this.subjectHandles = subjectHandles;
+            this.subjectCosts = subjectCosts;
+            this.fixedCost = fixedCost;
+            this.intrusionSession = intrusionSession;
+            this.targetIds = targetIds;
+        }
+
         private float cost() {
             var total = fixedCost;
             for (var cost : subjectCosts.values()) total += cost;
             return total;
         }
 
+        private ActionTick tick(ServerPlayer player, long now) {
+            if (now >= expiresAt) {
+                close(player);
+                return new ActionTick(true, List.of());
+            }
+            var changed = false;
+            var failures = new HashMap<PrecisionGraph.Diagnostic, Integer>();
+            var iterator = subjectHandles.entrySet().iterator();
+            while (iterator.hasNext()) {
+                var entry = iterator.next();
+                if (!entry.getValue().stream().allMatch(PrecisionOperationRuntime::isHandleClosed)) continue;
+                var diagnostic = entry.getValue().stream()
+                        .filter(ControlHandle.class::isInstance)
+                        .map(ControlHandle.class::cast)
+                        .map(ControlHandle::failureReason)
+                        .flatMap(java.util.Optional::stream)
+                        .findFirst()
+                        .map(PrecisionOperationRuntime::diagnostic)
+                        .orElse(null);
+                if (diagnostic != null) failures.merge(diagnostic, 1, Integer::sum);
+                iterator.remove();
+                subjectCosts.remove(entry.getKey());
+                changed = true;
+            }
+            if (intrusionSession != null
+                    && !MentalIntrusionManager.isPrecisionActive(player, intrusionSession)) {
+                intrusionSession = null;
+                fixedCost = 0.0f;
+                changed = true;
+            }
+            return new ActionTick(changed, failures.entrySet().stream()
+                    .map(entry -> new ActionFailure(entry.getKey(), nodeId, entry.getValue()))
+                    .toList());
+        }
+
         private void close(ServerPlayer player) {
-            for (var handles : subjectHandles.values()) closeReverse(handles);
+            subjectHandles.values().forEach(PrecisionOperationRuntime::closeReverse);
+            subjectHandles.clear();
+            subjectCosts.clear();
+            fixedCost = 0.0f;
             if (player != null && intrusionSession != null) {
                 MentalIntrusionManager.stopPrecision(player, intrusionSession);
             }
+            intrusionSession = null;
         }
 
         private float releaseSubjects(Set<UUID> subjects) {
@@ -847,8 +1253,56 @@ public final class PrecisionOperationRuntime {
             return released;
         }
 
-        private boolean references(UUID entityId) {
-            return targetIds.contains(entityId);
+        private float subjectCost(Set<UUID> subjects) {
+            var result = 0.0f;
+            for (var subject : subjects) result += subjectCosts.getOrDefault(subject, 0.0f);
+            return result;
         }
+
+        private boolean releaseEntity(ServerPlayer player, UUID entityId) {
+            if (targetIds.contains(entityId)) {
+                close(player);
+                return true;
+            }
+            var handles = subjectHandles.remove(entityId);
+            if (handles == null) return false;
+            closeReverse(handles);
+            subjectCosts.remove(entityId);
+            return true;
+        }
+
+        private boolean empty() {
+            return subjectHandles.isEmpty() && fixedCost <= 0.0f && intrusionSession == null;
+        }
+    }
+
+    private static boolean isHandleClosed(AutoCloseable handle) {
+        if (handle instanceof ControlHandle control) return control.isClosed();
+        if (handle instanceof MentalPerceptionRuntime.Handle perception) return perception.isClosed();
+        return false;
+    }
+
+    private static PrecisionGraph.Diagnostic diagnostic(ControlFailureReason reason) {
+        return switch (reason) {
+            case UNREACHABLE_DESTINATION -> PrecisionGraph.Diagnostic.UNREACHABLE_DESTINATION;
+            case TARGET_UNAVAILABLE -> PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE;
+            case ADAPTER_ERROR -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
+        };
+    }
+
+    private record FailureKey(PrecisionGraph.Diagnostic diagnostic, int nodeId) {
+    }
+
+    private record ActionFailure(
+            PrecisionGraph.Diagnostic diagnostic,
+            int nodeId,
+            int affectedCount
+    ) {
+    }
+
+    private record ActionTick(boolean changed, List<ActionFailure> failures) {
+    }
+
+    private record ContextTick(boolean changed, List<ActionFailure> failures) {
     }
 }

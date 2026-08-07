@@ -5,7 +5,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public sealed interface ControlDirective permits ControlDirective.ForceTarget,
-        ControlDirective.FreezeAi, ControlDirective.ImpressionAlliance, ControlDirective.MoveTo, ControlDirective.LookAt {
+        ControlDirective.FreezeAi, ControlDirective.ImpressionAlliance, ControlDirective.MoveTo,
+        ControlDirective.LookAt, ControlDirective.Guard {
     ControlCapability capability();
 
     default Set<ControlDomain> domains() {
@@ -37,9 +38,24 @@ public sealed interface ControlDirective permits ControlDirective.ForceTarget,
         }
     }
 
-    record MoveTo(UUID targetUuid) implements ControlDirective {
+    record MoveTo(ControlDestination destination, double arrivalRadius) implements ControlDirective {
         public MoveTo {
-            Objects.requireNonNull(targetUuid, "targetUuid");
+            Objects.requireNonNull(destination, "destination");
+            if (!Double.isFinite(arrivalRadius) || arrivalRadius <= 0.0) {
+                throw new IllegalArgumentException("arrivalRadius must be positive and finite");
+            }
+        }
+
+        public MoveTo(ControlDestination destination) {
+            this(destination, 1.0);
+        }
+
+        public MoveTo(UUID targetUuid) {
+            this(new ControlDestination.Entity(targetUuid), 1.0);
+        }
+
+        public UUID targetUuid() {
+            return destination instanceof ControlDestination.Entity entity ? entity.uuid() : null;
         }
 
         @Override
@@ -56,6 +72,26 @@ public sealed interface ControlDirective permits ControlDirective.ForceTarget,
         @Override
         public ControlCapability capability() {
             return ControlCapability.VIEW_CONTROL;
+        }
+    }
+
+    record Guard(ControlDestination destination, double detectionRadius, double arrivalRadius)
+            implements ControlDirective {
+        public Guard {
+            Objects.requireNonNull(destination, "destination");
+            if (!Double.isFinite(detectionRadius) || detectionRadius <= 0.0
+                    || !Double.isFinite(arrivalRadius) || arrivalRadius <= 0.0) {
+                throw new IllegalArgumentException("Guard radii must be positive and finite");
+            }
+        }
+
+        public Guard(ControlDestination destination) {
+            this(destination, 16.0, 1.0);
+        }
+
+        @Override
+        public ControlCapability capability() {
+            return ControlCapability.GUARD_CONTROL;
         }
     }
 }

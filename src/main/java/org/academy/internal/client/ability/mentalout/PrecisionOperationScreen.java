@@ -17,6 +17,7 @@ import org.academy.internal.client.gui.DataTerminalTheme;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -75,6 +76,10 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private boolean leftDrawerOpen;
     private boolean rightDrawerOpen;
     private EditBox search;
+    private EditBox durationInput;
+    private int durationInputNode = -1;
+    private boolean updatingDurationInput;
+    private boolean durationInputValid = true;
     private PrecisionGraph.NodeGroup selectedGroup = PrecisionGraph.NodeGroup.TARGET;
     private int paletteScroll;
     private int selectedNode = -1;
@@ -88,6 +93,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private ConnectionDrag connection;
     private QuickInsert quickInsert;
     private PrecisionGraph.Diagnostic diagnostic = PrecisionGraph.Diagnostic.OK;
+    private int diagnosticNodeId = -1;
+    private int diagnosticPort = -1;
     private PrecisionGraph.Diagnostic transientDiagnostic = PrecisionGraph.Diagnostic.OK;
     private long transientUntil;
     private Widget panelLayout;
@@ -144,6 +151,16 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         search.setTextColor(TEXT);
         search.visible = paletteVisible();
         addRenderableWidget(search);
+        durationInput = new EditBox(font, 0, 0, 80, 15, Component.empty());
+        durationInput.setHint(Component.translatable(
+                "screen.academy.precision_operation.value.permanent"));
+        durationInput.setMaxLength(4);
+        durationInput.setBordered(false);
+        durationInput.setTextColor(TEXT);
+        durationInput.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
+        durationInput.setResponder(this::durationInputChanged);
+        durationInput.visible = false;
+        addRenderableWidget(durationInput);
         if (initialView) {
             initialView = false;
             if (!graph.nodes().isEmpty()) fitCanvas(true);
@@ -212,11 +229,28 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (slot == selectedSlot) setGraph(serverGraph, false);
     }
 
-    void applyResult(int resultSlot, boolean accepted, long serverRevision, PrecisionGraph.Diagnostic result) {
+    void applyResult(
+            int resultSlot,
+            PrecisionOperationManager.FeedbackType type,
+            long serverRevision,
+            PrecisionGraph.Diagnostic result,
+            int nodeId,
+            int port
+    ) {
         revision = Math.max(revision, serverRevision);
         if (slot == resultSlot) {
-            diagnostic = result;
-            if (!accepted) showTransient(result);
+            if (type == PrecisionOperationManager.FeedbackType.ERROR) {
+                diagnostic = result;
+                diagnosticNodeId = nodeId;
+                diagnosticPort = port;
+                showTransient(result);
+            } else if (type == PrecisionOperationManager.FeedbackType.STARTED
+                    || type == PrecisionOperationManager.FeedbackType.COMPLETED
+                    && PrecisionOperationClient.diagnostic(slot) == PrecisionGraph.Diagnostic.OK) {
+                diagnostic = PrecisionGraph.Diagnostic.OK;
+                diagnosticNodeId = -1;
+                diagnosticPort = -1;
+            }
         }
     }
 
@@ -249,6 +283,18 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (search.visible) search.extractRenderState(graphics, mouseX, mouseY, partialTick);
         renderCanvas(graphics, mouseX, mouseY);
         if (inspectorVisible()) renderInspector(graphics, mouseX, mouseY);
+        syncDurationInput();
+        if (durationInput.visible) {
+            DataTerminalTheme.input(
+                    graphics,
+                    durationInput.getX(),
+                    durationInput.getY(),
+                    durationInput.getWidth(),
+                    15,
+                    durationInput.isFocused()
+            );
+            durationInput.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        }
         renderStatus(graphics);
         renderQuickInsert(graphics, mouseX, mouseY);
     }
@@ -266,7 +312,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
-            var disabled = index == 6 && !graph.validate().valid();
+            var disabled = index == 6 && (!graph.validate().valid() || !durationInputValid);
             iconButton(graphics, toolsX, panelY + 3, TOOL_GLYPHS[index], mouseX, mouseY, disabled);
             if (inside(mouseX, mouseY, toolsX, panelY + 3, TOOL_SIZE, TOOL_SIZE)) {
                 graphics.setTooltipForNextFrame(Component.translatable(
@@ -370,12 +416,19 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var y = (int) Math.round(node.y());
         var h = nodeHeight(node);
         var selected = node.id() == selectedNode;
+        var validation = graph.validate();
+        var errorNode = diagnostic != PrecisionGraph.Diagnostic.OK
+                ? diagnosticNodeId
+                : validation.valid() ? -1 : validation.nodeId();
+        var hasError = node.id() == errorNode;
         graphics.fill(x, y, x + NODE_W, y + h,
                 selected ? 0xE04A3D20 : DataTerminalTheme.SECTION_BACKGROUND);
-        border(graphics, x, y, NODE_W, h, selected ? ACCENT : DataTerminalTheme.BORDER_MUTED);
+        border(graphics, x, y, NODE_W, h,
+                hasError ? ERROR : selected ? ACCENT : DataTerminalTheme.BORDER_MUTED);
         graphics.fill(x, y, x + NODE_W, y + NODE_HEADER_H, categoryColor(node.kind().category()));
         smallText(graphics, groupGlyph(node.kind().group()), x + 3, y + 2, 0xFF15120C, 8);
         smallText(graphics, nodeLabel(node.kind()).getString(), x + 12, y + 2, 0xFF15120C, NODE_W - 15);
+        if (hasError) smallText(graphics, "!!", x + NODE_W - 12, y + 2, ERROR, 10);
         for (var port = 0; port < node.kind().inputDefinitions().size(); port++) {
             var definition = node.kind().inputDefinitions().get(port);
             var color = highlightedPort(node.id(), port, true, definition.type())
@@ -396,6 +449,11 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             var lines = new ArrayList<Component>();
             lines.add(nodeLabel(node.kind()));
             lines.add(Component.translatable(nodeDescriptionKey(node.kind())).withColor(DIM));
+            if (hasError) {
+                var shown = diagnostic != PrecisionGraph.Diagnostic.OK
+                        ? diagnostic : validation.diagnostic();
+                lines.add(Component.translatable(shown.translationKey()).withColor(ERROR));
+            }
             graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
         }
     }
@@ -483,7 +541,9 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (kind == PrecisionGraph.ParameterKind.NONE) return;
         smallText(graphics, Component.translatable("screen.academy.precision_operation.parameter",
                 formatParameter(node)).getString(), x, y, TEXT, width);
-        if (kind == PrecisionGraph.ParameterKind.RANGE
+        if (kind == PrecisionGraph.ParameterKind.DURATION_SECONDS) {
+            return;
+        } else if (kind == PrecisionGraph.ParameterKind.RANGE
                 || kind == PrecisionGraph.ParameterKind.HEALTH_PERCENT) {
             var min = 1.0;
             var max = kind == PrecisionGraph.ParameterKind.RANGE ? 32.0 : 100.0;
@@ -498,9 +558,14 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private void renderStatus(GuiGraphicsExtractor graphics) {
+        var validation = graph.validate();
         var shown = System.currentTimeMillis() < transientUntil ? transientDiagnostic
-                : diagnostic != PrecisionGraph.Diagnostic.OK ? diagnostic : graph.validate().diagnostic();
-        smallText(graphics, Component.translatable(shown.translationKey()).getString(),
+                : diagnostic != PrecisionGraph.Diagnostic.OK ? diagnostic : validation.diagnostic();
+        var nodeId = diagnostic != PrecisionGraph.Diagnostic.OK
+                ? diagnosticNodeId : validation.valid() ? -1 : validation.nodeId();
+        var text = Component.translatable(shown.translationKey()).getString();
+        if (nodeId >= 0) text += "  [#" + nodeId + "]";
+        smallText(graphics, text,
                 panelX + 4, panelY + panelH - 11,
                 shown == PrecisionGraph.Diagnostic.OK ? DataTerminalTheme.GOOD : ERROR, panelW - 8);
     }
@@ -530,6 +595,12 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var x = event.x();
         var y = event.y();
         if (event.button() == 0) {
+            if (durationInput != null && durationInput.visible
+                    && inside(x, y, durationInput.getX(), durationInput.getY(),
+                    durationInput.getWidth(), 15)) {
+                return super.mouseClicked(event, doubleClick);
+            }
+            if (durationInput != null) durationInput.setFocused(false);
             if (handleQuickInsertClick(x, y) || handleTopBarClick(x, y) || handleRailClick(x, y)
                     || handleInspectorClick(x, y) || handlePaletteClick(x, y)) return true;
             if (spaceDown && inside(x, y, canvasX, canvasY, canvasW, canvasH)) {
@@ -598,6 +669,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (durationInput != null && durationInput.isFocused()) return super.keyPressed(event);
         if (event.key() == InputConstants.KEY_SPACE) {
             spaceDown = true;
             return true;
@@ -748,6 +820,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 description, (int) (w / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
         var y = canvasY + Math.min(92, Math.max(58, descriptionHeight + 40));
         var parameterKind = selected.kind().parameterKind();
+        if (parameterKind == PrecisionGraph.ParameterKind.DURATION_SECONDS) return false;
         if ((parameterKind == PrecisionGraph.ParameterKind.RANGE
                 || parameterKind == PrecisionGraph.ParameterKind.HEALTH_PERCENT)
                 && inside(mouseX, mouseY, x, y + 9, w, 12)) {
@@ -1068,6 +1141,10 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private void save() {
+        if (!durationInputValid) {
+            showTransient(PrecisionGraph.Diagnostic.INVALID_PARAMETER);
+            return;
+        }
         var validation = graph.validate();
         if (!validation.valid()) {
             showTransient(validation.diagnostic());
@@ -1088,7 +1165,22 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         selectedNode = -1;
         connection = null;
         quickInsert = null;
-        changed();
+        if (recordUndo) {
+            changed();
+        } else {
+            var validation = graph.validate();
+            if (validation.valid()
+                    && PrecisionOperationClient.diagnostic(slot) != PrecisionGraph.Diagnostic.OK) {
+                diagnostic = PrecisionOperationClient.diagnostic(slot);
+                diagnosticNodeId = PrecisionOperationClient.diagnosticNode(slot);
+                diagnosticPort = PrecisionOperationClient.diagnosticPort(slot);
+            } else {
+                diagnostic = validation.diagnostic();
+                diagnosticNodeId = validation.nodeId();
+                diagnosticPort = validation.port();
+            }
+            PrecisionOperationClient.updateLocal(slot, graph);
+        }
     }
 
     private void replaceNode(PrecisionGraph.Node replacement, boolean notify) {
@@ -1098,7 +1190,11 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private void changed() {
-        diagnostic = graph.validate().diagnostic();
+        var validation = graph.validate();
+        diagnostic = validation.diagnostic();
+        diagnosticNodeId = validation.nodeId();
+        diagnosticPort = validation.port();
+        PrecisionOperationClient.clearDiagnostic(slot);
         PrecisionOperationClient.updateLocal(slot, graph);
     }
 
@@ -1117,22 +1213,26 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private List<PrecisionGraph.NodeKind> compatibleKinds(Endpoint anchor) {
         return java.util.Arrays.stream(PrecisionGraph.NodeKind.values())
                 .filter(kind -> anchor.input
-                        ? kind.outputDefinitions().stream().anyMatch(port -> port.type() == anchor.type)
-                        : kind.inputDefinitions().stream().anyMatch(port -> port.type() == anchor.type))
+                        ? kind.outputDefinitions().stream().anyMatch(port ->
+                        PrecisionGraph.isPortCompatible(port.type(), anchor.type))
+                        : kind.inputDefinitions().stream().anyMatch(port ->
+                        PrecisionGraph.isPortCompatible(anchor.type, port.type())))
                 .toList();
     }
 
     private Endpoint firstCompatibleEndpoint(PrecisionGraph.Node node, Endpoint anchor) {
         if (anchor.input) {
             for (var port = 0; port < node.kind().outputDefinitions().size(); port++) {
-                if (node.kind().outputDefinitions().get(port).type() == anchor.type) {
-                    return new Endpoint(node.id(), port, false, anchor.type);
+                var type = node.kind().outputDefinitions().get(port).type();
+                if (PrecisionGraph.isPortCompatible(type, anchor.type)) {
+                    return new Endpoint(node.id(), port, false, type);
                 }
             }
         } else {
             for (var port = 0; port < node.kind().inputDefinitions().size(); port++) {
-                if (node.kind().inputDefinitions().get(port).type() == anchor.type) {
-                    return new Endpoint(node.id(), port, true, anchor.type);
+                var type = node.kind().inputDefinitions().get(port).type();
+                if (PrecisionGraph.isPortCompatible(anchor.type, type)) {
+                    return new Endpoint(node.id(), port, true, type);
                 }
             }
         }
@@ -1180,8 +1280,11 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             var definitions = sourceInput ? node.kind().outputDefinitions() : node.kind().inputDefinitions();
             for (var port = 0; port < definitions.size(); port++) {
                 var definition = definitions.get(port);
-                if (definition.type() != type) continue;
-                var endpoint = new Endpoint(node.id(), port, !sourceInput, type);
+                var compatible = sourceInput
+                        ? PrecisionGraph.isPortCompatible(definition.type(), type)
+                        : PrecisionGraph.isPortCompatible(type, definition.type());
+                if (!compatible) continue;
+                var endpoint = new Endpoint(node.id(), port, !sourceInput, definition.type());
                 var point = endpointScreen(endpoint);
                 var distance = Math.hypot(mouseX - point.x, mouseY - point.y);
                 if (distance <= SNAP_DISTANCE && distance < best) {
@@ -1194,7 +1297,10 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private boolean compatible(Endpoint first, Endpoint second) {
-        return first.nodeId != second.nodeId && first.input != second.input && first.type == second.type;
+        if (first.nodeId == second.nodeId || first.input == second.input) return false;
+        var output = first.input ? second : first;
+        var input = first.input ? first : second;
+        return PrecisionGraph.isPortCompatible(output.type, input.type);
     }
 
     private boolean connectionCreatesCycle(Endpoint first, Endpoint second) {
@@ -1306,12 +1412,70 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         search.setWidth(paletteWidth() - 8);
     }
 
+    private void syncDurationInput() {
+        if (durationInput == null) return;
+        var selected = node(selectedNode);
+        var visible = inspectorVisible() && selected != null
+                && selected.kind().parameterKind() == PrecisionGraph.ParameterKind.DURATION_SECONDS;
+        durationInput.visible = visible;
+        if (!visible) {
+            durationInputNode = -1;
+            durationInputValid = true;
+            durationInput.setTextColor(TEXT);
+            return;
+        }
+
+        var x = inspectorX() + 5;
+        var width = inspectorWidth() - 10;
+        var description = Component.translatable(nodeDescriptionKey(selected.kind()));
+        var descriptionHeight = (int) Math.ceil(font.wordWrapHeight(
+                description, (int) (width / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
+        var parameterY = canvasY + Math.min(92, Math.max(58, descriptionHeight + 40));
+        durationInput.setX(x);
+        durationInput.setY(parameterY + 11);
+        durationInput.setWidth(width);
+
+        var expected = selected.parameter() == 0.0 ? "" : Long.toString(Math.round(selected.parameter()));
+        if (durationInputNode != selected.id() || !durationInput.isFocused()
+                && !durationInput.getValue().equals(expected)) {
+            updatingDurationInput = true;
+            durationInput.setValue(expected);
+            updatingDurationInput = false;
+            durationInputNode = selected.id();
+            durationInputValid = true;
+            durationInput.setTextColor(TEXT);
+        }
+    }
+
+    private void durationInputChanged(String value) {
+        if (updatingDurationInput) return;
+        var selected = node(durationInputNode);
+        if (selected == null
+                || selected.kind().parameterKind() != PrecisionGraph.ParameterKind.DURATION_SECONDS) return;
+        var parsed = 0;
+        var valid = value.isEmpty();
+        if (!value.isEmpty()) {
+            try {
+                parsed = Integer.parseInt(value);
+                valid = parsed >= 1 && parsed <= 3600;
+            } catch (NumberFormatException ignored) {
+                valid = false;
+            }
+        }
+        durationInputValid = valid;
+        durationInput.setTextColor(valid ? TEXT : ERROR);
+        if (valid && selected.parameter() != parsed) setParameter(selected, parsed);
+    }
+
     private String formatParameter(PrecisionGraph.Node node) {
         return switch (node.kind().parameterKind()) {
             case NONE -> "-";
             case RANGE -> Math.round(node.parameter()) + " m";
             case COUNT -> Long.toString(Math.round(node.parameter()));
             case HEALTH_PERCENT -> Math.round(node.parameter()) + "%";
+            case DURATION_SECONDS -> node.parameter() == 0.0
+                    ? Component.translatable("screen.academy.precision_operation.value.permanent").getString()
+                    : Math.round(node.parameter()) + " s";
             case SORT_DIRECTION -> Component.translatable(node.parameter() == 0.0
                     ? "screen.academy.precision_operation.value.near_first"
                     : "screen.academy.precision_operation.value.far_first").getString();
@@ -1447,6 +1611,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         return switch (type) {
             case ENTITY -> 0xFFFFCF70;
             case ENTITY_SET -> 0xFF75D7A7;
+            case DESTINATION -> 0xFF72B9E8;
             case FLOW -> 0xFFDB82E8;
         };
     }
