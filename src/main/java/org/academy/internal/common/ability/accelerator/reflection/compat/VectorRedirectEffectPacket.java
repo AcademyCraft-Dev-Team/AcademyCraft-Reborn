@@ -75,6 +75,7 @@ public final class VectorRedirectEffectPacket
 
     public static void broadcast(VectorRedirectPlan plan, double renderedLength) {
         if (plan.damageOnly()
+                || plan.attack().tier().usesFallbackVisuals()
                 || plan.attack().executionPolicy().visualStyle() == VectorVisualStyle.NONE
                 || plan.attack().executionPolicy().visualStyle() == VectorVisualStyle.PROJECTILE
                 || !(renderedLength > 1.0E-6)
