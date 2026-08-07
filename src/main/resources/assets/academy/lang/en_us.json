@@ -1,4 +1,9 @@
 {
+  "message.academy.skill_use.unavailable": "%s is currently unavailable.",
+  "message.academy.skill_use.overload": "%s cannot be used during ability overload.",
+  "message.academy.skill_use.insufficient_cp": "%s requires %s CP; only %s CP is available.",
+  "message.academy.skill_use.stack_limit": "%s has reached its stack limit (%s/%s).",
+  "message.academy.skill_use.server_cooldown": "%s is still iterating on the server: %s points remain (stacks %s/%s).",
   "attribute.name.academy.muscle_strength": "Muscle Strength",
   "attribute.name.academy.endurance": "Endurance",
   "attribute.name.academy.dexterity": "Dexterity",

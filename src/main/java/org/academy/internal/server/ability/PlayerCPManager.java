@@ -112,7 +112,9 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (player == null) return;
         var cpData = player.getCpData();
         MisakaNetworkServer.send(serverPlayer, new SyncAbilityDataPacket(
-                cpData.copyWithMaxCP(getMaxCP(serverPlayer.getUUID()))
+                cpData.copyWithMaxCP(getMaxCP(serverPlayer.getUUID())),
+                getCalculationIntensity(serverPlayer.getUUID()),
+                player.getCpOccupations()
         ));
         cpData.clearDirty();
     }

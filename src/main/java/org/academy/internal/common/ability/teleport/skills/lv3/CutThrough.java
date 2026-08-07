@@ -61,7 +61,7 @@ public final class CutThrough extends Skill {
                 .energyCost(10_000)
                 .cpCost(20)
                 .iterationTicks(40)
-                .maxStacks(1)
+                .maxStacks(20)
                 .dependsOn(Skills.SELF_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition("Self Teleport", "academy:self_teleport"))
