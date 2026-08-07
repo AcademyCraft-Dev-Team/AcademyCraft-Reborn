@@ -34,7 +34,8 @@ public final class VectorExternalInterceptionService {
             return;
         }
 
-        if (VectorReflection.Server.canMaintainLinearReflectionLease(defender)) {
+        if (VectorReflection.Server.canMaintainLinearReflectionLease(defender)
+                || VectorReduction.Server.canMaintain(defender)) {
             var reflection = VectorReflection.Server.hurtServer(
                     defender,
                     (net.minecraft.server.level.ServerLevel) defender.level(),
@@ -297,6 +298,10 @@ public final class VectorExternalInterceptionService {
                 damageOnly
         );
         if (damageOnly) {
+            if (!kind.dealsRedirectedEntityDamage()) {
+                VectorCompatibilityDiagnostics.record(attack, outcomePrefix + "_absorbed_no_return_damage");
+                return;
+            }
             var hits = VectorRedirectExecutor.executeDamageFallback(plan);
             VectorCompatibilityDiagnostics.record(
                     attack,
