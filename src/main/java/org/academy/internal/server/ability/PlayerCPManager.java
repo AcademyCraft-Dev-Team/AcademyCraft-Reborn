@@ -182,9 +182,9 @@ public class PlayerCPManager implements AbilitySubsystem {
             return false;
         }
 
-        var recoveryRate = getCpIterationRate(isSkillDebugMode(player.getUUID()))
+        var recoveryRate = (float) (getCpIterationRate(isSkillDebugMode(player.getUUID()))
                 * PlayerAttributeRuntime.neuralIterationMultiplier(player)
-                * (1.0f + getBonuses(player.getUUID()).recovery());
+                * (1.0f + getBonuses(player.getUUID()).recovery()));
         var progress = cpIterationProgress.merge(player.getUUID(), recoveryRate, Float::sum);
         var recoverySteps = (int) Math.floor(progress / TICKS_PER_ITERATION_POINT);
         if (recoverySteps > 0) {

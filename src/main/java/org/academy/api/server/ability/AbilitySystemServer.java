@@ -50,6 +50,7 @@ public final class AbilitySystemServer {
     private final SkillDataManager skillDataManager;
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
+    private final PropsManager propsManager;
     private final SyncManager syncManager;
     private final ConcurrentHashMap<UUID, DevelopData> developDataMap = new ConcurrentHashMap<>();
 
@@ -62,6 +63,10 @@ public final class AbilitySystemServer {
         playerCPManager = new PlayerCPManager(playerDataManager, abilityConfig, syncManager);
         NeoForge.EVENT_BUS.register(playerCPManager);
         SubsystemRegistry.registerSubsystem(playerCPManager, SyncTypes.CP_DATA);
+
+        propsManager = new PropsManager(playerDataManager, syncManager);
+        NeoForge.EVENT_BUS.register(propsManager);
+        SubsystemRegistry.registerSubsystem(propsManager, SyncTypes.PROPS_DATA);
 
         skillDataManager = new SkillDataManager(playerDataManager, syncManager);
         SubsystemRegistry.registerSubsystem(skillDataManager, SyncTypes.SKILL_DATA);
@@ -393,6 +398,10 @@ public final class AbilitySystemServer {
 
     public SyncManager getSyncManager() {
         return syncManager;
+    }
+
+    public PropsManager getPropsManager() {
+        return propsManager;
     }
 
     public Player getPlayerData(UUID uuid) {
