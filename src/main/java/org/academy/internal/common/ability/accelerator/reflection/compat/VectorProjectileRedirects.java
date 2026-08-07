@@ -23,10 +23,10 @@ public final class VectorProjectileRedirects {
             VectorRedirectKind kind
     ) {
         var current = get(projectile);
-        var owner = projectile.getOwner();
+        VectorAttackAttributionResolver.captureProjectileOwner(projectile);
         var originalOwnerId = current.originalOwnerId() != null
                 ? current.originalOwnerId()
-                : owner == null ? null : owner.getUUID();
+                : VectorAttackAttributionResolver.originalProjectileOwnerId(projectile);
         var fingerprint = fingerprint(projectile, originalOwnerId, redirector);
         var data = VectorMotionRedirects.mark(
                 projectile,

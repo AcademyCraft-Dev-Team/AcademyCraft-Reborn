@@ -71,4 +71,54 @@ class VectorCompatibilityModelTest {
         assertFalse(VectorAttackConfidence.LOW.atLeast(VectorAttackConfidence.MEDIUM));
         assertFalse(VectorAttackConfidence.NONE.atLeast(VectorAttackConfidence.LOW));
     }
+
+    @Test
+    void vanillaAttackerDamageTypesAreNotRejectedAsMeleeByName() {
+        assertFalse(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("player"));
+        assertFalse(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("player_attack"));
+        assertFalse(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("mob"));
+        assertFalse(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("mob_attack"));
+        assertTrue(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("fall"));
+        assertTrue(VectorExternalAttackClassifier.isExplicitlyDeniedDamageName("magic"));
+    }
+
+    @Test
+    void anomalousDamageThresholdIsStrictAndFinite() {
+        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(100_000.0f));
+        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(100_000.01f));
+        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.MAX_VALUE));
+        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.POSITIVE_INFINITY));
+        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.NaN));
+    }
+
+    @Test
+    void recentAttributionEvidenceExpiresAndCannotCrossDimensionsOrDamageTypes() {
+        assertTrue(VectorAttackAttributionResolver.isRecentEvidence(110L, 100L, true, true));
+        assertFalse(VectorAttackAttributionResolver.isRecentEvidence(111L, 100L, true, true));
+        assertFalse(VectorAttackAttributionResolver.isRecentEvidence(99L, 100L, true, true));
+        assertFalse(VectorAttackAttributionResolver.isRecentEvidence(105L, 100L, false, true));
+        assertFalse(VectorAttackAttributionResolver.isRecentEvidence(105L, 100L, true, false));
+    }
+
+    @Test
+    void compatibilityEffectsAndAccumulatedDamageUseTheirExpectedWindows() {
+        assertFalse(VectorCompatibilityEffectLimiter.shouldEmit(103L, 100L));
+        assertTrue(VectorCompatibilityEffectLimiter.shouldEmit(104L, 100L));
+        assertFalse(VectorReflectedDamageAccumulator.shouldFlush(109L, 110L));
+        assertTrue(VectorReflectedDamageAccumulator.shouldFlush(110L, 110L));
+    }
+
+    @Test
+    void incomingDamageResultKeepsPartialDamageDistinctFromPassThrough() {
+        var passThrough = VectorIncomingDamageResult.passThrough(12.0f);
+        var partial = VectorIncomingDamageResult.partial(7.5f);
+        var full = VectorIncomingDamageResult.fullRedirect();
+
+        assertFalse(passThrough.handled());
+        assertEquals(VectorIncomingDamageResult.Status.PARTIAL_REFLECTION, partial.status());
+        assertEquals(7.5f, partial.remainingDamage());
+        assertTrue(partial.handled());
+        assertEquals(VectorIncomingDamageResult.Status.FULL_REDIRECT, full.status());
+        assertEquals(0.0f, full.remainingDamage());
+    }
 }

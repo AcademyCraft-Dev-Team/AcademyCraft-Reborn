@@ -17,13 +17,39 @@ public final class VectorExternalInterceptionService {
     private VectorExternalInterceptionService() {
     }
 
+    @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
+    public static void recordIncomingAttribution(LivingIncomingDamageEvent event) {
+        if (event.getEntity() instanceof ServerPlayer defender && event.getSource() != null) {
+            VectorAttackAttributionResolver.rememberFromSource(defender, event.getSource());
+        }
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
         if (event.isCanceled()
                 || !(event.getEntity() instanceof ServerPlayer defender)
                 || !(event.getAmount() > 0.0f)
-                || !Float.isFinite(event.getAmount())) {
+                || !Float.isFinite(event.getAmount())
+                || VectorReflection.Server.isLegitimateHealthMutation(defender)) {
             return;
+        }
+
+        if (VectorReflection.Server.canMaintainLinearReflectionLease(defender)) {
+            var reflection = VectorReflection.Server.hurtServer(
+                    defender,
+                    (net.minecraft.server.level.ServerLevel) defender.level(),
+                    event.getSource(),
+                    event.getAmount()
+            );
+            if (reflection.getLeft()) {
+                var remaining = reflection.getRight();
+                if (remaining > 0.0f && Float.isFinite(remaining)) {
+                    event.setAmount(remaining);
+                } else {
+                    event.setCanceled(true);
+                }
+                return;
+            }
         }
 
         if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
@@ -51,98 +77,179 @@ public final class VectorExternalInterceptionService {
             return;
         }
         var attack = classified.get();
-        if (attack.attribution().nativeExact()) return;
-        if (VectorInterceptionTickets.wasCommitted(defender, attack.fingerprint())) {
-            event.setCanceled(true);
-            VectorCompatibilityDiagnostics.record(attack, "duplicate_ticket");
+        if (VectorReflection.Server.isActive(defender)) {
+            if (tryFullReflection(attack)) event.setCanceled(true);
             return;
         }
+        if (VectorReduction.Server.isActive(defender)) {
+            if (tryFullRefraction(attack)) event.setCanceled(true);
+            return;
+        }
+        VectorCompatibilityDiagnostics.record(attack, "no_vector_defense");
+    }
+
+    public static boolean tryFullReflection(VectorAttackDescriptor attack) {
+        if (attack == null) return false;
+        var defender = attack.defender();
+        if (!VectorReflection.Server.isActive(defender)) return false;
+        if (VectorInterceptionTickets.wasCommitted(defender, attack.fingerprint())) return true;
 
         var mirrorPoint = defender.getBoundingBox().getCenter();
         var incomingDirection = attack.direction();
         var damageOnly = !attack.confidence().atLeast(VectorAttackConfidence.MEDIUM);
         var continuous = attack.executionPolicy().continuous();
         var leaseKey = VectorAttackFingerprint.computeLeaseKey(
-                defender.getId(),
-                attack.source(),
-                incomingDirection
-        );
-        var leasedKind = continuous
-                ? consumeContinuousLease(defender, leaseKey, attack.damage())
-                : null;
-        if (leasedKind != null) {
+                defender.getId(), attack.source(), incomingDirection);
+        if (continuous
+                && VectorReflection.Server.canMaintainLinearReflectionLease(defender)
+                && VectorContinuousInterceptionLeases.consume(
+                defender, leaseKey, VectorRedirectKind.REFLECTION, attack.damage())) {
             VectorInterceptionTickets.commit(defender, attack.fingerprint());
-            event.setCanceled(true);
-            var leasedDirection = redirectedDirection(leasedKind, defender, incomingDirection);
-            VectorReflection.Server.spawnGlowCircle(defender, leasedDirection, mirrorPoint);
-            VectorReflection.Server.playReflectionSound(defender);
+            var reflected = incomingDirection.scale(-1.0);
+            VectorCompatibilityEffectLimiter.emit(defender, leaseKey, reflected, mirrorPoint);
             executeRedirect(
                     attack,
                     defender,
-                    leasedKind,
+                    VectorRedirectKind.REFLECTION,
                     mirrorPoint,
-                    leasedDirection,
+                    reflected,
                     damageOnly,
                     "continuous_lease"
             );
-            return;
+            VectorDefenseFeedbackTickets.commitFull(defender, attack.source());
+            return true;
         }
 
-        VectorRedirectKind kind;
-        Vec3 redirectedDirection;
-        boolean activated;
         var activationDamage = continuous
                 ? attack.damage() * VectorContinuousInterceptionLeases.LEASE_HITS
                 : attack.damage();
         if (!Float.isFinite(activationDamage)) activationDamage = attack.damage();
-        if (VectorReflection.Server.isActive(defender)) {
-            kind = VectorRedirectKind.REFLECTION;
-            redirectedDirection = redirectedDirection(kind, defender, incomingDirection);
-            activated = VectorReflection.Server.tryReflectLinearAttack(
+        var activated = tryActivate(
+                VectorRedirectKind.REFLECTION,
+                defender,
+                activationDamage,
+                mirrorPoint,
+                incomingDirection,
+                false
+        );
+        if (!activated && activationDamage > attack.damage() + 1.0E-5f) {
+            activationDamage = attack.damage();
+            activated = tryActivate(
+                    VectorRedirectKind.REFLECTION,
                     defender,
                     activationDamage,
                     mirrorPoint,
-                    incomingDirection
+                    incomingDirection,
+                    false
             );
-        } else if (VectorReduction.Server.isActive(defender)) {
-            kind = VectorRedirectKind.REFRACTION;
-            redirectedDirection = redirectedDirection(kind, defender, incomingDirection);
-            activated = VectorReduction.Server.tryRefractLinearAttack(
-                    defender,
-                    activationDamage,
-                    mirrorPoint,
-                    incomingDirection
-            );
-        } else {
-            VectorCompatibilityDiagnostics.record(attack, "no_vector_defense");
-            return;
         }
-
-        if (!activated) {
-            VectorCompatibilityDiagnostics.record(attack, "insufficient_cp_or_inactive");
-            return;
-        }
+        if (!activated) return false;
 
         VectorInterceptionTickets.commit(defender, attack.fingerprint());
         if (continuous) {
             VectorContinuousInterceptionLeases.create(
                     defender,
                     leaseKey,
-                    kind,
+                    VectorRedirectKind.REFLECTION,
                     activationDamage,
                     attack.damage()
             );
         }
-        event.setCanceled(true);
+        VectorCompatibilityEffectLimiter.emit(
+                defender, leaseKey, incomingDirection.scale(-1.0), mirrorPoint);
         executeRedirect(
                 attack,
                 defender,
-                kind,
+                VectorRedirectKind.REFLECTION,
                 mirrorPoint,
-                redirectedDirection,
+                incomingDirection.scale(-1.0),
                 damageOnly,
                 continuous ? "continuous_prepaid" : "redirected"
         );
+        VectorDefenseFeedbackTickets.commitFull(defender, attack.source());
+        return true;
+    }
+
+    public static boolean tryFullRefraction(VectorAttackDescriptor attack) {
+        if (attack == null) return false;
+        var defender = attack.defender();
+        if (!VectorReduction.Server.isActive(defender)
+                || !attack.confidence().atLeast(VectorAttackConfidence.LOW)) return false;
+        if (VectorInterceptionTickets.wasCommitted(defender, attack.fingerprint())) return true;
+
+        var mirrorPoint = defender.getBoundingBox().getCenter();
+        var incomingDirection = attack.direction();
+        var redirected = VectorReduction.refractedDirection(defender.getLookAngle(), incomingDirection);
+        if (redirected.lengthSqr() < 1.0E-8) return false;
+        var damageOnly = !attack.confidence().atLeast(VectorAttackConfidence.MEDIUM);
+        var continuous = attack.executionPolicy().continuous();
+        var leaseKey = VectorAttackFingerprint.computeLeaseKey(
+                defender.getId(), attack.source(), incomingDirection);
+        if (continuous
+                && VectorReduction.Server.canMaintain(defender)
+                && VectorContinuousInterceptionLeases.consume(
+                defender, leaseKey, VectorRedirectKind.REFRACTION, attack.damage())) {
+            VectorInterceptionTickets.commit(defender, attack.fingerprint());
+            VectorCompatibilityEffectLimiter.emit(defender, leaseKey, redirected, mirrorPoint);
+            executeRedirect(
+                    attack, defender, VectorRedirectKind.REFRACTION,
+                    mirrorPoint, redirected, damageOnly, "continuous_lease");
+            VectorDefenseFeedbackTickets.commitFull(defender, attack.source());
+            return true;
+        }
+
+        var activationDamage = continuous
+                ? attack.damage() * VectorContinuousInterceptionLeases.LEASE_HITS
+                : attack.damage();
+        if (!Float.isFinite(activationDamage)) activationDamage = attack.damage();
+        var activated = tryActivate(
+                VectorRedirectKind.REFRACTION,
+                defender,
+                activationDamage,
+                mirrorPoint,
+                incomingDirection,
+                false
+        );
+        if (!activated && activationDamage > attack.damage() + 1.0E-5f) {
+            activationDamage = attack.damage();
+            activated = tryActivate(
+                    VectorRedirectKind.REFRACTION,
+                    defender,
+                    activationDamage,
+                    mirrorPoint,
+                    incomingDirection,
+                    false
+            );
+        }
+        if (!activated) return false;
+
+        VectorInterceptionTickets.commit(defender, attack.fingerprint());
+        if (continuous) {
+            VectorContinuousInterceptionLeases.create(
+                    defender,
+                    leaseKey,
+                    VectorRedirectKind.REFRACTION,
+                    activationDamage,
+                    attack.damage()
+            );
+        }
+        VectorCompatibilityEffectLimiter.emit(defender, leaseKey, redirected, mirrorPoint);
+        executeRedirect(
+                attack, defender, VectorRedirectKind.REFRACTION,
+                mirrorPoint, redirected, damageOnly,
+                continuous ? "continuous_prepaid" : "redirected");
+        VectorDefenseFeedbackTickets.commitFull(defender, attack.source());
+        return true;
+    }
+
+    public static boolean tryDirectRefraction(
+            ServerPlayer defender,
+            net.minecraft.world.damagesource.DamageSource source,
+            float damage
+    ) {
+        if (!VectorReduction.Server.isActive(defender)) return false;
+        var attack = VectorExternalAttackClassifier.classify(defender, source, damage).orElse(null);
+        return attack != null && tryFullRefraction(attack);
     }
 
     @SubscribeEvent
@@ -150,34 +257,25 @@ public final class VectorExternalInterceptionService {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         VectorInterceptionTickets.clear(player);
         VectorContinuousInterceptionLeases.clear(player);
+        VectorAttackAttributionResolver.clear(player);
+        VectorCompatibilityEffectLimiter.clear(player);
+        VectorDefenseFeedbackTickets.clear(player);
+        VectorReflectedDamageAccumulator.clear(player);
     }
 
-    private static VectorRedirectKind consumeContinuousLease(
-            ServerPlayer defender,
-            long leaseKey,
-            float damage
-    ) {
-        if (VectorReflection.Server.canMaintainLinearReflectionLease(defender)
-                && VectorContinuousInterceptionLeases.consume(
-                defender, leaseKey, VectorRedirectKind.REFLECTION, damage)) {
-            return VectorRedirectKind.REFLECTION;
-        }
-        if (VectorReduction.Server.canMaintain(defender)
-                && VectorContinuousInterceptionLeases.consume(
-                defender, leaseKey, VectorRedirectKind.REFRACTION, damage)) {
-            return VectorRedirectKind.REFRACTION;
-        }
-        return null;
-    }
-
-    private static Vec3 redirectedDirection(
+    private static boolean tryActivate(
             VectorRedirectKind kind,
             ServerPlayer defender,
-            Vec3 incomingDirection
+            float damage,
+            Vec3 mirrorPoint,
+            Vec3 incomingDirection,
+            boolean emitFeedback
     ) {
         return kind == VectorRedirectKind.REFLECTION
-                ? incomingDirection.scale(-1.0)
-                : VectorReduction.refractedDirection(defender.getLookAngle(), incomingDirection);
+                ? VectorReflection.Server.tryReflectLinearAttack(
+                defender, damage, mirrorPoint, incomingDirection, emitFeedback)
+                : VectorReduction.Server.tryRefractLinearAttack(
+                defender, damage, mirrorPoint, incomingDirection, emitFeedback);
     }
 
     private static void executeRedirect(
@@ -198,6 +296,16 @@ public final class VectorExternalInterceptionService {
                 attack.range(),
                 damageOnly
         );
+        if (damageOnly) {
+            var hits = VectorRedirectExecutor.executeDamageFallback(plan);
+            VectorCompatibilityDiagnostics.record(
+                    attack,
+                    hits == 0
+                            ? "no_return_target"
+                            : outcomePrefix + "_damage_fallback_hits=" + hits
+            );
+            return;
+        }
         if (!damageOnly && VectorMotionRedirects.redirectProfiledEntity(plan)) {
             VectorCompatibilityDiagnostics.record(attack, outcomePrefix + "_motion_redirect");
             return;
