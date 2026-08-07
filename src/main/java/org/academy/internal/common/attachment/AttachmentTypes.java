@@ -10,6 +10,7 @@ import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirectData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -162,6 +163,12 @@ public final class AttachmentTypes {
             () -> AttachmentType
                     .builder(DEFAULT_FALSE)
                     .sync(ByteBufCodecs.BOOL)
+                    .build()
+    );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<VectorProjectileRedirectData>> VECTOR_PROJECTILE_REDIRECT = REGISTER.register(
+            "vector_projectile_redirect",
+            () -> AttachmentType
+                    .builder(VectorProjectileRedirectData::none)
                     .build()
     );
 }
