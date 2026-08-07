@@ -52,17 +52,35 @@ public final class ResolvedLinearAttack {
         return Optional.ofNullable(returnSegment);
     }
 
+    public Optional<LinearSegment> redirectedSegment() {
+        return returnSegment();
+    }
+
     public Optional<LinearReflectionCandidate> reflectionCandidate() {
         return Optional.ofNullable(reflectionCandidate);
     }
 
+    @Deprecated(forRemoval = false)
     public boolean isReflected() {
+        return isRedirected();
+    }
+
+    public boolean isRedirected() {
         return returnSegment != null && reflectionCandidate != null;
     }
 
+    public boolean isReflection() {
+        return isRedirected()
+                && reflectionCandidate.mode() == LinearReflectionCandidate.Mode.REFLECTION;
+    }
+
     public boolean isRefracted() {
-        return isReflected()
+        return isRedirected()
                 && reflectionCandidate.mode() != LinearReflectionCandidate.Mode.REFLECTION;
+    }
+
+    public boolean isRefraction() {
+        return isRefracted();
     }
 
     public double reflectionProgress() {

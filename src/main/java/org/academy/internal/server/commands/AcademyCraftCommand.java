@@ -29,12 +29,16 @@ import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.profiler.ProfileDump;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatProfileRegistry;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityDiagnostics;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityMode;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 @EventBusSubscriber
@@ -100,7 +104,86 @@ public final class AcademyCraftCommand {
                                         .executes(ctx -> AbilityExpCommands.info(ctx, EntityArgument.getPlayer(ctx, "target")))))
                 )
                 .then(ProfileCommands.register())
+                .then(VectorCompatibilityCommands.register())
         );
+    }
+
+    private static final class VectorCompatibilityCommands {
+        private static final String PROFILE_TEMPLATE = """
+                {"damage_type":["thirdparty:beam"],"direct_entity":[],"shape":"hitscan","direction":"source_position","range":96.0,"radius":0.25,"piercing":false,"continuous":false,"safe_motion_redirect":false,"visual":"energy","block_policy":"clip_no_break","priority":0}
+                """.strip();
+
+        static LiteralArgumentBuilder<CommandSourceStack> register() {
+            return Commands.literal("vectorcompat")
+                    .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                    .then(Commands.literal("inspect")
+                            .executes(VectorCompatibilityCommands::inspect))
+                    .then(Commands.literal("mode")
+                            .executes(VectorCompatibilityCommands::showMode)
+                            .then(Commands.argument("value", StringArgumentType.word())
+                                    .suggests((_, builder) -> SharedSuggestionProvider.suggest(
+                                            Arrays.stream(VectorCompatibilityMode.values())
+                                                    .map(value -> value.name().toLowerCase(Locale.ROOT)),
+                                            builder
+                                    ))
+                                    .executes(VectorCompatibilityCommands::setMode)));
+        }
+
+        private static int inspect(CommandContext<CommandSourceStack> context) {
+            var recent = VectorCompatibilityDiagnostics.recent();
+            var builder = new StringBuilder()
+                    .append("[Vector Compat] mode=")
+                    .append(VectorCompatProfileRegistry.mode())
+                    .append(", profiles=")
+                    .append(VectorCompatProfileRegistry.profiles().size())
+                    .append('\n');
+            if (recent.isEmpty()) {
+                builder.append("No external linear damage has been inspected yet.\n");
+            } else {
+                for (var entry : recent.stream().skip(Math.max(0, recent.size() - 8)).toList()) {
+                    builder.append(entry.damageType())
+                            .append(" direct=").append(entry.directEntityType())
+                            .append(" direction=").append(String.format(
+                                    Locale.ROOT,
+                                    "(%.3f, %.3f, %.3f)",
+                                    entry.direction().x,
+                                    entry.direction().y,
+                                    entry.direction().z
+                            ))
+                            .append(" confidence=").append(entry.confidence())
+                            .append(" tier=").append(entry.tier())
+                            .append(" outcome=").append(entry.outcome())
+                            .append('\n');
+                }
+            }
+            builder.append("Profile template: ").append(PROFILE_TEMPLATE);
+            context.getSource().sendSuccess(() -> Component.literal(builder.toString()), false);
+            return recent.size();
+        }
+
+        private static int showMode(CommandContext<CommandSourceStack> context) {
+            context.getSource().sendSuccess(
+                    () -> Component.literal("Vector compatibility mode: " + VectorCompatProfileRegistry.mode()),
+                    false
+            );
+            return 1;
+        }
+
+        private static int setMode(CommandContext<CommandSourceStack> context) {
+            var value = StringArgumentType.getString(context, "value");
+            try {
+                var mode = VectorCompatibilityMode.valueOf(value.toUpperCase(Locale.ROOT));
+                VectorCompatProfileRegistry.setMode(mode);
+                context.getSource().sendSuccess(
+                        () -> Component.literal("Vector compatibility mode set to " + mode),
+                        true
+                );
+                return 1;
+            } catch (IllegalArgumentException exception) {
+                context.getSource().sendFailure(Component.literal("Unknown vector compatibility mode: " + value));
+                return 0;
+            }
+        }
     }
 
     private static int toggleDevMode(CommandContext<CommandSourceStack> context) {

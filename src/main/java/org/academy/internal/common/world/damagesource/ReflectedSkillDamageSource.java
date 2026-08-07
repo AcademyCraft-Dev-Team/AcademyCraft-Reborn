@@ -6,12 +6,14 @@ import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.UUID;
 
-public final class ReflectedSkillDamageSource extends SkillDamageSource {
+public final class ReflectedSkillDamageSource extends SkillDamageSource
+        implements VectorRedirectedDamageSourceInfo {
     private final int reflectionDepth;
     @Nullable
     private final UUID originalAttackerId;
@@ -60,8 +62,18 @@ public final class ReflectedSkillDamageSource extends SkillDamageSource {
         return reflectionDepth;
     }
 
+    @Override
+    public int redirectDepth() {
+        return reflectionDepth;
+    }
+
     public @Nullable UUID originalAttackerId() {
         return originalAttackerId;
+    }
+
+    @Override
+    public VectorRedirectKind redirectKind() {
+        return VectorRedirectKind.REFLECTION;
     }
 
     public ServerPlayer reflector() {
@@ -76,7 +88,6 @@ public final class ReflectedSkillDamageSource extends SkillDamageSource {
     }
 
     public static boolean isReflected(DamageSource source) {
-        return source instanceof ReflectedSkillDamageSource reflected
-                && reflected.reflectionDepth() > 0;
+        return VectorRedirectedDamageSourceInfo.isRedirected(source);
     }
 }

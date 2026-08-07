@@ -9,7 +9,8 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,8 +24,7 @@ public abstract class MixinProjectile {
     private void academy$reflectNearProtectedPlayer(CallbackInfo ci) {
         var projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide()
-                || projectile.getData(AttachmentTypes
-                .VECTOR_REFLECTED_PROJECTILE.get())) return;
+                || VectorProjectileRedirects.isRedirected(projectile)) return;
         var velocity = projectile.getDeltaMovement();
         var path = projectile.getBoundingBox()
                 .minmax(projectile.getBoundingBox().move(velocity))
@@ -33,12 +33,12 @@ public abstract class MixinProjectile {
         var closest = projectile.level().getEntitiesOfClass(Player.class, path, candidate ->
                         candidate instanceof ServerPlayer player
                                 && candidate != owner
-                                && VectorReflection.Server.shouldReflectProjectileFor(player, projectile))
+                                && VectorProjectileInterceptionService.canIntercept(player, projectile))
                 .stream()
                 .min(Comparator.comparingDouble(projectile::distanceToSqr))
                 .orElse(null);
         if (closest instanceof ServerPlayer player) {
-            VectorReflection.Server.reflectProjectile(player, projectile);
+            VectorProjectileInterceptionService.intercept(player, projectile);
         }
     }
 
@@ -47,7 +47,7 @@ public abstract class MixinProjectile {
         var projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide() || !(result instanceof EntityHitResult entityHit)) return;
         if (entityHit.getEntity() instanceof ServerPlayer player
-                && VectorReflection.Server.reflectProjectile(player, projectile)) {
+                && VectorProjectileInterceptionService.intercept(player, projectile)) {
             ci.cancel();
         }
     }

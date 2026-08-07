@@ -18,7 +18,11 @@ class ResolvedLinearAttackTest {
         assertEquals(point, attack.original());
         assertEquals(point, attack.outbound());
         assertFalse(attack.isReflected());
+        assertFalse(attack.isRedirected());
+        assertFalse(attack.isReflection());
+        assertFalse(attack.isRefraction());
         assertTrue(attack.returnSegment().isEmpty());
+        assertTrue(attack.redirectedSegment().isEmpty());
         assertTrue(attack.reflectionCandidate().isEmpty());
         assertEquals(1.0, attack.reflectionProgress(), 1.0E-9);
         assertEquals(point.end(), attack.mirrorPoint());

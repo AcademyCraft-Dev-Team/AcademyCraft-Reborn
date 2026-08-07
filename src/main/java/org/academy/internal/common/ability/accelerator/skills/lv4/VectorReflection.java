@@ -42,11 +42,16 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
-import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalAttackClassifier;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
@@ -84,6 +89,7 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initClient() {
+        VectorRedirectEffectPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -180,6 +186,9 @@ public class VectorReflection extends Skill {
             if (ReflectedSkillDamageSource.isReflected(damageSource)) return false;
             if (damageSource instanceof SkillDamageSource skillSource
                     && skillSource.getSkill() == Skills.VECTOR_REFLECTION.get()) return false;
+            if (!VectorExternalAttackClassifier.canUseLegacyDamageFallback(serverPlayer, damageSource)) {
+                return false;
+            }
             return true;
         }
 
@@ -282,23 +291,32 @@ public class VectorReflection extends Skill {
         }
 
         public static boolean shouldReflectProjectileFor(ServerPlayer player, Projectile projectile) {
-            if (!isActive(player) || projectile == null || projectile.isRemoved()) return false;
-            if (projectile.getData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get())) return false;
-            var owner = projectile.getOwner();
-            if (owner == player || owner != null && owner.getUUID().equals(player.getUUID())) return false;
+            if (!isActive(player) || !canRedirectProjectileGeometry(player, projectile)) return false;
             var velocity = projectile.getDeltaMovement();
-            if (!isFiniteVector(velocity) || velocity.lengthSqr() < 1.0E-8) return false;
             var toPlayer = player.getBoundingBox().getCenter().subtract(projectile.position());
             return toPlayer.lengthSqr() <= 1.0E-8 || velocity.dot(toPlayer) > 0.0;
         }
 
+        private static boolean canRedirectProjectileGeometry(ServerPlayer player, Projectile projectile) {
+            if (player == null || projectile == null || projectile.isRemoved()) return false;
+            if (VectorProjectileRedirects.isRedirected(projectile)) return false;
+            var owner = projectile.getOwner();
+            if (owner == player || owner != null && owner.getUUID().equals(player.getUUID())) return false;
+            var velocity = projectile.getDeltaMovement();
+            return isFiniteVector(velocity) && velocity.lengthSqr() >= 1.0E-8;
+        }
+
         public static boolean reflectProjectile(ServerPlayer player, Projectile projectile) {
-            return reflectProjectile(player, projectile, true);
+            return reflectProjectile(player, projectile, true, true);
         }
 
         private static boolean reflectProjectile(ServerPlayer player, Projectile projectile,
-                                                 boolean spawnEffect) {
-            if (!shouldReflectProjectileFor(player, projectile)) return false;
+                                                 boolean spawnEffect, boolean chargeCp) {
+            if (chargeCp
+                    ? !shouldReflectProjectileFor(player, projectile)
+                    : !canRedirectProjectileGeometry(player, projectile)) {
+                return false;
+            }
             var velocity = projectile.getDeltaMovement();
             var speed = velocity.length();
             if (!Double.isFinite(speed)) return false;
@@ -306,18 +324,29 @@ public class VectorReflection extends Skill {
             var reflected = velocity.normalize().scale(-speed * 1.2);
             if (!isFiniteVector(reflected) || reflected.lengthSqr() < 1.0E-8) return false;
 
-            projectile.setData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get(), true);
-            projectile.setOwner(player);
-            projectile.setDeltaMovement(reflected);
-            var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
-            projectile.setPos(player.getBoundingBox().getCenter().add(reflected.normalize().scale(pushDistance)));
-            projectile.hurtMarked = true;
-            if (spawnEffect) {
-                spawnGlowCircle(player, projectile.getBoundingBox().getCenter()
-                        .subtract(player.getBoundingBox().getCenter()));
+            var redirect = (Runnable) () -> {
+                VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFLECTION);
+                projectile.setOwner(player);
+                projectile.setDeltaMovement(reflected);
+                var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
+                projectile.setPos(player.getBoundingBox().getCenter().add(reflected.normalize().scale(pushDistance)));
+                projectile.hurtMarked = true;
+                if (spawnEffect) {
+                    spawnGlowCircle(player, projectile.getBoundingBox().getCenter()
+                            .subtract(player.getBoundingBox().getCenter()));
+                }
+                playReflectionSound(player);
+            };
+            if (!chargeCp) {
+                redirect.run();
+                return true;
             }
-            playReflectionSound(player);
-            return true;
+            var projectileCost = Math.max(1.0f, (float) speed);
+            return Skills.VECTOR_REFLECTION.get().executeActive(
+                    player,
+                    _ -> projectileCost,
+                    (_, _) -> redirect.run()
+            );
         }
 
         private static boolean isFiniteVector(Vec3 vector) {
@@ -391,6 +420,8 @@ public class VectorReflection extends Skill {
         public static void clearProtection(ServerPlayer player) {
             if (player == null) return;
             VectorReflectionRuntime.deactivate(player);
+            VectorContinuousInterceptionLeases.clear(player);
+            VectorInterceptionTickets.clear(player);
             PROTECTED_HEALTH.remove(player.getUUID());
             LAST_SOUND_TICK.remove(player.getUUID());
         }
@@ -422,8 +453,8 @@ public class VectorReflection extends Skill {
             spawnGlowCircle(player, direction, pos);
 
             if (directEntity instanceof Projectile projectile
-                    && !projectile.getData(AttachmentTypes.VECTOR_REFLECTED_PROJECTILE.get())) {
-                reflectProjectile(player, projectile, false);
+                    && !VectorProjectileRedirects.isRedirected(projectile)) {
+                reflectProjectile(player, projectile, false, false);
             }
 
             if (causingEntity instanceof LivingEntity attacker
