@@ -70,7 +70,7 @@ public final class AreaTeleportSelect extends Skill {
         NeoForge.EVENT_BUS.register(Client.class);
         InputSystem.addKeyBinding(Client.KEY_NAME_MARK, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_MARK,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_U, InputConstants.PRESS, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.PRESS, 0)
         ), ctx -> Client.mark());
     }
 

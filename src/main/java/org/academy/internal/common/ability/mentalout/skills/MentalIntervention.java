@@ -58,7 +58,7 @@ public final class MentalIntervention extends Skill {
                 Client.KEY_NAME_USE,
                 InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_C,
+                        InputConstants.KEY_R,
                         InputConstants.PRESS,
                         InputConstants.MOD_ALT
                 )

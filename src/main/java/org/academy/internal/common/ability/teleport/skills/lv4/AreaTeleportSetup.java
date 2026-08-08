@@ -48,7 +48,7 @@ public final class AreaTeleportSetup extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_MARK, Client.CONFIG.getKeyBinding(Client.KEY_NAME_MARK,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_U,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
                         InputConstants.PRESS, InputConstants.MOD_ALT)), ctx -> Client.mark());
     }
 

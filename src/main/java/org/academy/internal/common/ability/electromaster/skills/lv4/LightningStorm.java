@@ -65,7 +65,8 @@ public class LightningStorm extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_L, InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT))
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                                InputConstants.PRESS, InputConstants.MOD_ALT))
                 , ctx -> Client.onUse());
     }
 

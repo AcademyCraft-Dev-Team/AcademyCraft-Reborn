@@ -82,9 +82,9 @@ public final class ElectromagneticShield extends Skill {
                         Client.KEY_NAME_TOGGLE,
                         InputSystem.combo(
                                 InputSystem.InputType.KEYBOARD,
-                                InputConstants.KEY_K,
+                                InputConstants.KEY_G,
                                 InputConstants.RELEASE,
-                                InputConstants.MOD_ALT
+                                InputConstants.MOD_SHIFT
                         )
                 ),
                 _ -> Client.toggle()

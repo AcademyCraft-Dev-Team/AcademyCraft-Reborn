@@ -70,7 +70,7 @@ public final class AreaTeleportStart extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_RUN, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RUN,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_U,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
                         InputConstants.PRESS, InputConstants.MOD_SHIFT)), ctx -> Client.run());
     }
 
