@@ -163,6 +163,37 @@ public final class VfxPipelines {
     public static final RenderPipeline TEX_QUAD_INSTANCED_ADDITIVE = quadInstanced("pipeline/vfx_tex_quad_instanced_additive", BlendFunction.ADDITIVE)
             .build();
 
+    private static final VertexFormat SKY_STRIKE_QUAD_INSTANCE_FORMAT = VertexFormat.builder(1)
+            .addAttribute("Corner0Pos", GpuFormat.RGB32_FLOAT)
+            .addAttribute("Corner0Uv", GpuFormat.RG32_FLOAT)
+            .addAttribute("Corner0Color", GpuFormat.RGBA32_FLOAT)
+            .addAttribute("Corner1Pos", GpuFormat.RGB32_FLOAT)
+            .addAttribute("Corner1Uv", GpuFormat.RG32_FLOAT)
+            .addAttribute("Corner1Color", GpuFormat.RGBA32_FLOAT)
+            .addAttribute("Corner2Pos", GpuFormat.RGB32_FLOAT)
+            .addAttribute("Corner2Uv", GpuFormat.RG32_FLOAT)
+            .addAttribute("Corner2Color", GpuFormat.RGBA32_FLOAT)
+            .addAttribute("Corner3Pos", GpuFormat.RGB32_FLOAT)
+            .addAttribute("Corner3Uv", GpuFormat.RG32_FLOAT)
+            .addAttribute("Corner3Color", GpuFormat.RGBA32_FLOAT)
+            .build();
+    public static final RenderPipeline SKY_STRIKE_QUAD_TRANSLUCENT = skyStrikeQuad(
+            "pipeline/vfx_sky_strike_quad_translucent", BlendFunction.TRANSLUCENT).build();
+    public static final RenderPipeline SKY_STRIKE_QUAD_ADDITIVE = skyStrikeQuad(
+            "pipeline/vfx_sky_strike_quad_additive", BlendFunction.ADDITIVE).build();
+    public static final RenderPipeline SCREEN_FLASH = builder()
+            .withLocation(academy("pipeline/vfx_screen_flash"))
+            .withVertexShader(R.shaders.core.vfx_screen_flash)
+            .withFragmentShader(R.shaders.core.vfx_screen_flash)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withPrimitiveTopology(PrimitiveTopology.QUADS)
+            .withVertexBinding(0, DefaultVertexFormat.POSITION)
+            .withVertexBinding(1, VertexFormat.builder(1)
+                    .addAttribute("InstanceColor", GpuFormat.RGBA32_FLOAT)
+                    .build())
+            .build();
+
     private VfxPipelines() {
     }
 
@@ -180,6 +211,22 @@ public final class VfxPipelines {
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION)
                 .withVertexBinding(1, QUAD_INSTANCE_FORMAT);
+    }
+
+    private static RenderPipeline.Builder skyStrikeQuad(String location, BlendFunction blend) {
+        return builder()
+                .withLocation(academy(location))
+                .withVertexShader(R.shaders.core.vfx_sky_strike_quad)
+                .withFragmentShader(R.shaders.core.vfx_sky_strike_quad)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(blend))
+                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION)
+                .withVertexBinding(1, SKY_STRIKE_QUAD_INSTANCE_FORMAT);
     }
 
     @SubscribeEvent

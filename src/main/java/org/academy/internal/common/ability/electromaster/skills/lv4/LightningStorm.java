@@ -21,6 +21,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
@@ -31,6 +32,7 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
@@ -41,6 +43,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
 
 public class LightningStorm extends Skill {
     private static final int STRIKE_COUNT = 21;
@@ -64,6 +68,7 @@ public class LightningStorm extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.registerSettings();
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                                 InputConstants.PRESS, InputConstants.MOD_ALT))
@@ -78,6 +83,46 @@ public class LightningStorm extends Skill {
     public static final class Client {
         public static final String KEY_NAME_USE = SkillNames.LIGHTNING_STORM + "_use";
         public static Config CONFIG = new Config();
+        private static boolean settingsRegistered;
+
+        private static void registerSettings() {
+            if (settingsRegistered) return;
+            settingsRegistered = true;
+            SkillSettingsRegistry.register(
+                    Skills.LIGHTNING_STORM.get(),
+                    new SkillSettingsRegistry.Module(
+                            "sky_strike_feedback",
+                            "app.academy.skill_settings.advanced.sky_strike_feedback",
+                            List.of(
+                                    new SkillSettingsRegistry.FloatRange(
+                                            "flash_intensity",
+                                            "app.academy.skill_settings.advanced.sky_strike_flash",
+                                            0.0f,
+                                            1.0f,
+                                            0.05f,
+                                            CONFIG::getFlashIntensity,
+                                            CONFIG::setFlashIntensity,
+                                            Client::persistVisualSettings
+                                    ),
+                                    new SkillSettingsRegistry.FloatRange(
+                                            "shake_intensity",
+                                            "app.academy.skill_settings.advanced.sky_strike_shake",
+                                            0.0f,
+                                            1.0f,
+                                            0.05f,
+                                            CONFIG::getShakeIntensity,
+                                            CONFIG::setShakeIntensity,
+                                            Client::persistVisualSettings
+                                    )
+                            )
+                    )
+            );
+        }
+
+        private static void persistVisualSettings() {
+            AcademyCraftClient.Config.INSTANCE.setConfig(Skills.LIGHTNING_STORM.get().getKey(), CONFIG);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
 
         public static void onUse() {
             var mc = Minecraft.getInstance();
@@ -87,6 +132,29 @@ public class LightningStorm extends Skill {
         }
 
         public static class Config extends KeyBindingConfig {
+            private float flashIntensity = 1.0f;
+            private float shakeIntensity = 1.0f;
+
+            public float getFlashIntensity() {
+                return sanitizeIntensity(flashIntensity);
+            }
+
+            public void setFlashIntensity(float flashIntensity) {
+                this.flashIntensity = sanitizeIntensity(flashIntensity);
+            }
+
+            public float getShakeIntensity() {
+                return sanitizeIntensity(shakeIntensity);
+            }
+
+            public void setShakeIntensity(float shakeIntensity) {
+                this.shakeIntensity = sanitizeIntensity(shakeIntensity);
+            }
+
+            private static float sanitizeIntensity(float value) {
+                return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 1.0f;
+            }
+
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 
@@ -153,7 +221,7 @@ public class LightningStorm extends Skill {
                 var strikePos = new BlockPos((int) strikeX, (int) center.y, (int) strikeZ);
                 var topPos = serverLevel.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, strikePos);
                 var impact = Vec3.atBottomCenterOf(topPos);
-                ElectromasterArcEffects.spawnSkyStrike(serverLevel, impact);
+                ElectromasterArcEffects.spawnSkyStrike(serverLevel, impact, SkyStrikeProfile.LIGHTNING_STORM);
 
                 var box = new AABB(topPos).inflate(3);
                 var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());

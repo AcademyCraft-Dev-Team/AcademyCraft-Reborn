@@ -78,6 +78,7 @@ import org.academy.internal.common.ability.mentalout.skills.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.electromaster.SkyStrikeVisualPacket;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
@@ -568,6 +569,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LightningStorm.ActivatePacket>>
             LIGHTNING_STORM_ACTIVATE = PACKET_TYPES.register("lightning_storm_activate",
             () -> new PacketType<>(LightningStorm.ActivatePacket.class, LightningStorm.ActivatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SkyStrikeVisualPacket>>
+            SKY_STRIKE_VISUAL = PACKET_TYPES.register("sky_strike_visual",
+            () -> new PacketType<>(SkyStrikeVisualPacket.class, SkyStrikeVisualPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Disarm.UsePacket>>
             DISARM_USE = PACKET_TYPES.register("disarm_use",
             () -> new PacketType<>(Disarm.UsePacket.class, Disarm.UsePacket.CODEC));
