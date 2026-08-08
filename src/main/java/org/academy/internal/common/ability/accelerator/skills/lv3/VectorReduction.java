@@ -252,11 +252,12 @@ public class VectorReduction extends Skill {
             var finalDirection = direction;
             var effectKey = VectorAttackFingerprint.computeLeaseKey(
                     player.getId(), source, incoming);
-            var executed = Skills.VECTOR_REDUCTION.get().executeActive(
+            var executed = Skills.VECTOR_REDUCTION.get().executeContinuous(
                     player,
                     _ -> Math.max(1.0f, incomingDamage),
                     (_, _) -> VectorCompatibilityEffectLimiter.emit(
-                            player, effectKey, finalDirection, mirrorPoint)
+                            player, effectKey, finalDirection, mirrorPoint),
+                    true
             );
             if (!executed) return false;
             player.invulnerableTime = 0;
@@ -314,7 +315,7 @@ public class VectorReduction extends Skill {
                 return false;
             }
             var skill = Skills.VECTOR_REDUCTION.get();
-            return skill.executeActive(
+            return skill.executeContinuous(
                     player,
                     _ -> Math.max(1.0f, incomingDamage),
                     (_, _) -> {
@@ -323,7 +324,8 @@ public class VectorReduction extends Skill {
                             VectorReflection.Server.spawnGlowCircle(player, direction, mirrorPoint);
                             VectorReflection.Server.playReflectionSound(player);
                         }
-                    }
+                    },
+                    true
             );
         }
 
@@ -359,7 +361,7 @@ public class VectorReduction extends Skill {
             if (normalizeOrZero(refracted) == Vec3.ZERO) return false;
 
             var skill = Skills.VECTOR_REDUCTION.get();
-            return skill.executeActive(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
+            return skill.executeContinuous(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
                 VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFRACTION);
                 projectile.setOwner(player);
                 var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
@@ -368,7 +370,7 @@ public class VectorReduction extends Skill {
                 VectorProjectileStateAdapter.applyRedirect(projectile, refracted);
                 VectorReflection.Server.spawnGlowCircle(player, refracted, projectile.position());
                 VectorReflection.Server.playReflectionSound(player);
-            });
+            }, true);
         }
     }
 

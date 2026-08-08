@@ -246,6 +246,11 @@ public final class MentalIntrusionManager {
                     || !session.confirmed && now >= session.readyDeadline
                     || now >= session.maximumEnd) {
                 stop(player.getUUID(), true);
+            } else {
+                Skills.MENTAL_INTRUSION.get().reportActivity(player, session.confirmed);
+                if (session.distortion != null && !session.distortion.isClosed()) {
+                    Skills.SENSORY_DISTORTION.get().reportActivity(player, true);
+                }
             }
         }
         PLAYER_COOLDOWNS.entrySet().removeIf(entry -> entry.getValue() <= now);

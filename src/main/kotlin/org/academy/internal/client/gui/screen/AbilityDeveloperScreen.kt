@@ -44,6 +44,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private lateinit var consoleOutputs: LinearLayoutWidget
     private lateinit var consoleScrollPanel: ScrollPanelWidget
     private var activeCover: FrameLayoutWidget? = null
+    private val skillLineBindings = mutableListOf<SkillLineBinding>()
 
     private val maxDuSkills = 10f
 
@@ -168,7 +169,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private fun fillAbilityPanel(panel: FrameLayoutWidget) {
         val category = AbilitySystemClient.getCategory()
         val level = AbilitySystemClient.getLevel()
-        val levelProgress = AbilitySystemClient.getAbilityExp()
+        val levelProgress = AbilitySystemClient.getAbilityProgress()
 
         val logoAbility = FrameLayoutWidget()
         logoAbility.layoutParams = WidgetContainer.LayoutParams()
@@ -523,19 +524,26 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val category = AbilitySystemClient.getCategory()
         val skillInfos = AbilitySystemClient.getSkillInfosForCategory(category)
 
-        val bg = ParallaxImageWidget(R.textures.gui.developer.skill_panel_back)
+        val bg = object : ParallaxImageWidget(R.textures.gui.developer.skill_panel_back) {
+            override fun render(context: RenderContext) {
+                setParallaxEnabled(!AbilityDeveloperLayoutEditor.isDebugMode())
+                super.render(context)
+            }
+        }
+        bg.setImageToViewRatio(0.9f, 0.9f)
         bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         bg.setSampler(FilterMode.LINEAR, true)
-        bg.setImageToViewRatio(0.9f, 0.9f)
         area.addChild("area_bg", bg)
 
+        skillLineBindings.clear()
         val lineMap = mutableMapOf<String, Widget>()
         for (info in skillInfos) {
             for (dep in info.dependencies) {
-                val line = createSkillLine(dep, info)
+                val line = createSkillLine(category, dep, info)
                 val key = "line_${info.skill.getKeyString()}_${dep.skill.getKeyString()}"
                 area.addChild(key, line)
                 lineMap[key] = line
+                skillLineBindings.add(SkillLineBinding(line, category, dep, info))
             }
         }
 
@@ -543,12 +551,30 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val nodeList = mutableListOf<Pair<AbilitySystemClient.SkillInfo, Widget>>()
         for (idx in skillInfos.indices) {
             val info = skillInfos[idx]
-            val node = createSkillNode(info)
+            val node = createSkillNode(category, info)
             val key = "node_${info.skill.getKeyString()}"
             area.addChild(key, node)
             nodeMap[key] = node
             nodeList.add(info to node)
         }
+
+        val debugLabel = object : LabelWidget("") {
+            override fun render(context: RenderContext) {
+                text = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
+                    "LAYOUT: ${category.getKey()}  (drag icons; snap 0.5px)"
+                } else {
+                    ""
+                }
+                super.render(context)
+            }
+        }
+        debugLabel.baseFontSize = 6f
+        debugLabel.isEnabled = false
+        debugLabel.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.TOP_LEFT)
+            .margin(2f, 1f, 0f, 0f)
+            .size(250f, 8f)
+        area.addChild("layout_debug_status", debugLabel)
 
         val nodeStagger = 50L
         val nodeFadeDuration = 400L
@@ -602,22 +628,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         }
     }
 
-    private fun createSkillLine(child: AbilitySystemClient.SkillInfo, dep: AbilitySystemClient.SkillInfo): Widget {
-        val childCx = child.x + 8f
-        val childCy = child.y + 8f
-        val depCx = dep.x + 8f
-        val depCy = dep.y + 8f
-
-        val dx = depCx - childCx
-        val dy = depCy - childCy
-        val dist = sqrt(dx * dx + dy * dy)
-        val angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
-
-        val ux = dx / dist * 12.2f
-        val uy = dy / dist * 12.2f
-        val shortDist = (dist - 24.4f).coerceAtLeast(0f)
-        if (shortDist <= 0f) return EmptyWidget()
-
+    private fun createSkillLine(
+        category: AbilityCategory,
+        child: AbilitySystemClient.SkillInfo,
+        dep: AbilitySystemClient.SkillInfo
+    ): Widget {
         val isChildLearned = AbilitySystemClient.isSkillLearned(child.skill)
         val isDepLearned = AbilitySystemClient.isSkillLearned(dep.skill)
         val mAlpha = when {
@@ -629,19 +644,21 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
         val line = object : ImageWidget(lineTex) {
             override fun render(context: RenderContext) {
-                val mc = Minecraft.getInstance()
-                val mh = mc.mouseHandler
-                val w = mc.window
-                val width = w.width
-                val height = w.height
-                val mouseX = mh.getScaledXPos(w)
-                val mouseY = mh.getScaledYPos(w)
-                val skillTreeMouseX = (mouseX / width).toFloat().coerceIn(0f, 1f)
-                val skillTreeMouseY = (mouseY / height).toFloat().coerceIn(0f, 1f)
-                val dx = skillTreeMouseX - 0.5f
-                val dy = skillTreeMouseY - 0.5f
-                translationX = -(dx * maxDuSkills)
-                translationY = -(dy * maxDuSkills)
+                updateSkillLineGeometry(this, category, child, dep)
+                if (AbilityDeveloperLayoutEditor.isDebugMode()) {
+                    translationX = 0f
+                    translationY = 0f
+                } else {
+                    val mc = Minecraft.getInstance()
+                    val mh = mc.mouseHandler
+                    val w = mc.window
+                    val mouseX = mh.getScaledXPos(w)
+                    val mouseY = mh.getScaledYPos(w)
+                    val skillTreeMouseX = (mouseX / w.width).toFloat().coerceIn(0f, 1f)
+                    val skillTreeMouseY = (mouseY / w.height).toFloat().coerceIn(0f, 1f)
+                    translationX = -((skillTreeMouseX - 0.5f) * maxDuSkills)
+                    translationY = -((skillTreeMouseY - 0.5f) * maxDuSkills)
+                }
                 super.render(context)
             }
 
@@ -652,16 +669,46 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         }
         line.layoutParams = WidgetContainer.LayoutParams()
             .gravity(Gravity.TOP_LEFT)
-            .size(shortDist, 5.5f)
-            .margin(childCx + ux, childCy + uy - 2.25f, 0f, 0f)
+            .size(0f, 5.5f)
         line.originX = 0f
         line.originY = 0.5f
-        line.rotation = angle
         line.alpha = alpha
+        updateSkillLineGeometry(line, category, child, dep)
         return line
     }
 
-    private fun createSkillNode(info: AbilitySystemClient.SkillInfo): ButtonWidget {
+    private fun updateSkillLineGeometry(
+        line: Widget,
+        category: AbilityCategory,
+        child: AbilitySystemClient.SkillInfo,
+        dep: AbilitySystemClient.SkillInfo
+    ) {
+        val childPos = AbilityDeveloperLayoutEditor.getPosition(category, child)
+        val depPos = AbilityDeveloperLayoutEditor.getPosition(category, dep)
+        val childCx = childPos.x() + 8f
+        val childCy = childPos.y() + 8f
+        val depCx = depPos.x() + 8f
+        val depCy = depPos.y() + 8f
+        val dx = depCx - childCx
+        val dy = depCy - childCy
+        val dist = sqrt(dx * dx + dy * dy)
+        val shortDist = (dist - 24.4f).coerceAtLeast(0f)
+        val ux = if (dist > 0f) dx / dist * 12.2f else 0f
+        val uy = if (dist > 0f) dy / dist * 12.2f else 0f
+        val lp = line.layoutParams
+        lp.marginLeft = childCx + ux
+        lp.marginTop = childCy + uy - 2.25f
+        line.width = shortDist
+        line.rotation = if (dist > 0f) Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() else 0f
+    }
+
+    private fun updateSkillLines() {
+        for (binding in skillLineBindings) {
+            updateSkillLineGeometry(binding.widget, binding.category, binding.child, binding.dependency)
+        }
+    }
+
+    private fun createSkillNode(category: AbilityCategory, info: AbilitySystemClient.SkillInfo): ButtonWidget {
         val isLearned = AbilitySystemClient.isSkillLearned(info.skill)
         val hasDepsLearned = info.dependencies.isEmpty() || info.dependencies.all {
             AbilitySystemClient.isSkillLearned(it.skill)
@@ -677,20 +724,41 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         var maskTexView: GpuTextureView? = null
 
         val node = object : ButtonWidget() {
+            private var isLayoutDragging = false
+            private var dragOffsetX = 0f
+            private var dragOffsetY = 0f
+
             override fun render(context: RenderContext) {
-                val mc = Minecraft.getInstance()
-                val mh = mc.mouseHandler
-                val w = mc.window
-                val width = w.width
-                val height = w.height
-                val mouseX = mh.getScaledXPos(w)
-                val mouseY = mh.getScaledYPos(w)
-                val skillTreeMouseX = (mouseX / width).toFloat().coerceIn(0f, 1f)
-                val skillTreeMouseY = (mouseY / height).toFloat().coerceIn(0f, 1f)
-                val dx = skillTreeMouseX - 0.5f
-                val dy = skillTreeMouseY - 0.5f
-                translationX = -(dx * maxDuSkills)
-                translationY = -(dy * maxDuSkills)
+                val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
+                if (layoutParams.marginLeft != position.x() || layoutParams.marginTop != position.y()) {
+                    layoutParams.marginLeft = position.x()
+                    layoutParams.marginTop = position.y()
+                    updateSkillLines()
+                    area.requestLayout()
+                }
+                tooltipText = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
+                    "${category.getKey()}\n${info.skill.getKeyString()}  (${position.x()}, ${position.y()})"
+                } else if (isLearned) {
+                    val proficiency = AbilitySystemClient.getSkillProficiency(info.skill)
+                    "${info.skill.translatedName}\n${L10n["academy.ability_developer.skill_exp"]}" +
+                        String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
+                } else {
+                    info.skill.translatedName
+                }
+                if (AbilityDeveloperLayoutEditor.isDebugMode()) {
+                    translationX = 0f
+                    translationY = 0f
+                } else {
+                    val mc = Minecraft.getInstance()
+                    val mh = mc.mouseHandler
+                    val w = mc.window
+                    val mouseX = mh.getScaledXPos(w)
+                    val mouseY = mh.getScaledYPos(w)
+                    val skillTreeMouseX = (mouseX / w.width).toFloat().coerceIn(0f, 1f)
+                    val skillTreeMouseY = (mouseY / w.height).toFloat().coerceIn(0f, 1f)
+                    translationX = -((skillTreeMouseX - 0.5f) * maxDuSkills)
+                    translationY = -((skillTreeMouseY - 0.5f) * maxDuSkills)
+                }
                 super.render(context)
             }
 
@@ -698,10 +766,52 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 super.onMouseMoved(event)
                 invalidate()
             }
+
+            override fun onMousePressed(event: MouseEvent) {
+                if (!AbilityDeveloperLayoutEditor.isDebugMode()) {
+                    super.onMousePressed(event)
+                    return
+                }
+                if (event.button == 0 && isMouseOver(event.x, event.y)) {
+                    val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
+                    dragOffsetX = event.x.toFloat() - area.getAbsoluteX() - position.x()
+                    dragOffsetY = event.y.toFloat() - area.getAbsoluteY() - position.y()
+                    isLayoutDragging = true
+                    event.consume()
+                }
+            }
+
+            override fun onMouseDragged(event: MouseEvent) {
+                if (!isLayoutDragging || event.button != 0) return
+                val maxX = (area.width - 16f).coerceAtLeast(0f)
+                val maxY = (area.height - 16f).coerceAtLeast(0f)
+                val x = AbilityDeveloperLayoutEditor.snap(
+                    event.x.toFloat() - area.getAbsoluteX() - dragOffsetX
+                ).coerceIn(0f, maxX)
+                val y = AbilityDeveloperLayoutEditor.snap(
+                    event.y.toFloat() - area.getAbsoluteY() - dragOffsetY
+                ).coerceIn(0f, maxY)
+                AbilityDeveloperLayoutEditor.setPosition(category, info, x, y)
+                layoutParams.marginLeft = x
+                layoutParams.marginTop = y
+                updateSkillLines()
+                area.requestLayout()
+                event.consume()
+            }
+
+            override fun onMouseReleased(event: MouseEvent) {
+                if (AbilityDeveloperLayoutEditor.isDebugMode() && isLayoutDragging) {
+                    isLayoutDragging = false
+                    event.consume()
+                    return
+                }
+                super.onMouseReleased(event)
+            }
         }
+        val initialPosition = AbilityDeveloperLayoutEditor.getPosition(category, info)
         node.layoutParams = WidgetContainer.LayoutParams()
             .gravity(Gravity.TOP_LEFT)
-            .margin(info.x, info.y, 0f, 0f)
+            .margin(initialPosition.x(), initialPosition.y(), 0f, 0f)
             .size(16f, 16f)
         node.alpha = mAlpha
         run {
@@ -711,7 +821,14 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 .size(23f, 23f)
             node.addChild("icon_bg", iconBg)
 
-            val outlineBg = ImageWidget(outlineTex)
+            val outlineBg = object : ImageWidget(outlineTex) {
+                override fun tick() {
+                    super.tick()
+                    val full = isLearned && AbilitySystemClient.getSkillProficiencyProgress(info.skill) >= 1f
+                    setBrightness(if (full) 1.4f else 0.2f)
+                    alpha = if (full) 1f else mAlpha * 0.6f
+                }
+            }
             outlineBg.layoutParams = WidgetContainer.LayoutParams()
                 .gravity(Gravity.CENTER)
                 .size(31f, 31f)
@@ -728,8 +845,8 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             val outline = object : AbstractWidget() {
                 override fun renderInternal(context: RenderContext) {
                     if (!isLearned) return
-                    val skillExp = AbilitySystemClient.getSkillExp(info.skill)
-                    if (skillExp <= 0f) return
+                    val skillProgress = AbilitySystemClient.getSkillProficiencyProgress(info.skill)
+                    if (skillProgress <= 0f) return
 
                     val texManager = Minecraft.getInstance().textureManager
                     if (outlineTexView?.isClosed != false) {
@@ -756,7 +873,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                         context.pose().translate(lp.paddingLeft, lp.paddingTop)
                         val command = SkillProgressDrawCommand(
                             o, m, sampler,
-                            width, height, skillExp * finalAlpha, finalAlpha
+                            width, height, skillProgress, finalAlpha
                         )
                         context.submit(command)
                     }
@@ -792,6 +909,13 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
         return node
     }
+
+    private data class SkillLineBinding(
+        val widget: Widget,
+        val category: AbilityCategory,
+        val child: AbilitySystemClient.SkillInfo,
+        val dependency: AbilitySystemClient.SkillInfo
+    )
 
     private fun addCover(cover: FrameLayoutWidget) {
         activeCover?.let { root.removeChild("cover") }
@@ -848,21 +972,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     private fun rebuildSkillTree() {
         area.clearChildren()
-        val category = AbilitySystemClient.getCategory()
-        val skillInfos = AbilitySystemClient.getSkillInfosForCategory(category)
-        for (info in skillInfos) {
-            for (dep in info.dependencies) {
-                val line = createSkillLine(info, dep)
-                val key = "line_${info.skill.getKeyString()}_${dep.skill.getKeyString()}"
-                area.addChild(key, line)
-            }
-        }
-        for (idx in skillInfos.indices) {
-            val info = skillInfos[idx]
-            val node = createSkillNode(info)
-            val key = "node_${info.skill.getKeyString()}"
-            area.addChild(key, node)
-        }
+        fillSkillTreeArea(area)
     }
 
     private fun createDevButton(brightnessRef: AtomicReference<Float> = AtomicReference(0.6f)): ButtonWidget {
@@ -911,7 +1021,10 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 .setInterpolator(EasingFunctions.EASE_OUT_SINE)
         )
 
-        val iconProgressRef = AtomicReference(0f)
+        val proficiency = AbilitySystemClient.getSkillProficiency(skill)
+        val iconProgressRef = AtomicReference(
+            if (isLearned) AbilitySystemClient.getSkillProficiencyProgress(skill) else 0f
+        )
 
         val coverCenter = LinearLayoutWidget()
         coverCenter.layoutParams = WidgetContainer.LayoutParams()
@@ -997,9 +1110,8 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
                     val expLabel =
                         LabelWidget(
-                            L10n["academy.ability_developer.skill_exp"] + (AbilitySystemClient.getSkillExp(
-                                skill
-                            ) * 100).toInt() + "%"
+                            L10n["academy.ability_developer.skill_exp"] +
+                                String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
                         )
                     expLabel.baseFontSize = 8f
                     expLabel.setRed(0.63f)

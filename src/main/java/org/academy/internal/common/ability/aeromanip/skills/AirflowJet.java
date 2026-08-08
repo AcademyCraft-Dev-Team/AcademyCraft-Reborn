@@ -163,6 +163,7 @@ public final class AirflowJet extends Skill {
             var context = new Context(player);
             ACTIVE.put(player, context);
             AbilitySystemServer.registerContext(context);
+            skill.reportTrigger(player);
         }
 
         @SubscribePacket
@@ -207,6 +208,7 @@ public final class AirflowJet extends Skill {
                     return;
                 }
 
+                skill.reportActivity(player, true);
                 if (player.isShiftKeyDown()) {
                     AeromanipTargeting.scaleVelocity(player, 0.15);
                 } else {

@@ -389,6 +389,13 @@ public final class MentaloutControlContext extends ServerContext {
             unregister();
             return;
         }
+        Skills.MENTAL_INTERVENTION.get().reportActivity(player, !entries.isEmpty());
+        if (misidentificationTargetUuid != null
+                || entries.values().stream().anyMatch(entry -> entry.misidentification != null)) {
+            Skills.TARGET_MISIDENTIFICATION.get().reportActivity(player, true);
+        }
+        if (stuporEnabled) Skills.MENTAL_STUPOR.get().reportActivity(player, true);
+        if (impressionEnabled) Skills.IMPRESSION_MANIPULATION.get().reportActivity(player, true);
 
         var hasMisidentificationState = misidentificationTargetUuid != null
                 || entries.values().stream().anyMatch(entry -> entry.misidentification != null);

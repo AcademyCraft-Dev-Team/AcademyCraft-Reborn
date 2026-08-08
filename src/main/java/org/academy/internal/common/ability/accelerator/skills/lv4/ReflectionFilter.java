@@ -200,9 +200,7 @@ public final class ReflectionFilter extends Skill {
 
         public Data copy() {
             var copy = new Data();
-            copy.setExp(getExp());
-            copy.setMaxExp(getMaxExp());
-            copy.setLevel(getLevel());
+            copy.setProficiency(getProficiency());
             copy.setEnabled(isEnabled());
             copy.mode = mode;
             copy.whitelist = whitelist == null ? new ArrayList<>() : new ArrayList<>(whitelist);
@@ -273,9 +271,7 @@ public final class ReflectionFilter extends Skill {
         }
 
         private static void mergeProgress(Data target, SkillData source) {
-            target.setLevel(source.getLevel());
-            target.setMaxExp(source.getMaxExp());
-            target.setExp(source.getExp());
+            target.setProficiency(source.getProficiency());
             target.setEnabled(source.isEnabled());
         }
 

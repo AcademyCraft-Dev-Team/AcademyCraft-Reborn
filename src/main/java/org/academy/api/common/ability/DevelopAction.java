@@ -6,6 +6,14 @@ import org.academy.api.common.wireless.WirelessUser;
 public interface DevelopAction {
     int getTotalTicks();
 
+    default int getEnergyCost() {
+        return 0;
+    }
+
+    default boolean validate(ServerPlayer player, WirelessUser developer) {
+        return true;
+    }
+
     void onComplete(ServerPlayer player, WirelessUser developer);
 
     default String getDescription() {

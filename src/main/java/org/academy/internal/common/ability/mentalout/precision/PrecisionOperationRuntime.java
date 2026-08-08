@@ -190,6 +190,7 @@ public final class PrecisionOperationRuntime {
                 releaseController(entry.getKey(), player);
                 continue;
             }
+            Skills.PRECISION_OPERATION.get().reportActivity(player, true);
             var changed = false;
             for (var slot = 0; slot < entry.getValue().length; slot++) {
                 var context = entry.getValue()[slot];

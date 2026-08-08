@@ -292,6 +292,8 @@ public final class Railgun extends Skill {
                     end();
                     return;
                 }
+                var skill = Skills.RAILGUN.get();
+                skill.reportActivity(player, false);
 
                 player.setData(
                         AttachmentTypes.RAILGUN_DATA,
@@ -306,6 +308,7 @@ public final class Railgun extends Skill {
                         .add(0, 1.2, 0)
                         .add(lookDir.scale(0.5));
                 if (ticks > CHARGE_TIME) {
+                    skill.reportActivity(player, true);
 
                     var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
                     var length = RailgunRay.DEFAULT_LENGTH;
@@ -318,7 +321,7 @@ public final class Railgun extends Skill {
                             railgunRay,
                             player
                     );
-                    var damageSource = SkillDamageSource.from(originalSource, Skills.RAILGUN.get());
+                    var damageSource = SkillDamageSource.from(originalSource, skill);
                     var system = AbilitySystemServer.getSystem(player);
                     var damage = calculateDamage(
                             system.getPlayerAbilityPowerMultiplier(player.getUUID()),
@@ -326,7 +329,7 @@ public final class Railgun extends Skill {
                     );
                     var payload = LinearAttackPayload.builder(
                                     player,
-                                    Skills.RAILGUN.get(),
+                                    skill,
                                     damageSource,
                                     0.125f
                             )

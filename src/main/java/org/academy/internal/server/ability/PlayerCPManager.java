@@ -13,6 +13,7 @@ import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
 import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.event.AbilityOverloadEvent;
@@ -21,6 +22,7 @@ import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkServer;
@@ -37,7 +39,6 @@ import java.util.function.BooleanSupplier;
 
 public class PlayerCPManager implements AbilitySubsystem {
     private static final Logger LOGGER = AcademyCraft.getLogger();
-    private static final AbilityLevel[] CACHED_LEVELS = AbilityLevel.values();
     private static final int PERSONAL_REALITY_OVERLOAD_TICKS = 100;
     private static final int MAX_OVERLOAD_TICKS = 1200;
     private static final int MIN_OVERLOAD_TICKS = 200;
@@ -49,14 +50,12 @@ public class PlayerCPManager implements AbilitySubsystem {
     private final Set<UUID> skillDebugPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Float> cpIterationProgress = new ConcurrentHashMap<>();
 
-    private final float CP_RATING_OFFSET;
     private final float DAMAGE_MULTIPLIER;
 
     public PlayerCPManager(PlayerDataManager manager, AbilityConfig config, SyncManager syncManager) {
         playerDataManager = manager;
         this.syncManager = syncManager;
 
-        CP_RATING_OFFSET = config.cpRatingOffset;
         DAMAGE_MULTIPLIER = config.damageMultiplier;
         brainDevelopmentSettings = config.brainDevelopment != null
                 ? config.brainDevelopment
@@ -256,7 +255,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         var cpData = playerData.getCpData();
         var occupations = playerData.getCpOccupations();
         var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
-        var level = (skillData != null) ? skillData.getLevel() : 0;
+        var level = (skillData != null) ? skill.getLevelForProficiency(skillData.getProficiency()) : 0;
 
         if (cpData.getStatus() == AbilityData.Status.OVERLOAD) return false;
         if (cpData.getAvailableCP() < amount) return false;
@@ -475,7 +474,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (cpData.getStatus() == AbilityData.Status.OVERLOAD || cpData.getAvailableCP() < amount) return false;
 
         var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
-        var level = skillData == null ? 0 : skillData.getLevel();
+        var level = skillData == null ? 0 : skill.getLevelForProficiency(skillData.getProficiency());
         if (skill.getMaxStacks(level) != Skill.NO_STACK_LIMIT) {
             var currentStacks = playerData.getCpOccupations().stream()
                     .filter(occupation -> !occupation.isPermanent())
@@ -503,7 +502,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             Skill skill
     ) {
         var data = playerData.getSkillDataMap().get(skill.getKeyString());
-        return data == null ? 0 : data.getLevel();
+        return data == null ? 0 : skill.getLevelForProficiency(data.getProficiency());
     }
 
     private record AtomicOccupationPlan(
@@ -602,26 +601,20 @@ public class PlayerCPManager implements AbilitySubsystem {
 
             cpData.setMaxCP(newBaseMaxCP);
             cpData.setAvailableCP(newAvailableCP, safeMaxCP);
-            checkAndUpgradeLevel(cpData);
         });
     }
 
-    private void checkAndUpgradeLevel(AbilityData cpData) {
-        var currentMaxCP = cpData.getMaxCP();
-        var newLevel = AbilityLevel.LEVEL0;
-
-        for (var i = CACHED_LEVELS.length - 1; i >= 0; i--) {
-            var lvl = CACHED_LEVELS[i];
-            if (currentMaxCP >= lvl.getBasicCP() - CP_RATING_OFFSET) {
-                newLevel = lvl;
-                break;
-            }
-        }
-
-        if (newLevel != cpData.getLevel()) {
-            LOGGER.info("Player Level Changed: {} -> {} (MaxCP: {})", cpData.getLevel(), newLevel, currentMaxCP);
-            cpData.setLevel(newLevel);
-        }
+    public void setBaseMaxCP(UUID uuid, float newBaseMaxCP) {
+        modify(uuid, cpData -> {
+            var safeBase = Float.isFinite(newBaseMaxCP) ? Math.max(0.0f, newBaseMaxCP) : 0.0f;
+            var oldEffectiveMax = getMaxCP(uuid);
+            var newEffectiveMax = safeBase + getBonuses(uuid).maxCp();
+            cpData.setMaxCP(safeBase);
+            cpData.setAvailableCP(
+                    cpData.getAvailableCP() + newEffectiveMax - oldEffectiveMax,
+                    newEffectiveMax
+            );
+        });
     }
 
     public float getAbilityExp(UUID uuid) {
@@ -632,7 +625,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         modify(uuid, cpData -> cpData.setAbilityExp(amount));
     }
 
-    private float getAbilityExpMax(UUID uuid) {
+    public float getAbilityExpMax(UUID uuid) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return 1f;
 
@@ -641,16 +634,14 @@ public class PlayerCPManager implements AbilitySubsystem {
         var categoryRef = Registries.ABILITY_CATEGORIES.get(Identifier.parse(categoryId));
         if (categoryRef.isEmpty()) return 1f;
 
-        var category = categoryRef.get().value();
-        var level = getLevel(uuid);
-        var count = category.getSkills().stream()
-                .filter(skill -> skill.getRecommendedLevel().getLevelCode() == level)
-                .count();
-        return count > 0 ? count * 1000f : 1000f;
+        return LearningHelper.getAbilityExpRequirement(categoryRef.get().value(), getLevel(uuid));
     }
 
     public boolean canLevelUp(UUID uuid) {
-        return getLevel(uuid) < 5 && getAbilityExp(uuid) >= 1f;
+        var level = getLevel(uuid);
+        if (level >= 5) return false;
+        if (playerDataManager.getPlayerAbilityCategory(uuid) == AbilityCategories.LEVEL0.get()) return level == 0;
+        return getAbilityExp(uuid) >= getAbilityExpMax(uuid);
     }
 
     public void addLevelProgress(UUID uuid, float amount) {
@@ -664,7 +655,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             if (categoryRef.isPresent()) {
                 mul = categoryRef.get().value().getProgIncrRate();
             }
-            cpData.addAbilityExp(amount * mul);
+            cpData.setAbilityExp(Math.min(getAbilityExpMax(uuid), cpData.getAbilityExp() + amount * mul));
         });
     }
 

@@ -30,6 +30,11 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
     @Override
     public JsonElement serialize(T data, Type typeOfSrc, JsonSerializationContext context) {
         var json = context.serialize(data).getAsJsonObject();
+        json.remove("exp");
+        json.remove("maxExp");
+        json.remove("level");
+        json.addProperty("proficiency", data.getProficiency());
+        json.addProperty("progressVersion", 1);
         json.addProperty("type", data.getType().toString());
         return json;
     }
@@ -63,6 +68,15 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
                 LOGGER.error("Failed to parse SkillData type identifier: {}", typeStr);
             }
         }
-        return context.deserialize(json, targetClass);
+        var data = context.<T>deserialize(json, targetClass);
+        if (jsonObject.has("proficiency")) {
+            data.setProficiency(jsonObject.get("proficiency").getAsFloat());
+        } else {
+            var exp = jsonObject.has("exp") ? jsonObject.get("exp").getAsFloat() : 0.0f;
+            var maxExp = jsonObject.has("maxExp") ? jsonObject.get("maxExp").getAsInt() : 1000;
+            var level = jsonObject.has("level") ? jsonObject.get("level").getAsInt() : 0;
+            data.markLegacyProgress(exp, maxExp, level);
+        }
+        return data;
     }
 }

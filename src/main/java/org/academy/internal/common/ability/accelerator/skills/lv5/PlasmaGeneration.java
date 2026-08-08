@@ -189,6 +189,7 @@ public class PlasmaGeneration extends Skill {
             CHARGE_STATES.put(player.getUUID(), new ChargeState(
                     level.dimension(), plasma.getId(), level.getGameTime()
             ));
+            Skills.PLASMA_GENERATION.get().reportTrigger(player);
             player.level().playSound(null, player.blockPosition(), SoundEvents.PLASMA_GENERATION.get(),
                     SoundSource.PLAYERS, 1.0f, 1.0f);
         }
@@ -263,10 +264,12 @@ public class PlasmaGeneration extends Skill {
                 return;
             }
             var ticks = Math.max(0, player.level().getGameTime() - state.startTick());
+            var skill = Skills.PLASMA_GENERATION.get();
+            skill.reportActivity(player, true);
             var seconds = ticks / 20;
             if (seconds > 0 && seconds > state.lastConsumedSecond()) {
-                var paid = Skills.PLASMA_GENERATION.get().executeActive(player, (_, _) -> {
-                });
+                var paid = skill.executeContinuous(player, (_, _) -> {
+                }, true);
                 if (!paid) {
                     clearCharge(player);
                     return;

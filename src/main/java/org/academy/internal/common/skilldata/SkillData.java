@@ -4,6 +4,13 @@ import com.google.gson.annotations.SerializedName;
 import net.minecraft.resources.Identifier;
 
 public abstract class SkillData {
+    public static final float MIN_PROFICIENCY = 0.0f;
+    public static final float MAX_PROFICIENCY = 3000.0f;
+
+    @SerializedName("proficiency")
+    private float proficiency;
+
+    /* Legacy progression fields. They are read by SkillDataSerializer and removed on write. */
     @SerializedName("exp")
     private float exp;
 
@@ -16,37 +23,82 @@ public abstract class SkillData {
     @SerializedName("enabled")
     private boolean enabled = true;
 
+    private transient boolean legacyProgress;
+
     public SkillData() {
-        exp = 0;
+        proficiency = 0;
     }
 
     public SkillData(float exp) {
-        this.exp = exp;
+        setProficiency(exp);
     }
 
     public SkillData(float exp, int maxExp) {
-        this.exp = exp;
-        this.maxExp = maxExp;
+        setProficiency(exp);
     }
 
+    /** @deprecated Use {@link #isMaxProficiency()}. */
+    @Deprecated
     public boolean isMaxExp() {
-        return exp >= maxExp;
+        return isMaxProficiency();
     }
 
+    /** @deprecated The proficiency cap is always {@value #MAX_PROFICIENCY}. */
+    @Deprecated
     public int getMaxExp() {
-        return maxExp;
+        return (int) MAX_PROFICIENCY;
     }
 
+    /** @deprecated The proficiency cap is fixed and cannot be changed. */
+    @Deprecated
     public void setMaxExp(int maxExp) {
-        this.maxExp = maxExp;
     }
 
+    /** @deprecated Use {@link #getProficiency()}. */
+    @Deprecated
     public float getExp() {
-        return exp;
+        return getProficiency();
     }
 
+    /** @deprecated Use {@link #setProficiency(float)}. */
+    @Deprecated
     public void setExp(float exp) {
-        this.exp = exp;
+        setProficiency(exp);
+    }
+
+    public float getProficiency() {
+        return proficiency;
+    }
+
+    public void setProficiency(float proficiency) {
+        this.proficiency = Float.isFinite(proficiency)
+                ? Math.clamp(proficiency, MIN_PROFICIENCY, MAX_PROFICIENCY)
+                : MIN_PROFICIENCY;
+        legacyProgress = false;
+    }
+
+    public boolean isMaxProficiency() {
+        return proficiency >= MAX_PROFICIENCY;
+    }
+
+    public boolean hasLegacyProgress() {
+        return legacyProgress;
+    }
+
+    public void markLegacyProgress(float exp, int maxExp, int level) {
+        this.exp = Float.isFinite(exp) ? exp : 0.0f;
+        this.maxExp = maxExp > 0 ? maxExp : 1000;
+        this.level = level;
+        legacyProgress = true;
+    }
+
+    public void migrateLegacyProgress(int maxSkillLevel) {
+        if (!legacyProgress) return;
+        var safeMaxLevel = Math.max(0, maxSkillLevel);
+        var safeMaxExp = maxExp > 0 ? maxExp : 1000;
+        var legacyFraction = exp / safeMaxExp;
+        var legacyTotal = level + legacyFraction;
+        setProficiency(legacyTotal / (safeMaxLevel + 1.0f) * MAX_PROFICIENCY);
     }
 
     public boolean isEnabled() {
@@ -61,10 +113,14 @@ public abstract class SkillData {
         enabled = !enabled;
     }
 
+    /** @deprecated Runtime effect levels are derived from proficiency and the owning skill. */
+    @Deprecated
     public int getLevel() {
         return level;
     }
 
+    /** @deprecated Runtime effect levels are derived from proficiency and the owning skill. */
+    @Deprecated
     public void setLevel(int level) {
         this.level = level;
     }

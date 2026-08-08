@@ -70,7 +70,14 @@ public final class AcademyCraftCommand {
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("skill_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestLearnedSkills)
-                                .then(Commands.argument("amount", FloatArgumentType.floatArg(0))
+                                .then(Commands.argument("amount", FloatArgumentType.floatArg(0, 3000))
+                                        .executes(AcademyCraftCommand::setSkillExp)))
+                )
+                .then(Commands.literal("set_proficiency")
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.argument("skill_name", IdentifierArgument.id())
+                                .suggests(AcademyCraftCommand::suggestLearnedSkills)
+                                .then(Commands.argument("amount", FloatArgumentType.floatArg(0, 3000))
                                         .executes(AcademyCraftCommand::setSkillExp)))
                 )
                 .then(Commands.literal("debug")
@@ -347,13 +354,13 @@ public final class AcademyCraftCommand {
             return 0;
         }
 
-        var skillData = playerData.getSkillDataMap().get(skillKey);
-        skillData.setExp(amount);
+        var skill = Registries.SKILLS.get(skillIdentifier).map(reference -> reference.value()).orElse(null);
+        if (skill == null || !abilitySystemServer.setPlayerSkillProficiency(playerUuid, skill, amount)) {
+            context.getSource().sendFailure(Component.literal("Unable to set proficiency for '" + skillIdentifier + "'."));
+            return 0;
+        }
 
-        playerData.markDirty();
-        abilitySystemServer.schedulePlayerSync(playerUuid, SyncTypes.SKILL_DATA);
-
-        context.getSource().sendSuccess(() -> Component.literal("Set experience for " + skillIdentifier + " to " + amount), true);
+        context.getSource().sendSuccess(() -> Component.literal("Set proficiency for " + skillIdentifier + " to " + amount), true);
         return 1;
     }
 

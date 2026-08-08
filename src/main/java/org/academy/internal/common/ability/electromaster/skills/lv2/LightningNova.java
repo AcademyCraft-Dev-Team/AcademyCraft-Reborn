@@ -128,6 +128,7 @@ public class LightningNova extends Skill {
                 end();
                 return;
             }
+            Skills.LIGHTNING_NOVA.get().reportActivity(player, false);
 
             var currentRadius = 1.0f + (float) ticks / PULSE_DURATION * MAX_RADIUS;
             var innerRadius = Math.max(0, currentRadius - 1.5f);

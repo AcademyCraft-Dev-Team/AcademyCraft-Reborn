@@ -57,6 +57,7 @@ import org.academy.internal.client.app.props.PropsClientState;
 import org.academy.internal.client.app.props.PropsIcon;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.gui.screen.Screens;
+import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
 import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.hud.HudDebugScreen;
 import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
@@ -153,6 +154,37 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
+        event.getDispatcher().register(
+                Commands.literal("academy")
+                        .then(Commands.literal("debug")
+                                .then(Commands.literal("skillgui")
+                                        .executes(ctx -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode()))
+                                        .then(Commands.literal("on")
+                                                .executes(ctx -> setSkillGuiDebug(true)))
+                                        .then(Commands.literal("off")
+                                                .executes(ctx -> setSkillGuiDebug(false)))
+                                        .then(Commands.literal("toggle")
+                                                .executes(ctx -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode())))
+                                        .then(Commands.literal("reset")
+                                                .executes(ctx -> {
+                                                    AbilityDeveloperLayoutEditor.resetSession();
+                                                    notifyClient("Skill GUI layout reset to built-in defaults.");
+                                                    return 1;
+                                                }))
+                                        .then(Commands.literal("export")
+                                                .executes(ctx -> {
+                                                    try {
+                                                        var path = AbilityDeveloperLayoutEditor.exportAll();
+                                                        notifyClient("Skill GUI layout exported to " + path.toAbsolutePath());
+                                                        return 1;
+                                                    } catch (Exception exception) {
+                                                        AcademyCraft.getLogger().error("Unable to export skill GUI layout", exception);
+                                                        notifyClient("Unable to export Skill GUI layout: " + exception.getMessage());
+                                                        return 0;
+                                                    }
+                                                }))
+                                ))
+        );
         if (!isUiDebugEnvironment()) return;
         event.getDispatcher().register(
                 Commands.literal("academy")
@@ -225,6 +257,17 @@ public final class AcademyCraftClient {
                                         )
                         )
         );
+    }
+
+    private static int setSkillGuiDebug(boolean enabled) {
+        AbilityDeveloperLayoutEditor.setDebugMode(enabled);
+        notifyClient("Skill GUI layout editor " + (enabled ? "enabled" : "disabled") + '.');
+        return 1;
+    }
+
+    private static void notifyClient(String message) {
+        var player = Minecraft.getInstance().player;
+        if (player != null) player.sendSystemMessage(net.minecraft.network.chat.Component.literal(message));
     }
 
     @SubscribeEvent

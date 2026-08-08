@@ -152,6 +152,8 @@ public class SpacialExcision extends Skill {
                 return;
             }
 
+            var skill = Skills.SPACIAL_EXCISION.get();
+            skill.reportActivity(player, ticks >= CHARGE_TICKS);
             if (ticks < CHARGE_TICKS) return;
 
             if (ticks % EFFECT_INTERVAL == 0 && level() instanceof ServerLevel sl) {
@@ -159,7 +161,7 @@ public class SpacialExcision extends Skill {
                 var radius = BASE_RADIUS + ticks * RADIUS_GROWTH;
                 var damage = DAMAGE * AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
-                var source = SkillDamageSource.of(player, Skills.SPACIAL_EXCISION.get());
+                var source = SkillDamageSource.of(player, skill);
 
                 var targets = sl.getEntitiesOfClass(LivingEntity.class,
                         new AABB(

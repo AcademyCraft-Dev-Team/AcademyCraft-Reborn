@@ -163,6 +163,7 @@ public final class MiningBeam extends Skill {
             var context = new Context(player);
             CONTEXT_MAP.put(player, context);
             AbilitySystemServer.registerContext(context);
+            skill.reportTrigger(player);
         }
 
         @SubscribePacket
@@ -199,6 +200,7 @@ public final class MiningBeam extends Skill {
             }
 
             ticks++;
+            skill.reportActivity(player, false);
             if (!ContinuousBeam.follow(player, visual, currentLength)) {
                 end();
                 return;
@@ -206,8 +208,8 @@ public final class MiningBeam extends Skill {
             var start = player.getEyePosition();
             visual.setPos(start);
             if (ticks % CP_INTERVAL_TICKS == 0
-                    && !skill.executeActive(player, (_, _) -> {
-                    })) {
+                    && !skill.executeContinuous(player, (_, _) -> {
+                    }, false)) {
                 end();
                 return;
             }
@@ -257,6 +259,7 @@ public final class MiningBeam extends Skill {
             );
 
             if (breakTick && destroyBlocks) {
+                skill.reportActivity(player, true);
                 MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
                         attack.outbound(),

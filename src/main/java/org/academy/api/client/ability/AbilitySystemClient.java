@@ -283,7 +283,7 @@ public final class AbilitySystemClient {
             return SkillUseStatus.denied(SkillUseFailure.OVERLOAD);
         }
 
-        var level = skillData.getLevel();
+        var level = skill.getLevelForProficiency(skillData.getProficiency());
         var requiredCp = Math.max(0.0f, skill.getCpCost(level) * calculationIntensity);
         if (cpData.getAvailableCP() + 1.0e-4f < requiredCp) {
             return new SkillUseStatus(
@@ -388,7 +388,14 @@ public final class AbilitySystemClient {
     }
 
     public static boolean canLevelUp() {
-        return getLevel().getLevelCode() < 5 && getAbilityExp() >= 1f;
+        var level = getLevel().getLevelCode();
+        if (level >= 5) return false;
+        if (getCategory() == AbilityCategories.LEVEL0.get()) return level == 0;
+        return getAbilityExp() >= LearningHelper.getAbilityExpRequirement(getCategory(), level);
+    }
+
+    public static float getAbilityProgress() {
+        return LearningHelper.getAbilityProgress(getCategory(), getLevel().getLevelCode(), getAbilityExp());
     }
 
     public static boolean isActiveHUD() {
@@ -427,14 +434,31 @@ public final class AbilitySystemClient {
     }
 
     public static float getSkillExp(Skill skill) {
-        return SKILL_DATA.get(skill.getKeyString()).getExp();
+        return getSkillProficiency(skill);
     }
 
     public static void setSkillExp(Skill skill, float exp) {
+        setSkillProficiency(skill, exp);
+    }
+
+    public static float getSkillProficiency(Skill skill) {
+        var data = SKILL_DATA.get(skill.getKeyString());
+        return data == null ? 0.0f : data.getProficiency();
+    }
+
+    public static int getSkillLevel(Skill skill) {
+        return skill.getLevelForProficiency(getSkillProficiency(skill));
+    }
+
+    public static float getSkillProficiencyProgress(Skill skill) {
+        return Math.clamp(getSkillProficiency(skill) / SkillData.MAX_PROFICIENCY, 0.0f, 1.0f);
+    }
+
+    public static void setSkillProficiency(Skill skill, float proficiency) {
         var skillId = Objects.requireNonNull(Registries.SKILLS.getKey(skill)).toString();
         var data = SKILL_DATA.get(skillId);
         if (data != null) {
-            data.setExp(exp);
+            data.setProficiency(proficiency);
         }
     }
 
@@ -502,5 +526,9 @@ public final class AbilitySystemClient {
         private static SkillUseStatus denied(SkillUseFailure failure) {
             return new SkillUseStatus(false, failure, 0.0f, 0.0f, 0, 0, 0);
         }
+    }
+
+    public static void addSkillProficiency(Skill skill, float amount) {
+        setSkillProficiency(skill, getSkillProficiency(skill) + amount);
     }
 }

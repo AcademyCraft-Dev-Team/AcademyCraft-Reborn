@@ -713,7 +713,7 @@
   "skill.academy.level0_passive_lv4.desc": "Increase calculation efficiency by 15%.",
   "skill.academy.level0_passive_lv5": "Absolute Self-Control",
   "skill.academy.level0_passive_lv5.desc": "Increase maximum CP by 500, CP recovery by 25, and calculation efficiency by 30%.",
-  "academy.ability_developer.skill_exp": "Skill Experience:",
+  "academy.ability_developer.skill_exp": "Skill Proficiency: ",
   "academy.ability_developer.skill_not_learned": "Skill not learned.",
   "academy.ability_developer.req": "Req.",
   "academy.ability_developer.dev_successful": "Development Successful.",
