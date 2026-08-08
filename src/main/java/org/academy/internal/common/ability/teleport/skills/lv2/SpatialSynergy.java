@@ -60,7 +60,8 @@ public class SpatialSynergy extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
+                        InputConstants.PRESS, InputConstants.MOD_ALT)
         ), ctx -> Client.onToggle());
         ToggleStatusHud.registerStateProvider(Skills.SPATIAL_SYNERGY.get(),
                 () -> AbilitySystemClient.canUseSkillSilently(Skills.SPATIAL_SYNERGY.get()));

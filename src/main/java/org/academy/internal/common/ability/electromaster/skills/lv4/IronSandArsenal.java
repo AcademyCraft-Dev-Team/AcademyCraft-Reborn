@@ -71,8 +71,8 @@ public class IronSandArsenal extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_TOGGLE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_I,
-                                InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)),
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
+                                InputConstants.PRESS, InputConstants.MOD_ALT)),
                 _ -> Client.onToggle());
         ToggleStatusHud.registerStateProvider(Skills.IRON_SAND_ARSENAL.get(), Client::isActive);
         RendererManager.registerEffectRenderer(ElectromasterWeaponEffectRenderer.INSTANCE);

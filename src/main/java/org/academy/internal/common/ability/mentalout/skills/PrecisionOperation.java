@@ -55,15 +55,21 @@ public final class PrecisionOperation extends Skill {
 
         var selectedTemplate = InputSystem.combo(
                 InputSystem.InputType.KEYBOARD,
-                InputConstants.KEY_P,
+                InputConstants.KEY_G,
                 InputConstants.PRESS,
-                InputConstants.MOD_ALT
+                0
+        );
+        var editorTemplate = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_BACKSLASH,
+                InputConstants.PRESS,
+                0
         );
         InputSystem.addKeyBinding(
                 Client.KEY_NAME_EXECUTE_SELECTED,
                 Client.CONFIG.getKeyBinding(
                         Client.KEY_NAME_EXECUTE_SELECTED,
-                        InputSystem.unbound(selectedTemplate)
+                        selectedTemplate
                 ),
                 context -> {
                     if (context.action() == InputConstants.PRESS) PrecisionOperationClient.executeSelected();
@@ -71,7 +77,7 @@ public final class PrecisionOperation extends Skill {
         );
         InputSystem.addKeyBinding(Client.KEY_NAME_EDIT, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_EDIT,
-                selectedTemplate
+                editorTemplate
         ), _ -> PrecisionOperationClient.openEditor());
         var keys = new int[]{
                 InputConstants.KEY_1,

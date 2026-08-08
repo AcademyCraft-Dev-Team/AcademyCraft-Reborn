@@ -79,7 +79,7 @@ public class Thunderclap extends Skill {
             Client.CONFIG.setKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.OLD_KEY));
         }
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                        InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_4,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                                 InputConstants.RELEASE, 0))
                 , ctx -> Client.onUse());
     }

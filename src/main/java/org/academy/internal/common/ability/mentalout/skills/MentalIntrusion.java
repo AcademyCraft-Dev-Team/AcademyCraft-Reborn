@@ -45,9 +45,9 @@ public final class MentalIntrusion extends Skill {
                 Client.KEY_NAME_USE,
                 InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_V,
+                        InputConstants.KEY_Y,
                         InputConstants.PRESS,
-                        InputConstants.MOD_ALT
+                        0
                 )
         ), _ -> Client.use());
     }

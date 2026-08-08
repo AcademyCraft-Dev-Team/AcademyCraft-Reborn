@@ -89,6 +89,15 @@ public final class AttachmentTypes {
     @Deprecated(forRemoval = false)
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> KINETIC_SHOCKWAVE_ENABLED =
             KINETIC_BLOCK_BREAK_ENABLED;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> KINETIC_BLOCK_DROPS_ENABLED = REGISTER.register(
+            "kinetic_block_drops_enabled",
+            () -> AttachmentType
+                    .builder(DEFAULT_TRUE)
+                    .serialize(Codec.BOOL.fieldOf("enabled"))
+                    .copyOnDeath()
+                    .sync(ByteBufCodecs.BOOL)
+                    .build()
+    );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> KINETIC_IMPACT_LEVEL = REGISTER.register(
             "kinetic_impact_level",
             () -> AttachmentType

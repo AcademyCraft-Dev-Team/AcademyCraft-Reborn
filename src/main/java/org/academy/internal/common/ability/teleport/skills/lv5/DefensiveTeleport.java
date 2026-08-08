@@ -74,12 +74,12 @@ public final class DefensiveTeleport extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_START,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
-                        InputConstants.PRESS, InputConstants.MOD_ALT)), _ -> Client.start());
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                        InputConstants.PRESS, 0)), _ -> Client.start());
         InputSystem.addKeyBinding(Client.KEY_NAME_END, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_END,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
-                        InputConstants.RELEASE, InputConstants.MOD_ALT)), _ -> Client.end());
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                        InputConstants.RELEASE, 0)), _ -> Client.end());
     }
 
     @Override
