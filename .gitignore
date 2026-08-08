@@ -136,3 +136,5 @@ runs/
 node_modules/
 /.tmp/
 /outputs/
+/output/
+/asset_backups/
