@@ -5,14 +5,17 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.DevState;
 import org.academy.api.common.ability.DevelopAction;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.UUID;
 
 public class DevelopData {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private final UUID playerId;
     private @Nullable DevelopAction action;
     private @Nullable BlockPos developerPos;
@@ -120,6 +123,7 @@ public class DevelopData {
             progress = 1.0f;
             message = "Success!";
         } catch (RuntimeException exception) {
+            LOGGER.error("Failed to complete ability development for player {}", playerId, exception);
             fail("Completion failed");
         }
     }

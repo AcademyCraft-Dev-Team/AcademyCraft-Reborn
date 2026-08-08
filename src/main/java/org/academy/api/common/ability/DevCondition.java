@@ -10,6 +10,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.function.Predicate;
 
 public interface DevCondition {
     boolean accepts();
@@ -86,14 +87,17 @@ public interface DevCondition {
 
         @Override
         public boolean accepts() {
-            return false;
+            return isSatisfied(depId, dependencyId -> AbilitySystemClient.LEARNED_SKILLS.stream()
+                    .anyMatch(skill -> dependencyId.equals(skill.getKeyString())));
         }
 
         @Override
         public boolean accepts(ServerPlayer player, WirelessUser developer) {
-            if (depId.isEmpty()) return true;
             var system = AbilitySystemServer.getSystem(player);
-            return system.getPlayerData(player.getUUID()).isSkillLearned(depId);
+            return isSatisfied(
+                    depId,
+                    system.getPlayerData(player.getUUID())::isSkillLearned
+            );
         }
 
         @Override
@@ -104,6 +108,18 @@ public interface DevCondition {
         @Override
         public String getHintText() {
             return "Requires " + depName;
+        }
+
+        @Override
+        public boolean shouldDisplay() {
+            // Explicit Skill.dependencies are rendered as skill-tree links and checked
+            // separately. Do not render a second, generic condition icon for the legacy
+            // compatibility condition.
+            return false;
+        }
+
+        static boolean isSatisfied(String dependencyId, Predicate<String> isLearned) {
+            return dependencyId == null || dependencyId.isEmpty() || isLearned.test(dependencyId);
         }
     }
 

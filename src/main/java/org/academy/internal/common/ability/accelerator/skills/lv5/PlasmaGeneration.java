@@ -37,8 +37,6 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
-import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
@@ -76,7 +74,7 @@ public class PlasmaGeneration extends Skill {
                 .cpCost(CP_PER_SECOND)
                 .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.VECTOR_REFLECTION, Skills.STORM_WING)
+                .dependsOn(Skills.STORM_WING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("Storm Wing", "academy:storm_wing"))
         );
@@ -122,7 +120,7 @@ public class PlasmaGeneration extends Skill {
                 AbilityCategories.ACCELERATOR.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.PLASMA_GENERATION.get(),
-                        List.of(VectorReflection.Client.SKILL_INFO, StormWing.Client.SKILL_INFO),
+                        List.of(),
                         R.textures.ability.accelerator.skill.plasma_generation.icon,
                         175,
                         14

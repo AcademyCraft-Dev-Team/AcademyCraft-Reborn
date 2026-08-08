@@ -51,7 +51,8 @@ public class Disintegrate extends Skill {
                 .energyCost(100_000)
                 .cpCost(200)
                 .iterationTicks(60)
-                .maxStacks(1));
+                .maxStacks(1)
+                .dependsOn(Skills.PARTICLE_WAVE_CANNON));
     }
 
     @Override
