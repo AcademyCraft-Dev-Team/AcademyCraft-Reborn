@@ -9,8 +9,10 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -47,7 +49,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class FleshRipping extends Skill {
-    private static final double MAX_RANGE = 14.0;
+    private static final double MAX_RANGE = 32.0;
     private static final float BASE_DAMAGE = 12.0f;
 
     public FleshRipping() {
@@ -138,10 +140,8 @@ public final class FleshRipping extends Skill {
                 }
                 var minecraft = Minecraft.getInstance();
                 AABB preview;
-                if (minecraft.hitResult instanceof EntityHitResult hit
-                        && hit.getEntity() instanceof LivingEntity living
-                        && living != player && living.isAlive()
-                        && player.distanceToSqr(living) <= MAX_RANGE * MAX_RANGE) {
+                var living = findTarget(player);
+                if (living != null) {
                     targetEntityId = living.getId();
                     preview = living.getBoundingBox().inflate(0.2);
                 } else {
@@ -164,6 +164,37 @@ public final class FleshRipping extends Skill {
                                 targetEntityId >= 0 ? 1.0f : 0.1f,
                                 1.0f));
                 matrices.popPose();
+            }
+
+            private static LivingEntity findTarget(LocalPlayer player) {
+                var start = player.getEyePosition();
+                var direction = player.getLookAngle().normalize();
+                if (direction.lengthSqr() < 1.0e-8) return null;
+                var fullEnd = start.add(direction.scale(MAX_RANGE));
+                var blockHit = player.level().clip(new ClipContext(
+                        start,
+                        fullEnd,
+                        ClipContext.Block.COLLIDER,
+                        ClipContext.Fluid.NONE,
+                        player
+                ));
+                var end = blockHit.getType() == HitResult.Type.MISS
+                        ? fullEnd
+                        : blockHit.getLocation();
+                var hit = ProjectileUtil.getEntityHitResult(
+                        player,
+                        start,
+                        end,
+                        new AABB(start, end).inflate(1.0),
+                        entity -> entity instanceof LivingEntity
+                                && entity != player
+                                && entity.isAlive()
+                                && entity.isPickable(),
+                        MAX_RANGE * MAX_RANGE
+                );
+                return hit != null && hit.getEntity() instanceof LivingEntity living
+                        ? living
+                        : null;
             }
 
             private void cleanup() {

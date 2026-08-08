@@ -44,6 +44,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -453,7 +454,10 @@ public final class VectorAccel extends Skill {
             var chargeRatio = getChargeRatio(startTick, player.level().getGameTime());
             Skills.VECTOR_ACCEL.get().executeActive(player, (_, _) -> {
                 var direction = normalizeDashDirection(player.getLookAngle());
-                player.setDeltaMovement(direction.scale(getSpeed(chargeRatio)));
+                EntityMotionGuard.runWithMotionSource(
+                        player,
+                        () -> player.setDeltaMovement(direction.scale(getSpeed(chargeRatio)))
+                );
                 player.resetFallDistance();
                 player.level().playSound(null, player.blockPosition(), SoundEvents.VECTOR_ACCEL.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);

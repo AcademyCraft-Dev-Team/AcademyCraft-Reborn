@@ -4,17 +4,75 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.TeleportTransition;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.Set;
 
 @Mixin(ServerPlayer.class)
 public abstract class MixinServerPlayer extends Player {
     private MixinServerPlayer(Level level, GameProfile gameProfile) {
         super(level, gameProfile);
+    }
+
+    @Inject(
+            method = "teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer;",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$guardPlayerTeleportTransition(
+            TeleportTransition transition,
+            CallbackInfoReturnable<ServerPlayer> cir
+    ) {
+        if (EntityMotionGuard.shouldBlockTeleport((ServerPlayer) (Object) this)) {
+            cir.setReturnValue(null);
+        }
+    }
+
+    @Inject(method = "teleportTo(DDD)V", at = @At("HEAD"), cancellable = true)
+    private void academy$guardSimplePlayerTeleport(double x, double y, double z, CallbackInfo ci) {
+        if (EntityMotionGuard.shouldBlockTeleport((ServerPlayer) (Object) this)) ci.cancel();
+    }
+
+    @Inject(method = "teleportRelative", at = @At("HEAD"), cancellable = true)
+    private void academy$guardRelativePlayerTeleport(double x, double y, double z, CallbackInfo ci) {
+        if (EntityMotionGuard.shouldBlockTeleport((ServerPlayer) (Object) this)) ci.cancel();
+    }
+
+    @Inject(method = "snapTo(DDD)V", at = @At("HEAD"), cancellable = true)
+    private void academy$guardPlayerPositionSnap(double x, double y, double z, CallbackInfo ci) {
+        if (EntityMotionGuard.shouldBlockPositionSnap((ServerPlayer) (Object) this)) ci.cancel();
+    }
+
+    @Inject(
+            method = "teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$guardPlayerLevelTeleport(
+            ServerLevel level,
+            double x,
+            double y,
+            double z,
+            Set<Relative> relatives,
+            float yRot,
+            float xRot,
+            boolean resetCamera,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (EntityMotionGuard.shouldBlockTeleport((ServerPlayer) (Object) this)) {
+            cir.setReturnValue(false);
+        }
     }
 
     @SuppressWarnings("UnnecessarySuperQualifier")

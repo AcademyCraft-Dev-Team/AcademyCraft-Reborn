@@ -38,6 +38,7 @@ import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTeleport;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -191,7 +192,7 @@ public final class DefensiveTeleport extends Skill {
             var center = packet.center;
             if (!finite(center) || center.distanceToSqr(player.getEyePosition())
                     > MAX_SELECTION_DISTANCE * MAX_SELECTION_DISTANCE) return;
-            var mark = LocationTeleport.Server.getSelectedMark(player);
+            var mark = LocationTeleport.Server.getDefensiveMark(player);
             if (mark == null) return;
             var destinationLevel = LocationTeleport.Server.resolveLevel(player, mark);
             if (destinationLevel == null || !player.level().hasChunkAt(net.minecraft.core.BlockPos.containing(center))) {
@@ -211,6 +212,7 @@ public final class DefensiveTeleport extends Skill {
             Skills.DEFENSIVE_TELEPORT.get().executeActive(player, (_, _) -> {
                 var index = 0;
                 for (var entity : selected) {
+                    if (!EntityMotionGuard.canApplyMotionFrom(player, entity)) continue;
                     var offsetX = index % 3 - 1;
                     var offsetZ = index / 3 % 3 - 1;
                     var desired = destination.add(offsetX * 0.55, 0, offsetZ * 0.55);
@@ -230,6 +232,7 @@ public final class DefensiveTeleport extends Skill {
 
         static boolean isSelectedThreat(ServerPlayer player, Entity entity) {
             if (entity == player || !entity.isAlive() || entity.isRemoved()) return false;
+            if (!EntityMotionGuard.canApplyMotionFrom(player, entity)) return false;
             if (entity instanceof Projectile projectile) {
                 var owner = projectile.getOwner();
                 return owner != player && (owner == null || !player.isAlliedTo(owner));

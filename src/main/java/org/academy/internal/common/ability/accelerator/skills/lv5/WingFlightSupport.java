@@ -18,6 +18,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
@@ -77,39 +78,41 @@ final class WingFlightSupport {
         if (state == StormWing.State.BOOST) {
             lastBoostTick.put(player.getUUID(), player.level().getGameTime());
         }
-        switch (state) {
-            case FRONT -> {
-                var movement = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
-                player.push(movement.x, movement.y * 1.5, movement.z);
-            }
-            case BACK -> {
-                var movement = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
-                player.push(movement.x, movement.y, movement.z);
-            }
-            case LEFT -> {
-                var look = player.getLookAngle();
-                var movement = new Vec3(look.z, -look.y + 0.15, -look.x).scale(0.2);
-                player.push(movement.x, movement.y, movement.z);
-            }
-            case RIGHT -> {
-                var look = player.getLookAngle();
-                var movement = new Vec3(-look.z, -look.y + 0.15, look.x).scale(0.2);
-                player.push(movement.x, movement.y, movement.z);
-            }
-            case KEEP -> {
-                if (Math.abs(player.getDeltaMovement().y) > 0.25) {
-                    player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
-                } else {
-                    player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
+        EntityMotionGuard.runWithMotionSource(player, () -> {
+            switch (state) {
+                case FRONT -> {
+                    var movement = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
+                    player.push(movement.x, movement.y * 1.5, movement.z);
                 }
-                player.resetFallDistance();
+                case BACK -> {
+                    var movement = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
+                    player.push(movement.x, movement.y, movement.z);
+                }
+                case LEFT -> {
+                    var look = player.getLookAngle();
+                    var movement = new Vec3(look.z, -look.y + 0.15, -look.x).scale(0.2);
+                    player.push(movement.x, movement.y, movement.z);
+                }
+                case RIGHT -> {
+                    var look = player.getLookAngle();
+                    var movement = new Vec3(-look.z, -look.y + 0.15, look.x).scale(0.2);
+                    player.push(movement.x, movement.y, movement.z);
+                }
+                case KEEP -> {
+                    if (Math.abs(player.getDeltaMovement().y) > 0.25) {
+                        player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
+                    } else {
+                        player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
+                    }
+                    player.resetFallDistance();
+                }
+                case BOOST -> {
+                    var movement = player.getLookAngle().scale(2.0);
+                    player.push(movement.x, movement.y, movement.z);
+                    player.resetFallDistance();
+                }
             }
-            case BOOST -> {
-                var movement = player.getLookAngle().scale(2.0);
-                player.push(movement.x, movement.y, movement.z);
-                player.resetFallDistance();
-            }
-        }
+        });
         player.connection.send(new ClientboundSetEntityMotionPacket(player));
     }
 

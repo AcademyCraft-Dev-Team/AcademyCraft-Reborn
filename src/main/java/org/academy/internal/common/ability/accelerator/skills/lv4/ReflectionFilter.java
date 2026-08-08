@@ -129,6 +129,12 @@ public final class ReflectionFilter extends Skill {
         return !shouldAcceptEffect(player, effect);
     }
 
+    public static boolean isForcedMovementProtectionEnabled(ServerPlayer player) {
+        return player != null
+                && Skills.REFLECTION_FILTER.get().isEnabled(player)
+                && Server.getOrCreateData(player).isForcedMovementProtectionEnabled();
+    }
+
     public static float getReflectionMaintenanceCost(ServerPlayer player) {
         var data = normalizeData(Server.getOrCreateData(player));
         var modeCost = switch (data.getMode()) {
@@ -197,6 +203,7 @@ public final class ReflectionFilter extends Skill {
         private String mode = Mode.REFLECT_ALL.name();
         private List<String> whitelist = new ArrayList<>();
         private List<String> blacklist = new ArrayList<>();
+        private boolean forcedMovementProtection;
 
         public Data copy() {
             var copy = new Data();
@@ -205,6 +212,7 @@ public final class ReflectionFilter extends Skill {
             copy.mode = mode;
             copy.whitelist = whitelist == null ? new ArrayList<>() : new ArrayList<>(whitelist);
             copy.blacklist = blacklist == null ? new ArrayList<>() : new ArrayList<>(blacklist);
+            copy.forcedMovementProtection = forcedMovementProtection;
             return copy;
         }
 
@@ -218,6 +226,10 @@ public final class ReflectionFilter extends Skill {
 
         public List<String> getBlacklist() {
             return List.copyOf(blacklist);
+        }
+
+        public boolean isForcedMovementProtectionEnabled() {
+            return forcedMovementProtection;
         }
 
         @Override
@@ -245,6 +257,7 @@ public final class ReflectionFilter extends Skill {
             data.mode = Mode.byName(packet.mode).name();
             data.whitelist = normalizeEffectIds(packet.whitelist, null);
             data.blacklist = normalizeEffectIds(packet.blacklist, null);
+            data.forcedMovementProtection = packet.forcedMovementProtection;
             data.whitelist.removeAll(data.blacklist);
             var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
             if (playerData != null) playerData.markDirty();
@@ -280,7 +293,8 @@ public final class ReflectionFilter extends Skill {
             MisakaNetworkServer.send(player, new SyncPacket(
                     normalized.mode,
                     normalized.whitelist,
-                    normalized.blacklist
+                    normalized.blacklist,
+                    normalized.forcedMovementProtection
             ));
         }
     }
@@ -323,6 +337,7 @@ public final class ReflectionFilter extends Skill {
             data.mode = packet.mode;
             data.whitelist = new ArrayList<>(packet.whitelist);
             data.blacklist = new ArrayList<>(packet.blacklist);
+            data.forcedMovementProtection = packet.forcedMovementProtection;
             localData = normalizeData(data).copy();
             var screen = lastScreen;
             if (screen != null && Minecraft.getInstance().gui.screen() == screen) {
@@ -513,7 +528,7 @@ public final class ReflectionFilter extends Skill {
             whiteX = rightX;
             blackX = rightX + sideListW + 8;
             listY = panelY + 66;
-            sideListY = panelY + 108;
+            sideListY = panelY + 126;
             sideListBottom = panelY + panelH - 16;
         }
 
@@ -570,6 +585,7 @@ public final class ReflectionFilter extends Skill {
             renderEffects(graphics, mouseX, mouseY);
             renderMiddleButtons(graphics, mouseX, mouseY);
             renderModes(graphics, mouseX, mouseY);
+            renderForcedMovementProtection(graphics, mouseX, mouseY);
             renderSideLists(graphics, mouseX, mouseY);
         }
 
@@ -623,6 +639,28 @@ public final class ReflectionFilter extends Skill {
             graphics.text(font, modeDescription(mode), rightX, panelY + 74, TEXT, false);
         }
 
+        private void renderForcedMovementProtection(
+                GuiGraphicsExtractor graphics,
+                int mouseX,
+                int mouseY
+        ) {
+            var enabled = data.forcedMovementProtection;
+            drawButton(
+                    graphics,
+                    rightX,
+                    panelY + 88,
+                    rightW,
+                    18,
+                    Component.translatable(enabled
+                            ? "screen.academy.reflection_filter.forced_movement.on"
+                            : "screen.academy.reflection_filter.forced_movement.off"),
+                    mouseX,
+                    mouseY,
+                    true,
+                    enabled
+            );
+        }
+
         private void renderSideLists(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
             var listW = (rightW - 8) / 2;
             graphics.text(font, Component.translatable("screen.academy.reflection_filter.whitelist"),
@@ -670,6 +708,7 @@ public final class ReflectionFilter extends Skill {
                 if (handleEffectClick(mouseX, mouseY)
                         || handleMiddleButtons(mouseX, mouseY)
                         || handleModeButtons(mouseX, mouseY)
+                        || handleForcedMovementProtection(mouseX, mouseY)
                         || handleSideListClick(mouseX, mouseY)) {
                     return true;
                 }
@@ -715,6 +754,13 @@ public final class ReflectionFilter extends Skill {
             } else {
                 return false;
             }
+            sendUpdate();
+            return true;
+        }
+
+        private boolean handleForcedMovementProtection(double mouseX, double mouseY) {
+            if (!inside(mouseX, mouseY, rightX, panelY + 88, rightW, 18)) return false;
+            data.forcedMovementProtection = !data.forcedMovementProtection;
             sendUpdate();
             return true;
         }
@@ -775,13 +821,19 @@ public final class ReflectionFilter extends Skill {
 
         private void sendUpdate() {
             normalizeData(data);
-            MisakaNetworkClient.send(new UpdatePacket(data.mode, data.whitelist, data.blacklist));
+            MisakaNetworkClient.send(new UpdatePacket(
+                    data.mode,
+                    data.whitelist,
+                    data.blacklist,
+                    data.forcedMovementProtection
+            ));
         }
 
         private void setData(Data updated) {
             data.mode = updated.mode;
             data.whitelist = new ArrayList<>(updated.whitelist);
             data.blacklist = new ArrayList<>(updated.blacklist);
+            data.forcedMovementProtection = updated.forcedMovementProtection;
             normalizeData(data);
         }
 
@@ -884,20 +936,35 @@ public final class ReflectionFilter extends Skill {
     @PacketTarget(ThreadType.SERVER)
     public static final class UpdatePacket extends Packet<ServerGamePacketListenerImpl, UpdatePacket> {
         public static final StreamCodec<ByteBuf, UpdatePacket> CODEC = StreamCodec.of(
-                (buf, packet) -> writeFilterPayload(buf, packet.mode, packet.whitelist, packet.blacklist),
+                (buf, packet) -> writeFilterPayload(
+                        buf, packet.mode, packet.whitelist, packet.blacklist,
+                        packet.forcedMovementProtection
+                ),
                 buf -> {
                     var payload = readFilterPayload(buf);
-                    return new UpdatePacket(payload.mode, payload.whitelist, payload.blacklist);
+                    return new UpdatePacket(
+                            payload.mode,
+                            payload.whitelist,
+                            payload.blacklist,
+                            payload.forcedMovementProtection
+                    );
                 }
         );
         private final String mode;
         private final List<String> whitelist;
         private final List<String> blacklist;
+        private final boolean forcedMovementProtection;
 
-        public UpdatePacket(String mode, List<String> whitelist, List<String> blacklist) {
+        public UpdatePacket(
+                String mode,
+                List<String> whitelist,
+                List<String> blacklist,
+                boolean forcedMovementProtection
+        ) {
             this.mode = mode;
             this.whitelist = List.copyOf(whitelist);
             this.blacklist = List.copyOf(blacklist);
+            this.forcedMovementProtection = forcedMovementProtection;
         }
 
         @Override
@@ -909,20 +976,35 @@ public final class ReflectionFilter extends Skill {
     @PacketTarget(ThreadType.CLIENT)
     public static final class SyncPacket extends Packet<ClientPacketListener, SyncPacket> {
         public static final StreamCodec<ByteBuf, SyncPacket> CODEC = StreamCodec.of(
-                (buf, packet) -> writeFilterPayload(buf, packet.mode, packet.whitelist, packet.blacklist),
+                (buf, packet) -> writeFilterPayload(
+                        buf, packet.mode, packet.whitelist, packet.blacklist,
+                        packet.forcedMovementProtection
+                ),
                 buf -> {
                     var payload = readFilterPayload(buf);
-                    return new SyncPacket(payload.mode, payload.whitelist, payload.blacklist);
+                    return new SyncPacket(
+                            payload.mode,
+                            payload.whitelist,
+                            payload.blacklist,
+                            payload.forcedMovementProtection
+                    );
                 }
         );
         private final String mode;
         private final List<String> whitelist;
         private final List<String> blacklist;
+        private final boolean forcedMovementProtection;
 
-        public SyncPacket(String mode, List<String> whitelist, List<String> blacklist) {
+        public SyncPacket(
+                String mode,
+                List<String> whitelist,
+                List<String> blacklist,
+                boolean forcedMovementProtection
+        ) {
             this.mode = mode;
             this.whitelist = List.copyOf(whitelist);
             this.blacklist = List.copyOf(blacklist);
+            this.forcedMovementProtection = forcedMovementProtection;
         }
 
         @Override
@@ -931,17 +1013,25 @@ public final class ReflectionFilter extends Skill {
         }
     }
 
-    private static void writeFilterPayload(ByteBuf buf, String mode, List<String> whitelist, List<String> blacklist) {
+    private static void writeFilterPayload(
+            ByteBuf buf,
+            String mode,
+            List<String> whitelist,
+            List<String> blacklist,
+            boolean forcedMovementProtection
+    ) {
         ByteBufCodecs.STRING_UTF8.encode(buf, Mode.byName(mode).name());
         writeStringList(buf, whitelist);
         writeStringList(buf, blacklist);
+        ByteBufCodecs.BOOL.encode(buf, forcedMovementProtection);
     }
 
     private static FilterPayload readFilterPayload(ByteBuf buf) {
         return new FilterPayload(
                 ByteBufCodecs.STRING_UTF8.decode(buf),
                 readStringList(buf),
-                readStringList(buf)
+                readStringList(buf),
+                ByteBufCodecs.BOOL.decode(buf)
         );
     }
 
@@ -962,6 +1052,11 @@ public final class ReflectionFilter extends Skill {
         return result;
     }
 
-    private record FilterPayload(String mode, List<String> whitelist, List<String> blacklist) {
+    private record FilterPayload(
+            String mode,
+            List<String> whitelist,
+            List<String> blacklist,
+            boolean forcedMovementProtection
+    ) {
     }
 }

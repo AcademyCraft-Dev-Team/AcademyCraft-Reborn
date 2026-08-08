@@ -29,7 +29,7 @@ public record VectorExecutionPolicy(
                 false,
                 false,
                 VectorBlockPolicy.CLIP_NO_BREAK,
-                VectorVisualStyle.ENERGY,
+                VectorVisualStyle.NONE,
                 1,
                 DEFAULT_MAXIMUM_RANGE
         );
