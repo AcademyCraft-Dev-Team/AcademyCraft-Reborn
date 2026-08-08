@@ -37,13 +37,13 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorR
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityEffectLimiter;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorEnvironmentalFeedbackController;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackFingerprint;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageCoordinator;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorMotionRedirects;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
-import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -70,9 +70,10 @@ public class VectorReduction extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(75)
                 .iterationTicks(40)
-                .dependsOn(Skills.VECTOR_ACCEL)
+                .dependsOn(Skills.KINETIC_ENERGY_APPLIED)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
-                .devCondition(new DevCondition.DependencyCondition("Vector Acceleration", "academy:vector_accel"))
+                .devCondition(new DevCondition.DependencyCondition(
+                        "Kinetic Energy Applied", "academy:kinetic_energy_applied"))
         );
     }
 
@@ -146,7 +147,7 @@ public class VectorReduction extends Skill {
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
-                new AbilitySystemClient.SkillInfo(Skills.VECTOR_REDUCTION.get(), List.of(VectorAccel.Client.SKILL_INFO), R.textures.ability.accelerator.skill.vector_reduction.icon, 145, 53)
+                new AbilitySystemClient.SkillInfo(Skills.VECTOR_REDUCTION.get(), List.of(), R.textures.ability.accelerator.skill.vector_reduction.icon, 145, 53)
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REDUCTION + "_toggle";
         public static Config CONFIG = new Config();
@@ -255,8 +256,13 @@ public class VectorReduction extends Skill {
             var executed = Skills.VECTOR_REDUCTION.get().executeContinuous(
                     player,
                     _ -> Math.max(1.0f, incomingDamage),
-                    (_, _) -> VectorCompatibilityEffectLimiter.emit(
-                            player, effectKey, finalDirection, mirrorPoint),
+                    (_, _) -> VectorEnvironmentalFeedbackController.emitRefraction(
+                            player,
+                            source,
+                            effectKey,
+                            finalDirection,
+                            mirrorPoint
+                    ),
                     true
             );
             if (!executed) return false;
@@ -283,8 +289,13 @@ public class VectorReduction extends Skill {
             if (normalizeOrZero(direction) == Vec3.ZERO) direction = player.getLookAngle();
             var effectKey = VectorAttackFingerprint.computeLeaseKey(
                     player.getId(), source, incoming);
-            VectorCompatibilityEffectLimiter.emit(
-                    player, effectKey, direction, player.getBoundingBox().getCenter());
+            VectorEnvironmentalFeedbackController.emitRefraction(
+                    player,
+                    source,
+                    effectKey,
+                    direction,
+                    player.getBoundingBox().getCenter()
+            );
             player.invulnerableTime = 0;
             VectorDefenseFeedbackTickets.commitFull(player, source);
             return true;

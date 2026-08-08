@@ -111,7 +111,11 @@ public final class LocationTeleport extends Skill {
         @SubscribePacket
         public static void handleSync(MarksSyncPacket packet) {
             if (lastScreen != null && Minecraft.getInstance().gui.screen() == lastScreen) {
-                lastScreen.setMarks(packet.getMarks(), packet.getSelectedIndex());
+                lastScreen.setMarks(
+                        packet.getMarks(),
+                        packet.getQuickMarkIndex(),
+                        packet.getDefensiveMarkIndex()
+                );
             }
         }
 
@@ -168,8 +172,7 @@ public final class LocationTeleport extends Skill {
             var index = packet.getIndex();
             if (index < 0 || index >= data.getMarks().size()) return;
             data.getMarks().remove(index);
-            if (data.getSelectedMarkIndex() == index) data.setSelectedMarkIndex(-1);
-            else if (data.getSelectedMarkIndex() > index) data.setSelectedMarkIndex(data.getSelectedMarkIndex() - 1);
+            data.adjustSelectionsAfterRemoval(index);
             dirtyAndSync(player, data);
         }
 
@@ -179,7 +182,8 @@ public final class LocationTeleport extends Skill {
             var data = getData(player);
             if (data == null || !Skills.LOCATION_TELEPORT.get().isEnabled(player)) return;
             if (packet.index < -1 || packet.index >= data.getMarks().size()) return;
-            data.setSelectedMarkIndex(packet.index);
+            if (packet.defensive) data.setDefensiveMarkIndex(packet.index);
+            else data.setQuickMarkIndex(packet.index);
             dirtyAndSync(player, data);
         }
 
@@ -201,7 +205,6 @@ public final class LocationTeleport extends Skill {
                 player.teleportTo(level, destination.x, destination.y, destination.z,
                         Set.of(), player.getYRot(), player.getXRot(), false);
                 player.resetFallDistance();
-                data.setSelectedMarkIndex(packet.index);
                 dirtyAndSync(player, data);
             });
         }
@@ -210,10 +213,22 @@ public final class LocationTeleport extends Skill {
             return Skills.LOCATION_TELEPORT.get().<LocationTeleportData>getRuntimeData(player).orElse(null);
         }
 
+        @Deprecated(forRemoval = false)
         public static Mark getSelectedMark(ServerPlayer player) {
+            return getQuickMark(player);
+        }
+
+        public static Mark getQuickMark(ServerPlayer player) {
             var data = getData(player);
             if (data == null) return null;
-            var index = data.getSelectedMarkIndex();
+            var index = data.getQuickMarkIndex();
+            return index < 0 || index >= data.getMarks().size() ? null : data.getMarks().get(index);
+        }
+
+        public static Mark getDefensiveMark(ServerPlayer player) {
+            var data = getData(player);
+            if (data == null) return null;
+            var index = data.getDefensiveMarkIndex();
             return index < 0 || index >= data.getMarks().size() ? null : data.getMarks().get(index);
         }
 
@@ -251,7 +266,11 @@ public final class LocationTeleport extends Skill {
 
         private static void sync(ServerPlayer player, LocationTeleportData data) {
             MisakaNetworkServer.send(player,
-                    new MarksSyncPacket(new ArrayList<>(data.getMarks()), data.getSelectedMarkIndex()));
+                    new MarksSyncPacket(
+                            new ArrayList<>(data.getMarks()),
+                            data.getQuickMarkIndex(),
+                            data.getDefensiveMarkIndex()
+                    ));
         }
     }
 
@@ -312,8 +331,21 @@ public final class LocationTeleport extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class SelectMarkPacket extends IndexPacket<SelectMarkPacket> {
-        public static final StreamCodec<ByteBuf, SelectMarkPacket> CODEC = ByteBufCodecs.INT.map(SelectMarkPacket::new, SelectMarkPacket::getIndex);
-        public SelectMarkPacket(int index) { super(index); }
+        public static final StreamCodec<ByteBuf, SelectMarkPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    ByteBufCodecs.INT.encode(buf, packet.index);
+                    ByteBufCodecs.BOOL.encode(buf, packet.defensive);
+                },
+                buf -> new SelectMarkPacket(
+                        ByteBufCodecs.INT.decode(buf),
+                        ByteBufCodecs.BOOL.decode(buf)
+                )
+        );
+        private final boolean defensive;
+        public SelectMarkPacket(int index, boolean defensive) {
+            super(index);
+            this.defensive = defensive;
+        }
         @Override public PacketType<ServerGamePacketListenerImpl, SelectMarkPacket> getPacketType() { return PacketTypes.LOCATION_TELEPORT_SELECT.get(); }
     }
 
@@ -336,7 +368,8 @@ public final class LocationTeleport extends Skill {
                         ByteBufCodecs.INT.encode(buf, mark.y());
                         ByteBufCodecs.INT.encode(buf, mark.z());
                     }
-                    ByteBufCodecs.INT.encode(buf, packet.selectedIndex);
+                    ByteBufCodecs.INT.encode(buf, packet.quickMarkIndex);
+                    ByteBufCodecs.INT.encode(buf, packet.defensiveMarkIndex);
                 },
                 buf -> {
                     var count = Math.min(MAX_MARKS, Math.max(0, ByteBufCodecs.VAR_INT.decode(buf)));
@@ -345,17 +378,24 @@ public final class LocationTeleport extends Skill {
                         marks.add(new Mark(ByteBufCodecs.STRING_UTF8.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),
                                 ByteBufCodecs.INT.decode(buf), ByteBufCodecs.INT.decode(buf), ByteBufCodecs.INT.decode(buf)));
                     }
-                    return new MarksSyncPacket(marks, ByteBufCodecs.INT.decode(buf));
+                    return new MarksSyncPacket(
+                            marks,
+                            ByteBufCodecs.INT.decode(buf),
+                            ByteBufCodecs.INT.decode(buf)
+                    );
                 }
         );
         private final List<Mark> marks;
-        private final int selectedIndex;
-        public MarksSyncPacket(List<Mark> marks, int selectedIndex) {
+        private final int quickMarkIndex;
+        private final int defensiveMarkIndex;
+        public MarksSyncPacket(List<Mark> marks, int quickMarkIndex, int defensiveMarkIndex) {
             this.marks = List.copyOf(marks);
-            this.selectedIndex = selectedIndex;
+            this.quickMarkIndex = quickMarkIndex;
+            this.defensiveMarkIndex = defensiveMarkIndex;
         }
         public List<Mark> getMarks() { return marks; }
-        public int getSelectedIndex() { return selectedIndex; }
+        public int getQuickMarkIndex() { return quickMarkIndex; }
+        public int getDefensiveMarkIndex() { return defensiveMarkIndex; }
         @Override public PacketType<ClientPacketListener, MarksSyncPacket> getPacketType() { return PacketTypes.LOCATION_TELEPORT_SYNC.get(); }
     }
 }

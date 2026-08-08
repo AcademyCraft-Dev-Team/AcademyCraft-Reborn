@@ -39,7 +39,6 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.network.PacketTypes;
@@ -58,6 +57,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorD
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityEffectLimiter;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorEnvironmentalFeedbackController;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
@@ -88,9 +88,9 @@ public class VectorReflection extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.KINETIC_ENERGY_APPLIED)
+                .dependsOn(Skills.VECTOR_REDUCTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
-                .devCondition(new DevCondition.DependencyCondition("Kinetic Energy Applied", "academy:kinetic_energy_applied"))
+                .devCondition(new DevCondition.DependencyCondition("Vector Reduction", "academy:vector_reduction"))
         );
     }
 
@@ -117,7 +117,7 @@ public class VectorReflection extends Skill {
                 AbilityCategories.ACCELERATOR.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.VECTOR_REFLECTION.get(),
-                        List.of(KineticEnergyApplied.Client.SKILL_INFO),
+                        List.of(),
                         R.textures.ability.accelerator.skill.vector_reflection.icon,
                         210, 50
                 )
@@ -232,7 +232,6 @@ public class VectorReflection extends Skill {
                     || !canReflectSource(player, source)) {
                 return false;
             }
-            playReflectionSound(player);
             applyReflection(player, (ServerLevel) player.level(), source, damage);
             player.invulnerableTime = 0;
             VectorDefenseFeedbackTickets.commitFull(player, source);
@@ -320,7 +319,6 @@ public class VectorReflection extends Skill {
             if (reflectedDamage > 0.0f) {
                 executed = skill.executeContinuous(serverPlayer, _ -> result.baseCpCost(),
                         (_, _) -> {
-                            playReflectionSound(serverPlayer);
                             applyReflection(serverPlayer, level, source, reflectedDamage);
                         }, true);
             }
@@ -398,7 +396,7 @@ public class VectorReflection extends Skill {
             var velocity = projectile.getDeltaMovement();
             var speed = velocity.length();
             if (!Double.isFinite(speed)) return false;
-            speed = Math.max(speed, 1.5);
+            speed = Math.max(speed, projectileReflectionCost(0.0));
             var reflected = velocity.normalize().scale(-speed * 1.2);
             if (!isFiniteVector(reflected) || reflected.lengthSqr() < 1.0E-8) return false;
 
@@ -418,13 +416,28 @@ public class VectorReflection extends Skill {
                 redirect.run();
                 return true;
             }
-            var projectileCost = Math.max(1.0f, (float) speed);
+            var projectileCost = projectileReflectionCost(speed);
             return Skills.VECTOR_REFLECTION.get().executeContinuous(
                     player,
                     _ -> projectileCost,
                     (_, _) -> redirect.run(),
                     true
             );
+        }
+
+        public static boolean tryProtectForcedMovement(ServerPlayer player) {
+            if (!isActive(player)) return false;
+            return Skills.VECTOR_REFLECTION.get().executeContinuous(
+                    player,
+                    _ -> projectileReflectionCost(0.0),
+                    (_, _) -> playReflectionSound(player),
+                    true
+            );
+        }
+
+        static float projectileReflectionCost(double speed) {
+            if (!Double.isFinite(speed)) return 1.5f;
+            return Math.max(1.5f, (float) Math.max(0.0, speed));
         }
 
         private static boolean isFiniteVector(Vec3 vector) {
@@ -530,7 +543,12 @@ public class VectorReflection extends Skill {
                     ? sourcePos
                     : playerCenter.add(direction.scale(offset));
 
-            spawnGlowCircle(player, direction, pos);
+            VectorEnvironmentalFeedbackController.emitReflection(
+                    player,
+                    source,
+                    direction,
+                    pos
+            );
 
             if (directEntity instanceof Projectile projectile
                     && !VectorProjectileRedirects.isRedirected(projectile)) {

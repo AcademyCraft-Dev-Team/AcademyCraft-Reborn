@@ -26,10 +26,12 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
     private static final int DIM = DataTerminalTheme.TEXT_DIM;
     private static final int ACCENT = DataTerminalTheme.TELEPORT_ACCENT;
     private static final int SELECTED = DataTerminalTheme.TELEPORT_SELECTED;
-    private static final int PANEL_W = 300;
+    private static final int PANEL_W = 420;
     private static final int PANEL_H = 212;
     private static final int ROW_H = 18;
     private static final int TELEPORT_ACTION_WIDTH = 24;
+    private static final int QUICK_ACTION_WIDTH = 50;
+    private static final int DEFENSIVE_ACTION_WIDTH = 50;
     private static final int REMOVE_ACTION_WIDTH = 18;
 
     private final List<Mark> marks = new ArrayList<>();
@@ -42,7 +44,8 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
     private int panelWidth = PANEL_W;
     private int listTop;
     private int listBottom;
-    private int selectedIndex = -1;
+    private int quickMarkIndex = -1;
+    private int defensiveMarkIndex = -1;
     private int scroll;
     private Widget panelLayout;
     private Widget nameInputLayout;
@@ -103,13 +106,13 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         layout.setLayoutParams(new FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT));
         var panel = new FrameLayoutWidget();
         panel.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(PANEL_W, PANEL_H).gravity(Gravity.CENTER));
-        addSlot(panel, "name_input", 12, 25, 276, 16);
-        addSlot(panel, "coordinates", 12, 47, 276, 16);
-        addSlot(panel, "mark_current", 12, 69, 132, 16);
-        addSlot(panel, "add_mark", 156, 69, 132, 16);
-        addSlot(panel, "marks", 12, 91, 276, 93);
-        addSlot(panel, "refresh", 12, 190, 132, 16);
-        addSlot(panel, "done", 156, 190, 132, 16);
+        addSlot(panel, "name_input", 12, 25, 396, 16);
+        addSlot(panel, "coordinates", 12, 47, 396, 16);
+        addSlot(panel, "mark_current", 12, 69, 192, 16);
+        addSlot(panel, "add_mark", 216, 69, 192, 16);
+        addSlot(panel, "marks", 12, 91, 396, 93);
+        addSlot(panel, "refresh", 12, 190, 192, 16);
+        addSlot(panel, "done", 216, 190, 192, 16);
         layout.addChild("panel", panel);
         return layout;
     }
@@ -211,19 +214,28 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
             var y = listTop + row * ROW_H;
             var hover = mouseX >= left && mouseX <= right && mouseY >= y && mouseY < y + ROW_H - 1;
             graphics.fill(left, y, right, y + ROW_H - 1,
-                    index == selectedIndex ? SELECTED
+                    index == quickMarkIndex || index == defensiveMarkIndex ? SELECTED
                             : hover ? DataTerminalTheme.HOVER
                             : index % 2 == 0 ? DataTerminalTheme.ROW_BACKGROUND
                             : DataTerminalTheme.ROW_ALTERNATE);
-            if (index == selectedIndex) {
+            if (index == quickMarkIndex || index == defensiveMarkIndex) {
                 graphics.fill(left, y, left + 2, y + ROW_H - 1, ACCENT);
             }
             var name = mark.name() == null || mark.name().isBlank() ? "Mark " + (index + 1) : mark.name();
-            graphics.text(font, font.plainSubstrByWidth(name, 130), left + 6, y + 5, TEXT, false);
-            var coords = mark.x() + ", " + mark.y() + ", " + mark.z();
             var removeLeft = right - REMOVE_ACTION_WIDTH;
             var teleportLeft = removeLeft - TELEPORT_ACTION_WIDTH;
-            graphics.text(font, coords, teleportLeft - 4 - font.width(coords), y + 5, DIM, false);
+            var defensiveLeft = teleportLeft - DEFENSIVE_ACTION_WIDTH;
+            var quickLeft = defensiveLeft - QUICK_ACTION_WIDTH;
+            graphics.text(font, font.plainSubstrByWidth(name, 118), left + 6, y + 5, TEXT, false);
+            var coords = mark.x() + ", " + mark.y() + ", " + mark.z();
+            graphics.text(font, font.plainSubstrByWidth(coords, 118),
+                    quickLeft - 4 - Math.min(118, font.width(coords)), y + 5, DIM, false);
+            rowAction(graphics, quickLeft, y, QUICK_ACTION_WIDTH,
+                    Component.translatable("academy.location_teleport.quick_point"),
+                    mouseX, mouseY, index == quickMarkIndex, ACCENT);
+            rowAction(graphics, defensiveLeft, y, DEFENSIVE_ACTION_WIDTH,
+                    Component.translatable("academy.location_teleport.defensive_point"),
+                    mouseX, mouseY, index == defensiveMarkIndex, DataTerminalTheme.WARNING);
             graphics.centeredText(font, ">", teleportLeft + TELEPORT_ACTION_WIDTH / 2, y + 5,
                     DataTerminalTheme.GOOD);
             graphics.centeredText(font, "x", removeLeft + REMOVE_ACTION_WIDTH / 2, y + 5,
@@ -234,6 +246,30 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
             graphics.centeredText(font, Component.translatable("academy.location_teleport.empty"),
                     panelX + panelWidth / 2, listTop + 6, DIM);
         }
+    }
+
+    private void rowAction(
+            GuiGraphicsExtractor graphics,
+            int x,
+            int y,
+            int width,
+            Component label,
+            int mouseX,
+            int mouseY,
+            boolean selected,
+            int accent
+    ) {
+        var hovered = inside(mouseX, mouseY, x, y, width, ROW_H - 1);
+        DataTerminalTheme.button(
+                graphics, x, y, width, ROW_H - 1, true, selected, hovered, accent, SELECTED
+        );
+        graphics.centeredText(
+                font,
+                font.plainSubstrByWidth(label.getString(), width - 4),
+                x + width / 2,
+                y + 5,
+                TEXT
+        );
     }
 
     private void button(GuiGraphicsExtractor graphics, Rect bounds, Component text, int mouseX, int mouseY) {
@@ -253,6 +289,13 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         var mouseY = event.y();
         syncSerializedLayout();
         if (event.button() == 0) {
+            if (focusInputAt(event, doubleClick, nameBox)
+                    || focusInputAt(event, doubleClick, xBox)
+                    || focusInputAt(event, doubleClick, yBox)
+                    || focusInputAt(event, doubleClick, zBox)) {
+                return true;
+            }
+            setFocused(null);
             if (inside(mouseX, mouseY, rect(markCurrentLayout))) {
                 MisakaNetworkClient.send(new LocationTeleport.SaveMarkPacket(true, nameBox.getValue(), 0, 0, 0));
                 return true;
@@ -276,20 +319,51 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
                     var right = panelX + panelWidth - 12;
                     var removeLeft = right - REMOVE_ACTION_WIDTH;
                     var teleportLeft = removeLeft - TELEPORT_ACTION_WIDTH;
+                    var defensiveLeft = teleportLeft - DEFENSIVE_ACTION_WIDTH;
+                    var quickLeft = defensiveLeft - QUICK_ACTION_WIDTH;
                     if (mouseX >= removeLeft && mouseX < right) {
                         MisakaNetworkClient.send(new LocationTeleport.RemoveMarkPacket(index));
                     } else if (mouseX >= teleportLeft && mouseX < removeLeft) {
                         MisakaNetworkClient.send(new LocationTeleport.TeleportToMarkPacket(index));
                         onClose();
+                    } else if (mouseX >= defensiveLeft && mouseX < teleportLeft) {
+                        defensiveMarkIndex = defensiveMarkIndex == index ? -1 : index;
+                        MisakaNetworkClient.send(new LocationTeleport.SelectMarkPacket(
+                                defensiveMarkIndex,
+                                true
+                        ));
+                    } else if (mouseX >= quickLeft && mouseX < defensiveLeft) {
+                        quickMarkIndex = quickMarkIndex == index ? -1 : index;
+                        MisakaNetworkClient.send(new LocationTeleport.SelectMarkPacket(
+                                quickMarkIndex,
+                                false
+                        ));
                     } else {
-                        selectedIndex = index;
-                        MisakaNetworkClient.send(new LocationTeleport.SelectMarkPacket(index));
+                        nameBox.setValue(markValue(index).name());
+                        xBox.setValue(Integer.toString(markValue(index).x()));
+                        yBox.setValue(Integer.toString(markValue(index).y()));
+                        zBox.setValue(Integer.toString(markValue(index).z()));
                     }
                     return true;
                 }
             }
         }
         return super.mouseClicked(event, doubleClick);
+    }
+
+    private boolean focusInputAt(MouseButtonEvent event, boolean doubleClick, EditBox box) {
+        if (!inside(event.x(), event.y(), box.getX(), box.getY(), box.getWidth(), 16)) return false;
+        setFocused(box);
+        nameBox.setFocused(box == nameBox);
+        xBox.setFocused(box == xBox);
+        yBox.setFocused(box == yBox);
+        zBox.setFocused(box == zBox);
+        box.mouseClicked(event, doubleClick);
+        return true;
+    }
+
+    private Mark markValue(int index) {
+        return marks.get(index);
     }
 
     @Override
@@ -301,10 +375,11 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    public void setMarks(List<Mark> marks, int selectedIndex) {
+    public void setMarks(List<Mark> marks, int quickMarkIndex, int defensiveMarkIndex) {
         this.marks.clear();
         this.marks.addAll(marks);
-        this.selectedIndex = selectedIndex;
+        this.quickMarkIndex = quickMarkIndex;
+        this.defensiveMarkIndex = defensiveMarkIndex;
     }
 
     private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {

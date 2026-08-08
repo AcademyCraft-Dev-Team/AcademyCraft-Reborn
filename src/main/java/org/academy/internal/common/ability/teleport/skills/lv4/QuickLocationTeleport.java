@@ -26,6 +26,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -107,7 +108,7 @@ public final class QuickLocationTeleport extends Skill {
         @SubscribePacket
         public static void handle(RunPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var mark = LocationTeleport.Server.getSelectedMark(player);
+            var mark = LocationTeleport.Server.getQuickMark(player);
             if (mark == null) return;
             var level = LocationTeleport.Server.resolveLevel(player, mark);
             if (level == null) return;
@@ -115,6 +116,7 @@ public final class QuickLocationTeleport extends Skill {
             Entity target = player;
             var destination = LocationTeleport.Server.safeDestination(player, level, mark);
             if (picked != null && picked.level() == level) {
+                if (!EntityMotionGuard.canApplyMotionFrom(player, picked)) return;
                 LocationTeleport.Server.forceDestinationChunk(level, mark.x(), mark.z(),
                         "quick_location_" + player.getStringUUID());
                 level.getChunk(mark.x() >> 4, mark.z() >> 4);
@@ -125,7 +127,7 @@ public final class QuickLocationTeleport extends Skill {
                     destination = entityDestination;
                 }
             }
-            if (destination == null) return;
+            if (destination == null || !EntityMotionGuard.canApplyMotionFrom(player, target)) return;
 
             var finalTarget = target;
             var finalDestination = destination;

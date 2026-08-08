@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.teleport.skills.lv1;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -10,12 +11,20 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.LevelRenderEvent;
+import org.academy.api.client.render.Render;
+import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -42,7 +51,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class ThreateningTeleport extends Skill {
-    static final double MAX_RANGE = 24.0;
+    static final double MAX_RANGE = 32.0;
     static final float BASE_DAMAGE = 4.0f;
 
     public ThreateningTeleport() {
@@ -67,6 +76,7 @@ public final class ThreateningTeleport extends Skill {
                 InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_LEFT,
                         InputConstants.PRESS, InputConstants.MOD_ALT)
         ), ctx -> Client.cast());
+        NeoForge.EVENT_BUS.register(Client.class);
     }
 
     @Override
@@ -88,16 +98,78 @@ public final class ThreateningTeleport extends Skill {
         public static final String KEY_NAME_CAST = SkillNames.THREATENING_TELEPORT + "_cast";
         public static Config CONFIG = new Config();
 
+        @SubscribeEvent
+        public static void onLevelRender(LevelRenderEvent event) {
+            var minecraft = Minecraft.getInstance();
+            var player = minecraft.player;
+            if (player == null
+                    || minecraft.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.THREATENING_TELEPORT.get())
+                    || player.getMainHandItem().isEmpty()
+                    || !isPreviewing()) {
+                return;
+            }
+            var target = findTarget(player);
+            if (target == null) return;
+
+            var camera = minecraft.gameRenderer.mainCamera().position();
+            var bounds = target.getBoundingBox().inflate(0.05);
+            var matrices = event.getMatrixStack();
+            matrices.pushPose();
+            matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
+            event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) ->
+                    LineBoxRenderer.renderWireframeBox(
+                            snapshot, consumer, bounds,
+                            0.75f, 0.35f, 1.0f, 1.0f
+                    ));
+            matrices.popPose();
+        }
+
+        private static boolean isPreviewing() {
+            return InputSystem.isDown(InputSystem.InputType.KEYBOARD, InputConstants.KEY_LALT)
+                    || InputSystem.isDown(InputSystem.InputType.KEYBOARD, InputConstants.KEY_RALT);
+        }
+
         private static void cast() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.THREATENING_TELEPORT.get())) {
                 return;
             }
             var minecraft = Minecraft.getInstance();
-            if (minecraft.player == null || !(minecraft.hitResult instanceof EntityHitResult hit)
-                    || !(hit.getEntity() instanceof LivingEntity target) || target == minecraft.player) {
-                return;
-            }
+            if (minecraft.player == null) return;
+            var target = findTarget(minecraft.player);
+            if (target == null) return;
             MisakaNetworkClient.send(new CastPacket(target.getId()));
+        }
+
+        private static LivingEntity findTarget(LocalPlayer player) {
+            var start = player.getEyePosition();
+            var direction = player.getLookAngle().normalize();
+            if (direction.lengthSqr() < 1.0e-8) return null;
+            var fullEnd = start.add(direction.scale(MAX_RANGE));
+            var blockHit = player.level().clip(new ClipContext(
+                    start,
+                    fullEnd,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    player
+            ));
+            var end = blockHit.getType() == HitResult.Type.MISS
+                    ? fullEnd
+                    : blockHit.getLocation();
+            var hit = ProjectileUtil.getEntityHitResult(
+                    player,
+                    start,
+                    end,
+                    new AABB(start, end).inflate(1.0),
+                    entity -> entity instanceof LivingEntity
+                            && entity != player
+                            && entity.isAlive()
+                            && entity.isPickable(),
+                    MAX_RANGE * MAX_RANGE
+            );
+            return hit != null && hit.getEntity() instanceof LivingEntity living
+                    ? living
+                    : null;
         }
 
         public static class Config extends KeyBindingConfig {

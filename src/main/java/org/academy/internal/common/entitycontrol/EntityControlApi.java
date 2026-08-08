@@ -281,6 +281,7 @@ public final class EntityControlApi {
 
     public static void tick(LivingEntity entity) {
         if (entity == null || entity.level().isClientSide()) return;
+        EntityMotionGuard.tick(entity);
         var state = STATES.get(entity.getUUID());
         if (state == null) return;
         expire(state, gameTime(entity));
