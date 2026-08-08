@@ -42,6 +42,7 @@
   ],
   "client": [
     "client.MixinAvatarRenderer",
+    "client.MixinCamera",
     "client.MixinGameRenderer",
     "client.MixinEntityRenderDispatcher",
     "client.MixinHud",

@@ -60,6 +60,8 @@ public final class R {
             public static final Identifier vfx_ring = academy("core/vfx_ring");
             public static final Identifier vfx_arc_inst = academy("core/vfx_arc_inst");
             public static final Identifier vfx_tex_billboard = academy("core/vfx_tex_billboard");
+            public static final Identifier vfx_sky_strike_quad = academy("core/vfx_sky_strike_quad");
+            public static final Identifier vfx_screen_flash = academy("core/vfx_screen_flash");
             public static final Identifier bloom_blend = academy("core/bloom_blend");
             public static final Identifier distortion_ring = academy("core/distortion_ring");
             public static final Identifier gaussian_blur = academy("core/gaussian_blur");
@@ -244,6 +246,21 @@ public final class R {
                         public static final Identifier icon = academy("textures/ability/electromaster/skill/iron_sand_arsenal/icon.png");
 
                         private iron_sand_arsenal() {
+                        }
+                    }
+
+                    public static final class sky_strike {
+                        public static final class effect {
+                            public static final Identifier lightning_column = academy("textures/ability/electromaster/skill/sky_strike/effect/lightning_column.png");
+                            public static final Identifier lightning_ribbon = academy("textures/ability/electromaster/skill/sky_strike/effect/lightning_ribbon.png");
+                            public static final Identifier impact_shockwave_ring = academy("textures/ability/electromaster/skill/sky_strike/effect/impact_shockwave_ring.png");
+                            public static final Identifier impact_flash = academy("textures/ability/electromaster/skill/sky_strike/effect/impact_flash.png");
+
+                            private effect() {
+                            }
+                        }
+
+                        private sky_strike() {
                         }
                     }
 

@@ -7,6 +7,7 @@ import java.util.function.BooleanSupplier
 import java.util.function.Consumer
 import java.util.function.IntConsumer
 import java.util.function.IntSupplier
+import kotlin.math.roundToInt
 
 /**
  * Registers client-side, per-skill settings displayed by the Skill Settings app.
@@ -83,6 +84,36 @@ object SkillSettingsRegistry {
         init {
             require(min <= max) { "Integer setting '$id' has an invalid range" }
             require(step > 0) { "Integer setting '$id' must use a positive step" }
+        }
+    }
+
+    fun interface FloatSupplier {
+        fun getAsFloat(): Float
+    }
+
+    data class FloatRange(
+        override val id: String,
+        override val labelKey: String,
+        val min: Float,
+        val max: Float,
+        val step: Float = 0.05f,
+        val getter: FloatSupplier,
+        val setter: Consumer<Float>,
+        val commit: Runnable
+    ) : Entry {
+        init {
+            require(min.isFinite() && max.isFinite() && min <= max) {
+                "Float setting '$id' has an invalid range"
+            }
+            require(step.isFinite() && step > 0f) {
+                "Float setting '$id' must use a positive finite step"
+            }
+        }
+
+        fun quantize(value: Float): Float {
+            if (!value.isFinite()) return min
+            val index = ((value - min) / step).roundToInt()
+            return (min + index * step).coerceIn(min, max)
         }
     }
 

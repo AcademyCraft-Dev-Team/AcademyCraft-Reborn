@@ -76,6 +76,7 @@ import org.academy.internal.client.renderer.vfx.BeamVfxClient;
 import org.academy.internal.client.renderer.vfx.SmokeVfxClient;
 import org.academy.internal.client.renderer.vfx.StormWingVfxClient;
 import org.academy.internal.client.renderer.vfx.PlasmaVfxClient;
+import org.academy.internal.client.renderer.vfx.SkyStrikeVfxClient;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -115,6 +116,7 @@ public final class AcademyCraftClient {
         ArcVfxClient.register();
         StormWingVfxClient.register();
         PlasmaVfxClient.register();
+        SkyStrikeVfxClient.register();
     }
 
     public static void initRender() {
