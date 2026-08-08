@@ -185,6 +185,7 @@ public final class PulseCharge extends Skill {
             var context = new Context(player);
             ACTIVE.put(player, context);
             AbilitySystemServer.registerContext(context);
+            skill.reportTrigger(player);
         }
 
         @SubscribePacket
@@ -276,9 +277,7 @@ public final class PulseCharge extends Skill {
         }
 
         private static void mergeProgress(SkillData target, SkillData legacy) {
-            target.setLevel(Math.max(target.getLevel(), legacy.getLevel()));
-            target.setMaxExp(Math.max(target.getMaxExp(), legacy.getMaxExp()));
-            target.setExp(Math.max(target.getExp(), legacy.getExp()));
+            target.setProficiency(Math.max(target.getProficiency(), legacy.getProficiency()));
         }
     }
 
@@ -306,6 +305,7 @@ public final class PulseCharge extends Skill {
                 return;
             }
             var target = Server.resolveChargeTarget(level(), player);
+            skill.reportActivity(player, false);
             if (target == null) {
                 clearPoweredBlock();
                 return;
@@ -337,6 +337,7 @@ public final class PulseCharge extends Skill {
                     effective = true;
                 }
             }
+            if (effective) skill.reportActivity(player, true);
             if (!effective && costTick) clearPoweredBlock();
         }
 

@@ -42,6 +42,20 @@ public final class LearningHelper {
         };
     }
 
+    public static float getAbilityExpRequirement(AbilityCategory category, int currentLevel) {
+        if (category == null) return 1000.0f;
+        var count = category.getSkills().stream()
+                .filter(skill -> skill.getRecommendedLevel().getLevelCode() == currentLevel)
+                .count();
+        var base = Math.max(1L, count) * 1000.0f;
+        return base * (currentLevel == 4 ? 1.333f : 0.666f);
+    }
+
+    public static float getAbilityProgress(AbilityCategory category, int currentLevel, float abilityExp) {
+        var required = getAbilityExpRequirement(category, currentLevel);
+        return required <= 0.0f ? 1.0f : Math.clamp(abilityExp / required, 0.0f, 1.0f);
+    }
+
     /**
      * Returns the complete server-authoritative skill set exposed by a category.
      */

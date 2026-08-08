@@ -64,7 +64,7 @@ public final class PressureLock extends Skill {
     }
     public static final class Server {
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
-        @SubscribePacket public static void handle(StartPacket packet) { var player = packet.getPacketListener().getPlayer(); if (ACTIVE.containsKey(player) || !Skills.PRESSURE_LOCK.get().isEnabled(player)) return; var context = new Context(player); ACTIVE.put(player, context); AbilitySystemServer.registerContext(context); }
+        @SubscribePacket public static void handle(StartPacket packet) { var player = packet.getPacketListener().getPlayer(); var skill = Skills.PRESSURE_LOCK.get(); if (ACTIVE.containsKey(player) || !skill.isEnabled(player)) return; var context = new Context(player); ACTIVE.put(player, context); AbilitySystemServer.registerContext(context); skill.reportTrigger(player); }
         @SubscribePacket public static void handle(StopPacket packet) {
             var context = ACTIVE.get(packet.getPacketListener().getPlayer());
             if (context != null && context.target == null) context.end();
@@ -84,6 +84,8 @@ public final class PressureLock extends Skill {
                     end();
                     return;
                 }
+                var skill = Skills.PRESSURE_LOCK.get();
+                skill.reportActivity(player, false);
                 if (target == null) {
                     if ((age & 1) != 0) return;
                     target = findTarget();
@@ -92,7 +94,6 @@ public final class PressureLock extends Skill {
                         end();
                         return;
                     }
-                    var skill = Skills.PRESSURE_LOCK.get();
                     if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
                             player.getUUID(),
                             skill.getCpCost(skill.getLevel(player))
@@ -117,6 +118,7 @@ public final class PressureLock extends Skill {
                 target.snapTo(anchor);
                 target.resetFallDistance();
                 target.hurtMarked = true;
+                skill.reportActivity(player, true);
             }
 
             private LivingEntity findTarget() {

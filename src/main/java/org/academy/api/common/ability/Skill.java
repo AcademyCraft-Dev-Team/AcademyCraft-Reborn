@@ -21,7 +21,6 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
-import org.academy.internal.server.ability.SkillDataManager;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
 
@@ -105,8 +104,7 @@ public abstract class Skill {
      * 重写时建议调用super.onHurt()
      */
     public void onHurt(ServerPlayer attacker, LivingEntity target, float amount) {
-        AbilitySystemServer.getSystem(attacker)
-                .addPlayerSkillExp(attacker.getUUID(), this, SkillDataManager.ExpEvent.ACT_EFFECTIVE);
+        reportActivity(attacker, true);
     }
 
     /**
@@ -116,7 +114,7 @@ public abstract class Skill {
      */
     public void onKill(ServerPlayer killer, LivingEntity target) {
         AbilitySystemServer.getSystem(killer)
-                .addPlayerSkillExp(killer.getUUID(), this, SkillDataManager.ExpEvent.KILL_ENTITY);
+                .addPlayerSkillProficiency(killer.getUUID(), this, ProficiencyEvent.KILL_ENTITY);
     }
 
     /**
@@ -132,6 +130,38 @@ public abstract class Skill {
         return executeActive(player, ctx -> cpCost, action);
     }
 
+    /**
+     * Pays CP for one tick of an already-running skill without treating the payment as a new cast.
+     */
+    protected final boolean executeContinuous(
+            ServerPlayer player,
+            CostCalculator calculator,
+            SkillAction action,
+            boolean effective
+    ) {
+        if (!isEnabled(player)) return false;
+        return AbilitySystemServer.getSystem(player)
+                .castContinuousCpIfPossible(player, this, calculator, action, effective);
+    }
+
+    protected final boolean executeContinuous(ServerPlayer player, SkillAction action, boolean effective) {
+        return executeContinuous(player, ctx -> cpCost, action, effective);
+    }
+
+    public final void reportActivity(ServerPlayer player, boolean effective) {
+        AbilitySystemServer.getSystem(player).reportSkillActivity(
+                player.getUUID(),
+                this,
+                effective ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE
+        );
+    }
+
+    /** Records one server-confirmed successful activation. */
+    public final void reportTrigger(ServerPlayer player) {
+        AbilitySystemServer.getSystem(player)
+                .addPlayerSkillProficiency(player.getUUID(), this, ProficiencyEvent.TRIGGER);
+    }
+
     @SuppressWarnings("unchecked")
     public final <T extends SkillData> Optional<T> getRuntimeData(ServerPlayer player) {
         var system = AbilitySystemServer.getSystem(player);
@@ -145,7 +175,7 @@ public abstract class Skill {
         if (!LearningHelper.isSkillAvailableForCategory(system.getPlayerAbilityCategory(uuid), this)) return;
         var runtimeData = getRuntimeData(player);
         if (runtimeData.isEmpty()) return;
-        var level = runtimeData.get().getLevel();
+        var level = getLevel(player);
         var cost = getMaintenanceCost(level);
 
         var goingToEnable = !runtimeData.get().isEnabled();
@@ -229,6 +259,13 @@ public abstract class Skill {
 
     public int getMaxSkillLevel() {
         return maxSkillLevel;
+    }
+
+    public int getLevelForProficiency(float proficiency) {
+        if (maxSkillLevel <= 0) return 0;
+        var clamped = Math.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY);
+        var level = (int) Math.floor(clamped / SkillData.MAX_PROFICIENCY * (maxSkillLevel + 1));
+        return Math.min(maxSkillLevel, level);
     }
 
     public final int getLevel(ServerPlayer player) {

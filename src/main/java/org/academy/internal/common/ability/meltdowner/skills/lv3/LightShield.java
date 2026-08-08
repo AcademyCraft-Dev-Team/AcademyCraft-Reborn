@@ -203,6 +203,7 @@ public final class LightShield extends Skill {
             var context = new Context(player);
             CONTEXT_MAP.put(player, context);
             AbilitySystemServer.registerContext(context);
+            skill.reportTrigger(player);
         }
 
         @SubscribePacket
@@ -259,9 +260,7 @@ public final class LightShield extends Skill {
         }
 
         private static void mergeProgress(SkillData target, SkillData legacy) {
-            target.setLevel(Math.max(target.getLevel(), legacy.getLevel()));
-            target.setMaxExp(Math.max(target.getMaxExp(), legacy.getMaxExp()));
-            target.setExp(Math.max(target.getExp(), legacy.getExp()));
+            target.setProficiency(Math.max(target.getProficiency(), legacy.getProficiency()));
         }
     }
 
@@ -305,6 +304,7 @@ public final class LightShield extends Skill {
             }
 
             ticks++;
+            skill.reportActivity(player, true);
             var system = AbilitySystemServer.getSystem(player);
             if (ticks % CP_INTERVAL_TICKS == 0
                     && !system.tryTimedOccupation(player.getUUID(), 5.0f, skill)) {

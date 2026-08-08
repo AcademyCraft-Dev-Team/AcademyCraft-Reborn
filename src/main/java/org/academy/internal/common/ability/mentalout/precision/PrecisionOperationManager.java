@@ -92,9 +92,7 @@ public final class PrecisionOperationManager {
     }
 
     private static void mergeProgress(PrecisionOperation.Data target, SkillData source) {
-        target.setLevel(source.getLevel());
-        target.setMaxExp(source.getMaxExp());
-        target.setExp(source.getExp());
+        target.setProficiency(source.getProficiency());
         target.setEnabled(source.isEnabled());
     }
 

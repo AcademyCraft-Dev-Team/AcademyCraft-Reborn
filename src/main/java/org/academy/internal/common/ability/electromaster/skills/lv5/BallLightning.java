@@ -224,6 +224,7 @@ public class BallLightning extends Skill {
                     return;
                 }
 
+                Skills.BALL_LIGHTNING.get().reportActivity(player, true);
                 updateTarget();
                 updateStateTransition();
                 updatePhysics();

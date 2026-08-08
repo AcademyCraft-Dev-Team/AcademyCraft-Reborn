@@ -137,7 +137,9 @@ public final class AeromanipFieldManager {
                 end();
                 return;
             }
+            skill.reportActivity(player, false);
             if ((ageTicks & 1) != 0) return;
+            skill.reportActivity(player, true);
             ticker.tick(player, field, ageTicks);
             spawnVisual();
         }

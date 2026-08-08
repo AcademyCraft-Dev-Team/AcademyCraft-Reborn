@@ -115,7 +115,17 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
 
     @Override
     public int extractEnergy(int maxExtract, boolean simulate) {
-        return 0;
+        if (maxExtract <= 0) return 0;
+        if (!isMain() && level != null) {
+            var mainBE = getMain();
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDeveloper) {
+                return mainDeveloper.extractEnergy(maxExtract, simulate);
+            }
+            return 0;
+        }
+        var extracted = Math.min(maxExtract, energyStored);
+        if (!simulate && extracted > 0) setEnergyStored(energyStored - extracted);
+        return extracted;
     }
 
     @Override
@@ -166,7 +176,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         if (isMain()) {
-            energyStored = input.getIntOr("energy_stored", 0);
+            energyStored = Math.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
             connectedNodePos = BlockPos.of(input.getLongOr("connected_node_pos", 0));
             isOpen = input.getBooleanOr("is_open", false);
         } else {

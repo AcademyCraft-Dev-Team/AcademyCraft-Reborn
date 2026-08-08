@@ -2,16 +2,21 @@ package org.academy.internal.server.ability;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import org.academy.api.common.ability.LearningHelper;
+import org.academy.api.common.ability.ProficiencyEvent;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillActivity;
 import org.academy.api.common.ability.SkillScope;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.SkillData;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -19,10 +24,13 @@ import java.util.function.Function;
 public class SkillDataManager implements AbilitySubsystem {
     private final SyncManager syncManager;
     private final PlayerDataManager playerDataManager;
+    private final Map<UUID, Map<String, SkillActivity>> pendingActivities = new ConcurrentHashMap<>();
 
     private BiConsumer<UUID, Integer> onSkillLevelUp = (_, _) -> {
     };
     private Consumer<UUID> onSkillSetChanged = uuid -> {
+    };
+    private BiConsumer<UUID, Float> onProficiencyGain = (_, _) -> {
     };
 
     public SkillDataManager(PlayerDataManager playerDataManager, SyncManager syncManager) {
@@ -36,17 +44,56 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     @Override
+    public void onPlayerLogout(ServerPlayer player) {
+        pendingActivities.remove(player.getUUID());
+    }
+
+    @Override
+    public void tick(ServerPlayer player) {
+        var uuid = player.getUUID();
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null) return;
+
+        var activities = pendingActivities.remove(uuid);
+        var category = playerDataManager.getPlayerAbilityCategory(uuid);
+        var overload = playerData.getCpData().getStatus() == AbilityData.Status.OVERLOAD;
+        var changed = false;
+        var crossedThreshold = false;
+
+        for (var entry : playerData.getSkillDataMap().entrySet()) {
+            var id = Identifier.tryParse(entry.getKey());
+            if (id == null) continue;
+            var skill = Registries.SKILLS.get(id).map(reference -> reference.value()).orElse(null);
+            if (skill == null) continue;
+            var data = entry.getValue();
+            if (!data.isEnabled() || overload || !LearningHelper.isSkillAvailableForCategory(category, skill)) continue;
+
+            var effectLevel = skill.getLevelForProficiency(data.getProficiency());
+            var activity = activities == null ? null : activities.get(entry.getKey());
+            var event = resolveContinuousEvent(skill.isPassive(effectLevel), activity);
+            if (event == null) continue;
+
+            var levelsGained = applyProficiency(data, skill, event.getIncrement());
+            if (levelsGained > 0) {
+                crossedThreshold = true;
+                onSkillLevelUp.accept(uuid, levelsGained);
+            }
+            onProficiencyGain.accept(uuid, event.getIncrement());
+            changed = true;
+        }
+
+        if (!changed) return;
+        playerData.markDirty();
+        if (crossedThreshold || player.tickCount % 20 == 0) {
+            syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        }
+    }
+
+    @Override
     public void processSync(ServerPlayer player) {
         var playerData = playerDataManager.getData(player.getUUID());
         if (playerData == null) return;
-
-        var skills = playerData.getSkillDataMap();
-        var packet = new SyncSkillDataPacket(skills);
-        MisakaNetworkServer.send(player, packet);
-    }
-
-    private void modify(UUID uuid, String skillId, Consumer<SkillData> action) {
-        mutate(uuid, skillId, SkillData.class, action);
+        MisakaNetworkServer.send(player, new SyncSkillDataPacket(playerData.getSkillDataMap()));
     }
 
     public <T extends SkillData> boolean mutate(
@@ -57,7 +104,6 @@ public class SkillDataManager implements AbilitySubsystem {
     ) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
-
         var data = playerData.getSkillDataMap().get(skillId);
         if (!type.isInstance(data)) return false;
 
@@ -70,43 +116,97 @@ public class SkillDataManager implements AbilitySubsystem {
     private void query(UUID uuid, String skillId, Consumer<SkillData> action) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return;
-
         var data = playerData.getSkillDataMap().get(skillId);
-        if (data == null) return;
-
-        action.accept(data);
+        if (data != null) action.accept(data);
     }
 
     public int getSkillLevel(UUID uuid, String skillKey) {
+        var id = Identifier.tryParse(skillKey);
+        if (id == null) return 0;
+        var skill = Registries.SKILLS.get(id).map(reference -> reference.value()).orElse(null);
+        if (skill == null) return 0;
         var result = new int[]{0};
-        query(uuid, skillKey, data -> result[0] = data.getLevel());
+        query(uuid, skillKey, data -> result[0] = skill.getLevelForProficiency(data.getProficiency()));
         return result[0];
     }
 
-    public void addSkillExp(UUID uuid, Skill skill, ExpEvent event) {
-        modify(uuid, skill.getKeyString(), skillData -> {
-            var maxLevel = skill.getMaxSkillLevel();
-
-            if (skillData.getLevel() >= maxLevel && skillData.isMaxExp()) return;
-
-            skillData.setExp(skillData.getExp() + event.getIncrement());
-
-            while (skillData.getExp() >= skillData.getMaxExp() && skillData.getLevel() < maxLevel) {
-                skillData.setExp(skillData.getExp() - skillData.getMaxExp());
-                skillData.setLevel(skillData.getLevel() + 1);
-                onSkillLevelUp.accept(uuid, 1);
-            }
-
-            if (skillData.getLevel() >= maxLevel) {
-                skillData.setExp((float) skillData.getMaxExp());
-            }
-        });
-    }
-
-    public float getSkillExp(UUID uuid, String skillKey) {
+    public float getSkillProficiency(UUID uuid, String skillKey) {
         var result = new float[]{0.0f};
-        query(uuid, skillKey, data -> result[0] = data.getExp());
+        query(uuid, skillKey, data -> result[0] = data.getProficiency());
         return result[0];
+    }
+
+    public boolean addSkillProficiency(UUID uuid, Skill skill, ProficiencyEvent event) {
+        if (skill == null || event == null) return false;
+        return addSkillProficiency(uuid, skill, event.getIncrement());
+    }
+
+    public boolean addSkillProficiency(UUID uuid, Skill skill, float increment) {
+        if (skill == null || !Float.isFinite(increment) || increment == 0.0f) return false;
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null) return false;
+        var data = playerData.getSkillDataMap().get(skill.getKeyString());
+        if (data == null) return false;
+
+        var levelsGained = applyProficiency(data, skill, increment);
+        if (levelsGained > 0) onSkillLevelUp.accept(uuid, levelsGained);
+        if (increment > 0.0f) onProficiencyGain.accept(uuid, increment);
+        playerData.markDirty();
+        syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        return true;
+    }
+
+    public boolean setSkillProficiency(UUID uuid, Skill skill, float proficiency) {
+        if (skill == null) return false;
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null) return false;
+        var data = playerData.getSkillDataMap().get(skill.getKeyString());
+        if (data == null) return false;
+
+        var oldLevel = skill.getLevelForProficiency(data.getProficiency());
+        data.setProficiency(proficiency);
+        var newLevel = skill.getLevelForProficiency(data.getProficiency());
+        if (newLevel > oldLevel) onSkillLevelUp.accept(uuid, newLevel - oldLevel);
+        playerData.markDirty();
+        syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
+        return true;
+    }
+
+    public void reportSkillActivity(UUID uuid, Skill skill, SkillActivity activity) {
+        if (uuid == null || skill == null || activity == null) return;
+        pendingActivities.computeIfAbsent(uuid, _ -> new ConcurrentHashMap<>())
+                .merge(skill.getKeyString(), activity, SkillDataManager::strongestActivity);
+    }
+
+    static SkillActivity strongestActivity(SkillActivity left, SkillActivity right) {
+        return left == SkillActivity.EFFECTIVE || right == SkillActivity.EFFECTIVE
+                ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE;
+    }
+
+    static ProficiencyEvent resolveContinuousEvent(boolean passive, SkillActivity activity) {
+        if (passive) return ProficiencyEvent.PASSIVE_TICK;
+        if (activity == SkillActivity.EFFECTIVE) return ProficiencyEvent.EFFECTIVE_TICK;
+        if (activity == SkillActivity.ACTIVE) return ProficiencyEvent.ACTIVE_TICK;
+        return null;
+    }
+
+    private static int applyProficiency(SkillData data, Skill skill, float increment) {
+        var oldLevel = skill.getLevelForProficiency(data.getProficiency());
+        data.setProficiency(data.getProficiency() + increment);
+        var newLevel = skill.getLevelForProficiency(data.getProficiency());
+        return Math.max(0, newLevel - oldLevel);
+    }
+
+    /** @deprecated Use {@link #addSkillProficiency(UUID, Skill, ProficiencyEvent)}. */
+    @Deprecated
+    public void addSkillExp(UUID uuid, Skill skill, ExpEvent event) {
+        addSkillProficiency(uuid, skill, event.event);
+    }
+
+    /** @deprecated Use {@link #getSkillProficiency(UUID, String)}. */
+    @Deprecated
+    public float getSkillExp(UUID uuid, String skillKey) {
+        return getSkillProficiency(uuid, skillKey);
     }
 
     public void addSkill(ServerPlayer serverPlayer, String skillKey) {
@@ -115,7 +215,10 @@ public class SkillDataManager implements AbilitySubsystem {
         if (playerData == null) return;
 
         Registries.SKILLS.get(Identifier.parse(skillKey)).ifPresent(skillReference -> {
-            var skillData = playerData.getSkillDataMap().putIfAbsent(skillKey, skillReference.value().createData(serverPlayer));
+            var skillData = playerData.getSkillDataMap().putIfAbsent(
+                    skillKey,
+                    skillReference.value().createData(serverPlayer)
+            );
             if (skillData == null) {
                 playerData.markDirty();
                 syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
@@ -126,11 +229,7 @@ public class SkillDataManager implements AbilitySubsystem {
 
     public void removeSkill(UUID uuid, String skillKey) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null) return;
-
-        var skillData = playerData.getSkillDataMap().remove(skillKey);
-        if (skillData == null) return;
-
+        if (playerData == null || playerData.getSkillDataMap().remove(skillKey) == null) return;
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         onSkillSetChanged.accept(uuid);
@@ -139,13 +238,8 @@ public class SkillDataManager implements AbilitySubsystem {
     public void clearCategorySkills(UUID uuid) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return;
-
-        var removed = removeCategorySkills(
-                playerData.getSkillDataMap(),
-                SkillDataManager::resolveSkillScope
-        );
+        var removed = removeCategorySkills(playerData.getSkillDataMap(), SkillDataManager::resolveSkillScope);
         if (removed == 0) return;
-
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         onSkillSetChanged.accept(uuid);
@@ -169,7 +263,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public void toggleSkill(UUID uuid, String skillId) {
-        modify(uuid, skillId, SkillData::toggleEnabled);
+        mutate(uuid, skillId, SkillData.class, SkillData::toggleEnabled);
     }
 
     public void setOnSkillLevelUp(BiConsumer<UUID, Integer> onSkillLevelUp) {
@@ -180,27 +274,26 @@ public class SkillDataManager implements AbilitySubsystem {
         this.onSkillSetChanged = onSkillSetChanged;
     }
 
+    public void setOnProficiencyGain(BiConsumer<UUID, Float> onProficiencyGain) {
+        this.onProficiencyGain = onProficiencyGain;
+    }
+
+    /** @deprecated Use {@link ProficiencyEvent}. */
+    @Deprecated
     public enum ExpEvent {
-        //击杀生物
-        KILL_ENTITY(8.0f),
+        KILL_ENTITY(ProficiencyEvent.KILL_ENTITY),
+        HIT_ENTITY(ProficiencyEvent.EFFECTIVE_TICK),
+        ACT_EFFECTIVE(ProficiencyEvent.TRIGGER),
+        TICK_PASSIVE(ProficiencyEvent.PASSIVE_TICK);
 
-        //击中生物
-        HIT_ENTITY(4.0f),
+        private final ProficiencyEvent event;
 
-        //释放技能
-        ACT_EFFECTIVE(2.0f),
-
-        //被动开启
-        TICK_PASSIVE(0.01f);
-
-        private final float increment;
-
-        ExpEvent(float increment) {
-            this.increment = increment;
+        ExpEvent(ProficiencyEvent event) {
+            this.event = event;
         }
 
         public float getIncrement() {
-            return increment;
+            return event.getIncrement();
         }
     }
 }

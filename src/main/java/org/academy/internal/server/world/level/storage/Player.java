@@ -1,9 +1,11 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.google.gson.annotations.SerializedName;
+import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.data.AbilityData;
+import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 
@@ -154,9 +156,14 @@ public final class Player {
         for (var entry : original) {
             var sourceId = entry.getKey();
             var targetId = canonicalizeSkillId(sourceId);
+            var sourceData = entry.getValue();
+            if (sourceData != null && sourceData.hasLegacyProgress()) {
+                sourceData.migrateLegacyProgress(resolveMaxSkillLevel(targetId));
+                changed = true;
+            }
             if (sourceId.equals(targetId)) continue;
 
-            var sourceData = skillDataMap.remove(sourceId);
+            sourceData = skillDataMap.remove(sourceId);
             if (sourceData == null) continue;
             var targetData = skillDataMap.get(targetId);
             if (targetData == null) {
@@ -241,9 +248,15 @@ public final class Player {
     }
 
     private static void mergeSkillData(SkillData target, SkillData source) {
-        target.setLevel(Math.max(target.getLevel(), source.getLevel()));
-        target.setMaxExp(Math.max(target.getMaxExp(), source.getMaxExp()));
-        target.setExp(Math.max(target.getExp(), source.getExp()));
+        target.setProficiency(Math.max(target.getProficiency(), source.getProficiency()));
         target.setEnabled(target.isEnabled() || source.isEnabled());
+    }
+
+    private static int resolveMaxSkillLevel(String skillId) {
+        var id = Identifier.tryParse(skillId);
+        if (id == null) return 3;
+        return Registries.SKILLS.get(id)
+                .map(reference -> reference.value().getMaxSkillLevel())
+                .orElse(3);
     }
 }

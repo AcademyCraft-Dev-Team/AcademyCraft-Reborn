@@ -134,6 +134,7 @@ public final class PneumaticGrasp extends Skill {
             var context = new Context(player);
             ACTIVE.put(player, context);
             AbilitySystemServer.registerContext(context);
+            Skills.PNEUMATIC_GRASP.get().reportTrigger(player);
         }
         @SubscribePacket public static void handle(StopPacket packet) {
             var context = ACTIVE.get(packet.getPacketListener().getPlayer());
@@ -161,6 +162,7 @@ public final class PneumaticGrasp extends Skill {
                     end();
                     return;
                 }
+                skill.reportActivity(player, false);
                 var eye = player.getEyePosition();
                 var look = player.getLookAngle().normalize();
                 if (look.lengthSqr() <= 1.0e-8) return;
@@ -180,6 +182,7 @@ public final class PneumaticGrasp extends Skill {
                     return;
                 }
                 moveTarget(controlledTarget, eye, look, skillLevel);
+                skill.reportActivity(player, true);
             }
 
             private Entity findTarget(Vec3 eye, Vec3 look,

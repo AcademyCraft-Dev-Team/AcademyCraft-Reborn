@@ -277,12 +277,12 @@ public class VectorReflection extends Skill {
                 return false;
             }
 
-            var executed = skill.executeActive(player, _ -> result.baseCpCost(), (_, _) -> {
+            var executed = skill.executeContinuous(player, _ -> result.baseCpCost(), (_, _) -> {
                 if (emitFeedback) {
                     playReflectionSound(player);
                     spawnGlowCircle(player, incomingDirection.scale(-1.0), mirrorPoint);
                 }
-            });
+            }, true);
             if (!executed) return false;
             player.invulnerableTime = 0;
             maintainProtection(player);
@@ -318,11 +318,11 @@ public class VectorReflection extends Skill {
             var reflectedDamage = result.reflectedDamage();
             var executed = reflectedDamage <= 0.0f;
             if (reflectedDamage > 0.0f) {
-                executed = skill.executeActive(serverPlayer, _ -> result.baseCpCost(),
+                executed = skill.executeContinuous(serverPlayer, _ -> result.baseCpCost(),
                         (_, _) -> {
                             playReflectionSound(serverPlayer);
                             applyReflection(serverPlayer, level, source, reflectedDamage);
-                        });
+                        }, true);
             }
             serverPlayer.invulnerableTime = 0;
             maintainProtection(serverPlayer);
@@ -419,10 +419,11 @@ public class VectorReflection extends Skill {
                 return true;
             }
             var projectileCost = Math.max(1.0f, (float) speed);
-            return Skills.VECTOR_REFLECTION.get().executeActive(
+            return Skills.VECTOR_REFLECTION.get().executeContinuous(
                     player,
                     _ -> projectileCost,
-                    (_, _) -> redirect.run()
+                    (_, _) -> redirect.run(),
+                    true
             );
         }
 

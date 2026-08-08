@@ -206,6 +206,8 @@ public class LightningStorm extends Skill {
                 end();
                 return;
             }
+            var skill = Skills.LIGHTNING_STORM.get();
+            skill.reportActivity(player, false);
 
             cooldown--;
             if (cooldown > 0) return;
@@ -218,6 +220,7 @@ public class LightningStorm extends Skill {
             var strikeZ = center.z + r * Math.sin(theta);
 
             if (level() instanceof ServerLevel serverLevel) {
+                skill.reportActivity(player, true);
                 var strikePos = new BlockPos((int) strikeX, (int) center.y, (int) strikeZ);
                 var topPos = serverLevel.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, strikePos);
                 var impact = Vec3.atBottomCenterOf(topPos);
@@ -232,7 +235,7 @@ public class LightningStorm extends Skill {
                 );
                 var source = SkillDamageSource.of(
                         player,
-                        Skills.LIGHTNING_STORM.get(),
+                        skill,
                         org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE
                 );
                 for (var target : targets) {

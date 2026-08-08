@@ -200,6 +200,7 @@ public class DirStrike extends Skill {
                 executeStrike(player, true);
                 return;
             }
+            Skills.DIR_STRIKE.get().reportActivity(player, true);
             dive(player);
         }
 

@@ -713,7 +713,7 @@
   "skill.academy.level0_passive_lv4.desc": "演算效率提高 15%。",
   "skill.academy.level0_passive_lv5": "自我绝对控制",
   "skill.academy.level0_passive_lv5.desc": "计算力上限提高 500，计算力恢复速度提高 25，演算效率提高 30%。",
-  "academy.ability_developer.skill_exp": "技能经验：",
+  "academy.ability_developer.skill_exp": "技能熟练度：",
   "academy.ability_developer.skill_not_learned": "技能未学习。",
   "academy.ability_developer.req": "需求",
   "academy.ability_developer.dev_successful": "开发成功。",

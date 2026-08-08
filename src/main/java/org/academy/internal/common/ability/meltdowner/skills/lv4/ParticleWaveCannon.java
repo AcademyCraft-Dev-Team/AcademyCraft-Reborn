@@ -184,6 +184,7 @@ public final class ParticleWaveCannon extends Skill {
                 return;
             }
             ticks++;
+            skill.reportActivity(player, false);
 
             if (!beaming && ticks >= CHARGE_TICKS) {
                 if (!skill.executeActive(player, (_, _) -> beginBeam())) {
@@ -200,8 +201,8 @@ public final class ParticleWaveCannon extends Skill {
             }
 
             if (ticks - lastPaidTick >= CP_INTERVAL_TICKS) {
-                if (!skill.executeActive(player, (_, _) -> {
-                })) {
+                if (!skill.executeContinuous(player, (_, _) -> {
+                }, false)) {
                     end();
                     return;
                 }
@@ -234,6 +235,7 @@ public final class ParticleWaveCannon extends Skill {
             updateVisual(attack);
 
             if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.PARTICLE_WAVE_CANNON.get())) {
+                skill.reportActivity(player, true);
                 MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
                         attack.outbound(),

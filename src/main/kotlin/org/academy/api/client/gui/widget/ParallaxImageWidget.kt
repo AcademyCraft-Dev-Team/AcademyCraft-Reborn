@@ -6,14 +6,23 @@ import net.minecraft.util.Mth
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.render.RenderContext
 
-class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
+open class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
     private var parallaxFactorX: Float = 0.5f
     private var parallaxFactorY: Float = 0.5f
 
     private var imageToViewRatioWidth: Float = 0.9f
     private var imageToViewRatioHeight: Float = 0.9f
+    private var parallaxEnabled: Boolean = true
 
     override fun render(context: RenderContext) {
+        if (!parallaxEnabled) {
+            val uOffset = (1.0f - imageToViewRatioWidth) / 2.0f
+            val vOffset = (1.0f - imageToViewRatioHeight) / 2.0f
+            setUv(uOffset, vOffset, uOffset + imageToViewRatioWidth, vOffset + imageToViewRatioHeight)
+            super.render(context)
+            return
+        }
+
         val anchorX = getAbsoluteX() + width / 2.0f
         val anchorY = getAbsoluteY() + height / 2.0f
 
@@ -54,6 +63,11 @@ class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
     fun setImageToViewRatio(imageToViewRatioWidth: Float, imageToViewRatioHeight: Float): ParallaxImageWidget {
         this.imageToViewRatioWidth = Mth.clamp(imageToViewRatioWidth, 0f, 1f)
         this.imageToViewRatioHeight = Mth.clamp(imageToViewRatioHeight, 0f, 1f)
+        return this
+    }
+
+    fun setParallaxEnabled(enabled: Boolean): ParallaxImageWidget {
+        parallaxEnabled = enabled
         return this
     }
 }

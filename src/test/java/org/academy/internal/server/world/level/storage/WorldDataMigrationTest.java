@@ -53,7 +53,7 @@ class WorldDataMigrationTest {
         assertTrue(skills.containsKey("academy:thunder_lance"));
         assertTrue(skills.containsKey("academy:thunderclap"));
         assertTrue(skills.containsKey("academy:scatter_bomb"));
-        assertEquals(42.0f, skills.get("academy:thunder_lance").getExp());
+        assertEquals(31.5f, skills.get("academy:thunder_lance").getProficiency());
         assertFalse(skills.containsKey("arc_generate"));
         assertFalse(skills.containsKey("lightning_spear"));
         assertFalse(skills.containsKey("academy:thunder_clap"));
@@ -115,7 +115,9 @@ class WorldDataMigrationTest {
         var data = WorldData.createGson().fromJson(json, SkillData.class);
         assertInstanceOf(ReflectionFilter.Data.class, data);
         var filterData = (ReflectionFilter.Data) data;
-        assertEquals(27.0f, filterData.getExp());
+        assertTrue(filterData.hasLegacyProgress());
+        filterData.migrateLegacyProgress(3);
+        assertEquals(20.25f, filterData.getProficiency());
         assertEquals(ReflectionFilter.Mode.POSITIVE_FILTER, filterData.getMode());
         assertEquals(List.of("minecraft:speed"), filterData.getWhitelist());
         assertEquals(List.of("minecraft:poison"), filterData.getBlacklist());

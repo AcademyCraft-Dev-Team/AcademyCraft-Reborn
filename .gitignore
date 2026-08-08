@@ -128,6 +128,7 @@ runs/
 # Local
 *.py
 *.txt
+!src/main/resources/assets/academy/gui/ability_developer_gui_layout.txt
 *.exe
 
 .vscode
