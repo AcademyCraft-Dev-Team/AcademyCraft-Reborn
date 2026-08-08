@@ -52,6 +52,7 @@ class SyncAbilityDataPacketTest {
         var decoded = SyncAbilityDataPacket.CODEC.decode(buffer);
 
         assertEquals(125.0f, decoded.getAbilityData().getAvailableCP(), 0.0001f);
+        assertEquals(AbilityData.FIXED_MAX_SP, decoded.getAbilityData().getMaxSP());
         assertEquals(0.75f, decoded.getCalculationIntensity(), 0.0001f);
         assertEquals(1, decoded.getSkillOccupations().size());
         assertEquals("academy:flesh_ripping", decoded.getSkillOccupations().getFirst().skillId());

@@ -44,4 +44,38 @@ class PlayerCPManagerTest {
         assertTrue(PlayerCPManager.isAtomicReplacementAffordable(-25.0f, 60.0f, 0.0f));
         assertFalse(PlayerCPManager.isAtomicReplacementAffordable(-25.0f, 20.0f, 30.0f));
     }
+
+    @Test
+    void smallCpRecoveriesAccumulateBeforeSpIsConsumed() {
+        var first = PlayerCPManager.planCpRecovery(4.0f, 0.0f, 10);
+        assertEquals(4.0f, first.recoveredCp(), 0.0001f);
+        assertEquals(4.0f, first.remainderCp(), 0.0001f);
+        assertEquals(0, first.spCost());
+
+        var second = PlayerCPManager.planCpRecovery(5.0f, first.remainderCp(), 10);
+        assertEquals(5.0f, second.recoveredCp(), 0.0001f);
+        assertEquals(9.0f, second.remainderCp(), 0.0001f);
+        assertEquals(0, second.spCost());
+
+        var third = PlayerCPManager.planCpRecovery(1.0f, second.remainderCp(), 10);
+        assertEquals(1.0f, third.recoveredCp(), 0.0001f);
+        assertEquals(0.0f, third.remainderCp(), 0.0001f);
+        assertEquals(1, third.spCost());
+    }
+
+    @Test
+    void finalSpOnlyRecoversCpUpToTheNextTenPointBoundary() {
+        var plan = PlayerCPManager.planCpRecovery(20.0f, 8.0f, 1);
+        assertEquals(2.0f, plan.recoveredCp(), 0.0001f);
+        assertEquals(0.0f, plan.remainderCp(), 0.0001f);
+        assertEquals(1, plan.spCost());
+    }
+
+    @Test
+    void cpIterationRecoveryStopsAtZeroSp() {
+        var plan = PlayerCPManager.planCpRecovery(0.25f, 9.0f, 0);
+        assertEquals(0.0f, plan.recoveredCp(), 0.0001f);
+        assertEquals(9.0f, plan.remainderCp(), 0.0001f);
+        assertEquals(0, plan.spCost());
+    }
 }

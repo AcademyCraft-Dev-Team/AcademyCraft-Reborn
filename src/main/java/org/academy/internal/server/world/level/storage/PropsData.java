@@ -23,6 +23,8 @@ public final class PropsData {
     private Set<String> visitedStructures = new HashSet<>();
     @SerializedName("milestoneMask")
     private int milestoneMask;
+    @SerializedName("started")
+    private boolean started;
 
     public int getVersion() {
         return version;
@@ -35,6 +37,16 @@ public final class PropsData {
     public double get(AbilityFactor factor) {
         ensureContainers();
         return values[factor.ordinal()];
+    }
+
+    public boolean isStarted() {
+        return started;
+    }
+
+    public boolean start() {
+        if (started) return false;
+        started = true;
+        return true;
     }
 
     public void set(AbilityFactor factor, double value) {

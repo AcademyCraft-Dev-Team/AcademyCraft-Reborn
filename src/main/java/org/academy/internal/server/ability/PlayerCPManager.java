@@ -43,6 +43,8 @@ public class PlayerCPManager implements AbilitySubsystem {
     private static final int MAX_OVERLOAD_TICKS = 1200;
     private static final int MIN_OVERLOAD_TICKS = 200;
     private static final float TICKS_PER_ITERATION_POINT = 20.0f;
+    static final float RECOVERED_CP_PER_SP = 10.0f;
+    private static final float CP_EPSILON = 1.0e-4f;
 
     private final PlayerDataManager playerDataManager;
     private final SyncManager syncManager;
@@ -50,13 +52,10 @@ public class PlayerCPManager implements AbilitySubsystem {
     private final Set<UUID> skillDebugPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Float> cpIterationProgress = new ConcurrentHashMap<>();
 
-    private final float DAMAGE_MULTIPLIER;
-
     public PlayerCPManager(PlayerDataManager manager, AbilityConfig config, SyncManager syncManager) {
         playerDataManager = manager;
         this.syncManager = syncManager;
 
-        DAMAGE_MULTIPLIER = config.damageMultiplier;
         brainDevelopmentSettings = config.brainDevelopment != null
                 ? config.brainDevelopment
                 : new AbilityConfig.BrainDevelopmentSettings();
@@ -175,25 +174,29 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private boolean processOccupations(ServerPlayer player, AbilityData cpData, List<AbilityData.CpOccupationData> occupations) {
+        var dirty = releaseInactiveMaintenanceOccupations(player, cpData, occupations);
         var hasTimedOccupation = occupations.stream().anyMatch(occupation -> !occupation.isPermanent());
         if (!hasTimedOccupation) {
             cpIterationProgress.remove(player.getUUID());
-            return false;
+            return dirty;
         }
 
-        var recoveryRate = (float) (getCpIterationRate(isSkillDebugMode(player.getUUID()))
-                * PlayerAttributeRuntime.neuralIterationMultiplier(player)
-                * (1.0f + getBonuses(player.getUUID()).recovery()));
-        var progress = cpIterationProgress.merge(player.getUUID(), recoveryRate, Float::sum);
-        var recoverySteps = (int) Math.floor(progress / TICKS_PER_ITERATION_POINT);
-        if (recoverySteps > 0) {
-            cpIterationProgress.put(
-                    player.getUUID(),
-                    progress - recoverySteps * TICKS_PER_ITERATION_POINT
-            );
+        var debugMode = isSkillDebugMode(player.getUUID());
+        var recoverySteps = 0;
+        if (debugMode || cpData.getCurrSP() > 0) {
+            var recoveryRate = (float) (getCpIterationRate(debugMode)
+                    * PlayerAttributeRuntime.neuralIterationMultiplier(player)
+                    * (1.0f + getBonuses(player.getUUID()).recovery()));
+            var progress = cpIterationProgress.merge(player.getUUID(), recoveryRate, Float::sum);
+            recoverySteps = (int) Math.floor(progress / TICKS_PER_ITERATION_POINT);
+            if (recoverySteps > 0) {
+                cpIterationProgress.put(
+                        player.getUUID(),
+                        progress - recoverySteps * TICKS_PER_ITERATION_POINT
+                );
+            }
         }
 
-        var dirty = false;
         var it = occupations.iterator();
         while (it.hasNext()) {
             var occupation = it.next();
@@ -211,23 +214,80 @@ public class PlayerCPManager implements AbilitySubsystem {
             }
 
             if (!occupation.isFree()) continue;
-            //sp消耗 =（cp迭代量*系数X）* 50% * sp消耗减少率
-            var spReductionRate = AbilitySystemServer.getSPReductionRate(player);
-            var spCost = (int) (occupation.getAmount() * DAMAGE_MULTIPLIER * 0.5f * spReductionRate);
-            if (!isSkillDebugMode(player.getUUID())) {
-                if (cpData.getCurrSP() < spCost) continue;
-                cpData.addSP(-spCost);
+            var recovered = occupation.getAmount();
+            if (!debugMode) {
+                var plan = planCpRecovery(
+                        recovered,
+                        cpData.getSpRecoveryCpRemainder(),
+                        cpData.getCurrSP()
+                );
+                recovered = plan.recoveredCp();
+                if (recovered <= CP_EPSILON) continue;
+                cpData.setSpRecoveryCpRemainder(plan.remainderCp());
+                if (plan.spCost() > 0) cpData.addSP(-plan.spCost());
             }
 
-            // 归还迭代完成的CP占用
             cpData.setAvailableCP(
-                    cpData.getAvailableCP() + occupation.getAmount(),
+                    cpData.getAvailableCP() + recovered,
                     getMaxCP(player.getUUID())
             );
-            it.remove();
+            var remaining = occupation.getAmount() - recovered;
+            if (remaining <= CP_EPSILON) it.remove();
+            else occupation.setAmount(remaining);
             dirty = true;
         }
         return dirty;
+    }
+
+    static CpRecoveryPlan planCpRecovery(float requestedCp, float remainderCp, int currentSp) {
+        if (!Float.isFinite(requestedCp) || requestedCp <= 0.0f || currentSp <= 0) {
+            return new CpRecoveryPlan(0.0f, normalizeRecoveryRemainder(remainderCp), 0);
+        }
+        var normalizedRemainder = normalizeRecoveryRemainder(remainderCp);
+        var recoverableBeforeEmpty = currentSp * RECOVERED_CP_PER_SP - normalizedRemainder;
+        var recovered = Math.min(requestedCp, Math.max(0.0f, recoverableBeforeEmpty));
+        if (recovered <= CP_EPSILON) {
+            return new CpRecoveryPlan(0.0f, normalizedRemainder, 0);
+        }
+
+        var accumulated = normalizedRemainder + recovered;
+        var spCost = Math.min(currentSp,
+                (int) Math.floor((accumulated + CP_EPSILON) / RECOVERED_CP_PER_SP));
+        var nextRemainder = accumulated - spCost * RECOVERED_CP_PER_SP;
+        if (nextRemainder < CP_EPSILON) nextRemainder = 0.0f;
+        return new CpRecoveryPlan(recovered, normalizeRecoveryRemainder(nextRemainder), spCost);
+    }
+
+    private static float normalizeRecoveryRemainder(float remainderCp) {
+        if (!Float.isFinite(remainderCp) || remainderCp <= 0.0f) return 0.0f;
+        var normalized = remainderCp % RECOVERED_CP_PER_SP;
+        return normalized < CP_EPSILON ? 0.0f : normalized;
+    }
+
+    record CpRecoveryPlan(float recoveredCp, float remainderCp, int spCost) {
+    }
+
+    private boolean releaseInactiveMaintenanceOccupations(
+            ServerPlayer player,
+            AbilityData cpData,
+            List<AbilityData.CpOccupationData> occupations
+    ) {
+        var released = 0.0f;
+        var iterator = occupations.iterator();
+        while (iterator.hasNext()) {
+            var occupation = iterator.next();
+            if (!occupation.isPermanent()) continue;
+            var id = Identifier.tryParse(occupation.getSkillId());
+            var enabled = id != null && Registries.SKILLS.get(id)
+                    .map(reference -> reference.value().isEnabled(player))
+                    .orElse(false);
+            if (enabled) continue;
+            released += occupation.getAmount();
+            iterator.remove();
+        }
+        if (released <= 0.0f) return false;
+        cpData.setAvailableCP(cpData.getAvailableCP() + released, getMaxCP(player.getUUID()));
+        return true;
     }
 
     public boolean isSkillDebugMode(UUID uuid) {
