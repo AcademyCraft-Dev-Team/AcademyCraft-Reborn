@@ -144,19 +144,29 @@ public final class WirelessNetworkData extends SavedData {
             return false;
         }
 
-        if (config.connectedUsers.size() >= config.maxConnections) {
+        if (!config.connectedUsers.containsKey(userPos)
+                && config.connectedUsers.size() >= config.maxConnections) {
             LOGGER.warn("Node '{}' at {} is at full capacity.", config.name, nodePos);
             return false;
         }
 
-        if (config.connectedUsers.containsKey(userPos)) {
-            LOGGER.warn("User {} is already connected to node '{}'", userPos, config.name);
-            return false;
+        var changed = false;
+        for (var entry : nodes.getPrimaryMap().entrySet()) {
+            if (!entry.getKey().equals(nodePos)
+                    && entry.getValue().connectedUsers.remove(userPos) != null) {
+                LOGGER.debug("Removed stale connection for user {} from node '{}'.", userPos, entry.getValue().name);
+                changed = true;
+            }
         }
 
-        config.connectedUsers.put(userPos, new UserConfig());
-        LOGGER.debug("Connected user {} to node '{}'", userPos, config.name);
-        setDirty();
+        if (!config.connectedUsers.containsKey(userPos)) {
+            config.connectedUsers.put(userPos, new UserConfig());
+            LOGGER.debug("Connected user {} to node '{}'", userPos, config.name);
+            changed = true;
+        }
+        if (changed) {
+            setDirty();
+        }
         return true;
     }
 
@@ -172,6 +182,20 @@ public final class WirelessNetworkData extends SavedData {
             return true;
         }
         return false;
+    }
+
+    public boolean disconnectUserFromAllNodes(BlockPos userPos) {
+        var removed = false;
+        for (var config : nodes.getPrimaryMap().values()) {
+            if (config.connectedUsers.remove(userPos) != null) {
+                LOGGER.debug("Disconnected user {} from node '{}'.", userPos, config.name);
+                removed = true;
+            }
+        }
+        if (removed) {
+            setDirty();
+        }
+        return removed;
     }
 
     public static class NodeConfig {
