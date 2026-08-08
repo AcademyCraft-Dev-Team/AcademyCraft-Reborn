@@ -15,7 +15,7 @@ import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -149,14 +149,19 @@ public class WirelessManager {
             return;
         }
 
-        if (nodeConfig.connectedUsers.size() >= nodeConfig.maxConnections) {
-            LOGGER.warn("Node '{}' has reached its maximum connection limit. User at {} cannot connect.", targetNodeName, userPos);
+        if (nodePos.equals(userPos)) {
+            LOGGER.warn("Player {} tried to connect wireless node '{}' to itself.", player.getGameProfile().name(), targetNodeName);
             return;
         }
 
         var userBE = level.getBlockEntity(userPos);
         if (!(userBE instanceof WirelessUser wirelessUser)) {
             LOGGER.warn("Player {} tried to connect invalid block at {} to node '{}'. Block is not a WirelessUser.", player.getGameProfile().name(), userPos, targetNodeName);
+            return;
+        }
+
+        if (!(level.getBlockEntity(nodePos) instanceof WirelessNode)) {
+            LOGGER.warn("Player {} tried to connect user at {} to missing wireless node '{}' at {}.", player.getGameProfile().name(), userPos, targetNodeName, nodePos);
             return;
         }
 
@@ -170,12 +175,39 @@ public class WirelessManager {
             return;
         }
 
+        if (!nodeConfig.connectedUsers.containsKey(userPos)
+                && nodeConfig.connectedUsers.size() >= nodeConfig.maxConnections) {
+            LOGGER.warn("Node '{}' has reached its maximum connection limit. User at {} cannot connect.", targetNodeName, userPos);
+            return;
+        }
+
+        if (userBE instanceof WirelessNode && createsConnectionCycle(level, userPos, nodePos)) {
+            LOGGER.warn("Connecting wireless node at {} to '{}' would create a cycle.", userPos, targetNodeName);
+            return;
+        }
+
         if (networkData.connectUserToNode(nodePos, userPos)) {
             wirelessUser.setConnectedNodePosition(nodePos);
             LOGGER.debug("User at {} successfully connected to node '{}' (at {}).", userPos, targetNodeName, nodePos);
         } else {
             LOGGER.warn("Failed connecting user {} to node '{}': Node likely full or user already connected elsewhere.", userPos, targetNodeName);
         }
+    }
+
+    private static boolean createsConnectionCycle(ServerLevel level, BlockPos userPos, BlockPos targetNodePos) {
+        var visited = new HashSet<BlockPos>();
+        var current = targetNodePos;
+        while (current != null && visited.add(current)) {
+            if (current.equals(userPos)) {
+                return true;
+            }
+            var blockEntity = level.getBlockEntity(current);
+            if (!(blockEntity instanceof WirelessUser wirelessUser)) {
+                return false;
+            }
+            current = wirelessUser.getConnectedNodePosition();
+        }
+        return false;
     }
 
     public static void handleDisconnect(@Nullable ServerPlayer player, ServerLevel level, BlockPos userPos) {
@@ -187,17 +219,12 @@ public class WirelessManager {
         }
 
         var connectedNodePosition = wirelessUser.getConnectedNodePosition();
-
-        if (connectedNodePosition != null) {
-            var networkData = WirelessNetworkData.get(level);
-            var removedFromData = networkData.disconnectUserFromNode(connectedNodePosition, userPos);
-            if (removedFromData) {
-                LOGGER.debug("Successfully removed user {} from node {}'s list in SavedData.", userPos, connectedNodePosition);
-            } else {
-                LOGGER.debug("Attempted to remove user {} from node {}'s list in SavedData, but the association was not found (possibly already removed or node unregistered).", userPos, connectedNodePosition);
-            }
+        var networkData = WirelessNetworkData.get(level);
+        var removedFromData = networkData.disconnectUserFromAllNodes(userPos);
+        if (removedFromData) {
+            LOGGER.debug("Successfully removed all SavedData associations for user {} (reported node: {}).", userPos, connectedNodePosition);
         } else {
-            LOGGER.debug("User at {} was not connected to any node according to its own state.", userPos);
+            LOGGER.debug("User at {} had no SavedData association (reported node: {}).", userPos, connectedNodePosition);
         }
 
         wirelessUser.setConnectedNodePosition(null);
@@ -210,10 +237,12 @@ public class WirelessManager {
         for (var entry : data.getAllNodes().entrySet()) {
             var nodePos = entry.getKey();
             var config = entry.getValue();
-            if (nodePos.distSqr(requesterPos) <= (double) config.radius * config.radius) {
+            if (!nodePos.equals(requesterPos)
+                    && nodePos.distSqr(requesterPos) <= (double) config.radius * config.radius) {
                 nodeNamesInRange.add(config.name);
             }
         }
+        nodeNamesInRange.sort(String.CASE_INSENSITIVE_ORDER);
         return nodeNamesInRange;
     }
 
@@ -244,14 +273,13 @@ public class WirelessManager {
     ) {
         if (userConfigMap.isEmpty()) return;
 
-        var transferRate = node.getEnergyTransferRate();
-        var energyStored = node.getEnergyStored();
-        var maxEnergy = node.getMaxEnergyStorage();
+        var transferRate = Math.max(0, node.getEnergyTransferRate());
+        var maxEnergy = Math.max(0, node.getMaxEnergyStorage());
+        var energyStored = Math.clamp(node.getEnergyStored(), 0, maxEnergy);
+        if (transferRate == 0 || maxEnergy == 0) return;
 
-        var extractSources = new HashMap<WirelessUser, Integer>();
-        var insertTargets = new HashMap<WirelessUser, Integer>();
-        var extractWeight = 0.0;
-        var insertWeight = 0.0;
+        var extractSources = new ArrayList<TransferCandidate>();
+        var insertTargets = new ArrayList<TransferCandidate>();
 
         for (var entry : userConfigMap.entrySet()) {
             var user = entry.getKey();
@@ -262,61 +290,114 @@ public class WirelessManager {
             var receiveWeight = cfg.receiveWeight();
             var sendWeight = cfg.sendWeight();
 
-            var canExtract = node.extractFromUser(user, transferRate, true);
-            if (canExtract > 0) {
-                extractSources.put(user, canExtract);
-                extractWeight += receiveWeight;
-            }
+            // A consumer role wins if a device declares both capabilities. This keeps
+            // internal machine extraction separate from network output and prevents
+            // energy from bouncing back every tick.
+            var acceptsEnergy = user.acceptsWirelessEnergy();
+            var canExtract = !acceptsEnergy && user.suppliesWirelessEnergy()
+                    ? node.extractFromUser(user, transferRate, true)
+                    : 0;
+            var canInsert = acceptsEnergy
+                    ? node.insertIntoUser(user, transferRate, true)
+                    : 0;
 
-            var canInsert = node.insertIntoUser(user, transferRate, true);
+            canExtract = Math.clamp(canExtract, 0, transferRate);
+            canInsert = Math.clamp(canInsert, 0, transferRate);
+
+            if (canExtract > 0) {
+                extractSources.add(new TransferCandidate(user, canExtract, receiveWeight));
+            }
             if (canInsert > 0) {
-                insertTargets.put(user, canInsert);
-                insertWeight += sendWeight;
+                insertTargets.add(new TransferCandidate(user, canInsert, sendWeight));
             }
         }
 
         if (insertTargets.isEmpty() && extractSources.isEmpty()) return;
 
-        var remainingBandwidth = transferRate;
+        var receiveBudget = Math.min(transferRate, maxEnergy - energyStored);
+        var received = moveEnergy(extractSources, receiveBudget, node::extractFromUser);
+        energyStored += received;
 
-        if (!insertTargets.isEmpty() && energyStored > 0) {
-            for (var entry : insertTargets.entrySet()) {
-                if (remainingBandwidth <= 0 || energyStored <= 0) break;
-                var user = entry.getKey();
-                var capacity = entry.getValue();
-                var weight = userConfigMap.get(user).sendWeight();
-
-                var share = (insertWeight > 0) ? (int) Math.floor((weight / insertWeight) * transferRate) : 0;
-                var amount = Math.min(Math.min(share, capacity), Math.min(energyStored, remainingBandwidth));
-                if (amount <= 0) continue;
-
-                var moved = node.insertIntoUser(user, amount, false);
-                if (moved > 0) {
-                    energyStored -= moved;
-                    remainingBandwidth -= moved;
-                }
-            }
-        }
-
-        if (!extractSources.isEmpty() && remainingBandwidth > 0 && energyStored < maxEnergy) {
-            for (var entry : extractSources.entrySet()) {
-                if (remainingBandwidth <= 0 || energyStored >= maxEnergy) break;
-                var user = entry.getKey();
-                var capacity = entry.getValue();
-                var weight = userConfigMap.get(user).receiveWeight();
-
-                var share = (extractWeight > 0) ? (int) Math.floor((weight / extractWeight) * remainingBandwidth) : 0;
-                var amount = Math.min(Math.min(share, capacity), Math.min(maxEnergy - energyStored, remainingBandwidth));
-                if (amount <= 0) continue;
-
-                var moved = node.extractFromUser(user, amount, false);
-                if (moved > 0) {
-                    energyStored += moved;
-                    remainingBandwidth -= moved;
-                }
-            }
-        }
+        var sendBudget = Math.min(transferRate, energyStored);
+        var sent = moveEnergy(insertTargets, sendBudget, node::insertIntoUser);
+        energyStored -= sent;
 
         node.setEnergyStored(energyStored);
+    }
+
+    private static int moveEnergy(List<TransferCandidate> candidates, int budget, EnergyMover mover) {
+        if (budget <= 0 || candidates.isEmpty()) return 0;
+
+        var remaining = budget;
+        while (remaining > 0) {
+            var totalWeight = 0.0;
+            for (var candidate : candidates) {
+                if (candidate.hasCapacity() && candidate.hasWeight()) {
+                    totalWeight += candidate.weight;
+                }
+            }
+            if (!(totalWeight > 0.0) || !Double.isFinite(totalWeight)) break;
+
+            var roundBudget = remaining;
+            var allocatedThisRound = 0;
+            for (var candidate : candidates) {
+                if (!candidate.hasCapacity() || !candidate.hasWeight()) continue;
+                var share = (int) Math.floor(roundBudget * (candidate.weight / totalWeight));
+                var allocated = Math.min(share, candidate.remainingCapacity());
+                if (allocated <= 0) continue;
+                candidate.allocated += allocated;
+                remaining -= allocated;
+                allocatedThisRound += allocated;
+            }
+
+            if (allocatedThisRound == 0) {
+                for (var candidate : candidates) {
+                    if (remaining == 0) break;
+                    if (!candidate.hasCapacity() || !candidate.hasWeight()) continue;
+                    candidate.allocated++;
+                    remaining--;
+                    allocatedThisRound++;
+                }
+            }
+            if (allocatedThisRound == 0) break;
+        }
+
+        var movedTotal = 0;
+        for (var candidate : candidates) {
+            if (candidate.allocated == 0) continue;
+            var moved = Math.clamp(mover.move(candidate.user, candidate.allocated, false), 0, candidate.allocated);
+            movedTotal += moved;
+        }
+        return movedTotal;
+    }
+
+    @FunctionalInterface
+    private interface EnergyMover {
+        int move(WirelessUser user, int amount, boolean simulate);
+    }
+
+    private static final class TransferCandidate {
+        private final WirelessUser user;
+        private final int capacity;
+        private final double weight;
+        private int allocated;
+
+        private TransferCandidate(WirelessUser user, int capacity, double weight) {
+            this.user = user;
+            this.capacity = capacity;
+            this.weight = weight;
+        }
+
+        private boolean hasCapacity() {
+            return allocated < capacity;
+        }
+
+        private int remainingCapacity() {
+            return capacity - allocated;
+        }
+
+        private boolean hasWeight() {
+            return weight > 0.0 && Double.isFinite(weight);
+        }
     }
 }

@@ -6,6 +6,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.api.common.wireless.WirelessUser;
 import org.jspecify.annotations.Nullable;
 
@@ -99,5 +101,20 @@ public final class CatEngineBlockEntity extends BlockEntity implements WirelessU
     @Override
     public int getMaxEnergyStorage() {
         return Integer.MAX_VALUE;
+    }
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        if (connectedNodePos != null) {
+            output.putLong("connected_node_pos", connectedNodePos.asLong());
+        }
+    }
+
+    @Override
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        connectedNodePos = null;
+        input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
     }
 }

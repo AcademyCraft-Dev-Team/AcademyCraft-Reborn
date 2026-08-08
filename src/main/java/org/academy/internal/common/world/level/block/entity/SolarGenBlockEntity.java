@@ -137,6 +137,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(input, items);
         energyStored = input.getIntOr("energy_stored", 0);
+        connectedNodePos = null;
         input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
     }
 

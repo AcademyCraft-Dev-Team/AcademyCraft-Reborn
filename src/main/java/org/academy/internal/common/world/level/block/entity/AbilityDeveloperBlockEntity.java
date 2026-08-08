@@ -84,6 +84,16 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
 
     @Nullable
     @Override
+    public boolean suppliesWirelessEnergy() {
+        return false;
+    }
+
+    @Override
+    public boolean acceptsWirelessEnergy() {
+        return true;
+    }
+
+    @Override
     public BlockPos getConnectedNodePosition() {
         if (!isMain() && level != null && mainPos != null) {
             var mainBE = getMain();
@@ -177,7 +187,8 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         super.loadAdditional(input);
         if (isMain()) {
             energyStored = Math.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
-            connectedNodePos = BlockPos.of(input.getLongOr("connected_node_pos", 0));
+            connectedNodePos = null;
+            input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
             isOpen = input.getBooleanOr("is_open", false);
         } else {
             connectedNodePos = null;

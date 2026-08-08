@@ -53,26 +53,29 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     }
 
     public void serverTick(ServerLevel serverLevel, BlockPos pos) {
+        var networkData = WirelessNetworkData.get(serverLevel);
         if (cachedConfig == null) {
-            var networkData = WirelessNetworkData.get(serverLevel);
             cachedConfig = networkData.getNodeConfig(pos);
             if (cachedConfig == null && level != null && level.getGameTime() > 1) {
                 LOGGER.warn("Wireless Node BE at {} ticking but not (yet?) registered in SavedData!", pos);
             }
-            return;
+            if (cachedConfig == null) return;
         }
 
-        connectedUsersCount = cachedConfig.connectedUsers.size();
-        maxConnectedUsers = cachedConfig.maxConnections;
-        radius = cachedConfig.radius;
-
-        Map<WirelessUser, WirelessNetworkData.UserConfig> userMap = new HashMap<>(connectedUsersCount);
+        Map<WirelessUser, WirelessNetworkData.UserConfig> userMap = new LinkedHashMap<>();
         List<BlockPos> toRemove = new ArrayList<>();
 
-        for (var entry : cachedConfig.connectedUsers.entrySet()) {
+        var connectedUsers = new ArrayList<>(cachedConfig.connectedUsers.entrySet());
+        connectedUsers.sort(Comparator.comparingLong(entry -> entry.getKey().asLong()));
+        for (var entry : connectedUsers) {
             var userPos = entry.getKey();
+            if (!serverLevel.isLoaded(userPos)) {
+                continue;
+            }
             var userBE = serverLevel.getBlockEntity(userPos);
-            if (!(userBE instanceof WirelessUser user)) {
+            if (userPos.equals(pos) || !(userBE instanceof WirelessUser user)
+                    || !Objects.equals(user.getConnectedNodePosition(), pos)
+                    || userPos.distSqr(pos) > (double) cachedConfig.radius * cachedConfig.radius) {
                 toRemove.add(userPos);
             } else {
                 userMap.put(user, entry.getValue());
@@ -81,13 +84,22 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
         for (var blockPos : toRemove) {
             handleUserDisconnect(serverLevel, blockPos);
-            cachedConfig.connectedUsers.remove(blockPos);
         }
 
-        WirelessManager.balanceEnergy(this, new HashMap<>(userMap));
+        var newConnectedUsersCount = cachedConfig.connectedUsers.size();
+        var networkInfoChanged = connectedUsersCount != newConnectedUsersCount
+                || maxConnectedUsers != cachedConfig.maxConnections
+                || radius != cachedConfig.radius;
+        connectedUsersCount = newConnectedUsersCount;
+        maxConnectedUsers = cachedConfig.maxConnections;
+        radius = cachedConfig.radius;
 
-        setChanged();
-        serverLevel.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        WirelessManager.balanceEnergy(this, userMap);
+
+        if (networkInfoChanged) {
+            setChanged();
+            serverLevel.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
     }
 
     private void handleUserDisconnect(ServerLevel level, BlockPos userPos) {
@@ -101,7 +113,8 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
             LOGGER.warn("Failed request to disconnect user {} from node {} in SavedData.", userPos, worldPosition);
         }
         var userBE = level.getBlockEntity(userPos);
-        if (userBE instanceof WirelessUser user) {
+        if (userBE instanceof WirelessUser user
+                && Objects.equals(user.getConnectedNodePosition(), worldPosition)) {
             try {
                 user.setConnectedNodePosition(null);
             } catch (Exception e) {
@@ -117,7 +130,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     @Override
     public void setEnergyStored(int energy) {
-        double oldEnergy = energyStored;
+        var oldEnergy = energyStored;
         energyStored = Math.clamp(energy, 0, getMaxEnergyStorage());
         if (oldEnergy != energyStored) {
             setChanged();
@@ -145,6 +158,16 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
             LOGGER.error("Error inserting energyCost into user at {}: {}", user, e.getMessage());
             return 0;
         }
+    }
+
+    @Override
+    public boolean suppliesWirelessEnergy() {
+        return false;
+    }
+
+    @Override
+    public boolean acceptsWirelessEnergy() {
+        return true;
     }
 
     @Override
@@ -187,6 +210,9 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         output.putInt("connected_users_count", connectedUsersCount);
         output.putInt("max_connected_users", maxConnectedUsers);
         output.putInt("radius", radius);
+        if (connectedNodePos != null) {
+            output.putLong("connected_node_pos", connectedNodePos.asLong());
+        }
     }
 
     @Override
@@ -194,10 +220,12 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         super.loadAdditional(input);
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(input, items);
-        energyStored = input.getIntOr("energy_stored", 0);
-        connectedUsersCount = input.getIntOr("connected_users_count", 0);
-        maxConnectedUsers = input.getIntOr("max_connected_users", 0);
-        radius = input.getIntOr("radius", 0);
+        energyStored = Math.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
+        connectedUsersCount = Math.max(0, input.getIntOr("connected_users_count", 0));
+        maxConnectedUsers = Math.max(0, input.getIntOr("max_connected_users", 0));
+        radius = Math.max(0, input.getIntOr("radius", 0));
+        connectedNodePos = null;
+        input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
         cachedConfig = null;
     }
 
