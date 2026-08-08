@@ -409,7 +409,7 @@ object MusicApp : App {
                         spacing = 2f
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .widthMode(SizeMode.MATCH_PARENT)
-                            .height(18f)
+                            .height(24f)
                     }
                     row.addChild("name", LabelWidget(
                         (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist
@@ -423,7 +423,7 @@ object MusicApp : App {
                     row.addChild("add", createTextButton("+", 16f) {
                         OnlineMusicManager.add(entry)
                     })
-                    row.addChild("play", createTextButton("▶", 16f) {
+                    row.addChild("play", createTextButton("▶", 24f, 0.9f, 22f) {
                         OnlineMusicManager.add(entry, true)
                     })
                     container.addChild("result_$index", row)
@@ -442,12 +442,12 @@ object MusicApp : App {
                     spacing = 2f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
-                        .height(18f)
+                        .height(24f)
                 }
                 row.addChild("play", ButtonWidget().apply {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
-                        .height(18f)
+                        .height(24f)
                     onClickListener = { MusicPlayerBackend.getInstance().play(index) }
                     addChild("text", LabelWidget(mediaInfo.name).apply {
                         scale = 0.68f
@@ -458,7 +458,7 @@ object MusicApp : App {
                     })
                 })
                 if (mediaInfo.provider != "local") {
-                    row.addChild("remove", createTextButton("×", 16f) {
+                    row.addChild("remove", createTextButton("×", 24f, 0.9f, 22f) {
                         OnlineMusicManager.remove(mediaInfo)
                     })
                 }
@@ -477,12 +477,13 @@ object MusicApp : App {
             text: String,
             width: Float,
             textScale: Float = 0.65f,
+            height: Float = 14f,
             action: () -> Unit
         ): ButtonWidget {
             return ButtonWidget().apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .width(width)
-                    .height(14f)
+                    .height(height)
                 onClickListener = { action() }
                 addChild("text", LabelWidget(text).apply {
                     scale = textScale
