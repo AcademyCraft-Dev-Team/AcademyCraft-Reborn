@@ -587,6 +587,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, IronSandArsenal.FormSelectPacket>>
             IRON_SAND_ARSENAL_FORM_SELECT = PACKET_TYPES.register("iron_sand_arsenal_form_select",
             () -> new PacketType<>(IronSandArsenal.FormSelectPacket.class, IronSandArsenal.FormSelectPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, IronSandArsenal.SweepVisualPacket>>
+            IRON_SAND_ARSENAL_SWEEP_VISUAL = PACKET_TYPES.register("iron_sand_arsenal_sweep_visual",
+            () -> new PacketType<>(IronSandArsenal.SweepVisualPacket.class, IronSandArsenal.SweepVisualPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagneticWeapon.TogglePacket>>
             MAGNETIC_WEAPON_TOGGLE = PACKET_TYPES.register("magnetic_weapon_toggle",
             () -> new PacketType<>(MagneticWeapon.TogglePacket.class, MagneticWeapon.TogglePacket.CODEC));

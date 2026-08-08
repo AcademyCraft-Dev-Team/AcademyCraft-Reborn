@@ -12,4 +12,8 @@ public interface EffectRenderer {
     default void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector nodeCollector, LocalPlayer player, int packedLight, float partialTick) {
 
     }
+
+    default boolean renderFirstPersonWhenHudHidden() {
+        return false;
+    }
 }

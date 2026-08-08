@@ -4,6 +4,10 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.internal.client.renderer.effect.WingEffectRenderer;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -51,6 +55,7 @@ public final class AdvancedWingSweepPacket extends Packet<ClientPacketListener, 
         if (clientInitialized) return;
         clientInitialized = true;
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+        NeoForge.EVENT_BUS.register(Client.class);
     }
 
     @Override
@@ -81,6 +86,16 @@ public final class AdvancedWingSweepPacket extends Packet<ClientPacketListener, 
                     packet.yawOffsetDeg,
                     packet.pitchOffsetDeg
             );
+        }
+
+        @SubscribeEvent
+        public static void onClientTick(ClientTickEvent.Post event) {
+            WingEffectRenderer.clientTick();
+        }
+
+        @SubscribeEvent
+        public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+            WingEffectRenderer.clearSweeps();
         }
     }
 }
