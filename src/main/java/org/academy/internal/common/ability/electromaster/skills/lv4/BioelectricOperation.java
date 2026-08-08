@@ -86,9 +86,9 @@ public final class BioelectricOperation extends Skill {
                         Client.KEY_NAME_TOGGLE,
                         InputSystem.combo(
                                 InputSystem.InputType.KEYBOARD,
-                                InputConstants.KEY_N,
+                                InputConstants.KEY_Y,
                                 InputConstants.RELEASE,
-                                InputConstants.MOD_ALT
+                                0
                         )
                 ),
                 _ -> Client.toggle()

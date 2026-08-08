@@ -59,8 +59,8 @@ public final class TargetMisidentification extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_USE,
                 InputSystem.combo(
-                        InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_R,
+                        InputSystem.InputType.MOUSE,
+                        InputConstants.MOUSE_BUTTON_LEFT,
                         InputConstants.PRESS,
                         InputConstants.MOD_ALT
                 )

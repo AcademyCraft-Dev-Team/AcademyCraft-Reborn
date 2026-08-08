@@ -76,8 +76,8 @@ public class MagneticWeapon extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_M,
-                                InputConstants.PRESS, InputConstants.MOD_ALT | InputConstants.MOD_SHIFT)),
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
+                                InputConstants.PRESS, 0)),
                 _ -> Client.onToggle());
         ToggleStatusHud.registerStateProvider(Skills.MAGNETIC_WEAPON.get(), Client::isActive);
         RendererManager.registerEffectRenderer(ElectromasterWeaponEffectRenderer.INSTANCE);

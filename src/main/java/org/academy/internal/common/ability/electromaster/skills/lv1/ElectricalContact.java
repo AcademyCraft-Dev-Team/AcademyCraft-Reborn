@@ -57,11 +57,15 @@ public class ElectricalContact extends Skill {
 
         var legacyBinding = InputSystem.combo(
                 InputSystem.InputType.KEYBOARD, InputConstants.KEY_H, InputConstants.PRESS, 0);
-        var defaultBinding = InputSystem.combo(
+        var previousDefaultBinding = InputSystem.combo(
                 InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
                 InputConstants.PRESS, InputConstants.MOD_ALT);
+        var defaultBinding = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
+                InputConstants.PRESS, InputConstants.MOD_ALT);
         if (Client.CONFIG.containsKeyBinding(Client.KEY_NAME_TOGGLE)
-                && legacyBinding.equals(Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE))) {
+                && (legacyBinding.equals(Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE))
+                || previousDefaultBinding.equals(Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE)))) {
             Client.CONFIG.setKeyBinding(Client.KEY_NAME_TOGGLE, defaultBinding);
             AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
             AcademyCraftClient.Config.INSTANCE.save();

@@ -78,12 +78,12 @@ public final class DarkmatterRadiation extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_START,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                         InputConstants.PRESS, 0)
         ), context -> Client.start());
         InputSystem.addKeyBinding(Client.KEY_NAME_END, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_END,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                         InputConstants.RELEASE, 0)
         ), context -> Client.stop());
     }

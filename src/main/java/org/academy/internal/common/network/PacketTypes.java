@@ -387,6 +387,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.CycleImpactLevelPacket>>
             KINETIC_ENERGY_APPLIED_IMPACT_LEVEL = PACKET_TYPES.register("kinetic_energy_applied_impact_level",
             () -> new PacketType<>(KineticEnergyApplied.CycleImpactLevelPacket.class, KineticEnergyApplied.CycleImpactLevelPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.SetBlockDropsPacket>>
+            KINETIC_ENERGY_APPLIED_BLOCK_DROPS_SET = PACKET_TYPES.register("kinetic_energy_applied_block_drops_set",
+            () -> new PacketType<>(KineticEnergyApplied.SetBlockDropsPacket.class, KineticEnergyApplied.SetBlockDropsPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.AttackWavePacket>>
             KINETIC_ENERGY_APPLIED_ATTACK_WAVE = PACKET_TYPES.register("kinetic_energy_applied_attack_wave",
             () -> new PacketType<>(KineticEnergyApplied.AttackWavePacket.class, KineticEnergyApplied.AttackWavePacket.CODEC));

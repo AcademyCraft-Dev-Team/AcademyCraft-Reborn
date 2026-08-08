@@ -60,9 +60,9 @@ public final class MentalStupor extends Skill {
                 Client.KEY_NAME_USE,
                 InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_G,
+                        InputConstants.KEY_H,
                         InputConstants.PRESS,
-                        InputConstants.MOD_ALT
+                        0
                 )
         ), _ -> Client.use());
     }

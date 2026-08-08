@@ -270,6 +270,7 @@
   "app.academy.skill_settings.advanced.title": "技能高级配置",
   "app.academy.skill_settings.advanced.empty": "该技能暂无其他专属高级配置。",
   "app.academy.skill_settings.advanced.block_destruction": "方块破坏（服从全局设置）",
+  "app.academy.skill_settings.advanced.kinetic_block_drops": "冲击波破坏方块时掉落物品",
   "app.academy.skill_settings.tooltip.description": "技能说明",
   "app.academy.skill_settings.tooltip.description_missing": "该技能暂无说明。",
   "app.academy.skill_settings.tooltip.usage": "使用方法",

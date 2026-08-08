@@ -133,13 +133,13 @@ public class Disarm extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_START,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_D,
-                        InputConstants.PRESS, InputConstants.MOD_ALT)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
+                        InputConstants.PRESS, InputConstants.MOD_SHIFT)
         ), ctx -> Client.start());
         InputSystem.addKeyBinding(Client.KEY_NAME_END, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_END,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_D,
-                        InputConstants.RELEASE, InputConstants.MOD_ALT)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
+                        InputConstants.RELEASE, InputConstants.MOD_SHIFT)
         ), ctx -> Client.end());
     }
 

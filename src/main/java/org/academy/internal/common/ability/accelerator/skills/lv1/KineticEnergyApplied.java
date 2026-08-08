@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -50,6 +51,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseButtonEvent;
@@ -154,6 +156,7 @@ public class KineticEnergyApplied extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.registerSettings();
         if (!Client.CONFIG.containsKeyBinding(Client.KEY_NAME_BLOCK_BREAK)
                 && Client.CONFIG.containsKeyBinding(Client.OLD_KEY_NAME_SHOCKWAVE_TOGGLE)) {
             Client.CONFIG.setKeyBinding(Client.KEY_NAME_BLOCK_BREAK,
@@ -200,8 +203,27 @@ public class KineticEnergyApplied extends Skill {
         private static final String OLD_KEY_NAME_SHOCKWAVE_TOGGLE =
                 SkillNames.KINETIC_ENERGY_APPLIED + "_shockwave_toggle";
         public static Config CONFIG = new Config();
+        private static boolean settingsRegistered;
 
         private Client() {
+        }
+
+        private static void registerSettings() {
+            if (settingsRegistered) return;
+            settingsRegistered = true;
+            SkillSettingsRegistry.register(
+                    Skills.KINETIC_ENERGY_APPLIED.get(),
+                    new SkillSettingsRegistry.Module(
+                            "shockwave",
+                            "",
+                            List.of(new SkillSettingsRegistry.Toggle(
+                                    "block_drops",
+                                    "app.academy.skill_settings.advanced.kinetic_block_drops",
+                                    Client::blockDropsEnabled,
+                                    Client::setBlockDropsEnabled
+                            ))
+                    )
+            );
         }
 
         public static void toggle() {
@@ -216,6 +238,18 @@ public class KineticEnergyApplied extends Skill {
 
         public static void cycleImpactLevel() {
             MisakaNetworkClient.send(CycleImpactLevelPacket.INSTANCE);
+        }
+
+        private static boolean blockDropsEnabled() {
+            var player = Minecraft.getInstance().player;
+            return player == null || player.getData(AttachmentTypes.KINETIC_BLOCK_DROPS_ENABLED.get());
+        }
+
+        private static void setBlockDropsEnabled(boolean enabled) {
+            var player = Minecraft.getInstance().player;
+            if (player == null) return;
+            player.setData(AttachmentTypes.KINETIC_BLOCK_DROPS_ENABLED.get(), enabled);
+            MisakaNetworkClient.send(new SetBlockDropsPacket(enabled));
         }
 
         public static String statusText() {
@@ -306,6 +340,13 @@ public class KineticEnergyApplied extends Skill {
             if (!Skills.KINETIC_ENERGY_APPLIED.get().isEnabled(player)) return;
             player.setData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get(),
                     nextImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get())));
+        }
+
+        @SubscribePacket
+        public static void handleSetBlockDrops(SetBlockDropsPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            player.setData(AttachmentTypes.KINETIC_BLOCK_DROPS_ENABLED.get(), packet.enabled());
+            player.syncData(AttachmentTypes.KINETIC_BLOCK_DROPS_ENABLED.get());
         }
 
         @SubscribePacket
@@ -446,7 +487,10 @@ public class KineticEnergyApplied extends Skill {
                                              BlockPos priorityBlock) {
             var tasks = BREAK_TASKS.computeIfAbsent(player.getUUID(), ignored -> new ArrayDeque<>());
             while (tasks.size() >= MAX_TASKS_PER_PLAYER) tasks.pollFirst();
-            tasks.addLast(new BreakTask(level.dimension(), center, radius, direction, impactLevel, priorityBlock));
+            tasks.addLast(new BreakTask(
+                    level.dimension(), center, radius, direction, impactLevel, priorityBlock,
+                    player.getData(AttachmentTypes.KINETIC_BLOCK_DROPS_ENABLED.get())
+            ));
         }
 
         private static void tickBreakTasks(ServerPlayer player) {
@@ -588,6 +632,26 @@ public class KineticEnergyApplied extends Skill {
     }
 
     @PacketTarget(ThreadType.SERVER)
+    public static final class SetBlockDropsPacket extends Packet<ServerGamePacketListenerImpl, SetBlockDropsPacket> {
+        public static final StreamCodec<ByteBuf, SetBlockDropsPacket> CODEC =
+                ByteBufCodecs.BOOL.map(SetBlockDropsPacket::new, SetBlockDropsPacket::enabled);
+        private final boolean enabled;
+
+        public SetBlockDropsPacket(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean enabled() {
+            return enabled;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SetBlockDropsPacket> getPacketType() {
+            return PacketTypes.KINETIC_ENERGY_APPLIED_BLOCK_DROPS_SET.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
     public static final class AttackWavePacket extends Packet<ServerGamePacketListenerImpl, AttackWavePacket> {
         public static final AttackWavePacket INSTANCE = new AttackWavePacket();
         public static final StreamCodec<ByteBuf, AttackWavePacket> CODEC = StreamCodec.unit(INSTANCE);
@@ -626,11 +690,12 @@ public class KineticEnergyApplied extends Skill {
         private final int impactLevel;
         private final List<BlockOffset> offsets;
         private final BlockPos priorityBlock;
+        private final boolean dropBlocks;
         private int offsetIndex;
         private boolean priorityProcessed;
 
         private BreakTask(ResourceKey<Level> dimension, Vec3 center, float radius, Vec3 direction,
-                          int impactLevel, BlockPos priorityBlock) {
+                          int impactLevel, BlockPos priorityBlock, boolean dropBlocks) {
             this.dimension = dimension;
             this.center = center;
             origin = BlockPos.containing(center);
@@ -638,6 +703,7 @@ public class KineticEnergyApplied extends Skill {
             this.impactLevel = impactLevel;
             offsets = sphereOffsetsFor(Mth.ceil(radius));
             this.priorityBlock = priorityBlock == null ? null : priorityBlock.immutable();
+            this.dropBlocks = dropBlocks;
         }
 
         private boolean tick(ServerLevel level, ServerPlayer player) {
@@ -678,7 +744,7 @@ public class KineticEnergyApplied extends Skill {
                 return level.setBlock(pos, Blocks.AIR.defaultBlockState(),
                         Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
             }
-            return level.destroyBlock(pos, true, player);
+            return level.destroyBlock(pos, dropBlocks, player);
         }
 
         private boolean clearFluid(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state) {

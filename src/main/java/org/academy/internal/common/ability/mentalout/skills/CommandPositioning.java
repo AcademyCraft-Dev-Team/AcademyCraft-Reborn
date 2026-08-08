@@ -71,9 +71,9 @@ public final class CommandPositioning extends Skill {
                 Client.KEY_NAME_USE,
                 InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_G,
+                        InputConstants.KEY_R,
                         InputConstants.PRESS,
-                        InputConstants.MOD_ALT
+                        0
                 )
         ), _ -> Client.use());
     }

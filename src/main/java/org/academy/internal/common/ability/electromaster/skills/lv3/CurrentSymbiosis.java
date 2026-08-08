@@ -66,9 +66,9 @@ public final class CurrentSymbiosis extends Skill {
                         Client.KEY_NAME_TOGGLE,
                         InputSystem.combo(
                                 InputSystem.InputType.KEYBOARD,
-                                InputConstants.KEY_Y,
+                                InputConstants.KEY_H,
                                 InputConstants.RELEASE,
-                                0
+                                InputConstants.MOD_ALT
                         )
                 ),
                 _ -> Client.toggle()

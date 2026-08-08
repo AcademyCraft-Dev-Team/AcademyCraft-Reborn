@@ -60,7 +60,8 @@ public class LightningNova extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N, InputConstants.PRESS, InputConstants.MOD_CONTROL))
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                                InputConstants.PRESS, InputConstants.MOD_SHIFT))
                 , ctx -> Client.onUse());
     }
 
