@@ -5,6 +5,7 @@ import net.minecraft.client.sounds.SoundEngineExecutor
 import net.minecraft.resources.Identifier
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientPauseChangeEvent
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.msdf.font.MsdfFont
@@ -55,6 +56,15 @@ class MusicPlayerBackend private constructor() {
                 audioPlayer.resume()
             }
         }
+    }
+
+    @SubscribeEvent
+    fun onLoggingOut(@Suppress("unused") event: ClientPlayerNetworkEvent.LoggingOut) {
+        // Disable auto-advance immediately so an already queued main-loop update
+        // cannot start another track while the world is being torn down.
+        isSessionActive.set(false)
+        resumeAfterGamePause.set(false)
+        runOnSoundEngine { performStop() }
     }
 
     @SubscribeEvent
