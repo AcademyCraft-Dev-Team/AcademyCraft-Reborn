@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "D": "minecraft:echo_shard",
+    "N": "minecraft:netherite_leggings"
+  },
+  "pattern": [
+    "DDD",
+    "DND",
+    "D D"
+  ],
+  "result": {
+    "id": "academy:dark_matter_leggings"
+  }
+}

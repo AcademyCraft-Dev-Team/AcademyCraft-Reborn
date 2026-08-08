@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "E": "minecraft:ender_pearl",
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone"
+  },
+  "pattern": [
+    "IRI",
+    "RER",
+    "IRI"
+  ],
+  "result": {
+    "id": "academy:wireless_node"
+  }
+}

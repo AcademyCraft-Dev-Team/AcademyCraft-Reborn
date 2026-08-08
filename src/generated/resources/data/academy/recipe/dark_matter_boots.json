@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "D": "minecraft:echo_shard",
+    "N": "minecraft:netherite_boots"
+  },
+  "pattern": [
+    "DND",
+    "D D"
+  ],
+  "result": {
+    "id": "academy:dark_matter_boots"
+  }
+}
