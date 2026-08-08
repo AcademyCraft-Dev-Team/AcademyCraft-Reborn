@@ -6,6 +6,7 @@ import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
+import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.neoforged.neoforge.common.NeoForge
@@ -32,7 +33,6 @@ import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBloc
 import org.apache.commons.lang3.RandomStringUtils
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -74,6 +74,10 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     }
 
     override fun onInit() {
+        activeCover = null
+        isConsoleMode = false
+        skillLineBindings.clear()
+
         val main = FrameLayoutWidget()
         main.layoutParams = FrameLayoutWidget.LayoutParams()
             .gravity(Gravity.CENTER)
@@ -169,7 +173,9 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private fun fillAbilityPanel(panel: FrameLayoutWidget) {
         val category = AbilitySystemClient.getCategory()
         val level = AbilitySystemClient.getLevel()
-        val levelProgress = AbilitySystemClient.getAbilityProgress()
+        val isLevel0 = category is Level0
+        val displayedLevel = if (isLevel0) AbilityLevel.LEVEL0 else level
+        val levelProgress = if (isLevel0) 0f else AbilitySystemClient.getAbilityProgress()
 
         val logoAbility = FrameLayoutWidget()
         logoAbility.layoutParams = WidgetContainer.LayoutParams()
@@ -183,7 +189,12 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             logoAbility.addChild("icon", icon)
         }
 
-        val nameLabel = LabelWidget(category.getDisplayName())
+        val categoryKey = category.getKey()
+        val translationKey = "ability_category.${categoryKey.namespace}.${categoryKey.path}"
+        val translatedName = Language.getInstance().getOrDefault(translationKey)
+            .takeUnless { it == translationKey }
+            ?: category.getDisplayName()
+        val nameLabel = LabelWidget(translatedName)
         nameLabel.baseFontSize = 13f
         nameLabel.layoutParams = WidgetContainer.LayoutParams()
             .gravity(Gravity.TOP_LEFT)
@@ -218,7 +229,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             .size(42f, 10f)
         panel.addChild("text_exp", expLabel)
 
-        if (AbilitySystemClient.canLevelUp()) {
+        if (!isLevel0 && AbilitySystemClient.canLevelUp()) {
             val upgradeBtn = ButtonWidget()
             upgradeBtn.layoutParams = WidgetContainer.LayoutParams()
                 .gravity(Gravity.TOP_LEFT)
@@ -231,7 +242,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 upgradeBtn.addChild("tex", btnTex)
             }
         } else {
-            val levelLabel = LabelWidget("Level ${level.levelCode}")
+            val levelLabel = LabelWidget("Level ${displayedLevel.levelCode}")
             levelLabel.baseFontSize = 9f
             levelLabel.setRed(0.09f)
             levelLabel.setGreen(0.46f)
@@ -354,35 +365,39 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     private fun startConsoleBoot() {
         val outputs = consoleOutputs
-        val welcomeString = "Welcome to Academy OS, Ver 0.0.1"
-        addOutput(outputs, welcomeString) {
-            addOutput(outputs, "Copyright (c) Academy Tech. All rights reserved.") {
+        addOutput(outputs, L10n["academy.ability_developer.console.welcome"]) {
+            addOutput(outputs, L10n["academy.ability_developer.console.copyright"]) {
                 val playerName = Minecraft.getInstance().player?.name?.string ?: "Unknown"
-                addOutput(outputs, "User $playerName detected, System booting......") {
+                addOutput(
+                    outputs,
+                    L10n["academy.ability_developer.console.user_detected"].format(playerName)
+                ) {
                     val label = LabelWidget("")
                     label.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.BOTTOM_LEFT)
-                    val list = (10..100 step 10).toMutableList()
-                    for (i in 8 downTo 0) {
-                        val min = if (i == 0) 10 else list[i - 1] + 1
-                        val max = list[i + 1] - 1
-                        list[i] = (min..max).random()
-                    }
+                    val progressSequence = (1..6).map { it * 10 + (-3..2).random() } + (64..67).random()
 
                     val bootAnim = ObjectAnimator.ofFloat(
                         { f ->
-                            val value = f.toInt()
-                            val progress = list.minBy { abs(it - value) }
-                            label.text = if (progress == 100) "Boot Failed." else "$progress%"
-                        }, 0f, 100f
-                    ).setDuration(2500)
+                            val index = f.toInt().coerceIn(0, progressSequence.size)
+                            label.text = if (index < progressSequence.size) {
+                                "${progressSequence[index]}%"
+                            } else {
+                                L10n["academy.ability_developer.console.boot_failed"]
+                            }
+                            label.invalidate()
+                            consoleScrollPanel.scrollToEnd()
+                        }, 0f, progressSequence.size.toFloat()
+                    ).setDuration((progressSequence.size + 1) * 300L).setStartDelay(400L)
 
                     bootAnim.addListener(object : AnimatorListener {
                         override fun onAnimationEnd(animation: Animator) {
-                            addOutput(outputs, "FATAL: User's ability category is invalid, booting aborted.") {
-                                addOutput(outputs, "Type `learn` to acquire new category.") {
-                                    val initialInputArea = createCommandInputArea(outputs)
-                                    outputs.addChild("input_area", initialInputArea)
+                            addOutput(
+                                outputs,
+                                L10n["academy.ability_developer.console.invalid_category"]
+                            ) {
+                                addOutput(outputs, L10n["academy.ability_developer.console.learn_hint"]) {
+                                    attachCommandInput(outputs)
                                 }
                             }
                         }
@@ -397,6 +412,15 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private fun addOutput(outputs: LinearLayoutWidget, text: String, onEnd: () -> Unit = {}) {
         val label = object : LabelWidget(text) {
             var progress = 0f
+
+            fun setRevealProgress(value: Float) {
+                progress = value.coerceIn(0f, 1f)
+                // LabelWidget caches generated glyph commands. Force regeneration while
+                // the typewriter reveal changes even though the backing text is unchanged.
+                lastText = null
+                invalidate()
+            }
+
             override fun generateDrawCommands(
                 text: String, fontSize: Float, thickness: Float,
                 red: Float, green: Float, blue: Float, alpha: Float
@@ -409,11 +433,12 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         outputs.addChild("label_${text.hashCode()}_${RandomStringUtils.insecure().nextAlphabetic(4)}", label)
 
         label.startAnimation(
-            ObjectAnimator.ofFloat({ label.progress = it; label.invalidate() }, 0f, 1f)
-                .setDuration(text.length * 25L)
+            ObjectAnimator.ofFloat(label::setRevealProgress, 0f, 1f)
+                .setDuration(text.length * CONSOLE_CHAR_DELAY_MS)
                 .addListener(object : AnimatorListener {
                     override fun onAnimationEnd(animation: Animator) {
-                        consoleScrollPanel.scrollToEnd()
+                        label.setRevealProgress(1f)
+                        scrollConsoleToEndAfterLayout()
                         onEnd()
                     }
                 })
@@ -428,19 +453,27 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             .widthMode(SizeMode.MATCH_PARENT)
         inputArea.orientation = Orientation.HORIZONTAL
         run {
-            val label = LabelWidget("OS >")
+            val label = LabelWidget(L10n["academy.ability_developer.console.prompt"])
             label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
             inputArea.addChild("label", label)
 
             val textBox = TextBoxWidget(8)
-            textBox.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.BOTTOM_LEFT)
-                .sizeMode(SizeMode.MATCH_PARENT)
+            textBox.layoutParams = LinearLayoutWidget.LayoutParams().apply {
+                gravity(Gravity.BOTTOM_LEFT)
+                width(0f)
+                heightMode(SizeMode.MATCH_PARENT)
+                weight(1f)
+            }
             textBox.background = null
             textBox.setWhenEnter { input ->
                 outputs.removeChild("input_area")
-                when (input) {
+                addOutputLine(
+                    outputs,
+                    "${L10n["academy.ability_developer.console.prompt"]} $input"
+                )
+                when (input.trim().lowercase()) {
                     "learn" -> {
+                        addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
                         AbilitySystemClient.resetDevState()
                         MisakaNetworkClient.FUTURE_MANAGER.send(StartLevelDevPacket(mainPos.asLong())) { response ->
                             if (response != null && response.isSuccess) {
@@ -465,9 +498,8 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                                         }
 
                                         DevState.FAILED -> {
-                                            progressLabel.text = L10n["academy.ability_developer.dev_failed"]
-                                            val newInputArea = createCommandInputArea(outputs)
-                                            outputs.addChild("input_area", newInputArea)
+                                            progressLabel.text = developmentFailureMessage()
+                                            attachCommandInput(outputs)
                                         }
 
                                         else -> {
@@ -478,8 +510,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                                 poll()
                             } else {
                                 addOutputLine(outputs, response?.message ?: "Unknown error")
-                                val newInputArea = createCommandInputArea(outputs)
-                                outputs.addChild("input_area", newInputArea)
+                                attachCommandInput(outputs)
                             }
                         }
                     }
@@ -489,29 +520,42 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     }
 
                     else -> {
-                        addOutputLine(outputs, "Invalid command.")
-                        val newInputArea = createCommandInputArea(outputs)
-                        outputs.addChild("input_area", newInputArea)
+                        addOutputLine(outputs, L10n["academy.ability_developer.console.invalid_command"])
+                        attachCommandInput(outputs)
                     }
                 }
             }
             inputArea.addChild("text_box", textBox)
-            inputArea.focusedChild = textBox
         }
         return inputArea
+    }
+
+    private fun attachCommandInput(outputs: LinearLayoutWidget) {
+        outputs.removeChild("input_area")
+        val inputArea = createCommandInputArea(outputs)
+        outputs.addChild("input_area", inputArea)
+        inputArea.children["text_box"]?.let { inputArea.focusedChild = it }
+        scrollConsoleToEndAfterLayout()
     }
 
     private fun addOutputLine(outputs: LinearLayoutWidget, text: String) {
         val label = LabelWidget(text)
         label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
         outputs.addChild("output_${RandomStringUtils.insecure().nextAlphabetic(8)}", label)
-        consoleScrollPanel.scrollToEnd()
+        scrollConsoleToEndAfterLayout()
+    }
+
+    private fun scrollConsoleToEndAfterLayout() {
+        consoleOutputs.requestLayout()
+        consoleScrollPanel.pollNextFrame { consoleScrollPanel.scrollToEnd() }
     }
 
     private fun rebuildAfterCategoryLearned() {
         var attempts = 0
         fun poll() {
-            if (AbilitySystemClient.getCategory() !is Level0 || attempts++ >= 1200) {
+            val categoryReady = AbilitySystemClient.getCategory() !is Level0
+            val levelReady = AbilitySystemClient.getLevel().levelCode >= AbilityLevel.LEVEL1.levelCode
+            if ((categoryReady && levelReady) || attempts++ >= 1200) {
                 init()
             } else {
                 consoleScrollPanel.pollNextFrame { poll() }
@@ -523,6 +567,12 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private fun fillSkillTreeArea(area: FrameLayoutWidget) {
         val category = AbilitySystemClient.getCategory()
         val skillInfos = AbilitySystemClient.getSkillInfosForCategory(category)
+            .filter { info ->
+                AbilitySystemClient.isSkillLearned(info.skill) || (
+                    info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) } &&
+                        info.skill.devConditions.all { it.accepts() }
+                    )
+            }
 
         val bg = object : ParallaxImageWidget(R.textures.gui.developer.skill_panel_back) {
             override fun render(context: RenderContext) {
@@ -821,6 +871,16 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 .size(23f, 23f)
             node.addChild("icon_bg", iconBg)
 
+            if (isLearned) {
+                val learnedHighlight = ImageWidget(R.textures.gui.developer.skill_back)
+                learnedHighlight.layoutParams = WidgetContainer.LayoutParams()
+                    .gravity(Gravity.CENTER)
+                    .size(25f, 25f)
+                learnedHighlight.setBrightness(1.25f)
+                learnedHighlight.alpha = 0.32f
+                node.addChild("learned_highlight", learnedHighlight)
+            }
+
             val outlineBg = object : ImageWidget(outlineTex) {
                 override fun tick() {
                     super.tick()
@@ -905,7 +965,10 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 .setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
         )
         node.stateListAnimator = animator
-        node.onClickListener = { addCover(createSkillViewCover(info)) }
+        node.onClickListener = {
+            area.clearChildren()
+            area.addChild("skill_view", createSkillViewCover(info))
+        }
 
         return node
     }
@@ -918,7 +981,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     )
 
     private fun addCover(cover: FrameLayoutWidget) {
-        activeCover?.let { root.removeChild("cover") }
+        if (activeCover != null) return
         activeCover = cover
         root.addChild("cover", cover)
         mainWidget.startAnimation(
@@ -1001,7 +1064,6 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val skill = info.skill
 
         var canClose = true
-        var shouldRebuild = false
 
         val cover = FrameLayoutWidget()
         cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
@@ -1010,8 +1072,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             bg.onClickListener = OnClickListener {
                 if (canClose) {
-                    if (shouldRebuild) removeCover(true)
-                    else removeCover()
+                    rebuildSkillTree()
                 }
             }
             cover.addChild("bg", bg)
@@ -1253,12 +1314,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                                             DevState.DONE -> {
                                                 iconProgressRef.set(1.0f)
                                                 messageLabel.text = L10n["academy.ability_developer.dev_successful"]
-                                                shouldRebuild = true
                                                 canClose = true
                                             }
 
                                             DevState.FAILED -> {
-                                                messageLabel.text = L10n["academy.ability_developer.dev_failed"]
+                                                messageLabel.text = developmentFailureMessage()
                                                 canClose = true
                                             }
 
@@ -1271,6 +1331,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                                 } else {
                                     messageLabel.text =
                                         response?.message ?: L10n["academy.ability_developer.dev_failed"]
+                                    canClose = true
                                 }
                             }
                         }
@@ -1291,6 +1352,15 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             }
         })
         startAnimation(anim)
+    }
+
+    private fun developmentFailureMessage(): String {
+        val detail = AbilitySystemClient.getDevMessage()
+        return if (detail.isBlank() || detail == "Failed") {
+            L10n["academy.ability_developer.dev_failed"]
+        } else {
+            "${L10n["academy.ability_developer.dev_failed"]}: $detail"
+        }
     }
 
     private fun createLevelUpCover(): FrameLayoutWidget {
@@ -1445,7 +1515,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                                         }
 
                                         DevState.FAILED -> {
-                                            hintLabel.text = L10n["academy.ability_developer.dev_failed"]
+                                            hintLabel.text = developmentFailureMessage()
                                         }
 
                                         else -> {
@@ -1474,5 +1544,6 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     companion object {
         const val PANEL_MAIN_WIDTH: Float = 400f
         const val PANEL_MAIN_HEIGHT: Float = 187f
+        private const val CONSOLE_CHAR_DELAY_MS: Long = 10L
     }
 }

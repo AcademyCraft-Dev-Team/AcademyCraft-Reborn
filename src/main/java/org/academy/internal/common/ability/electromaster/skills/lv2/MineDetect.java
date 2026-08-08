@@ -64,7 +64,7 @@ public final class MineDetect extends Skill {
     public MineDetect() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
-                .level(AbilityLevel.LEVEL1)
+                .level(AbilityLevel.LEVEL3)
                 .energyCost(5_000)
                 .passive()
                 .initiallyDisabled()
@@ -72,7 +72,7 @@ public final class MineDetect extends Skill {
                 .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.MAGNET_MANIPULATION)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
     }
 

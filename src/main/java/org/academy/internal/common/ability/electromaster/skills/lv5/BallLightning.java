@@ -38,7 +38,6 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.common.world.entity.skill.LightOrb;
@@ -70,6 +69,7 @@ public class BallLightning extends Skill {
                 .cpCost(80)
                 .iterationTicks(60)
                 .maxStacks(1)
+                .dependsOn(Skills.LIGHTNING_NOVA)
         );
     }
 
@@ -109,7 +109,7 @@ public class BallLightning extends Skill {
                 AbilityCategories.ELECTROMASTER.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.BALL_LIGHTNING.get(),
-                        List.of(CurrentSymbiosis.Client.SKILL_INFO),
+                        List.of(),
                         R.textures.ball_lightning_icon,
                         184,
                         72

@@ -67,7 +67,7 @@ public final class VacuumDomain extends Skill {
                 .cpCost(120)
                 .iterationTicks(120)
                 .maxStacks(1)
-                .dependsOn(Skills.PRESSURE_LOCK)
+                .dependsOn(Skills.ATMOSPHERIC_DOMINION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
         );
     }
@@ -110,7 +110,7 @@ public final class VacuumDomain extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.VACUUM_DOMAIN.get(),
-                        List.of(PressureLock.Client.SKILL_INFO),
+                        List.of(),
                         R.textures.vacuum_domain_icon,
                         130,
                         72

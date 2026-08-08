@@ -70,6 +70,7 @@ public final class VectorBlast extends Skill {
                 .cpCost(10)
                 .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.VECTOR_ACCEL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }

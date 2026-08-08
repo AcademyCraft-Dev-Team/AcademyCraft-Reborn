@@ -50,7 +50,7 @@ public class LightningNova extends Skill {
                 .cpCost(60)
                 .iterationTicks(30)
                 .maxStacks(1)
-                .dependsOn(Skills.ELECTRICAL_CONTACT)
+                .dependsOn(Skills.THUNDER_LANCE)
         );
     }
 

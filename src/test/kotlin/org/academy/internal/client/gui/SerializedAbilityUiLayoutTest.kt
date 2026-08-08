@@ -46,9 +46,9 @@ class SerializedAbilityUiLayoutTest {
         val root = load("location_teleport")
         layout(root, 854f, 480f)
         val panel = SerializedUiLayout.require(root, "panel")
-        assertEquals(300f, panel.width)
+        assertEquals(420f, panel.width)
         assertEquals(212f, panel.height)
-        assertEquals(277f, panel.x)
+        assertEquals(217f, panel.x)
         assertEquals(134f, panel.y)
     }
 

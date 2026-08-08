@@ -54,6 +54,7 @@ public class Cloudroom extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(30)
+                .dependsOn(Skills.LIGHT_SHIELD)
         );
     }
 

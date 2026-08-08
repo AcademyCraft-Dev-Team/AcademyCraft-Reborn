@@ -31,6 +31,7 @@ public final class MentalIntrusion extends Skill {
                 .cpCost(0)
                 .iterationTicks(0)
                 .maxStacks(1)
+                .dependsOn(Skills.MENTAL_INTERVENTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }

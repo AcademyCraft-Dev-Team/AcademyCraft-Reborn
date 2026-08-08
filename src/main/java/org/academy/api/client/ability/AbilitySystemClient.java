@@ -121,8 +121,9 @@ public final class AbilitySystemClient {
 
     /**
      * Keeps the HUD and developer screen complete even while a newly ported skill has not yet
-     * received a hand-authored tree node. Explicit registrations remain authoritative; only
-     * missing category skills receive deterministic fallback entries.
+     * received a hand-authored tree node. Explicit registrations remain authoritative for
+     * textures and positions, while all dependency links are rebuilt from the server-side
+     * {@link Skill} definitions after registration has completed.
      */
     private static void ensureCompleteSkillInfos() {
         for (var category : Registries.ABILITY_CATEGORIES) {
@@ -152,18 +153,16 @@ public final class AbilitySystemClient {
                 bySkill.put(skill, info);
             }
 
-            if (!fallbackSkills.isEmpty()) {
-                for (var index = 0; index < infos.size(); index++) {
-                    var info = infos.get(index);
-                    if (!fallbackSkills.contains(info.skill())) continue;
-                    var dependencies = info.skill().getDependencies().stream()
-                            .map(bySkill::get)
-                            .filter(Objects::nonNull)
-                            .toList();
-                    infos.set(index, new SkillInfo(
-                            info.skill(), dependencies, info.texture(), info.x(), info.y()
-                    ));
-                }
+            COMMON_SKILL_INFOS.forEach(info -> bySkill.put(info.skill(), info));
+            for (var index = 0; index < infos.size(); index++) {
+                var info = infos.get(index);
+                var dependencies = info.skill().getDependencies().stream()
+                        .map(bySkill::get)
+                        .filter(Objects::nonNull)
+                        .toList();
+                infos.set(index, new SkillInfo(
+                        info.skill(), dependencies, info.texture(), info.x(), info.y()
+                ));
             }
         }
     }
