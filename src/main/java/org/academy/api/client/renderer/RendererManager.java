@@ -29,4 +29,13 @@ public final class RendererManager {
             renderer.renderFirstPerson(poseStack, nodeCollector, player, packedLight, partialTick);
         }
     }
+
+    public static void renderEffectFirstPersonWithHiddenHud(PoseStack poseStack, SubmitNodeCollector nodeCollector,
+                                                            LocalPlayer player, int packedLight, float partialTick) {
+        for (var renderer : EFFECT_RENDERERS) {
+            if (renderer.renderFirstPersonWhenHudHidden()) {
+                renderer.renderFirstPerson(poseStack, nodeCollector, player, packedLight, partialTick);
+            }
+        }
+    }
 }

@@ -5,17 +5,21 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
+import org.academy.internal.client.renderer.effect.PlatinumCosmosPass;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -32,9 +36,35 @@ public abstract class MixinGameRenderer {
     @Final
     private SubmitNodeStorage handAndScreenSubmitNodeStorage;
 
+    @Shadow
+    @Final
+    private FeatureRenderDispatcher featureRenderDispatcher;
+
+    @Unique
+    private final SubmitNodeStorage academy$hiddenHudEffectSubmitNodeStorage = new SubmitNodeStorage();
+
     @Inject(method = "render", at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
         NeoForge.EVENT_BUS.post(new RenderLoopEvent());
+    }
+
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    private void academy$beginPlatinumCosmosFrame(DeltaTracker deltaTracker, CallbackInfo ci) {
+        PlatinumCosmosPass.beginFrame(minecraft.level);
+    }
+
+    @Inject(
+            method = "renderLevel",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V",
+                    shift = At.Shift.AFTER
+            )
+    )
+    private void academy$renderPlatinumCosmosAfterWorld(
+            DeltaTracker deltaTracker, CallbackInfo ci
+    ) {
+        PlatinumCosmosPass.renderWorld(featureRenderDispatcher);
     }
 
     @Inject(
@@ -59,7 +89,10 @@ public abstract class MixinGameRenderer {
 
     @Inject(
             method = "renderItemInHand",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;bobView(Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;)V"),
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"
+            ),
             locals = LocalCapture.CAPTURE_FAILSOFT
     )
     private void onRenderItemInHand(
@@ -81,5 +114,37 @@ public abstract class MixinGameRenderer {
                 ),
                 deltaPartialTick
         );
+    }
+
+    @Inject(
+            method = "renderLevel",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/GameRenderer;renderItemInHand(Lnet/minecraft/client/renderer/state/level/CameraRenderState;FLorg/joml/Matrix4fc;)V",
+                    shift = At.Shift.AFTER
+            )
+    )
+    private void renderFirstPersonEffectsWithHiddenHud(DeltaTracker deltaTracker, CallbackInfo ci) {
+        var player = minecraft.player;
+        var gameMode = minecraft.gameMode;
+        if (player == null || gameMode == null || gameMode.getPlayerMode() == GameType.SPECTATOR) return;
+
+        var gameRenderState = minecraft.gameRenderer.gameRenderState();
+        if (!gameRenderState.guiRenderState.isHudHidden
+                || !gameRenderState.optionsRenderState.cameraType.isFirstPerson()) return;
+
+        var cameraState = gameRenderState.levelRenderState.cameraRenderState;
+        if (cameraState.isPanoramicMode || cameraState.entityRenderState.isSleeping) return;
+
+        var partialTick = minecraft.gameRenderer.mainCamera().getCameraEntityPartialTicks(deltaTracker);
+        RendererManager.renderEffectFirstPersonWithHiddenHud(
+                new PoseStack(),
+                academy$hiddenHudEffectSubmitNodeStorage,
+                player,
+                minecraft.getEntityRenderDispatcher().getPackedLightCoords(player, partialTick),
+                partialTick
+        );
+        featureRenderDispatcher.renderAllFeatures(academy$hiddenHudEffectSubmitNodeStorage);
+        PlatinumCosmosPass.renderFirstPersonWithHiddenHud(featureRenderDispatcher, partialTick);
     }
 }
