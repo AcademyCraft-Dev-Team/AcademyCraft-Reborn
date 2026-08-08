@@ -149,54 +149,11 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
             return
         }
 
-        val transformedEvent = transformEvent(event)
-
-        if (content != null && content!!.isVisible() && content!!.isAbsoluteEnabled()) {
-            content!!.dispatchEvent(transformedEvent)
-            if (transformedEvent.isConsumed) {
-                event.consume()
-                if (transformedEvent.type == EventType.MOUSE_PRESSED) {
-                    gestureTarget = content
-                    focusedChild = if (content!!.canFocus()) content else this
-                } else if (transformedEvent.type == EventType.MOUSE_RELEASED) {
-                    gestureTarget = null
-                }
-                return
-            }
-        }
-
+        // Widget hit-testing already works in absolute coordinates and accounts
+        // for every parent's scroll offset. Converting the pointer into content
+        // coordinates here applies the panel offset a second time, making controls
+        // inside a scrolled panel intermittently miss clicks.
         super.dispatchEvent(event)
-        if (event.isConsumed && event.type == EventType.MOUSE_PRESSED) focusedChild = this
-    }
-
-    private fun transformEvent(event: InputEvent): InputEvent {
-        if (event is MouseEvent) {
-            val transformedX = event.x - getAbsoluteX() + scrollX
-            val transformedY = event.y - getAbsoluteY() + scrollY
-
-            return when (event.type) {
-                EventType.MOUSE_PRESSED -> MouseEvent.createPressEvent(transformedX, transformedY, event.button)
-                EventType.MOUSE_RELEASED -> MouseEvent.createReleaseEvent(transformedX, transformedY, event.button)
-                EventType.MOUSE_MOVED -> MouseEvent.createMoveEvent(transformedX, transformedY)
-                EventType.MOUSE_DRAGGED -> MouseEvent.createDragEvent(
-                    transformedX,
-                    transformedY,
-                    event.button,
-                    event.dragX,
-                    event.dragY
-                )
-
-                else -> event
-            }
-        }
-
-        if (event is ScrollEvent) {
-            val transformedX = event.x - getAbsoluteX() + scrollX
-            val transformedY = event.y - getAbsoluteY() + scrollY
-            return ScrollEvent(transformedX, transformedY, event.delta)
-        }
-
-        return event
     }
 
     val maxScroll: Float

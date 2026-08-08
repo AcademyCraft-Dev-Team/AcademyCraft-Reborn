@@ -128,6 +128,16 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     val selectedPosition: Int
         get() = _selectedPosition
 
+    /** Item index the current animation is targeting, including queued rapid scrolls. */
+    val targetSelectedPosition: Int
+        get() = if (itemCount == 0) {
+            0
+        } else if (isCyclic) {
+            normalizePosition(_selectedPosition + targetPosition)
+        } else {
+            (_selectedPosition + targetPosition).coerceIn(0, itemCount - 1)
+        }
+
     /** The item index currently at the center (may differ from [selectedPosition] while scrolling). */
     val currentPosition: Int
         get() = _currentPosition
