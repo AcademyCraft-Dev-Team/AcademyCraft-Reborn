@@ -133,6 +133,9 @@ public final class AcademyCraftClient {
             IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE, ShaderKey.BASIC_COLOR);
             IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_TRANGLES, ShaderKey.BASIC_COLOR);
             IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR, ShaderKey.TEXTURED_COLOR);
+            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE, ShaderKey.TEXTURED_COLOR);
+            IrisPipelines.assignPipeline(Render.RenderPipelines.PLATINUM_COSMIC_WING, ShaderKey.TEXTURED_COLOR);
+            IrisPipelines.assignPipeline(Render.RenderPipelines.PLATINUM_COSMIC_WING_NO_DEPTH_WRITE, ShaderKey.TEXTURED_COLOR);
         }
         renderInitialized = true;
     }

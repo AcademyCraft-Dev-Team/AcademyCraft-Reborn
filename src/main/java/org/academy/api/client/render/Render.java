@@ -122,21 +122,21 @@ public final class Render {
                                 clearDepth ? OptionalDouble.of(1) : OptionalDouble.empty()
                         )
         ) {
-            IrisCompat.enableBypass();
-            renderPass.setPipeline(pipeline);
+            IrisCompat.runWithBypass(() -> {
+                renderPass.setPipeline(pipeline);
 
-            for (var texture : textures) {
-                renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
-            }
-            for (var uniform : uniforms) {
-                renderPass.setUniform(uniform.name(), uniform.slice());
-            }
+                for (var texture : textures) {
+                    renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
+                }
+                for (var uniform : uniforms) {
+                    renderPass.setUniform(uniform.name(), uniform.slice());
+                }
 
-            renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer.slice());
-            var sequentialBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
-            renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
-            renderPass.drawIndexed(6, 1, 0, 0, 0);
-            IrisCompat.resetBypass();
+                renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer.slice());
+                var sequentialBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+                renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
+                renderPass.drawIndexed(6, 1, 0, 0, 0);
+            });
         }
     }
 
@@ -844,6 +844,18 @@ public final class Render {
                 .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
+        public static final RenderPipeline LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/level_pos_tex_color_no_depth_write"))
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.position_tex_color)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+                .build();
+
         public static final RenderPipeline PLATINUM_COSMIC_WING = builder()
                 .withLocation(academy("pipeline/platinum_cosmic_wing"))
                 .withVertexShader(R.shaders.core.PLATINUM_COSMIC_WING)
@@ -857,6 +869,21 @@ public final class Render {
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
                 .withDepthStencilState(DepthStencilState.DEFAULT)
+                .build();
+
+        public static final RenderPipeline PLATINUM_COSMIC_WING_NO_DEPTH_WRITE = builder()
+                .withLocation(academy("pipeline/platinum_cosmic_wing_no_depth_write"))
+                .withVertexShader(R.shaders.core.PLATINUM_COSMIC_WING)
+                .withFragmentShader(R.shaders.core.PLATINUM_COSMIC_WING)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
                 .build();
 
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
@@ -1031,6 +1058,69 @@ public final class Render {
                         )
                         .withTexture(
                                 "Sampler1", R.textures.platinum_wing_starfield,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType BLACK_WING_FIRST_PERSON = create(
+                "black_wing_first_person",
+                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE)
+                        .withTexture(
+                                "Sampler0", R.textures.black_wing,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType WHITE_WING_FIRST_PERSON = create(
+                "white_wing_first_person",
+                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE)
+                        .withTexture(
+                                "Sampler0", R.textures.white_wing,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType PLATINUM_WING_FIRST_PERSON = create(
+                "platinum_wing_first_person",
+                RenderSetup.builder(Render.RenderPipelines.PLATINUM_COSMIC_WING_NO_DEPTH_WRITE)
+                        .withTexture(
+                                "Sampler0", R.textures.white_wing,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .withTexture(
+                                "Sampler1", R.textures.platinum_wing_starfield,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType PLATINUM_WING_BYPASS = create(
+                "platinum_wing_bypass",
+                RenderSetup.builder(Render.RenderPipelines.PLATINUM_COSMIC_WING_NO_DEPTH_WRITE)
+                        .withTexture(
+                                "Sampler0", R.textures.white_wing,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .withTexture(
+                                "Sampler1", R.textures.platinum_wing_starfield,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType IRON_SAND_FIRST_PERSON = create(
+                "iron_sand_first_person",
+                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE)
+                        .withTexture(
+                                "Sampler0", R.textures.iron_sand_arsenal_effect,
                                 () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                         )
                         .sortOnUpload()

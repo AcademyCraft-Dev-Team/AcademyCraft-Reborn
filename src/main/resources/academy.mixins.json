@@ -55,7 +55,8 @@
     "client.MixinMinecraft",
     "client.MixinModelDiscovery",
     "client.MixinMouseHandler",
-    "client.MixinSoundEngine"
+    "client.MixinSoundEngine",
+    "client.compatibility.MixinIrisHandRenderer"
   ],
   "injectors": {
     "defaultRequire": 1

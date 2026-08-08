@@ -123,11 +123,16 @@ public final class StormWingEffectRenderer implements EffectRenderer {
     }
 
     static void renderSingleTornado(PoseStack poseStack, VertexConsumer vertexConsumer, float effectiveTime) {
-        renderSingleTornado(poseStack, vertexConsumer, effectiveTime, 1.0f);
+        renderSingleTornado(poseStack, vertexConsumer, effectiveTime, 1.0f, 1.0f);
     }
 
     static void renderSingleTornado(PoseStack poseStack, VertexConsumer vertexConsumer,
                                     float effectiveTime, float ringWidthScale) {
+        renderSingleTornado(poseStack, vertexConsumer, effectiveTime, ringWidthScale, 1.0f);
+    }
+
+    static void renderSingleTornado(PoseStack poseStack, VertexConsumer vertexConsumer,
+                                    float effectiveTime, float ringWidthScale, float alpha) {
         var tPosBase = effectiveTime * TIME_POS_BASE;
         var tWarp = effectiveTime * TIME_POS_WARP;
         var tGap = effectiveTime * TIME_GAP;
@@ -181,7 +186,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
                             vertexConsumer,
                             RING_SEGMENTS,
                             CACHED_VERTICAL_VERTEX_BUFFER,
-                            1, 1, 1, 1
+                            1, 1, 1, alpha
                     );
                 }
                 poseStack.popPose();
@@ -197,7 +202,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
                     renderRing(
                             poseStack.last().pose(), vertexConsumer,
                             RING_SEGMENTS, CACHED_VERTICAL_VERTEX_BUFFER,
-                            1, 1, 1, 1
+                            1, 1, 1, alpha
                     );
                 }
                 poseStack.popPose();

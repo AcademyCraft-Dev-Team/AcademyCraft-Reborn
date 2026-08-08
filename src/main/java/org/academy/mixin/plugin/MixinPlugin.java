@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Set;
 
 public class MixinPlugin implements IMixinConfigPlugin {
+    private static final String IRIS_HAND_MIXIN =
+            "org.academy.mixin.client.compatibility.MixinIrisHandRenderer";
+
     @Override
     public void onLoad(String mixinPackage) {
         IrisCompat.init();
@@ -21,7 +24,7 @@ public class MixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return true;
+        return !IRIS_HAND_MIXIN.equals(mixinClassName) || IrisCompat.hasIris();
     }
 
     @Override

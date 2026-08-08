@@ -49,15 +49,11 @@ public final class PostEffect {
                 List.of(),
                 false
         );
-        IrisCompat.enableBypass();
-        PRE_PHASE.draw();
-        IrisCompat.resetBypass();
+        IrisCompat.runWithBypass(PRE_PHASE::draw);
     }
 
     public static void post() {
-        IrisCompat.enableBypass();
-        POST_PHASE.draw();
-        IrisCompat.resetBypass();
+        IrisCompat.runWithBypass(POST_PHASE::draw);
     }
 
     public static Phase getPre() {

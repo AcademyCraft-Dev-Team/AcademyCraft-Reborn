@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -13,6 +14,9 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -67,6 +71,7 @@ public class IronSandArsenal extends Skill {
 
     @Override
     public void initClient() {
+        Client.init();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -86,6 +91,14 @@ public class IronSandArsenal extends Skill {
     public static final class Client {
         public static final String KEY_TOGGLE = SkillNames.IRON_SAND_ARSENAL + "_toggle";
         public static Config CONFIG = new Config();
+        private static boolean initialized;
+
+        private static void init() {
+            if (initialized) return;
+            initialized = true;
+            MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+            NeoForge.EVENT_BUS.register(Client.class);
+        }
 
         private static void onToggle() {
             if (AbilitySystemClient.canToggleSkill(Skills.IRON_SAND_ARSENAL.get())) {
@@ -96,6 +109,21 @@ public class IronSandArsenal extends Skill {
         private static boolean isActive() {
             var player = net.minecraft.client.Minecraft.getInstance().player;
             return player != null && player.getData(AttachmentTypes.IRON_SAND_DATA.get()).active();
+        }
+
+        @SubscribePacket
+        public static void handleSweepVisual(SweepVisualPacket packet) {
+            ElectromasterWeaponEffectRenderer.enqueueIronSandSweep(packet.entityId());
+        }
+
+        @SubscribeEvent
+        public static void onClientTick(ClientTickEvent.Post event) {
+            ElectromasterWeaponEffectRenderer.clientTick();
+        }
+
+        @SubscribeEvent
+        public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+            ElectromasterWeaponEffectRenderer.clearSweeps();
         }
 
         public static class Config extends KeyBindingConfig {
@@ -247,6 +275,12 @@ public class IronSandArsenal extends Skill {
             sweepCooldown = HIT_COOLDOWN;
             swingTicks = 1;
             syncData();
+            var packet = new SweepVisualPacket(player.getId());
+            for (var observer : level.players()) {
+                if (observer.distanceToSqr(player) <= 128.0 * 128.0) {
+                    MisakaNetworkServer.send(observer, packet);
+                }
+            }
         }
 
         private void syncData() {
@@ -275,6 +309,28 @@ public class IronSandArsenal extends Skill {
                 ByteBufCodecs.VAR_INT, Data::swingTicks,
                 Data::new
         );
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class SweepVisualPacket extends Packet<ClientPacketListener, SweepVisualPacket> {
+        public static final StreamCodec<ByteBuf, SweepVisualPacket> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, SweepVisualPacket::entityId,
+                SweepVisualPacket::new
+        );
+        private final int entityId;
+
+        public SweepVisualPacket(int entityId) {
+            this.entityId = entityId;
+        }
+
+        public int entityId() {
+            return entityId;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, SweepVisualPacket> getPacketType() {
+            return PacketTypes.IRON_SAND_ARSENAL_SWEEP_VISUAL.get();
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
