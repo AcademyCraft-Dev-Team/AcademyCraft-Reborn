@@ -71,10 +71,10 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     }
 
     private void serverTick() {
+        if (!isMain()) return;
         updateState();
         if (level != null && completeness == Completeness.COMPLETE && topBlockEntity != null && topBlockEntity.hasFan) {
-            energyStored += 10;
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+            setEnergyStorage(energyStored + 10);
         }
     }
 
@@ -194,6 +194,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
 
         if (isMain()) {
             energyStored = input.getIntOr("energy_stored", 0);
+            connectedNodePos = null;
             input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
             altitude = input.getIntOr("altitude", 0);
         }
@@ -265,8 +266,8 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     public @Nullable BlockPos getConnectedNodePosition() {
         if (!isMain() && level != null && mainPos != null) {
             var mainBE = getMain();
-            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
-                return mainDevBE.getConnectedNodePosition();
+            if (mainBE instanceof WindGenBaseBlockEntity mainWindGen) {
+                return mainWindGen.getConnectedNodePosition();
             }
             return null;
         }
@@ -277,8 +278,8 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     public void setConnectedNodePosition(@Nullable BlockPos nodePos) {
         if (!isMain() && level != null && mainPos != null) {
             var mainBE = getMain();
-            if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
-                mainDevBE.setConnectedNodePosition(nodePos);
+            if (mainBE instanceof WindGenBaseBlockEntity mainWindGen) {
+                mainWindGen.setConnectedNodePosition(nodePos);
             }
             return;
         }

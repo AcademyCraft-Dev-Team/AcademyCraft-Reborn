@@ -42,6 +42,7 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
     public void submit(WindGenBaseRenderState state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
         if (state.isMain) {
             poseStack.pushPose();
+            var yRot = state.facing.getOpposite().toYRot();
             poseStack.pushPose();
             poseStack.scale(1, 15 / 16f, 1);
             poseStack.translate(0, 1 / 16f, 0);
@@ -50,6 +51,7 @@ public final class WindGenBaseRenderer implements BlockEntityRenderer<WindGenBas
             poseStack.translate(0.5f, 0f, 0.5f);
             poseStack.translate(0, 1.5f, 0);
             poseStack.mulPose(Axis.XP.rotationDegrees(180));
+            poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
             submitNodeCollector.submitModel(
                     WindGenBaseModel.MODEL,
                     state,
