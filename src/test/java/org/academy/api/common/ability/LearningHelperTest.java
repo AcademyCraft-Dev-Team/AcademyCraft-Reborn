@@ -5,6 +5,7 @@ import org.academy.AcademyCraft;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LearningHelperTest {
@@ -32,6 +33,15 @@ class LearningHelperTest {
         assertFalse(LearningHelper.isSkillAvailableForCategory(null, skill));
     }
 
+    @Test
+    void abilityExperienceRequirementKeepsTheOneThousandBaseAndLevelFourFactor() {
+        var category = new TestCategory("requirements");
+        new LeveledTestSkill(category, AbilityLevel.LEVEL4);
+
+        assertEquals(1333.0f, LearningHelper.getAbilityExpRequirement(category, 4));
+        assertEquals(666.0f, LearningHelper.getAbilityExpRequirement(category, 3));
+    }
+
     private static final class TestSkill extends Skill {
         private TestSkill(AbilityCategory category) {
             super(Builder.of(category));
@@ -41,6 +51,12 @@ class LearningHelperTest {
     private static final class CommonTestSkill extends Skill {
         private CommonTestSkill(AbilityCategory category) {
             super(Builder.of(category).common());
+        }
+    }
+
+    private static final class LeveledTestSkill extends Skill {
+        private LeveledTestSkill(AbilityCategory category, AbilityLevel level) {
+            super(Builder.of(category).level(level));
         }
     }
 

@@ -259,9 +259,7 @@ public final class BioelectricOperation extends Skill {
         }
 
         private static void mergeProgress(SkillData target, SkillData legacy) {
-            target.setLevel(Math.max(target.getLevel(), legacy.getLevel()));
-            target.setMaxExp(Math.max(target.getMaxExp(), legacy.getMaxExp()));
-            target.setExp(Math.max(target.getExp(), legacy.getExp()));
+            target.setProficiency(Math.max(target.getProficiency(), legacy.getProficiency()));
         }
 
         private static void syncModifier(AttributeInstance attribute, double amount, boolean enabled) {

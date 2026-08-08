@@ -380,10 +380,12 @@ public class MagnetManipulation extends Skill {
 
             var system = AbilitySystemServer.getSystem(player);
             var uuid = player.getUUID();
+            skill.reportActivity(player, false);
             var moved = mode == PullMode.TARGET_TO_PLAYER
                     ? pullTargetToPlayer()
                     : pullPlayerToTarget();
             if (!moved) return;
+            skill.reportActivity(player, true);
             movingTicks++;
             if (movingTicks % MOVE_CP_INTERVAL_TICKS == 0
                     && !system.tryTimedOccupation(uuid, MOVE_CP_COST, skill, 10)) {

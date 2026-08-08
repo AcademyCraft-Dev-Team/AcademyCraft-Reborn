@@ -168,9 +168,7 @@ public final class PrecisionOperation extends Skill {
         public Data copy() {
             normalizeData(this);
             var copy = new Data();
-            copy.setExp(getExp());
-            copy.setMaxExp(getMaxExp());
-            copy.setLevel(getLevel());
+            copy.setProficiency(getProficiency());
             copy.setEnabled(isEnabled());
             copy.schemaVersion = schemaVersion;
             copy.revision = revision;

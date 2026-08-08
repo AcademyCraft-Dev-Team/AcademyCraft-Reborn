@@ -223,13 +223,19 @@ public final class VectorBlast extends Skill {
             switch (packet.action) {
                 case BLAST -> Skills.VECTOR_BLAST.get().executeActive(
                         player, (context, actualCost) -> fire(player, level));
-                case PULL_START -> ACTIVE_CONTROLS.put(
-                        player.getUUID(), new ControlState(ControlMode.PULL, level.getGameTime()));
-                case PUSH_START -> ACTIVE_CONTROLS.put(
-                        player.getUUID(), new ControlState(ControlMode.PUSH, level.getGameTime()));
+                case PULL_START -> startControl(player, level, ControlMode.PULL);
+                case PUSH_START -> startControl(player, level, ControlMode.PUSH);
                 case PULL_STOP -> stop(player, ControlMode.PULL);
                 case PUSH_STOP -> stop(player, ControlMode.PUSH);
             }
+        }
+
+        private static void startControl(ServerPlayer player, ServerLevel level, ControlMode mode) {
+            var skill = Skills.VECTOR_BLAST.get();
+            if (!skill.isEnabled(player)) return;
+            var previous = ACTIVE_CONTROLS.put(
+                    player.getUUID(), new ControlState(mode, level.getGameTime()));
+            if (previous == null || previous.mode != mode) skill.reportTrigger(player);
         }
 
         private static void stop(ServerPlayer player, ControlMode mode) {
@@ -248,9 +254,10 @@ public final class VectorBlast extends Skill {
             }
 
             var now = level.getGameTime();
+            skill.reportActivity(player, false);
             if (now >= state.nextCostTick) {
-                if (!skill.executeActive(player, (context, actualCost) -> {
-                })) {
+                if (!skill.executeContinuous(player, (context, actualCost) -> {
+                }, false)) {
                     ACTIVE_CONTROLS.remove(player.getUUID());
                     return;
                 }
@@ -270,6 +277,7 @@ public final class VectorBlast extends Skill {
                     : Math.min(0.62, 0.26 + distance * 0.022);
             var velocity = target.getDeltaMovement().scale(0.35).add(delta.normalize().scale(strength));
             target.setDeltaMovement(velocity);
+            skill.reportActivity(player, true);
             target.hurtMarked = true;
             target.resetFallDistance();
             if (target instanceof ServerPlayer targetPlayer) {

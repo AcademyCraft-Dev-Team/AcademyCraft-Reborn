@@ -126,9 +126,9 @@ public final class DarkmatterRepair extends Skill {
                     || player.getHealth() >= player.getMaxHealth()) return;
 
             var system = AbilitySystemServer.getSystem(player);
-            skill.executeActive(player, (context, actualCost) -> {
+            skill.executeContinuous(player, (context, actualCost) -> {
                 player.heal(healAmount(system.getPlayerAbilityPowerMultiplier(player.getUUID())));
-            });
+            }, true);
         }
     }
 

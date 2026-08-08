@@ -311,6 +311,7 @@ public final class AutoCruiseBeamCannon extends Skill {
             private final List<UUID> detected = new ArrayList<>();
 
             private void tick(ServerPlayer player, AutoCruiseBeamCannon skill) {
+                skill.reportActivity(player, false);
                 var level = player.level();
                 var now = level.getGameTime();
                 if (now - lastDetect >= DETECT_INTERVAL_TICKS) {
@@ -329,7 +330,7 @@ public final class AutoCruiseBeamCannon extends Skill {
                 if (target == null) return;
                 var multiplier = AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
-                if (skill.executeActive(player, (_, _) -> fire(player, target, multiplier))) {
+                if (skill.executeContinuous(player, (_, _) -> fire(player, target, multiplier), true)) {
                     lastFire = now;
                 }
             }

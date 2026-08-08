@@ -141,8 +141,11 @@ public final class DarkmatterRadiation extends Skill {
         @SubscribePacket
         public static void handle(StartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (!Skills.DARKMATTER_RADIATION.get().isEnabled(player)) return;
-            ACTIVE.put(player.getUUID(), new RadiationState(player.level().getGameTime()));
+            var skill = Skills.DARKMATTER_RADIATION.get();
+            if (!skill.isEnabled(player)) return;
+            if (ACTIVE.putIfAbsent(player.getUUID(), new RadiationState(player.level().getGameTime())) == null) {
+                skill.reportTrigger(player);
+            }
         }
 
         @SubscribePacket
@@ -235,9 +238,10 @@ public final class DarkmatterRadiation extends Skill {
                 return;
             }
             var now = level.getGameTime();
+            skill.reportActivity(player, false);
             if (now >= state.nextCostTick) {
-                if (!skill.executeActive(player, (context, actualCost) -> {
-                })) {
+                if (!skill.executeContinuous(player, (context, actualCost) -> {
+                }, false)) {
                     ACTIVE.remove(player.getUUID());
                     return;
                 }

@@ -271,6 +271,7 @@ public final class ScatterBomb extends Skill {
             }
             var elapsed = Math.clamp(
                     (int) (player.level().getGameTime() - state.startTick), 0, MAX_CHARGE_TICKS);
+            Skills.SCATTER_BOMB.get().reportActivity(player, false);
             var desired = Math.min(BEAM_COUNT, 1 + elapsed / SPAWN_INTERVAL_TICKS);
             state.ensureBeamCount(player, desired);
             state.follow(player);
