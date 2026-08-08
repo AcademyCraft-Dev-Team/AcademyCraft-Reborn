@@ -42,7 +42,7 @@ import java.util.List;
 public final class VortexPull extends Skill {
     public VortexPull() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL3).energyCost(30_000)
-                .cpCost(40).iterationTicks(60).maxStacks(1).dependsOn(Skills.TAILWIND_FIELD)
+                .cpCost(40).iterationTicks(60).maxStacks(1).dependsOn(Skills.PNEUMATIC_GRASP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
 
@@ -50,7 +50,7 @@ public final class VortexPull extends Skill {
         var key = getKey(); AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE); Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_B, InputConstants.RELEASE, InputConstants.MOD_ALT)), _ -> Client.cast());
-        Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.VORTEX_PULL.get(), List.of(TailwindField.Client.SKILL_INFO), R.textures.vortex_pull_icon, 130, 104));
+        Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.VORTEX_PULL.get(), List.of(), R.textures.vortex_pull_icon, 130, 104));
     }
     @Override public void initServer(MinecraftServerContext context) { MisakaNetworkServer.NETWORK_MANAGER.register(Server.class); }
     public static final class Client {

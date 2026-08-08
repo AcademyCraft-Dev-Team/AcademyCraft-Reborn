@@ -46,14 +46,14 @@ import java.util.List;
 public final class WindCorridor extends Skill {
     public WindCorridor() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL4).energyCost(60_000)
-                .cpCost(65).iterationTicks(100).maxStacks(1).dependsOn(Skills.VORTEX_PULL)
+                .cpCost(65).iterationTicks(100).maxStacks(1).dependsOn(Skills.TAILWIND_FIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4)));
     }
     @Override public void initClient() {
         var key = getKey(); AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE); Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.RELEASE, InputConstants.MOD_ALT)), _ -> Client.cast());
-        Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.WIND_CORRIDOR.get(), List.of(VortexPull.Client.SKILL_INFO), R.textures.wind_corridor_icon, 20, 136));
+        Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.WIND_CORRIDOR.get(), List.of(), R.textures.wind_corridor_icon, 20, 136));
         ToggleStatusHud.registerStateProvider(Skills.WIND_CORRIDOR.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && AeromanipFieldSyncPacket.Client.snapshot().values().stream()

@@ -34,7 +34,6 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.BioelectricSurgeData;
 import org.academy.internal.common.skilldata.SkillData;
@@ -70,7 +69,7 @@ public final class BioelectricOperation extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(40)
                 .iterationTicks(40)
-                .dependsOn(Skills.CURRENT_SYMBIOSIS)
+                .dependsOn(Skills.ELECTRICAL_CONTACT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
         );
     }
@@ -109,7 +108,7 @@ public final class BioelectricOperation extends Skill {
                 AbilityCategories.ELECTROMASTER.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.BIOELECTRIC_OPERATION.get(),
-                        List.of(CurrentSymbiosis.Client.SKILL_INFO),
+                        List.of(),
                         R.textures.bioelectric_operation_icon,
                         184,
                         46

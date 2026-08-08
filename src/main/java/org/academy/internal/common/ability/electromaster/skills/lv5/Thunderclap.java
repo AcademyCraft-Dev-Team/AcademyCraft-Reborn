@@ -33,7 +33,6 @@ import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.skills.lv3.ThunderLance;
 import org.academy.internal.common.network.PacketTypes;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -59,9 +58,9 @@ public class Thunderclap extends Skill {
                 .cpCost(100)
                 .iterationTicks(80)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.THUNDER_LANCE)
+                .dependsOn(Skills.BALL_LIGHTNING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
-                .devCondition(new DevCondition.DependencyCondition("Lightning Spear", "academy:thunder_lance"))
+                .devCondition(new DevCondition.DependencyCondition("Ball Lightning", "academy:ball_lightning"))
         );
     }
 
@@ -90,7 +89,7 @@ public class Thunderclap extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ELECTROMASTER.get(),
                 new AbilitySystemClient.SkillInfo(
-                        Skills.THUNDERCLAP.get(), List.of(ThunderLance.Client.SKILL_INFO),
+                        Skills.THUNDERCLAP.get(), List.of(),
                         R.textures.ability.electromaster.skill.thunderclap.icon, 204, 80)
         );
         public static final String KEY = SkillNames.THUNDERCLAP + "_clap";
