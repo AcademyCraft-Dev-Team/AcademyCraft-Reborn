@@ -589,7 +589,7 @@ class AbilityInfoHud private constructor() {
         private var currentSkills: List<SkillInfo> = emptyList()
 
         val selectedSkillInfo: SkillInfo?
-            get() = currentSkills.getOrNull(selectedPosition)
+            get() = currentSkills.getOrNull(targetSelectedPosition)
 
         override fun tick() {
             refreshItems()
