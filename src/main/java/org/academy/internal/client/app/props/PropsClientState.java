@@ -11,6 +11,7 @@ import java.util.Arrays;
 public final class PropsClientState {
     private static final double[] VALUES = new double[AbilityFactor.values().length];
     private static int lockedMask;
+    private static boolean started;
 
     private PropsClientState() {
     }
@@ -24,6 +25,7 @@ public final class PropsClientState {
         var incoming = packet.values();
         System.arraycopy(incoming, 0, VALUES, 0, Math.min(incoming.length, VALUES.length));
         lockedMask = packet.lockedMask();
+        started = packet.started();
     }
 
     public static double get(AbilityFactor factor) {
@@ -40,5 +42,17 @@ public final class PropsClientState {
 
     public static boolean isLocked(AbilityFactor factor) {
         return (lockedMask & factor.bit()) != 0;
+    }
+
+    static void setLockedLocally(AbilityFactor factor, boolean locked) {
+        if (locked) {
+            lockedMask |= factor.bit();
+        } else {
+            lockedMask &= ~factor.bit();
+        }
+    }
+
+    public static boolean isStarted() {
+        return started;
     }
 }

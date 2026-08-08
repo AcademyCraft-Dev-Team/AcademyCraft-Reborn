@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
@@ -119,13 +120,23 @@ public final class PropsManager implements AbilitySubsystem {
         var storedPlayer = playerDataManager.getData(player.getUUID());
         if (storedPlayer == null) return;
         var data = storedPlayer.getPropsData();
-        MisakaNetworkServer.send(player, new PropsPackets.SyncPacket(data.copyValues(), data.getLockedMask()));
+        MisakaNetworkServer.send(player, new PropsPackets.SyncPacket(
+                data.copyValues(), data.getLockedMask(), data.isStarted()
+        ));
+    }
+
+    public void start(ServerPlayer player) {
+        var storedPlayer = playerDataManager.getData(player.getUUID());
+        if (storedPlayer == null || !storedPlayer.getPropsData().start()) return;
+        storedPlayer.markDirty();
+        syncNow(player);
     }
 
     public double award(ServerPlayer player, AbilityFactor factor, double rawAmount, boolean bypassCoefficient) {
         var storedPlayer = playerDataManager.getData(player.getUUID());
         if (storedPlayer == null) return 0.0;
         var data = storedPlayer.getPropsData();
+        if (!data.isStarted()) return 0.0;
         if (data.isLocked(factor)) return 0.0;
         var gained = PropsMath.awardedAmount(data.total(), rawAmount, bypassCoefficient);
         if (gained <= 0.0) return 0.0;
@@ -138,6 +149,7 @@ public final class PropsManager implements AbilitySubsystem {
     public void setLocked(ServerPlayer player, AbilityFactor factor, boolean locked) {
         var storedPlayer = playerDataManager.getData(player.getUUID());
         if (storedPlayer == null) return;
+        if (!storedPlayer.getPropsData().isStarted()) return;
         if (!storedPlayer.getPropsData().setLocked(factor, locked)) return;
         storedPlayer.markDirty();
         syncNow(player);
@@ -193,6 +205,7 @@ public final class PropsManager implements AbilitySubsystem {
         var storedPlayer = playerDataManager.getData(player.getUUID());
         if (storedPlayer == null) return;
         var data = storedPlayer.getPropsData();
+        if (!data.isStarted()) return;
         var changed = false;
 
         for (var structure : structures.keySet()) {
@@ -218,7 +231,8 @@ public final class PropsManager implements AbilitySubsystem {
         var wholeDamage = Math.floor(Math.max(0.0, event.getHealthDamage()));
         if (wholeDamage <= 0.0) return;
 
-        if (event.getEntity() instanceof ServerPlayer victim) {
+        if (event.getEntity() instanceof ServerPlayer victim
+                && !event.getSource().is(DamageTypes.GENERIC_KILL)) {
             award(victim, AbilityFactor.ENDURANCE, wholeDamage * 0.5, false);
         }
 
@@ -288,6 +302,7 @@ public final class PropsManager implements AbilitySubsystem {
         var storedPlayer = playerDataManager.getData(player.getUUID());
         if (storedPlayer == null) return;
         var data = storedPlayer.getPropsData();
+        if (!data.isStarted()) return;
         var special = specialMilestone(event.getEntity().getType());
         if (special != null && data.markMilestone(special.bit)) {
             storedPlayer.markDirty();
@@ -337,8 +352,9 @@ public final class PropsManager implements AbilitySubsystem {
     private static void mirrorAttributes(ServerPlayer player, PropsData data) {
         for (var factor : AbilityFactor.values()) {
             var instance = player.getAttribute(attribute(factor));
-            if (instance != null && Double.compare(instance.getBaseValue(), data.get(factor)) != 0) {
-                instance.setBaseValue(data.get(factor));
+            var value = data.isStarted() ? data.get(factor) : 0.0;
+            if (instance != null && Double.compare(instance.getBaseValue(), value) != 0) {
+                instance.setBaseValue(value);
             }
         }
     }

@@ -14,6 +14,7 @@ import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.api.client.gui.widget.ImageWidget
 import org.academy.api.client.gui.widget.LabelWidget
 import org.academy.api.client.gui.widget.LinearLayoutWidget
+import org.academy.api.client.gui.widget.TextBoxWidget
 import org.academy.api.client.gui.widget.ToggleButtonWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
@@ -35,13 +36,35 @@ object PropsApp : App {
     override fun icon(): Identifier = PropsIcon.LOCATION
 
     private class Context : WidgetContext {
-        private val root = createRoot()
+        private var displayedStarted = PropsClientState.isStarted()
+        private var consoleStatus = ""
+        private val root = object : FrameLayoutWidget() {
+            init {
+                layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            }
+
+            override fun tick() {
+                val started = PropsClientState.isStarted()
+                if (displayedStarted != started) {
+                    displayedStarted = started
+                    rebuild()
+                }
+                super.tick()
+            }
+        }
+
+        init {
+            rebuild()
+        }
 
         override fun get(): Widget = root
 
-        private fun createRoot(): FrameLayoutWidget = FrameLayoutWidget().apply {
-            layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            addChild("content", LinearLayoutWidget().apply {
+        private fun rebuild() {
+            root.clearChildren()
+            root.addChild("content", if (displayedStarted) createDashboard() else createConsole())
+        }
+
+        private fun createDashboard(): LinearLayoutWidget = LinearLayoutWidget().apply {
                 orientation = Orientation.VERTICAL
                 spacing = 1f
                 layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
@@ -92,6 +115,76 @@ object PropsApp : App {
                         .height(9f)
                         .gravity(Gravity.CENTER)
                 })
+        }
+
+        private fun createConsole(): LinearLayoutWidget = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = 1f
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            addChild("top_bar", createTopBar())
+            addChild("separator", FillWidget(0xBFFFFFFF.toInt()).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(1f)
+                    .padding(2f, 0f)
+            })
+            addChild("console", LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                spacing = 5f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .padding(18f, 16f)
+                addChild("heading", LabelWidget(tr("app.academy.props.console.heading")).apply {
+                    scale = 1.15f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.MATCH_PARENT)
+                        .height(18f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
+                addChild("description", LabelWidget(tr("app.academy.props.console.description")).apply {
+                    scale = 0.78f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.MATCH_PARENT)
+                        .height(24f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
+                addChild("prompt", LinearLayoutWidget().apply {
+                    orientation = Orientation.HORIZONTAL
+                    spacing = 3f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.MATCH_PARENT)
+                        .height(18f)
+                    addChild("marker", LabelWidget(">").apply {
+                        layoutParams = LinearLayoutWidget.LayoutParams()
+                            .width(8f)
+                            .heightMode(SizeMode.MATCH_PARENT)
+                            .gravity(Gravity.CENTER)
+                    })
+                    addChild("input", TextBoxWidget(16).apply {
+                        background = org.academy.api.client.gui.drawable.ColorDrawable(0x28000000)
+                        layoutParams = LinearLayoutWidget.LayoutParams()
+                            .weight(1f)
+                            .heightMode(SizeMode.MATCH_PARENT)
+                            .padding(4f, 1f)
+                        setClearWhenEnter(true)
+                        setWhenEnter { command ->
+                            if (command.trim().equals("start", ignoreCase = true)) {
+                                consoleStatus = tr("app.academy.props.console.starting")
+                                MisakaNetworkClient.send(PropsPackets.StartPacket.INSTANCE)
+                            } else {
+                                consoleStatus = tr("app.academy.props.console.invalid")
+                            }
+                        }
+                    })
+                })
+                addChild("status", dynamicLabel { consoleStatus }.apply {
+                    scale = 0.72f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.MATCH_PARENT)
+                        .height(12f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
             })
         }
 
@@ -132,29 +225,15 @@ object PropsApp : App {
                         layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT).gravity(Gravity.CENTER_LEFT)
                     })
                 })
-                addChild("lock", object : ToggleButtonWidget() {
-                    private var reconciling = false
-
-                    init {
-                        isChecked = PropsClientState.isLocked(factor)
-                        onCheckedChangeListener = object : ToggleButtonWidget.OnCheckedChangeListener {
-                            override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
-                                if (!reconciling) MisakaNetworkClient.send(PropsPackets.SetLockPacket(factor, isChecked))
-                            }
+                addChild("lock", ToggleButtonWidget().apply {
+                    setChecked(!PropsClientState.isLocked(factor))
+                    setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
+                        override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
+                            val locked = !isChecked
+                            PropsClientState.setLockedLocally(factor, locked)
+                            MisakaNetworkClient.send(PropsPackets.SetLockPacket(factor, locked))
                         }
-                    }
-
-                    override fun tick() {
-                        super.tick()
-                        val serverValue = PropsClientState.isLocked(factor)
-                        if (isChecked != serverValue) {
-                            reconciling = true
-                            isChecked = serverValue
-                            reconciling = false
-                        }
-                    }
-                }.apply {
-                    checkedTrackColor = 0xFFFF5555.toInt()
+                    })
                     layoutParams = LinearLayoutWidget.LayoutParams().size(18f, 10f).gravity(Gravity.CENTER)
                 })
             })

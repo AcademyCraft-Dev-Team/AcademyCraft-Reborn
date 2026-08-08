@@ -3,6 +3,8 @@ package org.academy.api.common.data;
 import org.academy.api.common.ability.AbilityLevel;
 
 public class AbilityData {
+    public static final int FIXED_MAX_SP = 1_000;
+
     // CP
     private float maxCP = 100;
     private float availableCP = 100;
@@ -11,9 +13,10 @@ public class AbilityData {
     private int stateTimer = 0;
 
     // SP
-    private int currSP = 2000;
-    private int maxSP = 2000;
+    private int currSP = FIXED_MAX_SP;
+    private int maxSP = FIXED_MAX_SP;
     private int spRegenTimer = 0;
+    private float spRecoveryCpRemainder = 0.0f;
 
     // MP (Matter Point)
     private float currMP = 100;
@@ -91,9 +94,10 @@ public class AbilityData {
         copy.level = level;
         copy.status = status;
         copy.stateTimer = stateTimer;
-        copy.currSP = currSP;
-        copy.maxSP = maxSP;
+        copy.currSP = getCurrSP();
+        copy.maxSP = FIXED_MAX_SP;
         copy.spRegenTimer = spRegenTimer;
+        copy.spRecoveryCpRemainder = getSpRecoveryCpRemainder();
         copy.currMP = currMP;
         copy.maxMP = maxMP;
         copy.abilityExp = abilityExp;
@@ -128,26 +132,53 @@ public class AbilityData {
     }
 
     public int getCurrSP() {
+        normalizeSpLimit();
         return currSP;
     }
 
     public void setCurrSP(int currSP) {
-        this.currSP = Math.clamp(currSP, 0, maxSP);
+        normalizeSpLimit();
+        this.currSP = Math.clamp(currSP, 0, FIXED_MAX_SP);
         markDirty();
     }
 
     public void addSP(int amount) {
-        currSP = Math.clamp(currSP + amount, 0, maxSP);
+        normalizeSpLimit();
+        currSP = Math.clamp(currSP + amount, 0, FIXED_MAX_SP);
         markDirty();
     }
 
     public int getMaxSP() {
-        return maxSP;
+        normalizeSpLimit();
+        return FIXED_MAX_SP;
     }
 
     public void setMaxSP(int maxSP) {
-        this.maxSP = Math.max(0, maxSP);
-        currSP = Math.min(currSP, this.maxSP);
+        normalizeSpLimit();
+        markDirty();
+    }
+
+    public float getSpRecoveryCpRemainder() {
+        if (!Float.isFinite(spRecoveryCpRemainder) || spRecoveryCpRemainder < 0.0f) {
+            spRecoveryCpRemainder = 0.0f;
+        } else if (spRecoveryCpRemainder >= 10.0f) {
+            spRecoveryCpRemainder %= 10.0f;
+        }
+        return spRecoveryCpRemainder;
+    }
+
+    public void setSpRecoveryCpRemainder(float remainder) {
+        spRecoveryCpRemainder = Float.isFinite(remainder)
+                ? Math.clamp(remainder, 0.0f, Math.nextDown(10.0f))
+                : 0.0f;
+        markDirty();
+    }
+
+    private void normalizeSpLimit() {
+        var normalized = Math.clamp(currSP, 0, FIXED_MAX_SP);
+        if (maxSP == FIXED_MAX_SP && currSP == normalized) return;
+        maxSP = FIXED_MAX_SP;
+        currSP = normalized;
         markDirty();
     }
 
@@ -235,12 +266,12 @@ public class AbilityData {
         }
 
         public Builder currSP(int currSP) {
-            data.currSP = currSP;
+            data.currSP = Math.clamp(currSP, 0, FIXED_MAX_SP);
             return this;
         }
 
         public Builder maxSP(int maxSP) {
-            data.maxSP = maxSP;
+            data.maxSP = FIXED_MAX_SP;
             return this;
         }
 
@@ -265,7 +296,7 @@ public class AbilityData {
     }
 
     public static class CpOccupationData {
-        private final float amount;
+        private float amount;
         private final String skillId;
         private final boolean isPermanent;
         private int iterationTicks;
@@ -283,6 +314,10 @@ public class AbilityData {
 
         public float getAmount() {
             return amount;
+        }
+
+        public void setAmount(float amount) {
+            this.amount = Math.max(0.0f, amount);
         }
 
         public int getIterationTicks() {

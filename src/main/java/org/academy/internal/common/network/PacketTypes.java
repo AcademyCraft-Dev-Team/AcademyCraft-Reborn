@@ -134,6 +134,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PropsPackets.SetLockPacket>>
             PROPS_SET_LOCK = PACKET_TYPES.register("props_set_lock",
             () -> new PacketType<>(PropsPackets.SetLockPacket.class, PropsPackets.SetLockPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PropsPackets.StartPacket>>
+            PROPS_START = PACKET_TYPES.register("props_start",
+            () -> new PacketType<>(PropsPackets.StartPacket.class, PropsPackets.StartPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ConnectNodePacket>>
             CONNECT_NODE = PACKET_TYPES.register("connect_node",

@@ -30,6 +30,12 @@ public final class PropsPackets {
             AbilitySystemServer.getSystem(player).getPropsManager()
                     .setLocked(player, factor, packet.locked);
         }
+
+        @SubscribePacket
+        public static void start(StartPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            AbilitySystemServer.getSystem(player).getPropsManager().start(player);
+        }
     }
 
     @PacketTarget(ThreadType.CLIENT)
@@ -38,22 +44,29 @@ public final class PropsPackets {
                 (buf, packet) -> {
                     for (var value : packet.values) buf.writeDouble(value);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.lockedMask);
+                    ByteBufCodecs.BOOL.encode(buf, packet.started);
                 },
                 buf -> {
                     var values = new double[AbilityFactor.values().length];
                     for (var i = 0; i < values.length; i++) values[i] = buf.readDouble();
-                    return new SyncPacket(values, ByteBufCodecs.VAR_INT.decode(buf));
+                    return new SyncPacket(
+                            values,
+                            ByteBufCodecs.VAR_INT.decode(buf),
+                            ByteBufCodecs.BOOL.decode(buf)
+                    );
                 }
         );
         private final double[] values;
         private final int lockedMask;
+        private final boolean started;
 
-        public SyncPacket(double[] values, int lockedMask) {
+        public SyncPacket(double[] values, int lockedMask, boolean started) {
             this.values = new double[AbilityFactor.values().length];
             if (values != null) {
                 System.arraycopy(values, 0, this.values, 0, Math.min(values.length, this.values.length));
             }
             this.lockedMask = lockedMask;
+            this.started = started;
         }
 
         public double[] values() {
@@ -64,9 +77,27 @@ public final class PropsPackets {
             return lockedMask;
         }
 
+        public boolean started() {
+            return started;
+        }
+
         @Override
         public PacketType<ClientPacketListener, SyncPacket> getPacketType() {
             return PacketTypes.PROPS_SYNC.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
+        public static final StartPacket INSTANCE = new StartPacket();
+        public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private StartPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+            return PacketTypes.PROPS_START.get();
         }
     }
 
