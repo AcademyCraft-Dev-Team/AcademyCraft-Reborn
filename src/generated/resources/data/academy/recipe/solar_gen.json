@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "C": "minecraft:copper_ingot",
+    "D": "minecraft:daylight_detector",
+    "G": "minecraft:glass_pane",
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone"
+  },
+  "pattern": [
+    "GGG",
+    "CDC",
+    "IRI"
+  ],
+  "result": {
+    "id": "academy:solar_gen"
+  }
+}

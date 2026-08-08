@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "C": "minecraft:crafting_table",
+    "F": "minecraft:furnace",
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone",
+    "S": "minecraft:stonecutter"
+  },
+  "pattern": [
+    "SCF",
+    "IRI",
+    "III"
+  ],
+  "result": {
+    "id": "academy:omni_crafting_table"
+  }
+}
