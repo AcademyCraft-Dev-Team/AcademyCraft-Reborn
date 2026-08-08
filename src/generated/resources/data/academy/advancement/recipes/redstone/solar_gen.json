@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_daylight_detector": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:daylight_detector"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "academy:solar_gen"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_daylight_detector"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "academy:solar_gen"
+    ]
+  }
+}
