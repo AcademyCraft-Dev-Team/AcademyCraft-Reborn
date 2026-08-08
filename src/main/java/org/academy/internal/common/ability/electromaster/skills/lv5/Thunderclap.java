@@ -18,26 +18,23 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv3.ThunderLance;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -47,7 +44,6 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class Thunderclap extends Skill {
@@ -74,6 +70,7 @@ public class Thunderclap extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.registerSettings();
         if (!Client.CONFIG.containsKeyBinding(Client.KEY)
                 && Client.CONFIG.containsKeyBinding(Client.OLD_KEY)) {
             Client.CONFIG.setKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.OLD_KEY));
@@ -99,6 +96,46 @@ public class Thunderclap extends Skill {
         public static final String KEY = SkillNames.THUNDERCLAP + "_clap";
         private static final String OLD_KEY = SkillNames.THUNDERCLAP + "_use";
         public static Config CONFIG = new Config();
+        private static boolean settingsRegistered;
+
+        private static void registerSettings() {
+            if (settingsRegistered) return;
+            settingsRegistered = true;
+            SkillSettingsRegistry.register(
+                    Skills.THUNDERCLAP.get(),
+                    new SkillSettingsRegistry.Module(
+                            "sky_strike_feedback",
+                            "app.academy.skill_settings.advanced.sky_strike_feedback",
+                            List.of(
+                                    new SkillSettingsRegistry.FloatRange(
+                                            "flash_intensity",
+                                            "app.academy.skill_settings.advanced.sky_strike_flash",
+                                            0.0f,
+                                            1.0f,
+                                            0.05f,
+                                            CONFIG::getFlashIntensity,
+                                            CONFIG::setFlashIntensity,
+                                            Client::persistVisualSettings
+                                    ),
+                                    new SkillSettingsRegistry.FloatRange(
+                                            "shake_intensity",
+                                            "app.academy.skill_settings.advanced.sky_strike_shake",
+                                            0.0f,
+                                            1.0f,
+                                            0.05f,
+                                            CONFIG::getShakeIntensity,
+                                            CONFIG::setShakeIntensity,
+                                            Client::persistVisualSettings
+                                    )
+                            )
+                    )
+            );
+        }
+
+        private static void persistVisualSettings() {
+            AcademyCraftClient.Config.INSTANCE.setConfig(Skills.THUNDERCLAP.get().getKey(), CONFIG);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
 
         public static void onUse() {
             if (!AbilitySystemClient.canUseSkill(Skills.THUNDERCLAP.get())) return;
@@ -106,6 +143,29 @@ public class Thunderclap extends Skill {
         }
 
         public static class Config extends KeyBindingConfig {
+            private float flashIntensity = 1.0f;
+            private float shakeIntensity = 1.0f;
+
+            public float getFlashIntensity() {
+                return sanitizeIntensity(flashIntensity);
+            }
+
+            public void setFlashIntensity(float flashIntensity) {
+                this.flashIntensity = sanitizeIntensity(flashIntensity);
+            }
+
+            public float getShakeIntensity() {
+                return sanitizeIntensity(shakeIntensity);
+            }
+
+            public void setShakeIntensity(float shakeIntensity) {
+                this.shakeIntensity = sanitizeIntensity(shakeIntensity);
+            }
+
+            private static float sanitizeIntensity(float value) {
+                return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 1.0f;
+            }
+
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 
@@ -161,7 +221,7 @@ public class Thunderclap extends Skill {
         }
 
         private static void strike(ServerPlayer player, ServerLevel level, Vec3 targetPos) {
-            ElectromasterArcEffects.spawnSkyStrike(level, targetPos);
+            ElectromasterArcEffects.spawnSkyStrike(level, targetPos, SkyStrikeProfile.THUNDERCLAP);
 
             var system = AbilitySystemServer.getSystem(player);
             var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
@@ -181,34 +241,6 @@ public class Thunderclap extends Skill {
                         1.0f + calculateDamage(target.getMaxHealth(), abilityPower)
                 );
             }
-            spawnArcs(level, targetPos, player.getLookAngle());
-        }
-
-        private static void spawnArcs(ServerLevel level, Vec3 targetPos, Vec3 look) {
-            var right = look.cross(new Vec3(0, 1, 0));
-            if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
-            else right = right.normalize();
-            var up = right.cross(look).normalize();
-            var arcs = new ArrayList<ArcPath>();
-            for (var i = 0; i < 20; i++) {
-                var angle = MathUtil.RANDOM.nextDouble() * Math.PI * 2.0;
-                var radius = 3.5 * MathUtil.RANDOM.nextDouble();
-                var height = (MathUtil.RANDOM.nextDouble() - 0.5) * 2.0;
-                var start = targetPos
-                        .add(right.scale(Math.cos(angle) * radius))
-                        .add(up.scale(Math.sin(angle) * radius))
-                        .add(0, height, 0);
-                var end = targetPos.add(
-                        (MathUtil.RANDOM.nextDouble() - 0.5) * 0.8,
-                        (MathUtil.RANDOM.nextDouble() - 0.5) * 0.8,
-                        (MathUtil.RANDOM.nextDouble() - 0.5) * 0.8
-                );
-                arcs.add(ElectromasterArcEffects.thickArc(start, end, 0.58f, 2.6f));
-            }
-            var effect = new ArcEffect(level, 8);
-            effect.setPos(targetPos);
-            effect.setArcPaths(arcs);
-            level.addFreshEntity(effect);
         }
     }
 

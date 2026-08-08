@@ -23,6 +23,7 @@ import org.academy.api.client.gui.widget.ImageWidget
 import org.academy.api.client.gui.widget.LabelWidget
 import org.academy.api.client.gui.widget.LinearLayoutWidget
 import org.academy.api.client.gui.widget.ScrollPanelWidget
+import org.academy.api.client.gui.widget.SeekBarWidget
 import org.academy.api.client.gui.widget.ToggleButtonWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
@@ -35,6 +36,7 @@ import org.academy.api.common.ability.Skill
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.misaka.MisakaNetworkClient
 import org.lwjgl.glfw.GLFW
+import kotlin.math.roundToInt
 
 object SkillSettingsApp : App {
     override fun createContext(): WidgetContext = Context()
@@ -613,6 +615,61 @@ object SkillSettingsApp : App {
                     row.addChild("decrease", smallButton("-") { change(-entry.step) })
                     row.addChild("value", value)
                     row.addChild("increase", smallButton("+") { change(entry.step) })
+                }
+
+                is SkillSettingsRegistry.FloatRange -> {
+                    fun displayedValue(): String {
+                        val range = entry.max - entry.min
+                        val normalized = if (range > 0f) {
+                            ((entry.getter.getAsFloat() - entry.min) / range).coerceIn(0f, 1f)
+                        } else 0f
+                        return "${(normalized * 100f).roundToInt()}%"
+                    }
+
+                    val value = LabelWidget(displayedValue()).apply {
+                        scale = 0.7f
+                        layoutParams = LinearLayoutWidget.LayoutParams()
+                            .width(26f)
+                            .height(10f)
+                            .gravity(Gravity.CENTER)
+                    }
+                    val stepCount = (((entry.max - entry.min) / entry.step).roundToInt()).coerceAtLeast(1)
+                    val currentStep = (((entry.getter.getAsFloat() - entry.min) / entry.step).roundToInt())
+                        .coerceIn(0, stepCount)
+                    val slider = SeekBarWidget()
+                    slider.setMin(0f)
+                    slider.setMax(stepCount.toFloat())
+                    slider.setProgress(currentStep.toFloat())
+                    slider.setKeyProgressIncrement(1)
+                    slider.layoutParams = LinearLayoutWidget.LayoutParams()
+                        .size(48f, 5f)
+                        .gravity(Gravity.CENTER)
+                    var tracking = false
+                    slider.setOnSeekBarChangeListener(object : SeekBarWidget.OnSeekBarChangeListener {
+                        override fun onProgressChanged(
+                            seekBar: SeekBarWidget,
+                            progress: Float,
+                            fromUser: Boolean
+                        ) {
+                            if (!fromUser) return
+                            val index = progress.roundToInt().coerceIn(0, stepCount)
+                            val updated = entry.quantize(entry.min + index * entry.step)
+                            entry.setter.accept(updated)
+                            value.text = displayedValue()
+                            if (!tracking) entry.commit.run()
+                        }
+
+                        override fun onStartTrackingTouch(seekBar: SeekBarWidget) {
+                            tracking = true
+                        }
+
+                        override fun onStopTrackingTouch(seekBar: SeekBarWidget) {
+                            tracking = false
+                            entry.commit.run()
+                        }
+                    })
+                    row.addChild("slider", slider)
+                    row.addChild("value", value)
                 }
 
                 is SkillSettingsRegistry.Action -> {

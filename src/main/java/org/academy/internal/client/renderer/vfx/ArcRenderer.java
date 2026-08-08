@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
 import org.academy.api.client.render.vfx.VfxPipelines;
 import org.academy.api.client.render.vfx.VfxRenderContext;
 import org.academy.api.client.render.vfx.VfxRenderer;
@@ -26,13 +27,19 @@ public final class ArcRenderer implements VfxRenderer<ArcData> {
     private static final int INITIAL_QUADS = 128;
 
     private final boolean glow;
+    private final Identifier texture;
     private @Nullable GpuBuffer quadBuffer;
     private @Nullable GpuBuffer instanceBuffer;
     private @Nullable ByteBuffer instanceData;
     private int capacityQuads;
 
     public ArcRenderer(boolean glow) {
+        this(glow, R.textures.ability.electromaster.skill.arc_generate.effect.line_segment);
+    }
+
+    public ArcRenderer(boolean glow, Identifier texture) {
         this.glow = glow;
+        this.texture = Objects.requireNonNull(texture, "texture");
     }
 
     private static void collectQuads(ArcFactory.ArcRenderData data, List<ArcFactory.Quad> out) {
@@ -100,7 +107,7 @@ public final class ArcRenderer implements VfxRenderer<ArcData> {
             renderPass.setUniform("DynamicTransforms", transform);
 
             var texture = Minecraft.getInstance().getTextureManager()
-                    .getTexture(R.textures.ability.electromaster.skill.arc_generate.effect.line_segment);
+                    .getTexture(this.texture);
             renderPass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());
 
             renderPass.setVertexBuffer(0, quadBuffer.slice());
