@@ -56,6 +56,7 @@ import org.academy.internal.client.app.props.PropsApp;
 import org.academy.internal.client.app.props.PropsClientState;
 import org.academy.internal.client.app.props.PropsIcon;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
+import org.academy.internal.client.compatibility.InventoryProfilesNextCompat;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
 import org.academy.internal.client.hud.HudLayoutConfig;
@@ -147,6 +148,7 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onClientStarted(ClientStartedEvent event) {
+        InventoryProfilesNextCompat.initialize();
         ImGuiUtilApi.INSTANCE.init();
         initMain();
         initRender();
