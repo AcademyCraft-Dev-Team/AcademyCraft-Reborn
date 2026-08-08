@@ -9,6 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PropsDataTest {
     @Test
+    void acquisitionStartsOnlyOnce() {
+        var data = new PropsData();
+        assertFalse(data.isStarted());
+        assertTrue(data.start());
+        assertTrue(data.isStarted());
+        assertFalse(data.start());
+    }
+
+    @Test
     void oversizedLegacyValuesAreScaledProportionally() {
         var data = new PropsData();
         data.initialize(new double[]{2_000.0, 1_000.0, 500.0, 250.0, 250.0});
