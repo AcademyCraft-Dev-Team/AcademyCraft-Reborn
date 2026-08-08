@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.neoforged.bus.api.Event;
+import org.academy.internal.client.renderer.effect.WorldLineOverlayPass;
 
 import java.util.function.BiConsumer;
 
@@ -36,6 +37,10 @@ public class LevelRenderEvent extends Event {
     public void submitCustomGeometry(RenderType renderType,
                                      BiConsumer<MatrixStack, VertexConsumer> renderer) {
         var snapshot = matrixStack.copy();
+        if (WorldLineOverlayPass.accepts(renderType)) {
+            WorldLineOverlayPass.submit(poseStack, renderType, snapshot, renderer);
+            return;
+        }
         submitNodeCollector.submitCustomGeometry(
                 poseStack,
                 renderType,

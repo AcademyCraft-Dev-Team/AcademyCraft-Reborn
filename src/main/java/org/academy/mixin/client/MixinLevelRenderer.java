@@ -16,6 +16,7 @@ import org.academy.api.client.render.post.BloomEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxContexts;
 import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.internal.client.renderer.effect.WorldPostEffectSubmission;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,6 +26,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LevelRenderer.class)
 public abstract class MixinLevelRenderer {
+    @Inject(method = "submitEntities", at = @At("HEAD"))
+    private void academy$beginWorldPostEffectSubmission(
+            PoseStack poseStack,
+            LevelRenderState levelRenderState,
+            SubmitNodeCollector output,
+            CallbackInfo ci
+    ) {
+        WorldPostEffectSubmission.begin();
+    }
+
     @Inject(
             method = "render",
             at = @At(
@@ -56,6 +67,7 @@ public abstract class MixinLevelRenderer {
             SubmitNodeCollector output,
             CallbackInfo ci
     ) {
+        WorldPostEffectSubmission.end();
         VfxContexts.submit(
                 Minecraft.getInstance().getDeltaTracker(),
                 levelRenderState.cameraRenderState

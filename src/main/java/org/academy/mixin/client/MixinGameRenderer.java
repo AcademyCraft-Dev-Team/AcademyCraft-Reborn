@@ -14,6 +14,8 @@ import org.academy.api.client.render.Render;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.academy.internal.client.renderer.effect.PlatinumCosmosPass;
+import org.academy.internal.client.renderer.effect.WorldLineOverlayPass;
+import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Final;
@@ -51,6 +53,7 @@ public abstract class MixinGameRenderer {
     @Inject(method = "renderLevel", at = @At("HEAD"))
     private void academy$beginPlatinumCosmosFrame(DeltaTracker deltaTracker, CallbackInfo ci) {
         PlatinumCosmosPass.beginFrame(minecraft.level);
+        WorldLineOverlayPass.beginFrame(minecraft.level);
     }
 
     @Inject(
@@ -64,7 +67,16 @@ public abstract class MixinGameRenderer {
     private void academy$renderPlatinumCosmosAfterWorld(
             DeltaTracker deltaTracker, CallbackInfo ci
     ) {
-        PlatinumCosmosPass.renderWorld(featureRenderDispatcher);
+        var cameraState = minecraft.gameRenderer.gameRenderState()
+                .levelRenderState.cameraRenderState;
+        PlatinumCosmosPass.renderWorld(
+                featureRenderDispatcher,
+                cameraState.viewRotationMatrix
+        );
+        WorldLineOverlayPass.renderWorld(
+                featureRenderDispatcher,
+                cameraState.viewRotationMatrix
+        );
     }
 
     @Inject(
@@ -85,6 +97,20 @@ public abstract class MixinGameRenderer {
     @Inject(method = "close", at = @At("HEAD"))
     private void onClose(CallbackInfo ci) {
         Render.Buffers.getResourcePool().close();
+    }
+
+    @Inject(
+            method = "renderItemInHand",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$hideMentalIntrusionHands(
+            CameraRenderState cameraState,
+            float deltaPartialTick,
+            Matrix4fc modelViewMatrix,
+            CallbackInfo ci
+    ) {
+        if (MentalIntrusionClientState.isActive()) ci.cancel();
     }
 
     @Inject(
