@@ -28,6 +28,7 @@
     "common.MixinPlayerList",
     "common.MixinProjectile",
     "common.MixinServerEntity",
+    "common.MixinServerGamePacketListenerImpl",
     "common.MixinServerLevelVectorDefenseFeedback",
     "common.MixinServerPlayer",
     "common.MixinServerPlayerGameMode",

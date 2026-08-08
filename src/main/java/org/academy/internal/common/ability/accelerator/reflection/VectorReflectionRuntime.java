@@ -5,6 +5,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
 
 import java.lang.ref.WeakReference;
@@ -100,7 +101,10 @@ public final class VectorReflectionRuntime {
         if (finite(position)) {
             anchor.lastSafePosition = position;
         } else if (anchor.lastSafePosition != null) {
-            player.snapTo(anchor.lastSafePosition);
+            EntityMotionGuard.runInternalCorrection(
+                    player,
+                    () -> player.snapTo(anchor.lastSafePosition)
+            );
             anchor.observerRebuildRequested = true;
         }
     }

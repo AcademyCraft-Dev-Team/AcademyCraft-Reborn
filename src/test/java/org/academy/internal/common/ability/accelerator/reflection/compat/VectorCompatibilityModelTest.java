@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.accelerator.reflection.compat;
 
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -81,6 +83,17 @@ class VectorCompatibilityModelTest {
     }
 
     @Test
+    void onlyExplicitLinearProfilesMayRenderSyntheticReturnBeams() {
+        assertTrue(VectorCompatibilityTier.PROFILED_LINEAR.permitsSyntheticReturnVisual());
+        assertFalse(VectorCompatibilityTier.NATIVE_EXACT.permitsSyntheticReturnVisual());
+        assertFalse(VectorCompatibilityTier.STANDARD_PROJECTILE.permitsSyntheticReturnVisual());
+        assertFalse(VectorCompatibilityTier.INFERRED_HITSCAN.permitsSyntheticReturnVisual());
+        assertFalse(VectorCompatibilityTier.DAMAGE_FALLBACK.permitsSyntheticReturnVisual());
+        assertFalse(VectorCompatibilityTier.PASS_THROUGH.permitsSyntheticReturnVisual());
+        assertEquals(VectorVisualStyle.NONE, VectorExecutionPolicy.safeDefault().visualStyle());
+    }
+
+    @Test
     void refractionAbsorbsWithoutSubmittingRedirectedEntityDamage() {
         assertTrue(VectorRedirectKind.REFLECTION.dealsRedirectedEntityDamage());
         assertFalse(VectorRedirectKind.REFRACTION.dealsRedirectedEntityDamage());
@@ -120,6 +133,82 @@ class VectorCompatibilityModelTest {
         assertTrue(VectorCompatibilityEffectLimiter.shouldEmit(104L, 100L));
         assertFalse(VectorReflectedDamageAccumulator.shouldFlush(109L, 110L));
         assertTrue(VectorReflectedDamageAccumulator.shouldFlush(110L, 110L));
+    }
+
+    @Test
+    void continuousEnvironmentalFeedbackUsesIndependentVisualAndSoundIntervals() {
+        var visualEmissions = 0;
+        var soundEmissions = 0;
+        var lastVisual = Long.MIN_VALUE;
+        var lastSound = Long.MIN_VALUE;
+
+        for (var tick = 0L; tick < 100L; tick++) {
+            if (VectorEnvironmentalFeedbackController.shouldEmit(
+                    tick,
+                    lastVisual,
+                    VectorEnvironmentalFeedbackController.VISUAL_INTERVAL_TICKS
+            )) {
+                visualEmissions++;
+                lastVisual = tick;
+            }
+            if (VectorEnvironmentalFeedbackController.shouldEmit(
+                    tick,
+                    lastSound,
+                    VectorEnvironmentalFeedbackController.SOUND_INTERVAL_TICKS
+            )) {
+                soundEmissions++;
+                lastSound = tick;
+            }
+        }
+
+        assertEquals(5, visualEmissions);
+        assertEquals(3, soundEmissions);
+        assertFalse(VectorEnvironmentalFeedbackController.isExpired(17L, 5L));
+        assertTrue(VectorEnvironmentalFeedbackController.isExpired(18L, 5L));
+    }
+
+    @Test
+    void onlyPositionalContinuousEnvironmentalDamageTypesAreLimited() {
+        assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:lava"));
+        assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:cactus"));
+        assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:hot_floor"));
+        assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:in_fire"));
+        assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:campfire"));
+        assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:sweet_berry_bush"));
+        assertFalse(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:on_fire"));
+        assertFalse(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:drown"));
+        assertFalse(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:starve"));
+    }
+
+    @Test
+    void environmentalOriginFacesTheHazardInsteadOfThePlayerView() {
+        var defenderBounds = new AABB(-0.3, 0.0, -0.3, 0.3, 1.8, 0.3);
+        var eastOrigin = VectorEnvironmentalFeedbackController.originFromSource(
+                defenderBounds,
+                new Vec3(1.0, 0.9, 0.0),
+                false
+        ).orElseThrow();
+        var floorOrigin = VectorEnvironmentalFeedbackController.originFromSource(
+                defenderBounds,
+                new Vec3(0.0, -0.5, 0.0),
+                true
+        ).orElseThrow();
+        var overlappingFloorOrigin = VectorEnvironmentalFeedbackController.originFromSource(
+                defenderBounds,
+                defenderBounds.getCenter(),
+                true
+        ).orElseThrow();
+
+        assertEquals(1.0, eastOrigin.normal().x, 1.0E-8);
+        assertEquals(0.35, eastOrigin.ringPosition().x, 1.0E-8);
+        assertEquals(-1.0, floorOrigin.normal().y, 1.0E-8);
+        assertEquals(-0.05, floorOrigin.ringPosition().y, 1.0E-8);
+        assertEquals(-1.0, overlappingFloorOrigin.normal().y, 1.0E-8);
+        assertTrue(VectorEnvironmentalFeedbackController.originFromSource(
+                defenderBounds,
+                defenderBounds.getCenter(),
+                false
+        ).isEmpty());
     }
 
     @Test

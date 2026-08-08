@@ -38,6 +38,7 @@ public final class VectorCompatibilityEffectLimiter {
         if (defender == null) return;
         var id = defender.getUUID();
         LAST_EFFECT_TICKS.keySet().removeIf(key -> key.defenderId.equals(id));
+        VectorEnvironmentalFeedbackController.clear(defender);
     }
 
     static boolean shouldEmit(long now, long lastEmission) {

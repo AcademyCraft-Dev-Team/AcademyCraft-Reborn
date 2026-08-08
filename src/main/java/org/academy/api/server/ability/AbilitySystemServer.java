@@ -25,6 +25,7 @@ import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.*;
@@ -153,6 +154,9 @@ public final class AbilitySystemServer {
         if (developData.isDeveloping()) {
             return new StartSkillDevPacket.Response(false, "Already developing");
         }
+        if (!isPlayerReadyForDevelopment(player)) {
+            return new StartSkillDevPacket.Response(false, "Player cannot develop abilities now");
+        }
 
         if (!LearningHelper.isSkillAvailableForCategory(
                 instance.getPlayerAbilityCategory(player.getUUID()), skill
@@ -180,7 +184,7 @@ public final class AbilitySystemServer {
         }
 
         // Energy check
-        if (developer.getEnergyStored() < skill.getEnergyCostToLearn()) {
+        if (developer.extractEnergy(skill.getEnergyCostToLearn(), true) < skill.getEnergyCostToLearn()) {
             return new StartSkillDevPacket.Response(false, "Insufficient energy");
         }
 
@@ -233,22 +237,31 @@ public final class AbilitySystemServer {
 
         var server = level.getServer();
         var instance = server.getAcademyCraftServer().getAbilitySystemServer();
+        var currentCategory = instance.getPlayerAbilityCategory(player.getUUID());
+        var initialDevelopment = currentCategory == AbilityCategories.LEVEL0.get();
         var currentLevel = instance.getPlayerLevel(player.getUUID());
         var developData = getDevelopData(player.getUUID());
         if (developData.isDeveloping()) {
             return new StartLevelDevPacket.Response(false, "Already developing");
         }
-        if (currentLevel >= 5) {
+        if (!initialDevelopment && currentLevel >= 5) {
             return new StartLevelDevPacket.Response(false, "Already max level");
         }
 
-        var hasCategory = instance.getPlayerAbilityCategory(player.getUUID()) != AbilityCategories.LEVEL0.get();
-        if (hasCategory && !instance.canPlayerLevelUp(player.getUUID())) {
+        if (!initialDevelopment && !instance.canPlayerLevelUp(player.getUUID())) {
             return new StartLevelDevPacket.Response(false, "Ability exp not full");
         }
 
-        var cost = LearningHelper.getEstimatedLevelUpConsumption(currentLevel);
-        if (developer.getEnergyStored() < cost) {
+        // A missing category is always the initial Level 0 development, even if a legacy save
+        // contains an inconsistent CP level. Completing it repairs the player to category Level 1.
+        var plan = LevelDevelopmentPlan.create(initialDevelopment, currentLevel);
+        var cost = plan.energyCost();
+        if (!canDevelopLevel(
+                player, developer, currentCategory, currentLevel, initialDevelopment, cost
+        )) {
+            return new StartLevelDevPacket.Response(false, "Development conditions not met");
+        }
+        if (developer.extractEnergy(cost, true) < cost) {
             return new StartLevelDevPacket.Response(false, "Insufficient energy");
         }
 
@@ -266,31 +279,28 @@ public final class AbilitySystemServer {
             @Override
             public boolean validate(ServerPlayer sp, WirelessUser dev) {
                 return dev instanceof AbilityDeveloperBlockEntity currentDeveloper
-                        && canDevelopLevel(sp, currentDeveloper, currentLevel, cost);
+                        && canDevelopLevel(
+                                sp,
+                                currentDeveloper,
+                                currentCategory,
+                                currentLevel,
+                                initialDevelopment,
+                                cost
+                        );
             }
 
             @Override
             public void onComplete(ServerPlayer sp, WirelessUser dev) {
-                if (instance.getPlayerAbilityCategory(sp.getUUID()) == AbilityCategories.LEVEL0.get()) {
-                    var weightedRandom = new MathUtil.WeightedRandom<AbilityCategory>();
-                    for (var category : Registries.ABILITY_CATEGORIES) {
-                        if (category != AbilityCategories.LEVEL0.get()) {
-                            weightedRandom.addItem(category, category.getProbability());
-                        }
-                    }
-                    var abilityCategory = weightedRandom.getRandomItem();
-                    if (abilityCategory != null) {
-                        instance.setPlayerAbilityCategory(sp.getUUID(), abilityCategory);
-                        instance.setPlayerLevel(sp.getUUID(), 1);
-                        instance.setPlayerBaseMaxCP(sp.getUUID(), AbilityLevel.LEVEL1.getBasicCP());
-                    } else {
-                        throw new IllegalStateException("WeightedRandom returned null for ability category selection");
-                    }
+                if (initialDevelopment) {
+                    var abilityCategory = chooseInitialAbilityCategory();
+                    instance.setPlayerAbilityCategory(sp.getUUID(), abilityCategory);
+                    instance.setPlayerLevel(sp.getUUID(), plan.targetLevel());
+                    instance.setPlayerBaseMaxCP(sp.getUUID(), AbilityLevel.LEVEL1.getBasicCP());
                 } else {
-                    instance.setPlayerLevel(sp.getUUID(), currentLevel + 1);
+                    instance.setPlayerLevel(sp.getUUID(), plan.targetLevel());
                     var levels = AbilityLevel.values();
-                    if (currentLevel + 1 < levels.length) {
-                        instance.setPlayerBaseMaxCP(sp.getUUID(), levels[currentLevel + 1].getBasicCP());
+                    if (plan.targetLevel() < levels.length) {
+                        instance.setPlayerBaseMaxCP(sp.getUUID(), levels[plan.targetLevel()].getBasicCP());
                     }
                 }
             }
@@ -307,7 +317,7 @@ public final class AbilitySystemServer {
         if (!developer.isMain() || player.position().distanceToSqr(Vec3.atCenterOf(developer.getBlockPos())) > 64.0) {
             return false;
         }
-        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) return false;
+        if (!isPlayerReadyForDevelopment(player)) return false;
         var instance = getSystem(player);
         var playerData = instance.getPlayerData(player.getUUID());
         if (!LearningHelper.isSkillAvailableForCategory(instance.getPlayerAbilityCategory(player.getUUID()), skill)
@@ -327,21 +337,48 @@ public final class AbilitySystemServer {
     private static boolean canDevelopLevel(
             ServerPlayer player,
             AbilityDeveloperBlockEntity developer,
+            AbilityCategory expectedCategory,
             int expectedLevel,
+            boolean initialDevelopment,
             int expectedCost
     ) {
         if (!developer.isMain() || player.position().distanceToSqr(Vec3.atCenterOf(developer.getBlockPos())) > 64.0) {
             return false;
         }
-        if (!player.isAlive() || player.hasDisconnected() || player.isSpectator()) return false;
+        if (!isPlayerReadyForDevelopment(player)) return false;
         var instance = getSystem(player);
-        if (instance.getPlayerLevel(player.getUUID()) != expectedLevel || expectedLevel >= 5
+        var currentCategory = instance.getPlayerAbilityCategory(player.getUUID());
+        if (initialDevelopment) {
+            return currentCategory == AbilityCategories.LEVEL0.get()
+                    && LearningHelper.getEstimatedLevelUpConsumption(0) == expectedCost;
+        }
+        if (currentCategory != expectedCategory
+                || instance.getPlayerLevel(player.getUUID()) != expectedLevel
+                || expectedLevel < 0
+                || expectedLevel >= 5
                 || LearningHelper.getEstimatedLevelUpConsumption(expectedLevel) != expectedCost) {
             return false;
         }
-        return instance.getPlayerAbilityCategory(player.getUUID()) == AbilityCategories.LEVEL0.get()
-                ? expectedLevel == 0
-                : instance.canPlayerLevelUp(player.getUUID());
+        return instance.canPlayerLevelUp(player.getUUID());
+    }
+
+    private static boolean isPlayerReadyForDevelopment(ServerPlayer player) {
+        return player.isAlive() && !player.hasDisconnected() && !player.isSpectator();
+    }
+
+    private static AbilityCategory chooseInitialAbilityCategory() {
+        var candidates = new ArrayList<AbilityCategory>();
+        var weightedRandom = new MathUtil.WeightedRandom<AbilityCategory>();
+        for (var category : Registries.ABILITY_CATEGORIES) {
+            if (category == AbilityCategories.LEVEL0.get()) continue;
+            candidates.add(category);
+            weightedRandom.addItem(category, category.getProbability());
+        }
+        if (candidates.isEmpty()) {
+            throw new IllegalStateException("No ability category is available for initial development");
+        }
+        var selected = weightedRandom.getRandomItem();
+        return selected != null ? selected : candidates.get(MathUtil.RANDOM.nextInt(candidates.size()));
     }
 
     public static void registerContext(ServerContext serverContext) {
@@ -417,6 +454,10 @@ public final class AbilitySystemServer {
         for (var sub : SubsystemRegistry.getSubsystems()) {
             sub.onPlayerLogin(player);
         }
+        normalizePlayerLevelForCategory(
+                player.getUUID(),
+                playerDataManager.getPlayerAbilityCategory(player.getUUID())
+        );
     }
 
     public void onPlayerLogout(ServerPlayer player) {
@@ -541,8 +582,24 @@ public final class AbilitySystemServer {
         if (clearCategorySkills) {
             skillDataManager.clearCategorySkills(uuid);
         }
+        normalizePlayerLevelForCategory(uuid, abilityCategory);
         playerCPManager.refreshCommonSkillBonuses(uuid);
         playerCPManager.releaseAllOccupations(uuid);
+    }
+
+    private void normalizePlayerLevelForCategory(UUID uuid, AbilityCategory category) {
+        var currentLevel = playerCPManager.getLevel(uuid);
+        var normalizedLevel = LevelDevelopmentPlan.normalizeLevelForCategory(
+                category == AbilityCategories.LEVEL0.get(),
+                currentLevel
+        );
+        if (normalizedLevel == currentLevel) return;
+
+        playerCPManager.setLevel(uuid, normalizedLevel);
+        playerCPManager.setBaseMaxCP(
+                uuid,
+                AbilityLevel.fromLevelCode(normalizedLevel).getBasicCP()
+        );
     }
 
 
@@ -663,7 +720,10 @@ public final class AbilitySystemServer {
         var actualCost = Math.max(0, baseCost * playerCPManager.getCalculationIntensity(uuid));
         var iterationPoints = resolveIterationPoints(skill.getIterationTicks(level), baseCost);
         if (playerCPManager.tryOccupation(uuid, actualCost, skill, iterationPoints, false)) {
-            action.execute(ctx, actualCost);
+            EntityMotionGuard.runWithMotionSource(
+                    player,
+                    () -> action.execute(ctx, actualCost)
+            );
             if (discreteTrigger) addPlayerSkillProficiency(uuid, skill, ProficiencyEvent.TRIGGER);
             else reportSkillActivity(uuid, skill, effective ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE);
             return true;
@@ -695,7 +755,10 @@ public final class AbilitySystemServer {
                 actualCost,
                 skill,
                 resolveIterationPoints(skill.getIterationTicks(level), cost),
-                action
+                () -> Boolean.TRUE.equals(EntityMotionGuard.callWithMotionSource(
+                        player,
+                        action::getAsBoolean
+                ))
         )) {
             return false;
         }

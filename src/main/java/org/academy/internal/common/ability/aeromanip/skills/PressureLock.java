@@ -8,7 +8,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -28,8 +27,8 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
-import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -46,14 +45,14 @@ import java.util.WeakHashMap;
 public final class PressureLock extends Skill {
     public PressureLock() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL4).energyCost(60_000)
-                .cpCost(65).iterationTicks(10).maxStacks(1).dependsOn(Skills.LAMINAR_CUTTER)
+                .cpCost(65).iterationTicks(10).maxStacks(1).dependsOn(Skills.VORTEX_PULL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4)));
     }
     @Override public void initClient() {
         var key = getKey(); AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE); Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(Client.KEY_NAME_START, InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_P, InputConstants.PRESS, 0)), _ -> Client.start());
         InputSystem.addKeyBinding(Client.KEY_NAME_STOP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_STOP, InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_P, InputConstants.RELEASE, 0)), _ -> Client.stop());
-        Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.PRESSURE_LOCK.get(), List.of(LaminarCutter.Client.SKILL_INFO), R.textures.pressure_lock_icon, 130, 136));
+        Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.PRESSURE_LOCK.get(), List.of(), R.textures.pressure_lock_icon, 130, 136));
     }
     @Override public void initServer(MinecraftServerContext context) { MisakaNetworkServer.NETWORK_MANAGER.register(Server.class); }
     public static final class Client {
@@ -74,8 +73,11 @@ public final class PressureLock extends Skill {
             private int lockAge;
             private boolean ended;
             private LivingEntity target;
-            private Vec3 anchor;
-            private Context(ServerPlayer player) { super(player); }
+            private final String imprisonmentSource;
+            private Context(ServerPlayer player) {
+                super(player);
+                imprisonmentSource = "pressure_lock:" + player.getStringUUID();
+            }
             private void end() { if (!ended) { ended = true; unregister(); } }
             @SubscribeEvent public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Pre event) {
                 age++;
@@ -104,7 +106,6 @@ public final class PressureLock extends Skill {
                         end();
                         return;
                     }
-                    anchor = target.position();
                     target.stopRiding();
                 }
                 var duration = Math.max(1, Math.round(200
@@ -114,10 +115,7 @@ public final class PressureLock extends Skill {
                     end();
                     return;
                 }
-                target.setDeltaMovement(Vec3.ZERO);
-                target.snapTo(anchor);
-                target.resetFallDistance();
-                target.hurtMarked = true;
+                EntityMotionGuard.imprison(target, imprisonmentSource, 2L);
                 skill.reportActivity(player, true);
             }
 
@@ -139,13 +137,18 @@ public final class PressureLock extends Skill {
                 )).orElse(null);
             }
 
-            private static boolean isProtected(LivingEntity target) {
-                if (!(target instanceof ServerPlayer player)) return false;
-                return VectorReflection.Server.isActive(player)
-                        || DarkmatterSixWings.Server.isActive(player)
-                        || AtmosphereShield.Server.isActive(player);
+            private boolean isProtected(LivingEntity target) {
+                if (!(target instanceof ServerPlayer protectedPlayer)) return false;
+                if (!EntityMotionGuard.canApplyMotionFrom(player, protectedPlayer)) return true;
+                return !EntityMotionGuard.canBeImprisoned(protectedPlayer)
+                        || DarkmatterSixWings.Server.isActive(protectedPlayer)
+                        || AtmosphereShield.Server.isActive(protectedPlayer);
             }
-            @Override protected void onUnregistered() { ACTIVE.remove(player, this); }
+
+            @Override protected void onUnregistered() {
+                if (target != null) EntityMotionGuard.release(target, imprisonmentSource);
+                ACTIVE.remove(player, this);
+            }
         }
     }
     @PacketTarget(ThreadType.SERVER) public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> { public static final StartPacket INSTANCE = new StartPacket(); public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE); private StartPacket() { } @Override public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() { return PacketTypes.PRESSURE_LOCK_START.get(); } }

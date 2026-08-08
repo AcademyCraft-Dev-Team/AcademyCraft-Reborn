@@ -35,4 +35,13 @@ class VectorReflectionTest {
         assertEquals(0.0f, full.remainingDamage(), 1.0E-6f);
         assertEquals(10.0f, full.baseCpCost(), 1.0E-6f);
     }
+
+    @Test
+    void forcedMovementUsesTheProjectileReflectionMinimumCost() {
+        assertEquals(1.5f, VectorReflection.Server.projectileReflectionCost(0.0), 1.0E-6f);
+        assertEquals(1.5f, VectorReflection.Server.projectileReflectionCost(1.0), 1.0E-6f);
+        assertEquals(3.25f, VectorReflection.Server.projectileReflectionCost(3.25), 1.0E-6f);
+        assertEquals(1.5f,
+                VectorReflection.Server.projectileReflectionCost(Double.NaN), 1.0E-6f);
+    }
 }

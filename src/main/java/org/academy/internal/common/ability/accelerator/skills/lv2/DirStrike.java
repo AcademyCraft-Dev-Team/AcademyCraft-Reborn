@@ -40,6 +40,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.DirStrikeBlockFx;
@@ -170,7 +171,10 @@ public class DirStrike extends Skill {
             var player = packet.getPacketListener().getPlayer();
             if (!packet.pressed()) {
                 if (DIVING_PLAYERS.remove(player.getUUID())) {
-                    player.setDeltaMovement(Vec3.ZERO);
+                    EntityMotionGuard.runWithMotionSource(
+                            player,
+                            () -> player.setDeltaMovement(Vec3.ZERO)
+                    );
                     player.hurtMarked = true;
                     player.fallDistance = 0.0;
                 }
@@ -194,7 +198,10 @@ public class DirStrike extends Skill {
             }
             if (player.onGround() || player.verticalCollision) {
                 DIVING_PLAYERS.remove(player.getUUID());
-                player.setDeltaMovement(Vec3.ZERO);
+                EntityMotionGuard.runWithMotionSource(
+                        player,
+                        () -> player.setDeltaMovement(Vec3.ZERO)
+                );
                 player.hurtMarked = true;
                 player.fallDistance = 0.0;
                 executeStrike(player, true);
@@ -205,7 +212,10 @@ public class DirStrike extends Skill {
         }
 
         private static void dive(ServerPlayer player) {
-            player.setDeltaMovement(0.0, -DIVE_SPEED, 0.0);
+            EntityMotionGuard.runWithMotionSource(
+                    player,
+                    () -> player.setDeltaMovement(0.0, -DIVE_SPEED, 0.0)
+            );
             player.hurtMarked = true;
             player.fallDistance = 0.0;
         }

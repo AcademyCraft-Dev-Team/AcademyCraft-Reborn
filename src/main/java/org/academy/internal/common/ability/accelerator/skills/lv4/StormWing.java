@@ -20,6 +20,7 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -27,6 +28,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -36,6 +38,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.mixin.common.EntitySharedFlagInvoker;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -79,6 +82,7 @@ public final class StormWing extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        RendererManager.registerEffectRenderer(StormWingEffectRenderer.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(
@@ -214,39 +218,41 @@ public final class StormWing extends Skill {
                 if (state == State.BOOST) {
                     LAST_BOOST_TICK.put(player.getUUID(), player.level().getGameTime());
                 }
-                switch (state) {
-                    case FRONT -> {
-                        var vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
-                        player.push(vec3.x, vec3.y * 1.5, vec3.z);
-                    }
-                    case BACK -> {
-                        var vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
-                        player.push(vec3.x, vec3.y, vec3.z);
-                    }
-                    case LEFT -> {
-                        var look = player.getLookAngle();
-                        var left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2);
-                        player.push(left.x, left.y, left.z);
-                    }
-                    case RIGHT -> {
-                        var look = player.getLookAngle();
-                        var right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2);
-                        player.push(right.x, right.y, right.z);
-                    }
-                    case KEEP -> {
-                        if (Math.abs(player.getDeltaMovement().y) > 0.25) {
-                            player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
-                        } else {
-                            player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
+                EntityMotionGuard.runWithMotionSource(player, () -> {
+                    switch (state) {
+                        case FRONT -> {
+                            var vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
+                            player.push(vec3.x, vec3.y * 1.5, vec3.z);
                         }
-                        player.resetFallDistance();
+                        case BACK -> {
+                            var vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
+                            player.push(vec3.x, vec3.y, vec3.z);
+                        }
+                        case LEFT -> {
+                            var look = player.getLookAngle();
+                            var left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2);
+                            player.push(left.x, left.y, left.z);
+                        }
+                        case RIGHT -> {
+                            var look = player.getLookAngle();
+                            var right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2);
+                            player.push(right.x, right.y, right.z);
+                        }
+                        case KEEP -> {
+                            if (Math.abs(player.getDeltaMovement().y) > 0.25) {
+                                player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
+                            } else {
+                                player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
+                            }
+                            player.resetFallDistance();
+                        }
+                        case BOOST -> {
+                            var vec3 = player.getLookAngle().scale(2.0);
+                            player.push(vec3.x, vec3.y, vec3.z);
+                            player.resetFallDistance();
+                        }
                     }
-                    case BOOST -> {
-                        var vec3 = player.getLookAngle().scale(2.0);
-                        player.push(vec3.x, vec3.y, vec3.z);
-                        player.resetFallDistance();
-                    }
-                }
+                });
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
             }
         }

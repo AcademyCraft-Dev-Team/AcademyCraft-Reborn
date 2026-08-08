@@ -34,6 +34,14 @@ class ReflectionFilterTest {
         assertFalse(accept(data, "minecraft:poison", MobEffectCategory.HARMFUL));
     }
 
+    @Test
+    void preservesForcedMovementProtectionInCopies() {
+        var data = GSON.fromJson("{\"forcedMovementProtection\":true}",
+                ReflectionFilter.Data.class);
+
+        assertTrue(data.copy().isForcedMovementProtectionEnabled());
+    }
+
     private static ReflectionFilter.Data data(String mode, String whitelist, String blacklist) {
         return GSON.fromJson("{\"mode\":\"" + mode + "\",\"whitelist\":" + whitelist
                 + ",\"blacklist\":" + blacklist + "}", ReflectionFilter.Data.class);
