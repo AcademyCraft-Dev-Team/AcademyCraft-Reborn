@@ -25,11 +25,12 @@ public abstract class MixinIrisHandRenderer {
             method = "renderTranslucent",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;renderAllFeatures(Lnet/minecraft/client/renderer/SubmitNodeStorage;)V"
+                    target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;renderAllFeatures(Lnet/minecraft/client/renderer/SubmitNodeStorage;)V",
+                    shift = At.Shift.AFTER
             ),
             require = 0
     )
-    private void academy$renderPlatinumCosmosBeforeTranslucentHand(
+    private void academy$renderPlatinumCosmosAfterTranslucentHand(
             Matrix4fc modelViewMatrix,
             float partialTick,
             Camera camera,

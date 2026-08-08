@@ -228,6 +228,7 @@ public final class StormWingEffectRenderer implements EffectRenderer {
 
     @Override
     public void render(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int packedLight, AvatarRenderState renderState, float yRot, float xRot) {
+        if (!IrisCompat.isShaderPackInUse()) return;
         if (IrisCompat.isShadowRendererActive()) return;
         if (!renderState.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
 

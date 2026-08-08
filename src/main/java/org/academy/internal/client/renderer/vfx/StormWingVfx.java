@@ -3,6 +3,7 @@ package org.academy.internal.client.renderer.vfx;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
@@ -182,6 +183,7 @@ public final class StormWingVfx implements Vfx {
 
     @Override
     public void sample(VfxFrameContext ctx, VfxSink sink) {
+        if (IrisCompat.isShaderPackInUse()) return;
         var mc = Minecraft.getInstance();
         var player = mc.player;
         if (player == null) return;

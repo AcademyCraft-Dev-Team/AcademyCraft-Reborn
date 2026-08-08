@@ -1,5 +1,6 @@
 package org.academy.internal.client.renderer.effect;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -7,6 +8,7 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import org.academy.AcademyCraft;
 import org.academy.api.client.compatibility.IrisCompat;
+import org.joml.Matrix4fc;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -56,7 +58,7 @@ public final class PlatinumCosmosPass {
         WORLD_QUEUE.add(new ThirdPersonInstance(snapshot, entityId, currentTick, effectTime));
     }
 
-    public static void renderWorld(FeatureRenderDispatcher dispatcher) {
+    public static void renderWorld(FeatureRenderDispatcher dispatcher, Matrix4fc modelViewMatrix) {
         var minecraft = Minecraft.getInstance();
         var instances = WORLD_QUEUE.consume(minecraft.level);
         if (instances.isEmpty() || worldMode() != PlatinumCosmosRenderMode.EXACT) return;
@@ -68,7 +70,8 @@ public final class PlatinumCosmosPass {
                         instance.currentTick(), instance.effectTime()
                 );
             }
-            IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(WORLD_STORAGE));
+            withModelView(modelViewMatrix,
+                    () -> IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(WORLD_STORAGE)));
         } catch (Throwable throwable) {
             worldPassAvailable = false;
             if (WORLD_FAILURE_LOGGED.compareAndSet(false, true)) {
@@ -145,6 +148,17 @@ public final class PlatinumCosmosPass {
     private static void drain(SubmitNodeStorage storage) {
         storage.drainPhases(ignored -> {
         });
+    }
+
+    private static void withModelView(Matrix4fc modelViewMatrix, Runnable action) {
+        var modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushMatrix();
+        try {
+            modelViewStack.set(modelViewMatrix);
+            action.run();
+        } finally {
+            modelViewStack.popMatrix();
+        }
     }
 
     private record ThirdPersonInstance(
