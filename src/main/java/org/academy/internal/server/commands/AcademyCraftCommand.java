@@ -43,6 +43,9 @@ import java.util.concurrent.CompletableFuture;
 
 @EventBusSubscriber
 public final class AcademyCraftCommand {
+    static final int MIN_COMMAND_ABILITY_LEVEL = 0;
+    static final int MAX_COMMAND_ABILITY_LEVEL = 5;
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         register(event.getDispatcher());
@@ -66,6 +69,13 @@ public final class AcademyCraftCommand {
                         .then(Commands.argument("category_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestAbilityCategories)
                                 .executes(AcademyCraftCommand::setAbilityCategory)))
+                .then(Commands.literal("level")
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.argument(
+                                        "level",
+                                        abilityLevelArgument()
+                                )
+                                .executes(AcademyCraftCommand::setAbilityLevel)))
                 .then(Commands.literal("set_exp")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("skill_name", IdentifierArgument.id())
@@ -106,6 +116,10 @@ public final class AcademyCraftCommand {
                 .then(ProfileCommands.register())
                 .then(VectorCompatibilityCommands.register())
         );
+    }
+
+    static IntegerArgumentType abilityLevelArgument() {
+        return IntegerArgumentType.integer(MIN_COMMAND_ABILITY_LEVEL, MAX_COMMAND_ABILITY_LEVEL);
     }
 
     private static final class VectorCompatibilityCommands {
@@ -306,6 +320,21 @@ public final class AcademyCraftCommand {
                         "Ability category set to: " + categoryIdentifier +
                                 ". Previous category skills have been cleared; common skills were preserved."
                 ), true
+        );
+        return 1;
+    }
+
+    private static int setAbilityLevel(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        var player = context.getSource().getPlayerOrException();
+        var playerUuid = player.getUUID();
+        var level = IntegerArgumentType.getInteger(context, "level");
+        var abilitySystemServer = CommandUtils.getSystem(context);
+        var previousLevel = abilitySystemServer.getPlayerLevel(playerUuid);
+
+        abilitySystemServer.setPlayerLevel(playerUuid, level);
+        context.getSource().sendSuccess(
+                () -> Component.literal("Ability level set to " + level + " (was " + previousLevel + ")."),
+                true
         );
         return 1;
     }
