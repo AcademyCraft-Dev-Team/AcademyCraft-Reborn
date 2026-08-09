@@ -107,7 +107,7 @@ public final class Flight extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.FLIGHT.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.FLIGHT.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

@@ -18,7 +18,8 @@ public abstract class MixinClientLivingEntity {
     private void academy$protectVectorReflectionHealth(CallbackInfoReturnable<Float> cir) {
         if ((Object) this instanceof LocalPlayer player
                 && VectorReflectionClientRuntime.isProtected(player)) {
-            cir.setReturnValue(Math.max(1.0f, player.getMaxHealth()));
+            cir.setReturnValue(VectorReflectionClientRuntime
+                    .protectHealthRead(player, cir.getReturnValue()));
         }
     }
 

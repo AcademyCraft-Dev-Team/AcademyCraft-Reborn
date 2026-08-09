@@ -70,9 +70,14 @@ public final class DestroyBlocksSetting {
     }
 
     public static boolean canDestroyBlocks(ServerPlayer player, Skill skill) {
-        return supportsSkillBlockDestruction(skill)
-                && isSkillDestroyBlocksEnabled(player, skill)
+        return canDestroyBlocksBySkillSetting(player, skill)
                 && canDestroyBlocks(player);
+    }
+
+    /** Checks only the per-skill switch shown in the skill settings advanced section. */
+    public static boolean canDestroyBlocksBySkillSetting(Player player, Skill skill) {
+        return supportsSkillBlockDestruction(skill)
+                && isSkillDestroyBlocksEnabled(player, skill);
     }
 
     public static void setDestroyBlocksEnabled(Player player, boolean enabled) {

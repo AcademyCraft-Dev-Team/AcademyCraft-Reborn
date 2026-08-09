@@ -45,39 +45,50 @@ public final class PlayerAttributeRuntime {
         var muscle = value(player, PlayerAttributes.MUSCLE_STRENGTH);
         var endurance = value(player, PlayerAttributes.ENDURANCE);
         var dexterity = value(player, PlayerAttributes.DEXTERITY);
+        var healthBeforeEnduranceSync = player.getHealth();
 
         syncModifier(
                 player.getAttribute(Attributes.ATTACK_DAMAGE),
                 MUSCLE_DAMAGE,
                 muscleDamageBonus(muscle),
-                AttributeModifier.Operation.ADD_VALUE
+                AttributeModifier.Operation.ADD_VALUE,
+                true
         );
         syncModifier(
                 player.getAttribute(Attributes.MAX_HEALTH),
                 ENDURANCE_HEALTH,
                 enduranceHealthBonus(endurance),
-                AttributeModifier.Operation.ADD_VALUE
+                AttributeModifier.Operation.ADD_VALUE,
+                true
         );
+        var healthAfterEnduranceSync = healthAfterMaxHealthChange(
+                healthBeforeEnduranceSync, player.getMaxHealth()
+        );
+        if (healthAfterEnduranceSync < healthBeforeEnduranceSync) {
+            player.setHealth(healthAfterEnduranceSync);
+        }
         syncModifier(
                 player.getAttribute(Attributes.MOVEMENT_SPEED),
                 DEXTERITY_SPEED,
                 dexteritySpeedBonus(dexterity),
-                AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                AttributeModifier.Operation.ADD_MULTIPLIED_BASE,
+                true
         );
         syncModifier(
                 player.getAttribute(Attributes.JUMP_STRENGTH),
                 LEGACY_ENDURANCE_JUMP,
                 0.0,
-                AttributeModifier.Operation.ADD_VALUE
+                AttributeModifier.Operation.ADD_VALUE,
+                false
         );
         syncModifier(
                 player.getAttribute(Attributes.JUMP_STRENGTH),
                 DEXTERITY_JUMP,
                 dexterityJumpStrengthBonus(dexterity),
-                AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                AttributeModifier.Operation.ADD_MULTIPLIED_BASE,
+                true
         );
 
-        if (player.getHealth() > player.getMaxHealth()) player.setHealth(player.getMaxHealth());
     }
 
     @SubscribeEvent
@@ -147,7 +158,8 @@ public final class PlayerAttributeRuntime {
                 player.getAttribute(PlayerAttributes.TRUE_RESISTANCE),
                 id,
                 enabled ? Math.max(0.0, amount) : 0.0,
-                AttributeModifier.Operation.ADD_VALUE
+                AttributeModifier.Operation.ADD_VALUE,
+                false
         );
     }
 
@@ -199,6 +211,14 @@ public final class PlayerAttributeRuntime {
         }
     }
 
+    static float healthAfterMaxHealthChange(float health, float newMaxHealth) {
+        if (!Float.isFinite(health) || !Float.isFinite(newMaxHealth)) return health;
+        // ENDURANCE grows when damage is taken. Raising current health together with its maximum
+        // therefore turns a lethal hit into a positive-health dead player on the following tick.
+        // Attribute synchronization may clamp health after a maximum decrease, but must never heal.
+        return Math.min(health, Math.max(0.0f, newMaxHealth));
+    }
+
     private static double value(Player player, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute) {
         return Math.max(0.0, player.getAttributeValue(attribute));
     }
@@ -208,15 +228,33 @@ public final class PlayerAttributeRuntime {
     }
 
     private static void syncModifier(AttributeInstance attribute, Identifier id, double amount,
-                                     AttributeModifier.Operation operation) {
+                                     AttributeModifier.Operation operation, boolean permanent) {
         if (attribute == null) return;
         var current = attribute.getModifier(id);
+        var currentIsPermanent = current != null && attribute.getPermanentModifiers().stream()
+                .anyMatch(modifier -> modifier.id().equals(id));
         if (current != null
                 && current.operation() == operation
-                && Math.abs(current.amount() - amount) < 1.0E-9) return;
-        if (current != null) attribute.removeModifier(id);
-        if (amount != 0.0 && Double.isFinite(amount)) {
-            attribute.addTransientModifier(new AttributeModifier(id, amount, operation));
+                && Math.abs(current.amount() - amount) < 1.0E-9
+                && currentIsPermanent == permanent) return;
+        if (amount == 0.0 || !Double.isFinite(amount)) {
+            if (current != null) attribute.removeModifier(id);
+            return;
+        }
+
+        var replacement = new AttributeModifier(id, amount, operation);
+        if (permanent) {
+            // Stable P.R.O.P.S bonuses must be effective as soon as attributes are loaded. This is
+            // essential for MAX_HEALTH: otherwise saved health is clamped to the vanilla limit
+            // before the first player tick restores the endurance bonus.
+            attribute.addOrReplacePermanentModifier(replacement);
+        } else if (current == null) {
+            attribute.addTransientModifier(replacement);
+        } else if (!currentIsPermanent && current.operation() == operation) {
+            attribute.addOrUpdateTransientModifier(replacement);
+        } else {
+            attribute.removeModifier(id);
+            attribute.addTransientModifier(replacement);
         }
     }
 

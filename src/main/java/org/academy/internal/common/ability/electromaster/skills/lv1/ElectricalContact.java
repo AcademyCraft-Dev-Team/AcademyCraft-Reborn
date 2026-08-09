@@ -86,7 +86,7 @@ public class ElectricalContact extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.ELECTRICAL_CONTACT.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.ELECTRICAL_CONTACT.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

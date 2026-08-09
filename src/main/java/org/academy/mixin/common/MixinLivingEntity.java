@@ -146,7 +146,7 @@ public abstract class MixinLivingEntity {
                         ((LivingEntityDamageInvoker) (Object) this)
                                 .academy$actuallyHurt(level, source, remaining);
                     } finally {
-                        VectorReflection.Server.endLegitimateHealthMutation(player, true);
+                        VectorReflection.Server.endLegitimateHealthMutation(player);
                     }
                 }
                 return;
@@ -346,7 +346,7 @@ public abstract class MixinLivingEntity {
                 && VectorReflection.Server
                 .isLegitimateHealthMutation(player)) {
             VectorReflection.Server
-                    .endLegitimateHealthMutation(player, true);
+                    .endLegitimateHealthMutation(player);
         }
     }
 

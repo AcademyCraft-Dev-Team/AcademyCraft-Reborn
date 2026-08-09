@@ -14,9 +14,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -48,12 +52,17 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 public final class LocationTeleport extends Skill {
     public static final int MAX_MARKS = 32;
+    static final String DEATH_MARK_PREFIX = "死亡地点 ";
+    private static final DateTimeFormatter DEATH_MARK_TIME =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public LocationTeleport() {
         super(Builder
@@ -85,6 +94,40 @@ public final class LocationTeleport extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    static String deathMarkName(LocalDateTime deathTime) {
+        return DEATH_MARK_PREFIX + DEATH_MARK_TIME.format(deathTime);
+    }
+
+    static boolean addDeathMark(
+            LocationTeleportData data,
+            String dimension,
+            BlockPos position,
+            LocalDateTime deathTime
+    ) {
+        if (data == null || dimension == null || position == null || deathTime == null) return false;
+        while (data.getMarks().size() >= MAX_MARKS) {
+            var oldestDeathMark = -1;
+            for (var index = 0; index < data.getMarks().size(); index++) {
+                var name = data.getMarks().get(index).name();
+                if (name != null && name.startsWith(DEATH_MARK_PREFIX)) {
+                    oldestDeathMark = index;
+                    break;
+                }
+            }
+            if (oldestDeathMark < 0) return false;
+            data.getMarks().remove(oldestDeathMark);
+            data.adjustSelectionsAfterRemoval(oldestDeathMark);
+        }
+        data.getMarks().add(new Mark(
+                deathMarkName(deathTime),
+                dimension,
+                position.getX(),
+                position.getY(),
+                position.getZ()
+        ));
+        return true;
     }
 
     public static final class Client {
@@ -136,6 +179,26 @@ public final class LocationTeleport extends Skill {
                     return Config.class;
                 }
             }
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent(priority = EventPriority.LOWEST)
+        public static void onPlayerDeath(LivingDeathEvent event) {
+            if (event.isCanceled() || !(event.getEntity() instanceof ServerPlayer player)) return;
+            if (!Skills.LOCATION_TELEPORT.get().isEnabled(player)) return;
+            var data = Server.getData(player);
+            if (!addDeathMark(
+                    data,
+                    player.level().dimension().identifier().toString(),
+                    player.blockPosition(),
+                    LocalDateTime.now()
+            )) return;
+            Server.dirtyAndSync(player, data);
         }
     }
 

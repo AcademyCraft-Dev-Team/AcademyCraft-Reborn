@@ -111,7 +111,7 @@ public final class AtmosphereShield extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.ATMOSPHERE_SHIELD.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.ATMOSPHERE_SHIELD.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

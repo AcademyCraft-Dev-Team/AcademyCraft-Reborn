@@ -10,12 +10,13 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
+import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
 /** Field-free bytecode template for generated server-player dispatch subclasses. */
-public class VrServerPlayerTemplate extends ServerPlayer {
+public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreakerHealthAccess {
     public VrServerPlayerTemplate(MinecraftServer server, ServerLevel level, GameProfile profile,
                                   ClientInformation clientInformation) {
         super(server, level, profile, clientInformation);
@@ -27,9 +28,15 @@ public class VrServerPlayerTemplate extends ServerPlayer {
 
     @Override
     public float getHealth() {
-        var max = super.getMaxHealth();
-        var original = super.getHealth();
-        return academy$protected() ? VectorReflection.Server.protectHealthRead(this, max) : original;
+        if (!academy$protected() || VectorReflection.Server.isLegitimateHealthMutation(this)) {
+            return super.getHealth();
+        }
+        return VectorReflection.Server.protectHealthRead(this, super.getHealth());
+    }
+
+    @Override
+    public void imaginebreaker(float amount) {
+        VectorReflection.Server.imaginebreaker(this, amount);
     }
 
     @Override

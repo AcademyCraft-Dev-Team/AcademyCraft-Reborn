@@ -101,7 +101,7 @@ public class IronSandArsenal extends Skill {
         }
 
         private static void onToggle() {
-            if (AbilitySystemClient.canToggleSkill(Skills.IRON_SAND_ARSENAL.get())) {
+            if (AbilitySystemClient.beginToggleRequest(Skills.IRON_SAND_ARSENAL.get())) {
                 MisakaNetworkClient.send(TogglePacket.INSTANCE);
             }
         }

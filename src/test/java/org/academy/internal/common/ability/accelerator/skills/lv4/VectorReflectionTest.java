@@ -55,4 +55,14 @@ class VectorReflectionTest {
         assertEquals(1.5f,
                 VectorReflection.Server.projectileReflectionCost(Double.NaN), 1.0E-6f);
     }
+
+    @Test
+    void depletedOrInvalidCpRequiresSynchronousProtectionShutdown() {
+        assertFalse(VectorReflection.Server.isComputingPowerDepleted(0.01f));
+        assertTrue(VectorReflection.Server.isComputingPowerDepleted(0.00001f));
+        assertTrue(VectorReflection.Server.isComputingPowerDepleted(0.0f));
+        assertTrue(VectorReflection.Server.isComputingPowerDepleted(-1.0f));
+        assertTrue(VectorReflection.Server.isComputingPowerDepleted(Float.NaN));
+    }
+
 }

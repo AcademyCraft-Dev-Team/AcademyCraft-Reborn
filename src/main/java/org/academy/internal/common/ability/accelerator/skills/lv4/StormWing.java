@@ -154,7 +154,7 @@ public final class StormWing extends Skill {
         }
 
         public static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.STORM_WING.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.STORM_WING.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

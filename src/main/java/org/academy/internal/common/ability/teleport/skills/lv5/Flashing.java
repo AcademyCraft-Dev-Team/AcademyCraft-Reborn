@@ -123,7 +123,7 @@ public final class Flashing extends Skill {
 
         private static void toggle() {
             if (ClientUtil.hasScreen() || Minecraft.getInstance().player == null) return;
-            if (!AbilitySystemClient.canToggleSkill(Skills.FLASHING.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.FLASHING.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

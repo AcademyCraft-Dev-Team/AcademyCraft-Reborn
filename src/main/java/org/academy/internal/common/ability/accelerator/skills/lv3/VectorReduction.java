@@ -153,7 +153,7 @@ public class VectorReduction extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.VECTOR_REDUCTION.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.VECTOR_REDUCTION.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
