@@ -103,7 +103,7 @@ public final class DarkmatterSixWings extends Skill {
 
         private static void toggle() {
             if (ClientUtil.hasScreen()
-                    || !AbilitySystemClient.canToggleSkill(Skills.DARKMATTER_SIX_WINGS.get())) return;
+                    || !AbilitySystemClient.beginToggleRequest(Skills.DARKMATTER_SIX_WINGS.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

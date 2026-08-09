@@ -461,6 +461,10 @@ public final class AcademyCraftClient {
                 AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC
         );
         event.register(
+                academy("ability_control_tablet"),
+                AbilityControlTabletSpecialRenderer.Unbaked.MAP_CODEC
+        );
+        event.register(
                 academy("omni_crafting_table"),
                 OmniCraftingTableSpecialRenderer.Unbaked.MAP_CODEC
         );

@@ -41,6 +41,7 @@ public final class AbilitySystemClient {
     private static final Map<String, SyncAbilityDataPacket.SkillOccupationSnapshot> SKILL_OCCUPATIONS =
             new ConcurrentHashMap<>();
     private static final Map<String, Long> LAST_SKILL_DENIAL_MESSAGES = new ConcurrentHashMap<>();
+    private static final Map<String, Long> PENDING_TOGGLE_REQUESTS = new ConcurrentHashMap<>();
     private static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
     private static final List<SkillInfo> COMMON_SKILL_INFOS = new ArrayList<>();
     @Nullable
@@ -49,6 +50,7 @@ public final class AbilitySystemClient {
     private static AbilityData cpData = new AbilityData();
     private static float calculationIntensity = 1.0f;
     private static final long SKILL_DENIAL_MESSAGE_INTERVAL_MS = 1_500L;
+    private static final long TOGGLE_REQUEST_TIMEOUT_MS = 750L;
 
     private static volatile DevState devState = DevState.IDLE;
     private static volatile float devProgress = 0f;
@@ -210,6 +212,7 @@ public final class AbilitySystemClient {
     @SubscribePacket
     public static void handleSync(SyncAbilityCategoryPacket packet) {
         category = packet.getAbilityCategory();
+        PENDING_TOGGLE_REQUESTS.clear();
     }
 
     @SubscribePacket
@@ -256,6 +259,8 @@ public final class AbilitySystemClient {
         LEARNED_SKILLS.clear();
         newData.keySet().forEach(skillId -> Registries.SKILLS.get(Identifier.parse(skillId))
                 .ifPresent(holder -> LEARNED_SKILLS.add(holder.value())));
+        // This full snapshot is the authoritative acknowledgement for every outstanding toggle.
+        PENDING_TOGGLE_REQUESTS.clear();
     }
 
     public static boolean canUseSkill(Skill skill) {
@@ -373,8 +378,28 @@ public final class AbilitySystemClient {
     }
 
     public static boolean canToggleSkill(Skill skill) {
-        return LearningHelper.isSkillAvailableForCategory(category, skill)
+        return skill != null
+                && LearningHelper.isSkillAvailableForCategory(category, skill)
                 && LEARNED_SKILLS.contains(skill);
+    }
+
+    /**
+     * Starts one stateless toggle request and suppresses a second key/HUD dispatch until the
+     * authoritative skill snapshot arrives. Without this gate two rapid packets toggle twice and
+     * leave the player observing no state change.
+     */
+    public static boolean beginToggleRequest(Skill skill) {
+        if (skill == null) return false;
+        // A stale enabled state must always be allowed to request shutdown, even while category
+        // synchronization is transitioning and the skill is no longer available for activation.
+        var shuttingDown = getSkillData(skill).map(SkillData::isEnabled).orElse(false);
+        if (!shuttingDown && !canToggleSkill(skill)) return false;
+        var now = Util.getMillis();
+        var skillId = skill.getKeyString();
+        var pendingSince = PENDING_TOGGLE_REQUESTS.get(skillId);
+        if (pendingSince != null && now - pendingSince < TOGGLE_REQUEST_TIMEOUT_MS) return false;
+        PENDING_TOGGLE_REQUESTS.put(skillId, now);
+        return true;
     }
 
     public static boolean isSkillLearned(Skill skill) {

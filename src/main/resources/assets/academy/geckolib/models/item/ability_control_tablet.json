@@ -1,0 +1,152 @@
+{
+  "format_version": "1.21.110",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.remote",
+        "texture_width": 48,
+        "texture_height": 48,
+        "visible_bounds_width": 2,
+        "visible_bounds_height": 2.5,
+        "visible_bounds_offset": [
+          0,
+          0.75,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "all",
+          "pivot": [
+            -5.25,
+            0.75,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -5.75,
+                0.25,
+                -1
+              ],
+              "size": [
+                1,
+                1,
+                2
+              ],
+              "uv": [
+                25,
+                4
+              ],
+              "mirror": true
+            },
+            {
+              "origin": [
+                -6.25,
+                -0.25,
+                -0.5
+              ],
+              "size": [
+                2,
+                2,
+                1
+              ],
+              "inflate": 0.1,
+              "uv": [
+                25,
+                0
+              ],
+              "mirror": true
+            }
+          ]
+        },
+        {
+          "name": "f1",
+          "parent": "all",
+          "pivot": [
+            -5.2,
+            0.8,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -6.2,
+                1,
+                -0.5
+              ],
+              "size": [
+                2,
+                7.5,
+                1
+              ],
+              "inflate": 0.2,
+              "uv": [
+                0,
+                10
+              ],
+              "mirror": true
+            }
+          ]
+        },
+        {
+          "name": "f2",
+          "parent": "all",
+          "pivot": [
+            -5.2,
+            0.8,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -5,
+                -0.2,
+                -0.5
+              ],
+              "size": [
+                11.5,
+                2,
+                1
+              ],
+              "inflate": 0.21,
+              "uv": [
+                8,
+                11
+              ],
+              "mirror": true
+            }
+          ]
+        },
+        {
+          "name": "screen",
+          "parent": "all",
+          "pivot": [
+            -5.9,
+            0.1,
+            -1
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -5.9,
+                0.1,
+                0
+              ],
+              "size": [
+                12,
+                8,
+                0
+              ],
+              "uv": [
+                0,
+                0
+              ],
+              "mirror": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

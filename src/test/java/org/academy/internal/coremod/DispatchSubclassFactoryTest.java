@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,11 +14,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DispatchSubclassFactoryTest {
     @Test
-    void generatesFieldFreeSubclassForCustomPlayerLayout() {
+    void generatesFieldFreeSubclassForCustomPlayerLayout() throws NoSuchMethodException {
         var result = DispatchSubclassFactory.forPlayerType(CustomServerPlayer.class);
         assertTrue(result.successful(), result.failureReason());
         assertSame(CustomServerPlayer.class, result.dispatchType().getSuperclass());
         assertTrue(HotSpotClassPointerAccess.hasNoInstanceFields(result.dispatchType()));
+        assertTrue(ImagineBreakerHealthAccess.class.isAssignableFrom(result.dispatchType()));
+        assertTrue(java.lang.reflect.Modifier.isPublic(result.dispatchType()
+                .getMethod("imaginebreaker", float.class).getModifiers()));
         assertSame(result.dispatchType(),
                 DispatchSubclassFactory.forPlayerType(CustomServerPlayer.class).dispatchType());
     }

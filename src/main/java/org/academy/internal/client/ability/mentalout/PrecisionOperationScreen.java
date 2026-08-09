@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 
 public final class PrecisionOperationScreen extends UiScreen implements SerializedUiDebugHost {
@@ -151,13 +152,17 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         search.setTextColor(TEXT);
         search.visible = paletteVisible();
         addRenderableWidget(search);
-        durationInput = new EditBox(font, 0, 0, 80, 15, Component.empty());
+        durationInput = new EditBox(font, 0, 0, 80, 15, Component.empty()) {
+            @Override
+            public void insertText(String input) {
+                if (isDurationInsertionAllowed(input)) super.insertText(input);
+            }
+        };
         durationInput.setHint(Component.translatable(
                 "screen.academy.precision_operation.value.permanent"));
         durationInput.setMaxLength(4);
         durationInput.setBordered(false);
         durationInput.setTextColor(TEXT);
-        durationInput.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         durationInput.setResponder(this::durationInputChanged);
         durationInput.visible = false;
         addRenderableWidget(durationInput);
@@ -1452,19 +1457,25 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var selected = node(durationInputNode);
         if (selected == null
                 || selected.kind().parameterKind() != PrecisionGraph.ParameterKind.DURATION_SECONDS) return;
-        var parsed = 0;
-        var valid = value.isEmpty();
-        if (!value.isEmpty()) {
-            try {
-                parsed = Integer.parseInt(value);
-                valid = parsed >= 1 && parsed <= 3600;
-            } catch (NumberFormatException ignored) {
-                valid = false;
-            }
-        }
+        var parsed = parseDurationSeconds(value);
+        var valid = parsed.isPresent();
         durationInputValid = valid;
         durationInput.setTextColor(valid ? TEXT : ERROR);
-        if (valid && selected.parameter() != parsed) setParameter(selected, parsed);
+        if (valid && selected.parameter() != parsed.getAsInt()) setParameter(selected, parsed.getAsInt());
+    }
+
+    static boolean isDurationInsertionAllowed(String input) {
+        return input.chars().allMatch(Character::isDigit);
+    }
+
+    static OptionalInt parseDurationSeconds(String value) {
+        if (value.isEmpty()) return OptionalInt.of(0);
+        try {
+            var parsed = Integer.parseInt(value);
+            return parsed >= 1 && parsed <= 3600 ? OptionalInt.of(parsed) : OptionalInt.empty();
+        } catch (NumberFormatException ignored) {
+            return OptionalInt.empty();
+        }
     }
 
     private String formatParameter(PrecisionGraph.Node node) {

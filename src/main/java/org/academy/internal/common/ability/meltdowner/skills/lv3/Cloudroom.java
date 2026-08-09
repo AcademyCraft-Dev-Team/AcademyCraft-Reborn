@@ -78,7 +78,7 @@ public class Cloudroom extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.CLOUDROOM.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.CLOUDROOM.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

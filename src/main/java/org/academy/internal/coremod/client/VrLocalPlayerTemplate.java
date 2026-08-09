@@ -10,10 +10,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.stats.StatsCounter;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Input;
+import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
 
 /** Field-free bytecode template for generated local-player dispatch subclasses. */
-public class VrLocalPlayerTemplate extends LocalPlayer {
+public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreakerHealthAccess {
     public VrLocalPlayerTemplate(Minecraft minecraft, ClientLevel level, ClientPacketListener connection,
                                  StatsCounter stats, ClientRecipeBook recipeBook, Input lastSentInput,
                                  boolean wasSprinting, ChatAbilities chatAbilities) {
@@ -26,7 +27,15 @@ public class VrLocalPlayerTemplate extends LocalPlayer {
 
     @Override
     public float getHealth() {
-        return academy$protected() ? Math.max(1.0f, super.getMaxHealth()) : super.getHealth();
+        var original = super.getHealth();
+        return academy$protected()
+                ? VectorReflectionClientRuntime.protectHealthRead(this, original)
+                : original;
+    }
+
+    @Override
+    public void imaginebreaker(float amount) {
+        VectorReflectionClientRuntime.imaginebreaker(this, amount);
     }
 
     @Override

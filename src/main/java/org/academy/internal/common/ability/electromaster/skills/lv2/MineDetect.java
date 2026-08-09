@@ -159,7 +159,7 @@ public final class MineDetect extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.MINE_DETECT.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.MINE_DETECT.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

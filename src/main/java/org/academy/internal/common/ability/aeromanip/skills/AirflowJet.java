@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.aeromanip.skills;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -50,6 +51,7 @@ import java.util.WeakHashMap;
 public final class AirflowJet extends Skill {
     private static final double SPEED_MULTIPLIER = 1.5;
     private static final double LAUNCH_SPEED = 1.4;
+    private static final double SUBMERGED_SPEED_MULTIPLIER = 0.4;
     private static final int CP_INTERVAL_TICKS = 10;
 
     public AirflowJet() {
@@ -106,6 +108,22 @@ public final class AirflowJet extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    static double propulsionSpeed(int skillLevel, boolean fullySubmerged) {
+        var clampedLevel = Math.max(0, Math.min(2, skillLevel));
+        var speed = (LAUNCH_SPEED + clampedLevel * 0.1) * SPEED_MULTIPLIER;
+        return fullySubmerged ? speed * SUBMERGED_SPEED_MULTIPLIER : speed;
+    }
+
+    private static boolean isFullySubmerged(ServerPlayer player) {
+        var eyePos = BlockPos.containing(player.getX(), player.getEyeY(), player.getZ());
+        var eyeFluid = player.level().getFluidState(eyePos);
+        if (eyeFluid.isEmpty()
+                || player.getEyeY() >= eyePos.getY() + eyeFluid.getHeight(player.level(), eyePos)) {
+            return false;
+        }
+        return !player.level().getFluidState(player.blockPosition()).isEmpty();
     }
 
     public static final class Client {
@@ -259,7 +277,7 @@ public final class AirflowJet extends Skill {
                             player,
                             direction,
                             response,
-                            (LAUNCH_SPEED + skillLevel * 0.1) * SPEED_MULTIPLIER
+                            propulsionSpeed(skillLevel, isFullySubmerged(player))
                     );
                 }
                 recordMaceMomentum(player);

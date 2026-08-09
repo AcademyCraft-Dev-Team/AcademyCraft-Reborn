@@ -134,7 +134,7 @@ public final class ElectromagneticShield extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.ELECTROMAGNETIC_SHIELD.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.ELECTROMAGNETIC_SHIELD.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

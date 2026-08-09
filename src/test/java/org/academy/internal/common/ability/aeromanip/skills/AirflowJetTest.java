@@ -19,4 +19,10 @@ class AirflowJetTest {
                 new Vec3(Double.NaN, 0.0, 0.0)
         ));
     }
+
+    @Test
+    void fullFluidSubmersionReducesPropulsionSpeed() {
+        assertEquals(2.4, AirflowJet.propulsionSpeed(2, false), 1.0E-9);
+        assertEquals(0.96, AirflowJet.propulsionSpeed(2, true), 1.0E-9);
+    }
 }

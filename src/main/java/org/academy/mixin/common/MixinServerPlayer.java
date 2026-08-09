@@ -8,6 +8,7 @@ import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.portal.TeleportTransition;
+import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,9 +21,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.Set;
 
 @Mixin(ServerPlayer.class)
-public abstract class MixinServerPlayer extends Player {
+public abstract class MixinServerPlayer extends Player implements ImagineBreakerHealthAccess {
     private MixinServerPlayer(Level level, GameProfile gameProfile) {
         super(level, gameProfile);
+    }
+
+    @Override
+    public void imaginebreaker(float amount) {
+        VectorReflection.Server.imaginebreaker((ServerPlayer) (Object) this, amount);
     }
 
     @Inject(
@@ -107,7 +113,7 @@ public abstract class MixinServerPlayer extends Player {
         try {
             return super.hurtServer(level, source, damage);
         } finally {
-            VectorReflection.Server.endLegitimateHealthMutation(player, true);
+            VectorReflection.Server.endLegitimateHealthMutation(player);
         }
     }
 }
