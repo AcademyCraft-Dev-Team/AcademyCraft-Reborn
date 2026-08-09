@@ -11,10 +11,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
@@ -38,6 +34,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportDamage;
+import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
@@ -142,34 +139,7 @@ public final class ThreateningTeleport extends Skill {
         }
 
         private static LivingEntity findTarget(LocalPlayer player) {
-            var start = player.getEyePosition();
-            var direction = player.getLookAngle().normalize();
-            if (direction.lengthSqr() < 1.0e-8) return null;
-            var fullEnd = start.add(direction.scale(MAX_RANGE));
-            var blockHit = player.level().clip(new ClipContext(
-                    start,
-                    fullEnd,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    player
-            ));
-            var end = blockHit.getType() == HitResult.Type.MISS
-                    ? fullEnd
-                    : blockHit.getLocation();
-            var hit = ProjectileUtil.getEntityHitResult(
-                    player,
-                    start,
-                    end,
-                    new AABB(start, end).inflate(1.0),
-                    entity -> entity instanceof LivingEntity
-                            && entity != player
-                            && entity.isAlive()
-                            && entity.isPickable(),
-                    MAX_RANGE * MAX_RANGE
-            );
-            return hit != null && hit.getEntity() instanceof LivingEntity living
-                    ? living
-                    : null;
+            return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
         }
 
         public static class Config extends KeyBindingConfig {
