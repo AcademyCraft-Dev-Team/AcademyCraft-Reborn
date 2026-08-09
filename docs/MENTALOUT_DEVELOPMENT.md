@@ -3,13 +3,13 @@
 ## 基本信息
 
 - 能力 ID：`academy:mentalout`
-- 当前里程碑：M2 + M3 联合交付
-- 当前状态：`自动验证通过`
+- 当前里程碑：M4 玩家编队、意识接管与全地形寻路
+- 当前状态：`开发中`
 - 文档建立日期：2026-08-05
 - M0 已交付：Mental Control 公共 API、租约 Runtime、目标误认与呆然自失基础能力
 - M1 已交付：受控清单、心灵介入、批量控制、永久效果、左侧 HUD、Boss 与第三方实体兼容
 - M2 + M3 目标：心灵潜入、感官扭曲、精密操作节点编辑器、四槽编译与执行
-- M2 + M3 不包含：M4 玩家输入替换、移动控制和寻路代理
+- M4 目标：玩家编队、双客户端输入接管、服务端动作/移动校验和多模态玩家寻路
 - 启动注册预期：8 个能力类别、92 个技能
 
 状态字段只能使用以下取值：
@@ -28,7 +28,7 @@
 Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不持久化或替换原版 `Goal`、`Brain`、龙阶段图或 Scoreboard Team。
 
 - C2S 只表达施放或重同步意图，不携带可信实体 ID；服务端重新执行 16 格视线射线。
-- 玩家在 M1 不能加入受控清单。玩家控制仍由 M4 的独立输入替换与移动校验实现。
+- 符合友伤、旁观者和精神保护规则的其他玩家可加入清单；玩家不写入 Mob 召回记忆。
 - `academy:mental_control_immune` 标签、矢量反射、电磁护盾和未元物质六翼统一进入精神控制保护门禁。
 - 名单与永久效果仅存在于当前服务器会话，不跨卸载、维度、登出或服务器重启持久化。
 - 所有控制句柄和清理操作必须幂等。退出、死亡、过载、换能力、换维度、实体卸载和停服不得遗留租约或 CP occupation。
@@ -42,7 +42,7 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 | M1 | 受控清单、心灵介入、批量及永久效果、HUD、Boss/第三方 Adapter | `自动验证通过` |
 | M2 | 心灵潜入、感官扭曲、观察者视角与感官过滤 | `自动验证通过` |
 | M3 | 精密操作节点编辑器、四快捷槽、图校验和服务端编译 | `自动验证通过` |
-| M4 | 玩家输入替换、服务端移动包校验、地面寻路代理和玩家控制 | `未开始` |
+| M4 | 玩家输入替换、服务端移动包校验、多模态寻路代理和玩家控制 | `开发中` |
 
 ## 技能树与合同
 
@@ -54,13 +54,16 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 | Lv2 | `mental_stupor` | 呆然自失 | `target_misidentification` | M1 | `自动验证通过` |
 | Lv2 | `sensory_distortion` | 感官扭曲 | `mental_intrusion` | M2 | `代码完成` |
 | Lv3 | `impression_manipulation` | 印象操作 | `mental_intervention`、`target_misidentification` | M1 | `自动验证通过` |
+| Lv3 | `command_positioning` | 指挥定位 | `mental_intervention` | M1 | `自动验证通过` |
+| Lv4 | `mental_takeover` | 意识接管 | `mental_intrusion`、`command_positioning`、`mental_stupor` | M4 | `开发中` |
 | Lv5 | `precision_operation` | 精密操作 | `impression_manipulation`、`mental_stupor` | M3 | `代码完成` |
 
 ### 心灵介入
 
 - 默认按键：`Alt+C`，绑定名 `mental_intervention_use`。
 - 开发消耗：5000；成功加入普通目标消耗 10 CP。
-- 服务端重新射线选择非玩家 LivingEntity，并执行免疫、距离、存活、维度和 Adapter 支持校验。
+- 服务端重新射线选择 LivingEntity，并执行自身、旁观者、友伤、免疫、距离、存活、维度和 Adapter 支持校验。
+- 玩家可同时位于多个施术者的编队，但移动、视角和动作领域始终由单个最高优先级租约占用。
 - 未在名单中的有效目标加入当前施术者的有序清单；再次施放同一目标时免费移除。
 - 目标死亡、卸载或换维度时立即移除。名单不设玩法数量上限。
 - 若全局永久效果已经开启，新目标只有在 CP 聚合占用可原子扩容且对应 Adapter 激活成功后才能加入。
@@ -122,12 +125,29 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 - 所有槽聚合为一个精密操作 occupation，动作使用高于 M1 的优先级并在任一步失败时逆序关闭句柄、恢复原 occupation。
 - 编辑器使用响应式侧栏和 80 像素紧凑节点，支持四槽状态、分类滚动搜索、统一缩放平移、拖拽/吸附/重连、兼容节点快速插入、自动排布、参数检查、撤销重做、保存和恢复服务端版本。
 
+### 意识接管与玩家寻路
+
+- `academy:mental_takeover` 为 Lv4 单实例技能，开发消耗 60000、迭代间隔 10 tick，默认按键 `Alt+Y`，技能树坐标 `(164,112)`。
+- 只有当前心灵潜入目标仍是施术者编队内的 `ServerPlayer` 时才能升级接管；建立前原子预占 100 CP，并创建优先级 300 的 `DIRECT_CONTROL` 租约。
+- 控制端与目标端必须在 20 tick 内完成同一 session UUID/revision 的 `Ready`。任一端拒绝或超时会关闭租约并完整释放 occupation。
+- C2S 输入只含 session、revision、递增 sequence、量化移动轴、视角与动作位；目标实体和攻击目标均由服务端会话索引及被控玩家视角重射线确定。
+- 控制端每游戏 tick 最多提交一帧；5 tick 无帧下发中立输入，20 tick 无帧终止。目标移动包复核有限值、授权视角、单包速度和垂直模式，连续三次非法移动会纠正并结束会话。
+- 接管覆盖移动、视角、跳跃、潜行、疾跑、实体攻击和当前主手使用；来自目标客户端的攻击、使用、采掘、丢弃、热栏切换包在接管期间被拒绝，聊天与菜单仍由目标本人使用。
+- 目标的原始硬件方向切换及跳跃/潜行按下边沿每 tick 最多增加 2 点挣脱值；10 tick 无挣扎后每 tick 衰减 1 点，达到 100 结束接管。控制端实际承受生命伤害也会结束接管。
+- 接管、玩家呆然或玩家自动寻路结束后获得默认 400 tick 输入控制抗性；抗性只清理移动、视角和动作租约，编队与印象关系保留。
+- `PlayerNavigationApi` 支持第三方按 ID 与优先级注册适配器。内置适配器使用每路径 4096 节点、每 tick 每路径 256 展开、全服 1024 展开的有界 A*。
+- 内置节点覆盖 WALK、JUMP、DROP、CLIMB、SWIM、FLY、GLIDE、BOAT、MOUNT 和 RAIL；所有移动通过授权输入或技能速度完成，不传送玩家。
+- 地面路径校验玩家或当前载具包围盒、头顶空间、落点和最多三格安全落差；升高节点只在着地及跳跃冷却允许时发送跳跃。
+- 梯子/藤蔓/脚手架、水域升降、已滑翔鞘翅、船、可控坐骑和矿车使用对应模式；当前载具不受支持时返回 `UNSUPPORTED_MOVEMENT_MODE`，不会自动上下车。
+- FLY 路径可开启目标已学习且可负担的 Flight、Storm Wing、Black/White/Platinum Wing，并只关闭本次导航开启的状态；未元物质六翼不在候选列表。
+- 路径可通过目标服务端 `gameMode` 交互打开门、栅栏门和活板门；不会破坏、放置、传送或操作红石。
+
 ## Runtime 与公共 API
 
 - `MentaloutControlContext` 按施术者维护有序名单、当前永久误认批次、名单全局开关、每目标句柄和两项聚合 CP occupation。
 - Runtime 同时维护 `controller -> subjects` 与 `subject -> controllers` 索引。多个施术者可以控制同一目标，最终效果仍按领域优先级和最新租约解析。
 - `ControlRequest.permanent(...)` 使用 `Long.MAX_VALUE` 表示由句柄关闭终止的租约，不改变已有绝对结束 tick 合同。
-- 新增 `RELATION` 领域、`RELATION_CONTROL` capability、`ImpressionAlliance` directive 和 `ALLOW/DENY/PASS` 攻击裁决。
+- 控制领域包含独立 `VIEW`；新增 `DIRECT_CONTROL(MOVEMENT, VIEW, ACTION)`、`DirectControl`、统一 `PlayerControlFrame` 与玩家导航扩展点。
 - Adapter v2 返回 `FULL`、`BEST_EFFORT` 或 `UNSUPPORTED`，并通过 binding 的 `activate/tick/close` 管理实体专用行为。
 - 同一 capability 下不同 ID 的最高优先级 Adapter 并列时返回 `AMBIGUOUS_ADAPTER`，不得依赖注册或模组加载顺序。
 - 动态 CP 调整必须先预检新增施放费和两个永久效果的目标权重总额，再原子替换 occupation；失败时旧名单、旧效果和旧 CP 占用保持不变。
@@ -143,7 +163,7 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 | Warden | `FULL` | `FULL` | `FULL` | 维护 Brain 目标与虚拟愤怒许可，清理非法 active suspect 与 `ROAR_TARGET`；冻结时抑制新增振动感知 |
 | Wither | `FULL` | `FULL` | `FULL` | 同步主头及侧头目标；出生无敌阶段拒绝冻结且不扣 CP |
 | Ender Dragon | `FULL` | `FULL` | `FULL` | 误认切入扫射阶段；冻结切入悬停并抑制接触攻击，释放后回到盘旋阶段 |
-| 玩家 | `UNSUPPORTED` | `UNSUPPORTED` | `UNSUPPORTED` | M1 不允许入列，只执行精神控制保护门禁 |
+| 玩家 | `UNSUPPORTED` | `FULL` | `FULL` | 可入列；另支持 `PATH_CONTROL`、`VIEW_CONTROL`、`DIRECT_CONTROL`，首版跳过 Force/Guard |
 | 免疫标签实体 | `UNSUPPORTED` | `UNSUPPORTED` | `UNSUPPORTED` | 稳定返回免疫拒绝原因 |
 
 第三方模组可以在 common setup 注册高优先级 Adapter。自定义 AI 绕过原版 `Mob`/Brain 路径时，模组应通过公开 `inspect/effectiveDirective/attackDecision` 查询在自身 tick 或 Mixin 中执行控制。
@@ -166,7 +186,7 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 - 施术者死亡、登出、换维度、过载或切换能力类别。
 - 技能被禁用、服务器停止或 Adapter binding 激活失败。
 
-保护技能在准入时和每个服务端 tick 复核。玩家当前不可入列；M4 开放玩家控制后，矢量反射、电磁护盾或未元物质六翼任一激活都必须立即撤销对应精神控制。
+保护技能在准入时和每个服务端 tick 复核。矢量反射、电磁护盾或未元物质六翼任一激活都会立即撤销玩家输入控制，但保留其编队条目并同步保护状态。
 
 ## M0 验收矩阵
 
@@ -217,6 +237,18 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 | `MO-EDITOR-01` | 四槽编辑器支持节点搜索、拖动、连线、参数、撤销重做、保存和恢复 | 客户端手工 | `代码完成` | 编辑器及中英文资源已通过客户端类加载与资源重载；交互截图和低帧率操作仍待验收 |
 | `MO-BUILD-03` | M2 + M3 JUnit、GameTest、双构建与客户端启动无注册、资源或 Mixin 错误 | Gradle | `自动验证通过` | 2026-08-05：JUnit、12/12 GameTest、开发/发布构建通过；客户端确认 8 类别、92 技能及声音引擎启动 |
 
+## M4 验收矩阵
+
+| ID | 明确预期结果 | 验证方式 | 状态 | 证据 |
+| --- | --- | --- | --- | --- |
+| `MO-PLAYER-ROSTER-01` | 玩家可多编队入列，按 3 倍权重计费，且不写入 Mob 召回记忆 | JUnit、双人手工 | `代码完成` | LivingEntity 泛化、玩家专用验证与费用权重已落盘；等待专项测试与联机验收 |
+| `MO-TAKEOVER-01` | 双端握手、唯一输入租约、环形控制拒绝和 CP 原子回滚符合合同 | JUnit、双人手工 | `代码完成` | session 双索引、100 CP 原子 occupation 与 DirectControl 租约已落盘 |
+| `MO-INPUT-01` | 移动/视角/跳跃/潜行/疾跑按授权帧生效，乱序重放及超时被拒绝 | JUnit、双人手工 | `代码完成` | 量化 codec、双序列高水位、中立帧和移动包校验已落盘 |
+| `MO-ACTION-01` | 攻击和当前手使用服务端重射线；采掘、热栏和伪造世界动作被拒绝 | 双人手工 | `代码完成` | 服务端实体/方块射线及入站动作包拦截已落盘 |
+| `MO-RESIST-01` | 挣脱、控制端受伤、保护技能与生命周期均结束会话并正确施加抗性 | JUnit、GameTest、双人手工 | `代码完成` | 挣脱衰减、Post 健康伤害、保护 tick 复核和 400 tick 抗性已落盘 |
+| `MO-PATH-01` | 有界 A* 支持跳障、门、攀爬、游泳、飞行与当前载具，且不传送 | JUnit、GameTest、双人手工 | `代码完成` | 10 模式节点、包围盒校验、全服规划预算和授权输入驱动已落盘 |
+| `MO-BUILD-04` | M4 JUnit、Mentalout GameTest、开发/发布构建与双客户端烟测通过 | Gradle、手工 | `开发中` | 2026-08-09：JUnit、开发/发布双构建和单客户端启动通过；23 项 GameTest 中 19 项通过，4 项既有 Mob 场景失败；双客户端玩法验收待执行 |
+
 自动门禁顺序：
 
 ```powershell
@@ -241,6 +273,14 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 - 精密操作当前把执行阶段的大多数失败统一报告为 `ACTION_FAILED`，不会向客户端泄露受保护目标或服务端实体细节。
 
 ## 进展日志
+
+### 2026-08-09
+
+- `代码完成`：M4 玩家编队、意识接管、输入租约/挣脱/抗性、服务端动作校验与 10 模式玩家导航实现已落盘。
+- `自动验证通过`：`test -DisDev=true`、`build -DisDev=true` 与 `build -DisDev=false` 通过。
+- `运行时验收通过`：`runClientDev` 完成 8 类别、92 技能注册校验、资源重载和声音引擎初始化，未发现 Academy Mixin apply 或资源注册错误。
+- `开发中`：GameTest 总计 23 项，M4 新增的 `player_freeze_and_relation` 与 `player_path_requires_client_ready` 均通过；既有 `wither_flight_path`、`guard_reactive_target_and_return`、`warden_path_relation_and_dig_guard`、`path_unreachable_reports_failure` 仍失败。
+- `开发中`：双客户端真实玩家的延迟、挣脱、攻击/使用、载具和飞行画面同步仍需手工验收。
 
 ### 2026-08-05
 

@@ -87,6 +87,10 @@ public final class MentalControlRuntime {
             validateDirective(server, subject, directive);
             var resolution = resolve(subject, directive.capability());
             if (!resolution.evaluation().supported() || resolution.registration() == null) {
+                if (resolution.evaluation().reason() == ControlRejectionReason.PROTECTED_PLAYER
+                        || resolution.evaluation().reason() == ControlRejectionReason.IMMUNE_TAG) {
+                    notifyProtectionBlocked(controller, subject);
+                }
                 throw new ControlApplyException(
                         resolution.evaluation().reason(),
                         directive.capability(),
@@ -279,6 +283,7 @@ public final class MentalControlRuntime {
         var now = subject.level().getGameTime();
         return state.leases.effective(subject.getUUID(), ControlCapability.FORCE_TARGET, now) != null
                 || state.leases.effective(subject.getUUID(), ControlCapability.PATH_CONTROL, now) != null
+                || state.leases.effective(subject.getUUID(), ControlCapability.DIRECT_CONTROL, now) != null
                 || state.leases.effective(subject.getUUID(), ControlCapability.GUARD_CONTROL, now) != null
                 || state.leases.effective(subject.getUUID(), ControlCapability.FREEZE_AI, now) != null;
     }
@@ -292,11 +297,11 @@ public final class MentalControlRuntime {
         Objects.requireNonNull(subject, "subject");
         var state = stateIfPresent(subject.level().getServer());
         if (state == null) return false;
+        var now = subject.level().getGameTime();
         return state.leases.effective(
-                subject.getUUID(),
-                ControlCapability.PATH_CONTROL,
-                subject.level().getGameTime()
-        ) != null;
+                subject.getUUID(), ControlCapability.PATH_CONTROL, now) != null
+                || state.leases.effective(
+                subject.getUUID(), ControlCapability.DIRECT_CONTROL, now) != null;
     }
 
     public static boolean suppressesAutonomousBrain(Mob subject) {
@@ -669,6 +674,10 @@ public final class MentalControlRuntime {
         return subject == null || MentalControlProtection.rejectionReason(subject) != null;
     }
 
+    public static void notifyProtectionBlocked(ServerPlayer controller, LivingEntity subject) {
+        MentalControlProtection.notifyBlocked(controller, subject);
+    }
+
     public static void maintainTarget(Mob mob) {
         var target = getForcedTarget(mob);
         if (target == null) return;
@@ -896,7 +905,7 @@ public final class MentalControlRuntime {
         synchronized (state) {
             for (var entry : List.copyOf(state.activeBindings.entrySet())) {
                 if (!entry.getKey().subjectId().equals(subject.getUUID())
-                        || entry.getValue().capability() != ControlCapability.VIEW_CONTROL) continue;
+                        || !entry.getValue().capability().domains().contains(ControlDomain.VIEW)) continue;
                 try {
                     entry.getValue().binding().beforeLookControlTick();
                 } catch (Throwable throwable) {
@@ -1204,6 +1213,18 @@ public final class MentalControlRuntime {
         } else if (directive instanceof ControlDirective.Guard guard) {
             validateDestination(server, subject, guard.destination(), directive.capability());
         }
+    }
+
+    public static void releasePlayerInputLeases(MinecraftServer server, UUID subjectId) {
+        Objects.requireNonNull(server, "server");
+        Objects.requireNonNull(subjectId, "subjectId");
+        var state = stateIfPresent(server);
+        if (state == null) return;
+        synchronized (state) {
+            var removal = state.leases.removePlayerInputBySubject(subjectId);
+            reconcileRecovering(server, state, removal);
+        }
+        removeEmptyState(server, state);
     }
 
     private static @Nullable UUID referencedTarget(ControlDirective directive) {
@@ -1968,6 +1989,17 @@ public final class MentalControlRuntime {
                             .collect(java.util.stream.Collectors.toUnmodifiableSet()),
                     lease.input().guardianRelationLeaseId()
             )).toList();
+        }
+
+        synchronized RemovalResult removePlayerInputBySubject(UUID subjectId) {
+            var ids = leases.values().stream()
+                    .filter(lease -> lease.input().subjectId().equals(subjectId))
+                    .filter(lease -> lease.input().directives().containsKey(ControlDomain.MOVEMENT)
+                            || lease.input().directives().containsKey(ControlDomain.VIEW)
+                            || lease.input().directives().containsKey(ControlDomain.ACTION))
+                    .map(LeaseRecord::id)
+                    .toList();
+            return removeAll(Set.copyOf(ids));
         }
 
         synchronized TableSnapshot snapshotState() {

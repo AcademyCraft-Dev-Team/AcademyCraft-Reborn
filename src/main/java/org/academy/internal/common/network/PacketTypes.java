@@ -16,6 +16,7 @@ import org.academy.api.common.wireless.*;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
+import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrikeVisualPacket;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
@@ -77,6 +78,7 @@ import org.academy.internal.common.ability.mentalout.skills.TargetMisidentificat
 import org.academy.internal.common.ability.mentalout.skills.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.electromaster.SkyStrikeVisualPacket;
 import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
@@ -381,6 +383,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DirStrike.ActionPacket>>
             DIR_STRIKE = PACKET_TYPES.register("dir_strike",
             () -> new PacketType<>(DirStrike.ActionPacket.class, DirStrike.ActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DirStrikeVisualPacket>>
+            DIR_STRIKE_VISUAL = PACKET_TYPES.register("dir_strike_visual",
+            () -> new PacketType<>(DirStrikeVisualPacket.class, DirStrikeVisualPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorBlast.UsePacket>>
             VECTOR_BLAST_USE = PACKET_TYPES.register("vector_blast_use",
@@ -658,6 +663,50 @@ public final class PacketTypes {
             MENTAL_PERCEPTION_UPDATE = PACKET_TYPES.register("mental_perception_update",
             () -> new PacketType<>(MentalIntrusionManager.PerceptionPacket.class,
                     MentalIntrusionManager.PerceptionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.TogglePacket>>
+            MENTAL_TAKEOVER_TOGGLE = PACKET_TYPES.register("mental_takeover_toggle",
+            () -> new PacketType<>(PlayerControlSessionManager.TogglePacket.class,
+                    PlayerControlSessionManager.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.ReadyPacket>>
+            MENTAL_TAKEOVER_READY = PACKET_TYPES.register("mental_takeover_ready",
+            () -> new PacketType<>(PlayerControlSessionManager.ReadyPacket.class,
+                    PlayerControlSessionManager.ReadyPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.IntentPacket>>
+            MENTAL_TAKEOVER_INTENT = PACKET_TYPES.register("mental_takeover_intent",
+            () -> new PacketType<>(PlayerControlSessionManager.IntentPacket.class,
+                    PlayerControlSessionManager.IntentPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.StrugglePacket>>
+            MENTAL_TAKEOVER_STRUGGLE = PACKET_TYPES.register("mental_takeover_struggle",
+            () -> new PacketType<>(PlayerControlSessionManager.StrugglePacket.class,
+                    PlayerControlSessionManager.StrugglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.AppliedFramePacket>>
+            MENTAL_TAKEOVER_APPLIED = PACKET_TYPES.register("mental_takeover_applied",
+            () -> new PacketType<>(PlayerControlSessionManager.AppliedFramePacket.class,
+                    PlayerControlSessionManager.AppliedFramePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.StopRequestPacket>>
+            MENTAL_TAKEOVER_STOP = PACKET_TYPES.register("mental_takeover_stop",
+            () -> new PacketType<>(PlayerControlSessionManager.StopRequestPacket.class,
+                    PlayerControlSessionManager.StopRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.BeginPacket>>
+            MENTAL_TAKEOVER_BEGIN = PACKET_TYPES.register("mental_takeover_begin",
+            () -> new PacketType<>(PlayerControlSessionManager.BeginPacket.class,
+                    PlayerControlSessionManager.BeginPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.AuthorizedFramePacket>>
+            MENTAL_TAKEOVER_FRAME = PACKET_TYPES.register("mental_takeover_frame",
+            () -> new PacketType<>(PlayerControlSessionManager.AuthorizedFramePacket.class,
+                    PlayerControlSessionManager.AuthorizedFramePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.StatusPacket>>
+            MENTAL_TAKEOVER_STATUS = PACKET_TYPES.register("mental_takeover_status",
+            () -> new PacketType<>(PlayerControlSessionManager.StatusPacket.class,
+                    PlayerControlSessionManager.StatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.TargetViewStatePacket>>
+            MENTAL_TAKEOVER_TARGET_VIEW = PACKET_TYPES.register("mental_takeover_target_view",
+            () -> new PacketType<>(PlayerControlSessionManager.TargetViewStatePacket.class,
+                    PlayerControlSessionManager.TargetViewStatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.EndPacket>>
+            MENTAL_TAKEOVER_END = PACKET_TYPES.register("mental_takeover_end",
+            () -> new PacketType<>(PlayerControlSessionManager.EndPacket.class,
+                    PlayerControlSessionManager.EndPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.RequestPacket>>
             PRECISION_OPERATION_REQUEST = PACKET_TYPES.register("precision_operation_request",
             () -> new PacketType<>(PrecisionOperationManager.RequestPacket.class,

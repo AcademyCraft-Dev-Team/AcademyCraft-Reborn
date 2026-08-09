@@ -17,10 +17,13 @@ import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.entitycontrol.MentalControlApi;
+import org.academy.api.common.entitycontrol.PlayerNavigationApi;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.AbilityRegistrationValidator;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.EnderDragonMentalControlAdapter;
+import org.academy.internal.common.ability.mentalout.control.DefaultPlayerNavigationAdapter;
+import org.academy.internal.common.ability.mentalout.control.ServerPlayerMentalControlAdapter;
 import org.academy.internal.common.ability.mentalout.control.VanillaMobMentalControlAdapter;
 import org.academy.internal.common.ability.mentalout.control.WardenMentalControlAdapter;
 import org.academy.internal.common.ability.mentalout.control.WitherMentalControlAdapter;
@@ -127,6 +130,16 @@ public final class AcademyCraftRegister {
                     Identifier.fromNamespaceAndPath(MODID, "vanilla_mob"),
                     Integer.MIN_VALUE,
                     new VanillaMobMentalControlAdapter()
+            );
+            MentalControlApi.registerAdapter(
+                    Identifier.fromNamespaceAndPath(MODID, "server_player"),
+                    200,
+                    new ServerPlayerMentalControlAdapter()
+            );
+            PlayerNavigationApi.registerAdapter(
+                    Identifier.fromNamespaceAndPath(MODID, "vanilla_player"),
+                    0,
+                    new DefaultPlayerNavigationAdapter()
             );
             NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
             AbilityRegistrationValidator.validate();

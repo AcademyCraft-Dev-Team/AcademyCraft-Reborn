@@ -6,10 +6,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.ControlRejectionReason;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
 import org.jspecify.annotations.Nullable;
 
@@ -27,19 +30,64 @@ final class MentalControlProtection {
     }
 
     static @Nullable ControlRejectionReason rejectionReason(LivingEntity subject) {
-        if (subject.getType().builtInRegistryHolder().is(IMMUNE_ENTITY_TYPES)) {
-            return ControlRejectionReason.IMMUNE_TAG;
+        var kind = kind(subject);
+        if (kind == null) return null;
+        return kind == Kind.IMMUNE_TAG
+                ? ControlRejectionReason.IMMUNE_TAG
+                : ControlRejectionReason.PROTECTED_PLAYER;
+    }
+
+    static @Nullable Kind kind(LivingEntity subject) {
+        if (subject == null) return Kind.IMMUNE_TAG;
+        if (subject.getType().builtInRegistryHolder().is(IMMUNE_ENTITY_TYPES)) return Kind.IMMUNE_TAG;
+        if (!(subject instanceof ServerPlayer player)) return null;
+        if (VectorReflection.Server.isActive(player) || VectorReduction.Server.isActive(player)) {
+            return Kind.VECTOR_FILTER;
         }
-        if (subject instanceof ServerPlayer player
-                && (VectorReflection.Server.isActive(player)
-                || ElectromagneticShield.Server.isActive(player)
-                || DarkmatterSixWings.Server.isActive(player))) {
-            return ControlRejectionReason.PROTECTED_PLAYER;
-        }
+        if (ElectromagneticShield.Server.isActive(player)) return Kind.ELECTROMAGNETIC_FIELD;
+        if (DarkmatterSixWings.Server.isActive(player)) return Kind.DARKMATTER_UNKNOWN;
         return null;
+    }
+
+    static void notifyBlocked(ServerPlayer controller, LivingEntity subject) {
+        var kind = kind(subject);
+        if (controller == null || kind == null) return;
+        controller.sendOverlayMessage(Component.translatable(kind.feedbackKey));
+        if (!(subject instanceof ServerPlayer player)) return;
+        var direction = controller.getBoundingBox().getCenter()
+                .subtract(player.getBoundingBox().getCenter());
+        if (!Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1.0E-8) {
+            direction = player.getLookAngle();
+        }
+        if (kind == Kind.VECTOR_FILTER) {
+            if (!VectorReflection.Server.tryPlayReflectionSound(player)) return;
+            var normal = direction.normalize();
+            var offset = Math.max(player.getBbWidth() * 0.95, 0.75);
+            var center = player.getBoundingBox().getCenter().add(normal.scale(offset));
+            VectorReflection.Server.spawnGlowCircle(player, normal, center);
+        } else if (kind == Kind.ELECTROMAGNETIC_FIELD
+                && player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            var normal = direction.normalize();
+            var offset = Math.max(player.getBbWidth() * 0.95, 0.75);
+            var center = player.getBoundingBox().getCenter().add(normal.scale(offset));
+            ElectromasterArcEffects.spawnShieldInterceptRing(level, center, normal);
+        }
     }
 
     static boolean isBossCost(LivingEntity subject) {
         return subject.getType().builtInRegistryHolder().is(BOSS_COST_ENTITY_TYPES);
+    }
+
+    enum Kind {
+        IMMUNE_TAG("message.academy.mentalout.protected_target"),
+        VECTOR_FILTER("message.academy.mentalout.protected.vector_filter"),
+        ELECTROMAGNETIC_FIELD("message.academy.mentalout.protected.electromagnetic_field"),
+        DARKMATTER_UNKNOWN("message.academy.mentalout.protected.darkmatter_unknown");
+
+        private final String feedbackKey;
+
+        Kind(String feedbackKey) {
+            this.feedbackKey = feedbackKey;
+        }
     }
 }

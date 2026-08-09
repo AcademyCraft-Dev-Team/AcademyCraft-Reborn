@@ -34,6 +34,14 @@ public class LevelRenderEvent extends Event {
         return partialTick;
     }
 
+    public PoseStack getPoseStack() {
+        return poseStack;
+    }
+
+    public SubmitNodeCollector getSubmitNodeCollector() {
+        return submitNodeCollector;
+    }
+
     public void submitCustomGeometry(RenderType renderType,
                                      BiConsumer<MatrixStack, VertexConsumer> renderer) {
         var snapshot = matrixStack.copy();

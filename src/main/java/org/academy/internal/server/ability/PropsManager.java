@@ -87,7 +87,7 @@ public final class PropsManager implements AbilitySubsystem {
             storedPlayer.markDirty();
         }
 
-        mirrorAttributes(player, data);
+        mirrorAttributes(player, storedPlayer);
         activity.put(player.getUUID(), ActivitySnapshot.capture(player));
         lastSyncTick.put(player.getUUID(), player.level().getGameTime());
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.PROPS_DATA);
@@ -102,6 +102,8 @@ public final class PropsManager implements AbilitySubsystem {
 
     @Override
     public void tick(ServerPlayer player) {
+        var storedPlayer = playerDataManager.getData(player.getUUID());
+        if (storedPlayer != null) mirrorAttributes(player, storedPlayer);
         var snapshot = activity.computeIfAbsent(player.getUUID(), _ -> ActivitySnapshot.capture(player));
         tickActivity(player, snapshot);
 
@@ -158,7 +160,7 @@ public final class PropsManager implements AbilitySubsystem {
     private void syncNow(ServerPlayer player) {
         var storedPlayer = playerDataManager.getData(player.getUUID());
         if (storedPlayer == null) return;
-        mirrorAttributes(player, storedPlayer.getPropsData());
+        mirrorAttributes(player, storedPlayer);
         dirtySync.remove(player.getUUID());
         lastSyncTick.put(player.getUUID(), player.level().getGameTime());
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.PROPS_DATA);
@@ -349,10 +351,26 @@ public final class PropsManager implements AbilitySubsystem {
         };
     }
 
-    private static void mirrorAttributes(ServerPlayer player, PropsData data) {
+    private void mirrorAttributes(
+            ServerPlayer player,
+            org.academy.internal.server.world.level.storage.Player storedPlayer
+    ) {
+        var data = storedPlayer.getPropsData();
+        var category = playerDataManager.getPlayerAbilityCategory(player.getUUID());
+        var bonuses = CommonSkillBonuses.calculate(
+                storedPlayer.getSkillDataMap(),
+                storedPlayer.getCpData().getLevel().getLevelCode(),
+                category.supportsCommonSkills()
+        );
         for (var factor : AbilityFactor.values()) {
             var instance = player.getAttribute(attribute(factor));
             var value = data.isStarted() ? data.get(factor) : 0.0;
+            value += switch (factor) {
+                case MUSCLE_STRENGTH -> bonuses.muscleBonus();
+                case ENDURANCE -> bonuses.enduranceBonus();
+                case DEXTERITY -> bonuses.dexterityBonus();
+                case PERCEPTION, NEURAL_ACTIVITY -> 0.0;
+            };
             if (instance != null && Double.compare(instance.getBaseValue(), value) != 0) {
                 instance.setBaseValue(value);
             }

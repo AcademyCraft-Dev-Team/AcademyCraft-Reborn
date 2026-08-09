@@ -9,6 +9,7 @@ import net.minecraft.util.Util;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.AcademyCraft;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.AbilityInfoHud;
 import org.academy.api.client.input.InputSystem;
@@ -21,6 +22,7 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.skilldata.SkillData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -99,6 +101,15 @@ public final class AbilitySystemClient {
         result.addAll(categoryInfos);
         result.addAll(COMMON_SKILL_INFOS);
         return List.copyOf(result);
+    }
+
+    public static List<SkillInfo> getCommonSkillInfos() {
+        return List.copyOf(COMMON_SKILL_INFOS);
+    }
+
+    public static List<SkillInfo> getCategorySkillInfos(@Nullable AbilityCategory category) {
+        if (category == null) return List.of();
+        return List.copyOf(SKILL_INFOS.getOrDefault(category, List.of()));
     }
 
     public static void init() {
@@ -291,7 +302,7 @@ public final class AbilitySystemClient {
                     requiredCp,
                     cpData.getAvailableCP(),
                     0,
-                    skill.getMaxStacks(level),
+                    getEffectiveMaxStacks(skill, level),
                     0
             );
         }
@@ -299,7 +310,7 @@ public final class AbilitySystemClient {
         var occupation = SKILL_OCCUPATIONS.get(skill.getKeyString());
         var stackCount = occupation == null ? 0 : occupation.stackCount();
         var remaining = occupation == null ? 0 : occupation.remainingIterationPoints();
-        var maxStacks = skill.getMaxStacks(level);
+        var maxStacks = getEffectiveMaxStacks(skill, level);
         if (maxStacks != Skill.NO_STACK_LIMIT && stackCount >= maxStacks) {
             return new SkillUseStatus(
                     false,
@@ -447,6 +458,20 @@ public final class AbilitySystemClient {
 
     public static int getSkillLevel(Skill skill) {
         return skill.getLevelForProficiency(getSkillProficiency(skill));
+    }
+
+    public static int getEffectiveMaxStacks(Skill skill, int skillLevel) {
+        var base = skill.getMaxStacks(skillLevel);
+        if (base == Skill.NO_STACK_LIMIT) return Skill.NO_STACK_LIMIT;
+        var category = getCategory();
+        if (category == null || !category.supportsCommonSkills()) return base;
+        var stackData = SKILL_DATA.get(
+                AcademyCraft.academy(SkillNames.LEVEL0_PASSIVE_LV2).toString()
+        );
+        var bonus = stackData == null
+                ? 0
+                : SkillData.getProficiencyTier(stackData.getProficiency());
+        return Math.max(0, base + bonus);
     }
 
     public static float getSkillProficiencyProgress(Skill skill) {

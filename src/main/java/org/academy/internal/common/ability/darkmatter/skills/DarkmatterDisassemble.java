@@ -129,7 +129,7 @@ public final class DarkmatterDisassemble extends Skill {
             if (!(player.level() instanceof ServerLevel level)) return;
             var hit = pick(level, player);
             if (hit.entity != null) {
-                attack(player, level, hit.entity);
+                tryAutomatedAttack(player, hit.entity);
             } else if (hit.block != null && canDestroy(level, player, hit.block.getBlockPos())) {
                 destroy(player, level, hit.block.getBlockPos());
             }
@@ -164,13 +164,17 @@ public final class DarkmatterDisassemble extends Skill {
                     && !player.isAlliedTo(target);
         }
 
-        private static void attack(ServerPlayer player, ServerLevel level, LivingEntity target) {
+        public static boolean tryAutomatedAttack(ServerPlayer player, LivingEntity target) {
+            if (!(player.level() instanceof ServerLevel level)
+                    || target == null || target.level() != level || !target.isAlive()
+                    || player.distanceToSqr(target) > RANGE * RANGE
+                    || !player.hasLineOfSight(target)) return false;
             var skill = Skills.DARKMATTER_DISASSEMBLE.get();
             var targets = DarkmatterSixWings.Server.isActive(player)
                     ? level.getEntitiesOfClass(LivingEntity.class,
                     target.getBoundingBox().inflate(3), candidate -> validTarget(player, candidate))
                     : List.of(target);
-            skill.executeActive(player, (context, actualCost) -> {
+            return skill.executeActive(player, (context, actualCost) -> {
                 var multiplier = AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, skill);

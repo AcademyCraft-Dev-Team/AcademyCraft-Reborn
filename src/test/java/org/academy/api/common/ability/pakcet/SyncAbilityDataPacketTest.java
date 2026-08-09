@@ -22,7 +22,7 @@ class SyncAbilityDataPacketTest {
         var summary = summaries.getFirst();
         assertEquals("academy:self_teleport", summary.skillId());
         assertEquals(2, summary.stackCount());
-        assertEquals(9, summary.remainingIterationPoints());
+        assertEquals(4, summary.remainingIterationPoints());
         assertEquals(15.0f, summary.occupiedCp(), 0.0001f);
     }
 

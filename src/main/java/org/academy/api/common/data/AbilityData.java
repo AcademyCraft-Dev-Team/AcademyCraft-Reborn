@@ -16,6 +16,7 @@ public class AbilityData {
     private int currSP = FIXED_MAX_SP;
     private int maxSP = FIXED_MAX_SP;
     private int spRegenTimer = 0;
+    private int foodSpRecoveryTicks = 0;
     private float spRecoveryCpRemainder = 0.0f;
 
     // MP (Matter Point)
@@ -52,16 +53,24 @@ public class AbilityData {
         }
     }
 
-    public boolean tickSpRegenTimer() {
-        var threshold = 20;
+    public boolean tickFoodSpRecovery() {
+        if (foodSpRecoveryTicks <= 0) return false;
 
+        foodSpRecoveryTicks--;
         spRegenTimer++;
-        if (spRegenTimer >= threshold) {
+        var dirty = false;
+        if (spRegenTimer >= 20) {
             spRegenTimer = 0;
             addSP(1);
-            return true;
+            dirty = true;
         }
-        return false;
+        if (foodSpRecoveryTicks <= 0) {
+            foodSpRecoveryTicks = 0;
+            spRegenTimer = 0;
+            markDirty();
+            dirty = true;
+        }
+        return dirty;
     }
 
     public float getMaxCP() {
@@ -161,15 +170,13 @@ public class AbilityData {
     public float getSpRecoveryCpRemainder() {
         if (!Float.isFinite(spRecoveryCpRemainder) || spRecoveryCpRemainder < 0.0f) {
             spRecoveryCpRemainder = 0.0f;
-        } else if (spRecoveryCpRemainder >= 10.0f) {
-            spRecoveryCpRemainder %= 10.0f;
         }
         return spRecoveryCpRemainder;
     }
 
     public void setSpRecoveryCpRemainder(float remainder) {
         spRecoveryCpRemainder = Float.isFinite(remainder)
-                ? Math.clamp(remainder, 0.0f, Math.nextDown(10.0f))
+                ? Math.max(0.0f, remainder)
                 : 0.0f;
         markDirty();
     }
@@ -188,6 +195,21 @@ public class AbilityData {
 
     public void setSpRegenTimer(int setSpRegenTimer) {
         spRegenTimer = setSpRegenTimer;
+    }
+
+    public int getFoodSpRecoveryTicks() {
+        foodSpRecoveryTicks = Math.max(0, foodSpRecoveryTicks);
+        return foodSpRecoveryTicks;
+    }
+
+    public void addFoodSpRecoveryTicks(int durationTicks) {
+        if (durationTicks <= 0) return;
+        if (foodSpRecoveryTicks <= 0) spRegenTimer = 0;
+        foodSpRecoveryTicks = (int) Math.min(
+                Integer.MAX_VALUE,
+                (long) Math.max(0, foodSpRecoveryTicks) + durationTicks
+        );
+        markDirty();
     }
 
     public float getCurrMP() {
