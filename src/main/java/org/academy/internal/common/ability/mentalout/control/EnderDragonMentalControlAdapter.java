@@ -6,8 +6,12 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.ControlBinding;
 import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.api.common.entitycontrol.ControlContext;
@@ -16,6 +20,8 @@ import org.academy.api.common.entitycontrol.ControlDirective;
 import org.academy.api.common.entitycontrol.ControlFailureReason;
 import org.academy.api.common.entitycontrol.ControlSupport;
 import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import org.academy.api.common.entitycontrol.PlayerControlFrame;
+import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
 import java.util.Comparator;
@@ -45,6 +51,7 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
             case ControlDirective.MoveTo moveTo -> new MoveBinding(
                     dragon, moveTo.destination(), moveTo.arrivalRadius());
             case ControlDirective.LookAt lookAt -> new LookBinding(dragon, lookAt.targetUuid());
+            case ControlDirective.DirectControl ignored -> new DirectBinding(dragon);
             case ControlDirective.Guard guard -> new GuardBinding(
                     dragon,
                     context.controller(),
@@ -53,6 +60,78 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
                     guard.arrivalRadius()
             );
         };
+    }
+
+    private static final class DirectBinding implements ControlBinding {
+        private final EnderDragon dragon;
+        private PlayerControlFrame frame = PlayerControlFrame.NEUTRAL;
+        private long lastActionSequence = Long.MIN_VALUE;
+
+        private DirectBinding(EnderDragon dragon) {
+            this.dragon = dragon;
+        }
+
+        @Override
+        public void tick() {
+            var input = PlayerControlSessionManager.mobDirectInput(dragon).orElse(null);
+            if (input == null) {
+                frame = PlayerControlFrame.NEUTRAL;
+                setFlightTarget(dragon, dragon.position());
+                return;
+            }
+            frame = input.frame();
+            var forward = Vec3.directionFromRotation(frame.pitch(), frame.yaw());
+            var right = new Vec3(-forward.z, 0.0, forward.x);
+            var movement = forward.scale(frame.forward()).add(right.scale(frame.strafe()));
+            movement = movement.add(0.0,
+                    (frame.jump() ? 1.0 : 0.0) - (frame.sneak() ? 1.0 : 0.0), 0.0);
+            if (movement.lengthSqr() > 1.0e-6) {
+                movement = movement.normalize();
+                var target = dragon.position().add(movement.scale(24.0));
+                setFlightTarget(dragon, target);
+                steerFlight(dragon, target);
+                advanceFlight(dragon, target, frame.sprint() ? 0.24 : 0.16);
+            } else {
+                dragon.setDeltaMovement(Vec3.ZERO);
+                setFlightTarget(dragon, dragon.position());
+                lookAt(dragon, dragon.getEyePosition().add(forward.scale(8.0)));
+            }
+            if (input.sequence() != lastActionSequence) {
+                lastActionSequence = input.sequence();
+                if (frame.attack()) attack();
+            }
+        }
+
+        private void attack() {
+            if (!(dragon.level() instanceof ServerLevel level)) return;
+            var eye = dragon.getEyePosition();
+            var end = eye.add(Vec3.directionFromRotation(frame.pitch(), frame.yaw()).scale(12.0));
+            var block = level.clip(new ClipContext(
+                    eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, dragon));
+            var rayEnd = block.getType() == HitResult.Type.MISS ? end : block.getLocation();
+            var hit = ProjectileUtil.getEntityHitResult(
+                    level,
+                    dragon,
+                    eye,
+                    rayEnd,
+                    new AABB(eye, rayEnd).inflate(2.0),
+                    entity -> entity instanceof LivingEntity living && living != dragon
+                            && living.isAlive() && living.isPickable() && !living.isSpectator(),
+                    0.3f
+            );
+            if (hit != null && hit.getEntity() instanceof LivingEntity target
+                    && MentalControlRuntime.attackDecision(dragon, target) != AttackDecision.DENY) {
+                dragon.doHurtTarget(level, target);
+            }
+        }
+
+        @Override
+        public void close() {
+            dragon.setDeltaMovement(Vec3.ZERO);
+            if (dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.HOVERING) {
+                dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
+            }
+        }
     }
 
     private static final class ForceTargetBinding implements ControlBinding {

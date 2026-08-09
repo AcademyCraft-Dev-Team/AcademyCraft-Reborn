@@ -41,6 +41,10 @@ public class AbilityConfig {
     }
 
     public static class MentaloutSettings {
+        @SerializedName("allowPlayerRoster")
+        public boolean allowPlayerRoster = true;
+        @SerializedName("allowMentalTakeover")
+        public boolean allowMentalTakeover = true;
         @SerializedName("mentalInterventionCost")
         public float mentalInterventionCost = 10.0f;
         @SerializedName("targetMisidentificationCost")
@@ -57,6 +61,12 @@ public class AbilityConfig {
         public float precisionGuardCostPerTarget = 20.0f;
         @SerializedName("bossCostMultiplier")
         public float bossCostMultiplier = 2.0f;
+        @SerializedName("playerControlCostMultiplier")
+        public float playerControlCostMultiplier = 3.0f;
+        @SerializedName("mentalTakeoverOccupation")
+        public float mentalTakeoverOccupation = 100.0f;
+        @SerializedName("playerControlResistanceTicks")
+        public int playerControlResistanceTicks = 400;
         @SerializedName("mentalIntrusionMaintenanceCost")
         public float mentalIntrusionMaintenanceCost = 20.0f;
         @SerializedName("sensoryDistortionMaintenanceCost")

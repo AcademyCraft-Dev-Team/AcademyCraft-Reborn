@@ -251,6 +251,72 @@ public final class MentaloutGameTests {
                 });
             }
         },
+        PLAYER_FREEZE_AND_RELATION("player_freeze_and_relation", 40) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var subject = createController(helper);
+                var subjectPosition = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(4, 2, 1)
+                ));
+                subject.snapTo(subjectPosition.x, subjectPosition.y, subjectPosition.z, 0.0f, 0.0f);
+                var freeze = freeze(controller, subject, 8L);
+                var relation = impression(controller, subject);
+
+                helper.runAtTickTime(3L, () -> {
+                    helper.assertTrue(MentalControlRuntime.isFrozen(subject),
+                            "Player adapter did not expose an effective freeze lease");
+                    helper.assertValueEqual(
+                            MentalControlApi.allianceDecision(subject, controller),
+                            AttackDecision.DENY,
+                            "Player impression alliance decision"
+                    );
+                });
+                helper.runAtTickTime(12L, () -> {
+                    helper.assertTrue(freeze.isClosed(), "Player freeze did not expire");
+                    helper.assertFalse(MentalControlRuntime.isFrozen(subject),
+                            "Player remained frozen after lease expiry");
+                    relation.close();
+                    helper.getLevel().getServer().getPlayerList().remove(subject);
+                    finish(helper, controller, freeze);
+                });
+            }
+        },
+        PLAYER_PATH_REQUIRES_CLIENT_READY("player_path_requires_client_ready", 55) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var subject = createController(helper);
+                var subjectPosition = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(3, 2, 1)
+                ));
+                subject.snapTo(subjectPosition.x, subjectPosition.y, subjectPosition.z, 0.0f, 0.0f);
+                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
+                        new net.minecraft.core.BlockPos(8, 2, 1)
+                ));
+                var handle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller,
+                        subject,
+                        SOURCE,
+                        250,
+                        new ControlDirective.MoveTo(new ControlDestination.Position(
+                                helper.getLevel().dimension().identifier(), destination))
+                ));
+
+                helper.runAtTickTime(5L, () -> helper.assertFalse(
+                        handle.isClosed(), "Player path closed before the Ready deadline"));
+                helper.runAtTickTime(32L, () -> {
+                    helper.assertTrue(handle.isClosed(), "Unconfirmed player path did not time out");
+                    helper.assertValueEqual(
+                            handle.failureReason().orElse(null),
+                            ControlFailureReason.CLIENT_TIMEOUT,
+                            "Player path handshake failure reason"
+                    );
+                    helper.getLevel().getServer().getPlayerList().remove(subject);
+                    finish(helper, controller, handle);
+                });
+            }
+        },
         MOB_PERMANENT_TARGET_LIFECYCLE("mob_permanent_target_lifecycle", 220) {
             @Override
             void run(GameTestHelper helper) {

@@ -214,6 +214,16 @@ public final class InputSystem {
         return stateOf(type).getOrDefault(key, InputConstants.RELEASE) != InputConstants.RELEASE;
     }
 
+    /** Returns the hardware state behind a vanilla key mapping, unaffected by injected key state. */
+    public static boolean isPhysicalDown(KeyMapping mapping) {
+        if (mapping == null) return false;
+        var key = mapping.getKey();
+        var type = key.getType() == InputConstants.Type.MOUSE
+                ? InputType.MOUSE
+                : InputType.KEYBOARD;
+        return isDown(type, key.getValue());
+    }
+
     public static int actionOf(InputType type, int key) {
         return stateOf(type).getOrDefault(key, InputConstants.RELEASE);
     }

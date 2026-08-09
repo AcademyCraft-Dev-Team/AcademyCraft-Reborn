@@ -19,6 +19,7 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.ability.mentalout.MentalControlRecall;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
@@ -67,6 +68,9 @@ public final class MentalControlEvents {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLivingDamaged(LivingDamageEvent.Post event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            PlayerControlSessionManager.onControllerDamaged(player, event.getHealthDamage());
+        }
         if (event.getOriginalDamage() <= 0.0f
                 || !(event.getSource().getEntity() instanceof LivingEntity aggressor)
                 || aggressor == event.getEntity()) return;
@@ -78,8 +82,10 @@ public final class MentalControlEvents {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onServerTick(ServerTickEvent.Pre event) {
+        PlayerNavigationRuntime.beginServerTick(event.getServer().overworld().getGameTime());
         MentalControlRuntime.tick(event.getServer());
         MentalIntrusionManager.tick(event.getServer());
+        PlayerControlSessionManager.tick(event.getServer());
         PrecisionOperationRuntime.tick(event.getServer());
         MentalControlRecall.tick(event.getServer());
     }
@@ -92,6 +98,7 @@ public final class MentalControlEvents {
         MentaloutControlContext.releaseSubject(entityId);
         MentalControlRuntime.releaseBySubject(level.getServer(), entityId);
         MentalIntrusionManager.releaseEntity(entityId);
+        PlayerControlSessionManager.releaseEntity(entityId);
         PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
         if (event.getEntity() instanceof ServerPlayer) {
             MentalControlRecall.releaseController(entityId);
@@ -110,6 +117,7 @@ public final class MentalControlEvents {
         MentaloutControlContext.releaseSubject(entityId);
         MentalControlRuntime.releaseBySubject(level.getServer(), entityId);
         MentalIntrusionManager.releaseEntity(entityId);
+        PlayerControlSessionManager.releaseEntity(entityId);
         PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
         if (event.getEntity() instanceof ServerPlayer) {
             MentalControlRecall.releaseController(entityId);
@@ -128,6 +136,7 @@ public final class MentalControlEvents {
         MentaloutControlContext.releaseController(player.getUUID());
         MentalControlRuntime.releaseByController(player.level().getServer(), player.getUUID());
         MentalIntrusionManager.releaseEntity(player.getUUID());
+        PlayerControlSessionManager.releaseEntity(player.getUUID());
         MentalIntrusionManager.releaseController(player.getUUID());
         PrecisionOperationRuntime.releaseEntity(player.level().getServer(), player.getUUID());
         PrecisionOperationManager.releaseController(player);
@@ -142,6 +151,7 @@ public final class MentalControlEvents {
         MentalControlRuntime.releaseByController(player.level().getServer(), player.getUUID());
         MentalControlRuntime.releaseBySubject(player.level().getServer(), player.getUUID());
         MentalIntrusionManager.releaseEntity(player.getUUID());
+        PlayerControlSessionManager.releaseEntity(player.getUUID());
         MentalIntrusionManager.releaseController(player.getUUID());
         PrecisionOperationRuntime.releaseEntity(player.level().getServer(), player.getUUID());
         PrecisionOperationManager.releaseController(player);
@@ -154,6 +164,7 @@ public final class MentalControlEvents {
         MentaloutControlContext.clearAll();
         MentalControlRuntime.clear(event.getServer());
         MentalIntrusionManager.clear();
+        PlayerControlSessionManager.clear();
         PrecisionOperationManager.clear(event.getServer());
     }
 }

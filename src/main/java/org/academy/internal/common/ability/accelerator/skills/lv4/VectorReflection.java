@@ -30,7 +30,9 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
+import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
@@ -163,12 +165,55 @@ public class VectorReflection extends Skill {
         public static void toggleReflection(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.VECTOR_REFLECTION.get();
-            if (!skill.isEnabled(player)) {
-                VectorReduction.Server.forceDeactivate(player);
+            if (skill.isEnabled(player)) {
+                forceDeactivate(player);
+                return;
             }
+
+            var system = AbilitySystemServer.getSystem(player);
+            if (skill.getRuntimeData(player).isEmpty()
+                    || !LearningHelper.isSkillAvailableForCategory(
+                    system.getPlayerAbilityCategory(player.getUUID()), skill
+            )) {
+                clearProtection(player);
+                return;
+            }
+            var maintenanceCost = ReflectionFilter.getReflectionMaintenanceCost(player);
+            if (system.getPlayerStatus(player.getUUID()) != AbilityData.Status.NORMAL
+                    || !hasSufficientCpToEnable(
+                            system.getPlayerAvailableCP(player.getUUID()),
+                            maintenanceCost,
+                            system.getPlayerCalculationIntensity(player.getUUID())
+                    )) {
+                clearProtection(player);
+                return;
+            }
+
             skill.toggle(player);
-            if (skill.isEnabled(player)) maintainProtection(player);
-            else clearProtection(player);
+            if (!skill.isEnabled(player)
+                    || !system.ensurePermanentOccupation(
+                    player.getUUID(), maintenanceCost, skill
+            )) {
+                forceDeactivate(player);
+                return;
+            }
+
+            VectorReduction.Server.forceDeactivate(player);
+            maintainProtection(player);
+        }
+
+        static boolean hasSufficientCpToEnable(
+                float availableCp,
+                float maintenanceCost,
+                float calculationIntensity
+        ) {
+            if (!Float.isFinite(availableCp)
+                    || !Float.isFinite(maintenanceCost) || maintenanceCost < 0.0f
+                    || !Float.isFinite(calculationIntensity) || !(calculationIntensity > 0.0f)) {
+                return false;
+            }
+            var actualCost = maintenanceCost * calculationIntensity;
+            return Float.isFinite(actualCost) && availableCp > actualCost;
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -587,12 +632,18 @@ public class VectorReflection extends Skill {
         }
 
         public static void playReflectionSound(ServerPlayer player) {
+            tryPlayReflectionSound(player);
+        }
+
+        /** Plays the shared reflection cue once per feedback cooldown window. */
+        public static boolean tryPlayReflectionSound(ServerPlayer player) {
             var tick = player.level().getGameTime();
             var last = LAST_SOUND_TICK.get(player.getUUID());
-            if (last != null && tick - last < REFLECTION_SOUND_COOLDOWN_TICKS) return;
+            if (last != null && tick - last < REFLECTION_SOUND_COOLDOWN_TICKS) return false;
             LAST_SOUND_TICK.put(player.getUUID(), tick);
             player.level().playSound(null, player, SoundEvents.VECTOR_REFLECTION.get(),
                     SoundSource.PLAYERS, 1.0f, 1.0f);
+            return true;
         }
 
         record ReflectionResult(float reflectedDamage, float remainingDamage, float baseCpCost) {

@@ -39,6 +39,8 @@ public final class Player {
     private Set<String> legacySkills;
     @SerializedName("skillData")
     private final Map<String, SkillData> skillDataMap = new HashMap<>();
+    @SerializedName("retainedSkillProficiencies")
+    private final Map<String, Float> retainedSkillProficiencies = new HashMap<>();
     @SerializedName("abilityCategory")
     private String abilityCategory;
     @SerializedName("propsData")
@@ -51,6 +53,8 @@ public final class Player {
     private AbilityData cpData = new AbilityData();
     @SerializedName("appliedCommonSkillMaxCpBonus")
     private float appliedCommonSkillMaxCpBonus;
+    @SerializedName("challengeCpBonus")
+    private float challengeCpBonus;
 
     @SerializedName("level")
     private Integer legacyLevel;
@@ -94,6 +98,22 @@ public final class Player {
         return skillDataMap.containsKey(skillId);
     }
 
+    public void retainSkillProficiency(String skillId, SkillData data) {
+        if (skillId == null || data == null) return;
+        retainedSkillProficiencies.merge(skillId, data.getProficiency(), Math::max);
+        markDirty();
+    }
+
+    public void restoreRetainedSkillProficiency(String skillId, SkillData data) {
+        if (skillId == null || data == null) return;
+        var retained = retainedSkillProficiencies.get(skillId);
+        if (retained != null) data.setProficiency(Math.max(data.getProficiency(), retained));
+    }
+
+    public Map<String, Float> getRetainedSkillProficiencies() {
+        return retainedSkillProficiencies;
+    }
+
     public AbilityData getCpData() {
         return cpData;
     }
@@ -125,6 +145,19 @@ public final class Player {
         }
     }
 
+    public float getChallengeCpBonus() {
+        return Math.clamp(challengeCpBonus, 0.0f, 200.0f);
+    }
+
+    public boolean addChallengeCpBonus(float amount) {
+        if (!Float.isFinite(amount) || amount <= 0.0f) return false;
+        var next = Math.clamp(getChallengeCpBonus() + amount, 0.0f, 200.0f);
+        if (Float.compare(challengeCpBonus, next) == 0) return false;
+        challengeCpBonus = next;
+        markDirty();
+        return true;
+    }
+
     public PropsData getPropsData() {
         if (propsData == null) propsData = new PropsData();
         return propsData;
@@ -134,6 +167,7 @@ public final class Player {
         var changed = migrateAbilityCategory();
         changed |= migrateSkillData();
         changed |= migrateLegacySkillSet();
+        changed |= migrateRetainedSkillProficiencies();
         changed |= removeRetiredSkills();
         changed |= migrateOccupations();
         changed |= migrateLegacyAbilityData();
@@ -250,6 +284,23 @@ public final class Player {
     private static void mergeSkillData(SkillData target, SkillData source) {
         target.setProficiency(Math.max(target.getProficiency(), source.getProficiency()));
         target.setEnabled(target.isEnabled() || source.isEnabled());
+    }
+
+    private boolean migrateRetainedSkillProficiencies() {
+        if (retainedSkillProficiencies.isEmpty()) return false;
+        var migrated = new HashMap<String, Float>();
+        retainedSkillProficiencies.forEach((skillId, proficiency) -> {
+            if (proficiency == null || !Float.isFinite(proficiency)) return;
+            migrated.merge(
+                    canonicalizeSkillId(skillId),
+                    Math.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY),
+                    Math::max
+            );
+        });
+        if (migrated.equals(retainedSkillProficiencies)) return false;
+        retainedSkillProficiencies.clear();
+        retainedSkillProficiencies.putAll(migrated);
+        return true;
     }
 
     private static int resolveMaxSkillLevel(String skillId) {

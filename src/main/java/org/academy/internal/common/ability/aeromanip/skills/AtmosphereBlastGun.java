@@ -163,8 +163,7 @@ public final class AtmosphereBlastGun extends Skill {
 
         @SubscribePacket
         public static void handle(CastPacket packet) {
-            var player = packet.getPacketListener().getPlayer();
-            fire(player, 0);
+            tryAutomatedAttack(packet.getPacketListener().getPlayer());
         }
 
         @SubscribePacket
@@ -182,11 +181,15 @@ public final class AtmosphereBlastGun extends Skill {
             fire(player, start == null ? 0 : (int) Math.min(20, Math.max(0, player.level().getGameTime() - start)));
         }
 
-        private static void fire(ServerPlayer player, int chargeTicks) {
-            if (!(player.level() instanceof ServerLevel level)) return;
+        public static boolean tryAutomatedAttack(ServerPlayer player) {
+            return fire(player, 0);
+        }
+
+        private static boolean fire(ServerPlayer player, int chargeTicks) {
+            if (!(player.level() instanceof ServerLevel level)) return false;
             var skill = Skills.ATMOSPHERE_BLAST_GUN.get();
             var focused = chargeTicks > 0;
-            skill.executeActive(player, context -> (focused ? 60.0f : 40.0f)
+            return skill.executeActive(player, context -> (focused ? 60.0f : 40.0f)
                     * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_BLAST_GUN), (context, _) -> {
                 var eye = player.getEyePosition();
                 var look = player.getLookAngle();
@@ -204,7 +207,9 @@ public final class AtmosphereBlastGun extends Skill {
                         target -> target != player
                                 && target.isAlive()
                                 && !target.isSpectator()
-                                && AeromanipTargeting.canAffectNegatively(player, target)
+                                && (org.academy.internal.common.ability.mentalout.control.MentalControlRuntime
+                                .canForceAttack(player, target)
+                                || AeromanipTargeting.canAffectNegatively(player, target))
                                 && player.hasLineOfSight(target)
                                 && isInsideBlastVolume(
                                 eye,

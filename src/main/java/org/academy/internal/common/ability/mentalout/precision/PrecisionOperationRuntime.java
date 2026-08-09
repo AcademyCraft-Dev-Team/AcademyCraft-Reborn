@@ -178,7 +178,10 @@ public final class PrecisionOperationRuntime {
         } catch (RuntimeException exception) {
             activeActions.forEach(action -> action.close(player));
             system.replacePermanentOccupation(player.getUUID(), activeCost(slots), skill);
-            return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED, applyingNodeId, -1, 0);
+            var diagnostic = exception instanceof ProtectedTargetException
+                    ? PrecisionGraph.Diagnostic.PROTECTED_TARGET
+                    : PrecisionGraph.Diagnostic.ACTION_FAILED;
+            return ExecutionResult.failed(diagnostic, applyingNodeId, -1, 0);
         }
     }
 
@@ -469,6 +472,7 @@ public final class PrecisionOperationRuntime {
                     case PERCEPTION_MASK -> {
                         var observers = requireSet(input(program, values, node, 0));
                         var hidden = requireEntity(input(program, values, node, 1));
+                        ensureUnprotected(player, observers);
                         requireSkill(Skills.SENSORY_DISTORTION.get(), player);
                         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.sensoryDistortionCost(player, sensoryLevel) * observers.size();
@@ -479,6 +483,7 @@ public final class PrecisionOperationRuntime {
                     }
                     case START_INTRUSION -> {
                         var target = requireEntity(input(program, values, node, 0));
+                        ensureUnprotected(player, List.of(target));
                         requireSkill(Skills.MENTAL_INTRUSION.get(), player);
                         var intrusionLevel = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.mentalIntrusionCost(player, intrusionLevel);
@@ -555,6 +560,8 @@ public final class PrecisionOperationRuntime {
                         values.put(node.id(), Boolean.TRUE);
                     }
                 }
+            } catch (ProtectedTargetException exception) {
+                return Evaluation.error(PrecisionGraph.Diagnostic.PROTECTED_TARGET, node.id());
             } catch (RuntimeException exception) {
                 return Evaluation.error(PrecisionGraph.Diagnostic.ACTION_FAILED, node.id());
             }
@@ -719,10 +726,21 @@ public final class PrecisionOperationRuntime {
             ControlCapability capability,
             ServerPlayer player
     ) {
-        return usableSet(value, player).stream()
-                .filter(entity -> !MentalControlRuntime.isProtectedTarget(entity))
+        var entities = usableSet(value, player);
+        ensureUnprotected(player, entities);
+        return entities.stream()
                 .filter(entity -> MentalControlRuntime.evaluate(entity, capability).supported())
                 .toList();
+    }
+
+    private static void ensureUnprotected(ServerPlayer player, List<LivingEntity> entities) {
+        var protectedTarget = entities.stream()
+                .filter(MentalControlRuntime::isProtectedTarget)
+                .findFirst()
+                .orElse(null);
+        if (protectedTarget == null) return;
+        MentalControlRuntime.notifyProtectionBlocked(player, protectedTarget);
+        throw new ProtectedTargetException();
     }
 
     private static List<LivingEntity> excludeDestinationTarget(
@@ -841,7 +859,8 @@ public final class PrecisionOperationRuntime {
     ) {
         for (var subject : subjects) {
             if (MentalControlRuntime.isProtectedTarget(subject)) {
-                throw new IllegalStateException("Protected target");
+                MentalControlRuntime.notifyProtectionBlocked(player, subject);
+                throw new ProtectedTargetException();
             }
             var handle = MentalControlApi.apply(new ControlRequest(
                     player,
@@ -890,7 +909,8 @@ public final class PrecisionOperationRuntime {
         var cost = MentaloutConfig.sensoryDistortionCost(player, sensoryLevel);
         for (var observer : observers) {
             if (MentalControlRuntime.isProtectedTarget(observer)) {
-                throw new IllegalStateException("Protected target");
+                MentalControlRuntime.notifyProtectionBlocked(player, observer);
+                throw new ProtectedTargetException();
             }
             var handle = MentalPerceptionRuntime.apply(
                     player,
@@ -925,6 +945,12 @@ public final class PrecisionOperationRuntime {
         }
         if (java.util.Arrays.stream(slots).allMatch(java.util.Objects::isNull)) {
             ACTIVE.remove(player.getUUID());
+        }
+    }
+
+    private static final class ProtectedTargetException extends RuntimeException {
+        private ProtectedTargetException() {
+            super(null, null, false, false);
         }
     }
 
@@ -1287,6 +1313,8 @@ public final class PrecisionOperationRuntime {
         return switch (reason) {
             case UNREACHABLE_DESTINATION -> PrecisionGraph.Diagnostic.UNREACHABLE_DESTINATION;
             case TARGET_UNAVAILABLE -> PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE;
+            case CONTROL_RESISTANCE, UNSUPPORTED_MOVEMENT_MODE,
+                    PLANNING_BUDGET_EXHAUSTED, CLIENT_TIMEOUT -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
             case ADAPTER_ERROR -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
         };
     }

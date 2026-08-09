@@ -9,7 +9,8 @@ public enum ControlCapability {
     FREEZE_AI(ControlDomain.MOVEMENT, ControlDomain.ACTION),
     RELATION_CONTROL(ControlDomain.RELATION),
     PATH_CONTROL(ControlDomain.MOVEMENT, ControlDomain.ACTION),
-    VIEW_CONTROL(ControlDomain.ACTION),
+    VIEW_CONTROL(ControlDomain.VIEW),
+    DIRECT_CONTROL(ControlDomain.MOVEMENT, ControlDomain.VIEW, ControlDomain.ACTION),
     GUARD_CONTROL(ControlDomain.TARGET, ControlDomain.MOVEMENT, ControlDomain.ACTION);
 
     private final Set<ControlDomain> domains;

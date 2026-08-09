@@ -198,9 +198,12 @@ public final class ArcGenerate extends Skill {
     public static final class Server {
         @SubscribePacket
         public static void handle(GeneratePacket packet) {
-            var player = packet.getPacketListener().getPlayer();
+            tryAutomatedAttack(packet.getPacketListener().getPlayer());
+        }
+
+        public static boolean tryAutomatedAttack(net.minecraft.server.level.ServerPlayer player) {
             var level = player.level();
-            Skills.ARC_GENERATE.get().executeActive(player, (_, _) -> {
+            return Skills.ARC_GENERATE.get().executeActive(player, (_, _) -> {
                 var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
                 var eyePos = player.getEyePosition();
 

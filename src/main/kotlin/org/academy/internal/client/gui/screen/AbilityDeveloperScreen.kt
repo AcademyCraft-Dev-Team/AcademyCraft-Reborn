@@ -28,6 +28,7 @@ import org.academy.api.client.resources.R
 import org.academy.api.common.ability.*
 import org.academy.api.common.util.L10n
 import org.academy.api.common.wireless.GetCurrentNodePacket
+import org.academy.internal.common.ability.AbilityCategories
 import org.academy.internal.common.ability.level0.Level0
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity
 import org.apache.commons.lang3.RandomStringUtils
@@ -45,6 +46,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private lateinit var consoleScrollPanel: ScrollPanelWidget
     private var activeCover: FrameLayoutWidget? = null
     private val skillLineBindings = mutableListOf<SkillLineBinding>()
+    private var coursePage = CoursePage.ABILITY
 
     private val maxDuSkills = 10f
 
@@ -142,14 +144,26 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     .size(278f, 187f)
                 parentRight.addChild("ui_right", uiRight)
 
+                val category = AbilitySystemClient.getCategory()
                 val a = FrameLayoutWidget()
                 a.layoutParams = WidgetContainer.LayoutParams()
                     .gravity(Gravity.TOP_LEFT)
-                    .margin(10f, 18f, 0f, 0f)
+                    .margin(if (category is Level0) 10f else 14f, 18f, 0f, 0f)
                     .size(257f, 139f)
                 area = a
+                if (category !is Level0) {
+                    val courseTabs = LinearLayoutWidget()
+                    courseTabs.layoutParams = WidgetContainer.LayoutParams()
+                        .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                        .margin(1f, 0f, 0f, 0f)
+                        .size(COURSE_TAB_WIDTH, COURSE_TABS_HEIGHT)
+                    courseTabs.orientation = Orientation.VERTICAL
+                    courseTabs.spacing = COURSE_TAB_GAP
+                    parentRight.addChild("course_tabs", courseTabs) {
+                        fillCourseTabs(courseTabs)
+                    }
+                }
                 parentRight.addChild("area", a) {
-                    val category = AbilitySystemClient.getCategory()
                     if (category !is Level0) {
                         fillSkillTreeArea(area)
                     } else {
@@ -566,7 +580,15 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     private fun fillSkillTreeArea(area: FrameLayoutWidget) {
         val category = AbilitySystemClient.getCategory()
-        val skillInfos = AbilitySystemClient.getSkillInfosForCategory(category)
+        val layoutCategory = if (coursePage == CoursePage.COMMON) {
+            AbilityCategories.LEVEL0.get()
+        } else {
+            category
+        }
+        val skillInfos = when (coursePage) {
+            CoursePage.COMMON -> AbilitySystemClient.getCommonSkillInfos()
+            CoursePage.ABILITY -> AbilitySystemClient.getCategorySkillInfos(category)
+        }
             .filter { info ->
                 AbilitySystemClient.isSkillLearned(info.skill) || (
                     info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) } &&
@@ -589,11 +611,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val lineMap = mutableMapOf<String, Widget>()
         for (info in skillInfos) {
             for (dep in info.dependencies) {
-                val line = createSkillLine(category, dep, info)
+                val line = createSkillLine(layoutCategory, dep, info)
                 val key = "line_${info.skill.getKeyString()}_${dep.skill.getKeyString()}"
                 area.addChild(key, line)
                 lineMap[key] = line
-                skillLineBindings.add(SkillLineBinding(line, category, dep, info))
+                skillLineBindings.add(SkillLineBinding(line, layoutCategory, dep, info))
             }
         }
 
@@ -601,7 +623,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val nodeList = mutableListOf<Pair<AbilitySystemClient.SkillInfo, Widget>>()
         for (idx in skillInfos.indices) {
             val info = skillInfos[idx]
-            val node = createSkillNode(category, info)
+            val node = createSkillNode(layoutCategory, info)
             val key = "node_${info.skill.getKeyString()}"
             area.addChild(key, node)
             nodeMap[key] = node
@@ -611,7 +633,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val debugLabel = object : LabelWidget("") {
             override fun render(context: RenderContext) {
                 text = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "LAYOUT: ${category.getKey()}  (drag icons; snap 0.5px)"
+                    "LAYOUT: ${layoutCategory.getKey()} / ${coursePage.name.lowercase()}  (drag icons; snap 0.5px)"
                 } else {
                     ""
                 }
@@ -980,6 +1002,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val dependency: AbilitySystemClient.SkillInfo
     )
 
+    private enum class CoursePage {
+        COMMON,
+        ABILITY
+    }
+
     private fun addCover(cover: FrameLayoutWidget) {
         if (activeCover != null) return
         activeCover = cover
@@ -1036,6 +1063,74 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private fun rebuildSkillTree() {
         area.clearChildren()
         fillSkillTreeArea(area)
+    }
+
+    private fun fillCourseTabs(tabs: LinearLayoutWidget) {
+        tabs.addChild(
+            "common_course",
+            createCourseTab(CoursePage.COMMON, L10n["academy.ability_developer.course.common"])
+        )
+        tabs.addChild(
+            "ability_course",
+            createCourseTab(CoursePage.ABILITY, L10n["academy.ability_developer.course.ability"])
+        )
+    }
+
+    private fun createCourseTab(page: CoursePage, labelText: String): ButtonWidget {
+        val background = FillWidget(COURSE_TAB_IDLE_COLOR)
+        val edge = FillWidget(COURSE_TAB_EDGE_IDLE_COLOR)
+        val topLine = FillWidget(COURSE_TAB_LINE_COLOR)
+        val bottomLine = FillWidget(COURSE_TAB_LINE_COLOR)
+        val label = LabelWidget(labelText)
+        val button = object : ButtonWidget() {
+            override fun render(context: RenderContext) {
+                val selected = coursePage == page
+                background.setColor(
+                    when {
+                        selected -> COURSE_TAB_SELECTED_COLOR
+                        isHovered -> COURSE_TAB_HOVER_COLOR
+                        else -> COURSE_TAB_IDLE_COLOR
+                    }
+                )
+                edge.setColor(if (selected) COURSE_TAB_EDGE_SELECTED_COLOR else COURSE_TAB_EDGE_IDLE_COLOR)
+                label.setRed(if (selected) 0.72f else 0.78f)
+                label.setGreen(if (selected) 0.93f else 0.82f)
+                label.setBlue(if (selected) 1.0f else 0.85f)
+                super.render(context)
+            }
+        }
+        button.layoutParams = WidgetContainer.LayoutParams().size(COURSE_TAB_WIDTH, COURSE_TAB_HEIGHT)
+        button.tooltipText = labelText
+        background.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        button.addChild("background", background)
+
+        label.baseFontSize = 5.5f
+        label.isEnabled = false
+        label.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.CENTER)
+            .margin(1.5f, 0f, 0.5f, 0f)
+            .size(COURSE_TAB_WIDTH - 2f, 9f)
+        edge.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            .size(1.5f, COURSE_TAB_HEIGHT - 6f)
+        topLine.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            .size(COURSE_TAB_WIDTH - 2f, 0.5f)
+        bottomLine.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+            .size(COURSE_TAB_WIDTH - 2f, 0.5f)
+        button.addChild("edge", edge)
+        button.addChild("top_line", topLine)
+        button.addChild("bottom_line", bottomLine)
+        button.addChild("label", label)
+        button.onClickListener = OnClickListener {
+            if (coursePage == page) return@OnClickListener
+            coursePage = page
+            skillLineBindings.clear()
+            area.clearChildren()
+            fillSkillTreeArea(area)
+        }
+        return button
     }
 
     private fun createDevButton(brightnessRef: AtomicReference<Float> = AtomicReference(0.6f)): ButtonWidget {
@@ -1544,6 +1639,16 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     companion object {
         const val PANEL_MAIN_WIDTH: Float = 400f
         const val PANEL_MAIN_HEIGHT: Float = 187f
+        private const val COURSE_TAB_WIDTH = 12f
+        private const val COURSE_TAB_HEIGHT = 30f
+        private const val COURSE_TAB_GAP = 3f
+        private const val COURSE_TABS_HEIGHT = COURSE_TAB_HEIGHT * 2f + COURSE_TAB_GAP
+        private val COURSE_TAB_IDLE_COLOR = 0xA0161D21.toInt()
+        private val COURSE_TAB_HOVER_COLOR = 0xC024343C.toInt()
+        private val COURSE_TAB_SELECTED_COLOR = 0xE02B4652.toInt()
+        private val COURSE_TAB_EDGE_IDLE_COLOR = 0x80687579.toInt()
+        private val COURSE_TAB_EDGE_SELECTED_COLOR = 0xFF8EDCF3.toInt()
+        private val COURSE_TAB_LINE_COLOR = 0x7093ABB3.toInt()
         private const val CONSOLE_CHAR_DELAY_MS: Long = 10L
     }
 }

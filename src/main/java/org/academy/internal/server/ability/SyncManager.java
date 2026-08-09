@@ -44,6 +44,10 @@ public class SyncManager {
         playerSyncQueueMap.get(uuid).add(syncType);
     }
 
+    ServerPlayer getOnlinePlayer(UUID uuid) {
+        return context.getMinecraftServer().getPlayerList().getPlayer(uuid);
+    }
+
     public void processPendingTasks() {
         if (!pendingTasks.isEmpty()) {
             pendingTasks.forEach(Runnable::run);

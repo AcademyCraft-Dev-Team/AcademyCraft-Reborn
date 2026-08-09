@@ -22,7 +22,6 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.LIGHT_ORB.get(), LightOrbRenderer::new);
         event.registerEntityRenderer(EntityTypes.GLOW_CIRCLE.get(), GlowCircleRenderer::new);
         event.registerEntityRenderer(EntityTypes.KINETIC_SHOCKWAVE.get(), KineticShockwaveRenderer::new);
-        event.registerEntityRenderer(EntityTypes.DIR_STRIKE_BLOCK_FX.get(), DirStrikeBlockFxRenderer::new);
         event.registerEntityRenderer(EntityTypes.SMOKE.get(), SmokeRenderer::new);
         event.registerEntityRenderer(EntityTypes.CLEANING_ROBOT.get(), CleaningRobotRenderer::new);
         event.registerEntityRenderer(EntityTypes.ARC_EFFECT.get(), ArcEffectRenderer::new);

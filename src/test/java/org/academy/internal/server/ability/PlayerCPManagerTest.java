@@ -1,7 +1,10 @@
 package org.academy.internal.server.ability;
 
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.data.AbilityData;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -81,6 +84,36 @@ class PlayerCPManagerTest {
     }
 
     @Test
+    void completeConsciousnessAnalysisLetsOneSpRecoverFourteenCp() {
+        var plan = PlayerCPManager.planCpRecovery(20.0f, 0.0f, 1, 14.0f);
+        assertEquals(14.0f, plan.recoveredCp(), 0.0001f);
+        assertEquals(0.0f, plan.remainderCp(), 0.0001f);
+        assertEquals(1, plan.spCost());
+    }
+
+    @Test
+    void abilityLevelCpBonusesAreCumulative() {
+        assertEquals(0.0f, PlayerCPManager.abilityLevelCpBonus(1));
+        assertEquals(20.0f, PlayerCPManager.abilityLevelCpBonus(2));
+        assertEquals(60.0f, PlayerCPManager.abilityLevelCpBonus(3));
+        assertEquals(140.0f, PlayerCPManager.abilityLevelCpBonus(4));
+        assertEquals(300.0f, PlayerCPManager.abilityLevelCpBonus(5));
+    }
+
+    @Test
+    void cpBaselineCapsAndOverloadDurationMatchTheNewRules() {
+        assertEquals(100.0f, PlayerCPManager.BASE_MAX_CP);
+        assertEquals(300.0f, PlayerCPManager.MAX_SKILL_PROFICIENCY_CP_BONUS);
+        assertEquals(200.0f, PlayerCPManager.MAX_CHALLENGE_CP_BONUS);
+        assertEquals(200, PlayerCPManager.OVERLOAD_TICKS);
+    }
+
+    @Test
+    void temporarilyDisablesStackLimitsForEverySkill() {
+        assertFalse(Skill.STACK_LIMITS_ENABLED);
+    }
+
+    @Test
     void debugMaximumCpOverridesTheNaturallyCalculatedMaximum() {
         assertEquals(250.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, 250.0f));
         assertEquals(640.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, null));
@@ -88,7 +121,52 @@ class PlayerCPManagerTest {
     }
 
     @Test
-    void temporarilyDisablesStackLimitsForEverySkill() {
-        assertFalse(Skill.STACK_LIMITS_ENABLED);
+    void calculationEfficiencyIsPointZeroFivePercentOfMaximumCp() {
+        assertEquals(0.05f, PlayerCPManager.calculationEfficiency(100.0f));
+        assertEquals(0.5f, PlayerCPManager.calculationEfficiency(1000.0f));
+    }
+
+    @Test
+    void foodSpRecoveryLastsTenSecondsPerNutritionPoint() {
+        assertEquals(0, PlayerCPManager.foodSpRecoveryDurationTicks(0));
+        assertEquals(1_000, PlayerCPManager.foodSpRecoveryDurationTicks(5));
+        assertEquals(1_600, PlayerCPManager.foodSpRecoveryDurationTicks(8));
+    }
+
+    @Test
+    void everyStackAdvancesWithoutWaitingForEarlierCasts() {
+        var occupations = new ArrayList<AbilityData.CpOccupationData>();
+        for (var stack = 0; stack < 5; stack++) {
+            occupations.add(new AbilityData.CpOccupationData(
+                    10.0f,
+                    10 + stack,
+                    "academy:test_skill",
+                    false
+            ));
+        }
+
+        assertTrue(PlayerCPManager.advanceTimedOccupationIterations(occupations, 10));
+
+        assertEquals(0, occupations.get(0).getIterationTicks());
+        for (var stack = 1; stack < occupations.size(); stack++) {
+            assertEquals(stack, occupations.get(stack).getIterationTicks());
+        }
+
+        occupations.removeIf(AbilityData.CpOccupationData::isFree);
+        assertEquals(4, occupations.size());
+    }
+
+    @Test
+    void differentSkillQueuesAdvanceInParallel() {
+        var occupations = new ArrayList<AbilityData.CpOccupationData>();
+        occupations.add(new AbilityData.CpOccupationData(10.0f, 10, "academy:first", false));
+        occupations.add(new AbilityData.CpOccupationData(10.0f, 10, "academy:first", false));
+        occupations.add(new AbilityData.CpOccupationData(10.0f, 10, "academy:second", false));
+
+        PlayerCPManager.advanceTimedOccupationIterations(occupations, 3);
+
+        assertEquals(7, occupations.get(0).getIterationTicks());
+        assertEquals(7, occupations.get(1).getIterationTicks());
+        assertEquals(7, occupations.get(2).getIterationTicks());
     }
 }
