@@ -3,6 +3,8 @@ package org.academy.internal.common.ability.teleport.skills.lv3;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,11 +23,11 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -37,8 +39,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 public class Shackle extends Skill {
-    private static final double MAX_RANGE = 16.0;
-    private static final double TARGET_RADIUS = 1.5;
+    private static final double MAX_RANGE = 32.0;
 
     public Shackle() {
         super(Builder
@@ -73,7 +74,14 @@ public class Shackle extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onUse() {
-            MisakaNetworkClient.send(UsePacket.INSTANCE);
+            var minecraft = Minecraft.getInstance();
+            var player = minecraft.player;
+            if (player == null || minecraft.gui.screen() != null
+                    || !AbilitySystemClient.canUseSkill(Skills.SHACKLE.get())) return;
+            var target = findTarget(player);
+            if (target != null) {
+                MisakaNetworkClient.send(new UsePacket(target.getId()));
+            }
         }
 
         @SubscribeEvent
@@ -87,22 +95,16 @@ public class Shackle extends Skill {
                 return;
             }
 
-            var distance = LevelUtil.getValidViewDistance(player, MAX_RANGE);
-            var targetPos = player.getEyePosition(event.getPartialTick())
-                    .add(player.getViewVector(event.getPartialTick()).scale(distance));
-            var selection = new AABB(
-                    targetPos.add(-TARGET_RADIUS, -TARGET_RADIUS, -TARGET_RADIUS),
-                    targetPos.add(TARGET_RADIUS, TARGET_RADIUS, TARGET_RADIUS)
-            );
-            var target = player.level().getEntitiesOfClass(LivingEntity.class, selection,
-                            entity -> entity != player && entity.isAlive())
-                    .stream()
-                    .min((first, second) -> Double.compare(
-                            first.distanceToSqr(targetPos),
-                            second.distanceToSqr(targetPos)
-                    ))
-                    .orElse(null);
-            var preview = target == null ? selection : target.getBoundingBox().inflate(0.2);
+            var target = findTarget(player);
+            AABB preview;
+            if (target != null) {
+                preview = target.getBoundingBox().inflate(0.2);
+            } else {
+                var point = player.getEyePosition(event.getPartialTick())
+                        .add(player.getViewVector(event.getPartialTick()).scale(MAX_RANGE));
+                preview = new AABB(point.x - 0.5, point.y - 0.5, point.z - 0.5,
+                        point.x + 0.5, point.y + 0.5, point.z + 0.5);
+            }
 
             var camera = minecraft.gameRenderer.mainCamera().position();
             var matrices = event.getMatrixStack();
@@ -119,6 +121,10 @@ public class Shackle extends Skill {
                             1.0f
                     ));
             matrices.popPose();
+        }
+
+        private static LivingEntity findTarget(LocalPlayer player) {
+            return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
         }
 
         private static boolean isPreviewing() {
@@ -152,48 +158,49 @@ public class Shackle extends Skill {
         @SubscribePacket
         public static void handle(UsePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.SHACKLE.get().executeActive(player, (ctx, actualCost) -> {
-                var distance = LevelUtil.getValidViewDistance(player, MAX_RANGE);
-                var targetPos = player.getEyePosition().add(player.getLookAngle().scale(distance));
-                var box = new AABB(
-                        targetPos.add(-TARGET_RADIUS, -TARGET_RADIUS, -TARGET_RADIUS),
-                        targetPos.add(TARGET_RADIUS, TARGET_RADIUS, TARGET_RADIUS)
-                );
-                var target = player.level().getEntitiesOfClass(LivingEntity.class, box,
-                                entity -> entity != player
-                                        && entity.isAlive()
-                                        && EntityMotionGuard.canApplyMotionFrom(player, entity)
-                                        && EntityMotionGuard.canBeImprisoned(entity))
-                        .stream()
-                        .min((first, second) -> Double.compare(
-                                first.distanceToSqr(targetPos),
-                                second.distanceToSqr(targetPos)
-                        ))
-                        .orElse(null);
+            if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
+                    || target == player || !target.isAlive()
+                    || !target.isPickable()
+                    || !canShackle(player, target)
+                    || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
 
-                if (target != null) {
-                    target.stopRiding();
-                    EntityMotionGuard.imprison(
-                            target,
-                            "shackle:" + player.getStringUUID(),
-                            SHACKLE_DURATION
-                    );
-                    target.hurtServer(
-                            player.level(),
-                            SkillDamageSource.of(player, Skills.SHACKLE.get()),
-                            3.0f
-                    );
-                }
+            Skills.SHACKLE.get().executeActive(player, (ctx, actualCost) -> {
+                if (!target.isAlive() || target.level() != player.level()
+                        || !canShackle(player, target)
+                        || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
+                target.stopRiding();
+                EntityMotionGuard.imprison(
+                        target,
+                        "shackle:" + player.getStringUUID(),
+                        SHACKLE_DURATION
+                );
+                target.hurtServer(
+                        player.level(),
+                        SkillDamageSource.of(player, Skills.SHACKLE.get()),
+                        3.0f
+                );
             });
+        }
+
+        private static boolean canShackle(LivingEntity source, LivingEntity target) {
+            return EntityMotionGuard.canBeImprisoned(target)
+                    && (EntityMotionGuard.isImprisoned(target)
+                    || EntityMotionGuard.canApplyMotionFrom(source, target));
         }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
-        public static final UsePacket INSTANCE = new UsePacket();
-        public static final StreamCodec<ByteBuf, UsePacket> CODEC = StreamCodec.unit(INSTANCE);
+        public static final StreamCodec<ByteBuf, UsePacket> CODEC = ByteBufCodecs.VAR_INT
+                .map(UsePacket::new, UsePacket::getTargetEntityId);
+        private final int targetEntityId;
 
-        private UsePacket() {
+        public UsePacket(int targetEntityId) {
+            this.targetEntityId = targetEntityId;
+        }
+
+        public int getTargetEntityId() {
+            return targetEntityId;
         }
 
         @Override
