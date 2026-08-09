@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "academy:item/ability_control_tablet",
+    "model": {
+      "type": "academy:ability_control_tablet"
+    }
+  }
+}

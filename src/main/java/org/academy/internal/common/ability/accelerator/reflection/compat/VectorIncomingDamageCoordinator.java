@@ -34,13 +34,13 @@ public final class VectorIncomingDamageCoordinator {
                 || VectorRedirectedDamageSourceInfo.isRedirected(source)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
+        if (!VectorReflection.Server.isActive(defender)) {
+            VectorReflection.Server.deactivateUnavailableProtection(defender);
+            return VectorIncomingDamageResult.passThrough(damage);
+        }
         if (isAnomalousDamage(damage)
-                && VectorReflection.Server.canMaintainLinearReflectionLease(defender)
                 && VectorReflection.Server.reflectAnomalousDamage(defender, source, damage)) {
             return VectorIncomingDamageResult.fullRedirect();
-        }
-        if (!VectorReflection.Server.isActive(defender)) {
-            return VectorIncomingDamageResult.passThrough(damage);
         }
         if (!VectorReflection.Server.shouldReflection(defender, source)) {
             return VectorIncomingDamageResult.passThrough(damage);

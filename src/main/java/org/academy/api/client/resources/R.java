@@ -599,6 +599,7 @@ public final class R {
 
         public static final class model {
             public static final Identifier ability_developer = academy("textures/model/ability_developer.png");
+            public static final Identifier ability_control_tablet = academy("textures/model/ability_control_tablet.png");
             public static final Identifier cleaning_robot = academy("textures/model/cleaning_robot.png");
             public static final Identifier omni_crafting_table = academy("textures/model/omni_crafting_table.png");
             public static final Identifier solar_gen = academy("textures/model/solar_gen.png");

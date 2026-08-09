@@ -25,4 +25,12 @@ class PlayerAttributeRuntimeTest {
         assertEquals(0.0, PlayerAttributeRuntime.dexteritySpeedBonus(Double.POSITIVE_INFINITY));
         assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(-1.0));
     }
+
+    @Test
+    void maxHealthChangesNeverHealOrResurrectThePlayer() {
+        assertEquals(20.0f, PlayerAttributeRuntime.healthAfterMaxHealthChange(20.0f, 30.0f));
+        assertEquals(15.0f, PlayerAttributeRuntime.healthAfterMaxHealthChange(15.0f, 30.0f));
+        assertEquals(0.0f, PlayerAttributeRuntime.healthAfterMaxHealthChange(0.0f, 30.0f));
+        assertEquals(10.0f, PlayerAttributeRuntime.healthAfterMaxHealthChange(15.0f, 10.0f));
+    }
 }

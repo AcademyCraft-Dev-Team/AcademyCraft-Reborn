@@ -227,7 +227,7 @@ public class KineticEnergyApplied extends Skill {
         }
 
         public static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.KINETIC_ENERGY_APPLIED.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.KINETIC_ENERGY_APPLIED.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

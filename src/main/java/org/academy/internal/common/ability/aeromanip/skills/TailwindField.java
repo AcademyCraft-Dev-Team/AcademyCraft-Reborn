@@ -88,7 +88,7 @@ public final class TailwindField extends Skill {
         }
 
         private static void toggle() {
-            if (AbilitySystemClient.canToggleSkill(Skills.TAILWIND_FIELD.get())) {
+            if (AbilitySystemClient.beginToggleRequest(Skills.TAILWIND_FIELD.get())) {
                 MisakaNetworkClient.send(TogglePacket.INSTANCE);
             }
         }

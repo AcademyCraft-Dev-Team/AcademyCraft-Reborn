@@ -114,7 +114,7 @@ public final class WhiteWing extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.WHITE_WING.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.WHITE_WING.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

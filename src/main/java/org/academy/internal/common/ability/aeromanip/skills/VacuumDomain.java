@@ -58,6 +58,7 @@ public final class VacuumDomain extends Skill {
     private static final double MAX_TARGET_DISTANCE = 16.0;
     private static final int DAMAGE_INTERVAL_TICKS = 10;
     private static final float DAMAGE_FRACTION = 0.05f;
+    private static final float PERCENT_IMMUNE_DAMAGE = 1.0f;
 
     public VacuumDomain() {
         super(Builder
@@ -103,6 +104,15 @@ public final class VacuumDomain extends Skill {
 
     static boolean isInsideDomain(Vec3 center, Vec3 target, double radius) {
         return target.distanceToSqr(center) <= radius * radius;
+    }
+
+    static int airSupplyInVacuum(boolean protectedByBreathingFilm, int maxAirSupply) {
+        return protectedByBreathingFilm ? Math.max(0, maxAirSupply) : 0;
+    }
+
+    static float baseDamage(float maxHealth, boolean percentDamageImmune) {
+        if (percentDamageImmune) return PERCENT_IMMUNE_DAMAGE;
+        return Math.max(1.0f, Math.max(0.0f, maxHealth) * DAMAGE_FRACTION);
     }
 
     public static final class Client {
@@ -224,7 +234,7 @@ public final class VacuumDomain extends Skill {
                     AeromanipTargeting.addClampedVelocity(entity, velocity.scale(-0.8));
                 }
             }
-            if (ticks <= 40 || ticks % DAMAGE_INTERVAL_TICKS != 0) return;
+            if (ticks <= 40) return;
             var box = new AABB(
                     center.subtract(radius, radius, radius),
                     center.add(radius, radius, radius)
@@ -235,19 +245,24 @@ public final class VacuumDomain extends Skill {
                     target -> isHostileTarget(player, target)
                             && isInsideDomain(center, target.getBoundingBox().getCenter(), radius)
             );
-            var source = SkillDamageSource.of(player, Skills.VACUUM_DOMAIN.get());
-            var system = AbilitySystemServer.getSystem(player);
-            var power = system.getPlayerAbilityPowerMultiplier(player.getUUID())
-                    * system.getPlayerDamageMultiplier(player.getUUID());
+            var damageTick = ticks % DAMAGE_INTERVAL_TICKS == 0;
+            var source = damageTick ? SkillDamageSource.of(player, Skills.VACUUM_DOMAIN.get()) : null;
+            var power = 0.0f;
+            if (damageTick) {
+                var system = AbilitySystemServer.getSystem(player);
+                power = system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                        * system.getPlayerDamageMultiplier(player.getUUID());
+            }
             for (var target : targets) {
-                if (target instanceof ServerPlayer targetPlayer && Skills.BREATHING_FILM.get().isEnabled(targetPlayer)) {
-                    target.setAirSupply(target.getMaxAirSupply());
-                } else {
-                    target.setAirSupply(Math.max(0, target.getAirSupply() - 4));
-                }
-                if (ticks < 100 || ticks % 20 != 0 || isPercentDamageImmune(target)) continue;
+                var protectedByBreathingFilm = target instanceof ServerPlayer targetPlayer
+                        && Skills.BREATHING_FILM.get().isEnabled(targetPlayer);
+                target.setAirSupply(airSupplyInVacuum(
+                        protectedByBreathingFilm,
+                        target.getMaxAirSupply()
+                ));
+                if (!damageTick) continue;
                 target.invulnerableTime = 0;
-                var damage = Math.max(1.0f, target.getMaxHealth() * DAMAGE_FRACTION)
+                var damage = baseDamage(target.getMaxHealth(), isPercentDamageImmune(target))
                         * AeromanipConfig.damageMultiplier(player, SkillNames.VACUUM_DOMAIN) * power;
                 if (target instanceof ServerPlayer) damage = Math.min(4.0f, damage * 0.4f);
                 target.hurtServer(level, source, damage);

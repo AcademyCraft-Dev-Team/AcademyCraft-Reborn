@@ -121,7 +121,7 @@ public final class BioelectricOperation extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.BIOELECTRIC_OPERATION.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.BIOELECTRIC_OPERATION.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

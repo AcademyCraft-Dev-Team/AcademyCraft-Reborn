@@ -97,7 +97,7 @@ public class MagneticWeapon extends Skill {
         public static Config CONFIG = new Config();
 
         private static void onToggle() {
-            if (AbilitySystemClient.canToggleSkill(Skills.MAGNETIC_WEAPON.get())) {
+            if (AbilitySystemClient.beginToggleRequest(Skills.MAGNETIC_WEAPON.get())) {
                 MisakaNetworkClient.send(TogglePacket.INSTANCE);
             }
         }

@@ -31,6 +31,7 @@ public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
     /** Keep disabled until the skill stack system is redesigned and verified. */
     public static final boolean STACK_LIMITS_ENABLED = false;
+    private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
 
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
@@ -173,28 +174,53 @@ public abstract class Skill {
     public final void toggle(ServerPlayer player) {
         var uuid = player.getUUID();
         var system = AbilitySystemServer.getSystem(player);
-        if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) return;
-        if (!LearningHelper.isSkillAvailableForCategory(system.getPlayerAbilityCategory(uuid), this)) return;
         var runtimeData = getRuntimeData(player);
         if (runtimeData.isEmpty()) return;
-        var level = getLevel(player);
-        var cost = getMaintenanceCost(level);
-
         var goingToEnable = !runtimeData.get().isEnabled();
 
-        if (cost <= 0) {
+        // Disabling is cleanup, not a new ability use. It must remain possible after overload or a
+        // category transition; otherwise the enabled flag and permanent CP lease become stranded.
+        if (!goingToEnable) {
             system.toggleSkill(uuid, getKeyString());
             return;
         }
 
-        if (goingToEnable) {
-            if (system.tryPermanentOccupation(uuid, cost, this)) {
-                system.toggleSkill(uuid, getKeyString());
-            }
-        } else {
+        if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) return;
+        if (!LearningHelper.isSkillAvailableForCategory(system.getPlayerAbilityCategory(uuid), this)) return;
+        var level = getLevel(player);
+        var cost = getMaintenanceCost(level);
+        if (cost <= 0) {
             system.toggleSkill(uuid, getKeyString());
-            system.releaseMaintenanceOccupation(uuid, getKeyString());
+            return;
         }
+        if (!hasSufficientCpToEnable(
+                system.getPlayerAvailableCP(uuid),
+                cost,
+                system.getPlayerCalculationIntensity(uuid)
+        )) return;
+
+        if (system.tryPermanentOccupation(uuid, cost, this)) {
+            // Reserving exactly the last CP enters overload synchronously. Do not commit the
+            // enabled flag after that transition; roll the reservation back as one transaction.
+            if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) {
+                system.releaseMaintenanceOccupation(uuid, getKeyString());
+                return;
+            }
+            system.toggleSkill(uuid, getKeyString());
+            if (!runtimeData.get().isEnabled()) {
+                // Defensive rollback if authoritative skill-data mutation was rejected.
+                system.releaseMaintenanceOccupation(uuid, getKeyString());
+            }
+        }
+    }
+
+    static boolean hasSufficientCpToEnable(float availableCp, float maintenanceCost,
+                                           float calculationIntensity) {
+        if (!Float.isFinite(availableCp) || !Float.isFinite(maintenanceCost)
+                || !Float.isFinite(calculationIntensity)
+                || maintenanceCost < 0.0f || calculationIntensity < 0.0f) return false;
+        var actualCost = maintenanceCost * calculationIntensity;
+        return Float.isFinite(actualCost) && availableCp - actualCost > TOGGLE_CP_EPSILON;
     }
 
     public final boolean isEnabled(ServerPlayer player) {

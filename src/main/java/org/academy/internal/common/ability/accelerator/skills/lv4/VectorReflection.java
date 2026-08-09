@@ -43,6 +43,9 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.accelerator.reflection.ReflectionHealthRecordCodec;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
@@ -127,7 +130,7 @@ public class VectorReflection extends Skill {
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
         public static Config CONFIG = new Config();
         public static void onToggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.VECTOR_REFLECTION.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.VECTOR_REFLECTION.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
@@ -153,8 +156,9 @@ public class VectorReflection extends Skill {
 
     public static final class Server {
         private static final long REFLECTION_SOUND_COOLDOWN_TICKS = 10;
+        private static final float CP_DEPLETION_EPSILON = 1.0E-4f;
         private static final Map<UUID, Long> LAST_SOUND_TICK = new HashMap<>();
-        private static final Map<UUID, Float> PROTECTED_HEALTH = new ConcurrentHashMap<>();
+        private static final Map<UUID, String> HEALTH_RECORDS = new ConcurrentHashMap<>();
         private static final ThreadLocal<Map<UUID, Integer>> LEGITIMATE_HEALTH_MUTATIONS =
                 ThreadLocal.withInitial(HashMap::new);
 
@@ -165,13 +169,14 @@ public class VectorReflection extends Skill {
         public static void toggleReflection(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.VECTOR_REFLECTION.get();
-            if (skill.isEnabled(player)) {
+            var runtimeData = skill.getRuntimeData(player).orElse(null);
+            if (runtimeData != null && runtimeData.isEnabled()) {
                 forceDeactivate(player);
                 return;
             }
 
             var system = AbilitySystemServer.getSystem(player);
-            if (skill.getRuntimeData(player).isEmpty()
+            if (runtimeData == null
                     || !LearningHelper.isSkillAvailableForCategory(
                     system.getPlayerAbilityCategory(player.getUUID()), skill
             )) {
@@ -218,7 +223,8 @@ public class VectorReflection extends Skill {
 
         public static boolean isActive(ServerPlayer player) {
             return canMaintainLinearReflectionLease(player)
-                    && AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID()) > 0.0f;
+                    && !isComputingPowerDepleted(AbilitySystemServer.getSystem(player)
+                    .getPlayerAvailableCP(player.getUUID()));
         }
 
         public static boolean canMaintainLinearReflectionLease(ServerPlayer player) {
@@ -328,6 +334,7 @@ public class VectorReflection extends Skill {
                 }
             }, true);
             if (!executed) return false;
+            deactivateAfterCpChargeIfNeeded(player);
             player.invulnerableTime = 0;
             maintainProtection(player);
             return true;
@@ -367,6 +374,10 @@ public class VectorReflection extends Skill {
                             applyReflection(serverPlayer, level, source, reflectedDamage);
                         }, true);
             }
+            // The unreflected remainder is applied after this method returns. Restore the vanilla
+            // player class first when this charge spent the final CP, so lethal damage cannot enter
+            // the death/respawn pipeline through the dispatch subclass.
+            if (executed) deactivateAfterCpChargeIfNeeded(serverPlayer);
             serverPlayer.invulnerableTime = 0;
             maintainProtection(serverPlayer);
             var remaining = executed ? result.remainingDamage() : originalDamage;
@@ -462,22 +473,26 @@ public class VectorReflection extends Skill {
                 return true;
             }
             var projectileCost = projectileReflectionCost(speed);
-            return Skills.VECTOR_REFLECTION.get().executeContinuous(
+            var executed = Skills.VECTOR_REFLECTION.get().executeContinuous(
                     player,
                     _ -> projectileCost,
                     (_, _) -> redirect.run(),
                     true
             );
+            if (executed) deactivateAfterCpChargeIfNeeded(player);
+            return executed;
         }
 
         public static boolean tryProtectForcedMovement(ServerPlayer player) {
             if (!isActive(player)) return false;
-            return Skills.VECTOR_REFLECTION.get().executeContinuous(
+            var executed = Skills.VECTOR_REFLECTION.get().executeContinuous(
                     player,
                     _ -> projectileReflectionCost(0.0),
                     (_, _) -> playReflectionSound(player),
                     true
             );
+            if (executed) deactivateAfterCpChargeIfNeeded(player);
+            return executed;
         }
 
         static float projectileReflectionCost(double speed) {
@@ -507,7 +522,7 @@ public class VectorReflection extends Skill {
                 try {
                     player.setHealth(protectedHealth);
                 } finally {
-                    endLegitimateHealthMutation(player, false);
+                    endLegitimateHealthMutation(player);
                 }
             }
             purgeProtectedEffects(player);
@@ -523,6 +538,49 @@ public class VectorReflection extends Skill {
             return protectedHealth(player, original);
         }
 
+        public static boolean deactivateUnavailableProtection(ServerPlayer player) {
+            if (player == null || isActive(player)
+                    || !Skills.VECTOR_REFLECTION.get().isEnabled(player)) return false;
+            forceDeactivate(player);
+            return true;
+        }
+
+        public static void imaginebreaker(ServerPlayer player, float amount) {
+            if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
+            var reflectionActive = isActive(player);
+            var reductionActive = VectorReduction.Server.isActive(player);
+            if (!reflectionActive && !reductionActive) return;
+
+            var uuid = player.getUUID();
+            beginLegitimateHealthMutation(player);
+            var depleted = false;
+            try {
+                var original = player.getHealth();
+                var nextOriginal = ReflectionHealthRecordCodec.loweredHealth(original, amount);
+                if (reflectionActive) {
+                    var encoded = HEALTH_RECORDS.computeIfAbsent(
+                            uuid,
+                            ignored -> ReflectionHealthRecordCodec.encode(uuid, original)
+                    );
+                    var recorded = ReflectionHealthRecordCodec.decode(uuid, encoded, original);
+                    var nextRecorded = ReflectionHealthRecordCodec.loweredHealth(recorded, amount);
+                    HEALTH_RECORDS.put(uuid, ReflectionHealthRecordCodec.encode(uuid, nextRecorded));
+                    depleted = ReflectionHealthRecordCodec
+                            .lockedHealth(nextRecorded, nextOriginal) <= 0.0f;
+                } else {
+                    depleted = nextOriginal <= 0.0f;
+                }
+                setOriginalHealth(player, nextOriginal);
+            } finally {
+                endLegitimateHealthMutation(player);
+            }
+
+            if (depleted) {
+                VectorReduction.Server.forceDeactivate(player);
+                forceDeactivate(player);
+            }
+        }
+
         public static boolean shouldForceAlive(ServerPlayer player) {
             return isActive(player) && protectedHealth(player, player.getHealth()) > 0.0f
                     && !isLegitimateHealthMutation(player);
@@ -534,15 +592,11 @@ public class VectorReflection extends Skill {
             depths.merge(player.getUUID(), 1, Integer::sum);
         }
 
-        public static void endLegitimateHealthMutation(ServerPlayer player, boolean captureHealth) {
+        public static void endLegitimateHealthMutation(ServerPlayer player) {
             if (player == null) return;
             var uuid = player.getUUID();
             var depths = LEGITIMATE_HEALTH_MUTATIONS.get();
             var depth = depths.getOrDefault(uuid, 0);
-            if (captureHealth && depth > 0) {
-                var health = player.getHealth();
-                if (Float.isFinite(health)) PROTECTED_HEALTH.put(uuid, Math.max(0.0f, health));
-            }
             if (depth <= 1) depths.remove(uuid);
             else depths.put(uuid, depth - 1);
             if (depths.isEmpty()) LEGITIMATE_HEALTH_MUTATIONS.remove();
@@ -556,9 +610,25 @@ public class VectorReflection extends Skill {
         public static void clearProtection(ServerPlayer player) {
             if (player == null) return;
             VectorReflectionRuntime.deactivate(player);
+            clearProtectionState(player);
+        }
+
+        public static void forceDeactivateForDeath(ServerPlayer player) {
+            if (player == null) return;
+            var skill = Skills.VECTOR_REFLECTION.get();
+            var data = skill.getRuntimeData(player).orElse(null);
+            if (data != null && data.isEnabled()) {
+                var system = AbilitySystemServer.getSystem(player);
+                system.toggleSkill(player.getUUID(), skill.getKeyString());
+                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+            }
+            VectorReflectionRuntime.deactivateForDeath(player);
+            clearProtectionState(player);
+        }
+
+        private static void clearProtectionState(ServerPlayer player) {
             VectorContinuousInterceptionLeases.clear(player);
             VectorInterceptionTickets.clear(player);
-            PROTECTED_HEALTH.remove(player.getUUID());
             LAST_SOUND_TICK.remove(player.getUUID());
             VectorDefenseFeedbackTickets.clear(player);
             VectorReflectedDamageAccumulator.clear(player);
@@ -566,9 +636,52 @@ public class VectorReflection extends Skill {
             VectorCompatibilityEffectLimiter.clear(player);
         }
 
+        public static void discardRecordedHealth(ServerPlayer player) {
+            if (player != null) HEALTH_RECORDS.remove(player.getUUID());
+        }
+
+        public static void restoreRecordedHealth(ServerPlayer player) {
+            if (player == null) return;
+            var uuid = player.getUUID();
+            var encoded = HEALTH_RECORDS.get(uuid);
+            if (encoded == null) return;
+            var reported = player.getHealth();
+            var recorded = ReflectionHealthRecordCodec.decode(uuid, encoded, reported);
+            var restored = ReflectionHealthRecordCodec.lockedHealth(recorded, reported);
+            HEALTH_RECORDS.remove(uuid);
+            beginLegitimateHealthMutation(player);
+            try {
+                setOriginalHealth(player, restored);
+            } finally {
+                endLegitimateHealthMutation(player);
+            }
+        }
+
+        private static void setOriginalHealth(ServerPlayer player, float health) {
+            PlayerAttributeRuntime.runWithoutResistance(
+                    () -> EntityControlApi.forceSetTrueHealth(player, health)
+            );
+        }
+
         private static float protectedHealth(ServerPlayer player, float fallback) {
-            var safeFallback = Float.isFinite(fallback) ? Math.max(0.0f, fallback) : 0.0f;
-            return PROTECTED_HEALTH.computeIfAbsent(player.getUUID(), _ -> safeFallback);
+            var uuid = player.getUUID();
+            var encoded = HEALTH_RECORDS.computeIfAbsent(
+                    uuid,
+                    ignored -> ReflectionHealthRecordCodec.encode(uuid, fallback)
+            );
+            var recorded = ReflectionHealthRecordCodec.decode(uuid, encoded, fallback);
+            return ReflectionHealthRecordCodec.lockedHealth(recorded, fallback);
+        }
+
+        private static void deactivateAfterCpChargeIfNeeded(ServerPlayer player) {
+            if (player == null) return;
+            var availableCp = AbilitySystemServer.getSystem(player)
+                    .getPlayerAvailableCP(player.getUUID());
+            if (isComputingPowerDepleted(availableCp)) forceDeactivate(player);
+        }
+
+        static boolean isComputingPowerDepleted(float availableCp) {
+            return !Float.isFinite(availableCp) || !(availableCp > CP_DEPLETION_EPSILON);
         }
 
         private static void applyReflection(ServerPlayer player, ServerLevel level,
@@ -662,6 +775,7 @@ public class VectorReflection extends Skill {
             if (skill.isEnabled(player) && Skills.VECTOR_REDUCTION.get().isEnabled(player)) {
                 VectorReduction.Server.forceDeactivate(player);
             }
+            if (Server.deactivateUnavailableProtection(player)) return;
             if (skill.isEnabled(player)) {
                 var system = AbilitySystemServer.getSystem(player);
                 var maintained = system.ensurePermanentOccupation(
@@ -711,12 +825,15 @@ public class VectorReflection extends Skill {
         public static void onDeath(LivingDeathEvent event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             if (!Server.isActive(player)) {
-                Server.clearProtection(player);
+                Server.forceDeactivateForDeath(player);
                 return;
             }
-            if (Server.isLegitimateHealthMutation(player)) return;
+            if (Server.isLegitimateHealthMutation(player)) {
+                Server.forceDeactivateForDeath(player);
+                return;
+            }
             if (!Server.shouldForceAlive(player)) {
-                Server.clearProtection(player);
+                Server.forceDeactivateForDeath(player);
                 return;
             }
             event.setCanceled(true);

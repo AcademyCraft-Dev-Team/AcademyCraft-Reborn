@@ -111,7 +111,7 @@ public final class CrossingTheAbyss extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.CROSSING_THE_ABYSS.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.CROSSING_THE_ABYSS.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

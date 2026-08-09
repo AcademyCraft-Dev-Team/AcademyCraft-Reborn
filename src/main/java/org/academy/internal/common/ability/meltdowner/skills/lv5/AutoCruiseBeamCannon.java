@@ -120,7 +120,7 @@ public final class AutoCruiseBeamCannon extends Skill {
         public static Config CONFIG = new Config();
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.AUTO_CRUISE_BEAM_CANNON.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.AUTO_CRUISE_BEAM_CANNON.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

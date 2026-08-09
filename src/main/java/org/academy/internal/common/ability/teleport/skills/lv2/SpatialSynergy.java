@@ -77,7 +77,7 @@ public class SpatialSynergy extends Skill {
         public static Config CONFIG = new Config();
 
         public static void onToggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.SPATIAL_SYNERGY.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.SPATIAL_SYNERGY.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

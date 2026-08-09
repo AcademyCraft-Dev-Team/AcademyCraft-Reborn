@@ -155,7 +155,7 @@ public final class PlatinumWing extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.PLATINUM_WING.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.PLATINUM_WING.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

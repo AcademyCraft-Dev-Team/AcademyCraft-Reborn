@@ -39,6 +39,19 @@ public final class VectorReflectionRuntime {
 
     public static void deactivate(ServerPlayer player) {
         if (player == null) return;
+        VectorReflection.Server.restoreRecordedHealth(player);
+        restoreOriginalInstance(player);
+    }
+
+    public static void deactivateForDeath(ServerPlayer player) {
+        if (player == null) return;
+        // Death has already won the race. Restoring an older protected snapshot here would leave a
+        // dead entity with positive health, so only discard the snapshot and repair the class.
+        VectorReflection.Server.discardRecordedHealth(player);
+        restoreOriginalInstance(player);
+    }
+
+    private static void restoreOriginalInstance(ServerPlayer player) {
         var anchor = ANCHORS.remove(player.getUUID());
         var previous = anchor == null ? null : anchor.player.get();
         if (previous != null && previous != player) {
@@ -59,11 +72,8 @@ public final class VectorReflectionRuntime {
         for (var entry : ANCHORS.entrySet()) {
             var player = entry.getValue().player.get();
             if (player == null || player.connection == null || player.hasDisconnected()) {
-                if (player != null) {
-                    EntityControlApi.allowExternalRemoval(player);
-                    ClassPointerProtectionManager.restore(player);
-                }
-                ANCHORS.remove(entry.getKey(), entry.getValue());
+                if (player != null) deactivate(player);
+                else ANCHORS.remove(entry.getKey(), entry.getValue());
                 continue;
             }
             if (!VectorReflection.Server.isActive(player)) {
@@ -78,6 +88,7 @@ public final class VectorReflectionRuntime {
         for (var anchor : ANCHORS.values()) {
             var player = anchor.player.get();
             if (player == null) continue;
+            VectorReflection.Server.restoreRecordedHealth(player);
             EntityControlApi.allowExternalRemoval(player);
             ClassPointerProtectionManager.restore(player);
         }

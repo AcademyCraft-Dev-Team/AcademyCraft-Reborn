@@ -119,6 +119,13 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                 )
         );
         itemModels.itemModelOutput.accept(
+                Items.ABILITY_CONTROL_TABLET.get(),
+                ItemModelUtils.specialModel(
+                        academy("ability_control_tablet").withPrefix("item/"),
+                        AbilityControlTabletSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
                 Items.OMNI_CRAFTING_TABLE.get(),
                 ItemModelUtils.specialModel(
                         AcademyCraft.vanilla("block").withPrefix("block/"),

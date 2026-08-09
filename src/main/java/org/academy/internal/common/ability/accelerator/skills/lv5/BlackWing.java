@@ -114,7 +114,7 @@ public final class BlackWing extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.BLACK_WING.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.BLACK_WING.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 

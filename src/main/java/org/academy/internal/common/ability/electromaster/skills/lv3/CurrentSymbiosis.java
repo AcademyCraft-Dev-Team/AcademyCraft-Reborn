@@ -98,7 +98,7 @@ public final class CurrentSymbiosis extends Skill {
         }
 
         private static void toggle() {
-            if (!AbilitySystemClient.canToggleSkill(Skills.CURRENT_SYMBIOSIS.get())) return;
+            if (!AbilitySystemClient.beginToggleRequest(Skills.CURRENT_SYMBIOSIS.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
