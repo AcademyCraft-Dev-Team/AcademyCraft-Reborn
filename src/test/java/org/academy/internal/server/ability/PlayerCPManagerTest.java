@@ -78,4 +78,11 @@ class PlayerCPManagerTest {
         assertEquals(9.0f, plan.remainderCp(), 0.0001f);
         assertEquals(0, plan.spCost());
     }
+
+    @Test
+    void debugMaximumCpOverridesTheNaturallyCalculatedMaximum() {
+        assertEquals(250.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, 250.0f));
+        assertEquals(640.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, null));
+        assertEquals(0.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, Float.NaN));
+    }
 }
