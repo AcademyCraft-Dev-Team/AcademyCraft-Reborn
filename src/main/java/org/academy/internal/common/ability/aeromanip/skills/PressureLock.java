@@ -139,7 +139,8 @@ public final class PressureLock extends Skill {
 
             private boolean isProtected(LivingEntity target) {
                 if (!(target instanceof ServerPlayer protectedPlayer)) return false;
-                if (!EntityMotionGuard.canApplyMotionFrom(player, protectedPlayer)) return true;
+                if (!EntityMotionGuard.isImprisoned(protectedPlayer)
+                        && !EntityMotionGuard.canApplyMotionFrom(player, protectedPlayer)) return true;
                 return !EntityMotionGuard.canBeImprisoned(protectedPlayer)
                         || DarkmatterSixWings.Server.isActive(protectedPlayer)
                         || AtmosphereShield.Server.isActive(protectedPlayer);

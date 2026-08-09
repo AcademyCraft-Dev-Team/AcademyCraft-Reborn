@@ -35,6 +35,7 @@ import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
+import org.academy.internal.common.world.effect.StatusEffects;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.item.crafting.RecipeSerializers;
@@ -74,6 +75,7 @@ public final class AcademyCraftRegister {
         SoundEvents.SOUND_EVENTS.register(modEventBus);
         MenuTypes.MENU_TYPES.register(modEventBus);
         ParticleTypes.PARTICLE_TYPES.register(modEventBus);
+        StatusEffects.MOB_EFFECTS.register(modEventBus);
         PlayerAttributes.ATTRIBUTES.register(modEventBus);
 
         CREATIVE_MODE_TABS.register(modEventBus);

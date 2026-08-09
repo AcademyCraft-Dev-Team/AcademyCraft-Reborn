@@ -1,12 +1,15 @@
 package org.academy.internal.common.entitycontrol;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.world.effect.StatusEffects;
 
 import java.lang.ref.WeakReference;
 import java.lang.StackWalker.StackFrame;
@@ -97,8 +100,29 @@ public final class EntityMotionGuard {
             current.expirations.merge(sourceId, now + durationTicks, Math::max);
             return current;
         });
+        applyImprisonmentEffects(entity, durationTicks);
         runInternalCorrection(entity, () -> entity.setDeltaMovement(Vec3.ZERO));
         entity.hurtMarked = true;
+    }
+
+    private static void applyImprisonmentEffects(LivingEntity entity, long durationTicks) {
+        var effectDuration = (int) Math.min(Integer.MAX_VALUE, durationTicks);
+        entity.addEffect(new MobEffectInstance(
+                StatusEffects.IMPRISONED,
+                effectDuration,
+                0,
+                false,
+                false,
+                true
+        ));
+        entity.addEffect(new MobEffectInstance(
+                MobEffects.MINING_FATIGUE,
+                effectDuration,
+                0,
+                false,
+                false,
+                true
+        ));
     }
 
     public static void release(LivingEntity entity, String sourceId) {

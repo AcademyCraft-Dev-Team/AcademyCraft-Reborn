@@ -15,7 +15,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
@@ -35,6 +34,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -50,7 +50,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class Disarm extends Skill {
-    private static final double MAX_RANGE = 14.0;
+    private static final double MAX_RANGE = 16.0;
 
     public Disarm() {
         super(Builder
@@ -189,13 +189,11 @@ public class Disarm extends Skill {
                     return;
                 }
                 var minecraft = Minecraft.getInstance();
+                var target = TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
                 AABB preview;
-                if (minecraft.hitResult instanceof EntityHitResult hit
-                        && hit.getEntity() instanceof LivingEntity living
-                        && living != player && living.isAlive()
-                        && player.distanceToSqr(living) <= MAX_RANGE * MAX_RANGE) {
-                    targetEntityId = living.getId();
-                    preview = living.getBoundingBox().inflate(0.2);
+                if (target != null) {
+                    targetEntityId = target.getId();
+                    preview = target.getBoundingBox().inflate(0.2);
                 } else {
                     targetEntityId = -1;
                     var point = player.getEyePosition(event.getPartialTick())
