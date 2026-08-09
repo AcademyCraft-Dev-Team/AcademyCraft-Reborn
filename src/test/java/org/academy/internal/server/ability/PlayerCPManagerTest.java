@@ -1,5 +1,6 @@
 package org.academy.internal.server.ability;
 
+import org.academy.api.common.ability.Skill;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -84,5 +85,10 @@ class PlayerCPManagerTest {
         assertEquals(250.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, 250.0f));
         assertEquals(640.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, null));
         assertEquals(0.0f, PlayerCPManager.resolveEffectiveMaxCP(640.0f, Float.NaN));
+    }
+
+    @Test
+    void temporarilyDisablesStackLimitsForEverySkill() {
+        assertFalse(Skill.STACK_LIMITS_ENABLED);
     }
 }

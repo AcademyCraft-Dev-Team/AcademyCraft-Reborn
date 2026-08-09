@@ -28,8 +28,8 @@ import java.util.*;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
-    /** Temporary test switch: keep individual skill definitions intact for an easy rollback. */
-    public static final boolean FORCE_UNLIMITED_STACKS_FOR_TESTING = true;
+    /** Keep disabled until the skill stack system is redesigned and verified. */
+    public static final boolean STACK_LIMITS_ENABLED = false;
 
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
@@ -289,7 +289,7 @@ public abstract class Skill {
     }
 
     public int getMaxStacks(int skillLevel) {
-        return FORCE_UNLIMITED_STACKS_FOR_TESTING ? NO_STACK_LIMIT : maxStacks;
+        return STACK_LIMITS_ENABLED ? maxStacks : NO_STACK_LIMIT;
     }
 
     public final String getKeyString() {
