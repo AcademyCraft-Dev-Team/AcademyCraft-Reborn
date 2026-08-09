@@ -21,7 +21,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -36,7 +39,6 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
@@ -63,8 +65,6 @@ import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.Items;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -73,15 +73,15 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.misaka.MisakaNetworkClient.send;
 
 public final class Railgun extends Skill {
-    public static final int CHARGE_TIME = 0;
+    public static final int CHARGE_TIME = 30;
     public static final int RELEASE_VISUAL_TICKS = 12;
+    public static final int COIN_RETURN_HINT_TICKS = 12;
 
     public Railgun() {
         super(Builder
@@ -114,10 +114,28 @@ public final class Railgun extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CLIENT_CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
-        InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CLIENT_CONFIG.getKeyBinding(Client.KEY_NAME_START,
+        var startBinding = Client.CLIENT_CONFIG.getKeyBinding(
+                Client.KEY_NAME_START,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
-                        InputConstants.RELEASE, InputConstants.MOD_ALT)
-        ), ctx -> Client.start());
+                        InputConstants.PRESS, InputConstants.MOD_ALT)
+        );
+        if (startBinding.action() != InputConstants.PRESS) {
+            startBinding = Client.withAction(startBinding, InputConstants.PRESS);
+            Client.CLIENT_CONFIG.setKeyBinding(Client.KEY_NAME_START, startBinding);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
+        InputSystem.addKeyBinding(Client.KEY_NAME_START, startBinding, _ -> Client.start());
+
+        var endBinding = Client.CLIENT_CONFIG.getKeyBinding(
+                Client.KEY_NAME_END,
+                Client.withAction(startBinding, InputConstants.RELEASE)
+        );
+        if (endBinding.action() != InputConstants.RELEASE) {
+            endBinding = Client.withAction(endBinding, InputConstants.RELEASE);
+            Client.CLIENT_CONFIG.setKeyBinding(Client.KEY_NAME_END, endBinding);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
+        InputSystem.addKeyBinding(Client.KEY_NAME_END, endBinding, _ -> Client.end());
 
         ClientSyncManager.register(SyncKeys.RAILGUN_CHARGING.get(), Client::setCharging);
     }
@@ -134,6 +152,7 @@ public final class Railgun extends Skill {
                 )
         );
         public static final String KEY_NAME_START = SkillNames.RAILGUN + "_start";
+        public static final String KEY_NAME_END = SkillNames.RAILGUN + "_end";
         public static Config CLIENT_CONFIG = new Config();
         private static boolean charging = false;
 
@@ -149,6 +168,24 @@ public final class Railgun extends Skill {
             if (Minecraft.getInstance().gui.screen() != null) return;
             if (!AbilitySystemClient.canUseSkill(Skills.RAILGUN.get())) return;
             send(StartPacket.INSTANCE);
+        }
+
+        public static void end() {
+            send(EndPacket.INSTANCE);
+        }
+
+        private static InputSystem.KeyCombination withAction(
+                InputSystem.KeyCombination binding,
+                int action
+        ) {
+            return new InputSystem.KeyCombination(
+                    binding.type(),
+                    binding.keys(),
+                    action,
+                    binding.modifiers(),
+                    binding.availableWhenScreen(),
+                    binding.unbound()
+            );
         }
 
         public static class Config extends KeyBindingConfig {
@@ -183,19 +220,24 @@ public final class Railgun extends Skill {
 
             var player = packet.getPacketListener().getPlayer();
             if (CONTEXT_MAP.containsKey(player)) return;
+            if (!Skills.RAILGUN.get().isEnabled(player)) return;
             var releaseVisual = RELEASE_VISUALS.get(player);
             if (releaseVisual != null) releaseVisual.end();
-            var ammo = findAmmo(player);
-            if (ammo == null) return;
 
-            Skills.RAILGUN.get().executeActive(player, (_, _) -> {
-                ammo.consume(player);
-                chargingSyncManager.set(player.getUUID(), true);
+            var previewAmmo = findAmmo(player);
+            var renderHand = previewAmmo == null
+                    ? InteractionHand.MAIN_HAND
+                    : previewAmmo.renderHand();
+            chargingSyncManager.set(player.getUUID(), true);
+            var context = new Context(player, renderHand);
+            CONTEXT_MAP.put(player, context);
+            AbilitySystemServer.registerContext(context);
+        }
 
-                var context = new Context(player, ammo.renderHand());
-                CONTEXT_MAP.put(player, context);
-                AbilitySystemServer.registerContext(context);
-            });
+        @SubscribePacket
+        public static void onEndCharge(EndPacket packet) {
+            var context = CONTEXT_MAP.get(packet.getPacketListener().getPlayer());
+            if (context != null) context.release();
         }
 
         @SubscribePacket
@@ -231,6 +273,11 @@ public final class Railgun extends Skill {
             );
         }
 
+        private static void onCoinReturned(ServerPlayer player) {
+            var context = CONTEXT_MAP.get(player);
+            if (context != null) context.flashCoinReturnHint();
+        }
+
         private static @Nullable AmmoSource findAmmo(ServerPlayer player) {
             var center = player.position().add(0, player.getBbHeight() / 2.0, 0);
             var box = new AABB(center.subtract(1.5, 1.5, 1.5), center.add(1.5, 1.5, 1.5));
@@ -240,11 +287,13 @@ public final class Railgun extends Skill {
                     coin -> coin.isAlive()
             );
             if (!thrownCoins.isEmpty()) {
-                return new AmmoSource(null, thrownCoins.getFirst());
+                return new AmmoSource(AmmoKind.COIN, null, thrownCoins.getFirst());
             }
 
             var hand = findHeldAmmoHand(player, false);
-            return hand == null ? null : new AmmoSource(hand, null);
+            if (hand == null) return null;
+            var kind = ammoKind(player.getItemInHand(hand));
+            return kind == null ? null : new AmmoSource(kind, hand, null);
         }
 
         private static @Nullable InteractionHand findHeldAmmoHand(Player player, boolean coinOnly) {
@@ -256,17 +305,20 @@ public final class Railgun extends Skill {
         }
 
         public static class Context extends ServerContext {
-            private final InteractionHand hand;
             private final boolean rightHand;
+            private final boolean mainHandRight;
             private final ResourceKey<Level> dimension;
             private int ticks = 0;
+            private int coinReturnHintTicks;
+            @Nullable
+            private AmmoKind readyHintAmmo;
             private boolean ended;
 
             public Context(ServerPlayer player, InteractionHand hand) {
                 super(player);
-                this.hand = hand;
                 rightHand = (player.getMainArm() == HumanoidArm.RIGHT)
                         == (hand == InteractionHand.MAIN_HAND);
+                mainHandRight = player.getMainArm() == HumanoidArm.RIGHT;
                 dimension = player.level().dimension();
             }
 
@@ -294,108 +346,150 @@ public final class Railgun extends Skill {
                 }
                 var skill = Skills.RAILGUN.get();
                 skill.reportActivity(player, false);
+                updateChargeReadyHint();
 
                 player.setData(
                         AttachmentTypes.RAILGUN_DATA,
-                        new Data(rightHand, ticks, false)
+                        new Data(rightHand, mainHandRight, ticks, false, coinReturnHintTicks > 0)
                 );
+                if (coinReturnHintTicks > 0) coinReturnHintTicks--;
+            }
 
+            private void updateChargeReadyHint() {
+                var hand = findHeldAmmoHand(player, false);
+                var kind = hand == null ? null : ammoKind(player.getItemInHand(hand));
+                if (kind == null || kind == AmmoKind.COIN || ticks < kind.minimumChargeTicks()) {
+                    readyHintAmmo = null;
+                    return;
+                }
+                if (readyHintAmmo == kind) return;
+                readyHintAmmo = kind;
+                flashCoinReturnHint();
+            }
+
+            private void flashCoinReturnHint() {
+                coinReturnHintTicks = COIN_RETURN_HINT_TICKS;
+            }
+
+            private void release() {
+                if (ended) return;
+                var ammo = findAmmo(player);
+                if (ammo == null || ticks < ammo.kind().minimumChargeTicks()) {
+                    end();
+                    return;
+                }
+
+                var fired = new boolean[1];
+                var skill = Skills.RAILGUN.get();
+                skill.executeActive(player, (_, _) -> {
+                    ammo.consume(player);
+                    fire(skill, ammo);
+                    fired[0] = true;
+                });
+                end();
+                if (fired[0]) startReleaseVisual(player, rightHand, mainHandRight);
+            }
+
+            private void fire(Skill skill, AmmoSource ammo) {
                 var lookDir = player.getLookAngle();
                 var right = lookDir.cross(new Vec3(0, 1, 0));
                 if (right.lengthSqr() < 1.0E-6) right = new Vec3(1, 0, 0);
                 var startPos = player.position()
-                        .add(right.normalize().scale(0.4))
+                        .add(right.normalize().scale(rightHand ? 0.4 : -0.4))
                         .add(0, 1.2, 0)
                         .add(lookDir.scale(0.5));
-                if (ticks > CHARGE_TIME) {
-                    skill.reportActivity(player, true);
+                skill.reportActivity(player, true);
 
-                    var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
-                    var length = RailgunRay.DEFAULT_LENGTH;
-                    var endPos = startPos.add(lookDir.scale(length));
-                    railgunRay.setPos(startPos);
-                    railgunRay.setYRot(player.getYRot());
-                    railgunRay.setXRot(player.getXRot());
-                    var originalSource = new DamageSource(
-                            railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK),
-                            railgunRay,
-                            player
-                    );
-                    var damageSource = SkillDamageSource.from(originalSource, skill);
-                    var system = AbilitySystemServer.getSystem(player);
-                    var damage = calculateDamage(
-                            system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                            system.getPlayerDamageMultiplier(player.getUUID())
-                    );
-                    var payload = LinearAttackPayload.builder(
-                                    player,
-                                    skill,
-                                    damageSource,
-                                    0.125f
-                            )
-                            .damage(_ -> damage)
-                            .build();
-                    var resolved = LinearReflectionResolver.resolve(
-                            player.level(),
-                            new LinearSegment(startPos, endPos),
-                            payload
-                    );
-                    railgunRay.setBeamPath(
-                            (float) resolved.original().length(),
-                            resolved.isReflected(),
-                            (float) resolved.outbound().length(),
-                            (float) resolved.returnVisualLength(),
-                            resolved.returnSegment()
-                                    .map(LinearSegment::direction)
-                                    .orElse(Vec3.ZERO)
-                    );
-                    player.level().addFreshEntity(railgunRay);
-                    ElectromasterArcEffects.spawnBeamCoils(player.level(), resolved.outbound());
-                    resolved.returnSegment().ifPresent(segment ->
-                            ElectromasterArcEffects.spawnBeamCoils(player.level(), segment));
+                var profile = ammo.kind();
+                var beamRadius = 0.125f * profile.beamWidthMultiplier();
+                var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
+                var endPos = startPos.add(lookDir.scale(profile.beamLength()));
+                railgunRay.setPos(startPos);
+                railgunRay.setYRot(player.getYRot());
+                railgunRay.setXRot(player.getXRot());
+                var originalSource = new DamageSource(
+                        railgunRay.level().damageSources().damageTypes.getOrThrow(DamageTypes.MOB_ATTACK),
+                        railgunRay,
+                        player
+                );
+                var damageSource = SkillDamageSource.from(originalSource, skill);
+                var system = AbilitySystemServer.getSystem(player);
+                var damage = calculateDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID())
+                ) * profile.damageMultiplier();
+                var payload = LinearAttackPayload.builder(
+                                player,
+                                skill,
+                                damageSource,
+                                beamRadius
+                        )
+                        .damage(_ -> damage)
+                        .build();
+                var resolved = LinearReflectionResolver.resolve(
+                        player.level(),
+                        new LinearSegment(startPos, endPos),
+                        payload
+                );
+                railgunRay.setBeamPath(
+                        (float) resolved.original().length(),
+                        profile.beamWidthMultiplier(),
+                        resolved.isReflected(),
+                        (float) resolved.outbound().length(),
+                        (float) resolved.returnVisualLength(),
+                        resolved.returnSegment()
+                                .map(LinearSegment::direction)
+                                .orElse(Vec3.ZERO)
+                );
+                player.level().addFreshEntity(railgunRay);
+                ElectromasterArcEffects.spawnBeamCoils(player.level(), resolved.outbound());
+                resolved.returnSegment().ifPresent(segment ->
+                        ElectromasterArcEffects.spawnBeamCoils(player.level(), segment));
 
-                    if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.RAILGUN.get())) {
-                        destroyBlocksAlongSegment(resolved.outbound(), player);
-                    }
-                    var outboundResult = LinearAttackExecutor.executeOutbound(
-                            player.level(),
-                            resolved,
-                            payload
-                    );
-                    if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.RAILGUN.get())) {
-                        resolved.returnSegment().ifPresent(returnSegment -> resolved.reflectionCandidate()
-                                .ifPresent(candidate -> destroyBlocksAlongSegment(
-                                        returnSegment,
-                                        candidate.reflector()
-                                )));
-                    }
-                    LinearAttackExecutor.executeReturn(
-                            player.level(),
-                            resolved,
-                            payload,
-                            outboundResult
-                    );
-                    railgunRay.level().playSound(
-                            null,
-                            startPos.x,
-                            startPos.y,
-                            startPos.z,
-                            SoundEvents.RAILGUN.get(),
-                            SoundSource.PLAYERS,
-                            1.0f,
-                            1.0f
-                    );
-                    end();
-                    startReleaseVisual(player, rightHand);
+                if (DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
+                    destroyBlocksAlongSegment(resolved.outbound(), player, beamRadius);
                 }
+                var outboundResult = LinearAttackExecutor.executeOutbound(
+                        player.level(),
+                        resolved,
+                        payload
+                );
+                if (DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
+                    resolved.returnSegment().ifPresent(returnSegment -> resolved.reflectionCandidate()
+                            .ifPresent(candidate -> destroyBlocksAlongSegment(
+                                    returnSegment,
+                                    candidate.reflector(),
+                                    beamRadius
+                            )));
+                }
+                LinearAttackExecutor.executeReturn(
+                        player.level(),
+                        resolved,
+                        payload,
+                        outboundResult
+                );
+                railgunRay.level().playSound(
+                        null,
+                        startPos.x,
+                        startPos.y,
+                        startPos.z,
+                        SoundEvents.RAILGUN.get(),
+                        SoundSource.PLAYERS,
+                        1.0f,
+                        1.0f
+                );
             }
 
-            private static void destroyBlocksAlongSegment(LinearSegment segment, ServerPlayer breaker) {
+            private static void destroyBlocksAlongSegment(
+                    LinearSegment segment,
+                    ServerPlayer breaker,
+                    float radius
+            ) {
                 LevelUtil.destroyBlocksAlongPath(
                         breaker.level(),
                         segment.start(),
                         segment.end(),
-                        0.125f,
+                        radius,
                         3,
                         !breaker.isCreative(),
                         false,
@@ -413,25 +507,36 @@ public final class Railgun extends Skill {
 
         }
 
-        private static void startReleaseVisual(ServerPlayer player, boolean rightHand) {
+        private static void startReleaseVisual(
+                ServerPlayer player,
+                boolean rightHand,
+                boolean mainHandRight
+        ) {
             var previous = RELEASE_VISUALS.get(player);
             if (previous != null) previous.end();
-            var context = new ReleaseVisualContext(player, rightHand);
+            var context = new ReleaseVisualContext(player, rightHand, mainHandRight);
             RELEASE_VISUALS.put(player, context);
             AbilitySystemServer.registerContext(context);
         }
 
         private static final class ReleaseVisualContext extends ServerContext {
             private final boolean rightHand;
+            private final boolean mainHandRight;
             private final ResourceKey<Level> dimension;
             private int ticks;
             private boolean ended;
 
-            private ReleaseVisualContext(ServerPlayer player, boolean rightHand) {
+            private ReleaseVisualContext(
+                    ServerPlayer player,
+                    boolean rightHand,
+                    boolean mainHandRight
+            ) {
                 super(player);
                 this.rightHand = rightHand;
+                this.mainHandRight = mainHandRight;
                 dimension = player.level().dimension();
-                player.setData(AttachmentTypes.RAILGUN_DATA, new Data(rightHand, 0, true));
+                player.setData(AttachmentTypes.RAILGUN_DATA,
+                        new Data(rightHand, mainHandRight, 0, true, false));
             }
 
             @SubscribeEvent
@@ -445,7 +550,8 @@ public final class Railgun extends Skill {
                     return;
                 }
                 ticks++;
-                player.setData(AttachmentTypes.RAILGUN_DATA, new Data(rightHand, ticks, true));
+                player.setData(AttachmentTypes.RAILGUN_DATA,
+                        new Data(rightHand, mainHandRight, ticks, true, false));
             }
 
             private void end() {
@@ -466,6 +572,7 @@ public final class Railgun extends Skill {
         }
 
         private record AmmoSource(
+                AmmoKind kind,
                 @Nullable InteractionHand hand,
                 @Nullable ThrownCoin thrownCoin
         ) {
@@ -488,12 +595,16 @@ public final class Railgun extends Skill {
     }
 
     static boolean isVanillaAmmoId(Identifier id) {
-        return Identifier.withDefaultNamespace("iron_ingot").equals(id)
-                || Identifier.withDefaultNamespace("iron_block").equals(id);
+        return AmmoKind.fromVanillaId(id) != null;
     }
 
     static boolean isAmmo(ItemStack stack) {
-        return isVanillaAmmo(stack) || stack.is(Items.COIN.get());
+        return ammoKind(stack) != null;
+    }
+
+    private static @Nullable AmmoKind ammoKind(ItemStack stack) {
+        if (stack.is(Items.COIN.get())) return AmmoKind.COIN;
+        return AmmoKind.fromVanillaId(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     static float calculateDamage(float abilityPower, float playerMultiplier) {
@@ -501,17 +612,89 @@ public final class Railgun extends Skill {
         return 150.0f * Math.max(0, abilityPower) * Math.max(0, playerMultiplier);
     }
 
-    public record Data(boolean rightHand, int ticks, boolean released) {
+    enum AmmoKind {
+        COIN(0, 1.0f, 0.0f, 0.8f),
+        IRON_INGOT(10, 1.5f, 8.0f, 1.0f),
+        IRON_BLOCK(20, 2.0f, 16.0f, 1.5f),
+        ANVIL(30, 2.5f, 24.0f, 2.0f);
+
+        private final int minimumChargeTicks;
+        private final float beamWidthMultiplier;
+        private final float rangeBonus;
+        private final float damageMultiplier;
+
+        AmmoKind(
+                int minimumChargeTicks,
+                float beamWidthMultiplier,
+                float rangeBonus,
+                float damageMultiplier
+        ) {
+            this.minimumChargeTicks = minimumChargeTicks;
+            this.beamWidthMultiplier = beamWidthMultiplier;
+            this.rangeBonus = rangeBonus;
+            this.damageMultiplier = damageMultiplier;
+        }
+
+        int minimumChargeTicks() {
+            return minimumChargeTicks;
+        }
+
+        float beamWidthMultiplier() {
+            return beamWidthMultiplier;
+        }
+
+        float beamLength() {
+            return RailgunRay.DEFAULT_LENGTH + rangeBonus;
+        }
+
+        float damageMultiplier() {
+            return damageMultiplier;
+        }
+
+        private static @Nullable AmmoKind fromVanillaId(Identifier id) {
+            if (Identifier.withDefaultNamespace("iron_ingot").equals(id)) return IRON_INGOT;
+            if (Identifier.withDefaultNamespace("iron_block").equals(id)) return IRON_BLOCK;
+            if (Identifier.withDefaultNamespace("anvil").equals(id)
+                    || Identifier.withDefaultNamespace("chipped_anvil").equals(id)
+                    || Identifier.withDefaultNamespace("damaged_anvil").equals(id)) return ANVIL;
+            return null;
+        }
+    }
+
+    public record Data(
+            boolean rightHand,
+            boolean mainHandRight,
+            int ticks,
+            boolean released,
+            boolean coinReturnHint
+    ) {
         public static final StreamCodec<ByteBuf, Data> CODEC = StreamCodec.composite(
                 ByteBufCodecs.BOOL, Data::rightHand,
+                ByteBufCodecs.BOOL, Data::mainHandRight,
                 ByteBufCodecs.INT, Data::ticks,
                 ByteBufCodecs.BOOL, Data::released,
+                ByteBufCodecs.BOOL, Data::coinReturnHint,
                 Data::new
         );
-        private static final Data DEFAULT = new Data(true, 0, false);
+        private static final Data DEFAULT = new Data(true, true, 0, false, false);
 
         public static Data getDefault() {
             return DEFAULT;
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onCoinPickup(ItemEntityPickupEvent.Post event) {
+            if (!(event.getPlayer() instanceof ServerPlayer player)) return;
+            if (!event.getOriginalStack().is(Items.COIN.get())) return;
+            if (!player.getUUID().equals(event.getItemEntity().getTarget())) return;
+            if (!player.getMainHandItem().is(Items.COIN.get())) return;
+            Server.onCoinReturned(player);
         }
     }
 
@@ -526,6 +709,20 @@ public final class Railgun extends Skill {
         @Override
         public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
             return PacketTypes.RAILGUN_START_CHARGE.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class EndPacket extends Packet<ServerGamePacketListenerImpl, EndPacket> {
+        public static final EndPacket INSTANCE = new EndPacket();
+        public static final StreamCodec<ByteBuf, EndPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private EndPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, EndPacket> getPacketType() {
+            return PacketTypes.RAILGUN_END_CHARGE.get();
         }
     }
 }

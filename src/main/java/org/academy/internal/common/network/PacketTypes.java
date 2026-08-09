@@ -290,6 +290,10 @@ public final class PacketTypes {
             RAILGUN_START_CHARGE = PACKET_TYPES.register("railgun_start_charge",
             () -> new PacketType<>(Railgun.StartPacket.class, Railgun.StartPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Railgun.EndPacket>>
+            RAILGUN_END_CHARGE = PACKET_TYPES.register("railgun_end_charge",
+            () -> new PacketType<>(Railgun.EndPacket.class, Railgun.EndPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SingleHighSpeedElectronBeam.ShootPacket>>
             SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT = PACKET_TYPES.register("single_high_speed_electron_beam_shoot",
             () -> new PacketType<>(SingleHighSpeedElectronBeam.ShootPacket.class, SingleHighSpeedElectronBeam.ShootPacket.CODEC));
