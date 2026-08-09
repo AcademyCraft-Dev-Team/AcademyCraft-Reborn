@@ -1,13 +1,13 @@
 package org.academy.api.common.ability;
 
 public enum AbilityLevel {
-    LEVEL0(0, 10f),
+    LEVEL0(0, 100f),
     LEVEL1(1, 100f),
-    LEVEL2(2, 200f),
-    LEVEL3(3, 350f),
-    LEVEL4(4, 550f),
-    LEVEL5(5, 800f),
-    LEVEL6(6, 1400f);
+    LEVEL2(2, 100f),
+    LEVEL3(3, 100f),
+    LEVEL4(4, 100f),
+    LEVEL5(5, 100f),
+    LEVEL6(6, 100f);
 
     final float basicCP;
     final int levelCode;

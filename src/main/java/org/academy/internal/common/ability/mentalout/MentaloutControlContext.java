@@ -15,6 +15,7 @@ import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +38,8 @@ public final class MentaloutControlContext extends ServerContext {
     private static final byte FLAG_IMPRESSION = 1 << 1;
     private static final byte FLAG_MISIDENTIFICATION = 1 << 2;
     private static final byte FLAG_OVERRIDDEN = 1 << 3;
+    private static final byte FLAG_PROTECTED = 1 << 4;
+    private static final byte FLAG_RESISTANT = 1 << 5;
 
     private static final Map<UUID, MentaloutControlContext> BY_CONTROLLER = new HashMap<>();
     private static final Map<UUID, Set<MentaloutControlContext>> BY_SUBJECT = new HashMap<>();
@@ -62,7 +65,7 @@ public final class MentaloutControlContext extends ServerContext {
     public static List<LivingEntity> subjects(ServerPlayer player) {
         var context = get(player);
         if (context == null) return List.of();
-        return context.entries.values().stream().map(entry -> (LivingEntity) entry.subject).toList();
+        return context.entries.values().stream().map(entry -> entry.subject).toList();
     }
 
     public static void releaseController(UUID controllerUuid) {
@@ -117,17 +120,16 @@ public final class MentaloutControlContext extends ServerContext {
             if (target instanceof Mob mob) MentalControlRecall.suppressUntilExit(player, mob);
             return ToggleResult.REMOVED;
         }
-        if (!(target instanceof Mob mob)
-                || !MentaloutTargetValidation.isValidRosterTarget(player, mob)) {
+        if (!MentaloutTargetValidation.isValidRosterTarget(player, target)) {
             return ToggleResult.INVALID;
         }
-        if (!supportsAnyControl(mob)) return ToggleResult.UNSUPPORTED;
+        if (!supportsAnyControl(target)) return ToggleResult.UNSUPPORTED;
 
         var context = existing == null ? new MentaloutControlContext(player) : existing;
-        var added = context.add(mob);
+        var added = context.add(target);
         if (added != ToggleResult.ADDED || existing != null) return added;
 
-        registerNewContext(player, context, mob);
+        registerNewContext(player, context, target);
         return ToggleResult.ADDED;
     }
 
@@ -149,7 +151,7 @@ public final class MentaloutControlContext extends ServerContext {
     private static void registerNewContext(
             ServerPlayer player,
             MentaloutControlContext context,
-            Mob firstSubject
+            LivingEntity firstSubject
     ) {
         BY_CONTROLLER.put(player.getUUID(), context);
         AbilitySystemServer.registerContext(context);
@@ -250,6 +252,9 @@ public final class MentaloutControlContext extends ServerContext {
             for (var entry : entries.values()) {
                 close(entry.stupor);
                 entry.stupor = null;
+                if (entry.subject instanceof ServerPlayer subject) {
+                    PlayerControlSessionManager.grantResistance(subject);
+                }
             }
             AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                     player.getUUID(),
@@ -424,6 +429,9 @@ public final class MentaloutControlContext extends ServerContext {
             if (entry.stupor != null && (clearStupor || entry.stupor.isClosed())) {
                 close(entry.stupor);
                 entry.stupor = null;
+                if (entry.subject instanceof ServerPlayer subject) {
+                    PlayerControlSessionManager.grantResistance(subject);
+                }
                 changed = true;
                 occupationsChanged = true;
             }
@@ -452,7 +460,7 @@ public final class MentaloutControlContext extends ServerContext {
         }
     }
 
-    private ToggleResult add(Mob subject) {
+    private ToggleResult add(LivingEntity subject) {
         var entry = new Entry(subject, costWeight(subject));
         var applyStupor = stuporEnabled
                 && MentalControlApi.supports(subject, ControlCapability.FREEZE_AI);
@@ -502,8 +510,10 @@ public final class MentaloutControlContext extends ServerContext {
 
         entries.put(subject.getUUID(), entry);
         BY_SUBJECT.computeIfAbsent(subject.getUUID(), _ -> new HashSet<>()).add(this);
-        MentalControlMemory.remember(player, subject);
-        MentalControlRecall.allow(player, subject);
+        if (subject instanceof Mob mob) {
+            MentalControlMemory.remember(player, mob);
+            MentalControlRecall.allow(player, mob);
+        }
         if (BY_CONTROLLER.containsKey(player.getUUID())) sendUpsert(entry);
         return ToggleResult.ADDED;
     }
@@ -563,6 +573,9 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     private float costWeight(LivingEntity subject) {
+        if (subject instanceof ServerPlayer) {
+            return MentaloutConfig.playerControlCostMultiplier(player);
+        }
         return MentalControlApi.isBossCost(subject)
                 ? MentaloutConfig.bossCostMultiplier(player)
                 : 1.0f;
@@ -689,6 +702,10 @@ public final class MentaloutControlContext extends ServerContext {
         if (entry.impression != null && !entry.impression.isClosed()) flags |= FLAG_IMPRESSION;
         if (entry.misidentification != null && !entry.misidentification.isClosed()) flags |= FLAG_MISIDENTIFICATION;
         if (isOverridden(entry)) flags |= FLAG_OVERRIDDEN;
+        if (org.academy.internal.common.ability.mentalout.control.MentalControlRuntime
+                .isProtectedTarget(subject)) flags |= FLAG_PROTECTED;
+        if (subject instanceof ServerPlayer playerSubject
+                && PlayerControlSessionManager.isResistant(playerSubject)) flags |= FLAG_RESISTANT;
         var remaining = entry.misidentification == null || entry.misidentification.isClosed()
                 ? 0
                 : Integer.MAX_VALUE;
@@ -800,14 +817,14 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     private static final class Entry {
-        private final Mob subject;
+        private final LivingEntity subject;
         private final float costWeight;
         private ControlHandle stupor;
         private ControlHandle impression;
         private ControlHandle misidentification;
         private int lastFingerprint;
 
-        private Entry(Mob subject, float costWeight) {
+        private Entry(LivingEntity subject, float costWeight) {
             this.subject = subject;
             this.costWeight = costWeight;
         }
@@ -826,7 +843,15 @@ public final class MentaloutControlContext extends ServerContext {
         private MentaloutTargetValidation() {
         }
 
-        private static boolean isValidRosterTarget(ServerPlayer player, Mob subject) {
+        private static boolean isValidRosterTarget(ServerPlayer player, LivingEntity subject) {
+            if (player == null || subject == null || subject == player) return false;
+            if (subject instanceof ServerPlayer targetPlayer) {
+                if (!MentaloutConfig.allowPlayerRoster(player)
+                        || targetPlayer.isSpectator()
+                        || FriendlyFireSetting.shouldPrevent(player, targetPlayer)) {
+                    return false;
+                }
+            }
             return subject.isAlive()
                     && !subject.isRemoved()
                     && subject.level() == player.level();
@@ -841,10 +866,12 @@ public final class MentaloutControlContext extends ServerContext {
                     <= MentaloutTargetingRange.MAX_RANGE_SQR;
         }
 
-        private static boolean isRetained(ServerPlayer player, Mob subject) {
+        private static boolean isRetained(ServerPlayer player, LivingEntity subject) {
             return subject.isAlive()
                     && !subject.isRemoved()
-                    && subject.level() == player.level();
+                    && subject.level() == player.level()
+                    && (!(subject instanceof ServerPlayer targetPlayer)
+                    || MentaloutConfig.allowPlayerRoster(player) && !targetPlayer.isSpectator());
         }
     }
 

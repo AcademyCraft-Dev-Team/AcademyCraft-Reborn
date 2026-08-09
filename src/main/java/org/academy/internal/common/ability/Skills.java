@@ -66,6 +66,7 @@ import org.academy.internal.common.ability.mentalout.skills.MentalIntervention;
 import org.academy.internal.common.ability.mentalout.skills.ImpressionManipulation;
 import org.academy.internal.common.ability.mentalout.skills.TargetMisidentification;
 import org.academy.internal.common.ability.mentalout.skills.MentalIntrusion;
+import org.academy.internal.common.ability.mentalout.skills.MentalTakeover;
 import org.academy.internal.common.ability.mentalout.skills.SensoryDistortion;
 import org.academy.internal.common.ability.mentalout.skills.PrecisionOperation;
 import org.academy.internal.common.ability.mentalout.skills.CommandPositioning;
@@ -194,6 +195,8 @@ public final class Skills {
             SKILLS.register(SkillNames.IMPRESSION_MANIPULATION, ImpressionManipulation::new);
     public static final DeferredHolder<Skill, MentalIntrusion> MENTAL_INTRUSION =
             SKILLS.register(SkillNames.MENTAL_INTRUSION, MentalIntrusion::new);
+    public static final DeferredHolder<Skill, MentalTakeover> MENTAL_TAKEOVER =
+            SKILLS.register(SkillNames.MENTAL_TAKEOVER, MentalTakeover::new);
     public static final DeferredHolder<Skill, SensoryDistortion> SENSORY_DISTORTION =
             SKILLS.register(SkillNames.SENSORY_DISTORTION, SensoryDistortion::new);
     public static final DeferredHolder<Skill, CommandPositioning> COMMAND_POSITIONING =
@@ -227,6 +230,8 @@ public final class Skills {
     public static final DeferredHolder<Skill, Level0PassiveLv3> LEVEL0_PASSIVE_LV3 = SKILLS.register(SkillNames.LEVEL0_PASSIVE_LV3, Level0PassiveLv3::new);
     public static final DeferredHolder<Skill, Level0PassiveLv4> LEVEL0_PASSIVE_LV4 = SKILLS.register(SkillNames.LEVEL0_PASSIVE_LV4, Level0PassiveLv4::new);
     public static final DeferredHolder<Skill, Level0PassiveLv5> LEVEL0_PASSIVE_LV5 = SKILLS.register(SkillNames.LEVEL0_PASSIVE_LV5, Level0PassiveLv5::new);
+    public static final DeferredHolder<Skill, EnduranceTraining> ENDURANCE_TRAINING = SKILLS.register(SkillNames.ENDURANCE_TRAINING, EnduranceTraining::new);
+    public static final DeferredHolder<Skill, PhysicalTraining> PHYSICAL_TRAINING = SKILLS.register(SkillNames.PHYSICAL_TRAINING, PhysicalTraining::new);
 
     private Skills() {
     }

@@ -153,6 +153,11 @@ public final class Flight extends Skill {
             );
         }
 
+        /** Immediately refreshes the creative-flight lease after server-side automation toggles it. */
+        public static void refreshFlightPermission(ServerPlayer player) {
+            if (player != null) sync(player);
+        }
+
         public static boolean usesFlightAccelerationCost(ServerPlayer player) {
             return player.isAlive() && !player.hasDisconnected()
                     && Skills.FLIGHT.get().isEnabled(player)

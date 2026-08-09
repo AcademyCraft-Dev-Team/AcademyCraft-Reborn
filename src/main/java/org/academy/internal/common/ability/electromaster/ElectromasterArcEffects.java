@@ -85,6 +85,35 @@ public final class ElectromasterArcEffects {
         spawn(level, paths, 5, center);
     }
 
+    /** Emits a short-lived electric ring on the shield face struck by a remote effect. */
+    public static void spawnShieldInterceptRing(ServerLevel level, Vec3 center, Vec3 direction) {
+        if (level == null || center == null || direction == null
+                || !Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1.0E-8) {
+            return;
+        }
+        var normal = direction.normalize();
+        var paths = new ArrayList<ArcPath>(2);
+        paths.add(new ArcPath(
+                new CirclePath(center.toVector3f(), normal.toVector3f(), 0.72f),
+                List.of(
+                        new JaggedModifier(0.13f, 3, randomSeed()),
+                        new TaperModifier(FULL_THICKNESS, 0.86f)
+                ),
+                5.0f,
+                List.of()
+        ));
+        paths.add(new ArcPath(
+                new CirclePath(center.toVector3f(), normal.toVector3f(), 0.48f),
+                List.of(
+                        new JaggedModifier(0.10f, 2, randomSeed()),
+                        new TaperModifier(FULL_THICKNESS, 0.58f)
+                ),
+                4.0f,
+                List.of()
+        ));
+        spawn(level, paths, 6, center);
+    }
+
     public static void spawnNovaRing(ServerLevel level, Vec3 center, double radius, long age) {
         var paths = new ArrayList<ArcPath>();
         var segments = 16;

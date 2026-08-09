@@ -52,6 +52,8 @@ public final class WitherMentalControlAdapter implements MentalControlAdapter {
             case ControlDirective.ImpressionAlliance ignored -> new RelationBinding(wither);
             case ControlDirective.MoveTo moveTo -> StandardMobControlBindings.create(context, wither, moveTo);
             case ControlDirective.LookAt lookAt -> StandardMobControlBindings.create(context, wither, lookAt);
+            case ControlDirective.DirectControl direct ->
+                    StandardMobControlBindings.create(context, wither, direct);
             case ControlDirective.Guard guard -> StandardMobControlBindings.create(context, wither, guard);
         };
     }

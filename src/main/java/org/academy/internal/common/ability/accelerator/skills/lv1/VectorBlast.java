@@ -222,13 +222,18 @@ public final class VectorBlast extends Skill {
             var player = packet.getPacketListener().getPlayer();
             if (!(player.level() instanceof ServerLevel level)) return;
             switch (packet.action) {
-                case BLAST -> Skills.VECTOR_BLAST.get().executeActive(
-                        player, (context, actualCost) -> fire(player, level));
+                case BLAST -> tryAutomatedAttack(player);
                 case PULL_START -> startControl(player, level, ControlMode.PULL);
                 case PUSH_START -> startControl(player, level, ControlMode.PUSH);
                 case PULL_STOP -> stop(player, ControlMode.PULL);
                 case PUSH_STOP -> stop(player, ControlMode.PUSH);
             }
+        }
+
+        public static boolean tryAutomatedAttack(ServerPlayer player) {
+            if (!(player.level() instanceof ServerLevel level)) return false;
+            return Skills.VECTOR_BLAST.get().executeActive(
+                    player, (context, actualCost) -> fire(player, level));
         }
 
         private static void startControl(ServerPlayer player, ServerLevel level, ControlMode mode) {

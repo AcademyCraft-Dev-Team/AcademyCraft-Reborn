@@ -16,6 +16,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -172,6 +173,7 @@ public abstract class Skill {
     public final void toggle(ServerPlayer player) {
         var uuid = player.getUUID();
         var system = AbilitySystemServer.getSystem(player);
+        if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) return;
         if (!LearningHelper.isSkillAvailableForCategory(system.getPlayerAbilityCategory(uuid), this)) return;
         var runtimeData = getRuntimeData(player);
         if (runtimeData.isEmpty()) return;

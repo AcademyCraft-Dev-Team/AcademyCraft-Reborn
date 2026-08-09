@@ -161,11 +161,16 @@ public final class CommandPositioning extends Skill {
                     ? entity.uuid()
                     : null;
             var skipped = 0;
+            net.minecraft.world.entity.LivingEntity protectedTarget = null;
             var subjects = new ArrayList<net.minecraft.world.entity.LivingEntity>();
             for (var subject : MentaloutControlContext.subjects(player)) {
+                if (MentalControlRuntime.isProtectedTarget(subject)) {
+                    if (protectedTarget == null) protectedTarget = subject;
+                    skipped++;
+                    continue;
+                }
                 if (!subject.isAlive() || subject.isRemoved() || subject.level() != player.level()
                         || subject.getUUID().equals(destinationEntity)
-                        || MentalControlRuntime.isProtectedTarget(subject)
                         || !MentalControlApi.evaluate(subject, ControlCapability.PATH_CONTROL).supported()) {
                     skipped++;
                     continue;
@@ -173,7 +178,11 @@ public final class CommandPositioning extends Skill {
                 subjects.add(subject);
             }
             if (subjects.isEmpty()) {
-                feedback(player, "message.academy.mentalout.no_supported_targets");
+                if (protectedTarget != null) {
+                    MentalControlRuntime.notifyProtectionBlocked(player, protectedTarget);
+                } else {
+                    feedback(player, "message.academy.mentalout.no_supported_targets");
+                }
                 return;
             }
 
@@ -216,6 +225,9 @@ public final class CommandPositioning extends Skill {
                     skipped,
                     failed[0]
             );
+            if (protectedTarget != null) {
+                MentalControlRuntime.notifyProtectionBlocked(player, protectedTarget);
+            }
         }
 
         private static void feedback(ServerPlayer player, String key, Object... arguments) {

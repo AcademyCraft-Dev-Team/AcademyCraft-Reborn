@@ -70,12 +70,13 @@ public final class AbilitySystemServer {
 
         skillDataManager = new SkillDataManager(playerDataManager, syncManager);
         SubsystemRegistry.registerSubsystem(skillDataManager, SyncTypes.SKILL_DATA);
-        skillDataManager.setOnSkillLevelUp((uuid, levelsGained) -> {
-            var currentMax = playerCPManager.getMaxCP(uuid);
-            playerCPManager.setMaxCP(uuid, currentMax + (5.0f * levelsGained));
-        });
+        skillDataManager.setOnSkillLevelUp((uuid, levelsGained) ->
+                playerCPManager.refreshCommonSkillBonuses(uuid));
         skillDataManager.setOnSkillSetChanged(playerCPManager::refreshCommonSkillBonuses);
-        skillDataManager.setOnProficiencyGain(playerCPManager::addLevelProgress);
+        skillDataManager.setOnProficiencyGain((uuid, amount) -> {
+            playerCPManager.addLevelProgress(uuid, amount);
+            playerCPManager.refreshCommonSkillBonuses(uuid);
+        });
 
         for (var category : Registries.ABILITY_CATEGORIES) {
             category.initServer(context);

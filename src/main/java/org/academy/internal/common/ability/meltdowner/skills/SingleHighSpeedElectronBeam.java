@@ -130,8 +130,11 @@ public final class SingleHighSpeedElectronBeam extends Skill {
     public static final class Server {
         @SubscribePacket
         public static void handle(ShootPacket packet) {
-            var player = packet.getPacketListener().getPlayer();
-            Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get().executeActive(player, (_, _) -> {
+            tryAutomatedAttack(packet.getPacketListener().getPlayer());
+        }
+
+        public static boolean tryAutomatedAttack(ServerPlayer player) {
+            return Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get().executeActive(player, (_, _) -> {
                 var level = player.level();
                 var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
                 var eyePos = player.getEyePosition().add(0, -0.5, 0);

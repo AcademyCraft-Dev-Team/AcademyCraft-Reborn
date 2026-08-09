@@ -7,6 +7,18 @@ public abstract class SkillData {
     public static final float MIN_PROFICIENCY = 0.0f;
     public static final float MAX_PROFICIENCY = 3000.0f;
 
+    public static int getProficiencyTier(float proficiency) {
+        if (!Float.isFinite(proficiency) || proficiency < 0.0f) return 1;
+        if (proficiency >= 3000.0f) return 4;
+        if (proficiency >= 2000.0f) return 3;
+        if (proficiency >= 1000.0f) return 2;
+        return 1;
+    }
+
+    public static int getReachedProficiencyThresholds(float proficiency) {
+        return Math.max(0, getProficiencyTier(proficiency) - 1);
+    }
+
     @SerializedName("proficiency")
     private float proficiency;
 

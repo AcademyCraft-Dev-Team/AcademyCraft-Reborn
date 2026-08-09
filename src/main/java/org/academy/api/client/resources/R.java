@@ -394,6 +394,13 @@ public final class R {
                         }
                     }
 
+                    public static final class mental_takeover {
+                        public static final Identifier icon = academy("textures/ability/mentalout/skill/mental_takeover/icon.png");
+
+                        private mental_takeover() {
+                        }
+                    }
+
                     public static final class mental_stupor {
                         public static final Identifier icon = academy("textures/ability/mentalout/skill/mental_stupor/icon.png");
 

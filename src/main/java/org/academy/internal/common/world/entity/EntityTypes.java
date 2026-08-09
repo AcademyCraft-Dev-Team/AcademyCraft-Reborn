@@ -60,11 +60,6 @@ public class EntityTypes {
                     "kinetic_shockwave", KineticShockwave::new, MobCategory.MISC,
                     builder -> builder.sized(0.1f, 0.1f).clientTrackingRange(64).updateInterval(1)
             );
-    public static final DeferredHolder<EntityType<?>, EntityType<DirStrikeBlockFx>> DIR_STRIKE_BLOCK_FX =
-            ENTITY_TYPES.registerEntityType(
-                    "dir_strike_block_fx", DirStrikeBlockFx::new, MobCategory.MISC,
-                    builder -> builder.sized(1.0f, 1.0f).clientTrackingRange(64).updateInterval(1)
-            );
     public static final DeferredHolder<EntityType<?>, EntityType<Smoke>> SMOKE =
             ENTITY_TYPES.registerEntityType(
                     "smoke", Smoke::new, MobCategory.MISC);

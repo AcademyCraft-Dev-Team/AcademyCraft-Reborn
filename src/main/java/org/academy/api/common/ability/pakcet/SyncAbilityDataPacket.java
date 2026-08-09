@@ -150,7 +150,7 @@ public final class SyncAbilityDataPacket extends Packet<ClientPacketListener, Sy
             return new SkillOccupationSnapshot(
                     skillId,
                     stackCount + other.stackCount,
-                    Math.max(remainingIterationPoints, other.remainingIterationPoints),
+                    remainingIterationPoints,
                     occupiedCp + other.occupiedCp
             );
         }

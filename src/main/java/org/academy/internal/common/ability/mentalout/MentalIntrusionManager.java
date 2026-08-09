@@ -68,8 +68,11 @@ public final class MentalIntrusionManager {
                 MentaloutConfig.mentalIntrusionRange(player, level)
         );
         if (target == null) return StartResult.INVALID_TARGET;
-        if (MentalControlRuntime.isProtectedTarget(target)
-                || target instanceof ServerPlayer targetPlayer && targetPlayer.isSpectator()
+        if (MentalControlRuntime.isProtectedTarget(target)) {
+            MentalControlRuntime.notifyProtectionBlocked(player, target);
+            return StartResult.PROTECTED_NOTIFIED;
+        }
+        if (target instanceof ServerPlayer targetPlayer && targetPlayer.isSpectator()
                 || target instanceof ServerPlayer && FriendlyFireSetting.shouldPrevent(player, target)) {
             return StartResult.PROTECTED;
         }
@@ -89,9 +92,7 @@ public final class MentalIntrusionManager {
 
         var revision = nextRevision(SESSION_REVISIONS, player.getUUID());
         var sessionId = UUID.randomUUID();
-        var maximumEnd = target instanceof ServerPlayer
-                ? now + MentaloutConfig.playerIntrusionDuration(player, level)
-                : Long.MAX_VALUE;
+        var maximumEnd = Long.MAX_VALUE;
         var session = new Session(
                 sessionId,
                 revision,
@@ -123,18 +124,24 @@ public final class MentalIntrusionManager {
         if (!intrusion.isEnabled(player)) return null;
         var level = Math.clamp(intrusion.getLevel(player), 0, 2);
         var range = MentaloutConfig.mentalIntrusionRange(player, level);
+        if (MentalControlRuntime.isProtectedTarget(target)) {
+            MentalControlRuntime.notifyProtectionBlocked(player, target);
+            return null;
+        }
         if (!MentaloutTargeting.isValidTarget(player, target, range)
-                || MentalControlRuntime.isProtectedTarget(target)
                 || target instanceof ServerPlayer targetPlayer && targetPlayer.isSpectator()
                 || target instanceof ServerPlayer && FriendlyFireSetting.shouldPrevent(player, target)) {
             return null;
         }
         var now = player.level().getGameTime();
-        var maximumEnd = Math.max(now + 1L, expiresAt);
+        // Player intrusion currently has no duration cap, including precision-operation
+        // sessions. The owning operation can still stop the session explicitly.
+        var maximumEnd = target instanceof ServerPlayer
+                ? Long.MAX_VALUE
+                : Math.max(now + 1L, expiresAt);
         if (target instanceof ServerPlayer) {
             var cooldownKey = new CooldownKey(player.getUUID(), target.getUUID());
             if (PLAYER_COOLDOWNS.getOrDefault(cooldownKey, Long.MIN_VALUE) > now) return null;
-            maximumEnd = Math.min(maximumEnd, now + MentaloutConfig.playerIntrusionDuration(player, level));
             PLAYER_COOLDOWNS.put(cooldownKey, now + MentaloutConfig.playerIntrusionCooldown(player));
         }
         var revision = nextRevision(SESSION_REVISIONS, player.getUUID());
@@ -189,7 +196,10 @@ public final class MentalIntrusionManager {
             );
             return DistortionResult.STOPPED;
         }
-        if (MentalControlRuntime.isProtectedTarget(session.target)) return DistortionResult.PROTECTED;
+        if (MentalControlRuntime.isProtectedTarget(session.target)) {
+            MentalControlRuntime.notifyProtectionBlocked(player, session.target);
+            return DistortionResult.PROTECTED_NOTIFIED;
+        }
         var level = Math.clamp(skill.getLevel(player), 0, 2);
         var cost = MentaloutConfig.sensoryDistortionCost(player, level);
         if (MentalControlRuntime.isBossCost(session.target)) {
@@ -220,6 +230,10 @@ public final class MentalIntrusionManager {
                     player.getUUID(),
                     skill.getKeyString()
             );
+            if (MentalControlRuntime.isProtectedTarget(session.target)) {
+                MentalControlRuntime.notifyProtectionBlocked(player, session.target);
+                return DistortionResult.PROTECTED_NOTIFIED;
+            }
             return DistortionResult.PROTECTED;
         }
     }
@@ -236,15 +250,17 @@ public final class MentalIntrusionManager {
             var player = session.player;
             var target = session.target;
             var maxDistance = MentaloutConfig.intrusionMaximumDistance(player);
+            var protectedTarget = MentalControlRuntime.isProtectedTarget(target);
             if (!player.isAlive()
                     || !Skills.MENTAL_INTRUSION.get().isEnabled(player)
                     || target.isRemoved()
                     || !target.isAlive()
                     || target.level() != player.level()
                     || target.distanceToSqr(player) > maxDistance * maxDistance
-                    || MentalControlRuntime.isProtectedTarget(target)
+                    || protectedTarget
                     || !session.confirmed && now >= session.readyDeadline
                     || now >= session.maximumEnd) {
+                if (protectedTarget) MentalControlRuntime.notifyProtectionBlocked(player, target);
                 stop(player.getUUID(), true);
             } else {
                 Skills.MENTAL_INTRUSION.get().reportActivity(player, session.confirmed);
@@ -335,6 +351,7 @@ public final class MentalIntrusionManager {
         STOPPED,
         INVALID_TARGET,
         PROTECTED,
+        PROTECTED_NOTIFIED,
         COOLDOWN,
         INSUFFICIENT_CP,
         UNAVAILABLE
@@ -345,6 +362,7 @@ public final class MentalIntrusionManager {
         STOPPED,
         NO_SESSION,
         PROTECTED,
+        PROTECTED_NOTIFIED,
         INSUFFICIENT_CP,
         UNAVAILABLE
     }
@@ -364,6 +382,8 @@ public final class MentalIntrusionManager {
             switch (MentalIntrusionManager.toggle(player)) {
                 case INVALID_TARGET -> feedback(player, "message.academy.mentalout.invalid_target");
                 case PROTECTED -> feedback(player, "message.academy.mentalout.protected_target");
+                case PROTECTED_NOTIFIED -> {
+                }
                 case COOLDOWN -> feedback(player, "message.academy.mentalout.intrusion_cooldown");
                 case INSUFFICIENT_CP -> feedback(player, "message.academy.mentalout.insufficient_cp");
                 case UNAVAILABLE -> feedback(player, "message.academy.mentalout.skill_unavailable");
@@ -383,6 +403,8 @@ public final class MentalIntrusionManager {
             switch (MentalIntrusionManager.toggleDistortion(player)) {
                 case NO_SESSION -> feedback(player, "message.academy.mentalout.no_intrusion_session");
                 case PROTECTED -> feedback(player, "message.academy.mentalout.protected_target");
+                case PROTECTED_NOTIFIED -> {
+                }
                 case INSUFFICIENT_CP -> feedback(player, "message.academy.mentalout.insufficient_cp");
                 case UNAVAILABLE -> feedback(player, "message.academy.mentalout.skill_unavailable");
                 default -> {

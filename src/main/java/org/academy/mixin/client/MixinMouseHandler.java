@@ -3,10 +3,13 @@ package org.academy.mixin.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.player.LocalPlayer;
 import org.academy.api.client.input.InputSystem;
+import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
@@ -28,6 +31,19 @@ public abstract class MixinMouseHandler {
     private void onMove(long handle, double xpos, double ypos, CallbackInfo ci) {
         if (handle == Minecraft.getInstance().getWindow().handle()) {
             InputSystem.handleMouseMove(xpos, ypos, ci);
+        }
+    }
+
+    @Redirect(
+            method = "turnPlayer",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V"
+            )
+    )
+    private void academy$turnControlledView(LocalPlayer player, double yawDelta, double pitchDelta) {
+        if (!PlayerControlClientState.captureViewTurn(yawDelta, pitchDelta)) {
+            player.turn(yawDelta, pitchDelta);
         }
     }
 }

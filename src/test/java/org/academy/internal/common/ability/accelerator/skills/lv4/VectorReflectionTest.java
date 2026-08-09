@@ -4,8 +4,19 @@ import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VectorReflectionTest {
+    @Test
+    void requiresEnoughCpToPayMaintenanceWithoutDepletingCp() {
+        assertFalse(VectorReflection.Server.hasSufficientCpToEnable(44.0f, 50.0f, 0.9f));
+        assertFalse(VectorReflection.Server.hasSufficientCpToEnable(45.0f, 50.0f, 0.9f));
+        assertTrue(VectorReflection.Server.hasSufficientCpToEnable(45.01f, 50.0f, 0.9f));
+        assertFalse(VectorReflection.Server.hasSufficientCpToEnable(
+                Float.NaN, 50.0f, 0.9f));
+    }
+
     @Test
     void reversesAndAcceleratesProjectileVelocity() {
         var reflected = VectorReflection.Server.reflectedVelocity(new Vec3(1, -2, 3));

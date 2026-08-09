@@ -1,6 +1,7 @@
 package org.academy.mixin.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -8,6 +9,7 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.level.GameType;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.render.Render;
@@ -16,7 +18,10 @@ import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.academy.internal.client.renderer.effect.PlatinumCosmosPass;
 import org.academy.internal.client.renderer.effect.WorldLineOverlayPass;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
+import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.joml.Matrix4fStack;
+import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -110,7 +115,40 @@ public abstract class MixinGameRenderer {
             Matrix4fc modelViewMatrix,
             CallbackInfo ci
     ) {
-        if (MentalIntrusionClientState.isActive()) ci.cancel();
+        if (PlayerControlClientState.isController()) {
+            var entity = PlayerControlClientState.controlledViewEntity();
+            var state = PlayerControlClientState.targetViewState();
+            if (entity instanceof AbstractClientPlayer player && state != null
+                    && !cameraState.isPanoramicMode
+                    && minecraft.options.getCameraType().isFirstPerson()
+                    && !cameraState.entityRenderState.isSleeping
+                    && !minecraft.gameRenderer.gameRenderState().guiRenderState.isHudHidden
+                    && minecraft.gameMode != null
+                    && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR) {
+                var poseStack = new PoseStack();
+                poseStack.pushPose();
+                poseStack.mulPose(modelViewMatrix.invert(new Matrix4f()));
+                var modelViewStack = RenderSystem.getModelViewStack();
+                modelViewStack.pushMatrix().mul(modelViewMatrix);
+                ((ControlledItemInHandRendererBridge) minecraft.gameRenderer.itemInHandRenderer)
+                        .academy$submitControlledHands(
+                                player,
+                                state,
+                                deltaPartialTick,
+                                poseStack,
+                                handAndScreenSubmitNodeStorage,
+                                minecraft.getEntityRenderDispatcher().getPackedLightCoords(
+                                        player, deltaPartialTick
+                                )
+                        );
+                featureRenderDispatcher.renderAllFeatures(handAndScreenSubmitNodeStorage);
+                modelViewStack.popMatrix();
+                poseStack.popPose();
+            }
+            ci.cancel();
+        } else if (MentalIntrusionClientState.isActive()) {
+            ci.cancel();
+        }
     }
 
     @Inject(

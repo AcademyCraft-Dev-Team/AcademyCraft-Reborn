@@ -34,6 +34,7 @@ final class StandardMobControlBindings {
             case ControlDirective.MoveTo moveTo -> new PathBinding(
                     mob, moveTo.destination(), moveTo.arrivalRadius());
             case ControlDirective.LookAt lookAt -> new LookBinding(mob, lookAt.targetUuid());
+            case ControlDirective.DirectControl ignored -> new MobDirectControlBinding(mob);
             case ControlDirective.Guard guard -> new GuardBinding(
                     mob,
                     context.controller(),
@@ -156,6 +157,14 @@ final class StandardMobControlBindings {
                 case MOVING -> {
                 }
             }
+        }
+
+        @Override
+        public void beforeMoveControlTick() {
+            // Flying mobs commonly replace their velocity or wanted position from MoveControl.
+            // Reassert after navigation and immediately before that tick so the controlled
+            // destination remains the final movement owner for this server tick.
+            if (!complete && target != null) navigator.reassert(target, 1.0, false);
         }
 
         @Override

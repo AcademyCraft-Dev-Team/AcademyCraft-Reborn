@@ -8,6 +8,14 @@ public final class MentaloutConfig {
     private MentaloutConfig() {
     }
 
+    public static boolean allowPlayerRoster(ServerPlayer player) {
+        return settings(player).allowPlayerRoster;
+    }
+
+    public static boolean allowMentalTakeover(ServerPlayer player) {
+        return settings(player).allowMentalTakeover;
+    }
+
     public static float mentalInterventionCost(ServerPlayer player) {
         return nonNegative(settings(player).mentalInterventionCost, 10.0f);
     }
@@ -39,6 +47,18 @@ public final class MentaloutConfig {
 
     public static float bossCostMultiplier(ServerPlayer player) {
         return Math.max(1.0f, finite(settings(player).bossCostMultiplier, 2.0f));
+    }
+
+    public static float playerControlCostMultiplier(ServerPlayer player) {
+        return Math.max(1.0f, finite(settings(player).playerControlCostMultiplier, 3.0f));
+    }
+
+    public static float mentalTakeoverOccupation(ServerPlayer player) {
+        return nonNegative(settings(player).mentalTakeoverOccupation, 100.0f);
+    }
+
+    public static int playerControlResistanceTicks(ServerPlayer player) {
+        return Math.clamp(settings(player).playerControlResistanceTicks, 0, 20 * 60 * 10);
     }
 
     public static float mentalIntrusionCost(ServerPlayer player, int level) {

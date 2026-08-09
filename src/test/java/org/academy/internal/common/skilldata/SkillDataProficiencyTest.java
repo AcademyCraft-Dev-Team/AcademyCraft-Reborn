@@ -8,6 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkillDataProficiencyTest {
     @Test
+    void proficiencyTiersUseThousandPointThresholds() {
+        assertEquals(1, SkillData.getProficiencyTier(0.0f));
+        assertEquals(1, SkillData.getProficiencyTier(999.99f));
+        assertEquals(2, SkillData.getProficiencyTier(1000.0f));
+        assertEquals(3, SkillData.getProficiencyTier(2000.0f));
+        assertEquals(4, SkillData.getProficiencyTier(3000.0f));
+        assertEquals(3, SkillData.getReachedProficiencyThresholds(3000.0f));
+    }
+    @Test
     void proficiencyIsClampedToCanonicalRange() {
         var data = new CommonSkillData();
 

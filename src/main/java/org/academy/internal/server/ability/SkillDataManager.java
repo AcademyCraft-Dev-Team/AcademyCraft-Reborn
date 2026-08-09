@@ -151,6 +151,7 @@ public class SkillDataManager implements AbilitySubsystem {
         var levelsGained = applyProficiency(data, skill, increment);
         if (levelsGained > 0) onSkillLevelUp.accept(uuid, levelsGained);
         if (increment > 0.0f) onProficiencyGain.accept(uuid, increment);
+        else onSkillSetChanged.accept(uuid);
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         return true;
@@ -167,6 +168,7 @@ public class SkillDataManager implements AbilitySubsystem {
         data.setProficiency(proficiency);
         var newLevel = skill.getLevelForProficiency(data.getProficiency());
         if (newLevel > oldLevel) onSkillLevelUp.accept(uuid, newLevel - oldLevel);
+        onSkillSetChanged.accept(uuid);
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         return true;
@@ -220,6 +222,10 @@ public class SkillDataManager implements AbilitySubsystem {
                     skillReference.value().createData(serverPlayer)
             );
             if (skillData == null) {
+                playerData.restoreRetainedSkillProficiency(
+                        skillKey,
+                        playerData.getSkillDataMap().get(skillKey)
+                );
                 playerData.markDirty();
                 syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
                 onSkillSetChanged.accept(uuid);
@@ -229,7 +235,12 @@ public class SkillDataManager implements AbilitySubsystem {
 
     public void removeSkill(UUID uuid, String skillKey) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null || playerData.getSkillDataMap().remove(skillKey) == null) return;
+        if (playerData == null) return;
+        var removed = playerData.getSkillDataMap().remove(skillKey);
+        if (removed == null) return;
+        if (resolveSkillScope(skillKey) != SkillScope.COMMON) {
+            playerData.retainSkillProficiency(skillKey, removed);
+        }
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         onSkillSetChanged.accept(uuid);
@@ -238,6 +249,11 @@ public class SkillDataManager implements AbilitySubsystem {
     public void clearCategorySkills(UUID uuid) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return;
+        playerData.getSkillDataMap().forEach((skillId, data) -> {
+            if (resolveSkillScope(skillId) != SkillScope.COMMON) {
+                playerData.retainSkillProficiency(skillId, data);
+            }
+        });
         var removed = removeCategorySkills(playerData.getSkillDataMap(), SkillDataManager::resolveSkillScope);
         if (removed == 0) return;
         playerData.markDirty();

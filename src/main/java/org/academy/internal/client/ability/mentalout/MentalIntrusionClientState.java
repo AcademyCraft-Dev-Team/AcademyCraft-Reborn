@@ -105,7 +105,8 @@ public final class MentalIntrusionClientState {
             return;
         }
         var target = minecraft.level.getEntity(targetEntityId);
-        if (target == null || target.isRemoved() || !target.getUUID().equals(targetUuid)) {
+        if (target == null || !target.isAlive() || target.isRemoved()
+                || !target.getUUID().equals(targetUuid)) {
             var endedSession = sessionId;
             var endedRevision = revision;
             restoreCamera(false);

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public sealed interface ControlDirective permits ControlDirective.ForceTarget,
         ControlDirective.FreezeAi, ControlDirective.ImpressionAlliance, ControlDirective.MoveTo,
-        ControlDirective.LookAt, ControlDirective.Guard {
+        ControlDirective.LookAt, ControlDirective.DirectControl, ControlDirective.Guard {
     ControlCapability capability();
 
     default Set<ControlDomain> domains() {
@@ -72,6 +72,13 @@ public sealed interface ControlDirective permits ControlDirective.ForceTarget,
         @Override
         public ControlCapability capability() {
             return ControlCapability.VIEW_CONTROL;
+        }
+    }
+
+    record DirectControl() implements ControlDirective {
+        @Override
+        public ControlCapability capability() {
+            return ControlCapability.DIRECT_CONTROL;
         }
     }
 

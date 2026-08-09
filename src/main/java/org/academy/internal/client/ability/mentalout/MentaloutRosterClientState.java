@@ -20,6 +20,8 @@ public final class MentaloutRosterClientState {
     public static final byte FLAG_IMPRESSION = 1 << 1;
     public static final byte FLAG_MISIDENTIFICATION = 1 << 2;
     public static final byte FLAG_OVERRIDDEN = 1 << 3;
+    public static final byte FLAG_PROTECTED = 1 << 4;
+    public static final byte FLAG_RESISTANT = 1 << 5;
 
     public static final byte DELTA_UPSERT = 0;
     public static final byte DELTA_REMOVE = 1;

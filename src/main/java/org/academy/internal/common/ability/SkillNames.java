@@ -80,6 +80,7 @@ public final class SkillNames {
     public static final String DISINTEGRATE = "disintegrate";
     public static final String SPACIAL_EXCISION = "spacial_excision";
     public static final String MENTAL_INTRUSION = "mental_intrusion";
+    public static final String MENTAL_TAKEOVER = "mental_takeover";
     public static final String MENTAL_INTERVENTION = "mental_intervention";
     public static final String SENSORY_DISTORTION = "sensory_distortion";
     public static final String TARGET_MISIDENTIFICATION = "target_misidentification";
@@ -92,4 +93,6 @@ public final class SkillNames {
     public static final String LEVEL0_PASSIVE_LV3 = "level0_passive_lv3";
     public static final String LEVEL0_PASSIVE_LV4 = "level0_passive_lv4";
     public static final String LEVEL0_PASSIVE_LV5 = "level0_passive_lv5";
+    public static final String ENDURANCE_TRAINING = "endurance_training";
+    public static final String PHYSICAL_TRAINING = "physical_training";
 }
