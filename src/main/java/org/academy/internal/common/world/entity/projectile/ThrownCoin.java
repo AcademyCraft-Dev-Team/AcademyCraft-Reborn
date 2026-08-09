@@ -57,7 +57,12 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     @Override
     protected void onHitBlock(BlockHitResult blockHitResult) {
         if (level() instanceof ServerLevel serverLevel) {
-            spawnAtLocation(serverLevel, getPickupItem(), 0.1F);
+            var droppedCoin = spawnAtLocation(serverLevel, getPickupItem(), 0.1F);
+            var owner = getOwner();
+            if (droppedCoin != null && owner != null) {
+                droppedCoin.setTarget(owner.getUUID());
+                droppedCoin.setThrower(owner);
+            }
             discard();
         }
     }

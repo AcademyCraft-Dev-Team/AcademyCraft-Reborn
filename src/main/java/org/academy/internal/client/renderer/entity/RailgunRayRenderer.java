@@ -32,7 +32,12 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
     public void submit(RailgunRayRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
         poseStack.pushPose();
 
-        var progress = Math.max(0.0f, MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5)) * 0.1f;
+        var widthMultiplier = Float.isFinite(renderState.widthMultiplier)
+                ? Math.max(0.0f, renderState.widthMultiplier)
+                : 1.0f;
+        var progress = Math.max(0.0f,
+                MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5))
+                * 0.1f * widthMultiplier;
         var originalLength = ReflectedBeamVisualGeometry.safeLength(renderState.length);
         var outgoingLength = renderState.reflectionActive
                 ? Math.min(originalLength, ReflectedBeamVisualGeometry.safeLength(renderState.reflectionDistance))
@@ -228,6 +233,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
         reusedState.xRot = entity.getXRot();
         reusedState.yRot = entity.getYRot();
         reusedState.length = entity.getBeamLength();
+        reusedState.widthMultiplier = entity.getBeamWidthMultiplier();
         reusedState.reflectionActive = entity.isReflectionActive();
         reusedState.reflectionDistance = entity.getReflectionDistance();
         reusedState.reflectionReturnLength = entity.getReflectionReturnLength();

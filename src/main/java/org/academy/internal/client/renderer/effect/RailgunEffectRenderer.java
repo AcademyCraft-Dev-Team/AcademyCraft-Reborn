@@ -49,6 +49,14 @@ public final class RailgunEffectRenderer implements EffectRenderer {
             submitCoin(poseStack, collector, packedLight, renderState.ageInTicks, 0.23f);
         }
         poseStack.popPose();
+
+        if (data.coinReturnHint()) {
+            var mainHandX = data.mainHandRight() ? -0.32f : 0.32f;
+            poseStack.pushPose();
+            poseStack.translate(mainHandX, 0.55f, -0.16f);
+            submitCoinReturnHint(poseStack, collector, renderState.ageInTicks, false);
+            poseStack.popPose();
+        }
     }
 
     @Override
@@ -69,6 +77,14 @@ public final class RailgunEffectRenderer implements EffectRenderer {
             submitCoin(poseStack, collector, packedLight, player.tickCount + partialTick, 0.12f);
         }
         poseStack.popPose();
+
+        if (data.coinReturnHint()) {
+            var mainHandX = data.mainHandRight() ? 0.34f : -0.34f;
+            poseStack.pushPose();
+            poseStack.translate(mainHandX, -0.20f, -0.30f);
+            submitCoinReturnHint(poseStack, collector, player.tickCount + partialTick, true);
+            poseStack.popPose();
+        }
     }
 
     private static float getVisualStrength(Railgun.Data data, float ticks) {
@@ -100,6 +116,25 @@ public final class RailgunEffectRenderer implements EffectRenderer {
             ringPose.mulPose(Axis.ZP.rotationDegrees(-time * 6.5f));
             renderRingPlane(ringPose, consumer, time, 2, 0.21f, 0.019f, strength * 0.76f);
             ringPose.popPose();
+        });
+        poseStack.popPose();
+    }
+
+    private static void submitCoinReturnHint(
+            PoseStack poseStack,
+            SubmitNodeCollector collector,
+            float time,
+            boolean firstPerson
+    ) {
+        var scale = firstPerson ? 0.72f : 1.0f;
+        var pulse = 0.45f + 0.55f * Math.abs(Mth.sin(time * 0.85f));
+        poseStack.pushPose();
+        poseStack.scale(scale, scale, scale);
+        collector.submitCustomGeometry(poseStack, ARC, (pose, consumer) -> {
+            var ringPose = new PoseStack();
+            ringPose.last().set(pose);
+            ringPose.mulPose(Axis.ZP.rotationDegrees(-time * 9.0f));
+            renderRingPlane(ringPose, consumer, time, 4, 0.36f, 0.034f, pulse);
         });
         poseStack.popPose();
     }

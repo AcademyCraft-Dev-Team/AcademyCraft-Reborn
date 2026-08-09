@@ -8,8 +8,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -151,6 +156,7 @@ public final class AirflowJet extends Skill {
 
     public static final class Server {
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
+        private static final Map<ServerPlayer, Double> MACE_MOMENTUM = new WeakHashMap<>();
 
         private Server() {
         }
@@ -170,6 +176,39 @@ public final class AirflowJet extends Skill {
         public static void handleStop(StopPacket packet) {
             var context = ACTIVE.get(packet.getPacketListener().getPlayer());
             if (context != null) context.end();
+        }
+
+        public static boolean isActive(ServerPlayer player) {
+            return ACTIVE.containsKey(player);
+        }
+
+        public static double getEffectiveMaceFallDistance(Entity entity) {
+            if (!(entity instanceof ServerPlayer player)) return entity.fallDistance;
+            return Math.max(player.fallDistance, MACE_MOMENTUM.getOrDefault(player, 0.0));
+        }
+
+        public static void consumeMaceMomentum(ServerPlayer player) {
+            MACE_MOMENTUM.remove(player);
+        }
+
+        static double accumulateMaceMomentum(double current, double fallDistance, Vec3 velocity) {
+            var baseline = Math.max(0.0, Math.max(current, fallDistance));
+            if (velocity == null) return baseline;
+            var speed = velocity.length();
+            if (!Double.isFinite(speed) || speed <= 0.0) return baseline;
+            return Math.min(Double.MAX_VALUE, baseline + speed);
+        }
+
+        private static void recordMaceMomentum(ServerPlayer player) {
+            MACE_MOMENTUM.put(player, accumulateMaceMomentum(
+                    MACE_MOMENTUM.getOrDefault(player, 0.0),
+                    player.fallDistance,
+                    player.getDeltaMovement()
+            ));
+        }
+
+        private static void clearMaceMomentum(ServerPlayer player) {
+            MACE_MOMENTUM.remove(player);
         }
 
         private static final class Context extends ServerContext {
@@ -198,6 +237,7 @@ public final class AirflowJet extends Skill {
                 }
 
                 if (ticks % CP_INTERVAL_TICKS == 0
+                        && !Flight.Server.usesFlightAccelerationCost(player)
                         && !AbilitySystemServer.getSystem(player).tryTimedOccupation(
                         player.getUUID(),
                         skill.getCpCost(skill.getLevel(player))
@@ -222,6 +262,7 @@ public final class AirflowJet extends Skill {
                             (LAUNCH_SPEED + skillLevel * 0.1) * SPEED_MULTIPLIER
                     );
                 }
+                recordMaceMomentum(player);
                 player.resetFallDistance();
                 spawnEffects();
                 ticks++;
@@ -251,6 +292,21 @@ public final class AirflowJet extends Skill {
             @Override
             protected void onUnregistered() {
                 ACTIVE.remove(player, this);
+            }
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            if (!player.isAlive() || player.hasDisconnected()
+                    || player.onGround() || player.isInWater()) {
+                Server.clearMaceMomentum(player);
             }
         }
     }

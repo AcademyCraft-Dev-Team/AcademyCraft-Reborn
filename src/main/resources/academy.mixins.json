@@ -39,7 +39,8 @@
     "common.MixinVibrationSystemListener",
     "common.MixinWitherBoss",
     "common.item.MixinItemStackDarkmatterEnchantment",
-    "common.item.MixinItemEntityDarkmatterFireImmune"
+    "common.item.MixinItemEntityDarkmatterFireImmune",
+    "common.item.MixinMaceItemAirflowMomentum"
   ],
   "client": [
     "client.MixinAvatarRenderer",
