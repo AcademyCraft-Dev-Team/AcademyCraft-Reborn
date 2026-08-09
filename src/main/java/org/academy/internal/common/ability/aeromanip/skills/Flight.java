@@ -38,10 +38,16 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class Flight extends Skill {
     private static final Identifier FLIGHT_SOURCE =
             AcademyCraft.academy(SkillNames.FLIGHT);
+    private static final float ACCELERATION_CP_COST = 8.0f;
+    private static final int ACCELERATION_CP_INTERVAL_TICKS = 20;
+    private static final double NORMAL_FLIGHT_SPEED_CAP = 0.7;
+    private static final double ACCELERATED_FLIGHT_SPEED_CAP = 1.1;
 
     public Flight() {
         super(Builder
@@ -52,6 +58,7 @@ public final class Flight extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(60)
                 .iterationTicks(40)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.WIND_CORRIDOR)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
         );
@@ -125,6 +132,8 @@ public final class Flight extends Skill {
     }
 
     public static final class Server {
+        private static final Map<ServerPlayer, Integer> NEXT_ACCELERATION_COST_TICK = new WeakHashMap<>();
+
         private Server() {
         }
 
@@ -143,6 +152,50 @@ public final class Flight extends Skill {
                     Skills.FLIGHT.get().isEnabled(player) && player.isAlive()
             );
         }
+
+        public static boolean usesFlightAccelerationCost(ServerPlayer player) {
+            return player.isAlive() && !player.hasDisconnected()
+                    && Skills.FLIGHT.get().isEnabled(player)
+                    && player.getAbilities().flying;
+        }
+
+        private static boolean chargeAccelerationCost(
+                ServerPlayer player,
+                AbilitySystemServer system,
+                Skill skill
+        ) {
+            var nextCostTick = NEXT_ACCELERATION_COST_TICK.getOrDefault(
+                    player,
+                    player.tickCount
+            );
+            if (player.tickCount < nextCostTick) return true;
+            var paid = system.tryTimedOccupation(
+                    player.getUUID(),
+                    ACCELERATION_CP_COST
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT),
+                    skill,
+                    ACCELERATION_CP_INTERVAL_TICKS
+            );
+            if (paid) {
+                NEXT_ACCELERATION_COST_TICK.put(
+                        player,
+                        player.tickCount + ACCELERATION_CP_INTERVAL_TICKS
+                );
+            }
+            return paid;
+        }
+    }
+
+    static boolean consumesAccelerationCp(
+            boolean flightSkillEnabled,
+            boolean creativeFlightActive,
+            boolean sprinting,
+            boolean airflowJetActive,
+            double speed
+    ) {
+        return flightSkillEnabled && creativeFlightActive
+                && (sprinting || airflowJetActive
+                || Double.isFinite(speed) && speed > NORMAL_FLIGHT_SPEED_CAP);
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -158,18 +211,19 @@ public final class Flight extends Skill {
             var enabled = skill.isEnabled(player) && player.isAlive() && !player.hasDisconnected();
             if (enabled) {
                 var system = AbilitySystemServer.getSystem(player);
-                enabled = system.ensurePermanentOccupation(
-                        player.getUUID(),
-                        skill.getMaintenanceCost(skill.getLevel(player))
-                                * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT),
-                        skill
-                );
+                var creativeFlightActive = player.getAbilities().flying;
+                if (creativeFlightActive) {
+                    enabled = system.ensurePermanentOccupation(
+                            player.getUUID(),
+                            skill.getMaintenanceCost(skill.getLevel(player))
+                                    * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT),
+                            skill
+                    );
+                } else {
+                    system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+                }
                 if (!enabled && skill.isEnabled(player)) {
                     system.toggleSkill(player.getUUID(), skill.getKeyString());
-                }
-                if (enabled && player.isSprinting()) {
-                    enabled = system.tryTimedOccupation(player.getUUID(),
-                            8.0f * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT), skill, 20);
                 }
                 if (enabled) {
                     var velocity = player.getDeltaMovement();
@@ -177,16 +231,35 @@ public final class Flight extends Skill {
                     if (!Double.isFinite(speed) || !Double.isFinite(velocity.x)
                             || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z)) {
                         player.setDeltaMovement(0, 0, 0);
-                    } else if (speed > 0.7) {
-                        var highSpeedAllowed = system.tryTimedOccupation(player.getUUID(),
-                                8.0f * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT), skill, 20);
-                        var cap = highSpeedAllowed ? 1.1 : 0.7;
+                        Server.NEXT_ACCELERATION_COST_TICK.remove(player);
+                    } else {
+                        var accelerationActive = consumesAccelerationCp(
+                                enabled,
+                                creativeFlightActive,
+                                player.isSprinting(),
+                                AirflowJet.Server.isActive(player),
+                                speed
+                        );
+                        if (accelerationActive) {
+                            enabled = Server.chargeAccelerationCost(player, system, skill);
+                            if (!enabled && skill.isEnabled(player)) {
+                                system.toggleSkill(player.getUUID(), skill.getKeyString());
+                            }
+                        } else {
+                            Server.NEXT_ACCELERATION_COST_TICK.remove(player);
+                        }
+
+                        var cap = enabled && accelerationActive
+                                ? ACCELERATED_FLIGHT_SPEED_CAP
+                                : NORMAL_FLIGHT_SPEED_CAP;
                         if (speed > cap) {
                             var desired = velocity.scale(cap / speed);
                             AeromanipTargeting.addClampedVelocity(player, desired.subtract(velocity));
                         }
                     }
                 }
+            } else {
+                Server.NEXT_ACCELERATION_COST_TICK.remove(player);
             }
             SkillFlightController.setSource(player, FLIGHT_SOURCE, enabled);
         }

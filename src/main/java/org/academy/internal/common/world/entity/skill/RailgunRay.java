@@ -14,6 +14,10 @@ public class RailgunRay extends RenderOnlyEntity {
             RailgunRay.class,
             EntityDataSerializers.FLOAT
     );
+    private static final EntityDataAccessor<Float> BEAM_WIDTH_MULTIPLIER = SynchedEntityData.defineId(
+            RailgunRay.class,
+            EntityDataSerializers.FLOAT
+    );
     private static final EntityDataAccessor<Boolean> REFLECTION_ACTIVE = SynchedEntityData.defineId(
             RailgunRay.class,
             EntityDataSerializers.BOOLEAN
@@ -46,6 +50,7 @@ public class RailgunRay extends RenderOnlyEntity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(BEAM_LENGTH, DEFAULT_LENGTH);
+        builder.define(BEAM_WIDTH_MULTIPLIER, 1.0f);
         builder.define(REFLECTION_ACTIVE, false);
         builder.define(REFLECTION_DISTANCE, 0.0f);
         builder.define(REFLECTION_RETURN_LENGTH, 0.0f);
@@ -56,6 +61,10 @@ public class RailgunRay extends RenderOnlyEntity {
 
     public float getBeamLength() {
         return entityData.get(BEAM_LENGTH);
+    }
+
+    public float getBeamWidthMultiplier() {
+        return entityData.get(BEAM_WIDTH_MULTIPLIER);
     }
 
     public boolean isReflectionActive() {
@@ -80,12 +89,16 @@ public class RailgunRay extends RenderOnlyEntity {
 
     public void setBeamPath(
             float length,
+            float widthMultiplier,
             boolean reflectionActive,
             float reflectionDistance,
             float returnLength,
             Vec3 returnDirection
     ) {
         var safeLength = Float.isFinite(length) ? Math.max(0.0f, length) : 0.0f;
+        var safeWidthMultiplier = Float.isFinite(widthMultiplier)
+                ? Math.max(0.0f, widthMultiplier)
+                : 1.0f;
         var safeReflectionDistance = Float.isFinite(reflectionDistance)
                 ? Math.clamp(reflectionDistance, 0.0f, safeLength)
                 : 0.0f;
@@ -97,6 +110,7 @@ public class RailgunRay extends RenderOnlyEntity {
                 && Double.isFinite(directionLengthSqr)
                 && directionLengthSqr > 1.0e-12;
         entityData.set(BEAM_LENGTH, safeLength);
+        entityData.set(BEAM_WIDTH_MULTIPLIER, safeWidthMultiplier);
         entityData.set(REFLECTION_ACTIVE, active);
         entityData.set(REFLECTION_DISTANCE, active ? safeReflectionDistance : 0.0f);
         entityData.set(REFLECTION_RETURN_LENGTH, active ? safeReturnLength : 0.0f);
