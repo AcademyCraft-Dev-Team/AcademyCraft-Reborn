@@ -51,6 +51,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     private final AbilityConfig.BrainDevelopmentSettings brainDevelopmentSettings;
     private final Set<UUID> skillDebugPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Float> cpIterationProgress = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Float> debugMaxCpOverrides = new ConcurrentHashMap<>();
 
     public PlayerCPManager(PlayerDataManager manager, AbilityConfig config, SyncManager syncManager) {
         playerDataManager = manager;
@@ -648,26 +649,23 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public void setMaxCP(UUID uuid, float newMaxCP) {
-        modify(uuid, cpData -> {
-            var requestedMaxCP = Float.isFinite(newMaxCP) ? Math.max(0, newMaxCP) : 0;
-            var bonus = getBonuses(uuid).maxCp();
-            var safeMaxCP = Math.max(bonus, requestedMaxCP);
-            var oldEffectiveMaxCP = getMaxCP(uuid);
-            if (Float.compare(oldEffectiveMaxCP, safeMaxCP) == 0) return;
-
-            var newBaseMaxCP = Math.max(0, safeMaxCP - bonus);
-            var diff = safeMaxCP - oldEffectiveMaxCP;
-            var newAvailableCP = cpData.getAvailableCP() + diff;
-
-            cpData.setMaxCP(newBaseMaxCP);
-            cpData.setAvailableCP(newAvailableCP, safeMaxCP);
-        });
+        if (uuid == null) return;
+        var safeMaxCP = normalizeDebugMaxCP(newMaxCP);
+        debugMaxCpOverrides.put(uuid, safeMaxCP);
+        modify(uuid, cpData -> cpData.setAvailableCP(cpData.getAvailableCP(), safeMaxCP));
+        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     public void setBaseMaxCP(UUID uuid, float newBaseMaxCP) {
         modify(uuid, cpData -> {
             var safeBase = Float.isFinite(newBaseMaxCP) ? Math.max(0.0f, newBaseMaxCP) : 0.0f;
             var oldEffectiveMax = getMaxCP(uuid);
+            var debugMaxCP = debugMaxCpOverrides.get(uuid);
+            if (debugMaxCP != null) {
+                cpData.setMaxCP(safeBase);
+                cpData.setAvailableCP(cpData.getAvailableCP(), debugMaxCP);
+                return;
+            }
             var newEffectiveMax = safeBase + getBonuses(uuid).maxCp();
             cpData.setMaxCP(safeBase);
             cpData.setAvailableCP(
@@ -720,8 +718,19 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getMaxCP(UUID uuid) {
-        var base = query(uuid, AbilityData::getMaxCP, 1f);
-        return base + getBonuses(uuid).maxCp();
+        var naturalMaxCP = query(uuid, AbilityData::getMaxCP, 1f)
+                + getBonuses(uuid).maxCp();
+        return resolveEffectiveMaxCP(naturalMaxCP, debugMaxCpOverrides.get(uuid));
+    }
+
+    static float normalizeDebugMaxCP(float maxCP) {
+        return Float.isFinite(maxCP) ? Math.max(0.0f, maxCP) : 0.0f;
+    }
+
+    static float resolveEffectiveMaxCP(float naturalMaxCP, Float debugOverride) {
+        return debugOverride == null
+                ? normalizeDebugMaxCP(naturalMaxCP)
+                : normalizeDebugMaxCP(debugOverride);
     }
 
     public float getAvailableCP(UUID uuid) {
@@ -809,11 +818,25 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         var desiredBonus = getBonuses(uuid).maxCp();
         var appliedBonus = playerData.getAppliedCommonSkillMaxCpBonus();
+        var cpData = playerData.getCpData();
+        var debugMaxCP = debugMaxCpOverrides.get(uuid);
+        if (debugMaxCP != null) {
+            var changed = false;
+            if (Float.compare(desiredBonus, appliedBonus) != 0) {
+                playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
+                changed = true;
+            }
+            if (cpData.getAvailableCP() > debugMaxCP) {
+                cpData.setAvailableCP(debugMaxCP, debugMaxCP);
+                changed = true;
+            }
+            if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+            return;
+        }
         if (Float.compare(desiredBonus, appliedBonus) == 0) return;
 
-        var effectiveMaxCP = playerData.getCpData().getMaxCP() + desiredBonus;
+        var effectiveMaxCP = cpData.getMaxCP() + desiredBonus;
         var diff = desiredBonus - appliedBonus;
-        var cpData = playerData.getCpData();
         cpData.setAvailableCP(cpData.getAvailableCP() + diff, effectiveMaxCP);
         playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
         syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
