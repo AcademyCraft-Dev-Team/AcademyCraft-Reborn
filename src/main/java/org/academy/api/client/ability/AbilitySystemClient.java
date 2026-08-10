@@ -55,6 +55,8 @@ public final class AbilitySystemClient {
     private static volatile DevState devState = DevState.IDLE;
     private static volatile float devProgress = 0f;
     private static volatile String devMessage = "";
+    private static volatile String devTargetId = "";
+    private static volatile boolean devRequestPending = false;
 
     static {
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY_ABILITY_SYSTEM, Config.Action.INSTANCE);
@@ -229,6 +231,8 @@ public final class AbilitySystemClient {
         devState = packet.getState();
         devProgress = packet.getProgress();
         devMessage = packet.getMessage();
+        devTargetId = packet.getTargetId();
+        devRequestPending = false;
     }
 
     public static DevState getDevState() {
@@ -243,10 +247,44 @@ public final class AbilitySystemClient {
         return devMessage;
     }
 
+    public static String getDevTargetId() {
+        return devTargetId;
+    }
+
+    public static boolean isDevRequestPending() {
+        return devRequestPending;
+    }
+
+    public static boolean isDevelopmentActive() {
+        return devRequestPending || devState == DevState.DEVELOPING;
+    }
+
+    public static void beginDevelopmentRequest(String targetId) {
+        devState = DevState.IDLE;
+        devProgress = 0.0f;
+        devMessage = "";
+        devTargetId = targetId == null ? "" : targetId;
+        devRequestPending = true;
+    }
+
+    public static void rejectDevelopmentRequest(String targetId, String message) {
+        if (!devRequestPending || !Objects.equals(devTargetId, targetId)) return;
+        devRequestPending = false;
+        devState = DevState.FAILED;
+        devMessage = message == null ? "Failed" : message;
+    }
+
     public static void resetDevState() {
         devState = DevState.IDLE;
         devProgress = 0;
         devMessage = "";
+        devTargetId = "";
+        devRequestPending = false;
+    }
+
+    public static boolean isSkillLearned(String skillId) {
+        if (skillId == null || skillId.isBlank()) return false;
+        return LEARNED_SKILLS.stream().anyMatch(skill -> skillId.equals(skill.getKeyString()));
     }
 
     @SubscribePacket

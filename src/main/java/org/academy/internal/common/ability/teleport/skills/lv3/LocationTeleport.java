@@ -75,7 +75,7 @@ public final class LocationTeleport extends Skill {
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .cpCost(30)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.CUT_THROUGH)
                 .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, player -> new LocationTeleportData())

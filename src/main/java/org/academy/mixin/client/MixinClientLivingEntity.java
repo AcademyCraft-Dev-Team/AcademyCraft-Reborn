@@ -1,8 +1,11 @@
 package org.academy.mixin.client;
 
+import net.minecraft.core.Holder;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
@@ -14,6 +17,72 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntity.class)
 public abstract class MixinClientLivingEntity {
+    @Inject(
+            method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$protectVectorReflectionEffect(
+            MobEffectInstance effect,
+            Entity source,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if ((Object) this instanceof LocalPlayer player
+                && VectorReflectionClientRuntime.shouldReflectEffect(player, effect)) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "canBeAffected", at = @At("HEAD"), cancellable = true)
+    private void academy$protectVectorReflectionEffectApplicability(
+            MobEffectInstance effect,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if ((Object) this instanceof LocalPlayer player
+                && VectorReflectionClientRuntime.shouldReflectEffect(player, effect)) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(
+            method = "forceAddEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$protectVectorReflectionForcedEffect(
+            MobEffectInstance effect,
+            Entity source,
+            CallbackInfo ci
+    ) {
+        if ((Object) this instanceof LocalPlayer player
+                && VectorReflectionClientRuntime.shouldReflectEffect(player, effect)) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "hasEffect", at = @At("RETURN"), cancellable = true)
+    private void academy$protectVectorReflectionHasEffect(
+            Holder<MobEffect> effect,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (!cir.getReturnValue() || !((Object) this instanceof LocalPlayer player)) return;
+        if (VectorReflectionClientRuntime.shouldReflectEffect(player, new MobEffectInstance(effect))) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "getEffect", at = @At("RETURN"), cancellable = true)
+    private void academy$protectVectorReflectionGetEffect(
+            Holder<MobEffect> effect,
+            CallbackInfoReturnable<MobEffectInstance> cir
+    ) {
+        var instance = cir.getReturnValue();
+        if ((Object) this instanceof LocalPlayer player
+                && VectorReflectionClientRuntime.shouldReflectEffect(player, instance)) {
+            cir.setReturnValue(null);
+        }
+    }
+
     @Inject(method = "getHealth", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionHealth(CallbackInfoReturnable<Float> cir) {
         if ((Object) this instanceof LocalPlayer player

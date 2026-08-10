@@ -69,7 +69,7 @@ public final class BioelectricOperation extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(40)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .dependsOn(Skills.ELECTRICAL_CONTACT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
         );

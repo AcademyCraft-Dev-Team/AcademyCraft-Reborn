@@ -1,5 +1,6 @@
 package org.academy.internal.server.ability;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -11,6 +12,7 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
@@ -24,6 +26,7 @@ import net.neoforged.neoforge.event.brewing.PlayerBrewedPotionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingConversionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerXpEvent;
@@ -36,6 +39,7 @@ import org.academy.internal.common.attribute.PropsPackets;
 import org.academy.internal.server.world.level.storage.PropsData;
 import org.misaka.MisakaNetworkServer;
 
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -60,6 +64,8 @@ public final class PropsManager implements AbilitySubsystem {
     private final PlayerDataManager playerDataManager;
     private final SyncManager syncManager;
     private final Map<UUID, ActivitySnapshot> activity = new HashMap<>();
+    private final Map<UUID, ArrayDeque<Float>> healthBeforeDamage = new HashMap<>();
+    private final Map<UUID, Integer> foodBeforeConsumption = new HashMap<>();
     private final Map<UUID, CureAttribution> curingPlayers = new HashMap<>();
     private final Set<UUID> dirtySync = new HashSet<>();
     private final Map<UUID, Long> lastSyncTick = new HashMap<>();
@@ -96,6 +102,8 @@ public final class PropsManager implements AbilitySubsystem {
     @Override
     public void onPlayerLogout(ServerPlayer player) {
         activity.remove(player.getUUID());
+        healthBeforeDamage.remove(player.getUUID());
+        foodBeforeConsumption.remove(player.getUUID());
         dirtySync.remove(player.getUUID());
         lastSyncTick.remove(player.getUUID());
     }
@@ -171,30 +179,27 @@ public final class PropsManager implements AbilitySubsystem {
         var swim = stat(player, Stats.SWIM_ONE_CM);
         var jumps = stat(player, Stats.JUMP);
 
-        snapshot.sprintRemainder += positiveDelta(sprint, snapshot.sprintStat);
-        snapshot.swimRemainder += positiveDelta(swim, snapshot.swimStat);
-        var sprintBlocks = snapshot.sprintRemainder / 100;
-        var swimBlocks = snapshot.swimRemainder / 100;
-        snapshot.sprintRemainder %= 100;
-        snapshot.swimRemainder %= 100;
+        var sprintProgress = PropsAcquisition.distanceProgress(
+                snapshot.sprintRemainder, sprint, snapshot.sprintStat
+        );
+        var swimProgress = PropsAcquisition.distanceProgress(
+                snapshot.swimRemainder, swim, snapshot.swimStat
+        );
+        snapshot.sprintRemainder = sprintProgress.remainingCentimeters();
+        snapshot.swimRemainder = swimProgress.remainingCentimeters();
         snapshot.sprintStat = sprint;
         snapshot.swimStat = swim;
 
-        if (sprintBlocks > 0) award(player, AbilityFactor.DEXTERITY, sprintBlocks * 0.05, false);
-        if (swimBlocks > 0) award(player, AbilityFactor.DEXTERITY, swimBlocks * 0.15, false);
-
-        if (positiveDelta(jumps, snapshot.jumpStat) > 0
-                && player.level().getGameTime() - snapshot.lastRewardedJumpTick >= 4) {
-            award(player, AbilityFactor.DEXTERITY, 0.5, false);
-            snapshot.lastRewardedJumpTick = player.level().getGameTime();
+        if (sprintProgress.blocks() > 0) {
+            award(player, AbilityFactor.DEXTERITY, sprintProgress.blocks(), false);
         }
+        if (swimProgress.blocks() > 0) {
+            award(player, AbilityFactor.DEXTERITY, swimProgress.blocks(), false);
+        }
+
+        var completedJumps = PropsAcquisition.statIncrease(jumps, snapshot.jumpStat);
+        if (completedJumps > 0) award(player, AbilityFactor.DEXTERITY, completedJumps, false);
         snapshot.jumpStat = jumps;
-
-        var foodLevel = player.getFoodData().getFoodLevel();
-        if (foodLevel > snapshot.foodLevel) {
-            award(player, AbilityFactor.ENDURANCE, (foodLevel - snapshot.foodLevel) * 0.5, false);
-        }
-        snapshot.foodLevel = foodLevel;
     }
 
     private void checkStructures(ServerPlayer player) {
@@ -228,25 +233,69 @@ public final class PropsManager implements AbilitySubsystem {
         }
     }
 
-    @SubscribeEvent
-    public void onDamage(LivingDamageEvent.Post event) {
-        var wholeDamage = Math.floor(Math.max(0.0, event.getHealthDamage()));
-        if (wholeDamage <= 0.0) return;
-
-        if (event.getEntity() instanceof ServerPlayer victim
-                && !event.getSource().is(DamageTypes.GENERIC_KILL)) {
-            award(victim, AbilityFactor.ENDURANCE, wholeDamage * 0.5, false);
-        }
-
-        var attacker = resolvePlayer(event.getSource());
-        if (attacker == null || attacker == event.getEntity()) return;
-        award(attacker, AbilityFactor.MUSCLE_STRENGTH, wholeDamage * 0.2, false);
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void onDamagePre(LivingDamageEvent.Pre event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        healthBeforeDamage.computeIfAbsent(player.getUUID(), _ -> new ArrayDeque<>())
+                .push(player.getHealth());
     }
 
     @SubscribeEvent
-    public void onExperiencePickup(PlayerXpEvent.PickupXp event) {
+    public void onDamage(LivingDamageEvent.Post event) {
+        if (event.getEntity() instanceof ServerPlayer victim) {
+            var healthBefore = popHealthBeforeDamage(victim);
+            var healthLost = PropsAcquisition.healthLost(
+                    healthBefore == null ? victim.getMaxHealth() : healthBefore,
+                    event.getHealthDamage()
+            );
+            if (healthLost > 0.0) {
+                award(victim, AbilityFactor.ENDURANCE, healthLost, false);
+            }
+        }
+
+        if (!(event.getEntity() instanceof Mob)) return;
+        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) return;
+        if (event.getSource().getDirectEntity() != attacker
+                || !event.getSource().is(DamageTypes.PLAYER_ATTACK)) return;
+        var meleeDamage = PropsAcquisition.meleeDamage(event.getHealthDamage());
+        if (meleeDamage > 0.0) {
+            award(attacker, AbilityFactor.MUSCLE_STRENGTH, meleeDamage, false);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void onExperienceChange(PlayerXpEvent.XpChange event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
-        award(player, AbilityFactor.PERCEPTION, event.getOrb().getValue() * 0.1, false);
+        var experience = PropsAcquisition.experienceGained(event.getAmount());
+        if (experience > 0) award(player, AbilityFactor.PERCEPTION, experience, false);
+    }
+
+    @SubscribeEvent
+    public void onUseItemStart(LivingEntityUseItemEvent.Start event) {
+        rememberFoodLevel(event);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void onUseItemTick(LivingEntityUseItemEvent.Tick event) {
+        rememberFoodLevel(event);
+    }
+
+    @SubscribeEvent
+    public void onUseItemFinish(LivingEntityUseItemEvent.Finish event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        var foodBefore = foodBeforeConsumption.remove(player.getUUID());
+        if (foodBefore == null || !event.getItem().has(DataComponents.FOOD)) return;
+        var restored = PropsAcquisition.foodRestored(
+                foodBefore, player.getFoodData().getFoodLevel()
+        );
+        if (restored > 0) award(player, AbilityFactor.ENDURANCE, restored, false);
+    }
+
+    @SubscribeEvent
+    public void onUseItemStop(LivingEntityUseItemEvent.Stop event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            foodBeforeConsumption.remove(player.getUUID());
+        }
     }
 
     @SubscribeEvent
@@ -337,8 +386,18 @@ public final class PropsManager implements AbilitySubsystem {
         return player.getStats().getValue(Stats.CUSTOM.get(id));
     }
 
-    private static int positiveDelta(int current, int previous) {
-        return current >= previous ? current - previous : 0;
+    private void rememberFoodLevel(LivingEntityUseItemEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!event.getItem().has(DataComponents.FOOD)) return;
+        foodBeforeConsumption.put(player.getUUID(), player.getFoodData().getFoodLevel());
+    }
+
+    private Float popHealthBeforeDamage(ServerPlayer player) {
+        var stack = healthBeforeDamage.get(player.getUUID());
+        if (stack == null || stack.isEmpty()) return null;
+        var health = stack.pop();
+        if (stack.isEmpty()) healthBeforeDamage.remove(player.getUUID());
+        return health;
     }
 
     private static net.minecraft.core.Holder<Attribute> attribute(AbilityFactor factor) {
@@ -383,15 +442,12 @@ public final class PropsManager implements AbilitySubsystem {
         private int jumpStat;
         private int sprintRemainder;
         private int swimRemainder;
-        private int foodLevel;
-        private long lastRewardedJumpTick = Long.MIN_VALUE / 2;
 
         private static ActivitySnapshot capture(ServerPlayer player) {
             var snapshot = new ActivitySnapshot();
             snapshot.sprintStat = stat(player, Stats.SPRINT_ONE_CM);
             snapshot.swimStat = stat(player, Stats.SWIM_ONE_CM);
             snapshot.jumpStat = stat(player, Stats.JUMP);
-            snapshot.foodLevel = player.getFoodData().getFoodLevel();
             return snapshot;
         }
     }

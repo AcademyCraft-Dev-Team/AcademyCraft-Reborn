@@ -56,7 +56,7 @@ public final class DarkmatterCut extends Skill {
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(40)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.DARKMATTER_DISASSEMBLE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))

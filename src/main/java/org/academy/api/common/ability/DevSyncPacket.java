@@ -15,22 +15,26 @@ public class DevSyncPacket extends Packet<ClientPacketListener, DevSyncPacket> {
             ByteBufCodecs.FLOAT,
             DevSyncPacket::getProgress,
             ByteBufCodecs.STRING_UTF8,
+            DevSyncPacket::getTargetId,
+            ByteBufCodecs.STRING_UTF8,
             DevSyncPacket::getMessage,
             DevSyncPacket::new
     );
 
     private final int stateOrdinal;
     private final float progress;
+    private final String targetId;
     private final String message;
 
-    public DevSyncPacket(int stateOrdinal, float progress, String message) {
+    public DevSyncPacket(int stateOrdinal, float progress, String targetId, String message) {
         this.stateOrdinal = stateOrdinal;
         this.progress = progress;
+        this.targetId = targetId;
         this.message = message;
     }
 
-    public DevSyncPacket(DevState state, float progress, String message) {
-        this(state.ordinal(), progress, message);
+    public DevSyncPacket(DevState state, float progress, String targetId, String message) {
+        this(state.ordinal(), progress, targetId, message);
     }
 
     public int getStateOrdinal() {
@@ -43,6 +47,10 @@ public class DevSyncPacket extends Packet<ClientPacketListener, DevSyncPacket> {
 
     public float getProgress() {
         return progress;
+    }
+
+    public String getTargetId() {
+        return targetId;
     }
 
     public String getMessage() {

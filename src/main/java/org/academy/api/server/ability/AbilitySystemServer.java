@@ -208,6 +208,11 @@ public final class AbilitySystemServer {
             }
 
             @Override
+            public String getTargetId() {
+                return skillKey;
+            }
+
+            @Override
             public boolean validate(ServerPlayer sp, WirelessUser dev) {
                 return dev instanceof AbilityDeveloperBlockEntity currentDeveloper
                         && canDevelopSkill(sp, currentDeveloper, skill);
@@ -275,6 +280,11 @@ public final class AbilitySystemServer {
             @Override
             public int getEnergyCost() {
                 return cost;
+            }
+
+            @Override
+            public String getTargetId() {
+                return DevelopAction.LEVEL_TARGET_ID;
             }
 
             @Override
@@ -1083,7 +1093,7 @@ public final class AbilitySystemServer {
                         var player = server.getPlayerList().getPlayer(uuid);
                         if (player == null) continue;
                         MisakaNetworkServer.send(player, new DevSyncPacket(
-                                data.getState(), data.getProgress(), data.getMessage()
+                                data.getState(), data.getProgress(), data.getTargetId(), data.getMessage()
                         ));
                         if (data.getState() != DevState.DEVELOPING) {
                             devMap.remove(uuid);

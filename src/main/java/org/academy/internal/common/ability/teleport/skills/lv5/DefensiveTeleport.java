@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -62,7 +63,7 @@ public final class DefensiveTeleport extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(10)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.QUICK_LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
@@ -150,14 +151,37 @@ public final class DefensiveTeleport extends Skill {
                 var half = size / 2.0;
                 var box = new AABB(center.x - half, center.y - half, center.z - half,
                         center.x + half, center.y + half, center.z + half);
+                var selected = minecraft.level == null ? List.<Entity>of()
+                        : minecraft.level.getEntities(player, box,
+                        entity -> isPreviewThreat(player, entity));
                 var camera = minecraft.gameRenderer.mainCamera().position();
                 var matrices = event.getMatrixStack();
                 matrices.pushPose();
                 matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
                 event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
-                        (snapshot, consumer) -> LineBoxRenderer.renderWireframeBox(
-                                snapshot, consumer, box, 1.0f, 0.25f, 0.75f, 1.0f));
+                        (snapshot, consumer) -> {
+                            LineBoxRenderer.renderWireframeBox(
+                                    snapshot, consumer, box, 1.0f, 0.25f, 0.75f, 1.0f);
+                            for (var entity : selected) {
+                                LineBoxRenderer.renderWireframeBox(
+                                        snapshot, consumer, entity.getBoundingBox().inflate(0.04),
+                                        1.0f, 1.0f, 1.0f, 1.0f);
+                            }
+                        });
                 matrices.popPose();
+            }
+
+            private static boolean isPreviewThreat(Player player, Entity entity) {
+                if (entity == player || !entity.isAlive() || entity.isRemoved()) return false;
+                if (entity instanceof Projectile projectile) {
+                    var owner = projectile.getOwner();
+                    return owner != player && (owner == null || !player.isAlliedTo(owner));
+                }
+                if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
+                if (living instanceof Player target) {
+                    return !target.isCreative() && !target.isSpectator();
+                }
+                return living instanceof Enemy || living instanceof Mob mob && mob.getTarget() == player;
             }
 
             private void cleanup() {

@@ -61,7 +61,7 @@ public class Thunderclap extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(100)
-                .iterationTicks(80)
+                .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.BALL_LIGHTNING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))

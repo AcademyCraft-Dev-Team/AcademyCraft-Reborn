@@ -5,6 +5,7 @@ import org.academy.AcademyCraft;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkillInitialStateTest {
@@ -22,6 +23,16 @@ class SkillInitialStateTest {
         assertFalse(skill.createData(null).isEnabled());
     }
 
+    @Test
+    void cpConsumingSkillsClampIterationToOneSecond() {
+        assertEquals(20, new CostedSkill(
+                new TestCategory("cast_iteration"), 10, 0, 80).getIterationTicks(0));
+        assertEquals(20, new CostedSkill(
+                new TestCategory("maintenance_iteration"), 0, 10, 40).getIterationTicks(0));
+        assertEquals(40, new CostedSkill(
+                new TestCategory("free_iteration"), 0, 0, 40).getIterationTicks(0));
+    }
+
     private static final class TestSkill extends Skill {
         private TestSkill(AbilityCategory category, boolean initiallyDisabled) {
             super(createBuilder(category, initiallyDisabled));
@@ -30,6 +41,16 @@ class SkillInitialStateTest {
         private static Builder createBuilder(AbilityCategory category, boolean initiallyDisabled) {
             var builder = Builder.of(category);
             return initiallyDisabled ? builder.initiallyDisabled() : builder;
+        }
+    }
+
+    private static final class CostedSkill extends Skill {
+        private CostedSkill(AbilityCategory category, int cpCost, int maintenanceCost,
+                            int iterationTicks) {
+            super(Builder.of(category)
+                    .cpCost(cpCost)
+                    .maintenanceCost(maintenanceCost)
+                    .iterationTicks(iterationTicks));
         }
     }
 

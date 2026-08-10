@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,6 +14,32 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkillProficiencyCoverageTest {
+    @Test
+    void languageFilesHaveMatchingNaturallySortedKeys() {
+        var englishKeys = new ArrayList<>(loadLanguage("en_us").keySet());
+        var chineseKeys = new ArrayList<>(loadLanguage("zh_cn").keySet());
+
+        assertEquals(englishKeys, chineseKeys, "language files must contain keys in the same order");
+        var sortedKeys = new ArrayList<>(englishKeys);
+        sortedKeys.sort(String::compareTo);
+        assertEquals(sortedKeys, englishKeys, "language keys must use natural lexicographic order");
+    }
+
+    @Test
+    void everyAbilityCategoryHasEnglishAndChineseNames() {
+        for (var language : new String[]{"en_us", "zh_cn"}) {
+            var translations = loadLanguage(language);
+            for (var category : new String[]{
+                    "accelerator", "aeromanip", "darkmatter", "electromaster",
+                    "level0", "meltdowner", "mentalout", "teleport"
+            }) {
+                var key = "ability_category.academy." + category;
+                assertTrue(translations.has(key), language + " missing " + key);
+                assertFalse(translations.get(key).getAsString().isBlank(), language + " blank " + key);
+            }
+        }
+    }
+
     @Test
     void allNonCommonSkillsDeclareAProficiencyPlan() {
         assertEquals(87, SkillProficiencyProfiles.declaredSkillPaths().size());

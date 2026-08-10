@@ -49,7 +49,7 @@ public final class BreathingFilm extends Skill {
                 .energyCost(10_000)
                 .passive()
                 .maintenanceCost(20)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .dependsOn(Skills.FLOW_SENSE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
         );

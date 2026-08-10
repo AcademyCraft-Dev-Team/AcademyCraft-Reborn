@@ -45,7 +45,7 @@ import java.util.ArrayList;
 public final class VortexPull extends Skill {
     public VortexPull() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL3).energyCost(30_000)
-                .cpCost(40).iterationTicks(60).maxStacks(1).dependsOn(Skills.PNEUMATIC_GRASP)
+                .cpCost(40).iterationTicks(20).maxStacks(1).dependsOn(Skills.PNEUMATIC_GRASP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
 

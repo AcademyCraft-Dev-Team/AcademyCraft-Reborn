@@ -18,6 +18,13 @@ class MagneticWeaponTest {
     }
 
     @Test
+    void maceUsesRemoteAttackDistanceAsSyntheticFallHeight() {
+        assertEquals(0.0f, MagneticWeapon.maceFallDistance(-2.0), 0.0001f);
+        assertEquals(7.25f, MagneticWeapon.maceFallDistance(7.25), 0.0001f);
+        assertEquals(0.0f, MagneticWeapon.maceFallDistance(Double.NaN), 0.0001f);
+    }
+
+    @Test
     void synchronizedDataCodecPreservesWeaponVisibilityState() {
         var expected = new MagneticWeapon.Data(true, 6, true);
         var buffer = Unpooled.buffer();

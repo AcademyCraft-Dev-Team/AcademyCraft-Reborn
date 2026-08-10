@@ -3,12 +3,14 @@ package org.academy.internal.common.ability.electromaster.skills.lv3;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import org.academy.mixin.common.LivingEntityAttackStateAccessor;
 
 import java.util.LinkedHashMap;
@@ -27,12 +29,16 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
     private final int originalAttackStrengthTicker;
     private final int originalItemSwapTicker;
     private final boolean originalSprinting;
+    private final double originalFallDistance;
+    private final float syntheticFallDistance;
+    private final Vec3 originalMovement;
+    private final Vec3 originalImpulseImpactPosition;
     private final Map<ModifierKey, ModifierSnapshot> originalModifiers;
     private final Map<ModifierKey, AttributeModifier> weaponModifiers;
     private final Set<ModifierKey> affectedModifiers;
     private boolean closed;
 
-    private MagneticWeaponPlayerState(ServerPlayer player, int weaponSlot) {
+    private MagneticWeaponPlayerState(ServerPlayer player, int weaponSlot, float syntheticFallDistance) {
         if (!Inventory.isHotbarSlot(weaponSlot)) {
             throw new IllegalArgumentException("Magnetic weapon must be in the hotbar: " + weaponSlot);
         }
@@ -43,6 +49,10 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
         originalAttackStrengthTicker = attackState.academy$getAttackStrengthTicker();
         originalItemSwapTicker = attackState.academy$getItemSwapTicker();
         originalSprinting = player.isSprinting();
+        originalFallDistance = player.fallDistance;
+        this.syntheticFallDistance = syntheticFallDistance;
+        originalMovement = player.getDeltaMovement();
+        originalImpulseImpactPosition = player.currentImpulseImpactPos;
 
         var originalMainHand = player.getMainHandItem();
         var weapon = player.getInventory().getItem(weaponSlot);
@@ -54,8 +64,8 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
 
     }
 
-    static MagneticWeaponPlayerState open(ServerPlayer player, int weaponSlot) {
-        var state = new MagneticWeaponPlayerState(player, weaponSlot);
+    static MagneticWeaponPlayerState open(ServerPlayer player, int weaponSlot, float syntheticFallDistance) {
+        var state = new MagneticWeaponPlayerState(player, weaponSlot, syntheticFallDistance);
         try {
             state.activate(weaponSlot);
             return state;
@@ -67,6 +77,7 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
 
     private void activate(int weaponSlot) {
         if (originalSprinting) player.setSprinting(false);
+        if (syntheticFallDistance >= 0.0f) player.fallDistance = syntheticFallDistance;
         player.getInventory().setSelectedSlot(weaponSlot);
         applyWeaponModifiers();
 
@@ -107,6 +118,14 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
             player.getInventory().setSelectedSlot(originalSelectedSlot);
             attackState.academy$setAttackStrengthTicker(originalAttackStrengthTicker);
             attackState.academy$setItemSwapTicker(originalItemSwapTicker);
+            player.fallDistance = originalFallDistance;
+            if (syntheticFallDistance >= 0.0f) {
+                player.setDeltaMovement(originalMovement);
+                if (originalImpulseImpactPosition == null) player.resetCurrentImpulseContext();
+                else player.setIgnoreFallDamageFromCurrentImpulse(true, originalImpulseImpactPosition);
+                player.setSpawnExtraParticlesOnFall(false);
+                player.connection.send(new ClientboundSetEntityMotionPacket(player));
+            }
             if (player.isSprinting() != originalSprinting) player.setSprinting(originalSprinting);
         }
     }

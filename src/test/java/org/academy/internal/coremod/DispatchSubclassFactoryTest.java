@@ -1,10 +1,14 @@
 package org.academy.internal.coremod;
 
 import com.mojang.authlib.GameProfile;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +42,40 @@ class DispatchSubclassFactoryTest {
         var result = DispatchSubclassFactory.forPlayerType(FinalHealthServerPlayer.class);
         assertFalse(result.successful());
         assertTrue(result.failureReason().contains("final"));
+    }
+
+    @Test
+    void generatedServerDispatchDeclaresCompleteEffectBoundary() throws NoSuchMethodException {
+        var result = DispatchSubclassFactory.forPlayerType(CustomServerPlayer.class);
+        assertTrue(result.successful(), result.failureReason());
+        assertEffectBoundary(result.dispatchType());
+    }
+
+    @Test
+    void generatedClientDispatchDeclaresCompleteEffectBoundary() throws NoSuchMethodException {
+        var result = DispatchSubclassFactory.forPlayerType(LocalPlayer.class);
+        assertTrue(result.successful(), result.failureReason());
+        assertSame(LocalPlayer.class, result.dispatchType().getSuperclass());
+        assertEffectBoundary(result.dispatchType());
+    }
+
+    private static void assertEffectBoundary(Class<?> dispatchType) throws NoSuchMethodException {
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "addEffect", MobEffectInstance.class, Entity.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "canBeAffected", MobEffectInstance.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "forceAddEffect", MobEffectInstance.class, Entity.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "onEffectAdded", MobEffectInstance.class, Entity.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "onEffectUpdated", MobEffectInstance.class, boolean.class, Entity.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "sendEffectToPassengers", MobEffectInstance.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "hasEffect", Holder.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "getEffect", Holder.class).getDeclaringClass());
     }
 
     public static class CustomServerPlayer extends ServerPlayer {

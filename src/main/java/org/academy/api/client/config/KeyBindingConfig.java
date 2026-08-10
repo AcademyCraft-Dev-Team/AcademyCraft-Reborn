@@ -1,49 +1,148 @@
 package org.academy.api.client.config;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import org.academy.api.client.input.InputSystem;
 
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public abstract class KeyBindingConfig {
+    private static final Gson GSON = new Gson();
+
     @SerializedName("keyBindings")
-    private final Map<String, InputSystem.KeyCombination> keyBindings = new LinkedHashMap<>();
+    private Map<String, JsonElement> keyBindings = new LinkedHashMap<>();
     @SerializedName("enabledBindings")
-    private final Map<String, Boolean> enabledBindings = new LinkedHashMap<>();
+    private Map<String, Boolean> enabledBindings = new LinkedHashMap<>();
 
     public InputSystem.KeyCombination getKeyBinding(String name, InputSystem.KeyCombination defaultConfig) {
         InputSystem.rememberDefaultKeyBinding(name, defaultConfig);
-        if (!keyBindings.containsKey(name)) {
+        var keyBinding = decodeKeyBinding(keyBindingMap().get(name));
+        if (!InputSystem.isValidKeyCombination(keyBinding)) {
             setKeyBinding(name, defaultConfig);
+            return defaultConfig;
         }
-        return keyBindings.get(name);
+        migrateStoredKeyBinding(name, keyBinding);
+        return keyBinding;
     }
 
     public InputSystem.KeyCombination getKeyBinding(String name) {
-        return keyBindings.get(name);
+        var keyBinding = decodeKeyBinding(keyBindingMap().get(name));
+        if (!InputSystem.isValidKeyCombination(keyBinding)) {
+            return null;
+        }
+        migrateStoredKeyBinding(name, keyBinding);
+        return keyBinding;
     }
 
     public boolean containsKeyBinding(String name) {
-        return keyBindings.containsKey(name);
+        return keyBindingMap().containsKey(name);
     }
 
     public Map<String, InputSystem.KeyCombination> getKeyBindings() {
-        return Map.copyOf(keyBindings);
+        var result = new LinkedHashMap<String, InputSystem.KeyCombination>();
+        for (var name : keyBindingMap().keySet()) {
+            var keyBinding = getKeyBinding(name);
+            if (keyBinding != null) {
+                result.put(name, keyBinding);
+            }
+        }
+        return Map.copyOf(result);
     }
 
     public void setKeyBinding(String name, InputSystem.KeyCombination keyBinding) {
-        keyBindings.put(name, keyBinding);
+        keyBindingMap().put(name, GSON.toJsonTree(keyBinding));
     }
+
     public boolean isKeyBindingEnabled(String name) {
-        return enabledBindings.getOrDefault(name, true);
+        return enabledBindingMap().getOrDefault(name, true);
     }
 
     public void setKeyBindingEnabled(String name, boolean enabled) {
-        if (enabled) {
-            enabledBindings.put(name, true);
-        } else {
-            enabledBindings.put(name, false);
+        enabledBindingMap().put(name, enabled);
+    }
+
+    private Map<String, JsonElement> keyBindingMap() {
+        if (keyBindings == null) {
+            keyBindings = new LinkedHashMap<>();
         }
+        return keyBindings;
+    }
+
+    private Map<String, Boolean> enabledBindingMap() {
+        if (enabledBindings == null) {
+            enabledBindings = new LinkedHashMap<>();
+        }
+        return enabledBindings;
+    }
+
+    private void migrateStoredKeyBinding(String name, InputSystem.KeyCombination keyBinding) {
+        var stored = keyBindingMap().get(name);
+        if (stored == null || !isCurrentKeyBinding(stored)) {
+            setKeyBinding(name, keyBinding);
+        }
+    }
+
+    private static boolean isCurrentKeyBinding(JsonElement element) {
+        if (element == null || !element.isJsonObject()) return false;
+        var object = element.getAsJsonObject();
+        return object.has("type") && object.has("keys");
+    }
+
+    private static InputSystem.KeyCombination decodeKeyBinding(JsonElement element) {
+        if (element == null || !element.isJsonObject()) return null;
+        try {
+            if (isCurrentKeyBinding(element)) {
+                return GSON.fromJson(element, InputSystem.KeyCombination.class);
+            }
+            return decodeLegacyKeyBinding(element.getAsJsonObject());
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    /** Converts the pre-KeyCombination InputPair/KeyInfo representation. */
+    private static InputSystem.KeyCombination decodeLegacyKeyBinding(JsonObject object) {
+        if (!object.has("inputType") || !object.has("keyInfo") || !object.get("keyInfo").isJsonObject()) {
+            return null;
+        }
+
+        var type = InputSystem.InputType.valueOf(object.get("inputType").getAsString());
+        var keyInfo = object.getAsJsonObject("keyInfo");
+        if (!keyInfo.has("inputs") || !keyInfo.get("inputs").isJsonArray() || !keyInfo.has("action")) {
+            return null;
+        }
+
+        var keys = new LinkedHashSet<Integer>();
+        for (var key : keyInfo.getAsJsonArray("inputs")) {
+            keys.add(key.getAsInt());
+        }
+
+        var modifiers = InputSystem.ANY_MODIFIER;
+        if (keyInfo.has("modifiers") && keyInfo.get("modifiers").isJsonArray()) {
+            modifiers = 0;
+            for (var modifier : keyInfo.getAsJsonArray("modifiers")) {
+                var value = modifier.getAsInt();
+                if (value == InputSystem.ANY_MODIFIER) {
+                    modifiers = InputSystem.ANY_MODIFIER;
+                    break;
+                }
+                modifiers |= value;
+            }
+        }
+
+        var availableWhenScreen = object.has("availableWhenScreen")
+                && object.get("availableWhenScreen").getAsBoolean();
+        return new InputSystem.KeyCombination(
+                type,
+                keys,
+                keyInfo.get("action").getAsInt(),
+                modifiers,
+                availableWhenScreen,
+                false
+        );
     }
 }

@@ -50,7 +50,17 @@ class MagnetManipulationTest {
     void ironPathDetectionDoesNotTreatEveryMetalAsIron() {
         assertTrue(MagnetManipulation.isIronRelatedPath("iron_ore"));
         assertTrue(MagnetManipulation.isIronRelatedPath("raw_iron_block"));
+        assertTrue(MagnetManipulation.isIronRelatedPath("iron_horse_armor"));
+        assertTrue(MagnetManipulation.hasMagneticKeyword("forge:storage_blocks/steel"));
         assertFalse(MagnetManipulation.isIronRelatedPath("copper_block"));
         assertFalse(MagnetManipulation.isIronRelatedPath("netherite_block"));
+    }
+
+    @Test
+    void toolRequirementTagsDoNotMakeBlocksMagnetic() {
+        assertFalse(MagnetManipulation.isMagneticTagPath("incorrect_for_iron_tool"));
+        assertFalse(MagnetManipulation.isMagneticTagPath("needs_iron_tool"));
+        assertTrue(MagnetManipulation.isMagneticTagPath("storage_blocks/iron"));
+        assertTrue(MagnetManipulation.isMagneticTagPath("ores/magnetite"));
     }
 }

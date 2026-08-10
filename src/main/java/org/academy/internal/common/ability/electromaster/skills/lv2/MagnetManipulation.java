@@ -102,8 +102,13 @@ public class MagnetManipulation extends Skill {
             EquipmentSlot.HEAD,
             EquipmentSlot.CHEST,
             EquipmentSlot.LEGS,
-            EquipmentSlot.FEET
+            EquipmentSlot.FEET,
+            EquipmentSlot.BODY
     };
+
+    private static final List<String> MAGNETIC_KEYWORDS = List.of(
+            "iron", "steel", "ferrous", "ferric", "magnetic", "magnetite", "hematite"
+    );
 
     enum PullMode {
         PLAYER_TO_TARGET,
@@ -140,14 +145,33 @@ public class MagnetManipulation extends Skill {
     }
 
     static boolean isIronRelatedPath(String path) {
+        return hasMagneticKeyword(path);
+    }
+
+    static boolean hasMagneticKeyword(String path) {
+        if (path == null || path.isBlank()) return false;
+        var normalized = path.toLowerCase(Locale.ROOT).replace('-', '_');
+        var tokens = normalized.split("[/_.]");
+        for (var token : tokens) {
+            if (MAGNETIC_KEYWORDS.contains(token)) return true;
+        }
+        return false;
+    }
+
+    static boolean isMagneticTagPath(String path) {
+        if (path == null) return false;
         var normalized = path.toLowerCase(Locale.ROOT);
-        return normalized.equals("iron")
-                || normalized.startsWith("iron_")
-                || normalized.endsWith("_iron")
-                || normalized.contains("_iron_");
+        if (normalized.startsWith("incorrect_for_")
+                || normalized.startsWith("needs_")
+                || normalized.startsWith("mineable/")
+                || normalized.startsWith("enchantable/")) return false;
+        return hasMagneticKeyword(normalized);
     }
 
     static boolean isMagnetic(BlockState state) {
+        var block = state.getBlock();
+        var blockPath = BuiltInRegistries.BLOCK.getKey(block).getPath();
+        if (blockPath.equals("obsidian") || blockPath.equals("crying_obsidian")) return false;
         var sound = state.getSoundType();
         if (state.is(MAGNETIC_BLOCKS)
                 || sound == SoundType.IRON
@@ -155,19 +179,18 @@ public class MagnetManipulation extends Skill {
                 || sound == SoundType.CHAIN) {
             return true;
         }
-        var block = state.getBlock();
-        if (isIronRelatedPath(BuiltInRegistries.BLOCK.getKey(block).getPath())) return true;
+        if (hasMagneticKeyword(blockPath)) return true;
         return block.builtInRegistryHolder().tags()
-                .anyMatch(tag -> isIronRelatedPath(tag.location().getPath()));
+                .anyMatch(tag -> isMagneticTagPath(tag.location().getPath()));
     }
 
     static boolean isMagnetic(ItemStack stack) {
         if (stack.isEmpty()) return false;
         if (stack.is(MAGNETIC_ITEMS)) return true;
         var item = stack.getItem();
-        if (isIronRelatedPath(BuiltInRegistries.ITEM.getKey(item).getPath())) return true;
+        if (hasMagneticKeyword(BuiltInRegistries.ITEM.getKey(item).getPath())) return true;
         return item.builtInRegistryHolder().tags()
-                .anyMatch(tag -> isIronRelatedPath(tag.location().getPath()));
+                .anyMatch(tag -> isMagneticTagPath(tag.location().getPath()));
     }
 
     static boolean isMagnetic(Entity entity) {
@@ -176,9 +199,9 @@ public class MagnetManipulation extends Skill {
 
         var type = entity.getType();
         if (type.builtInRegistryHolder().is(MAGNETIC_ENTITY_TYPES)
-                || isIronRelatedPath(BuiltInRegistries.ENTITY_TYPE.getKey(type).getPath())
+                || hasMagneticKeyword(BuiltInRegistries.ENTITY_TYPE.getKey(type).getPath())
                 || type.builtInRegistryHolder().tags()
-                .anyMatch(tag -> isIronRelatedPath(tag.location().getPath()))) {
+                .anyMatch(tag -> isMagneticTagPath(tag.location().getPath()))) {
             return true;
         }
         if (!(entity instanceof LivingEntity living)) return false;

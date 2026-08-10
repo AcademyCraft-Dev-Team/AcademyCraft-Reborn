@@ -46,7 +46,7 @@ import java.util.List;
 public final class AtmosphericDominion extends Skill {
     public AtmosphericDominion() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL5).energyCost(100_000)
-                .cpCost(160).iterationTicks(160).maxStacks(1).dependsOn(Skills.ATMOSPHERE_BLAST_GUN, Skills.VORTEX_PULL)
+                .cpCost(160).iterationTicks(20).maxStacks(1).dependsOn(Skills.ATMOSPHERE_BLAST_GUN, Skills.VORTEX_PULL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5)));
     }
 

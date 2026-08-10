@@ -56,7 +56,7 @@ public final class DarkmatterCreation extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(80)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(2)
                 .dependsOn(Skills.DARKMATTER_REPAIR)
                 .withCustomData(DarkmatterCreationData.ID, DarkmatterCreationData.class,

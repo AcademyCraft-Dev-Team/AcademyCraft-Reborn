@@ -47,7 +47,7 @@ import java.util.List;
 public final class WindCorridor extends Skill {
     public WindCorridor() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL4).energyCost(60_000)
-                .cpCost(65).iterationTicks(100).maxStacks(1).dependsOn(Skills.TAILWIND_FIELD)
+                .cpCost(65).iterationTicks(20).maxStacks(1).dependsOn(Skills.TAILWIND_FIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4)));
     }
     @Override public void initClient() {

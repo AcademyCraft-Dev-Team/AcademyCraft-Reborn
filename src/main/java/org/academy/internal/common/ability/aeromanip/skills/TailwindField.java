@@ -51,7 +51,7 @@ public final class TailwindField extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(30)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .dependsOn(Skills.AIR_CUSHION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2)));
     }

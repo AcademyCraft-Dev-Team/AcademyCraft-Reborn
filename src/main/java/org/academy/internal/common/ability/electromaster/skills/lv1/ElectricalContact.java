@@ -46,7 +46,7 @@ public class ElectricalContact extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(15)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .dependsOn(Skills.ARC_GENERATE)
         );
     }

@@ -63,7 +63,7 @@ public class MagneticWeapon extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(40)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .dependsOn(Skills.MAGNET_MANIPULATION));
     }
 
@@ -85,8 +85,16 @@ public class MagneticWeapon extends Skill {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
-    public static boolean isSword(net.minecraft.world.item.ItemStack stack) {
-        return !stack.isEmpty() && stack.is(ItemTags.SWORDS);
+    public static boolean isSupportedWeapon(ItemStack stack) {
+        return !stack.isEmpty() && (stack.is(ItemTags.SWORDS)
+                || stack.is(ItemTags.AXES)
+                || stack.is(ItemTags.SPEARS)
+                || stack.is(ItemTags.TRIDENT_ENCHANTABLE)
+                || stack.is(ItemTags.MACE_ENCHANTABLE));
+    }
+
+    static float maceFallDistance(double attackDistance) {
+        return Double.isFinite(attackDistance) ? (float) Math.max(0.0, attackDistance) : 0.0f;
     }
 
     public static final class Client {
@@ -153,7 +161,7 @@ public class MagneticWeapon extends Skill {
                 forceDisable(player);
                 return;
             }
-            var weaponSlot = findFirstHotbarSwordSlot(player);
+            var weaponSlot = findFirstHotbarWeaponSlot(player);
             if (weaponSlot < 0) return;
 
             IronSandArsenal.Server.forceDisable(player);
@@ -165,9 +173,9 @@ public class MagneticWeapon extends Skill {
             AbilitySystemServer.registerContext(context);
         }
 
-        private static int findFirstHotbarSwordSlot(ServerPlayer player) {
+        private static int findFirstHotbarWeaponSlot(ServerPlayer player) {
             for (var slot = 0; slot < 9; slot++) {
-                if (isSword(player.getInventory().getItem(slot))) return slot;
+                if (isSupportedWeapon(player.getInventory().getItem(slot))) return slot;
             }
             return -1;
         }
@@ -184,11 +192,14 @@ public class MagneticWeapon extends Skill {
         private int attackCooldown;
         private int attackSequence;
         private PendingAttack pendingAttack;
+        private ItemStack magnetizedWeapon = ItemStack.EMPTY;
+        private boolean temporaryMagnetized;
         private boolean ended;
 
         private Context(ServerPlayer player, int weaponSlot) {
             super(player);
             this.weaponSlot = weaponSlot;
+            bindWeapon(weaponSlot);
             blade = new MagneticWeaponBlade(EntityTypes.MAGNETIC_WEAPON_BLADE.get(), player.level());
             blade.configure(player, player.getInventory().getItem(weaponSlot));
             player.level().addFreshEntity(blade);
@@ -219,10 +230,14 @@ public class MagneticWeapon extends Skill {
             }
 
             if (pendingAttack == null) {
-                weaponSlot = Server.findFirstHotbarSwordSlot(player);
-                if (weaponSlot < 0) {
+                var nextWeaponSlot = Server.findFirstHotbarWeaponSlot(player);
+                if (nextWeaponSlot < 0) {
                     end(true);
                     return;
+                }
+                if (nextWeaponSlot != weaponSlot
+                        || player.getInventory().getItem(nextWeaponSlot) != magnetizedWeapon) {
+                    bindWeapon(nextWeaponSlot);
                 }
                 blade.setWeapon(player.getInventory().getItem(weaponSlot));
             }
@@ -309,7 +324,7 @@ public class MagneticWeapon extends Skill {
 
         private boolean matchesBoundWeapon(PendingAttack pending) {
             var current = player.getInventory().getItem(pending.weaponSlot);
-            return isSword(current)
+            return isSupportedWeapon(current)
                     && ItemStack.isSameItemSameComponents(current, pending.weaponSnapshot);
         }
 
@@ -324,7 +339,11 @@ public class MagneticWeapon extends Skill {
                 return;
             }
 
-            try (var playerState = MagneticWeaponPlayerState.open(player, pending.weaponSlot);
+            var weapon = player.getInventory().getItem(pending.weaponSlot);
+            var syntheticFallDistance = weapon.is(ItemTags.MACE_ENCHANTABLE)
+                    ? maceFallDistance(player.distanceTo(target)) : -1.0f;
+            try (var playerState = MagneticWeaponPlayerState.open(
+                    player, pending.weaponSlot, syntheticFallDistance);
                  var attackContext = MagneticWeaponAttackContext.open(
                          player,
                          target,
@@ -356,7 +375,7 @@ public class MagneticWeapon extends Skill {
         private void syncData() {
             var hideMainHand = weaponSlot >= 0
                     && player.getInventory().getSelectedSlot() == weaponSlot
-                    && isSword(player.getInventory().getItem(weaponSlot));
+                    && isSupportedWeapon(player.getInventory().getItem(weaponSlot));
             var data = new Data(true, weaponSlot, hideMainHand);
             if (data.equals(player.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get()))) return;
             player.setData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get(), data);
@@ -370,9 +389,28 @@ public class MagneticWeapon extends Skill {
             if (disableSkill && Skills.MAGNETIC_WEAPON.get().isEnabled(player)) {
                 Skills.MAGNETIC_WEAPON.get().toggle(player);
             }
+            clearTemporaryMagnetization();
             blade.discard();
             Server.clearData(player);
             unregister();
+        }
+
+        private void bindWeapon(int slot) {
+            clearTemporaryMagnetization();
+            weaponSlot = slot;
+            magnetizedWeapon = player.getInventory().getItem(slot);
+            temporaryMagnetized = MagneticWeaponEnchantments.addTemporary(
+                    player.registryAccess(), magnetizedWeapon);
+            player.getInventory().setChanged();
+        }
+
+        private void clearTemporaryMagnetization() {
+            if (temporaryMagnetized && !magnetizedWeapon.isEmpty()) {
+                MagneticWeaponEnchantments.removeTemporary(player.registryAccess(), magnetizedWeapon);
+                player.getInventory().setChanged();
+            }
+            magnetizedWeapon = ItemStack.EMPTY;
+            temporaryMagnetized = false;
         }
 
         private static final class PendingAttack {

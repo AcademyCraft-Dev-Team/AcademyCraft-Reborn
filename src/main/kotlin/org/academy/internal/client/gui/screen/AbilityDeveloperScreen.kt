@@ -4,7 +4,9 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
+import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.Minecraft
+import net.minecraft.client.input.KeyEvent
 import net.minecraft.core.BlockPos
 import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
@@ -48,6 +50,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private var activeCover: FrameLayoutWidget? = null
     private val skillLineBindings = mutableListOf<SkillLineBinding>()
     private var coursePage = CoursePage.ABILITY
+    private var viewedSkillInfo: AbilitySystemClient.SkillInfo? = null
 
     private val maxDuSkills = 10f
 
@@ -76,10 +79,24 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         super.mouseMoved(mouseX, mouseY)
     }
 
+    override fun tick() {
+        super.tick()
+        refreshCompletedSkillDevelopment()
+    }
+
+    override fun keyPressed(e: KeyEvent): Boolean {
+        if (e.key() == InputConstants.KEY_ESCAPE && viewedSkillInfo != null) {
+            rebuildSkillTree()
+            return true
+        }
+        return super.keyPressed(e)
+    }
+
     override fun onInit() {
         activeCover = null
         isConsoleMode = false
         skillLineBindings.clear()
+        viewedSkillInfo = null
 
         val main = FrameLayoutWidget()
         main.layoutParams = FrameLayoutWidget.LayoutParams()
@@ -991,6 +1008,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         )
         node.stateListAnimator = animator
         node.onClickListener = {
+            viewedSkillInfo = info
             area.clearChildren()
             area.addChild("skill_view", createSkillViewCover(info))
         }
@@ -1064,8 +1082,21 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     }
 
     private fun rebuildSkillTree() {
+        viewedSkillInfo = null
         area.clearChildren()
         fillSkillTreeArea(area)
+    }
+
+    private fun refreshCompletedSkillDevelopment() {
+        if (AbilitySystemClient.getDevState() != DevState.DONE) return
+        val targetId = AbilitySystemClient.getDevTargetId()
+        if (targetId.isBlank() || targetId == DevelopAction.LEVEL_TARGET_ID) return
+        if (!AbilitySystemClient.isSkillLearned(targetId)) return
+
+        AbilitySystemClient.resetDevState()
+        if (::area.isInitialized && !isConsoleMode) {
+            rebuildSkillTree()
+        }
     }
 
     private fun fillCourseTabs(tabs: LinearLayoutWidget) {
@@ -1129,6 +1160,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         button.onClickListener = OnClickListener {
             if (coursePage == page) return@OnClickListener
             coursePage = page
+            viewedSkillInfo = null
             skillLineBindings.clear()
             area.clearChildren()
             fillSkillTreeArea(area)
@@ -1157,22 +1189,42 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         return btnWid
     }
 
+    private fun createSkillBackButton(): ButtonWidget {
+        val background = FillWidget(COURSE_TAB_SELECTED_COLOR)
+        val label = LabelWidget("<")
+        val button = object : ButtonWidget() {
+            override fun render(context: RenderContext) {
+                background.setColor(if (isHovered) COURSE_TAB_HOVER_COLOR else COURSE_TAB_SELECTED_COLOR)
+                super.render(context)
+            }
+        }
+        button.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.TOP_RIGHT)
+            .margin(0f, 3f, 3f, 0f)
+            .size(22f, 14f)
+        button.tooltipText = L10n["academy.ability_developer.back"]
+        button.onClickListener = OnClickListener { rebuildSkillTree() }
+
+        background.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        button.addChild("background", background)
+        label.baseFontSize = 9f
+        label.isEnabled = false
+        label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.CENTER).size(10f, 10f)
+        button.addChild("label", label)
+        return button
+    }
+
     private fun createSkillViewCover(info: AbilitySystemClient.SkillInfo): FrameLayoutWidget {
         val isLearned = AbilitySystemClient.isSkillLearned(info.skill)
         val skill = info.skill
-
-        var canClose = true
+        val skillId = skill.getKeyString()
 
         val cover = FrameLayoutWidget()
         cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         run {
             val bg = ButtonWidget()
             bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            bg.onClickListener = OnClickListener {
-                if (canClose) {
-                    rebuildSkillTree()
-                }
-            }
+            bg.onClickListener = OnClickListener { rebuildSkillTree() }
             cover.addChild("bg", bg)
         }
         cover.startAnimation(
@@ -1193,7 +1245,16 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             val iconWid = object : FrameLayoutWidget() {
                 override fun render(context: RenderContext) {
                     val finalAlpha = alpha * context.accumulatedAlpha
-                    val progress = iconProgressRef.get()
+                    val tracksDevelopment = AbilitySystemClient.getDevTargetId() == skillId
+                    val progress = if (tracksDevelopment) {
+                        when (AbilitySystemClient.getDevState()) {
+                            DevState.DONE -> 1.0f
+                            DevState.DEVELOPING -> AbilitySystemClient.getDevProgress()
+                            else -> iconProgressRef.get()
+                        }
+                    } else {
+                        iconProgressRef.get()
+                    }
                     val texManager = Minecraft.getInstance().textureManager
                     val outlineTex = if (progress >= 1.0f) viewOutlineGlowTex else viewOutlineTex
                     val backView =
@@ -1414,79 +1475,84 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                         }
                     }
 
-                    val messageLabel = LabelWidget(
-                        L10n["academy.ability_developer.learn_question"].format(
-                            LearningHelper.getEstimatedSkillConsumption(
-                                skill
-                            )
-                        )
+                    val learnQuestion = L10n["academy.ability_developer.learn_question"].format(
+                        LearningHelper.getEstimatedSkillConsumption(skill)
                     )
+                    val messageLabel = object : LabelWidget(learnQuestion) {
+                        override fun tick() {
+                            super.tick()
+                            val targetId = AbilitySystemClient.getDevTargetId()
+                            if (targetId == skillId) {
+                                text = when {
+                                    AbilitySystemClient.isDevRequestPending() ->
+                                        L10n["academy.ability_developer.dev_developing"]
+
+                                    AbilitySystemClient.getDevState() == DevState.DEVELOPING ->
+                                        L10n["academy.ability_developer.progress"] + " " +
+                                            (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
+
+                                    AbilitySystemClient.getDevState() == DevState.DONE ->
+                                        L10n["academy.ability_developer.dev_successful"]
+
+                                    AbilitySystemClient.getDevState() == DevState.FAILED ->
+                                        developmentFailureMessage()
+
+                                    else -> learnQuestion
+                                }
+                            } else if (AbilitySystemClient.isDevelopmentActive()) {
+                                text = L10n["academy.ability_developer.already_developing"]
+                            }
+                        }
+                    }
                     messageLabel.baseFontSize = 10f
                     messageLabel.alpha = 0.66f
                     messageLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER_HORIZONTAL)
                     textArea.addChild("message", messageLabel)
 
-                    val learnBtn = createDevButton()
-                    learnBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
-                    learnBtn.onClickListener = OnClickListener {
-                        if (blockEntity.energyStored < LearningHelper.getEstimatedSkillConsumption(skill)) {
-                            messageLabel.text = L10n["academy.ability_developer.noenergy"]
-                        } else if (skill.recommendedLevel.levelCode > AbilitySystemClient.getLevel().levelCode) {
-                            messageLabel.text =
-                                L10n["academy.ability_developer.level_fail"].format(skill.recommendedLevel.levelCode)
-                        } else if (info.dependencies.any { !AbilitySystemClient.isSkillLearned(it.skill) }) {
-                            messageLabel.text = L10n["academy.ability_developer.condition_fail"]
-                        } else if (skill.devConditions.any { !it.accepts() }) {
-                            messageLabel.text = L10n["academy.ability_developer.condition_fail"]
-                        } else {
-                            AbilitySystemClient.resetDevState()
-                            canClose = false
-
-                            MisakaNetworkClient.FUTURE_MANAGER.send(
-                                StartSkillDevPacket(skill.getKeyString(), mainPos.asLong())
-                            ) { response ->
-                                if (response != null && response.isSuccess) {
-                                    fun poll() {
-                                        val state = AbilitySystemClient.getDevState()
-                                        when (state) {
-                                            DevState.DEVELOPING -> {
-                                                messageLabel.text =
-                                                    L10n["academy.ability_developer.progress"] + " " + (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
-                                                iconProgressRef.set(AbilitySystemClient.getDevProgress())
-                                                cover.pollNextFrame { poll() }
-                                            }
-
-                                            DevState.DONE -> {
-                                                iconProgressRef.set(1.0f)
-                                                messageLabel.text = L10n["academy.ability_developer.dev_successful"]
-                                                canClose = true
-                                            }
-
-                                            DevState.FAILED -> {
-                                                messageLabel.text = developmentFailureMessage()
-                                                canClose = true
-                                            }
-
-                                            else -> {
-                                                cover.pollNextFrame { poll() }
-                                            }
-                                        }
+                    if (!AbilitySystemClient.isDevelopmentActive()) {
+                        val learnBtn = createDevButton()
+                        learnBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
+                        learnBtn.onClickListener = OnClickListener {
+                            if (AbilitySystemClient.getDevTargetId() == skillId
+                                && AbilitySystemClient.getDevState() == DevState.FAILED
+                            ) {
+                                AbilitySystemClient.resetDevState()
+                            }
+                            if (blockEntity.energyStored < LearningHelper.getEstimatedSkillConsumption(skill)) {
+                                messageLabel.text = L10n["academy.ability_developer.noenergy"]
+                            } else if (skill.recommendedLevel.levelCode > AbilitySystemClient.getLevel().levelCode) {
+                                messageLabel.text =
+                                    L10n["academy.ability_developer.level_fail"].format(skill.recommendedLevel.levelCode)
+                            } else if (info.dependencies.any { !AbilitySystemClient.isSkillLearned(it.skill) }) {
+                                messageLabel.text = L10n["academy.ability_developer.condition_fail"]
+                            } else if (skill.devConditions.any { !it.accepts() }) {
+                                messageLabel.text = L10n["academy.ability_developer.condition_fail"]
+                            } else if (AbilitySystemClient.isDevelopmentActive()) {
+                                messageLabel.text = L10n["academy.ability_developer.already_developing"]
+                            } else {
+                                learnBtn.isEnabled = false
+                                AbilitySystemClient.beginDevelopmentRequest(skillId)
+                                MisakaNetworkClient.FUTURE_MANAGER.send(
+                                    StartSkillDevPacket(skillId, mainPos.asLong())
+                                ) { response ->
+                                    if (response != null && response.isSuccess) {
+                                        textArea.removeChild("learn_btn")
+                                    } else {
+                                        val failure = response?.message
+                                            ?: L10n["academy.ability_developer.dev_failed"]
+                                        AbilitySystemClient.rejectDevelopmentRequest(skillId, failure)
+                                        learnBtn.isEnabled = true
                                     }
-                                    poll()
-                                } else {
-                                    messageLabel.text =
-                                        response?.message ?: L10n["academy.ability_developer.dev_failed"]
-                                    canClose = true
                                 }
                             }
                         }
-                        textArea.removeChild("learn_btn")
+                        textArea.addChild("learn_btn", learnBtn)
                     }
-                    textArea.addChild("learn_btn", learnBtn)
                 }
             }
         }
+        cover.addChild("back", createSkillBackButton())
         return cover
     }
 

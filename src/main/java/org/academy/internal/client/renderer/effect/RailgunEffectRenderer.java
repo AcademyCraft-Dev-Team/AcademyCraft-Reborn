@@ -3,19 +3,14 @@ package org.academy.internal.client.renderer.effect;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
-import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.world.item.Items;
 import org.joml.Matrix4f;
 
 import static org.academy.AcademyCraft.academy;
@@ -45,9 +40,6 @@ public final class RailgunEffectRenderer implements EffectRenderer {
         poseStack.pushPose();
         poseStack.translate(handX, 0.55f, -0.16f);
         submitHandRings(poseStack, collector, renderState.ageInTicks, strength, false);
-        if (!data.released()) {
-            submitCoin(poseStack, collector, packedLight, renderState.ageInTicks, 0.23f);
-        }
         poseStack.popPose();
 
         if (data.coinReturnHint()) {
@@ -73,9 +65,6 @@ public final class RailgunEffectRenderer implements EffectRenderer {
         poseStack.pushPose();
         poseStack.translate(handX, -0.20f, -0.30f);
         submitHandRings(poseStack, collector, player.tickCount + partialTick, strength, true);
-        if (!data.released()) {
-            submitCoin(poseStack, collector, packedLight, player.tickCount + partialTick, 0.12f);
-        }
         poseStack.popPose();
 
         if (data.coinReturnHint()) {
@@ -170,21 +159,4 @@ public final class RailgunEffectRenderer implements EffectRenderer {
                 .setColor(0.82f, 0.93f, 1.0f, alpha);
     }
 
-    private static void submitCoin(PoseStack poseStack, SubmitNodeCollector collector,
-                                   int packedLight, float time, float scale) {
-        poseStack.pushPose();
-        poseStack.mulPose(Axis.XP.rotationDegrees(time * 50.0f));
-        poseStack.scale(scale, scale, scale);
-        var state = new ItemStackRenderState();
-        Minecraft.getInstance().getItemModelResolver().updateForTopItem(
-                state,
-                Items.COIN.get().getDefaultInstance(),
-                ItemDisplayContext.FIXED,
-                null,
-                null,
-                0
-        );
-        state.submit(poseStack, collector, packedLight, OverlayTexture.NO_OVERLAY, 0);
-        poseStack.popPose();
-    }
 }

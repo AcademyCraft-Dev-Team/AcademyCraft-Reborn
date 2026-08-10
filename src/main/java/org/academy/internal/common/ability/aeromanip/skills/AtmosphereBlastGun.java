@@ -53,7 +53,7 @@ public final class AtmosphereBlastGun extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(40)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.ATMOSPHERE_SHIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
