@@ -12,6 +12,10 @@ public record LinearSegment(Vec3 start, Vec3 end) {
         Objects.requireNonNull(end, "end");
     }
 
+    private static boolean finite(Vec3 value) {
+        return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
+    }
+
     public Vec3 delta() {
         return end.subtract(start);
     }
@@ -60,9 +64,5 @@ public record LinearSegment(Vec3 start, Vec3 end) {
 
     public boolean hasFiniteCoordinates() {
         return finite(start) && finite(end);
-    }
-
-    private static boolean finite(Vec3 value) {
-        return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
 }

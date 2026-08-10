@@ -12,7 +12,9 @@ public enum VectorCompatibilityTier {
         return this == INFERRED_HITSCAN || this == DAMAGE_FALLBACK;
     }
 
-    /** Only an explicit linear compatibility profile may request a synthetic return beam. */
+    /**
+     * Only an explicit linear compatibility profile may request a synthetic return beam.
+     */
     public boolean permitsSyntheticReturnVisual() {
         return this == PROFILED_LINEAR;
     }

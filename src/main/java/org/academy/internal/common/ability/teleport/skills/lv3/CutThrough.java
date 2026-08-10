@@ -50,7 +50,9 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 
-/** The 26.2 target for the reference Penetrate Teleport skill. */
+/**
+ * The 26.2 target for the reference Penetrate Teleport skill.
+ */
 public final class CutThrough extends Skill {
     private static final double MAX_DISTANCE = 36.0;
 

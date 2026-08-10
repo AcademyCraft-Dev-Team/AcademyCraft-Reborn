@@ -69,6 +69,10 @@ public final class BloomEffect {
         return AFTER;
     }
 
+    public static void onResize() {
+        if (instance != null) instance.releaseInput();
+    }
+
     public void close() {
         releaseInput();
         bloomUniformsBuffer.close();
@@ -79,10 +83,6 @@ public final class BloomEffect {
     public RenderTarget getInput() {
         hasBeenUsed = true;
         return ensureInput(Minecraft.getInstance().gameRenderer.mainRenderTarget());
-    }
-
-    public static void onResize() {
-        if (instance != null) instance.releaseInput();
     }
 
     private RenderTarget ensureInput(RenderTarget mainRenderTarget) {

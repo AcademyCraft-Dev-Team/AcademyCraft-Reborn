@@ -2,7 +2,6 @@ package org.academy.api.client.config
 
 import net.minecraft.resources.Identifier
 import org.academy.api.common.ability.Skill
-import java.util.LinkedHashMap
 import java.util.function.BooleanSupplier
 import java.util.function.Consumer
 import java.util.function.IntConsumer

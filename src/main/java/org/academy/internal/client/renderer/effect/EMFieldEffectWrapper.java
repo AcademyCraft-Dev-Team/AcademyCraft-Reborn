@@ -36,6 +36,10 @@ public final class EMFieldEffectWrapper implements EffectRenderer {
         NeoForge.EVENT_BUS.register(this);
     }
 
+    private static boolean isFinite(Vec3 value) {
+        return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
+    }
+
     public EMFieldRenderer createField() {
         return createField(DEFAULT_LIFETIME);
     }
@@ -120,10 +124,6 @@ public final class EMFieldEffectWrapper implements EffectRenderer {
             total += field.getFieldLineCount();
         }
         return total;
-    }
-
-    private static boolean isFinite(Vec3 value) {
-        return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
 
     private void removeField(EMFieldRenderer field) {

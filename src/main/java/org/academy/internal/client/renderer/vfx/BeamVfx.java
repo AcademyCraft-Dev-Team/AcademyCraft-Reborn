@@ -1,11 +1,11 @@
 package org.academy.internal.client.renderer.vfx;
 
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.internal.client.renderer.entity.ReflectedBeamVisualGeometry;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 public final class BeamVfx implements Vfx {
@@ -17,6 +17,37 @@ public final class BeamVfx implements Vfx {
 
     public BeamVfx(HighSpeedElectronBeam beam) {
         this.beam = beam;
+    }
+
+    private static void pushSegment(
+            VfxSink sink,
+            Vec3 start,
+            Vec3 end,
+            float progress,
+            boolean isCharging,
+            float widthScale,
+            float ballScale
+    ) {
+        var direction = end.subtract(start);
+        var length = direction.length();
+        float yRot = 0.0f;
+        float xRot = 0.0f;
+        if (direction.lengthSqr() > DIRECTION_EPSILON_SQUARED && Double.isFinite(length)) {
+            var horizontalLength = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+            yRot = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
+            xRot = (float) Math.toDegrees(Math.atan2(-direction.y, horizontalLength));
+        } else {
+            length = 0.0;
+        }
+
+        var pos = new Vector3f((float) start.x, (float) start.y, (float) start.z);
+        var safeLength = (float) Math.max(0.0, length);
+        sink.push(new BeamCoreData(
+                pos, yRot, xRot, safeLength, progress, isCharging, widthScale, ballScale
+        ));
+        sink.push(new BeamGlowData(
+                pos, yRot, xRot, safeLength, progress, isCharging, widthScale, ballScale
+        ));
     }
 
     @Override
@@ -72,37 +103,6 @@ public final class BeamVfx implements Vfx {
         );
         pushSegment(sink, visualStart, reflectionPoint, progress, isCharging, widthScale, 1.0f);
         pushSegment(sink, reflectionPoint, returnEnd, progress, false, widthScale * 0.9f, 0.8f);
-    }
-
-    private static void pushSegment(
-            VfxSink sink,
-            Vec3 start,
-            Vec3 end,
-            float progress,
-            boolean isCharging,
-            float widthScale,
-            float ballScale
-    ) {
-        var direction = end.subtract(start);
-        var length = direction.length();
-        float yRot = 0.0f;
-        float xRot = 0.0f;
-        if (direction.lengthSqr() > DIRECTION_EPSILON_SQUARED && Double.isFinite(length)) {
-            var horizontalLength = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
-            yRot = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
-            xRot = (float) Math.toDegrees(Math.atan2(-direction.y, horizontalLength));
-        } else {
-            length = 0.0;
-        }
-
-        var pos = new Vector3f((float) start.x, (float) start.y, (float) start.z);
-        var safeLength = (float) Math.max(0.0, length);
-        sink.push(new BeamCoreData(
-                pos, yRot, xRot, safeLength, progress, isCharging, widthScale, ballScale
-        ));
-        sink.push(new BeamGlowData(
-                pos, yRot, xRot, safeLength, progress, isCharging, widthScale, ballScale
-        ));
     }
 
     @Override

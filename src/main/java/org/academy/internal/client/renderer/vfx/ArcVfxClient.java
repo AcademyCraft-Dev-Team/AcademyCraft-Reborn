@@ -17,8 +17,8 @@ public final class ArcVfxClient {
     }
 
     public static void register() {
-        VfxRegistry.register(ArcCoreData.class, VfxPhase.WORLD_TRANSLUCENT, new ArcRenderer(false));
-        VfxRegistry.register(ArcGlowData.class, VfxPhase.WORLD_GLOW, new ArcRenderer(true));
+        VfxRegistry.register(LightningCoreData.class, VfxPhase.WORLD_TRANSLUCENT, new LightningRenderer(false));
+        VfxRegistry.register(LightningRenderData.class, VfxPhase.WORLD_GLOW, new LightningRenderer(true));
     }
 
     @SubscribeEvent

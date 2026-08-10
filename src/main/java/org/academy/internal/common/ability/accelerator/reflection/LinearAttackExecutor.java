@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.accelerator.reflection;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -8,11 +9,7 @@ import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.entity.EntityTypes;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public final class LinearAttackExecutor {
     private LinearAttackExecutor() {
@@ -84,7 +81,7 @@ public final class LinearAttackExecutor {
             LinearSegment segment,
             LinearAttackPayload payload,
             boolean reflected,
-            net.minecraft.server.level.ServerPlayer reflector,
+            ServerPlayer reflector,
             Entity excludedEntity,
             Set<Entity> excludedFoldHits
     ) {

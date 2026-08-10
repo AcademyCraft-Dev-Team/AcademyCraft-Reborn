@@ -149,12 +149,11 @@ object AcademyProfiler {
     }
 
     private fun buildSnapshot(): ProfilerSnapshot {
-        val zonesEnabled = ZoneProfiler.enabled
         return ProfilerSnapshot(
-            zones = if (zonesEnabled) ZoneProfiler.snapshot() else emptyMap(),
+            zones = ZoneProfiler.snapshot(),
             sampler = if (ProfilerSampler.hasData) ProfilerSampler.snapshot() else null,
             frame = FrameStats.snapshot(),
-            zonesEnabled = zonesEnabled,
+            zonesEnabled = ZoneProfiler.enabled,
             sampling = ProfilerSampler.isRunning,
             samplingPaused = ProfilerSampler.isPaused,
         )

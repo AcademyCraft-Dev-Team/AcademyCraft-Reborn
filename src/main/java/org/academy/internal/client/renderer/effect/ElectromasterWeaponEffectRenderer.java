@@ -77,48 +77,6 @@ public final class ElectromasterWeaponEffectRenderer implements EffectRenderer {
         animationLevel = null;
     }
 
-    @Override
-    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
-                       AvatarRenderState state, float yRot, float xRot) {
-        var ironSand = state.getRenderDataOrDefault(IRON_SAND_CONTEXT, IronSandArsenal.Data.DEFAULT);
-        var minecraft = Minecraft.getInstance();
-        var entityId = state.getRenderDataOrDefault(WingEffectRenderer.ENTITY_ID_CONTEXT, -1);
-        var source = minecraft.level == null ? null : minecraft.level.getEntity(entityId);
-        if (!(source instanceof Player) || !ironSand.active()) return;
-
-        var currentTick = (double) minecraft.level.getGameTime() + state.partialTick;
-        renderIronSand(
-                poseStack,
-                collector,
-                packedLight,
-                state.ageInTicks,
-                currentTick,
-                IRON_SAND_SWEEPS.entries(entityId)
-        );
-    }
-
-    @Override
-    public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector collector,
-                                  LocalPlayer player, int packedLight, float partialTick) {
-        var data = player.getData(AttachmentTypes.IRON_SAND_DATA.get());
-        if (!data.active()) return;
-        var animations = IRON_SAND_SWEEPS.entries(player.getId());
-        if (animations.isEmpty()) return;
-
-        var currentTick = (double) player.level().getGameTime() + partialTick;
-        var handSide = player.getMainArm() == HumanoidArm.RIGHT ? 1.0f : -1.0f;
-        for (var entry : animations) {
-            var progress = SweepAnimationTimeline.progress(entry, currentTick, SWEEP_DURATION_TICKS);
-            if (progress < 0.0f || progress >= 1.0f) continue;
-            renderFirstPersonSweep(poseStack, collector, packedLight, handSide, progress);
-        }
-    }
-
-    @Override
-    public boolean renderFirstPersonWhenHudHidden() {
-        return true;
-    }
-
     private static void renderIronSand(
             PoseStack poseStack,
             SubmitNodeCollector collector,
@@ -250,6 +208,48 @@ public final class ElectromasterWeaponEffectRenderer implements EffectRenderer {
         consumer.addVertex(matrix, x, y, 0)
                 .setColor(0.78f, 0.82f, 0.88f, alpha)
                 .setUv(u, v);
+    }
+
+    @Override
+    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
+                       AvatarRenderState state, float yRot, float xRot) {
+        var ironSand = state.getRenderDataOrDefault(IRON_SAND_CONTEXT, IronSandArsenal.Data.DEFAULT);
+        var minecraft = Minecraft.getInstance();
+        var entityId = state.getRenderDataOrDefault(WingEffectRenderer.ENTITY_ID_CONTEXT, -1);
+        var source = minecraft.level == null ? null : minecraft.level.getEntity(entityId);
+        if (!(source instanceof Player) || !ironSand.active()) return;
+
+        var currentTick = (double) minecraft.level.getGameTime() + state.partialTick;
+        renderIronSand(
+                poseStack,
+                collector,
+                packedLight,
+                state.ageInTicks,
+                currentTick,
+                IRON_SAND_SWEEPS.entries(entityId)
+        );
+    }
+
+    @Override
+    public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector collector,
+                                  LocalPlayer player, int packedLight, float partialTick) {
+        var data = player.getData(AttachmentTypes.IRON_SAND_DATA.get());
+        if (!data.active()) return;
+        var animations = IRON_SAND_SWEEPS.entries(player.getId());
+        if (animations.isEmpty()) return;
+
+        var currentTick = (double) player.level().getGameTime() + partialTick;
+        var handSide = player.getMainArm() == HumanoidArm.RIGHT ? 1.0f : -1.0f;
+        for (var entry : animations) {
+            var progress = SweepAnimationTimeline.progress(entry, currentTick, SWEEP_DURATION_TICKS);
+            if (progress < 0.0f || progress >= 1.0f) continue;
+            renderFirstPersonSweep(poseStack, collector, packedLight, handSide, progress);
+        }
+    }
+
+    @Override
+    public boolean renderFirstPersonWhenHudHidden() {
+        return true;
     }
 
     private enum SweepMarker {

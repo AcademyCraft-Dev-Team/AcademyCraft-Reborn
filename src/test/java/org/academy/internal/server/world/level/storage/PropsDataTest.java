@@ -3,9 +3,7 @@ package org.academy.internal.server.world.level.storage;
 import org.academy.api.common.attribute.AbilityFactor;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PropsDataTest {
     @Test

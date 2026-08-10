@@ -1,25 +1,6 @@
 package org.academy.api.client.gui.serialize
 
-import org.academy.api.client.gui.serialize.codecs.BlendQuadCodec
-import org.academy.api.client.gui.serialize.codecs.ButtonCodec
-import org.academy.api.client.gui.serialize.codecs.EmptyCodec
-import org.academy.api.client.gui.serialize.codecs.FillCodec
-import org.academy.api.client.gui.serialize.codecs.FrameLayoutCodec
-import org.academy.api.client.gui.serialize.codecs.ImageCodec
-import org.academy.api.client.gui.serialize.codecs.LabelCodec
-import org.academy.api.client.gui.serialize.codecs.LinearLayoutCodec
-import org.academy.api.client.gui.serialize.codecs.MonochromeImageCodec
-import org.academy.api.client.gui.serialize.codecs.ParallaxImageCodec
-import org.academy.api.client.gui.serialize.codecs.ProgressBarCodec
-import org.academy.api.client.gui.serialize.codecs.RadioButtonCodec
-import org.academy.api.client.gui.serialize.codecs.RadioGroupCodec
-import org.academy.api.client.gui.serialize.codecs.ScrollBarCodec
-import org.academy.api.client.gui.serialize.codecs.ScrollPanelCodec
-import org.academy.api.client.gui.serialize.codecs.SeekBarCodec
-import org.academy.api.client.gui.serialize.codecs.SpriteSheetCodec
-import org.academy.api.client.gui.serialize.codecs.TextBoxCodec
-import org.academy.api.client.gui.serialize.codecs.ToggleButtonCodec
-import org.academy.api.client.gui.serialize.codecs.WheelPickerCodec
+import org.academy.api.client.gui.serialize.codecs.*
 
 /**
  * 注册全部内置控件 codec. 懒加载, 首次序列化/反序列化时执行.

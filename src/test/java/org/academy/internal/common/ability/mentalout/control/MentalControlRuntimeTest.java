@@ -1,30 +1,127 @@
 package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.resources.Identifier;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlDomain;
-import org.academy.api.common.entitycontrol.ControlRejectionReason;
-import org.academy.api.common.entitycontrol.ControlSupport;
-import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import net.minecraft.world.entity.LivingEntity;
+import org.academy.api.common.entitycontrol.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class MentalControlRuntimeTest {
     private static final Identifier SOURCE_A = Identifier.fromNamespaceAndPath("academy", "test_a");
     private static final Identifier SOURCE_B = Identifier.fromNamespaceAndPath("academy", "test_b");
     private static final Identifier DIMENSION = Identifier.withDefaultNamespace("overworld");
+
+    private static MentalControlRuntime.LeaseInput input(
+            UUID controller,
+            UUID subject,
+            Identifier source,
+            int priority,
+            long expiresAt,
+            EnumMap<ControlDomain, ControlDirective> directives
+    ) {
+        return new MentalControlRuntime.LeaseInput(
+                controller,
+                subject,
+                source,
+                priority,
+                expiresAt,
+                DIMENSION,
+                DIMENSION,
+                directives
+        );
+    }
+
+    private static EnumMap<ControlDomain, ControlDirective> target(UUID target) {
+        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
+        directives.put(ControlDomain.TARGET, new ControlDirective.ForceTarget(target));
+        return directives;
+    }
+
+    private static MentalControlRuntime.LeaseInput guardianInput(
+            UUID controller,
+            UUID subject,
+            UUID target,
+            UUID relationLeaseId
+    ) {
+        return new MentalControlRuntime.LeaseInput(
+                controller,
+                subject,
+                MentalControlRuntime.IMPRESSION_GUARD_SOURCE,
+                MentalControlRuntime.IMPRESSION_GUARD_PRIORITY,
+                100,
+                DIMENSION,
+                DIMENSION,
+                target(target),
+                relationLeaseId
+        );
+    }
+
+    private static EnumMap<ControlDomain, ControlDirective> freeze() {
+        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
+        var freeze = new ControlDirective.FreezeAi();
+        directives.put(ControlDomain.MOVEMENT, freeze);
+        directives.put(ControlDomain.ACTION, freeze);
+        return directives;
+    }
+
+    private static EnumMap<ControlDomain, ControlDirective> path(UUID target) {
+        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
+        var moveTo = new ControlDirective.MoveTo(target);
+        directives.put(ControlDomain.MOVEMENT, moveTo);
+        directives.put(ControlDomain.ACTION, moveTo);
+        return directives;
+    }
+
+    private static EnumMap<ControlDomain, ControlDirective> impression() {
+        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
+        directives.put(ControlDomain.RELATION, new ControlDirective.ImpressionAlliance());
+        return directives;
+    }
+
+    private static MentalControlRuntime.AdapterRegistration registration(String path, int priority) {
+        return new MentalControlRuntime.AdapterRegistration(
+                Identifier.fromNamespaceAndPath("academy", path),
+                priority,
+                new MentalControlAdapter() {
+                    @Override
+                    public boolean matches(LivingEntity subject) {
+                        return true;
+                    }
+
+                    @Override
+                    public ControlSupport support(
+                            LivingEntity subject,
+                            ControlCapability capability
+                    ) {
+                        return ControlSupport.UNSUPPORTED;
+                    }
+
+                    @Override
+                    public ControlBinding activate(ControlContext context, ControlDirective directive) {
+                        return ControlBinding.noop();
+                    }
+                }
+        );
+    }
+
+    private static MentalControlRuntime.CapabilityCandidate candidate(
+            MentalControlRuntime.AdapterRegistration registration,
+            ControlSupport support
+    ) {
+        return new MentalControlRuntime.CapabilityCandidate(
+                registration,
+                support,
+                support.isSupported()
+                        ? ControlRejectionReason.SUPPORTED
+                        : ControlRejectionReason.UNSUPPORTED_CAPABILITY
+        );
+    }
 
     @Test
     void higherPriorityAndNewestTieWin() {
@@ -37,10 +134,10 @@ class MentalControlRuntimeTest {
 
         table.add(input(controller, subject, SOURCE_A, 1, 100, target(firstTarget)));
         table.add(input(UUID.randomUUID(), subject, SOURCE_B, 2, 100, target(highTarget)));
-        assertTrue(highTarget.equals(table.forcedTarget(subject, 0)));
+        assertEquals(highTarget, table.forcedTarget(subject, 0));
 
         table.add(input(UUID.randomUUID(), subject, Identifier.withDefaultNamespace("test_c"), 2, 100, target(newestTarget)));
-        assertTrue(newestTarget.equals(table.forcedTarget(subject, 0)));
+        assertEquals(newestTarget, table.forcedTarget(subject, 0));
     }
 
     @Test
@@ -54,7 +151,7 @@ class MentalControlRuntimeTest {
 
         assertFalse(table.isActive(first));
         assertTrue(table.isActive(replacement));
-        assertTrue(replacementTarget.equals(table.forcedTarget(subject, 0)));
+        assertEquals(replacementTarget, table.forcedTarget(subject, 0));
     }
 
     @Test
@@ -89,9 +186,9 @@ class MentalControlRuntimeTest {
         table.add(input(UUID.randomUUID(), subject, SOURCE_A, 1, 100, target(fallbackTarget)));
         table.add(input(UUID.randomUUID(), subject, SOURCE_B, 2, 20, target(expiringTarget)));
 
-        assertTrue(expiringTarget.equals(table.forcedTarget(subject, 0)));
+        assertEquals(expiringTarget, table.forcedTarget(subject, 0));
         table.expire(20);
-        assertTrue(fallbackTarget.equals(table.forcedTarget(subject, 20)));
+        assertEquals(fallbackTarget, table.forcedTarget(subject, 20));
     }
 
     @Test
@@ -426,7 +523,7 @@ class MentalControlRuntimeTest {
                 200,
                 impression()
         ));
-        table.removeInvalidImpressionGuards(java.util.Set.of(subject), 0);
+        table.removeInvalidImpressionGuards(Set.of(subject), 0);
 
         assertFalse(table.isActive(originalGuard));
         assertNull(table.forcedTarget(subject, 0));
@@ -438,7 +535,7 @@ class MentalControlRuntimeTest {
                 replacementRelation
         ));
         table.remove(replacementRelation);
-        table.removeInvalidImpressionGuards(java.util.Set.of(subject), 0);
+        table.removeInvalidImpressionGuards(Set.of(subject), 0);
 
         assertFalse(table.isActive(replacementGuard));
         assertNull(table.forcedTarget(subject, 0));
@@ -483,111 +580,5 @@ class MentalControlRuntimeTest {
                 guardian,
                 0
         ));
-    }
-
-    private static MentalControlRuntime.LeaseInput input(
-            UUID controller,
-            UUID subject,
-            Identifier source,
-            int priority,
-            long expiresAt,
-            EnumMap<ControlDomain, ControlDirective> directives
-    ) {
-        return new MentalControlRuntime.LeaseInput(
-                controller,
-                subject,
-                source,
-                priority,
-                expiresAt,
-                DIMENSION,
-                DIMENSION,
-                directives
-        );
-    }
-
-    private static EnumMap<ControlDomain, ControlDirective> target(UUID target) {
-        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
-        directives.put(ControlDomain.TARGET, new ControlDirective.ForceTarget(target));
-        return directives;
-    }
-
-    private static MentalControlRuntime.LeaseInput guardianInput(
-            UUID controller,
-            UUID subject,
-            UUID target,
-            UUID relationLeaseId
-    ) {
-        return new MentalControlRuntime.LeaseInput(
-                controller,
-                subject,
-                MentalControlRuntime.IMPRESSION_GUARD_SOURCE,
-                MentalControlRuntime.IMPRESSION_GUARD_PRIORITY,
-                100,
-                DIMENSION,
-                DIMENSION,
-                target(target),
-                relationLeaseId
-        );
-    }
-
-    private static EnumMap<ControlDomain, ControlDirective> freeze() {
-        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
-        var freeze = new ControlDirective.FreezeAi();
-        directives.put(ControlDomain.MOVEMENT, freeze);
-        directives.put(ControlDomain.ACTION, freeze);
-        return directives;
-    }
-
-    private static EnumMap<ControlDomain, ControlDirective> path(UUID target) {
-        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
-        var moveTo = new ControlDirective.MoveTo(target);
-        directives.put(ControlDomain.MOVEMENT, moveTo);
-        directives.put(ControlDomain.ACTION, moveTo);
-        return directives;
-    }
-
-    private static EnumMap<ControlDomain, ControlDirective> impression() {
-        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
-        directives.put(ControlDomain.RELATION, new ControlDirective.ImpressionAlliance());
-        return directives;
-    }
-
-    private static MentalControlRuntime.AdapterRegistration registration(String path, int priority) {
-        return new MentalControlRuntime.AdapterRegistration(
-                Identifier.fromNamespaceAndPath("academy", path),
-                priority,
-                new MentalControlAdapter() {
-                    @Override
-                    public boolean matches(net.minecraft.world.entity.LivingEntity subject) {
-                        return true;
-                    }
-
-                    @Override
-                    public ControlSupport support(
-                            net.minecraft.world.entity.LivingEntity subject,
-                            ControlCapability capability
-                    ) {
-                        return ControlSupport.UNSUPPORTED;
-                    }
-
-                    @Override
-                    public ControlBinding activate(ControlContext context, ControlDirective directive) {
-                        return ControlBinding.noop();
-                    }
-                }
-        );
-    }
-
-    private static MentalControlRuntime.CapabilityCandidate candidate(
-            MentalControlRuntime.AdapterRegistration registration,
-            ControlSupport support
-    ) {
-        return new MentalControlRuntime.CapabilityCandidate(
-                registration,
-                support,
-                support.isSupported()
-                        ? ControlRejectionReason.SUPPORTED
-                        : ControlRejectionReason.UNSUPPORTED_CAPABILITY
-        );
     }
 }

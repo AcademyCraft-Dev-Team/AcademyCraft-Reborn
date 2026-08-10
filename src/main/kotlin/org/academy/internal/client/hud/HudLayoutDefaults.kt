@@ -52,12 +52,14 @@ object HudLayoutDefaults {
     }
 
     @JvmStatic
-    fun defaults(): Config = Config(linkedMapOf(
-        "toggle_status" to RegionValue(Anchor.TOP_LEFT, 8f, 8f, 1f),
-        "mental_control" to RegionValue(Anchor.CENTER_LEFT, 8f, 0f, 1f),
-        "cp" to RegionValue(Anchor.TOP_RIGHT, -4f, 4f, 1f),
-        "skill_wheel" to RegionValue(Anchor.CENTER_RIGHT, 0f, 0f, 1f)
-    ))
+    fun defaults(): Config = Config(
+        linkedMapOf(
+            "toggle_status" to RegionValue(Anchor.TOP_LEFT, 8f, 8f, 1f),
+            "mental_control" to RegionValue(Anchor.CENTER_LEFT, 8f, 0f, 1f),
+            "cp" to RegionValue(Anchor.TOP_RIGHT, -4f, 4f, 1f),
+            "skill_wheel" to RegionValue(Anchor.CENTER_RIGHT, 0f, 0f, 1f)
+        )
+    )
 
     @JvmStatic
     fun loadJson(json: JsonObject): Config {

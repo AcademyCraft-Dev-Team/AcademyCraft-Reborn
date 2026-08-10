@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -34,10 +33,11 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -53,9 +53,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_L;
-import static org.lwjgl.glfw.GLFW.GLFW_MOD_ALT;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.lwjgl.glfw.GLFW.*;
 
 public final class CrossingTheAbyss extends Skill {
     private static final float RESERVED_CP = 50.0f;
@@ -267,7 +265,7 @@ public final class CrossingTheAbyss extends Skill {
             var source = SkillDamageSource.of(
                     attacker,
                     Skills.CROSSING_THE_ABYSS.get(),
-                    org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                    DamageTypes.CTA
             );
             var trueHealth = CTAEntityActuallyHurt.readTrueHealth(target);
             new CTAEntityActuallyHurt(target).actuallyHurt(

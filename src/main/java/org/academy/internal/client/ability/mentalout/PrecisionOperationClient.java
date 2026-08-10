@@ -1,7 +1,7 @@
 package org.academy.internal.client.ability.mentalout;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.internal.common.ability.Skills;
@@ -11,6 +11,8 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionGraphCod
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.misaka.MisakaNetworkClient;
 
+import java.util.Locale;
+
 public final class PrecisionOperationClient {
     private static final PrecisionGraph[] GRAPHS = new PrecisionGraph[]{
             PrecisionGraph.EMPTY,
@@ -19,8 +21,6 @@ public final class PrecisionOperationClient {
             PrecisionGraph.EMPTY
     };
     private static final PrecisionGraph[] SERVER_GRAPHS = GRAPHS.clone();
-    private static long revision;
-    private static int selectedSlot;
     private static final PrecisionGraph.Diagnostic[] LAST_DIAGNOSTICS = {
             PrecisionGraph.Diagnostic.OK,
             PrecisionGraph.Diagnostic.OK,
@@ -31,6 +31,8 @@ public final class PrecisionOperationClient {
     private static final int[] LAST_PORTS = {-1, -1, -1, -1};
     private static final boolean[] ACTIVE_SLOTS = new boolean[4];
     private static final boolean[] ACTIVE_FAILURES = new boolean[4];
+    private static long revision;
+    private static int selectedSlot;
     private static PrecisionOperationScreen screen;
 
     private PrecisionOperationClient() {
@@ -213,7 +215,7 @@ public final class PrecisionOperationClient {
             var label = node == null
                     ? Component.literal("#" + nodeId)
                     : Component.translatable("screen.academy.precision_operation.node."
-                    + node.kind().name().toLowerCase(java.util.Locale.ROOT));
+                    + node.kind().name().toLowerCase(Locale.ROOT));
             message.append(Component.translatable(
                     "message.academy.precision_operation.feedback.node", label, nodeId));
         }

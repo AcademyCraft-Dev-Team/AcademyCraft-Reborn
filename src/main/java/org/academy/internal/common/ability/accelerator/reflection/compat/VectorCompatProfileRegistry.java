@@ -34,6 +34,24 @@ public final class VectorCompatProfileRegistry extends SimpleJsonResourceReloadL
         event.addListener(AcademyCraft.academy("vector_compat_profiles"), INSTANCE);
     }
 
+    public static Optional<ProfileEntry> find(DamageSource source) {
+        return profiles.stream()
+                .filter(entry -> entry.profile().matches(source))
+                .findFirst();
+    }
+
+    public static List<ProfileEntry> profiles() {
+        return profiles;
+    }
+
+    public static VectorCompatibilityMode mode() {
+        return mode;
+    }
+
+    public static void setMode(VectorCompatibilityMode newMode) {
+        mode = newMode == null ? VectorCompatibilityMode.SAFE : newMode;
+    }
+
     @Override
     protected void apply(
             Map<Identifier, VectorCompatProfile> prepared,
@@ -51,24 +69,6 @@ public final class VectorCompatProfileRegistry extends SimpleJsonResourceReloadL
                         ))
                 .toList();
         AcademyCraft.LOGGER.info("Loaded {} vector compatibility profiles", profiles.size());
-    }
-
-    public static Optional<ProfileEntry> find(DamageSource source) {
-        return profiles.stream()
-                .filter(entry -> entry.profile().matches(source))
-                .findFirst();
-    }
-
-    public static List<ProfileEntry> profiles() {
-        return profiles;
-    }
-
-    public static VectorCompatibilityMode mode() {
-        return mode;
-    }
-
-    public static void setMode(VectorCompatibilityMode newMode) {
-        mode = newMode == null ? VectorCompatibilityMode.SAFE : newMode;
     }
 
     public record ProfileEntry(Identifier id, VectorCompatProfile profile) {

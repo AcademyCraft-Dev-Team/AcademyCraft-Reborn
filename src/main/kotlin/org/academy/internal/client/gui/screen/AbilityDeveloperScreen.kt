@@ -203,7 +203,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             logoAbility.addChild("icon", icon)
         }
 
-        val categoryKey = category.getKey()
+        val categoryKey = category.key
         val translationKey = "ability_category.${categoryKey.namespace}.${categoryKey.path}"
         val translatedName = Language.getInstance().getOrDefault(translationKey)
             .takeUnless { it == translationKey }
@@ -591,9 +591,9 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         }
             .filter { info ->
                 AbilitySystemClient.isSkillLearned(info.skill) || (
-                    info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) } &&
-                        info.skill.devConditions.all { it.accepts() }
-                    )
+                        info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) } &&
+                                info.skill.devConditions.all { it.accepts() }
+                        )
             }
 
         val bg = object : ParallaxImageWidget(R.textures.gui.developer.skill_panel_back) {
@@ -633,7 +633,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val debugLabel = object : LabelWidget("") {
             override fun render(context: RenderContext) {
                 text = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "LAYOUT: ${layoutCategory.getKey()} / ${coursePage.name.lowercase()}  (drag icons; snap 0.5px)"
+                    "LAYOUT: ${layoutCategory.key} / ${coursePage.name.lowercase()}  (drag icons; snap 0.5px)"
                 } else {
                     ""
                 }
@@ -809,11 +809,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     area.requestLayout()
                 }
                 tooltipText = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "${category.getKey()}\n${info.skill.getKeyString()}  (${position.x()}, ${position.y()})"
+                    "${category.key}\n${info.skill.getKeyString()}  (${position.x()}, ${position.y()})"
                 } else if (isLearned) {
                     val proficiency = AbilitySystemClient.getSkillProficiency(info.skill)
                     "${info.skill.translatedName}\n${L10n["academy.ability_developer.skill_exp"]}" +
-                        String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
+                            String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
                 } else {
                     info.skill.translatedName
                 }
@@ -1267,7 +1267,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     val expLabel =
                         LabelWidget(
                             L10n["academy.ability_developer.skill_exp"] +
-                                String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
+                                    String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
                         )
                     expLabel.baseFontSize = 8f
                     expLabel.setRed(0.63f)

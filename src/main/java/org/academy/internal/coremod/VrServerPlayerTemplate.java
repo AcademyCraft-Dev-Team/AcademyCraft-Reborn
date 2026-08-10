@@ -15,7 +15,9 @@ import org.academy.internal.common.ability.accelerator.reflection.VectorReflecti
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
-/** Field-free bytecode template for generated server-player dispatch subclasses. */
+/**
+ * Field-free bytecode template for generated server-player dispatch subclasses.
+ */
 public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreakerHealthAccess {
     public VrServerPlayerTemplate(MinecraftServer server, ServerLevel level, GameProfile profile,
                                   ClientInformation clientInformation) {
@@ -46,7 +48,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
 
     @Override
     public boolean isDeadOrDying() {
-        return academy$protected() ? false : super.isDeadOrDying();
+        return !academy$protected() && super.isDeadOrDying();
     }
 
     @Override
@@ -125,7 +127,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
 
     @Override
     public boolean isInvisible() {
-        return academy$protected() ? false : super.isInvisible();
+        return !academy$protected() && super.isInvisible();
     }
 
     @Override

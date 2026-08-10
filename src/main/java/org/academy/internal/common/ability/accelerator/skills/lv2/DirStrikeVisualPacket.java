@@ -21,8 +21,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 @PacketTarget(ThreadType.CLIENT)
 public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, DirStrikeVisualPacket> {
-    private static final double BROADCAST_RANGE = 96.0;
-    private static final int MAX_RADIUS = 32;
     public static final StreamCodec<ByteBuf, DirStrikeVisualPacket> CODEC = StreamCodec.of(
             (buffer, packet) -> {
                 Vec3.STREAM_CODEC.encode(buffer, packet.center);
@@ -43,6 +41,8 @@ public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, Di
                     ByteBufCodecs.LONG.decode(buffer)
             )
     );
+    private static final double BROADCAST_RANGE = 96.0;
+    private static final int MAX_RADIUS = 32;
     private static boolean clientInitialized;
 
     private final Vec3 center;

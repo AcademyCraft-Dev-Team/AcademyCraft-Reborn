@@ -12,7 +12,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
@@ -48,10 +47,10 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -60,11 +59,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.*;
 
 public final class LightShield extends Skill {
     static final int CP_INTERVAL_TICKS = 2;
@@ -92,6 +87,16 @@ public final class LightShield extends Skill {
                         "Single High-Speed Electron Beam",
                         "academy:single_high_speed_electron_beam"
                 ))
+        );
+    }
+
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(
+                BASE_DAMAGE * Math.max(0.0f, abilityPower),
+                0.0f,
+                0.0f,
+                playerMultiplier,
+                false
         );
     }
 
@@ -384,16 +389,6 @@ public final class LightShield extends Skill {
             );
             Server.CONTEXT_MAP.remove(player, this);
         }
-    }
-
-    static float calculateDamage(float abilityPower, float playerMultiplier) {
-        return MeltdownerBeamDamage.calculate(
-                BASE_DAMAGE * Math.max(0.0f, abilityPower),
-                0.0f,
-                0.0f,
-                playerMultiplier,
-                false
-        );
     }
 
     @PacketTarget(ThreadType.SERVER)

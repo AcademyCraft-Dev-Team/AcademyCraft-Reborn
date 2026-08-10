@@ -1,30 +1,22 @@
 package org.academy.internal.client.app.music.qq;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.academy.AcademyCraft;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class QqMusicService {
     private static final String MUSICU_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg";
     private static final String DEFAULT_SIP = "http://ws.stream.qqmusic.qq.com/";
-    private static final FileCandidate[] OGG_CANDIDATES = new FileCandidate[] {
+    private static final FileCandidate[] OGG_CANDIDATES = new FileCandidate[]{
             new FileCandidate("O600", "ogg"),
             new FileCandidate("O670", "ogg")
     };
@@ -268,15 +260,6 @@ public final class QqMusicService {
         return "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0";
     }
 
-    private record FileCandidate(String prefix, String extension) {
-        private String buildFilename(String mediaMid) {
-            return prefix + mediaMid + "." + extension;
-        }
-    }
-
-    private record TrackInfo(String title, String artist, int interval, String mediaMid, String albumMid, boolean vip) {
-    }
-
     public static byte[] downloadAlbumCoverBytes(String albumMid) throws IOException {
         if (albumMid == null || albumMid.isBlank()) {
             throw new IOException("Missing album mid for cover download");
@@ -297,5 +280,14 @@ public final class QqMusicService {
     public static String resolveAlbumMid(String mid) throws IOException {
         var info = getTrackInfo(mid);
         return info.albumMid();
+    }
+
+    private record FileCandidate(String prefix, String extension) {
+        private String buildFilename(String mediaMid) {
+            return prefix + mediaMid + "." + extension;
+        }
+    }
+
+    private record TrackInfo(String title, String artist, int interval, String mediaMid, String albumMid, boolean vip) {
     }
 }

@@ -64,6 +64,18 @@ public final class Flight extends Skill {
         );
     }
 
+    static boolean consumesAccelerationCp(
+            boolean flightSkillEnabled,
+            boolean creativeFlightActive,
+            boolean sprinting,
+            boolean airflowJetActive,
+            double speed
+    ) {
+        return flightSkillEnabled && creativeFlightActive
+                && (sprinting || airflowJetActive
+                || Double.isFinite(speed) && speed > NORMAL_FLIGHT_SPEED_CAP);
+    }
+
     @Override
     public void initClient() {
         var key = getKey();
@@ -153,7 +165,9 @@ public final class Flight extends Skill {
             );
         }
 
-        /** Immediately refreshes the creative-flight lease after server-side automation toggles it. */
+        /**
+         * Immediately refreshes the creative-flight lease after server-side automation toggles it.
+         */
         public static void refreshFlightPermission(ServerPlayer player) {
             if (player != null) sync(player);
         }
@@ -189,18 +203,6 @@ public final class Flight extends Skill {
             }
             return paid;
         }
-    }
-
-    static boolean consumesAccelerationCp(
-            boolean flightSkillEnabled,
-            boolean creativeFlightActive,
-            boolean sprinting,
-            boolean airflowJetActive,
-            double speed
-    ) {
-        return flightSkillEnabled && creativeFlightActive
-                && (sprinting || airflowJetActive
-                || Double.isFinite(speed) && speed > NORMAL_FLIGHT_SPEED_CAP);
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)

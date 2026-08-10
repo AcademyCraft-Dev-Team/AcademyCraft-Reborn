@@ -7,11 +7,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillScope;
 import org.academy.api.common.registries.Registries;
 
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 /**

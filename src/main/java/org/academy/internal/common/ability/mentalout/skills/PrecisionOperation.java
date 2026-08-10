@@ -10,7 +10,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
@@ -44,6 +43,31 @@ public final class PrecisionOperation extends Skill {
                         "Mental Stupor", "academy:mental_stupor"))
                 .withCustomData(Data.ID, Data.class, _ -> new Data())
         );
+    }
+
+    public static Data normalizeData(Data data) {
+        if (data == null) data = new Data();
+        var migrateFlow = data.schemaVersion == 1;
+        var legacy = data.schemaVersion > 0 && data.schemaVersion < Data.SCHEMA_VERSION;
+        data.revision = Math.max(0L, data.revision);
+        var normalized = new ArrayList<PrecisionGraph>(4);
+        var source = data.slots == null ? List.<PrecisionGraph>of() : data.slots;
+        for (var slot = 0; slot < 4; slot++) {
+            var graph = slot < source.size() && source.get(slot) != null
+                    ? source.get(slot)
+                    : PrecisionGraph.EMPTY;
+            if (migrateFlow) {
+                var migration = PrecisionGraph.migrateLegacy(graph);
+                normalized.add(migration.valid() ? migration.graph() : PrecisionGraph.EMPTY);
+            } else {
+                var validation = graph.validate();
+                normalized.add(validation.valid() ? validation.normalized() : PrecisionGraph.EMPTY);
+            }
+        }
+        data.slots = normalized;
+        if (legacy) data.revision++;
+        data.schemaVersion = Data.SCHEMA_VERSION;
+        return data;
     }
 
     @Override
@@ -103,31 +127,6 @@ public final class PrecisionOperation extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         PrecisionOperationManager.initServer();
-    }
-
-    public static Data normalizeData(Data data) {
-        if (data == null) data = new Data();
-        var migrateFlow = data.schemaVersion == 1;
-        var legacy = data.schemaVersion > 0 && data.schemaVersion < Data.SCHEMA_VERSION;
-        data.revision = Math.max(0L, data.revision);
-        var normalized = new ArrayList<PrecisionGraph>(4);
-        var source = data.slots == null ? List.<PrecisionGraph>of() : data.slots;
-        for (var slot = 0; slot < 4; slot++) {
-            var graph = slot < source.size() && source.get(slot) != null
-                    ? source.get(slot)
-                    : PrecisionGraph.EMPTY;
-            if (migrateFlow) {
-                var migration = PrecisionGraph.migrateLegacy(graph);
-                normalized.add(migration.valid() ? migration.graph() : PrecisionGraph.EMPTY);
-            } else {
-                var validation = graph.validate();
-                normalized.add(validation.valid() ? validation.normalized() : PrecisionGraph.EMPTY);
-            }
-        }
-        data.slots = normalized;
-        if (legacy) data.revision++;
-        data.schemaVersion = Data.SCHEMA_VERSION;
-        return data;
     }
 
     public static final class Data extends SkillData {

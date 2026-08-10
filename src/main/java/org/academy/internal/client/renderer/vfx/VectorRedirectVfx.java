@@ -11,7 +11,6 @@ import org.academy.api.common.arc.modifier.TaperModifier;
 import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.arc.property.Knot;
-import org.academy.internal.client.renderer.arc.PathProcessor;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorVisualStyle;
 import org.joml.Vector3f;
@@ -31,6 +30,7 @@ public final class VectorRedirectVfx implements Vfx {
     private final VectorRedirectKind kind;
     private final VectorVisualStyle style;
     private final ArcPath arcPath;
+    private final ArcTube arcTube = new ArcTube();
     private final long createdAt = System.nanoTime();
 
     public VectorRedirectVfx(
@@ -50,7 +50,7 @@ public final class VectorRedirectVfx implements Vfx {
         var jaggedness = kind == VectorRedirectKind.REFRACTION ? 0.18f : 0.1f;
         this.arcPath = new ArcPath(
                 new LinePath(start.toVector3f(), end.toVector3f()),
-                List.<PathModifier>of(
+                List.of(
                         new JaggedModifier(jaggedness, 4, seed),
                         new TaperModifier(TAPER, this.radius)
                 ),
@@ -63,15 +63,10 @@ public final class VectorRedirectVfx implements Vfx {
     public void sample(VfxFrameContext context, VfxSink sink) {
         var age = Math.clamp((System.nanoTime() - createdAt) / (double) LIFETIME_NANOS, 0.0, 1.0);
         if (style == VectorVisualStyle.ARC) {
-            var renderData = PathProcessor.process(
-                    arcPath,
-                    (float) (age * 8.0),
-                    context.camera().pos()
-            );
-            if (!renderData.quads.isEmpty() || !renderData.branches.isEmpty()) {
-                sink.push(new ArcCoreData(renderData));
-                sink.push(new ArcGlowData(renderData));
-            }
+            arcTube.build(arcPath, (float) (age * 8.0));
+            if (arcTube.mesh().isEmpty()) return;
+            sink.push(new LightningCoreData(arcTube));
+            sink.push(new LightningRenderData(arcTube));
             return;
         }
 

@@ -20,8 +20,8 @@ import org.academy.api.client.render.post.BlurEffect
 import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.api.common.profiler.AcademyProfiler
-import org.academy.internal.client.profiler.ProfilerClientHooks
 import org.academy.internal.client.gui.debug.UiDebugSession
+import org.academy.internal.client.profiler.ProfilerClientHooks
 import org.joml.Vector4f
 import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicBoolean

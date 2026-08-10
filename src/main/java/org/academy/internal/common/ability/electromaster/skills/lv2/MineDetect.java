@@ -50,6 +50,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.awt.Color;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,14 @@ public final class MineDetect extends Skill {
                 .dependsOn(Skills.MAGNET_MANIPULATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
+    }
+
+    static boolean isInsideScanRadius(int dx, int dy, int dz) {
+        return dx * dx + dy * dy + dz * dz <= RADIUS_SQUARED;
+    }
+
+    static boolean isOrePath(String path) {
+        return path.endsWith("_ore") || path.contains("ore_") || path.contains("_ore_");
     }
 
     @Override
@@ -102,15 +111,18 @@ public final class MineDetect extends Skill {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
-    static boolean isInsideScanRadius(int dx, int dy, int dz) {
-        return dx * dx + dy * dy + dz * dz <= RADIUS_SQUARED;
-    }
-
-    static boolean isOrePath(String path) {
-        return path.endsWith("_ore") || path.contains("ore_") || path.contains("_ore_");
-    }
-
     public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.MINE_DETECT.get(),
+                        List.of(MagnetManipulation.Client.SKILL_INFO),
+                        R.textures.mine_detect_icon,
+                        96,
+                        24
+                )
+        );
+        public static final String KEY_NAME_TOGGLE = SkillNames.MINE_DETECT + "_toggle";
         private static final TagKey<Block> FORGE_ORES = TagKey.create(
                 Registries.BLOCK,
                 Identifier.fromNamespaceAndPath("forge", "ores")
@@ -126,18 +138,6 @@ public final class MineDetect extends Skill {
                 {4, 5}, {5, 6}, {6, 7}, {7, 4},
                 {0, 4}, {1, 5}, {2, 6}, {3, 7}
         };
-
-        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
-                AbilityCategories.ELECTROMASTER.get(),
-                new AbilitySystemClient.SkillInfo(
-                        Skills.MINE_DETECT.get(),
-                        List.of(MagnetManipulation.Client.SKILL_INFO),
-                        R.textures.mine_detect_icon,
-                        96,
-                        24
-                )
-        );
-        public static final String KEY_NAME_TOGGLE = SkillNames.MINE_DETECT + "_toggle";
         public static Config CONFIG = new Config();
 
         private static ClientLevel scanLevel;
@@ -295,7 +295,7 @@ public final class MineDetect extends Skill {
 
             var hash = path.hashCode();
             var hue = Math.floorMod(hash, 360) / 360.0f;
-            var rgb = java.awt.Color.HSBtoRGB(hue, 0.72f, 1.0f);
+            var rgb = Color.HSBtoRGB(hue, 0.72f, 1.0f);
             return new float[]{
                     ((rgb >> 16) & 0xff) / 255.0f,
                     ((rgb >> 8) & 0xff) / 255.0f,

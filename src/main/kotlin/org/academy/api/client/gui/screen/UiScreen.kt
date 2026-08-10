@@ -75,9 +75,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
         val event: MouseEvent = MouseEvent.createPressEvent(e.x(), e.y(), e.button())
         root.dispatchEvent(event)
 
-        if (event.isConsumed) return true
-
-        return super.mouseClicked(e, isDoubleClick)
+        return event.isConsumed || super.mouseClicked(e, isDoubleClick)
     }
 
     override fun mouseReleased(e: MouseButtonEvent): Boolean {
@@ -85,9 +83,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
 
         val event: MouseEvent = MouseEvent.createReleaseEvent(e.x(), e.y(), e.button())
         root.dispatchEvent(event)
-        if (event.isConsumed) return true
-
-        return super.mouseReleased(e)
+        return event.isConsumed || super.mouseReleased(e)
     }
 
     override fun mouseDragged(e: MouseButtonEvent, mouseX: Double, mouseY: Double): Boolean {
@@ -95,9 +91,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
 
         val event: MouseEvent = MouseEvent.createDragEvent(e.x(), e.y(), e.button(), mouseX, mouseY)
         root.dispatchEvent(event)
-        if (event.isConsumed) return true
-
-        return super.mouseDragged(e, mouseX, mouseY)
+        return event.isConsumed || super.mouseDragged(e, mouseX, mouseY)
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
@@ -105,9 +99,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
 
         val event = ScrollEvent(mouseX, mouseY, scrollY)
         root.dispatchEvent(event)
-        if (event.isConsumed) return true
-
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
+        return event.isConsumed || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
     }
 
     override fun keyPressed(e: KeyEvent): Boolean {
@@ -116,9 +108,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
         val event =
             org.academy.api.client.gui.event.KeyEvent(EventType.KEY_PRESSED, e.key(), e.scancode(), e.modifiers())
         root.dispatchEvent(event)
-        if (event.isConsumed) return true
-
-        return super.keyPressed(e)
+        return event.isConsumed || super.keyPressed(e)
     }
 
     override fun charTyped(e: CharacterEvent): Boolean {
@@ -126,8 +116,6 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
 
         val event = CharTypedEvent(e.codepoint())
         root.dispatchEvent(event)
-        if (event.isConsumed) return true
-
-        return super.charTyped(e)
+        return event.isConsumed || super.charTyped(e)
     }
 }

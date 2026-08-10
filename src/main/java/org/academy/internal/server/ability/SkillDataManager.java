@@ -2,12 +2,7 @@ package org.academy.internal.server.ability;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import org.academy.api.common.ability.LearningHelper;
-import org.academy.api.common.ability.ProficiencyEvent;
-import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.SkillActivity;
-import org.academy.api.common.ability.SkillScope;
-import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
@@ -36,6 +31,42 @@ public class SkillDataManager implements AbilitySubsystem {
     public SkillDataManager(PlayerDataManager playerDataManager, SyncManager syncManager) {
         this.syncManager = syncManager;
         this.playerDataManager = playerDataManager;
+    }
+
+    static SkillActivity strongestActivity(SkillActivity left, SkillActivity right) {
+        return left == SkillActivity.EFFECTIVE || right == SkillActivity.EFFECTIVE
+                ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE;
+    }
+
+    static ProficiencyEvent resolveContinuousEvent(boolean passive, SkillActivity activity) {
+        if (passive) return ProficiencyEvent.PASSIVE_TICK;
+        if (activity == SkillActivity.EFFECTIVE) return ProficiencyEvent.EFFECTIVE_TICK;
+        if (activity == SkillActivity.ACTIVE) return ProficiencyEvent.ACTIVE_TICK;
+        return null;
+    }
+
+    private static int applyProficiency(SkillData data, Skill skill, float increment) {
+        var oldLevel = skill.getLevelForProficiency(data.getProficiency());
+        data.setProficiency(data.getProficiency() + increment);
+        var newLevel = skill.getLevelForProficiency(data.getProficiency());
+        return Math.max(0, newLevel - oldLevel);
+    }
+
+    static int removeCategorySkills(
+            Map<String, SkillData> skillDataMap,
+            Function<String, SkillScope> scopeResolver
+    ) {
+        var previousSize = skillDataMap.size();
+        skillDataMap.keySet().removeIf(skillId -> scopeResolver.apply(skillId) != SkillScope.COMMON);
+        return previousSize - skillDataMap.size();
+    }
+
+    private static SkillScope resolveSkillScope(String skillId) {
+        var identifier = Identifier.tryParse(skillId);
+        if (identifier == null) return null;
+        return Registries.SKILLS.get(identifier)
+                .map(reference -> reference.value().getScope())
+                .orElse(null);
     }
 
     @Override
@@ -180,32 +211,17 @@ public class SkillDataManager implements AbilitySubsystem {
                 .merge(skill.getKeyString(), activity, SkillDataManager::strongestActivity);
     }
 
-    static SkillActivity strongestActivity(SkillActivity left, SkillActivity right) {
-        return left == SkillActivity.EFFECTIVE || right == SkillActivity.EFFECTIVE
-                ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE;
-    }
-
-    static ProficiencyEvent resolveContinuousEvent(boolean passive, SkillActivity activity) {
-        if (passive) return ProficiencyEvent.PASSIVE_TICK;
-        if (activity == SkillActivity.EFFECTIVE) return ProficiencyEvent.EFFECTIVE_TICK;
-        if (activity == SkillActivity.ACTIVE) return ProficiencyEvent.ACTIVE_TICK;
-        return null;
-    }
-
-    private static int applyProficiency(SkillData data, Skill skill, float increment) {
-        var oldLevel = skill.getLevelForProficiency(data.getProficiency());
-        data.setProficiency(data.getProficiency() + increment);
-        var newLevel = skill.getLevelForProficiency(data.getProficiency());
-        return Math.max(0, newLevel - oldLevel);
-    }
-
-    /** @deprecated Use {@link #addSkillProficiency(UUID, Skill, ProficiencyEvent)}. */
+    /**
+     * @deprecated Use {@link #addSkillProficiency(UUID, Skill, ProficiencyEvent)}.
+     */
     @Deprecated
     public void addSkillExp(UUID uuid, Skill skill, ExpEvent event) {
         addSkillProficiency(uuid, skill, event.event);
     }
 
-    /** @deprecated Use {@link #getSkillProficiency(UUID, String)}. */
+    /**
+     * @deprecated Use {@link #getSkillProficiency(UUID, String)}.
+     */
     @Deprecated
     public float getSkillExp(UUID uuid, String skillKey) {
         return getSkillProficiency(uuid, skillKey);
@@ -261,23 +277,6 @@ public class SkillDataManager implements AbilitySubsystem {
         onSkillSetChanged.accept(uuid);
     }
 
-    static int removeCategorySkills(
-            Map<String, SkillData> skillDataMap,
-            Function<String, SkillScope> scopeResolver
-    ) {
-        var previousSize = skillDataMap.size();
-        skillDataMap.keySet().removeIf(skillId -> scopeResolver.apply(skillId) != SkillScope.COMMON);
-        return previousSize - skillDataMap.size();
-    }
-
-    private static SkillScope resolveSkillScope(String skillId) {
-        var identifier = Identifier.tryParse(skillId);
-        if (identifier == null) return null;
-        return Registries.SKILLS.get(identifier)
-                .map(reference -> reference.value().getScope())
-                .orElse(null);
-    }
-
     public void toggleSkill(UUID uuid, String skillId) {
         mutate(uuid, skillId, SkillData.class, SkillData::toggleEnabled);
     }
@@ -294,7 +293,9 @@ public class SkillDataManager implements AbilitySubsystem {
         this.onProficiencyGain = onProficiencyGain;
     }
 
-    /** @deprecated Use {@link ProficiencyEvent}. */
+    /**
+     * @deprecated Use {@link ProficiencyEvent}.
+     */
     @Deprecated
     public enum ExpEvent {
         KILL_ENTITY(ProficiencyEvent.KILL_ENTITY),

@@ -1,17 +1,22 @@
 package org.academy.internal.coremod;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.ref.WeakReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class HotSpotClassPointerAccessTest {
+    private static void requireSupportedBackend() {
+        var capability = HotSpotClassPointerAccess.capability();
+        Assumptions.assumeTrue(capability.available(), capability.reason());
+    }
+
+    private static boolean unsupportedExpected() {
+        return Boolean.getBoolean("academy.test.expect_class_pointer_unsupported");
+    }
+
     @Test
     void detectsSupportedHotSpotObjectHeader() {
         var capability = HotSpotClassPointerAccess.capability();
@@ -67,15 +72,6 @@ class HotSpotClassPointerAccessTest {
 
         assertSame(TestBase.class, target.getClass());
         assertSame(target.referenceObject, weakReference.get());
-    }
-
-    private static void requireSupportedBackend() {
-        var capability = HotSpotClassPointerAccess.capability();
-        Assumptions.assumeTrue(capability.available(), capability.reason());
-    }
-
-    private static boolean unsupportedExpected() {
-        return Boolean.getBoolean("academy.test.expect_class_pointer_unsupported");
     }
 
     static class TestBase {

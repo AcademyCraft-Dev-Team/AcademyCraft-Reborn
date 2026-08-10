@@ -1,16 +1,16 @@
 package org.academy.mixin.common;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
+import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

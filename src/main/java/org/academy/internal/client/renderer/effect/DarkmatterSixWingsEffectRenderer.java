@@ -4,11 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.CubeDeformation;
-import net.minecraft.client.model.geom.builders.CubeListBuilder;
-import net.minecraft.client.model.geom.builders.LayerDefinition;
-import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -38,22 +34,6 @@ public final class DarkmatterSixWingsEffectRenderer implements EffectRenderer {
     private DarkmatterSixWingsEffectRenderer() {
     }
 
-    @Override
-    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
-                       AvatarRenderState state, float yRot, float xRot) {
-        if (!state.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
-        poseStack.pushPose();
-        poseStack.mulPose(BASE_MATRIX);
-        poseStack.scale(BASE_SCALE, BASE_SCALE, BASE_SCALE);
-        renderPair(poseStack, collector, packedLight, state, MODELS[0],
-                0.92f, 0.0f, -58.0f);
-        renderPair(poseStack, collector, packedLight, state, MODELS[1],
-                1.10f, 0.0f, 0.0f);
-        renderPair(poseStack, collector, packedLight, state, MODELS[2],
-                0.92f, 0.0f, 58.0f);
-        poseStack.popPose();
-    }
-
     private static void renderPair(PoseStack poseStack, SubmitNodeCollector collector,
                                    int packedLight, AvatarRenderState state,
                                    AvianWingsModel model, float scale,
@@ -68,6 +48,22 @@ public final class DarkmatterSixWingsEffectRenderer implements EffectRenderer {
         collector.submitModel(model, state, poseStack,
                 R.textures.darkmatter_six_wings_effect,
                 packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF, null);
+        poseStack.popPose();
+    }
+
+    @Override
+    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
+                       AvatarRenderState state, float yRot, float xRot) {
+        if (!state.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
+        poseStack.pushPose();
+        poseStack.mulPose(BASE_MATRIX);
+        poseStack.scale(BASE_SCALE, BASE_SCALE, BASE_SCALE);
+        renderPair(poseStack, collector, packedLight, state, MODELS[0],
+                0.92f, 0.0f, -58.0f);
+        renderPair(poseStack, collector, packedLight, state, MODELS[1],
+                1.10f, 0.0f, 0.0f);
+        renderPair(poseStack, collector, packedLight, state, MODELS[2],
+                0.92f, 0.0f, 58.0f);
         poseStack.popPose();
     }
 
@@ -91,19 +87,6 @@ public final class DarkmatterSixWingsEffectRenderer implements EffectRenderer {
             humerusRight = coracoidRight.getChild("humerusRight");
             ulnaRight = humerusRight.getChild("ulnaRight");
             carpalsRight = ulnaRight.getChild("carpalsRight");
-        }
-
-        @Override
-        public void setupAnim(AvatarRenderState state) {
-            super.setupAnim(state);
-            var s = Mth.sin(state.ageInTicks * 0.05f);
-            setupSegment(0.0f, -23.5f + (s * 5.0f - 14.0f) * 0.5f, -16.0f,
-                    coracoidLeft, coracoidRight);
-            setupSegment(0.0f, 13.0f, 29.0f, humerusLeft, humerusRight);
-            setupSegment(0.0f, 12.0f + (s * 5.0f - 14.0f) * 0.5f, -28.0f,
-                    ulnaLeft, ulnaRight);
-            setupSegment(0.0f, 4.0f + (s * 5.0f - 14.0f), 18.3f,
-                    carpalsLeft, carpalsRight);
         }
 
         private static void setupSegment(float xDeg, float yDeg, float zDeg,
@@ -178,6 +161,19 @@ public final class DarkmatterSixWingsEffectRenderer implements EffectRenderer {
             parent.addOrReplaceChild(name, CubeListBuilder.create().texOffs(u, v)
                             .addBox(x, y, z, width, height, depth, deformation),
                     PartPose.offset(offsetX, offsetY, offsetZ));
+        }
+
+        @Override
+        public void setupAnim(AvatarRenderState state) {
+            super.setupAnim(state);
+            var s = Mth.sin(state.ageInTicks * 0.05f);
+            setupSegment(0.0f, -23.5f + (s * 5.0f - 14.0f) * 0.5f, -16.0f,
+                    coracoidLeft, coracoidRight);
+            setupSegment(0.0f, 13.0f, 29.0f, humerusLeft, humerusRight);
+            setupSegment(0.0f, 12.0f + (s * 5.0f - 14.0f) * 0.5f, -28.0f,
+                    ulnaLeft, ulnaRight);
+            setupSegment(0.0f, 4.0f + (s * 5.0f - 14.0f), 18.3f,
+                    carpalsLeft, carpalsRight);
         }
     }
 }

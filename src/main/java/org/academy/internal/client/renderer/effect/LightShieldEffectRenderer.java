@@ -25,29 +25,6 @@ public final class LightShieldEffectRenderer implements EffectRenderer {
     private LightShieldEffectRenderer() {
     }
 
-    @Override
-    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
-                       AvatarRenderState state, float yRot, float xRot) {
-        if (!state.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
-        poseStack.pushPose();
-        poseStack.translate(0, -0.25, -1.4);
-        poseStack.mulPose(Axis.XP.rotationDegrees(-xRot));
-        poseStack.mulPose(Axis.ZP.rotationDegrees(state.ageInTicks * 12.0f));
-        submitShield(poseStack, collector, packedLight, THIRD_PERSON_HALF_SIZE);
-        poseStack.popPose();
-    }
-
-    @Override
-    public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector collector,
-                                  LocalPlayer player, int packedLight, float partialTick) {
-        if (!player.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get())) return;
-        poseStack.pushPose();
-        poseStack.translate(0, 0, -1.5);
-        poseStack.mulPose(Axis.ZP.rotationDegrees((player.tickCount + partialTick) * 12.0f));
-        submitShield(poseStack, collector, packedLight, FIRST_PERSON_HALF_SIZE);
-        poseStack.popPose();
-    }
-
     private static void submitShield(PoseStack poseStack, SubmitNodeCollector collector,
                                      int packedLight, float halfSize) {
         collector.submitCustomGeometry(
@@ -86,5 +63,28 @@ public final class LightShieldEffectRenderer implements EffectRenderer {
                 .setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(packedLight)
                 .setNormal(0, 0, 1);
+    }
+
+    @Override
+    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
+                       AvatarRenderState state, float yRot, float xRot) {
+        if (!state.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
+        poseStack.pushPose();
+        poseStack.translate(0, -0.25, -1.4);
+        poseStack.mulPose(Axis.XP.rotationDegrees(-xRot));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(state.ageInTicks * 12.0f));
+        submitShield(poseStack, collector, packedLight, THIRD_PERSON_HALF_SIZE);
+        poseStack.popPose();
+    }
+
+    @Override
+    public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector collector,
+                                  LocalPlayer player, int packedLight, float partialTick) {
+        if (!player.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get())) return;
+        poseStack.pushPose();
+        poseStack.translate(0, 0, -1.5);
+        poseStack.mulPose(Axis.ZP.rotationDegrees((player.tickCount + partialTick) * 12.0f));
+        submitShield(poseStack, collector, packedLight, FIRST_PERSON_HALF_SIZE);
+        poseStack.popPose();
     }
 }

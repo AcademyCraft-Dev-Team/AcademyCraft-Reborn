@@ -35,9 +35,9 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.AreaTeleportState;
 import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -65,7 +65,8 @@ public final class AreaTeleportStart extends Skill {
                 .devCondition(new DevCondition.DependencyCondition("Area Teleport Setup", "academy:area_teleport_setup")));
     }
 
-    @Override public void initClient() {
+    @Override
+    public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -74,7 +75,8 @@ public final class AreaTeleportStart extends Skill {
                         InputConstants.PRESS, InputConstants.MOD_SHIFT)), ctx -> Client.run());
     }
 
-    @Override public void initServer(MinecraftServerContext context) {
+    @Override
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
@@ -85,23 +87,35 @@ public final class AreaTeleportStart extends Skill {
                         R.textures.area_teleport_start_icon, 146, 112));
         public static final String KEY_NAME_RUN = SkillNames.AREA_TELEPORT_START + "_run";
         public static Config CONFIG = new Config();
+
         private static void run() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_START.get())) return;
             MisakaNetworkClient.send(RunPacket.INSTANCE);
         }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
 
     public static final class Server {
-        @SubscribePacket public static void handle(RunPacket packet) {
+        @SubscribePacket
+        public static void handle(RunPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var source = AreaTeleportState.selected(player.getUUID());
             var destination = AreaTeleportState.destination(player.getUUID());
@@ -255,17 +269,20 @@ public final class AreaTeleportStart extends Skill {
         private final Vec3 position;
         private final boolean noGravity;
         private final boolean noAi;
+
         private FrozenEntity(Entity entity) {
             this.entity = entity;
             position = entity.position();
             noGravity = entity.isNoGravity();
             noAi = entity instanceof Mob mob && mob.isNoAi();
         }
+
         private void freeze() {
             entity.setNoGravity(true);
             entity.setDeltaMovement(Vec3.ZERO);
             if (entity instanceof Mob mob) mob.setNoAi(true);
         }
+
         private void restore() {
             entity.setNoGravity(noGravity);
             if (entity instanceof Mob mob) mob.setNoAi(noAi);
@@ -277,8 +294,13 @@ public final class AreaTeleportStart extends Skill {
     public static final class RunPacket extends Packet<ServerGamePacketListenerImpl, RunPacket> {
         public static final RunPacket INSTANCE = new RunPacket();
         public static final StreamCodec<ByteBuf, RunPacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private RunPacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, RunPacket> getPacketType() { return PacketTypes.AREA_TELEPORT_START_RUN.get(); }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, RunPacket> getPacketType() {
+            return PacketTypes.AREA_TELEPORT_START_RUN.get();
+        }
     }
 }

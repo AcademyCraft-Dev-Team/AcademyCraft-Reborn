@@ -47,7 +47,7 @@ public final class MentaloutRosterPackets {
             long revision,
             List<RosterEntry> entries,
             int stuporCp,
-        int impressionCp
+            int impressionCp
     ) {
         var safeEntries = List.copyOf(entries);
         var totalChunks = safeEntries.isEmpty()
@@ -107,6 +107,43 @@ public final class MentaloutRosterPackets {
 
     public static void sendClear(ServerPlayer player, long revision) {
         MisakaNetworkServer.send(player, new ClearPacket(revision));
+    }
+
+    private static void encodeEntry(ByteBuf buf, RosterEntry entry) {
+        encodeUuid(buf, entry.targetUuid);
+        ByteBufCodecs.VAR_INT.encode(buf, entry.entityId);
+        ByteBufCodecs.STRING_UTF8.encode(buf, entry.entityTypeId);
+        ByteBufCodecs.STRING_UTF8.encode(buf, entry.displayName);
+        buf.writeFloat(entry.health);
+        buf.writeFloat(entry.maxHealth);
+        buf.writeFloat(entry.distance);
+        buf.writeByte(entry.support);
+        buf.writeByte(entry.flags);
+        ByteBufCodecs.VAR_INT.encode(buf, entry.misidentificationTicks);
+    }
+
+    private static RosterEntry decodeEntry(ByteBuf buf) {
+        return new RosterEntry(
+                decodeUuid(buf),
+                ByteBufCodecs.VAR_INT.decode(buf),
+                ByteBufCodecs.STRING_UTF8.decode(buf),
+                ByteBufCodecs.STRING_UTF8.decode(buf),
+                buf.readFloat(),
+                buf.readFloat(),
+                buf.readFloat(),
+                buf.readByte(),
+                buf.readByte(),
+                ByteBufCodecs.VAR_INT.decode(buf)
+        );
+    }
+
+    private static void encodeUuid(ByteBuf buf, UUID uuid) {
+        buf.writeLong(uuid.getMostSignificantBits());
+        buf.writeLong(uuid.getLeastSignificantBits());
+    }
+
+    private static UUID decodeUuid(ByteBuf buf) {
+        return new UUID(buf.readLong(), buf.readLong());
     }
 
     public record RosterEntry(
@@ -386,42 +423,5 @@ public final class MentaloutRosterPackets {
         public PacketType<ServerGamePacketListenerImpl, ResyncPacket> getPacketType() {
             return PacketTypes.MENTALOUT_ROSTER_RESYNC.get();
         }
-    }
-
-    private static void encodeEntry(ByteBuf buf, RosterEntry entry) {
-        encodeUuid(buf, entry.targetUuid);
-        ByteBufCodecs.VAR_INT.encode(buf, entry.entityId);
-        ByteBufCodecs.STRING_UTF8.encode(buf, entry.entityTypeId);
-        ByteBufCodecs.STRING_UTF8.encode(buf, entry.displayName);
-        buf.writeFloat(entry.health);
-        buf.writeFloat(entry.maxHealth);
-        buf.writeFloat(entry.distance);
-        buf.writeByte(entry.support);
-        buf.writeByte(entry.flags);
-        ByteBufCodecs.VAR_INT.encode(buf, entry.misidentificationTicks);
-    }
-
-    private static RosterEntry decodeEntry(ByteBuf buf) {
-        return new RosterEntry(
-                decodeUuid(buf),
-                ByteBufCodecs.VAR_INT.decode(buf),
-                ByteBufCodecs.STRING_UTF8.decode(buf),
-                ByteBufCodecs.STRING_UTF8.decode(buf),
-                buf.readFloat(),
-                buf.readFloat(),
-                buf.readFloat(),
-                buf.readByte(),
-                buf.readByte(),
-                ByteBufCodecs.VAR_INT.decode(buf)
-        );
-    }
-
-    private static void encodeUuid(ByteBuf buf, UUID uuid) {
-        buf.writeLong(uuid.getMostSignificantBits());
-        buf.writeLong(uuid.getLeastSignificantBits());
-    }
-
-    private static UUID decodeUuid(ByteBuf buf) {
-        return new UUID(buf.readLong(), buf.readLong());
     }
 }

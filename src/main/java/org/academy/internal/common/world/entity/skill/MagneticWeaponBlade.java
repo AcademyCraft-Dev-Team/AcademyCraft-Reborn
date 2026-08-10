@@ -39,6 +39,10 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
         setNoGravity(true);
     }
 
+    public static Vec3 idlePosition(ServerPlayer owner) {
+        return MagneticWeaponBladeMotion.idlePosition(owner.position(), owner.getYRot(), owner.tickCount);
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(WEAPON, ItemStack.EMPTY);
@@ -80,10 +84,6 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
         impactPosition = lastTargetPosition;
     }
 
-    public void setAttackTick(int attackTick) {
-        entityData.set(ATTACK_TICKS, Math.clamp(attackTick, 0, ATTACK_ANIMATION_TICKS));
-    }
-
     public void finishAttack() {
         entityData.set(TARGET_ID, -1);
         entityData.set(ATTACK_TICKS, 0);
@@ -103,6 +103,10 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
 
     public int getAttackTick() {
         return entityData.get(ATTACK_TICKS);
+    }
+
+    public void setAttackTick(int attackTick) {
+        entityData.set(ATTACK_TICKS, Math.clamp(attackTick, 0, ATTACK_ANIMATION_TICKS));
     }
 
     public int getAttackSequence() {
@@ -163,9 +167,5 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
         var horizontal = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
         setYRot((float) Math.toDegrees(Math.atan2(-direction.x, direction.z)));
         setXRot((float) Math.toDegrees(Math.atan2(-direction.y, horizontal)));
-    }
-
-    public static Vec3 idlePosition(ServerPlayer owner) {
-        return MagneticWeaponBladeMotion.idlePosition(owner.position(), owner.getYRot(), owner.tickCount);
     }
 }

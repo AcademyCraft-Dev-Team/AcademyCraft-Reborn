@@ -23,6 +23,31 @@ public abstract class MixinMob implements MentalControlMobAccess {
     @Shadow
     private @Nullable LivingEntity target;
 
+    private static void academy$maintainForcedTarget(Mob mob) {
+        var target = MentalControlRuntime.getForcedTarget(mob);
+        var forced = target != null;
+        if (target == null) target = MentalControlRuntime.getGuardTarget(mob);
+        if (target == null || !target.isAlive() || target.level() != mob.level()) return;
+
+        if (forced) {
+            MentalControlRuntime.maintainTarget(mob);
+        } else {
+            mob.setTarget(target);
+            mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+        }
+        mob.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+    }
+
+    private static void academy$clearSuppressedCombatPose(Mob mob) {
+        if (!MentalControlRuntime.suppressesAutonomousCombat(mob)) return;
+        if (mob.hasPose(Pose.DIGGING)
+                || mob.hasPose(Pose.EMERGING)
+                || mob.hasPose(Pose.ROARING)
+                || mob.hasPose(Pose.SNIFFING)) {
+            mob.setPose(Pose.STANDING);
+        }
+    }
+
     @Shadow
     protected abstract void customServerAiStep(ServerLevel level);
 
@@ -98,31 +123,6 @@ public abstract class MixinMob implements MentalControlMobAccess {
         if (target == null) target = MentalControlRuntime.getGuardTarget((Mob) (Object) this);
         if (target != null) {
             cir.setReturnValue(target);
-        }
-    }
-
-    private static void academy$maintainForcedTarget(Mob mob) {
-        var target = MentalControlRuntime.getForcedTarget(mob);
-        var forced = target != null;
-        if (target == null) target = MentalControlRuntime.getGuardTarget(mob);
-        if (target == null || !target.isAlive() || target.level() != mob.level()) return;
-
-        if (forced) {
-            MentalControlRuntime.maintainTarget(mob);
-        } else {
-            mob.setTarget(target);
-            mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
-        }
-        mob.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-    }
-
-    private static void academy$clearSuppressedCombatPose(Mob mob) {
-        if (!MentalControlRuntime.suppressesAutonomousCombat(mob)) return;
-        if (mob.hasPose(Pose.DIGGING)
-                || mob.hasPose(Pose.EMERGING)
-                || mob.hasPose(Pose.ROARING)
-                || mob.hasPose(Pose.SNIFFING)) {
-            mob.setPose(Pose.STANDING);
         }
     }
 

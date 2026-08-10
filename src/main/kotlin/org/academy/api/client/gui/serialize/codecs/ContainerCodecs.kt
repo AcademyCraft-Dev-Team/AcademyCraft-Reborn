@@ -5,11 +5,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.serialize.PropSpec
 import org.academy.api.client.gui.serialize.PropType
 import org.academy.api.client.gui.serialize.WidgetCodec
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.RadioGroupWidget
-import org.academy.api.client.gui.widget.ScrollPanelWidget
-import org.academy.api.client.gui.widget.WheelPickerWidget
+import org.academy.api.client.gui.widget.*
 
 class LinearLayoutCodec : WidgetCodec<LinearLayoutWidget> {
     override val typeName = "linear_layout"

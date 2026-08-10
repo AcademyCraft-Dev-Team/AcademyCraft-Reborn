@@ -9,7 +9,6 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -106,8 +105,8 @@ public final class TeleportChunkForceManager {
     }
 
     private static final class Ref {
-        private int count;
         private final boolean owned;
+        private int count;
 
         private Ref(int count, boolean owned) {
             this.count = count;

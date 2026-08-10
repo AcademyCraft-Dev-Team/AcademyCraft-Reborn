@@ -8,16 +8,16 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.golem.AbstractGolem;
 import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -39,9 +39,9 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -52,6 +52,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.UUID;
 
 public final class VacuumDomain extends Skill {
     static final double RADIUS = 12.0;
@@ -71,6 +72,23 @@ public final class VacuumDomain extends Skill {
                 .dependsOn(Skills.ATMOSPHERIC_DOMINION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
         );
+    }
+
+    static boolean isInsideDomain(Vec3 center, Vec3 target) {
+        return isInsideDomain(center, target, RADIUS);
+    }
+
+    static boolean isInsideDomain(Vec3 center, Vec3 target, double radius) {
+        return target.distanceToSqr(center) <= radius * radius;
+    }
+
+    static int airSupplyInVacuum(boolean protectedByBreathingFilm, int maxAirSupply) {
+        return protectedByBreathingFilm ? Math.max(0, maxAirSupply) : 0;
+    }
+
+    static float baseDamage(float maxHealth, boolean percentDamageImmune) {
+        if (percentDamageImmune) return PERCENT_IMMUNE_DAMAGE;
+        return Math.max(1.0f, Math.max(0.0f, maxHealth) * DAMAGE_FRACTION);
     }
 
     @Override
@@ -96,23 +114,6 @@ public final class VacuumDomain extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    static boolean isInsideDomain(Vec3 center, Vec3 target) {
-        return isInsideDomain(center, target, RADIUS);
-    }
-
-    static boolean isInsideDomain(Vec3 center, Vec3 target, double radius) {
-        return target.distanceToSqr(center) <= radius * radius;
-    }
-
-    static int airSupplyInVacuum(boolean protectedByBreathingFilm, int maxAirSupply) {
-        return protectedByBreathingFilm ? Math.max(0, maxAirSupply) : 0;
-    }
-
-    static float baseDamage(float maxHealth, boolean percentDamageImmune) {
-        if (percentDamageImmune) return PERCENT_IMMUNE_DAMAGE;
-        return Math.max(1.0f, Math.max(0.0f, maxHealth) * DAMAGE_FRACTION);
     }
 
     public static final class Client {
@@ -181,7 +182,7 @@ public final class VacuumDomain extends Skill {
                 if (!(player.level() instanceof ServerLevel level)) return;
                 var center = resolveTargetPoint(level, player);
                 var range = RADIUS * AeromanipConfig.rangeMultiplier(player, SkillNames.VACUUM_DOMAIN);
-                var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(),
+                var field = new AirflowField(UUID.randomUUID(), player.getUUID(), level.dimension(),
                         AirflowField.Type.VACUUM, AirflowField.Shape.SPHERE, center, player.getLookAngle(),
                         range, 0.0, 1.0f, Integer.MAX_VALUE);
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
@@ -221,6 +222,7 @@ public final class VacuumDomain extends Skill {
                     ? entityHit.getEntity().getBoundingBox().getCenter()
                     : blockPoint;
         }
+
         private static void tick(ServerPlayer player, AirflowField field, int ticks) {
             var level = player.level();
             var center = field.center();
@@ -229,7 +231,8 @@ public final class VacuumDomain extends Skill {
             if (ticks <= 40) {
                 for (var entity : level.getEntities(player, field.bounds(), Entity::isAlive)) {
                     if (!(entity instanceof Projectile)
-                            || !field.contains(entity.getBoundingBox().getCenter(), entity.getBbWidth() * 0.5)) continue;
+                            || !field.contains(entity.getBoundingBox().getCenter(), entity.getBbWidth() * 0.5))
+                        continue;
                     var velocity = entity.getDeltaMovement();
                     AeromanipTargeting.addClampedVelocity(entity, velocity.scale(-0.8));
                 }

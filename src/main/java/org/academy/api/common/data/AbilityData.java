@@ -5,25 +5,21 @@ import org.academy.api.common.ability.AbilityLevel;
 public class AbilityData {
     public static final int FIXED_MAX_SP = 1_000;
 
-    // CP
     private float maxCP = 100;
     private float availableCP = 100;
     private AbilityLevel level = AbilityLevel.LEVEL0;
     private Status status = Status.NORMAL;
     private int stateTimer = 0;
 
-    // SP
     private int currSP = FIXED_MAX_SP;
     private int maxSP = FIXED_MAX_SP;
     private int spRegenTimer = 0;
     private int foodSpRecoveryTicks = 0;
     private float spRecoveryCpRemainder = 0.0f;
 
-    // MP (Matter Point)
     private float currMP = 100;
     private float maxMP = 100;
 
-    // Ability Exp
     private float abilityExp = 0;
 
     private transient boolean isDirty = false;
@@ -318,9 +314,9 @@ public class AbilityData {
     }
 
     public static class CpOccupationData {
-        private float amount;
         private final String skillId;
         private final boolean isPermanent;
+        private float amount;
         private int iterationTicks;
 
         public CpOccupationData(float amount, int iterationTicks, String skillId, boolean isPermanent) {

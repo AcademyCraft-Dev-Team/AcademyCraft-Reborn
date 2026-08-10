@@ -23,9 +23,9 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -42,6 +42,18 @@ public final class SingleHighSpeedElectronBeam extends Skill {
     static final float BASE_DAMAGE = 20.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
 
+    public SingleHighSpeedElectronBeam() {
+        super(Builder
+                .of(AbilityCategories.MELTDOWNER.get())
+                .level(AbilityLevel.LEVEL1)
+                .energyCost(5_000)
+                .cpCost(20)
+                .iterationTicks(10)
+                .maxStacks(1)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
+        );
+    }
+
     public static int getConfiguredAttackDelayTicks(ServerPlayer player) {
         var server = player.level().getServer();
         if (server == null || server.getAcademyCraftServer() == null) {
@@ -56,18 +68,6 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 (float) DEFAULT_ATTACK_DELAY_TICKS
         );
         return Math.clamp(Math.round(configuredDelay), 0, 20 * 60);
-    }
-
-    public SingleHighSpeedElectronBeam() {
-        super(Builder
-                .of(AbilityCategories.MELTDOWNER.get())
-                .level(AbilityLevel.LEVEL1)
-                .energyCost(5_000)
-                .cpCost(20)
-                .iterationTicks(10)
-                .maxStacks(1)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
-        );
     }
 
     @Override

@@ -109,10 +109,19 @@ public final class DarkmatterCreation extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -257,9 +266,12 @@ public final class DarkmatterCreation extends Skill {
     public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
         public static final CastPacket INSTANCE = new CastPacket();
         public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private CastPacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_CAST.get();
         }
     }

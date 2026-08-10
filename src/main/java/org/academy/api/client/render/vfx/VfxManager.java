@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.vfx.lightning.ArcExecutor;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -28,6 +29,7 @@ public final class VfxManager {
         if (initialized) return;
         var device = RenderSystem.getDevice();
         VfxRegistry.forEachRenderer(renderer -> renderer.init(device));
+        ArcExecutor.get();
         initialized = true;
     }
 
@@ -36,6 +38,7 @@ public final class VfxManager {
         VfxRegistry.forEachRenderer(VfxRenderer::close);
         activeEffects.clear();
         frameData.clear();
+        ArcExecutor.shutdownAndReset();
         initialized = false;
     }
 

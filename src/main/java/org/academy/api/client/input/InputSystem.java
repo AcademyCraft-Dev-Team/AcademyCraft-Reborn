@@ -33,12 +33,12 @@ public final class InputSystem {
     private static final Map<Integer, Integer> MOUSE_STATE = new HashMap<>();
     private static final Map<InputKey, Integer> PRESS_MODIFIER_SNAPSHOTS = new HashMap<>();
     private static final Set<InputKey> SUPPRESSED_RELEASES = new HashSet<>();
-    private static Config config;
-    private static RebindSession rebindSession;
-    private static long bindingRevision;
     public static int currentMouseButton = -1;
     public static int currentMouseAction = -1;
     public static int currentMouseModifier = -1;
+    private static Config config;
+    private static RebindSession rebindSession;
+    private static long bindingRevision;
 
     private InputSystem() {
     }
@@ -167,11 +167,6 @@ public final class InputSystem {
         );
     }
 
-    /**
-     * Invokes the first enabled handler for a skill that matches the supplied press/release phase.
-     * The binding's physical key is deliberately ignored so an unbound skill remains usable from
-     * the selected-skill HUD binding.
-     */
     public static boolean triggerPrimaryBindingForSkill(Skill skill, BindingContext context) {
         for (var entry : KEY_BINDINGS.entrySet()) {
             var binding = entry.getValue();
@@ -184,16 +179,10 @@ public final class InputSystem {
         return false;
     }
 
-    /**
-     * Replaces the KeyCombination of an existing binding, keeping its handler intact.
-     */
     public static void updateKeyBinding(String keyName, KeyCombination combo) {
         setKeyBinding(keyName, combo);
     }
 
-    /**
-     * Enables or disables an existing binding without discarding its handler.
-     */
     public static void setKeyBindingEnabled(String keyName, boolean enabled) {
         var existing = KEY_BINDINGS.get(keyName);
         if (existing == null) {
@@ -214,7 +203,9 @@ public final class InputSystem {
         return stateOf(type).getOrDefault(key, InputConstants.RELEASE) != InputConstants.RELEASE;
     }
 
-    /** Returns the hardware state behind a vanilla key mapping, unaffected by injected key state. */
+    /**
+     * Returns the hardware state behind a vanilla key mapping, unaffected by injected key state.
+     */
     public static boolean isPhysicalDown(KeyMapping mapping) {
         if (mapping == null) return false;
         var key = mapping.getKey();
