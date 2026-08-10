@@ -17,6 +17,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.api.common.entitycontrol.ControlDestination;
 import org.academy.api.common.entitycontrol.ControlDirective;
@@ -150,7 +151,9 @@ public final class CommandPositioning extends Skill {
 
             var destination = MentaloutTargeting.findSightDestination(
                     player,
-                    MentaloutTargeting.MAX_SIGHT_RANGE
+                    skill.hasProficiencyMilestone(player, 2)
+                            ? MentaloutTargeting.PROFICIENCY_MAX_SIGHT_RANGE
+                            : MentaloutTargeting.MAX_SIGHT_RANGE
             );
             if (destination == null) {
                 feedback(player, "message.academy.mentalout.command_positioning.no_destination");
@@ -193,20 +196,26 @@ public final class CommandPositioning extends Skill {
                         ? MentaloutConfig.bossCostMultiplier(player)
                         : 1.0f);
             }
+            cost = skill.adjustProficiencyCost(
+                    player, SkillProficiencyProfile.CostKind.DYNAMIC, cost);
 
             var handles = new ArrayList<AutoCloseable>();
             var applied = new int[1];
             var failed = new int[1];
+            var formationIndex = new int[1];
             var cast = skill.executeCommand(player, cost, () -> {
                 for (var subject : subjects) {
                     try {
+                        var subjectDestination = formationDestination(
+                                destination, subject, formationIndex[0]++, subjects.size(),
+                                skill.hasProficiencyMilestone(player, 3));
                         handles.add(MentalControlApi.apply(new ControlRequest(
                                 player,
                                 subject,
                                 skill.getKey(),
                                 CONTROL_PRIORITY,
                                 Long.MAX_VALUE,
-                                List.of(new ControlDirective.MoveTo(destination))
+                                List.of(new ControlDirective.MoveTo(subjectDestination))
                         )));
                         applied[0]++;
                     } catch (RuntimeException exception) {
@@ -228,6 +237,23 @@ public final class CommandPositioning extends Skill {
             if (protectedTarget != null) {
                 MentalControlRuntime.notifyProtectionBlocked(player, protectedTarget);
             }
+        }
+
+        private static ControlDestination formationDestination(
+                ControlDestination destination,
+                net.minecraft.world.entity.LivingEntity subject,
+                int index,
+                int count,
+                boolean enabled
+        ) {
+            if (!enabled || !(destination instanceof ControlDestination.Position position)
+                    || count <= 1) return destination;
+            var spacing = Math.max(1.25, subject.getBbWidth() + 0.5);
+            var radius = Math.max(1.5, count * spacing / (Math.PI * 2.0));
+            var angle = Math.PI * 2.0 * index / count;
+            var offset = new net.minecraft.world.phys.Vec3(
+                    Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+            return new ControlDestination.Position(position.dimension(), position.value().add(offset));
         }
 
         private static void feedback(ServerPlayer player, String key, Object... arguments) {

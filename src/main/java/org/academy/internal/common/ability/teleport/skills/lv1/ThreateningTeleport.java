@@ -35,6 +35,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportDamage;
 import org.academy.internal.common.ability.teleport.TeleportTargeting;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
@@ -139,7 +140,8 @@ public final class ThreateningTeleport extends Skill {
         }
 
         private static LivingEntity findTarget(LocalPlayer player) {
-            return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
+            var milestone = AbilitySystemClient.getSkillProficiencyMilestone(Skills.THREATENING_TELEPORT.get());
+            return TeleportTargeting.findFirstLivingEntity(player, milestone >= 2 ? 40.0 : MAX_RANGE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -166,16 +168,18 @@ public final class ThreateningTeleport extends Skill {
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var skill = Skills.THREATENING_TELEPORT.get();
+            var maxRange = skill.hasProficiencyMilestone(player, 2) ? 40.0 : MAX_RANGE;
             if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
                     || target == player || !target.isAlive()
-                    || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE
+                    || player.distanceToSqr(target) > maxRange * maxRange
                     || player.getMainHandItem().isEmpty()) {
                 return;
             }
 
-            Skills.THREATENING_TELEPORT.get().executeActive(player, (ctx, actualCost) -> {
+            skill.executeActive(player, (ctx, actualCost) -> {
                 if (!target.isAlive() || target.level() != player.level()
-                        || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) {
+                        || player.distanceToSqr(target) > maxRange * maxRange) {
                     return;
                 }
                 var mainHand = player.getMainHandItem();
@@ -191,6 +195,17 @@ public final class ThreateningTeleport extends Skill {
                     item.setDeltaMovement(0.0, 0.0, 0.0);
                     item.setDefaultPickUpDelay();
                     player.level().addFreshEntity(item);
+                    if (ctx.milestone() >= 3) {
+                        TimedSkillEffectRuntime.schedule(player, 60, () -> {
+                            if (!item.isAlive() || item.isRemoved() || item.getItem().isEmpty()) return;
+                            var returning = item.getItem().copy();
+                            item.discard();
+                            if (!player.isAlive() || player.hasDisconnected()
+                                    || !player.getInventory().add(returning)) {
+                                player.drop(returning, false);
+                            }
+                        });
+                    }
                 }
 
                 var attackDamage = player.getAttribute(Attributes.ATTACK_DAMAGE);
@@ -202,12 +217,16 @@ public final class ThreateningTeleport extends Skill {
                         BASE_DAMAGE,
                         weaponBonus,
                         system.getPlayerDamageMultiplier(player.getUUID()),
-                        Skills.SPACE_FOLDING_THEOREM.get().isEnabled(player)
+                        SpaceFoldingTheorem.damageMultiplier(player)
                 );
 
                 player.level().playSound(null, target.blockPosition(), SoundEvents.THREATENING_TELEPORT.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
-                target.hurtServer(player.level(), SkillDamageSource.of(player, Skills.THREATENING_TELEPORT.get()), damage);
+                var wasAlive = target.isAlive();
+                target.hurtServer(player.level(), SkillDamageSource.of(player, skill), damage);
+                if (wasAlive && !target.isAlive()) {
+                    SpaceFoldingTheorem.refundKillCost(player, actualCost);
+                }
             });
         }
     }

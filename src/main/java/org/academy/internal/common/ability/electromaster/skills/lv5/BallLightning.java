@@ -157,8 +157,8 @@ public class BallLightning extends Skill {
         public static void handle(ActivatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (ACTIVE.containsKey(player)) return;
-            Skills.BALL_LIGHTNING.get().executeActive(player, (_, _) -> {
-                var context = new Context(player);
+            Skills.BALL_LIGHTNING.get().executeActive(player, (skillContext, _) -> {
+                var context = new Context(player, skillContext.milestone());
                 ACTIVE.put(player, context);
                 AbilitySystemServer.registerContext(context);
             });
@@ -178,6 +178,7 @@ public class BallLightning extends Skill {
             private final ArcEffect visualEntity;
             private final LightOrb coreOrb;
             private final float timeSeed;
+            private final int proficiencyMilestone;
 
             private int existedTicks = 0;
             private Vec3 position;
@@ -194,8 +195,9 @@ public class BallLightning extends Skill {
             private int stateTimer = 0;
             private boolean ended;
 
-            public Context(ServerPlayer player) {
+            public Context(ServerPlayer player, int proficiencyMilestone) {
                 super(player);
+                this.proficiencyMilestone = proficiencyMilestone;
                 position = player.getEyePosition().add(0, 1, 0);
                 timeSeed = (float) (MathUtil.RANDOM.nextDouble() * 10000);
 
@@ -253,7 +255,8 @@ public class BallLightning extends Skill {
                 }
 
                 if (!hasTarget && currentState != BehaviorState.START) {
-                    var entities = MathUtil.getEntitiesInSphereByHP(level(), position, MAX_RADIUS, e -> e != player);
+                    var searchRadius = proficiencyMilestone >= 2 ? MAX_RADIUS * 1.2f : MAX_RADIUS;
+                    var entities = MathUtil.getEntitiesInSphereByHP(level(), position, searchRadius, e -> e != player);
                     if (!entities.isEmpty()) {
                         targetEntity = entities.getFirst();
                         hasTarget = true;
@@ -366,6 +369,7 @@ public class BallLightning extends Skill {
                 }
 
                 velocity = velocity.add(force);
+                if (proficiencyMilestone >= 2) maxSpeed *= 1.2;
                 if (velocity.lengthSqr() > maxSpeed * maxSpeed) {
                     velocity = velocity.normalize().scale(maxSpeed);
                 }
@@ -394,7 +398,64 @@ public class BallLightning extends Skill {
                                 ));
                         QuantumUtil.enableQuantum(entity, 0.5f, 0x3366FF);
                     }
+                    if (proficiencyMilestone >= 3) {
+                        AbilitySystemServer.registerContext(new MiniContext(player, position,
+                                new Vec3(1, 0.15, 0).normalize()));
+                        AbilitySystemServer.registerContext(new MiniContext(player, position,
+                                new Vec3(-1, 0.15, 0).normalize()));
+                    }
                     end();
+                }
+            }
+
+            private static final class MiniContext extends ServerContext {
+                private final LightOrb orb;
+                private Vec3 position;
+                private Vec3 velocity;
+                private int ticks;
+                private boolean ended;
+
+                private MiniContext(ServerPlayer player, Vec3 position, Vec3 direction) {
+                    super(player);
+                    this.position = position;
+                    velocity = direction.scale(0.8);
+                    orb = new LightOrb(player.level(), 100, 0.08f, () -> { });
+                    orb.setColor(0.25f, 0.55f, 1.0f);
+                    orb.setPos(position);
+                    player.level().addFreshEntity(orb);
+                }
+
+                @SubscribeEvent
+                public void onTick(ServerTickEvent.Post event) {
+                    if (ended || player.hasDisconnected() || !player.isAlive() || ticks++ >= 100) {
+                        endMini();
+                        return;
+                    }
+                    var targets = MathUtil.getEntitiesInSphereByHP(level(), position, 24.0, entity -> entity != player);
+                    if (!targets.isEmpty()) {
+                        var delta = targets.getFirst().getBoundingBox().getCenter().subtract(position);
+                        if (delta.lengthSqr() > 1.0e-8) velocity = velocity.scale(0.75).add(delta.normalize().scale(0.25));
+                    }
+                    if (velocity.lengthSqr() > 0.96 * 0.96) velocity = velocity.normalize().scale(0.96);
+                    position = position.add(velocity);
+                    orb.setPos(position);
+                    if (!targets.isEmpty() && position.distanceToSqr(targets.getFirst().position()) <= 4.0) {
+                        var system = AbilitySystemServer.getSystem(player);
+                        var source = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
+                        for (var target : MathUtil.getEntitiesInSphereByHP(level(), position, 3.0, entity -> entity != player)) {
+                            target.hurtServer(level(), source, calculateImpactDamage(target.getHealth(),
+                                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                                    system.getPlayerDamageMultiplier(player.getUUID())) * 0.3f);
+                        }
+                        endMini();
+                    }
+                }
+
+                private void endMini() {
+                    if (ended) return;
+                    ended = true;
+                    orb.discard();
+                    unregister();
                 }
             }
 

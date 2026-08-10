@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public final class PrecisionGraphCodec {
-    private static final int VERSION = 3;
+    private static final int VERSION = 4;
     private static final PrecisionGraph.NodeKind[] LEGACY_KINDS = java.util.Arrays.copyOf(
             PrecisionGraph.NodeKind.values(),
             32
@@ -62,7 +62,7 @@ public final class PrecisionGraphCodec {
         }
         try (var data = new DataInputStream(new ByteArrayInputStream(bytes))) {
             var version = data.readUnsignedByte();
-            if (version != 1 && version != 2 && version != VERSION) return malformed();
+            if (version < 1 || version > VERSION) return malformed();
             var nodeCount = data.readUnsignedByte();
             if (nodeCount > PrecisionGraph.MAX_NODES) {
                 return new DecodeResult(PrecisionGraph.EMPTY, PrecisionGraph.Diagnostic.TOO_MANY_NODES);

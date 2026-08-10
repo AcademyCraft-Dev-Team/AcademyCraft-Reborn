@@ -4,6 +4,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfiles;
 import org.academy.api.common.ability.SkillScope;
 import org.academy.api.common.registries.Registries;
 
@@ -65,6 +66,11 @@ public final class AbilityRegistrationValidator {
             if (skill.getScope() == SkillScope.COMMON && attachedToOwner) {
                 throw new IllegalStateException("Common skill " + skillKey + " must not be attached to one category");
             }
+            if (skill.getScope() == SkillScope.CATEGORY
+                    && !SkillProficiencyProfiles.isDeclared(skill.getKeyString())) {
+                throw new IllegalStateException("Category skill " + skillKey
+                        + " has no explicit proficiency declaration");
+            }
             for (var dependency : skill.getDependencies()) {
                 if (!registeredSkills.contains(dependency)) {
                     throw new IllegalStateException("Skill " + skillKey
@@ -80,6 +86,15 @@ public final class AbilityRegistrationValidator {
                             + skillKey + " -> " + dependency.getKeyString());
                 }
             }
+        }
+
+        var categorySkillCount = registeredSkills.stream()
+                .filter(skill -> skill.getScope() == SkillScope.CATEGORY)
+                .count();
+        if (categorySkillCount != SkillProficiencyProfiles.declaredSkillPaths().size()) {
+            throw new IllegalStateException("Proficiency declaration count "
+                    + SkillProficiencyProfiles.declaredSkillPaths().size()
+                    + " does not match registered category skill count " + categorySkillCount);
         }
 
         validateAcyclic(

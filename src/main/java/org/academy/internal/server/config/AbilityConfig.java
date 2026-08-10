@@ -28,6 +28,27 @@ public class AbilityConfig {
     public final AeromanipSettings aeromanip = new AeromanipSettings();
     @SerializedName("mentalout")
     public final MentaloutSettings mentalout = new MentaloutSettings();
+    @SerializedName("proficiency")
+    public final ProficiencySettings proficiency = new ProficiencySettings();
+
+    public static class ProficiencySettings {
+        @SerializedName("enabled")
+        public boolean enabled = true;
+        @SerializedName("allowMiningBeamSmelting")
+        public boolean allowMiningBeamSmelting = true;
+        @SerializedName("allowAreaTeleportTransforms")
+        public boolean allowAreaTeleportTransforms = true;
+        @SerializedName("allowAreaTeleportSwap")
+        public boolean allowAreaTeleportSwap = true;
+        @SerializedName("allowMentalTakeoverExtendedControls")
+        public boolean allowMentalTakeoverExtendedControls = true;
+        @SerializedName("maxAreaTeleportAxis")
+        public int maxAreaTeleportAxis = 40;
+        @SerializedName("maxCapturedProjectiles")
+        public int maxCapturedProjectiles = 16;
+        @SerializedName("maxBonusEntitiesPerTick")
+        public int maxBonusEntitiesPerTick = 96;
+    }
 
     public static class AeromanipSettings {
         @SerializedName("pvpForceMultiplier")

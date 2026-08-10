@@ -45,6 +45,9 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 public class LightningStorm extends Skill {
     private static final int STRIKE_COUNT = 21;
@@ -182,22 +185,27 @@ public class LightningStorm extends Skill {
         @SubscribePacket
         public static void handle(ActivatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var center = player.pick(50.0, 1.0f, false).getLocation();
+            var skill = Skills.LIGHTNING_STORM.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var center = player.pick(milestone >= 2 ? 60.0 : 50.0, 1.0f, false).getLocation();
             if (!player.level().hasChunkAt(BlockPos.containing(center))) return;
-            Skills.LIGHTNING_STORM.get().executeActive(player,
-                    (_, _) -> AbilitySystemServer.registerContext(new Context(player, center)));
+            skill.executeActive(player,
+                    (context, _) -> AbilitySystemServer.registerContext(new Context(player, center, context.milestone())));
         }
     }
 
     public static final class Context extends ServerContext {
         private final Vec3 center;
+        private final int milestone;
+        private final Set<UUID> struckTargets = new HashSet<>();
         private int strikesLeft = STRIKE_COUNT;
         private int cooldown;
         private boolean ended;
 
-        private Context(ServerPlayer player, Vec3 center) {
+        private Context(ServerPlayer player, Vec3 center, int milestone) {
             super(player);
             this.center = center;
+            this.milestone = milestone;
         }
 
         @SubscribeEvent
@@ -214,12 +222,26 @@ public class LightningStorm extends Skill {
             cooldown = 3;
 
             strikesLeft--;
-            var r = (float) Math.sqrt(Math.random()) * RADIUS;
+            var radius = milestone >= 2 ? 10.0f : RADIUS;
+            var r = (float) Math.sqrt(Math.random()) * radius;
             var theta = Math.random() * 2 * Math.PI;
             var strikeX = center.x + r * Math.cos(theta);
             var strikeZ = center.z + r * Math.sin(theta);
 
             if (level() instanceof ServerLevel serverLevel) {
+                var strikeIndex = STRIKE_COUNT - strikesLeft;
+                if (milestone >= 3 && strikeIndex % 3 == 0) {
+                    var fresh = serverLevel.getEntitiesOfClass(LivingEntity.class,
+                                    new AABB(center, center).inflate(radius), target -> target != player
+                                            && target.isAlive() && !player.isAlliedTo(target)
+                                            && !struckTargets.contains(target.getUUID()))
+                            .stream().min(java.util.Comparator.comparingDouble(target -> target.distanceToSqr(center)))
+                            .orElse(null);
+                    if (fresh != null) {
+                        strikeX = fresh.getX();
+                        strikeZ = fresh.getZ();
+                    }
+                }
                 skill.reportActivity(player, true);
                 var strikePos = new BlockPos((int) strikeX, (int) center.y, (int) strikeZ);
                 var topPos = serverLevel.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, strikePos);
@@ -239,7 +261,7 @@ public class LightningStorm extends Skill {
                         org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE
                 );
                 for (var target : targets) {
-                    target.hurtServer(serverLevel, source, damage);
+                    if (target.hurtServer(serverLevel, source, damage)) struckTargets.add(target.getUUID());
                 }
             }
         }

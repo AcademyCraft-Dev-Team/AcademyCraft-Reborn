@@ -145,6 +145,7 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
         private final double arrivalRadius;
         private final Set<PlayerMovementMode> supportedModes;
         private final PlayerControlSessionManager.PathSessionToken session;
+        private final boolean selfControlled;
         private Search search;
         private List<NodeStep> path = List.of();
         private int pathIndex;
@@ -175,6 +176,7 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             destination = directive.destination();
             arrivalRadius = directive.arrivalRadius();
             this.supportedModes = supportedModes;
+            selfControlled = context.controller() == subject;
             session = PlayerControlSessionManager.beginPath(context, subject);
         }
 
@@ -184,7 +186,12 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             ticks++;
             if (PlayerControlSessionManager.isPathHandshakePending(session)) return;
             if (!PlayerControlSessionManager.isPathActive(session)) {
-                failure = ControlFailureReason.CLIENT_TIMEOUT;
+                var ended = PlayerControlSessionManager.consumePathEndReason(session).orElse(null);
+                if (selfControlled && ended == PlayerControlSessionManager.EndReason.CONTROLLER_STOPPED) {
+                    complete = true;
+                } else {
+                    failure = ControlFailureReason.CLIENT_TIMEOUT;
+                }
                 return;
             }
             if (!clientBecameActive) {
@@ -484,7 +491,8 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             var directOverride = MentalControlApi.inspect(
                     subject, org.academy.api.common.entitycontrol.ControlCapability.DIRECT_CONTROL
             ).isPresent();
-            PlayerControlSessionManager.closePath(session, clientBecameActive && !directOverride);
+            PlayerControlSessionManager.closePath(
+                    session, !selfControlled && clientBecameActive && !directOverride);
             var autoFlightActive = autoEnabledFlight != null || autoEnabledVanillaFlight;
             var retainAutoFlight = shouldRetainAutoFlight(
                     autoFlightActive,

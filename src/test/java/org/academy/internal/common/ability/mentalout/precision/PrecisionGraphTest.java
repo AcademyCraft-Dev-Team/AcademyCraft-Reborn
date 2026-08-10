@@ -16,6 +16,54 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PrecisionGraphTest {
     @Test
+    void rangeNodesDefaultToThirtyTwoBlocks() {
+        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_ENTITIES.defaultParameter());
+        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_ALL_ENTITIES.defaultParameter());
+        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_ITEMS.defaultParameter());
+        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_PROJECTILES.defaultParameter());
+        assertEquals(32.0, PrecisionGraph.NodeKind.DISTANCE.defaultParameter());
+        assertEquals(1.0, PrecisionGraph.NodeKind.POSITION_OFFSET.defaultParameter());
+    }
+
+    @Test
+    void entityTypeFilterIncludesNonLivingCategories() {
+        assertTrue(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(4.0));
+        assertTrue(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(5.0));
+        assertTrue(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(6.0));
+        assertTrue(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(7.0));
+        assertEquals(false, PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(8.0));
+    }
+
+    @Test
+    void newPositionNodesUseStableWireIdsAndTypedPorts() {
+        var graph = new PrecisionGraph(
+                List.of(
+                        node(1, PrecisionGraph.NodeKind.CASTER),
+                        node(2, PrecisionGraph.NodeKind.ROSTER),
+                        node(3, PrecisionGraph.NodeKind.ENTITY_POSITION),
+                        node(4, PrecisionGraph.NodeKind.PATH_TO)
+                ),
+                List.of(
+                        new PrecisionGraph.Edge(1, 0, 3, 0),
+                        new PrecisionGraph.Edge(2, 0, 4, 0),
+                        new PrecisionGraph.Edge(3, 0, 4, 1)
+                )
+        );
+
+        var decoded = PrecisionGraphCodec.decode(PrecisionGraphCodec.encode(graph));
+
+        assertTrue(decoded.valid());
+        assertEquals(PrecisionGraph.NodeKind.ENTITY_POSITION, decoded.graph().nodes().get(2).kind());
+        assertEquals(48, PrecisionGraph.NodeKind.ENTITY_POSITION.wireId());
+        assertEquals(49, PrecisionGraph.NodeKind.DIRECTION_BETWEEN.wireId());
+        assertEquals(50, PrecisionGraph.NodeKind.POSITION_OFFSET.wireId());
+        assertTrue(PrecisionGraph.isPortCompatible(
+                PrecisionGraph.PortType.DIRECTION, PrecisionGraph.PortType.DIRECTION));
+        assertEquals(false, PrecisionGraph.isPortCompatible(
+                PrecisionGraph.PortType.ENTITY, PrecisionGraph.PortType.DIRECTION));
+    }
+
+    @Test
     void validatesAndCompilesTypedAcyclicGraph() {
         var graph = simpleGraph();
 
@@ -170,8 +218,8 @@ class PrecisionGraphTest {
 
     @Test
     void catalogUsesStableUniqueWireIds() {
-        assertEquals(45, PrecisionGraph.NodeKind.values().length);
-        assertEquals(45, Arrays.stream(PrecisionGraph.NodeKind.values())
+        assertEquals(55, PrecisionGraph.NodeKind.values().length);
+        assertEquals(55, Arrays.stream(PrecisionGraph.NodeKind.values())
                 .map(PrecisionGraph.NodeKind::wireId)
                 .distinct()
                 .count());
@@ -180,6 +228,38 @@ class PrecisionGraphTest {
         assertEquals(42, PrecisionGraph.NodeKind.VISIBLE_FROM.wireId());
         assertEquals(43, PrecisionGraph.NodeKind.SIGHT_POSITION.wireId());
         assertEquals(44, PrecisionGraph.NodeKind.GUARD_MODE.wireId());
+        assertEquals(51, PrecisionGraph.NodeKind.HEALTH_RATIO_BRANCH.wireId());
+        assertEquals(54, PrecisionGraph.NodeKind.STATUS_EFFECT_BRANCH.wireId());
+    }
+
+    @Test
+    void oneConditionalBranchFormsAnAcyclicTwoWayFlow() {
+        var graph = new PrecisionGraph(
+                List.of(
+                        node(1, PrecisionGraph.NodeKind.CASTER),
+                        node(2, PrecisionGraph.NodeKind.ROSTER),
+                        node(3, PrecisionGraph.NodeKind.HEALTH_RATIO_BRANCH, 50.0),
+                        node(4, PrecisionGraph.NodeKind.MENTAL_STUPOR),
+                        node(5, PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION)
+                ),
+                List.of(
+                        new PrecisionGraph.Edge(1, 0, 3, 0),
+                        new PrecisionGraph.Edge(2, 0, 4, 0),
+                        new PrecisionGraph.Edge(2, 0, 5, 0),
+                        new PrecisionGraph.Edge(3, 0, 4, 1),
+                        new PrecisionGraph.Edge(3, 1, 5, 1)
+                )
+        );
+
+        var validation = graph.validate();
+        var compiled = CompiledPrecisionProgram.compile(graph);
+
+        assertTrue(validation.valid());
+        assertTrue(compiled.valid());
+        assertEquals(List.of(3, 4, 5), validation.actionOrder());
+        assertEquals(4, compiled.program().flowTarget(3, 0));
+        assertEquals(5, compiled.program().flowTarget(3, 1));
+        assertEquals(2, PrecisionGraph.NodeKind.HEALTH_RATIO_BRANCH.flowOutputCount());
     }
 
     @Test
@@ -282,7 +362,7 @@ class PrecisionGraphTest {
 
         assertTrue(decoded.valid());
         assertEquals(PrecisionGraph.NodeKind.MENTAL_STUPOR, decoded.graph().nodes().get(1).kind());
-        assertEquals(3, PrecisionGraphCodec.encode(decoded.graph())[0]);
+        assertEquals(4, PrecisionGraphCodec.encode(decoded.graph())[0]);
     }
 
     @Test
@@ -316,7 +396,7 @@ class PrecisionGraphTest {
     }
 
     @Test
-    void codecReadsVersionTwoAndWritesVersionThree() throws Exception {
+    void codecReadsVersionTwoAndWritesVersionFour() throws Exception {
         var output = new ByteArrayOutputStream();
         try (var data = new DataOutputStream(output)) {
             data.writeByte(2);
@@ -334,7 +414,7 @@ class PrecisionGraphTest {
 
         assertTrue(decoded.valid());
         assertEquals(0.0, decoded.graph().nodes().get(1).parameter());
-        assertEquals(3, PrecisionGraphCodec.encode(decoded.graph())[0]);
+        assertEquals(4, PrecisionGraphCodec.encode(decoded.graph())[0]);
     }
 
     private static void writeLegacyNode(

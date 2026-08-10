@@ -34,6 +34,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -194,11 +195,11 @@ public final class PulseCharge extends Skill {
             if (context != null) context.end();
         }
 
-        private static ChargeTarget resolveChargeTarget(ServerLevel level, ServerPlayer player) {
+        private static ChargeTarget resolveChargeTarget(ServerLevel level, ServerPlayer player, int milestone) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle();
             if (look.lengthSqr() <= 1.0E-6) return null;
-            var end = eye.add(look.normalize().scale(CHARGE_REACH));
+            var end = eye.add(look.normalize().scale(milestone >= 2 ? 8.0 : CHARGE_REACH));
             var blockHit = level.clip(new ClipContext(
                     eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
             var blockPoint = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
@@ -304,7 +305,8 @@ public final class PulseCharge extends Skill {
                 end();
                 return;
             }
-            var target = Server.resolveChargeTarget(level(), player);
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var target = Server.resolveChargeTarget(level(), player, milestone);
             skill.reportActivity(player, false);
             if (target == null) {
                 clearPoweredBlock();
@@ -315,7 +317,8 @@ public final class PulseCharge extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             var costTick = ticks % CP_CHARGE_INTERVAL_TICKS == 0;
             if (costTick && !system.tryTimedOccupation(
-                    player.getUUID(), CP_COST_PER_CHARGE_TICK, skill, 20
+                    player.getUUID(), skill.adjustProficiencyCost(player,
+                            SkillProficiencyProfile.CostKind.CONTINUOUS, CP_COST_PER_CHARGE_TICK), skill, 20
             )) {
                 clearPoweredBlock();
                 return;
@@ -325,6 +328,7 @@ public final class PulseCharge extends Skill {
             if (target.entity() != null) {
                 clearPoweredBlock();
                 effective = EnergyChargeHelper.chargeEntity(target.entity());
+                if (milestone >= 2) effective |= EnergyChargeHelper.chargeEntity(player);
             } else {
                 effective = EnergyChargeHelper.chargeBlock(
                         startedLevel,

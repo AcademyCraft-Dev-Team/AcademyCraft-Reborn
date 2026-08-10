@@ -10,6 +10,7 @@ import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.api.common.entitycontrol.PerceptionDecision;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.Skills;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,6 +54,7 @@ public final class MentalPerceptionRuntime {
         var key = new PairKey(observer.getUUID(), hidden.getUUID());
         var relation = RELATIONS.computeIfAbsent(key, _ -> new Relation(observer, hidden));
         var wasHidden = relation.isHidden();
+        var suppressedAmbient = relation.suppressesAmbient();
         var lease = new Lease(
                 id,
                 controller.getUUID(),
@@ -60,15 +62,18 @@ public final class MentalPerceptionRuntime {
                 source,
                 priority,
                 expiresAt,
-                relation.nextOrder++
+                relation.nextOrder++,
+                Skills.SENSORY_DISTORTION.get().hasProficiencyMilestone(controller, 2)
         );
         relation.leases.put(id, lease);
         LEASES.put(id, lease);
         index(BY_CONTROLLER, controller.getUUID(), id);
         index(BY_ENTITY, observer.getUUID(), id);
         index(BY_ENTITY, hidden.getUUID(), id);
-        if (!wasHidden && observer instanceof ServerPlayer player) {
-            MentalIntrusionManager.sendPerception(player, hidden, true);
+        if (observer instanceof ServerPlayer player
+                && (!wasHidden || suppressedAmbient != relation.suppressesAmbient())) {
+            MentalIntrusionManager.sendPerception(
+                    player, hidden, true, relation.suppressesAmbient());
         }
         clearNaturalTarget(observer, hidden);
         return new Handle(id);
@@ -137,12 +142,17 @@ public final class MentalPerceptionRuntime {
         unindex(BY_ENTITY, lease.key.hiddenId, id);
         var relation = RELATIONS.get(lease.key);
         if (relation == null) return;
+        var suppressedAmbient = relation.suppressesAmbient();
         relation.leases.remove(id);
         if (!relation.isHidden()) {
             RELATIONS.remove(lease.key);
             if (relation.observer instanceof ServerPlayer player) {
-                MentalIntrusionManager.sendPerception(player, relation.hidden, false);
+                MentalIntrusionManager.sendPerception(player, relation.hidden, false, false);
             }
+        } else if (suppressedAmbient != relation.suppressesAmbient()
+                && relation.observer instanceof ServerPlayer player) {
+            MentalIntrusionManager.sendPerception(
+                    player, relation.hidden, true, relation.suppressesAmbient());
         }
     }
 
@@ -244,7 +254,8 @@ public final class MentalPerceptionRuntime {
             Identifier source,
             int priority,
             long expiresAt,
-            long order
+            long order,
+            boolean suppressAmbient
     ) {
     }
 
@@ -261,6 +272,10 @@ public final class MentalPerceptionRuntime {
 
         private boolean isHidden() {
             return !leases.isEmpty();
+        }
+
+        private boolean suppressesAmbient() {
+            return leases.values().stream().anyMatch(Lease::suppressAmbient);
         }
     }
 }

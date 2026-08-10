@@ -25,6 +25,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -32,6 +33,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
@@ -193,7 +195,7 @@ public final class AirflowJet extends Skill {
         @SubscribePacket
         public static void handleStop(StopPacket packet) {
             var context = ACTIVE.get(packet.getPacketListener().getPlayer());
-            if (context != null) context.end();
+            if (context != null) context.end(true);
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -240,8 +242,16 @@ public final class AirflowJet extends Skill {
             }
 
             private void end() {
+                end(false);
+            }
+
+            private void end(boolean released) {
                 if (ended) return;
                 ended = true;
+                var skill = Skills.AIRFLOW_JET.get();
+                if (released && ticks >= 20 && skill.hasProficiencyMilestone(player, 3)) {
+                    TimedSkillEffectRuntime.put(player, player.getUUID(), skill, "glide", 20, 1.0f);
+                }
                 unregister();
             }
 
@@ -258,8 +268,9 @@ public final class AirflowJet extends Skill {
                         && !Flight.Server.usesFlightAccelerationCost(player)
                         && !AbilitySystemServer.getSystem(player).tryTimedOccupation(
                         player.getUUID(),
-                        skill.getCpCost(skill.getLevel(player))
-                                * AeromanipConfig.cpMultiplier(player, SkillNames.AIRFLOW_JET),
+                        skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.CONTINUOUS,
+                                skill.getCpCost(skill.getLevel(player))
+                                        * AeromanipConfig.cpMultiplier(player, SkillNames.AIRFLOW_JET)),
                         skill,
                         CP_INTERVAL_TICKS)) {
                     end();
@@ -272,12 +283,13 @@ public final class AirflowJet extends Skill {
                 } else {
                     var direction = player.getLookAngle().add(0.0, 0.12, 0.0);
                     var skillLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
-                    var response = 0.38 + skillLevel * 0.1;
+                    var milestoneScale = skill.hasProficiencyMilestone(player, 2) ? 1.1 : 1.0;
+                    var response = (0.38 + skillLevel * 0.1) * milestoneScale;
                     AeromanipTargeting.steerVelocity(
                             player,
                             direction,
                             response,
-                            propulsionSpeed(skillLevel, isFullySubmerged(player))
+                            propulsionSpeed(skillLevel, isFullySubmerged(player)) * milestoneScale
                     );
                 }
                 recordMaceMomentum(player);
@@ -322,6 +334,17 @@ public final class AirflowJet extends Skill {
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            var skill = Skills.AIRFLOW_JET.get();
+            if (TimedSkillEffectRuntime.get(player.getUUID(), player.getUUID(), skill,
+                    "glide", player.level().getGameTime()).isPresent()
+                    && !player.onGround() && !player.isInWater()) {
+                var velocity = player.getDeltaMovement();
+                if (velocity.y < -0.15) {
+                    player.setDeltaMovement(velocity.x, -0.15, velocity.z);
+                    player.hurtMarked = true;
+                }
+                player.resetFallDistance();
+            }
             if (!player.isAlive() || player.hasDisconnected()
                     || player.onGround() || player.isInWater()) {
                 Server.clearMaceMomentum(player);

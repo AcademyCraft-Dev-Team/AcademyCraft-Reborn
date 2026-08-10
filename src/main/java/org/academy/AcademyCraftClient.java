@@ -80,6 +80,8 @@ import org.academy.internal.client.renderer.vfx.StormWingVfxClient;
 import org.academy.internal.client.renderer.vfx.PlasmaVfxClient;
 import org.academy.internal.client.renderer.vfx.SkyStrikeVfxClient;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
@@ -112,6 +114,8 @@ public final class AcademyCraftClient {
         Screens.register();
         HudManager.INSTANCE.initMain();
         AbilitySystemClient.init();
+        ProficiencyPolicy.initClient();
+        ProficiencySkillSettings.initClient();
         ClientSyncManager.init();
         BeamVfxClient.register();
         SmokeVfxClient.register();

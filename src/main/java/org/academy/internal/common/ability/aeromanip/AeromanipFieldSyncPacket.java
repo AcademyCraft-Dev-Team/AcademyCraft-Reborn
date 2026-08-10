@@ -43,19 +43,20 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
     private final double length;
     private final float strength;
     private final int durationTicks;
+    private final int proficiencyMilestone;
     private final boolean active;
 
     public AeromanipFieldSyncPacket(AirflowField field, boolean active) {
         this(field.id(), field.ownerId(), field.dimension().identifier().toString(), field.type().ordinal(), field.shape().ordinal(),
                 field.center().x, field.center().y, field.center().z,
                 field.direction().x, field.direction().y, field.direction().z,
-                field.radius(), field.length(), field.strength(), field.durationTicks(), active);
+                field.radius(), field.length(), field.strength(), field.durationTicks(), field.proficiencyMilestone(), active);
     }
 
     private AeromanipFieldSyncPacket(
             UUID fieldId, UUID ownerId, String dimension, int type, int shape,
             double x, double y, double z, double dx, double dy, double dz,
-            double radius, double length, float strength, int durationTicks, boolean active
+            double radius, double length, float strength, int durationTicks, int proficiencyMilestone, boolean active
     ) {
         this.fieldId = fieldId;
         this.ownerId = ownerId;
@@ -72,6 +73,7 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
         this.length = length;
         this.strength = strength;
         this.durationTicks = durationTicks;
+        this.proficiencyMilestone = proficiencyMilestone;
         this.active = active;
     }
 
@@ -102,7 +104,7 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
                 ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, Identifier.parse(dimension)),
                 AirflowField.Type.values()[safeType], AirflowField.Shape.values()[safeShape],
                 new net.minecraft.world.phys.Vec3(x, y, z), new net.minecraft.world.phys.Vec3(dx, dy, dz),
-                radius, length, strength, durationTicks);
+                radius, length, strength, durationTicks, proficiencyMilestone);
     }
 
     public boolean active() {
@@ -127,6 +129,7 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
         buf.writeDouble(packet.radius); buf.writeDouble(packet.length);
         buf.writeFloat(packet.strength);
         ByteBufCodecs.VAR_INT.encode(buf, packet.durationTicks);
+        ByteBufCodecs.VAR_INT.encode(buf, packet.proficiencyMilestone);
         ByteBufCodecs.BOOL.encode(buf, packet.active);
     }
 
@@ -139,7 +142,7 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
                 buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readDouble(), buf.readDouble(), buf.readFloat(),
-                ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.BOOL.decode(buf)
+                ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.VAR_INT.decode(buf), ByteBufCodecs.BOOL.decode(buf)
         );
     }
 

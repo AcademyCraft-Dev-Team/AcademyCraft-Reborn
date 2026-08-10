@@ -31,6 +31,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.teleport.AreaTeleportState;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.network.PacketTypes;
@@ -148,10 +149,17 @@ public final class AreaTeleportSelect extends Skill {
             var uuid = player.getUUID();
             if (!AreaTeleportState.hasPending(uuid)) {
                 AreaTeleportState.setFirstCorner(uuid, player.level().dimension(), pos);
-            } else if (AreaTeleportState.complete(uuid, player.level().dimension(), pos) == null) {
+            } else if (AreaTeleportState.complete(uuid, player.level().dimension(), pos,
+                    maximumAxis(player)) == null) {
                 AreaTeleportState.setFirstCorner(uuid, player.level().dimension(), pos);
             }
             sync(player);
+        }
+
+        private static int maximumAxis(ServerPlayer player) {
+            var milestone = Skills.AREA_TELEPORT_SELECT.get().getEffectiveProficiencyMilestone(player);
+            var designed = milestone >= 3 ? 40 : milestone >= 2 ? 36 : 32;
+            return Math.min(designed, ProficiencyPolicy.server(player).maxAreaTeleportAxis());
         }
 
         static BlockPos pickBlock(ServerPlayer player) {

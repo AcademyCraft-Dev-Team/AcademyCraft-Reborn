@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.ArrayDeque;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
@@ -149,7 +150,9 @@ public final class Flashing extends Skill {
                 return;
             }
             var previous = HOLD_TICKS[index]++;
-            if (previous == 0 || HOLD_TICKS[index] % REPEAT_TICKS == 0) {
+            var repeatTicks = AbilitySystemClient.getSkillProficiencyMilestone(Skills.FLASHING.get()) >= 2
+                    ? 4 : REPEAT_TICKS;
+            if (previous == 0 || HOLD_TICKS[index] % repeatTicks == 0) {
                 MisakaNetworkClient.send(new DashPacket(direction));
             }
         }
@@ -180,6 +183,7 @@ public final class Flashing extends Skill {
 
     public static final class Server {
         private static final Map<UUID, Long> LAST_DASH = new WeakHashMap<>();
+        private static final Map<UUID, ArrayDeque<Direction>> DASH_QUEUES = new WeakHashMap<>();
 
         private Server() {
         }
@@ -189,7 +193,10 @@ public final class Flashing extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.FLASHING.get();
             skill.toggle(player);
-            if (!skill.isEnabled(player)) LAST_DASH.remove(player.getUUID());
+            if (!skill.isEnabled(player)) {
+                LAST_DASH.remove(player.getUUID());
+                DASH_QUEUES.remove(player.getUUID());
+            }
         }
 
         @SubscribePacket
@@ -197,15 +204,26 @@ public final class Flashing extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.FLASHING.get();
             if (!skill.isEnabled(player)) return;
+            if (skill.hasProficiencyMilestone(player, 3)) {
+                var queue = DASH_QUEUES.computeIfAbsent(player.getUUID(), ignored -> new ArrayDeque<>());
+                if (queue.size() < 3) queue.addLast(packet.direction);
+                return;
+            }
+            performDash(player, packet.direction);
+        }
+
+        private static void performDash(ServerPlayer player, Direction requestedDirection) {
+            var skill = Skills.FLASHING.get();
 
             var now = player.level().getGameTime();
             var last = LAST_DASH.get(player.getUUID());
             if (last != null && now - last < 2) return;
 
-            var direction = directionFromLook(player.getLookAngle(), player.getYRot(), packet.direction);
+            var direction = directionFromLook(player.getLookAngle(), player.getYRot(), requestedDirection);
             if (direction.lengthSqr() < 1.0e-6) return;
             var destination = TeleportSafety.findSafe(player,
-                    player.position().add(direction.scale(DASH_DISTANCE)));
+                    player.position().add(direction.scale(skill.hasProficiencyMilestone(player, 2)
+                            ? 10.0 : DASH_DISTANCE)));
             if (destination == null) return;
 
             if (skill.executeActive(player, (context, actualCost) -> {
@@ -218,6 +236,13 @@ public final class Flashing extends Skill {
             })) {
                 LAST_DASH.put(player.getUUID(), now);
             }
+        }
+
+        private static void processQueue(ServerPlayer player) {
+            var queue = DASH_QUEUES.get(player.getUUID());
+            if (queue == null || queue.isEmpty()) return;
+            performDash(player, queue.removeFirst());
+            if (queue.isEmpty()) DASH_QUEUES.remove(player.getUUID());
         }
 
         static Vec3 directionFromLook(Vec3 look, float yaw, Direction direction) {
@@ -249,15 +274,17 @@ public final class Flashing extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var skill = Skills.FLASHING.get();
             if (!skill.isEnabled(player)) return;
+            Server.processQueue(player);
             var system = AbilitySystemServer.getSystem(player);
             if (!player.isAlive() || player.hasDisconnected()
                     || !system.ensurePermanentOccupation(
                     player.getUUID(),
-                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill.getMaintenanceCost(player),
                     skill
             )) {
                 if (skill.isEnabled(player)) skill.toggle(player);
                 Server.LAST_DASH.remove(player.getUUID());
+                Server.DASH_QUEUES.remove(player.getUUID());
             }
         }
     }

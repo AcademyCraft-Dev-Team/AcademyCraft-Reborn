@@ -136,10 +136,12 @@ public class Cloudroom extends Skill {
 
     public static final class Context extends ServerContext {
         private final Map<LivingEntity, Vec3> lastPositions = new HashMap<>();
+        private final int proficiencyMilestone;
         private boolean ended;
 
         private Context(ServerPlayer player) {
             super(player);
+            proficiencyMilestone = Skills.CLOUDROOM.get().getEffectiveProficiencyMilestone(player);
         }
 
         @SubscribeEvent
@@ -150,14 +152,14 @@ public class Cloudroom extends Skill {
                 return;
             }
             if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
-                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                    player.getUUID(), skill.getMaintenanceCost(player), skill)) {
                 if (skill.isEnabled(player)) skill.toggle(player);
                 end();
                 return;
             }
 
             var entities = level().getEntitiesOfClass(LivingEntity.class,
-                    player.getBoundingBox().inflate(RADIUS),
+                    player.getBoundingBox().inflate(proficiencyMilestone >= 2 ? 24.0 : RADIUS),
                     e -> e != player && e.isAlive() && !e.isSpectator());
 
             var spawnedTrails = 0;
@@ -172,8 +174,16 @@ public class Cloudroom extends Skill {
                     var smoke = new Smoke(EntityTypes.SMOKE.get(), level());
                     smoke.setPos(currentPos);
                     smoke.size = 0.5f;
-                    smoke.setLifetimeTicks(TRAIL_LIFETIME);
+                    smoke.setLifetimeTicks(proficiencyMilestone >= 2
+                            ? Math.round(TRAIL_LIFETIME * 1.5f) : TRAIL_LIFETIME);
                     level().addFreshEntity(smoke);
+                    if (proficiencyMilestone >= 3 && lastPos.distanceToSqr(currentPos) > 16.0) {
+                        var breakpoint = new Smoke(EntityTypes.SMOKE.get(), level());
+                        breakpoint.setPos(lastPos);
+                        breakpoint.size = 0.75f;
+                        breakpoint.setLifetimeTicks(Math.round(TRAIL_LIFETIME * 1.5f));
+                        level().addFreshEntity(breakpoint);
+                    }
                     spawnedTrails++;
                 }
                 lastPositions.put(entity, currentPos);

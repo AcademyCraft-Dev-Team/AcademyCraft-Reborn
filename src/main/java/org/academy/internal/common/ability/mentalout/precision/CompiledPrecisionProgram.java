@@ -9,7 +9,8 @@ public record CompiledPrecisionProgram(
         List<PrecisionGraph.Node> order,
         List<PrecisionGraph.Node> dataOrder,
         List<PrecisionGraph.Node> actionOrder,
-        Map<InputKey, PrecisionGraph.Edge> inputs
+        Map<InputKey, PrecisionGraph.Edge> inputs,
+        Map<FlowKey, Integer> flowTargets
 ) {
     public static CompileResult compile(PrecisionGraph graph) {
         var validation = graph == null
@@ -32,15 +33,26 @@ public record CompiledPrecisionProgram(
         order.addAll(dataOrder);
         order.addAll(actionOrder);
         var inputs = new HashMap<InputKey, PrecisionGraph.Edge>();
+        var flowTargets = new HashMap<FlowKey, Integer>();
         validation.normalized().edges().forEach(edge ->
-                inputs.put(new InputKey(edge.toNode(), edge.toPort()), edge));
+        {
+            inputs.put(new InputKey(edge.toNode(), edge.toPort()), edge);
+            var source = byId.get(edge.fromNode());
+            if (source != null && edge.fromPort() >= 0
+                    && edge.fromPort() < source.kind().outputDefinitions().size()
+                    && source.kind().outputDefinitions().get(edge.fromPort()).type()
+                    == PrecisionGraph.PortType.FLOW) {
+                flowTargets.put(new FlowKey(edge.fromNode(), edge.fromPort()), edge.toNode());
+            }
+        });
         return new CompileResult(
                 new CompiledPrecisionProgram(
                         validation.normalized(),
                         List.copyOf(order),
                         List.copyOf(dataOrder),
                         List.copyOf(actionOrder),
-                        Map.copyOf(inputs)
+                        Map.copyOf(inputs),
+                        Map.copyOf(flowTargets)
                 ),
                 PrecisionGraph.Diagnostic.OK,
                 -1,
@@ -52,7 +64,14 @@ public record CompiledPrecisionProgram(
         return inputs.get(new InputKey(nodeId, port));
     }
 
+    public Integer flowTarget(int nodeId, int outputPort) {
+        return flowTargets.get(new FlowKey(nodeId, outputPort));
+    }
+
     public record InputKey(int nodeId, int port) {
+    }
+
+    public record FlowKey(int nodeId, int port) {
     }
 
     public record CompileResult(

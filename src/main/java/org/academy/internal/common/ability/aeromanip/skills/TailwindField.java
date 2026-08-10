@@ -26,6 +26,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
@@ -120,10 +122,12 @@ public final class TailwindField extends Skill {
                 return;
             }
             var level = Math.max(0, Math.min(2, skill.getLevel(player)));
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var fieldScale = milestone >= 2 ? 1.25 : 1.0;
             var direction = player.getLookAngle();
             var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), player.level().dimension(),
                     AirflowField.Type.TAILWIND, AirflowField.Shape.CAPSULE, player.position(), direction,
-                    4.0, 12.0, 0.15f + level * 0.05f, Integer.MAX_VALUE);
+                    4.0 * fieldScale, 14.0 * fieldScale, 0.15f + level * 0.05f, Integer.MAX_VALUE, milestone);
             AeromanipFieldManager.activatePersonal(player, skill, field, Server::tick);
         }
 
@@ -131,27 +135,54 @@ public final class TailwindField extends Skill {
             var direction = AeromanipTargeting.horizontalDirection(player.getLookAngle());
             if (direction.lengthSqr() <= 1.0e-8) return;
             var currentField = new AirflowField(field.id(), field.ownerId(), field.dimension(), field.type(), field.shape(),
-                    player.position().add(direction.scale(-2.0)), direction, field.radius(), 14.0,
-                    field.strength(), field.durationTicks());
+                    player.position().add(direction.scale(-2.0)), direction, field.radius(), field.length(),
+                    field.strength(), field.durationTicks(), field.proficiencyMilestone());
             spawnVisual(player, currentField, age);
             boostFriendly(player, player, direction, field.strength());
             var box = new AABB(currentField.center(), currentField.center().add(direction.scale(currentField.length())))
                     .inflate(currentField.radius());
+            var handled = 0;
+            var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
             for (var entity : player.level().getEntities(player, box, Entity::isAlive)) {
+                if (handled++ >= cap) break;
                 if (!currentField.contains(entity.getBoundingBox().getCenter(), entity.getBbWidth() * 0.5)) continue;
                 var dot = entity.getDeltaMovement().dot(direction);
                 var friendly = player.isAlliedTo(entity)
                         || entity instanceof TamableAnimal animal && animal.isOwnedBy(player);
+                if (entity instanceof Projectile projectile) {
+                    var projectileOwner = projectile.getOwner();
+                    friendly = projectileOwner == player
+                            || projectileOwner != null && player.isAlliedTo(projectileOwner);
+                }
                 var hostile = !friendly && AeromanipTargeting.canAffectNegatively(player, entity);
                 if ((entity instanceof Projectile || friendly) && dot > 0.01) {
                     boostFriendly(player, entity, direction, field.strength());
+                    if (field.proficiencyMilestone() >= 3 && entity instanceof Projectile && friendly) {
+                        boostProjectileOnce(player, entity);
+                    }
                 } else if (hostile && dot < 0) {
-                    var multiplier = AeromanipTargeting.forceMultiplier(player, entity);
-                    AeromanipTargeting.accelerateAlong(entity, direction,
-                            (0.08 + field.strength() * 0.12) * multiplier,
-                            (0.45 + field.strength() * 0.6) * multiplier);
+                    if (field.proficiencyMilestone() >= 3 && entity instanceof Projectile) {
+                        var radial = entity.position().subtract(currentField.center());
+                        var side = radial.subtract(direction.scale(radial.dot(direction)));
+                        if (side.lengthSqr() <= 1.0e-8) side = direction.cross(new net.minecraft.world.phys.Vec3(0, 1, 0));
+                        AeromanipTargeting.steerVelocity(entity, side, 0.65, Math.max(0.4, entity.getDeltaMovement().length()));
+                    } else {
+                        var multiplier = AeromanipTargeting.forceMultiplier(player, entity);
+                        AeromanipTargeting.accelerateAlong(entity, direction,
+                                (0.08 + field.strength() * 0.12) * multiplier,
+                                (0.45 + field.strength() * 0.6) * multiplier);
+                    }
                 }
             }
+        }
+
+        private static void boostProjectileOnce(net.minecraft.server.level.ServerPlayer owner, Entity projectile) {
+            var skill = Skills.TAILWIND_FIELD.get();
+            var now = owner.level().getGameTime();
+            if (TimedSkillEffectRuntime.get(owner.getUUID(), projectile.getUUID(), skill,
+                    "projectile_boost", now).isPresent()) return;
+            TimedSkillEffectRuntime.put(owner, projectile.getUUID(), skill, "projectile_boost", 20, 1.0f);
+            AeromanipTargeting.scaleVelocity(projectile, 1.2);
         }
 
         private static void spawnVisual(net.minecraft.server.level.ServerPlayer player,

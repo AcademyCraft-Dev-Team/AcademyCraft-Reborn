@@ -240,7 +240,10 @@ public class LevelUtil {
                 var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
 
                 if (dropBlock) {
-                    Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
+                    var refined = breaker != null && level instanceof net.minecraft.server.level.ServerLevel serverLevel
+                            && org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam
+                            .dropRefinedResources(serverLevel, pos, blockState, blockEntity, breaker);
+                    if (!refined) Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
                 }
                 level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
                 if (spawnParticles) {

@@ -6,9 +6,12 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -25,6 +28,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
@@ -220,7 +224,7 @@ public final class Flight extends Skill {
                 if (creativeFlightActive) {
                     enabled = system.ensurePermanentOccupation(
                             player.getUUID(),
-                            skill.getMaintenanceCost(skill.getLevel(player))
+                            skill.getMaintenanceCost(player)
                                     * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT),
                             skill
                     );
@@ -257,6 +261,7 @@ public final class Flight extends Skill {
                         var cap = enabled && accelerationActive
                                 ? ACCELERATED_FLIGHT_SPEED_CAP
                                 : NORMAL_FLIGHT_SPEED_CAP;
+                        if (skill.hasProficiencyMilestone(player, 2)) cap *= 1.15;
                         if (speed > cap) {
                             var desired = velocity.scale(cap / speed);
                             AeromanipTargeting.addClampedVelocity(player, desired.subtract(velocity));
@@ -267,6 +272,21 @@ public final class Flight extends Skill {
                 Server.NEXT_ACCELERATION_COST_TICK.remove(player);
             }
             SkillFlightController.setSource(player, FLIGHT_SOURCE, enabled);
+        }
+
+        @SubscribeEvent(priority = EventPriority.HIGH)
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)
+                    || !event.getSource().is(DamageTypes.FLY_INTO_WALL)) return;
+            var skill = Skills.FLIGHT.get();
+            if (!skill.isEnabled(player) || !skill.hasProficiencyMilestone(player, 3)) return;
+            var now = player.level().getGameTime();
+            if (TimedSkillEffectRuntime.get(player.getUUID(), player.getUUID(), skill,
+                    "collision_brake", now).isPresent()) return;
+            TimedSkillEffectRuntime.put(player, player.getUUID(), skill, "collision_brake", 100, 1.0f);
+            AeromanipTargeting.scaleVelocity(player, 0.1);
+            player.resetFallDistance();
+            event.setCanceled(true);
         }
     }
 

@@ -68,6 +68,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
@@ -390,7 +391,10 @@ public class KineticEnergyApplied extends Skill {
                     Skills.KINETIC_ENERGY_APPLIED.get(),
                     20
             )) return;
-            var radius = getImpactRadius(impactLevel);
+            var blockRadius = getImpactRadius(impactLevel);
+            var radius = Skills.KINETIC_ENERGY_APPLIED.get().hasProficiencyMilestone(player, 2)
+                    ? blockRadius * 1.15f
+                    : blockRadius;
             var damage = getImpactDamage(
                     impactLevel,
                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
@@ -399,7 +403,7 @@ public class KineticEnergyApplied extends Skill {
             applyAreaDamage(level, player, center, direction, radius, damage, impactLevel);
             spawnShockwave(level, player, center, direction, radius, impactLevel);
             if (canDestroyBlocks(player)) {
-                enqueueBreakTask(level, player, center, radius, direction, impactLevel, priorityBlock);
+                enqueueBreakTask(level, player, center, blockRadius, direction, impactLevel, priorityBlock);
             }
         }
 
@@ -421,6 +425,18 @@ public class KineticEnergyApplied extends Skill {
             for (var target : targets) {
                 CTADamageUtil.applyCompositeDamage(target, player, source, damage);
                 target.hurtMarked = true;
+                var skill = Skills.KINETIC_ENERGY_APPLIED.get();
+                var now = level.getGameTime();
+                if (skill.hasProficiencyMilestone(player, 3)
+                        && TimedSkillEffectRuntime.get(
+                        player.getUUID(), target.getUUID(), skill, "reverberation_cd", now).isEmpty()
+                        && TimedSkillEffectRuntime.put(
+                        player, target.getUUID(), skill, "reverberation_cd", 20, 0.0f)) {
+                    TimedSkillEffectRuntime.schedule(player, 6, () -> {
+                        if (!target.isAlive() || target.level() != level) return;
+                        target.hurtServer(level, source, damage * 0.3f);
+                    });
+                }
             }
         }
 
@@ -787,7 +803,7 @@ public class KineticEnergyApplied extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             if (enabled) {
                 enabled = system.ensurePermanentOccupation(
-                        player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill);
+                        player.getUUID(), skill.getMaintenanceCost(player), skill);
                 if (!enabled) system.toggleSkill(player.getUUID(), skill.getKeyString());
             }
             Server.syncAttributes(player, enabled);

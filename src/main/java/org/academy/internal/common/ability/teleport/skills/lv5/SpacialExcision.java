@@ -113,10 +113,10 @@ public class SpacialExcision extends Skill {
             Skills.SPACIAL_EXCISION.get().executeActive(player,
                     ctx -> {
                         var maxCP = AbilitySystemServer.getSystem(player).getPlayerMaxCP(player.getUUID());
-                        return maxCP;
+                        return maxCP * (ctx.milestone() >= 1 ? 0.9f : 1.0f);
                     },
                     (ctx, actualCost) -> {
-                        var context = new Context(player);
+                        var context = new Context(player, ctx.milestone());
                         ACTIVE.put(player, context);
                         AbilitySystemServer.registerContext(context);
                     });
@@ -131,12 +131,14 @@ public class SpacialExcision extends Skill {
         public static final float DAMAGE = 20.0f;
         private static final int EFFECT_INTERVAL = 10;
 
+        private final int milestone;
         private int ticks;
         private boolean ended;
         private boolean chargeCancelled;
 
-        private Context(ServerPlayer p) {
+        private Context(ServerPlayer p, int milestone) {
             super(p);
+            this.milestone = milestone;
         }
 
         @SubscribeEvent
@@ -156,9 +158,10 @@ public class SpacialExcision extends Skill {
             skill.reportActivity(player, ticks >= CHARGE_TICKS);
             if (ticks < CHARGE_TICKS) return;
 
-            if (ticks % EFFECT_INTERVAL == 0 && level() instanceof ServerLevel sl) {
+            var effectInterval = milestone >= 2 ? 8 : EFFECT_INTERVAL;
+            if (ticks % effectInterval == 0 && level() instanceof ServerLevel sl) {
                 var center = player.position();
-                var radius = BASE_RADIUS + ticks * RADIUS_GROWTH;
+                var radius = BASE_RADIUS + ticks * RADIUS_GROWTH * (milestone >= 2 ? 1.2f : 1.0f);
                 var damage = DAMAGE * AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, skill);
@@ -224,8 +227,32 @@ public class SpacialExcision extends Skill {
         private void end() {
             if (ended) return;
             ended = true;
+            if (milestone >= 3 && ticks >= CHARGE_TICKS && level() instanceof ServerLevel serverLevel) {
+                var center = player.position();
+                for (var delay = 10; delay <= 40; delay += 10) {
+                    var scheduledDelay = delay;
+                    org.academy.internal.common.ability.TimedSkillEffectRuntime.schedule(player, delay,
+                            () -> emitBoundary(serverLevel, player, center, scheduledDelay));
+                }
+            }
             Server.ACTIVE.remove(player, this);
             unregister();
+        }
+
+        private static void emitBoundary(ServerLevel level, ServerPlayer owner, net.minecraft.world.phys.Vec3 center,
+                                         int age) {
+            var radius = BASE_RADIUS + MAX_TICKS * RADIUS_GROWTH * 1.2f;
+            var inner = Math.max(0.0, radius - 1.25);
+            var targets = level.getEntitiesOfClass(LivingEntity.class,
+                    new AABB(center.x - radius, center.y - radius, center.z - radius,
+                            center.x + radius, center.y + radius, center.z + radius),
+                    target -> target != owner && target.isAlive()
+                            && target.distanceToSqr(center) <= radius * radius
+                            && target.distanceToSqr(center) >= inner * inner);
+            var source = SkillDamageSource.of(owner, Skills.SPACIAL_EXCISION.get());
+            for (var target : targets) target.hurtServer(level, source, DAMAGE * 0.25f);
+            level.sendParticles(ParticleTypes.REVERSE_PORTAL, center.x, center.y + 1.0, center.z,
+                    32, radius * 0.5, 0.25, radius * 0.5, 0.05);
         }
     }
 

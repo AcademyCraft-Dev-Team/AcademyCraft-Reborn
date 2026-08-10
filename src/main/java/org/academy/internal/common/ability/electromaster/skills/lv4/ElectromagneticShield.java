@@ -28,6 +28,12 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.api.common.ability.SkillProficiencyProfile;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetManipulation;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.ElectromagneticShieldData;
@@ -226,6 +232,8 @@ public final class ElectromagneticShield extends Skill {
             if (data == null) return;
 
             var capacity = BASE_CAPACITY * system.getPlayerAbilityPowerMultiplier(player.getUUID());
+            if (skill.hasProficiencyMilestone(player, 2)) capacity *= 1.25f;
+            var resolvedCapacity = capacity;
             var result = absorbDamage(data.getAbsorbedDamage(), capacity, event.getAmount());
             if (Float.compare(result.storedDamage(), data.getAbsorbedDamage()) != 0
                     || Float.compare(capacity, data.getCapacity()) != 0) {
@@ -234,7 +242,7 @@ public final class ElectromagneticShield extends Skill {
                         skill,
                         ElectromagneticShieldData.class,
                         shieldData -> {
-                            shieldData.setCapacity(capacity);
+                            shieldData.setCapacity(resolvedCapacity);
                             shieldData.setAbsorbedDamage(result.storedDamage());
                         }
                 );
@@ -243,6 +251,10 @@ public final class ElectromagneticShield extends Skill {
             event.setAmount(result.remainingDamage());
             if (result.remainingDamage() <= 0) {
                 event.setCanceled(true);
+            }
+            if (skill.hasProficiencyMilestone(player, 3)
+                    && data.getAbsorbedDamage() < capacity && result.storedDamage() >= capacity) {
+                triggerOverloadPulse(player, event.getSource().getEntity());
             }
         }
 
@@ -267,13 +279,14 @@ public final class ElectromagneticShield extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             var uuid = player.getUUID();
             var capacity = BASE_CAPACITY * system.getPlayerAbilityPowerMultiplier(uuid);
+            if (skill.hasProficiencyMilestone(player, 2)) capacity *= 1.25f;
             var syncedData = skill.<ElectromagneticShieldData>getRuntimeData(player).orElse(null);
             if (syncedData != null && Float.compare(syncedData.getCapacity(), capacity) != 0) {
                 Server.setShieldState(player, syncedData.getAbsorbedDamage(), capacity);
             }
             if (!system.ensurePermanentOccupation(
                     uuid,
-                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill.getMaintenanceCost(player),
                     skill
             )) {
                 system.toggleSkill(uuid, skill.getKeyString());
@@ -291,9 +304,33 @@ public final class ElectromagneticShield extends Skill {
             var data = skill.<ElectromagneticShieldData>getRuntimeData(player).orElse(null);
             if (data == null || data.getAbsorbedDamage() <= 0) return;
 
-            if (!system.tryTimedOccupation(uuid, BASE_COOLING_CP_COST, skill)) return;
-            var cooling = BASE_COOLING * system.getPlayerAbilityPowerMultiplier(uuid);
+            var coolingCost = skill.adjustProficiencyCost(player,
+                    SkillProficiencyProfile.CostKind.DYNAMIC, BASE_COOLING_CP_COST);
+            if (!system.tryTimedOccupation(uuid, coolingCost, skill)) return;
+            var coolingBase = skill.hasProficiencyMilestone(player, 2) ? 15.0f : BASE_COOLING;
+            var cooling = coolingBase * system.getPlayerAbilityPowerMultiplier(uuid);
             Server.setStoredDamage(player, coolStoredDamage(data.getAbsorbedDamage(), cooling));
+        }
+
+        private static void triggerOverloadPulse(ServerPlayer player, net.minecraft.world.entity.Entity attacker) {
+            var skill = Skills.ELECTROMAGNETIC_SHIELD.get();
+            var now = player.level().getGameTime();
+            if (TimedSkillEffectRuntime.get(player.getUUID(), player.getUUID(), skill,
+                    "overload_pulse", now).isPresent()) return;
+            TimedSkillEffectRuntime.put(player, player.getUUID(), skill, "overload_pulse", 200, 1.0f);
+            var handled = 0;
+            var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
+            for (var target : player.level().getEntitiesOfClass(LivingEntity.class,
+                    player.getBoundingBox().inflate(4.0),
+                    target -> target != player && target.isAlive() && !player.isAlliedTo(target))) {
+                if (handled++ >= cap) break;
+                var direction = target.position().subtract(player.position());
+                if (direction.lengthSqr() > 1.0e-8) target.push(direction.normalize().x, 0.25, direction.normalize().z);
+                if (target == attacker) {
+                    target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 40, 1));
+                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
+                }
+            }
         }
     }
 

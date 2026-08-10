@@ -113,7 +113,7 @@ public final class MentalControlEvents {
     public static void onLivingDeath(LivingDeathEvent event) {
         if (!(event.getEntity().level() instanceof ServerLevel level)) return;
         var entityId = event.getEntity().getUUID();
-        MentaloutControlContext.releaseMisidentificationTarget(entityId);
+        MentaloutControlContext.onMisidentificationTargetDeath(event.getEntity());
         MentaloutControlContext.releaseSubject(entityId);
         MentalControlRuntime.releaseBySubject(level.getServer(), entityId);
         MentalIntrusionManager.releaseEntity(entityId);

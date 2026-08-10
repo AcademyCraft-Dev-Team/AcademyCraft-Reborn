@@ -3,10 +3,12 @@ package org.academy.internal.client.ability.mentalout;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.UiScreen;
@@ -16,6 +18,8 @@ import org.academy.api.client.gui.widget.Widget;
 import org.academy.internal.client.gui.DataTerminalTheme;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 
@@ -50,6 +54,9 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private static final int TOOL_SIZE = 14;
     private static final int PORT_HIT = 14;
     private static final int SNAP_DISTANCE = 10;
+    private static final int PALETTE_TAB_OFFSET_Y = 16;
+    private static final int PALETTE_SEARCH_OFFSET_Y = 31;
+    private static final int PALETTE_LIST_OFFSET_Y = 49;
     private static final String[] TOOL_LABELS = {
             "delete", "copy", "undo", "redo", "auto_layout", "fit", "save", "restore"
     };
@@ -77,10 +84,10 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private boolean leftDrawerOpen;
     private boolean rightDrawerOpen;
     private EditBox search;
-    private EditBox durationInput;
-    private int durationInputNode = -1;
-    private boolean updatingDurationInput;
-    private boolean durationInputValid = true;
+    private EditBox parameterInput;
+    private int parameterInputNode = -1;
+    private boolean updatingParameterInput;
+    private boolean parameterInputValid = true;
     private PrecisionGraph.NodeGroup selectedGroup = PrecisionGraph.NodeGroup.TARGET;
     private int paletteScroll;
     private int selectedNode = -1;
@@ -144,28 +151,27 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         canvasLayout = SerializedUiLayout.require(serialized, "canvas");
         inspectorLayout = SerializedUiLayout.require(serialized, "inspector");
 
-        search = new EditBox(font, paletteX() + 4, panelY + TOP_H + 25, paletteWidth() - 8, 15,
+        search = new EditBox(font, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y,
+                paletteWidth() - 8, 15,
                 Component.empty());
         search.setHint(Component.translatable("screen.academy.precision_operation.search"));
         search.setMaxLength(48);
         search.setBordered(false);
         search.setTextColor(TEXT);
         search.visible = paletteVisible();
-        addRenderableWidget(search);
-        durationInput = new EditBox(font, 0, 0, 80, 15, Component.empty()) {
+        parameterInput = new EditBox(font, 0, 0, 80, 15, Component.empty()) {
             @Override
             public void insertText(String input) {
-                if (isDurationInsertionAllowed(input)) super.insertText(input);
+                if (isNumericInsertionAllowed(input)) super.insertText(input);
             }
         };
-        durationInput.setHint(Component.translatable(
+        parameterInput.setHint(Component.translatable(
                 "screen.academy.precision_operation.value.permanent"));
-        durationInput.setMaxLength(4);
-        durationInput.setBordered(false);
-        durationInput.setTextColor(TEXT);
-        durationInput.setResponder(this::durationInputChanged);
-        durationInput.visible = false;
-        addRenderableWidget(durationInput);
+        parameterInput.setMaxLength(4);
+        parameterInput.setBordered(false);
+        parameterInput.setTextColor(TEXT);
+        parameterInput.setResponder(this::parameterInputChanged);
+        parameterInput.visible = false;
         if (initialView) {
             initialView = false;
             if (!graph.nodes().isEmpty()) fitCanvas(true);
@@ -288,17 +294,17 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (search.visible) search.extractRenderState(graphics, mouseX, mouseY, partialTick);
         renderCanvas(graphics, mouseX, mouseY);
         if (inspectorVisible()) renderInspector(graphics, mouseX, mouseY);
-        syncDurationInput();
-        if (durationInput.visible) {
+        syncParameterInput();
+        if (parameterInput.visible) {
             DataTerminalTheme.input(
                     graphics,
-                    durationInput.getX(),
-                    durationInput.getY(),
-                    durationInput.getWidth(),
+                    parameterInput.getX(),
+                    parameterInput.getY(),
+                    parameterInput.getWidth(),
                     15,
-                    durationInput.isFocused()
+                    parameterInput.isFocused()
             );
-            durationInput.extractRenderState(graphics, mouseX, mouseY, partialTick);
+            parameterInput.extractRenderState(graphics, mouseX, mouseY, partialTick);
         }
         renderStatus(graphics);
         renderQuickInsert(graphics, mouseX, mouseY);
@@ -317,7 +323,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
-            var disabled = index == 6 && (!graph.validate().valid() || !durationInputValid);
+            var disabled = index == 6 && (!graph.validate().valid() || !parameterInputValid);
             iconButton(graphics, toolsX, panelY + 3, TOOL_GLYPHS[index], mouseX, mouseY, disabled);
             if (inside(mouseX, mouseY, toolsX, panelY + 3, TOOL_SIZE, TOOL_SIZE)) {
                 graphics.setTooltipForNextFrame(Component.translatable(
@@ -343,7 +349,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var w = paletteWidth();
         smallText(graphics, Component.translatable("screen.academy.precision_operation.nodes").getString(),
                 x + 4, canvasY + 4, DIM, w - 8);
-        var tabY = canvasY + 16;
+        var tabY = canvasY + PALETTE_TAB_OFFSET_Y;
         var tabW = Math.max(16, (w - 8) / PrecisionGraph.NodeGroup.values().length);
         for (var index = 0; index < PrecisionGraph.NodeGroup.values().length; index++) {
             var group = PrecisionGraph.NodeGroup.values()[index];
@@ -356,7 +362,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         DataTerminalTheme.input(graphics, search.getX(), search.getY(), search.getWidth(), 15,
                 search.isFocused());
         var kinds = visibleKinds();
-        var listY = canvasY + 44;
+        var listY = canvasY + PALETTE_LIST_OFFSET_Y;
         var listBottom = canvasY + canvasH - 3;
         var visibleRows = Math.max(1, (listBottom - listY) / ROW_H);
         paletteScroll = Math.clamp(paletteScroll, 0, Math.max(0, kinds.size() - visibleRows));
@@ -427,13 +433,17 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 : validation.valid() ? -1 : validation.nodeId();
         var hasError = node.id() == errorNode;
         graphics.fill(x, y, x + NODE_W, y + h,
-                selected ? 0xE04A3D20 : DataTerminalTheme.SECTION_BACKGROUND);
+                hasError ? 0xE044171B
+                        : selected ? 0xE04A3D20 : DataTerminalTheme.SECTION_BACKGROUND);
         border(graphics, x, y, NODE_W, h,
                 hasError ? ERROR : selected ? ACCENT : DataTerminalTheme.BORDER_MUTED);
-        graphics.fill(x, y, x + NODE_W, y + NODE_HEADER_H, categoryColor(node.kind().category()));
-        smallText(graphics, groupGlyph(node.kind().group()), x + 3, y + 2, 0xFF15120C, 8);
-        smallText(graphics, nodeLabel(node.kind()).getString(), x + 12, y + 2, 0xFF15120C, NODE_W - 15);
-        if (hasError) smallText(graphics, "!!", x + NODE_W - 12, y + 2, ERROR, 10);
+        graphics.fill(x, y, x + NODE_W, y + NODE_HEADER_H,
+                hasError ? 0xFFD84A55 : categoryColor(node.kind().category()));
+        var headerText = hasError ? 0xFFFFFFFF : 0xFF15120C;
+        smallText(graphics, groupGlyph(node.kind().group()), x + 3, y + 2, headerText, 8);
+        smallText(graphics, nodeLabel(node.kind()).getString(), x + 12, y + 2, headerText,
+                hasError ? NODE_W - 27 : NODE_W - 15);
+        if (hasError) smallText(graphics, "!!", x + NODE_W - 12, y + 2, 0xFFFFFFFF, 10);
         for (var port = 0; port < node.kind().inputDefinitions().size(); port++) {
             var definition = node.kind().inputDefinitions().get(port);
             var color = highlightedPort(node.id(), port, true, definition.type())
@@ -511,9 +521,9 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         smallText(graphics, nodeLabel(selected.kind()).getString(), x + 5, canvasY + 22, TEXT, w - 10);
         var description = Component.translatable(nodeDescriptionKey(selected.kind()));
         var descriptionHeight = smallWrappedText(graphics, description, x + 5, canvasY + 36, DIM, w - 10);
-        var parameterY = canvasY + Math.min(92, Math.max(58, descriptionHeight + 40));
+        var parameterY = canvasY + Math.max(58, descriptionHeight + 40);
         renderParameterEditor(graphics, selected, x + 5, parameterY, w - 10, mouseX, mouseY);
-        var inputsY = parameterY + 30;
+        var inputsY = parameterY + parameterEditorHeight(selected.kind().parameterKind());
         smallText(graphics, Component.translatable("screen.academy.precision_operation.ports").getString(),
                 x + 5, inputsY, DIM, w - 10);
         var y = inputsY + 11;
@@ -546,12 +556,12 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (kind == PrecisionGraph.ParameterKind.NONE) return;
         smallText(graphics, Component.translatable("screen.academy.precision_operation.parameter",
                 formatParameter(node)).getString(), x, y, TEXT, width);
-        if (kind == PrecisionGraph.ParameterKind.DURATION_SECONDS) {
+        if (kind == PrecisionGraph.ParameterKind.DURATION_SECONDS
+                || kind == PrecisionGraph.ParameterKind.RANGE) {
             return;
-        } else if (kind == PrecisionGraph.ParameterKind.RANGE
-                || kind == PrecisionGraph.ParameterKind.HEALTH_PERCENT) {
+        } else if (kind == PrecisionGraph.ParameterKind.HEALTH_PERCENT) {
             var min = 1.0;
-            var max = kind == PrecisionGraph.ParameterKind.RANGE ? 32.0 : 100.0;
+            var max = 100.0;
             var trackY = y + 13;
             graphics.fill(x, trackY, x + width, trackY + 2, DataTerminalTheme.BORDER_MUTED);
             var knob = x + (int) Math.round((node.parameter() - min) / (max - min) * (width - 4));
@@ -560,6 +570,10 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             iconButton(graphics, x, y + 11, "<", mouseX, mouseY, false);
             iconButton(graphics, x + 18, y + 11, ">", mouseX, mouseY, false);
         }
+    }
+
+    static int parameterEditorHeight(PrecisionGraph.ParameterKind kind) {
+        return kind == PrecisionGraph.ParameterKind.NONE ? 0 : 32;
     }
 
     private void renderStatus(GuiGraphicsExtractor graphics) {
@@ -600,12 +614,23 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var x = event.x();
         var y = event.y();
         if (event.button() == 0) {
-            if (durationInput != null && durationInput.visible
-                    && inside(x, y, durationInput.getX(), durationInput.getY(),
-                    durationInput.getWidth(), 15)) {
-                return super.mouseClicked(event, doubleClick);
+            if (search != null && search.visible
+                    && inside(x, y, search.getX(), search.getY(), search.getWidth(), 15)) {
+                if (parameterInput != null) parameterInput.setFocused(false);
+                search.setFocused(true);
+                search.mouseClicked(event, doubleClick);
+                return true;
             }
-            if (durationInput != null) durationInput.setFocused(false);
+            if (parameterInput != null && parameterInput.visible
+                    && inside(x, y, parameterInput.getX(), parameterInput.getY(),
+                    parameterInput.getWidth(), 15)) {
+                if (search != null) search.setFocused(false);
+                parameterInput.setFocused(true);
+                parameterInput.mouseClicked(event, doubleClick);
+                return true;
+            }
+            if (search != null) search.setFocused(false);
+            if (parameterInput != null) parameterInput.setFocused(false);
             if (handleQuickInsertClick(x, y) || handleTopBarClick(x, y) || handleRailClick(x, y)
                     || handleInspectorClick(x, y) || handlePaletteClick(x, y)) return true;
             if (spaceDown && inside(x, y, canvasX, canvasY, canvasW, canvasH)) {
@@ -674,7 +699,14 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (durationInput != null && durationInput.isFocused()) return super.keyPressed(event);
+        if (search != null && search.isFocused()) {
+            search.keyPressed(event);
+            return true;
+        }
+        if (parameterInput != null && parameterInput.isFocused()) {
+            parameterInput.keyPressed(event);
+            return true;
+        }
         if (event.key() == InputConstants.KEY_SPACE) {
             spaceDown = true;
             return true;
@@ -707,6 +739,19 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             }
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        if (search != null && search.isFocused()) {
+            search.charTyped(event);
+            return true;
+        }
+        if (parameterInput != null && parameterInput.isFocused()) {
+            parameterInput.charTyped(event);
+            return true;
+        }
+        return super.charTyped(event);
     }
 
     @Override
@@ -792,7 +837,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (!paletteVisible()) return false;
         var x = paletteX();
         var w = paletteWidth();
-        var tabY = canvasY + 16;
+        var tabY = canvasY + PALETTE_TAB_OFFSET_Y;
         var tabW = Math.max(16, (w - 8) / PrecisionGraph.NodeGroup.values().length);
         for (var index = 0; index < PrecisionGraph.NodeGroup.values().length; index++) {
             if (inside(mouseX, mouseY, x + 4 + index * tabW, tabY, tabW - 1, 12)) {
@@ -801,8 +846,9 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 return true;
             }
         }
-        var listY = canvasY + 44;
-        if (!inside(mouseX, mouseY, x + 3, listY, w - 6, canvasH - 47)) return false;
+        var listY = canvasY + PALETTE_LIST_OFFSET_Y;
+        if (!inside(mouseX, mouseY, x + 3, listY, w - 6,
+                canvasY + canvasH - 3 - listY)) return false;
         var row = (int) ((mouseY - listY) / ROW_H);
         var kinds = visibleKinds();
         var index = paletteScroll + row;
@@ -823,13 +869,13 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var description = Component.translatable(nodeDescriptionKey(selected.kind()));
         var descriptionHeight = (int) Math.ceil(font.wordWrapHeight(
                 description, (int) (w / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
-        var y = canvasY + Math.min(92, Math.max(58, descriptionHeight + 40));
+        var y = canvasY + Math.max(58, descriptionHeight + 40);
         var parameterKind = selected.kind().parameterKind();
-        if (parameterKind == PrecisionGraph.ParameterKind.DURATION_SECONDS) return false;
-        if ((parameterKind == PrecisionGraph.ParameterKind.RANGE
-                || parameterKind == PrecisionGraph.ParameterKind.HEALTH_PERCENT)
+        if (parameterKind == PrecisionGraph.ParameterKind.DURATION_SECONDS
+                || parameterKind == PrecisionGraph.ParameterKind.RANGE) return false;
+        if (parameterKind == PrecisionGraph.ParameterKind.HEALTH_PERCENT
                 && inside(mouseX, mouseY, x, y + 9, w, 12)) {
-            var max = parameterKind == PrecisionGraph.ParameterKind.RANGE ? 32.0 : 100.0;
+            var max = 100.0;
             var value = 1.0 + Math.clamp((mouseX - x) / Math.max(1.0, w), 0.0, 1.0) * (max - 1.0);
             setParameter(selected, Math.rint(value));
             return true;
@@ -1111,10 +1157,15 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             case COUNT -> 8;
             case CAPABILITY -> org.academy.api.common.entitycontrol.ControlCapability.values().length - 1;
             case SORT_DIRECTION -> 1;
-            case ENTITY_TYPE -> 3;
+            case ENTITY_TYPE -> 7;
+            case OFFSET_DISTANCE -> 32;
             default -> Integer.MAX_VALUE;
         };
-        var min = kind == PrecisionGraph.ParameterKind.COUNT ? 1 : 0;
+        var min = switch (kind) {
+            case COUNT -> 1;
+            case OFFSET_DISTANCE -> -32;
+            default -> 0;
+        };
         var value = node.parameter() + direction;
         if (kind == PrecisionGraph.ParameterKind.CAPABILITY
                 || kind == PrecisionGraph.ParameterKind.SORT_DIRECTION
@@ -1146,13 +1197,18 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private void save() {
-        if (!durationInputValid) {
+        if (!parameterInputValid) {
             showTransient(PrecisionGraph.Diagnostic.INVALID_PARAMETER);
             return;
         }
         var validation = graph.validate();
         if (!validation.valid()) {
             showTransient(validation.diagnostic());
+            return;
+        }
+        if (!branchUnlocked() && graph.nodes().stream()
+                .anyMatch(node -> node.kind().isConditionalBranch())) {
+            showTransient(PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED);
             return;
         }
         PrecisionOperationClient.save(slot, graph, revision);
@@ -1205,7 +1261,9 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private List<PrecisionGraph.NodeKind> visibleKinds() {
         var query = search == null ? "" : search.getValue().strip().toLowerCase(Locale.ROOT);
-        return java.util.Arrays.stream(PrecisionGraph.NodeKind.values()).filter(kind -> {
+        return java.util.Arrays.stream(PrecisionGraph.NodeKind.values())
+                .filter(kind -> !kind.isConditionalBranch() || branchUnlocked())
+                .filter(kind -> {
             if (query.isEmpty()) return kind.group() == selectedGroup;
             var label = nodeLabel(kind).getString().toLowerCase(Locale.ROOT);
             var description = Component.translatable(nodeDescriptionKey(kind)).getString().toLowerCase(Locale.ROOT);
@@ -1217,12 +1275,19 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private List<PrecisionGraph.NodeKind> compatibleKinds(Endpoint anchor) {
         return java.util.Arrays.stream(PrecisionGraph.NodeKind.values())
+                .filter(kind -> !kind.isConditionalBranch() || branchUnlocked())
                 .filter(kind -> anchor.input
                         ? kind.outputDefinitions().stream().anyMatch(port ->
                         PrecisionGraph.isPortCompatible(port.type(), anchor.type))
                         : kind.inputDefinitions().stream().anyMatch(port ->
                         PrecisionGraph.isPortCompatible(anchor.type, port.type())))
                 .toList();
+    }
+
+    private boolean branchUnlocked() {
+        return ProficiencyPolicy.client().enabled()
+                && AbilitySystemClient.getSkillProficiencyMilestone(
+                Skills.PRECISION_OPERATION.get()) >= 3;
     }
 
     private Endpoint firstCompatibleEndpoint(PrecisionGraph.Node node, Endpoint anchor) {
@@ -1412,21 +1477,24 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private void updateSearchBounds() {
         if (search == null) return;
         search.visible = paletteVisible();
+        if (!search.visible) search.setFocused(false);
         search.setX(paletteX() + 4);
-        search.setY(panelY + TOP_H + 25);
+        search.setY(canvasY + PALETTE_SEARCH_OFFSET_Y);
         search.setWidth(paletteWidth() - 8);
     }
 
-    private void syncDurationInput() {
-        if (durationInput == null) return;
+    private void syncParameterInput() {
+        if (parameterInput == null) return;
         var selected = node(selectedNode);
         var visible = inspectorVisible() && selected != null
-                && selected.kind().parameterKind() == PrecisionGraph.ParameterKind.DURATION_SECONDS;
-        durationInput.visible = visible;
+                && (selected.kind().parameterKind() == PrecisionGraph.ParameterKind.DURATION_SECONDS
+                || selected.kind().parameterKind() == PrecisionGraph.ParameterKind.RANGE);
+        parameterInput.visible = visible;
         if (!visible) {
-            durationInputNode = -1;
-            durationInputValid = true;
-            durationInput.setTextColor(TEXT);
+            parameterInput.setFocused(false);
+            parameterInputNode = -1;
+            parameterInputValid = true;
+            parameterInput.setTextColor(TEXT);
             return;
         }
 
@@ -1435,36 +1503,47 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var description = Component.translatable(nodeDescriptionKey(selected.kind()));
         var descriptionHeight = (int) Math.ceil(font.wordWrapHeight(
                 description, (int) (width / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
-        var parameterY = canvasY + Math.min(92, Math.max(58, descriptionHeight + 40));
-        durationInput.setX(x);
-        durationInput.setY(parameterY + 11);
-        durationInput.setWidth(width);
+        var parameterY = canvasY + Math.max(58, descriptionHeight + 40);
+        parameterInput.setX(x);
+        parameterInput.setY(parameterY + 11);
+        parameterInput.setWidth(width);
 
-        var expected = selected.parameter() == 0.0 ? "" : Long.toString(Math.round(selected.parameter()));
-        if (durationInputNode != selected.id() || !durationInput.isFocused()
-                && !durationInput.getValue().equals(expected)) {
-            updatingDurationInput = true;
-            durationInput.setValue(expected);
-            updatingDurationInput = false;
-            durationInputNode = selected.id();
-            durationInputValid = true;
-            durationInput.setTextColor(TEXT);
+        var duration = selected.kind().parameterKind() == PrecisionGraph.ParameterKind.DURATION_SECONDS;
+        parameterInput.setHint(Component.translatable(duration
+                ? "screen.academy.precision_operation.value.permanent"
+                : "screen.academy.precision_operation.value.default_range"));
+        var defaultValue = duration ? 0.0 : 32.0;
+        var expected = selected.parameter() == defaultValue
+                ? ""
+                : Long.toString(Math.round(selected.parameter()));
+        if (parameterInputNode != selected.id() || !parameterInput.isFocused()
+                && !parameterInput.getValue().equals(expected)) {
+            updatingParameterInput = true;
+            parameterInput.setValue(expected);
+            updatingParameterInput = false;
+            parameterInputNode = selected.id();
+            parameterInputValid = true;
+            parameterInput.setTextColor(TEXT);
         }
     }
 
-    private void durationInputChanged(String value) {
-        if (updatingDurationInput) return;
-        var selected = node(durationInputNode);
-        if (selected == null
-                || selected.kind().parameterKind() != PrecisionGraph.ParameterKind.DURATION_SECONDS) return;
-        var parsed = parseDurationSeconds(value);
+    private void parameterInputChanged(String value) {
+        if (updatingParameterInput) return;
+        var selected = node(parameterInputNode);
+        if (selected == null) return;
+        var kind = selected.kind().parameterKind();
+        if (kind != PrecisionGraph.ParameterKind.DURATION_SECONDS
+                && kind != PrecisionGraph.ParameterKind.RANGE) return;
+        var parsed = kind == PrecisionGraph.ParameterKind.DURATION_SECONDS
+                ? parseDurationSeconds(value)
+                : parseRange(value);
         var valid = parsed.isPresent();
-        durationInputValid = valid;
-        durationInput.setTextColor(valid ? TEXT : ERROR);
+        parameterInputValid = valid;
+        parameterInput.setTextColor(valid ? TEXT : ERROR);
         if (valid && selected.parameter() != parsed.getAsInt()) setParameter(selected, parsed.getAsInt());
     }
 
-    static boolean isDurationInsertionAllowed(String input) {
+    static boolean isNumericInsertionAllowed(String input) {
         return input.chars().allMatch(Character::isDigit);
     }
 
@@ -1473,6 +1552,16 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         try {
             var parsed = Integer.parseInt(value);
             return parsed >= 1 && parsed <= 3600 ? OptionalInt.of(parsed) : OptionalInt.empty();
+        } catch (NumberFormatException ignored) {
+            return OptionalInt.empty();
+        }
+    }
+
+    static OptionalInt parseRange(String value) {
+        if (value.isEmpty()) return OptionalInt.of(32);
+        try {
+            var parsed = Integer.parseInt(value);
+            return parsed >= 1 && parsed <= 32 ? OptionalInt.of(parsed) : OptionalInt.empty();
         } catch (NumberFormatException ignored) {
             return OptionalInt.empty();
         }
@@ -1487,6 +1576,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             case DURATION_SECONDS -> node.parameter() == 0.0
                     ? Component.translatable("screen.academy.precision_operation.value.permanent").getString()
                     : Math.round(node.parameter()) + " s";
+            case OFFSET_DISTANCE -> Math.round(node.parameter()) + " m";
             case SORT_DIRECTION -> Component.translatable(node.parameter() == 0.0
                     ? "screen.academy.precision_operation.value.near_first"
                     : "screen.academy.precision_operation.value.far_first").getString();
@@ -1624,6 +1714,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             case ENTITY_SET -> 0xFF75D7A7;
             case DESTINATION -> 0xFF72B9E8;
             case FLOW -> 0xFFDB82E8;
+            case DIRECTION -> 0xFFFF8BCB;
         };
     }
 

@@ -481,6 +481,10 @@ public final class AbilitySystemClient {
         return data == null ? 0.0f : data.getProficiency();
     }
 
+    public static int getSkillProficiencyMilestone(Skill skill) {
+        return SkillData.getReachedProficiencyThresholds(getSkillProficiency(skill));
+    }
+
     public static int getSkillLevel(Skill skill) {
         return skill.getLevelForProficiency(getSkillProficiency(skill));
     }

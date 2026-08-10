@@ -24,6 +24,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.electromaster.skills.lv1.PulseCharge;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.util.EnergyChargeHelper;
@@ -130,6 +131,19 @@ public final class CurrentSymbiosis extends Skill {
         public static void handle(TogglePacket packet) {
             Skills.CURRENT_SYMBIOSIS.get().toggle(packet.getPacketListener().getPlayer());
         }
+
+        public static float adjustNextCastCost(ServerPlayer player, Skill castSkill, float amount) {
+            if (player == null || castSkill == null || castSkill.getCategory() != AbilityCategories.ELECTROMASTER.get()) {
+                return amount;
+            }
+            var sourceSkill = Skills.CURRENT_SYMBIOSIS.get();
+            var now = player.level().getGameTime();
+            if (TimedSkillEffectRuntime.consume(player.getUUID(), player.getUUID(), sourceSkill,
+                    "overcharge", now).isEmpty()) return amount;
+            TimedSkillEffectRuntime.put(player, player.getUUID(), sourceSkill,
+                    "overcharge_cooldown", 100, 1.0f);
+            return amount * 0.8f;
+        }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -148,7 +162,7 @@ public final class CurrentSymbiosis extends Skill {
             var uuid = player.getUUID();
             if (!system.ensurePermanentOccupation(
                     uuid,
-                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill.getMaintenanceCost(player),
                     skill
             )) {
                 system.toggleSkill(uuid, skill.getKeyString());
@@ -156,6 +170,18 @@ public final class CurrentSymbiosis extends Skill {
             }
             if (player.level().getGameTime() % CHARGE_INTERVAL_TICKS == 0) {
                 EnergyChargeHelper.chargeEquipment(player);
+                var milestone = skill.getEffectiveProficiencyMilestone(player);
+                if (milestone >= 2) EnergyChargeHelper.chargeHotbar(player);
+                if (milestone >= 3 && EnergyChargeHelper.hasFullyChargedEquipment(player, true)) {
+                    var now = player.level().getGameTime();
+                    if (TimedSkillEffectRuntime.get(player.getUUID(), player.getUUID(), skill,
+                            "overcharge", now).isEmpty()
+                            && TimedSkillEffectRuntime.get(player.getUUID(), player.getUUID(), skill,
+                            "overcharge_cooldown", now).isEmpty()) {
+                        TimedSkillEffectRuntime.put(player, player.getUUID(), skill,
+                                "overcharge", 72_000, 1.0f);
+                    }
+                }
             }
         }
     }

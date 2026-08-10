@@ -31,6 +31,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -210,7 +211,8 @@ public class DirStrike extends Skill {
             skill.executeActive(player, (ctx, actualCost) -> {
                 var level = player.level();
                 var playerPos = player.blockPosition();
-                var radius = airborne ? ATTACK_RADIUS + AIRBORNE_RADIUS_BONUS : ATTACK_RADIUS;
+                var baseRadius = skill.hasProficiencyMilestone(player, 2) ? 14 : ATTACK_RADIUS;
+                var radius = airborne ? baseRadius + AIRBORNE_RADIUS_BONUS : baseRadius;
                 var look = horizontalLook(player);
                 level.playSound(null, playerPos, SoundEvents.DIR_STRIKE.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
@@ -250,8 +252,16 @@ public class DirStrike extends Skill {
                 for (var target : targets) {
                     target.hurtServer(level, source, damage);
                     var velocity = target.getDeltaMovement();
-                    target.setDeltaMovement(velocity.x, 0.5, velocity.z);
+                    var centerTarget = skill.hasProficiencyMilestone(player, 3)
+                            && target.distanceToSqr(center) <= 16.0;
+                    target.setDeltaMovement(velocity.x, centerTarget ? -0.35 : 0.5, velocity.z);
                     target.hurtMarked = true;
+                    if (centerTarget) {
+                        TimedSkillEffectRuntime.schedule(player, 6, () -> {
+                            if (!target.isAlive() || target.level() != level) return;
+                            target.hurtServer(level, source, damage * 0.4f);
+                        });
+                    }
                 }
             });
         }

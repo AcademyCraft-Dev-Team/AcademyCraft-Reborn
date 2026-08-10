@@ -64,24 +64,24 @@ public class Disarm extends Skill {
         );
     }
 
-    private static void disarmTarget(LivingEntity target) {
+    private static ItemEntity disarmTarget(LivingEntity target, boolean delayedPickup) {
         var level = target.level();
         var rng = new Random();
 
         // Priority 1: offhand
         var offHand = target.getOffhandItem();
         if (!offHand.isEmpty()) {
-            dropItem(level, target, offHand, rng);
+            var dropped = dropItem(level, target, offHand, rng, delayedPickup);
             target.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
-            return;
+            return dropped;
         }
 
         // Priority 2: main hand
         var mainHand = target.getMainHandItem();
         if (!mainHand.isEmpty()) {
-            dropItem(level, target, mainHand, rng);
+            var dropped = dropItem(level, target, mainHand, rng, delayedPickup);
             target.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-            return;
+            return dropped;
         }
 
         // Priority 3: armor (random piece)
@@ -92,9 +92,9 @@ public class Disarm extends Skill {
         }
         if (!armorItems.isEmpty()) {
             var slot = armorItems.get(rng.nextInt(armorItems.size()));
-            dropItem(level, target, target.getItemBySlot(slot), rng);
+            var dropped = dropItem(level, target, target.getItemBySlot(slot), rng, delayedPickup);
             target.setItemSlot(slot, ItemStack.EMPTY);
-            return;
+            return dropped;
         }
 
         // Priority 4: hotbar and inventory (Player only)
@@ -103,27 +103,31 @@ public class Disarm extends Skill {
             for (var i = 0; i < 9; i++) {
                 var stack = inv.getItem(i);
                 if (!stack.isEmpty()) {
-                    dropItem(level, target, stack, rng);
+                    var dropped = dropItem(level, target, stack, rng, delayedPickup);
                     inv.setItem(i, ItemStack.EMPTY);
-                    return;
+                    return dropped;
                 }
             }
             for (var i = 9; i < inv.getContainerSize(); i++) {
                 var stack = inv.getItem(i);
                 if (!stack.isEmpty()) {
-                    dropItem(level, target, stack, rng);
+                    var dropped = dropItem(level, target, stack, rng, delayedPickup);
                     inv.setItem(i, ItemStack.EMPTY);
-                    return;
+                    return dropped;
                 }
             }
         }
+        return null;
     }
 
-    private static void dropItem(Level level, LivingEntity target, ItemStack stack, Random rng) {
+    private static ItemEntity dropItem(Level level, LivingEntity target, ItemStack stack, Random rng,
+                                       boolean delayedPickup) {
         var item = new ItemEntity(level, target.getX(), target.getY() + 1, target.getZ(), stack.copy());
         level.addFreshEntity(item);
+        if (delayedPickup) item.setPickUpDelay(100);
         item.setDeltaMovement(new Vec3(
                 rng.nextDouble() * 4 - 2, rng.nextDouble() * 2, rng.nextDouble() * 4 - 2));
+        return item;
     }
 
     @Override
@@ -189,7 +193,9 @@ public class Disarm extends Skill {
                     return;
                 }
                 var minecraft = Minecraft.getInstance();
-                var target = TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
+                var range = AbilitySystemClient.getSkillProficiencyMilestone(Skills.DISARM.get()) >= 2
+                        ? 20.0 : MAX_RANGE;
+                var target = TeleportTargeting.findFirstLivingEntity(player, range);
                 AABB preview;
                 if (target != null) {
                     targetEntityId = target.getId();
@@ -197,7 +203,7 @@ public class Disarm extends Skill {
                 } else {
                     targetEntityId = -1;
                     var point = player.getEyePosition(event.getPartialTick())
-                            .add(player.getViewVector(event.getPartialTick()).scale(MAX_RANGE));
+                            .add(player.getViewVector(event.getPartialTick()).scale(range));
                     preview = new AABB(point.x - 0.5, point.y - 0.5, point.z - 0.5,
                             point.x + 0.5, point.y + 0.5, point.z + 0.5);
                 }
@@ -246,14 +252,19 @@ public class Disarm extends Skill {
         @SubscribePacket
         public static void handle(UsePacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var skill = Skills.DISARM.get();
+            var range = skill.hasProficiencyMilestone(player, 2) ? 20.0 : MAX_RANGE;
             if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
                     || target == player || !target.isAlive()
                     || CtaFriendlyFireWhitelist.shouldProtect(player, target)
-                    || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
-            Skills.DISARM.get().executeActive(player, (ctx, actualCost) -> {
+                    || player.distanceToSqr(target) > range * range) return;
+            var canTakeSecond = skill.hasProficiencyMilestone(player, 2)
+                    && !target.getOffhandItem().isEmpty() && !target.getMainHandItem().isEmpty();
+            skill.executeActive(player, ctx -> canTakeSecond ? 60.0f : 40.0f, (ctx, actualCost) -> {
                 if (!target.isAlive() || target.level() != player.level()
-                        || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
-                disarmTarget(target);
+                        || player.distanceToSqr(target) > range * range) return;
+                disarmTarget(target, ctx.milestone() >= 3);
+                if (canTakeSecond) disarmTarget(target, ctx.milestone() >= 3);
                 target.hurtServer(
                         player.level(),
                         SkillDamageSource.of(player, Skills.DISARM.get()),

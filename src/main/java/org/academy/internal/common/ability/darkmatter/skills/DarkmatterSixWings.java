@@ -22,6 +22,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -134,6 +135,19 @@ public final class DarkmatterSixWings extends Skill {
                     && player.getData(AttachmentTypes.DARKMATTER_SIX_WINGS.get());
         }
 
+        public static float adjustCategoryCost(ServerPlayer player, Skill skill,
+                                               float baseCost, float adjustedCost) {
+            if (player == null || skill == null || !Float.isFinite(baseCost)
+                    || !Float.isFinite(adjustedCost) || baseCost < 0.0f || adjustedCost < 0.0f
+                    || skill == Skills.DARKMATTER_SIX_WINGS.get()
+                    || skill.getCategory() != AbilityCategories.DARKMATTER.get()
+                    || !isActive(player)
+                    || !Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(player, 3)) {
+                return adjustedCost;
+            }
+            return Math.max(baseCost * 0.75f, adjustedCost * 0.9f);
+        }
+
         private static void sync(ServerPlayer player) {
             var active = Skills.DARKMATTER_SIX_WINGS.get().isEnabled(player)
                     && player.isAlive() && !player.hasDisconnected();
@@ -143,6 +157,13 @@ public final class DarkmatterSixWings extends Skill {
                 player.syncData(type);
             }
             SkillFlightController.setSource(player, FLIGHT_SOURCE, active);
+            var flightSpeed = active
+                    && Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(player, 2)
+                    ? 0.0575f : 0.05f;
+            if (Math.abs(player.getAbilities().getFlyingSpeed() - flightSpeed) > 1.0e-5f) {
+                player.getAbilities().setFlyingSpeed(flightSpeed);
+                player.onUpdateAbilities();
+            }
             PlayerAttributeRuntime.syncTrueResistanceModifier(
                     player,
                     TRUE_RESISTANCE_MODIFIER_ID,
@@ -156,7 +177,8 @@ public final class DarkmatterSixWings extends Skill {
             var active = skill.isEnabled(player) && player.isAlive() && !player.hasDisconnected();
             if (active) {
                 active = AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
-                        player.getUUID(), RESERVED_CP, skill);
+                        player.getUUID(), skill.adjustProficiencyCost(
+                                player, SkillProficiencyProfile.CostKind.MAINTENANCE, RESERVED_CP), skill);
                 if (!active && skill.isEnabled(player)) skill.toggle(player);
             }
             sync(player);

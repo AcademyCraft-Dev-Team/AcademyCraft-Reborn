@@ -186,6 +186,9 @@ public final class WhiteWing extends Skill {
         private static void tick(ServerPlayer player) {
             WingFlightSupport.tick(player, Skills.WHITE_WING.get(),
                     AttachmentTypes.ACTIVATED_WHITE_WING.get(), LAST_BOOST_TICK);
+            if (isActive(player)) {
+                WingFlightSupport.deflectFrontalProjectile(player, Skills.WHITE_WING.get());
+            }
         }
     }
 

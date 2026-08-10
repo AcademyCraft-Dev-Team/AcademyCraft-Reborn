@@ -59,14 +59,20 @@ public final class MentalIntrusionClientState {
         restoreCamera(false);
     }
 
-    public static void applyFilter(UUID hiddenUuid, int entityId, boolean active, long filterRevision) {
+    public static void applyFilter(
+            UUID hiddenUuid,
+            int entityId,
+            boolean active,
+            boolean suppressAmbient,
+            long filterRevision
+    ) {
         var minecraft = Minecraft.getInstance();
         synchronizeLevel(minecraft);
         if (minecraft.level == null || minecraft.player == null) return;
         if (filterRevision <= FILTER_REVISIONS.getOrDefault(hiddenUuid, Long.MIN_VALUE)) return;
         FILTER_REVISIONS.put(hiddenUuid, filterRevision);
         if (active) {
-            FILTERS.put(hiddenUuid, new FilterState(entityId, filterRevision));
+            FILTERS.put(hiddenUuid, new FilterState(entityId, filterRevision, suppressAmbient));
         } else {
             FILTERS.remove(hiddenUuid);
         }
@@ -89,6 +95,24 @@ public final class MentalIntrusionClientState {
 
     public static boolean hasFilters() {
         return !FILTERS.isEmpty();
+    }
+
+    public static boolean shouldSuppressAmbientAt(
+            double x,
+            double y,
+            double z,
+            double radius
+    ) {
+        var minecraft = Minecraft.getInstance();
+        synchronizeLevel(minecraft);
+        if (minecraft.level == null || radius < 0.0) return false;
+        var radiusSquared = radius * radius;
+        for (var state : FILTERS.values()) {
+            if (!state.suppressAmbient) continue;
+            var entity = minecraft.level.getEntity(state.entityId);
+            if (entity != null && entity.distanceToSqr(x, y, z) <= radiusSquared) return true;
+        }
+        return false;
     }
 
     public static void tick() {
@@ -163,6 +187,6 @@ public final class MentalIntrusionClientState {
         );
     }
 
-    private record FilterState(int entityId, long revision) {
+    private record FilterState(int entityId, long revision, boolean suppressAmbient) {
     }
 }

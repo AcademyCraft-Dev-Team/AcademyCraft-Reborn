@@ -8,6 +8,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -169,11 +170,22 @@ public class Shackle extends Skill {
                         || !canShackle(player, target)
                         || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
                 target.stopRiding();
-                EntityMotionGuard.imprison(
-                        target,
-                        "shackle:" + player.getStringUUID(),
-                        SHACKLE_DURATION
-                );
+                var duration = ctx.milestone() >= 2 && !(target instanceof Player) ? 130 : SHACKLE_DURATION;
+                var sourceId = "shackle:" + player.getStringUUID();
+                if (ctx.milestone() >= 3) {
+                    EntityMotionGuard.imprison(target, sourceId, duration, 2.0, displaced -> {
+                        if (displaced.isAlive() && player.isAlive()
+                                && displaced.level() == player.level()) {
+                            displaced.hurtServer(
+                                    player.level(),
+                                    SkillDamageSource.of(player, Skills.SHACKLE.get()),
+                                    1.2f
+                            );
+                        }
+                    });
+                } else {
+                    EntityMotionGuard.imprison(target, sourceId, duration);
+                }
                 target.hurtServer(
                         player.level(),
                         SkillDamageSource.of(player, Skills.SHACKLE.get()),

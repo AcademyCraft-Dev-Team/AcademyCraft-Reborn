@@ -38,6 +38,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
@@ -207,7 +208,8 @@ public class BloodflowReverse extends Skill {
                 var currentStacks = getBloodflowStacks(target);
                 var newStacks = currentStacks + 1;
                 var amplifier = Math.min(newStacks - 1, 4);
-                var duration = 200;
+                var skill = Skills.BLOODFLOW_REVERSE.get();
+                var duration = skill.hasProficiencyMilestone(player, 2) ? 250 : 200;
 
                 var multiplier = AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
@@ -232,6 +234,14 @@ public class BloodflowReverse extends Skill {
                         SoundEvents.BLOODFLOW_REVERSE.get(), SoundSource.AMBIENT, 1.0f, 1.0f);
 
                 setBloodflowStacks(target, newStacks);
+                if (skill.hasProficiencyMilestone(player, 3)) {
+                    var reduction = target instanceof net.minecraft.world.entity.player.Player
+                            || org.academy.internal.common.ability.aeromanip.AeromanipTargeting.isBoss(target)
+                            ? 0.25f
+                            : 0.5f;
+                    TimedSkillEffectRuntime.put(
+                            player, target.getUUID(), skill, "healing_reduction", 200, reduction);
+                }
             });
         }
 
@@ -278,6 +288,7 @@ public class BloodflowReverse extends Skill {
             if (direction.lengthSqr() < 1.0e-6) return null;
             var reach = player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
             var range = RANGE_BONUS + (reach == null ? 0.0 : Math.max(0.0, reach.getValue()));
+            if (Skills.BLOODFLOW_REVERSE.get().hasProficiencyMilestone(player, 2)) range += 4.0;
             var end = eyePosition.add(direction.scale(range));
             var searchBox = new AABB(eyePosition, end)
                     .inflate(SEARCH_HALF_WIDTH, SEARCH_HALF_HEIGHT, SEARCH_HALF_WIDTH);
@@ -319,6 +330,23 @@ public class BloodflowReverse extends Skill {
         private static void setBloodflowStacks(LivingEntity entity, int stacks) {
             var data = entity.getPersistentData();
             data.putInt(EFFECT_KEY, stacks);
+        }
+
+        public static float adjustHealing(LivingEntity entity, float amount) {
+            if (entity == null || !(amount > 0.0f) || entity.level().isClientSide()) return amount;
+            var reduction = TimedSkillEffectRuntime.maxValueForTarget(
+                    entity.getUUID(),
+                    Skills.BLOODFLOW_REVERSE.get(),
+                    "healing_reduction",
+                    entity.level().getGameTime()
+            );
+            reduction = Math.max(reduction, TimedSkillEffectRuntime.maxValueForTarget(
+                    entity.getUUID(),
+                    Skills.CROSSING_THE_ABYSS.get(),
+                    "healing_reduction",
+                    entity.level().getGameTime()
+            ));
+            return amount * (1.0f - Math.clamp(reduction, 0.0f, 1.0f));
         }
     }
 

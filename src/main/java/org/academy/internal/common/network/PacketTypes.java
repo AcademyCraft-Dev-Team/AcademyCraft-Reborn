@@ -14,6 +14,8 @@ import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
 import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrikeVisualPacket;
@@ -117,6 +119,14 @@ public final class PacketTypes {
     /**
      * Sync
      */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ProficiencyPolicy.SyncPacket>>
+            PROFICIENCY_POLICY_SYNC = PACKET_TYPES.register("proficiency_policy_sync",
+            () -> new PacketType<>(ProficiencyPolicy.SyncPacket.class, ProficiencyPolicy.SyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ProficiencySkillSettings.SetPacket>>
+            PROFICIENCY_SKILL_OPTION_SET = PACKET_TYPES.register("proficiency_skill_option_set",
+            () -> new PacketType<>(ProficiencySkillSettings.SetPacket.class, ProficiencySkillSettings.SetPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ?>>
             SYNC_DATA = PACKET_TYPES.register("sync_data",
             () -> new PacketType<>(SyncDataPacket.class, UncheckedUtil.uncheckedCast(SyncDataPacket.CODEC)));
@@ -675,6 +685,10 @@ public final class PacketTypes {
             MENTAL_TAKEOVER_INTENT = PACKET_TYPES.register("mental_takeover_intent",
             () -> new PacketType<>(PlayerControlSessionManager.IntentPacket.class,
                     PlayerControlSessionManager.IntentPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.InventoryActionPacket>>
+            MENTAL_TAKEOVER_INVENTORY_ACTION = PACKET_TYPES.register("mental_takeover_inventory_action",
+            () -> new PacketType<>(PlayerControlSessionManager.InventoryActionPacket.class,
+                    PlayerControlSessionManager.InventoryActionPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.StrugglePacket>>
             MENTAL_TAKEOVER_STRUGGLE = PACKET_TYPES.register("mental_takeover_struggle",
             () -> new PacketType<>(PlayerControlSessionManager.StrugglePacket.class,

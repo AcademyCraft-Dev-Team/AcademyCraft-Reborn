@@ -197,7 +197,12 @@ public final class AtmosphereBlastGun extends Skill {
 
                 var length = (focused ? 20.0 : LENGTH)
                         * AeromanipConfig.rangeMultiplier(player, SkillNames.ATMOSPHERE_BLAST_GUN);
+                if (context.milestone() >= 2) {
+                    length = focused ? length * 1.25 : 10.0
+                            * AeromanipConfig.rangeMultiplier(player, SkillNames.ATMOSPHERE_BLAST_GUN);
+                }
                 var width = focused ? 0.5 : HALF_WIDTH;
+                var resolvedLength = length;
                 var damageBase = (focused ? 10.0f : 6.0f)
                         * AeromanipConfig.damageMultiplier(player, SkillNames.ATMOSPHERE_BLAST_GUN);
                 var searchBox = new AABB(eye, eye).inflate(length);
@@ -216,7 +221,7 @@ public final class AtmosphereBlastGun extends Skill {
                                 look,
                                 target.getBoundingBox().getCenter(),
                                 target.getBbWidth() * 0.5,
-                                length,
+                                resolvedLength,
                                 width
                         )
                 );
@@ -234,7 +239,30 @@ public final class AtmosphereBlastGun extends Skill {
                         applyKnockback(target, direction, source, damage);
                     }
                 }
+                if (focused && context.milestone() >= 3 && !targets.isEmpty()) {
+                    var first = targets.stream().min(java.util.Comparator.comparingDouble(target ->
+                            target.getBoundingBox().getCenter().subtract(eye).dot(direction))).orElse(null);
+                    if (first != null) applyFocusedAftershock(player, level, first, targets, direction,
+                            source, damage * 0.4f);
+                }
             });
+        }
+
+        private static void applyFocusedAftershock(ServerPlayer owner, ServerLevel level, LivingEntity first,
+                                                   List<? extends LivingEntity> primaryTargets, Vec3 direction,
+                                                   DamageSource source, float damage) {
+            var start = first.getBoundingBox().getCenter().add(direction.scale(first.getBbWidth() * 0.5));
+            var box = new AABB(start, start.add(direction.scale(4.0))).inflate(3.0);
+            for (var target : level.getEntitiesOfClass(LivingEntity.class, box,
+                    target -> target != owner && target != first && target.isAlive()
+                            && AeromanipTargeting.canAffectNegatively(owner, target))) {
+                var relative = target.getBoundingBox().getCenter().subtract(start);
+                var forward = relative.dot(direction);
+                if (forward < 0.0 || forward > 4.0) continue;
+                var allowed = 0.5 + forward * 0.5;
+                if (relative.subtract(direction.scale(forward)).lengthSqr() > allowed * allowed) continue;
+                if (target.hurtServer(level, source, damage)) applyKnockback(target, direction, source, damage);
+            }
         }
 
         private static void applyKnockback(

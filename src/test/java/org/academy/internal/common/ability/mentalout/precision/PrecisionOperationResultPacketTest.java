@@ -12,7 +12,7 @@ class PrecisionOperationResultPacketTest {
                 2,
                 PrecisionOperationManager.FeedbackType.ERROR,
                 41L,
-                PrecisionGraph.Diagnostic.UNREACHABLE_DESTINATION,
+                PrecisionGraph.Diagnostic.CLIENT_TIMEOUT,
                 17,
                 1,
                 3
@@ -25,7 +25,7 @@ class PrecisionOperationResultPacketTest {
         assertEquals(2, decoded.slot());
         assertEquals(PrecisionOperationManager.FeedbackType.ERROR, decoded.type());
         assertEquals(41L, decoded.revision());
-        assertEquals(PrecisionGraph.Diagnostic.UNREACHABLE_DESTINATION, decoded.diagnostic());
+        assertEquals(PrecisionGraph.Diagnostic.CLIENT_TIMEOUT, decoded.diagnostic());
         assertEquals(17, decoded.nodeId());
         assertEquals(1, decoded.port());
         assertEquals(3, decoded.affectedCount());

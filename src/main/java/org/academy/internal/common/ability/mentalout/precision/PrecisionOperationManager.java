@@ -168,6 +168,16 @@ public final class PrecisionOperationManager {
                         decoded.diagnostic(), -1, -1, 0);
                 return;
             }
+            var lockedBranch = decoded.graph().nodes().stream()
+                    .filter(node -> node.kind().isConditionalBranch())
+                    .findFirst().orElse(null);
+            if (lockedBranch != null
+                    && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3)) {
+                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
+                        PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED,
+                        lockedBranch.id(), -1, 0);
+                return;
+            }
             var compiled = CompiledPrecisionProgram.compile(decoded.graph());
             if (!decoded.graph().nodes().isEmpty() && !compiled.valid()) {
                 result(player, packet.slot, FeedbackType.ERROR, data.revision(),
@@ -204,6 +214,17 @@ public final class PrecisionOperationManager {
                         compiled.port(),
                         0
                 );
+                return;
+            }
+            var lockedBranch = compiled.program().graph().nodes().stream()
+                    .filter(node -> node.kind().isConditionalBranch())
+                    .findFirst().orElse(null);
+            if (lockedBranch != null
+                    && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3)) {
+                result(player, packet.slot, FeedbackType.ERROR,
+                        getOrCreateData(player).revision(),
+                        PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED,
+                        lockedBranch.id(), -1, 0);
                 return;
             }
             var execution = PrecisionOperationRuntime.execute(player, packet.slot, compiled.program());

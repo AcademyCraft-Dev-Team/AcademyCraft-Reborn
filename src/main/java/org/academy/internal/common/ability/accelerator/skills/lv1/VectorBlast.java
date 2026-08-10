@@ -153,12 +153,16 @@ public final class VectorBlast extends Skill {
     }
 
     static boolean isInsideBeam(Vec3 origin, Vec3 direction, Vec3 target, double length) {
+        return isInsideBeam(origin, direction, target, length, BEAM_RADIUS);
+    }
+
+    static boolean isInsideBeam(Vec3 origin, Vec3 direction, Vec3 target, double length, double radius) {
         if (direction.lengthSqr() <= 1.0e-6 || length <= 0.0) return false;
         var normalized = direction.normalize();
         var relative = target.subtract(origin);
         var forward = relative.dot(normalized);
         if (forward <= 0.0 || forward >= length) return false;
-        return relative.subtract(normalized.scale(forward)).lengthSqr() <= BEAM_RADIUS * BEAM_RADIUS;
+        return relative.subtract(normalized.scale(forward)).lengthSqr() <= radius * radius;
     }
 
     public static final class Client {
@@ -311,15 +315,18 @@ public final class VectorBlast extends Skill {
         }
 
         private static void fire(ServerPlayer player, ServerLevel level) {
+            var skill = Skills.VECTOR_BLAST.get();
             var origin = player.getEyePosition();
             var direction = player.getLookAngle();
             if (direction.lengthSqr() <= 1.0e-6) return;
             direction = direction.normalize();
-            var end = origin.add(direction.scale(RANGE));
+            var range = skill.hasProficiencyMilestone(player, 2) ? 72.0 : RANGE;
+            var beamRadius = skill.hasProficiencyMilestone(player, 2) ? BEAM_RADIUS * 1.2 : BEAM_RADIUS;
+            var end = origin.add(direction.scale(range));
 
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0f, 1.0f);
-            for (var index = 1; index <= (int) RANGE; index++) {
+            for (var index = 1; index <= (int) range; index++) {
                 var point = origin.add(direction.scale(index));
                 level.sendParticles(ParticleTypes.VECTOR_BLAST.get(),
                         point.x, point.y, point.z, 1, 0, 0, 0, 0);
@@ -331,14 +338,24 @@ public final class VectorBlast extends Skill {
                     * system.getPlayerDamageMultiplier(player.getUUID());
             var source = SkillDamageSource.of(
                     player,
-                    Skills.VECTOR_BLAST.get(),
+                    skill,
                     org.academy.internal.common.world.damagesource.DamageTypes.VEC
             );
-            var search = new AABB(origin, end).inflate(BEAM_RADIUS);
+            var search = new AABB(origin, end).inflate(beamRadius);
             for (var target : level.getEntitiesOfClass(
                     LivingEntity.class, search, entity -> entity != player && entity.isAlive())) {
-                if (isInsideBeam(origin, direction, target.getBoundingBox().getCenter(), RANGE)) {
+                if (isInsideBeam(origin, direction, target.getBoundingBox().getCenter(), range, beamRadius)) {
                     target.hurtServer(level, source, damage);
+                }
+            }
+
+            if (skill.hasProficiencyMilestone(player, 3)) {
+                var blastArea = new AABB(end, end).inflate(3.0);
+                for (var target : level.getEntitiesOfClass(
+                        LivingEntity.class,
+                        blastArea,
+                        entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity))) {
+                    target.hurtServer(level, source, damage * 0.4f);
                 }
             }
 

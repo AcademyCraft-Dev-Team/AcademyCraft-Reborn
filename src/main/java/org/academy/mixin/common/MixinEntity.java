@@ -31,7 +31,7 @@ import java.util.Set;
 public abstract class MixinEntity {
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     private void academy$guardMovement(MoverType moverType, Vec3 movement, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockMovement((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockMovement((Entity) (Object) this, movement)) ci.cancel();
     }
 
     @Inject(
@@ -60,7 +60,8 @@ public abstract class MixinEntity {
 
     @Inject(method = "setPos(DDD)V", at = @At("HEAD"), cancellable = true)
     private void academy$guardSetPosition(double x, double y, double z, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap(
+                (Entity) (Object) this, new Vec3(x, y, z))) ci.cancel();
     }
 
     @Inject(
@@ -69,17 +70,19 @@ public abstract class MixinEntity {
             cancellable = true
     )
     private void academy$guardSetVectorPosition(Vec3 position, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this, position)) ci.cancel();
     }
 
     @Inject(method = "setPosRaw(DDD)V", at = @At("HEAD"), cancellable = true)
     private void academy$guardRawPosition(double x, double y, double z, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap(
+                (Entity) (Object) this, new Vec3(x, y, z))) ci.cancel();
     }
 
     @Inject(method = "snapTo(DDD)V", at = @At("HEAD"), cancellable = true)
     private void academy$guardPositionSnap(double x, double y, double z, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap(
+                (Entity) (Object) this, new Vec3(x, y, z))) ci.cancel();
     }
 
     @Inject(
@@ -88,7 +91,7 @@ public abstract class MixinEntity {
             cancellable = true
     )
     private void academy$guardVectorPositionSnap(Vec3 position, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this, position)) ci.cancel();
     }
 
     @Inject(
@@ -99,7 +102,8 @@ public abstract class MixinEntity {
     private void academy$guardBlockPositionSnap(
             BlockPos position, float yRot, float xRot, CallbackInfo ci
     ) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap(
+                (Entity) (Object) this, Vec3.atBottomCenterOf(position))) ci.cancel();
     }
 
     @Inject(
@@ -110,26 +114,29 @@ public abstract class MixinEntity {
     private void academy$guardVectorPositionAndRotationSnap(
             Vec3 position, float yRot, float xRot, CallbackInfo ci
     ) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this, position)) ci.cancel();
     }
 
     @Inject(method = "snapTo(DDDFF)V", at = @At("HEAD"), cancellable = true)
     private void academy$guardPositionAndRotationSnap(
             double x, double y, double z, float yRot, float xRot, CallbackInfo ci
     ) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap(
+                (Entity) (Object) this, new Vec3(x, y, z))) ci.cancel();
     }
 
     @Inject(method = "absSnapTo(DDDFF)V", at = @At("HEAD"), cancellable = true)
     private void academy$guardAbsolutePositionAndRotation(
             double x, double y, double z, float yRot, float xRot, CallbackInfo ci
     ) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap(
+                (Entity) (Object) this, new Vec3(x, y, z))) ci.cancel();
     }
 
     @Inject(method = "absSnapTo(DDD)V", at = @At("HEAD"), cancellable = true)
     private void academy$guardAbsolutePosition(double x, double y, double z, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockPositionSnap((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockPositionSnap(
+                (Entity) (Object) this, new Vec3(x, y, z))) ci.cancel();
     }
 
     @Inject(method = "teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/world/entity/Entity;",
@@ -143,7 +150,8 @@ public abstract class MixinEntity {
 
     @Inject(method = "teleportTo(DDD)V", at = @At("HEAD"), cancellable = true)
     private void academy$guardSimpleTeleport(double x, double y, double z, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockTeleport((Entity) (Object) this)) ci.cancel();
+        if (EntityMotionGuard.shouldBlockTeleport(
+                (Entity) (Object) this, new Vec3(x, y, z))) ci.cancel();
     }
 
     @Inject(
@@ -162,12 +170,15 @@ public abstract class MixinEntity {
             boolean resetCamera,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        if (EntityMotionGuard.shouldBlockTeleport((Entity) (Object) this)) cir.setReturnValue(false);
+        if (EntityMotionGuard.shouldBlockTeleport(
+                (Entity) (Object) this, new Vec3(x, y, z))) cir.setReturnValue(false);
     }
 
     @Inject(method = "teleportRelative", at = @At("HEAD"), cancellable = true)
     private void academy$guardRelativeTeleport(double x, double y, double z, CallbackInfo ci) {
-        if (EntityMotionGuard.shouldBlockTeleport((Entity) (Object) this)) ci.cancel();
+        var entity = (Entity) (Object) this;
+        if (EntityMotionGuard.shouldBlockTeleport(
+                entity, entity.position().add(x, y, z))) ci.cancel();
     }
 
     @Inject(

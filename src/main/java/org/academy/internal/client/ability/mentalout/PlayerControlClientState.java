@@ -7,7 +7,10 @@ import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec2;
 import org.academy.api.common.entitycontrol.PlayerControlFrame;
 import org.academy.api.common.entitycontrol.PlayerMovementMode;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.mixin.client.ClientInputAccessor;
 import org.misaka.MisakaNetworkClient;
@@ -31,6 +34,8 @@ public final class PlayerControlClientState {
     private static boolean previousSneak;
     private static boolean previousAttack;
     private static boolean previousUse;
+    private static boolean previousOffhandAction;
+    private static int previousHotbarMask;
     private static boolean pendingAttack;
     private static boolean pendingUse;
     private static boolean pendingJump;
@@ -62,7 +67,7 @@ public final class PlayerControlClientState {
             return;
         }
         Entity target = null;
-        if (requestedRole == PlayerControlSessionManager.Role.SUBJECT) {
+        if (requestedRole != PlayerControlSessionManager.Role.CONTROLLER) {
             if (!minecraft.player.getUUID().equals(requestedSubjectUuid)) {
                 acknowledge(requestedSession, requestedRevision, false);
                 return;
@@ -92,6 +97,8 @@ public final class PlayerControlClientState {
         previousSneak = false;
         previousAttack = false;
         previousUse = false;
+        previousOffhandAction = false;
+        previousHotbarMask = 0;
         pendingAttack = false;
         pendingUse = false;
         pendingJump = false;
@@ -114,7 +121,7 @@ public final class PlayerControlClientState {
             PlayerControlFrame frame
     ) {
         if (!matches(requestedSession, requestedRevision)
-                || role != PlayerControlSessionManager.Role.SUBJECT
+                || !isInputSubject()
                 || sequence <= authorizedSequence) return;
         authorizedSequence = sequence;
         authorizedFrame = frame;
@@ -186,6 +193,14 @@ public final class PlayerControlClientState {
         return sessionId != null && role == PlayerControlSessionManager.Role.SUBJECT;
     }
 
+    public static boolean isSelfControlled() {
+        return sessionId != null && role == PlayerControlSessionManager.Role.SELF;
+    }
+
+    private static boolean isInputSubject() {
+        return isSubject() || isSelfControlled();
+    }
+
     public static boolean isController() {
         return sessionId != null && role == PlayerControlSessionManager.Role.CONTROLLER;
     }
@@ -197,7 +212,7 @@ public final class PlayerControlClientState {
      */
     public static boolean prepareAuthorizedFlight(LocalPlayer player) {
         if (player == null || player != Minecraft.getInstance().player
-                || !isSubject() || authorizedSequence < 0L
+                || !isInputSubject() || authorizedSequence < 0L
                 || authorizedFrame.mode() != PlayerMovementMode.FLY || !player.mayFly()) {
             return false;
         }
@@ -222,6 +237,10 @@ public final class PlayerControlClientState {
 
     /** Receives the same sensitivity/inversion-adjusted deltas vanilla would pass to Entity.turn. */
     public static boolean captureViewTurn(double yawDelta, double pitchDelta) {
+        if (isSelfControlled()) {
+            if (yawDelta != 0.0 || pitchDelta != 0.0) requestStop();
+            return false;
+        }
         if (!isController()) return false;
         virtualYaw = net.minecraft.util.Mth.wrapDegrees(virtualYaw + (float) yawDelta * 0.15f);
         virtualPitch = Math.clamp(virtualPitch + (float) pitchDelta * 0.15f, -90.0f, 90.0f);
@@ -229,6 +248,10 @@ public final class PlayerControlClientState {
     }
 
     public static boolean blocksWorldInteraction() {
+        if (isSelfControlled()) {
+            requestStop();
+            return false;
+        }
         return isActive();
     }
 
@@ -265,10 +288,10 @@ public final class PlayerControlClientState {
     /** Projects an authorized frame into the input object actually consumed by LocalPlayer physics. */
     public static void applyAuthorizedInput(LocalPlayer player) {
         if (sessionId == null || player != Minecraft.getInstance().player) return;
-        var frame = isSubject() ? authorizedFrame : PlayerControlFrame.NEUTRAL;
+        var frame = isInputSubject() ? authorizedFrame : PlayerControlFrame.NEUTRAL;
         player.input.keyPresses = inputForFrame(frame);
         ((ClientInputAccessor) player.input).academy$setMoveVector(moveVectorForFrame(frame));
-        if (!isSubject()) return;
+        if (!isInputSubject()) return;
 
         player.setYRot(frame.yaw());
         player.setXRot(frame.pitch());
@@ -301,6 +324,7 @@ public final class PlayerControlClientState {
 
     private static void captureController(Minecraft minecraft, long gameTick) {
         var options = minecraft.options;
+        captureInventoryActions(options);
         var forward = axis(raw(options.keyUp), raw(options.keyDown));
         var strafe = axis(raw(options.keyLeft), raw(options.keyRight));
         var jump = raw(options.keyJump);
@@ -333,14 +357,52 @@ public final class PlayerControlClientState {
         pendingSneak = false;
     }
 
+    private static void captureInventoryActions(net.minecraft.client.Options options) {
+        var hotbarMask = 0;
+        for (var slot = 0; slot < options.keyHotbarSlots.length; slot++) {
+            if (raw(options.keyHotbarSlots[slot])) hotbarMask |= 1 << slot;
+        }
+        var offhandDown = raw(options.keySwapOffhand);
+        if (AbilitySystemClient.getSkillProficiencyMilestone(
+                Skills.MENTAL_TAKEOVER.get()) >= 3
+                && ProficiencyPolicy.client().allowMentalTakeoverExtendedControls()) {
+            var newlyPressed = hotbarMask & ~previousHotbarMask;
+            if (newlyPressed != 0) {
+                var slot = Integer.numberOfTrailingZeros(newlyPressed);
+                MisakaNetworkClient.send(new PlayerControlSessionManager.InventoryActionPacket(
+                        sessionId,
+                        revision,
+                        clientSequence++,
+                        PlayerControlSessionManager.InventoryAction.SELECT_HOTBAR,
+                        slot
+                ));
+            }
+            if (offhandDown && !previousOffhandAction) {
+                MisakaNetworkClient.send(new PlayerControlSessionManager.InventoryActionPacket(
+                        sessionId,
+                        revision,
+                        clientSequence++,
+                        PlayerControlSessionManager.InventoryAction.USE_OFFHAND,
+                        0
+                ));
+            }
+        }
+        previousHotbarMask = hotbarMask;
+        previousOffhandAction = offhandDown;
+    }
+
     private static void captureStruggleAndInject(Minecraft minecraft, long gameTick) {
         var options = minecraft.options;
         var directionMask = directionMask(options);
         var jump = raw(options.keyJump);
         var sneak = raw(options.keyShift);
+        var attack = raw(options.keyAttack);
+        var use = raw(options.keyUse);
         var edgeMask = 0;
         if (jump && !previousJump) edgeMask |= 1;
         if (sneak && !previousSneak) edgeMask |= 2;
+        if (attack && !previousAttack) edgeMask |= 4;
+        if (use && !previousUse) edgeMask |= 8;
         if (directionMask != previousDirectionMask) {
             pendingDirectionChange = true;
             pendingDirectionMask = directionMask;
@@ -359,6 +421,8 @@ public final class PlayerControlClientState {
         previousDirectionMask = directionMask;
         previousJump = jump;
         previousSneak = sneak;
+        previousAttack = attack;
+        previousUse = use;
     }
 
     private static PlayerMovementMode movementMode(net.minecraft.client.player.LocalPlayer player) {

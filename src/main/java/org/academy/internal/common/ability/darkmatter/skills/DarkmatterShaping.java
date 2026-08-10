@@ -7,6 +7,11 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -22,6 +27,10 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.ProficiencySkillSettings;
+import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
@@ -117,7 +126,9 @@ public final class DarkmatterShaping extends Skill {
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.DARKMATTER_SHAPING.get();
-            skill.executeActive(player, (context, actualCost) -> {
+            var heldBeforeCast = player.getMainHandItem();
+            skill.executeActive(player, context -> context.milestone() >= 2 && !heldBeforeCast.isEmpty()
+                    ? 25.0f : 50.0f, (context, actualCost) -> {
                 var held = player.getMainHandItem();
                 if (held.isEmpty()) {
                     player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DARKMATTER.get()));
@@ -144,6 +155,42 @@ public final class DarkmatterShaping extends Skill {
                 player.inventoryMenu.broadcastChanges();
                 if (player.containerMenu != player.inventoryMenu) player.containerMenu.broadcastChanges();
             });
+        }
+
+        private static void tickAutoRepair(ServerPlayer player) {
+            if (player.tickCount % 20 != 0 || !player.isAlive() || player.hasDisconnected()) return;
+            var skill = Skills.DARKMATTER_SHAPING.get();
+            if (!skill.isEnabled(player) || !skill.hasProficiencyMilestone(player, 3)
+                    || !ProficiencyPolicy.server(player).enabled()
+                    || !ProficiencySkillSettings.isEnabled(
+                    player, ProficiencySkillSettings.DARKMATTER_SHAPING_AUTO_REPAIR)) return;
+            var held = player.getMainHandItem();
+            if (!DarkmatterItemUtil.hasFamilyEnchantment(held) || !held.isDamageableItem()
+                    || !held.isDamaged() || held.getMaxDamage() <= 0
+                    || held.getMaxDamage() - held.getDamageValue() >= held.getMaxDamage() * 0.25f) return;
+            var repair = Math.min(held.getDamageValue(), Math.max(1, Math.round(held.getMaxDamage() * 0.15f)));
+            var baseCost = 50.0f * repair / held.getMaxDamage();
+            var proficiencyCost = skill.adjustProficiencyCost(
+                    player, SkillProficiencyProfile.CostKind.CAST, baseCost);
+            var finalCost = DarkmatterSixWings.Server.adjustCategoryCost(
+                    player, skill, baseCost, proficiencyCost);
+            var system = AbilitySystemServer.getSystem(player);
+            if (!system.tryTimedOccupation(player.getUUID(), finalCost, skill, 20)) return;
+            held.setDamageValue(Math.max(0, held.getDamageValue() - repair));
+            skill.reportActivity(player, true);
+            player.getInventory().setChanged();
+            player.inventoryMenu.broadcastChanges();
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.tickAutoRepair(player);
         }
     }
 

@@ -28,6 +28,12 @@ class PlayerControlProtocolTest {
     }
 
     @Test
+    void finalIntrusionMilestoneExtendsPlayerDurationByHalf() {
+        assertEquals(120, MentalIntrusionManager.scalePlayerIntrusionDuration(120, 2));
+        assertEquals(180, MentalIntrusionManager.scalePlayerIntrusionDuration(120, 3));
+    }
+
+    @Test
     void directControlOwnsMovementViewAndActionWhileViewIsIndependent() {
         assertEquals(
                 Set.of(ControlDomain.MOVEMENT, ControlDomain.VIEW, ControlDomain.ACTION),
@@ -118,6 +124,15 @@ class PlayerControlProtocolTest {
     }
 
     @Test
+    void selfControlRecognizesMovementAndActionOverrides() {
+        assertFalse(PlayerControlSessionManager.hasSelfOverrideInput(0, 0));
+        assertTrue(PlayerControlSessionManager.hasSelfOverrideInput(1, 0));
+        assertTrue(PlayerControlSessionManager.hasSelfOverrideInput(0, 1));
+        assertTrue(PlayerControlSessionManager.hasSelfOverrideInput(0, 4));
+        assertTrue(PlayerControlSessionManager.hasSelfOverrideInput(0, 8));
+    }
+
+    @Test
     void appliedFrameCodecRoundTripsEnvelope() {
         var id = UUID.randomUUID();
         var expected = new PlayerControlSessionManager.AppliedFramePacket(id, 7L, 19L);
@@ -128,6 +143,31 @@ class PlayerControlProtocolTest {
             assertEquals(id, decoded.sessionId());
             assertEquals(7L, decoded.revision());
             assertEquals(19L, decoded.sequence());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    void takeoverInventoryActionCodecRoundTripsValidatedCommand() {
+        var id = UUID.randomUUID();
+        var expected = new PlayerControlSessionManager.InventoryActionPacket(
+                id,
+                8L,
+                23L,
+                PlayerControlSessionManager.InventoryAction.SELECT_HOTBAR,
+                6
+        );
+        var buffer = Unpooled.buffer();
+        try {
+            PlayerControlSessionManager.InventoryActionPacket.CODEC.encode(buffer, expected);
+            var decoded = PlayerControlSessionManager.InventoryActionPacket.CODEC.decode(buffer);
+            assertEquals(id, decoded.sessionId());
+            assertEquals(8L, decoded.revision());
+            assertEquals(23L, decoded.sequence());
+            assertEquals(PlayerControlSessionManager.InventoryAction.SELECT_HOTBAR,
+                    decoded.action());
+            assertEquals(6, decoded.value());
         } finally {
             buffer.release();
         }
@@ -167,5 +207,20 @@ class PlayerControlProtocolTest {
     void ordinaryPlayersHaveNoInputResistanceForNow() {
         assertEquals(false, PlayerControlSessionManager.isResistant(null));
         assertEquals(0L, PlayerControlSessionManager.resistanceUntil(null));
+    }
+
+    @Test
+    void beginPacketPreservesSelfControlledRole() {
+        var packet = new PlayerControlSessionManager.BeginPacket(
+                UUID.randomUUID(), 12L, PlayerControlSessionManager.Role.SELF,
+                27, UUID.randomUUID());
+        var buffer = Unpooled.buffer();
+        try {
+            PlayerControlSessionManager.BeginPacket.CODEC.encode(buffer, packet);
+            var decoded = PlayerControlSessionManager.BeginPacket.CODEC.decode(buffer);
+            assertEquals(PlayerControlSessionManager.Role.SELF, decoded.role());
+        } finally {
+            buffer.release();
+        }
     }
 }

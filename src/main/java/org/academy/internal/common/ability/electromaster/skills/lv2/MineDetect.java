@@ -154,6 +154,7 @@ public final class MineDetect extends Skill {
         private static int x;
         private static int y;
         private static int z;
+        private static int scanRadius = RADIUS;
 
         private Client() {
         }
@@ -176,11 +177,14 @@ public final class MineDetect extends Skill {
 
             active = true;
             var playerPos = player.blockPosition();
+            var milestone = AbilitySystemClient.getSkillProficiencyMilestone(skill);
+            var desiredRadius = milestone >= 2 ? 80 : RADIUS;
             if (level != scanLevel
                     || scanCenter == null
-                    || scanCenter.distSqr(playerPos) > RESCAN_DISTANCE * RESCAN_DISTANCE
+                    || desiredRadius != scanRadius
+                    || scanCenter.distSqr(playerPos) > square(desiredRadius / 2)
                     || !scanning && level.getGameTime() >= nextPeriodicScan) {
-                beginScan(level, playerPos);
+                beginScan(level, playerPos, desiredRadius);
             }
             scanBatch(level);
         }
@@ -210,17 +214,18 @@ public final class MineDetect extends Skill {
             matrixStack.popPose();
         }
 
-        private static void beginScan(ClientLevel level, BlockPos center) {
+        private static void beginScan(ClientLevel level, BlockPos center, int radius) {
             scanLevel = level;
             scanCenter = center.immutable();
+            scanRadius = radius;
             ORES.clear();
             ORE_CACHE.clear();
-            minX = center.getX() - RADIUS;
-            maxX = center.getX() + RADIUS;
-            minY = Math.max(level.getMinY(), center.getY() - RADIUS);
-            maxY = Math.min(level.getMaxY() - 1, center.getY() + RADIUS);
-            minZ = center.getZ() - RADIUS;
-            maxZ = center.getZ() + RADIUS;
+            minX = center.getX() - radius;
+            maxX = center.getX() + radius;
+            minY = Math.max(level.getMinY(), center.getY() - radius);
+            maxY = Math.min(level.getMaxY() - 1, center.getY() + radius);
+            minZ = center.getZ() - radius;
+            maxZ = center.getZ() + radius;
             x = minX;
             y = minY;
             z = minZ;
@@ -232,7 +237,9 @@ public final class MineDetect extends Skill {
 
             var mutable = new BlockPos.MutableBlockPos();
             var processed = 0;
-            while (processed < POSITIONS_PER_TICK && scanning) {
+            var milestone = AbilitySystemClient.getSkillProficiencyMilestone(Skills.MINE_DETECT.get());
+            var budget = milestone >= 2 ? POSITIONS_PER_TICK + POSITIONS_PER_TICK / 2 : POSITIONS_PER_TICK;
+            while (processed < budget && scanning) {
                 if (x > maxX) {
                     scanning = false;
                     nextPeriodicScan = level.getGameTime() + PERIODIC_RESCAN_TICKS;
@@ -242,7 +249,7 @@ public final class MineDetect extends Skill {
                 var dx = x - scanCenter.getX();
                 var dy = y - scanCenter.getY();
                 var dz = z - scanCenter.getZ();
-                if (isInsideScanRadius(dx, dy, dz)) {
+                if ((long) dx * dx + (long) dy * dy + (long) dz * dz <= (long) scanRadius * scanRadius) {
                     mutable.set(x, y, z);
                     if (level.isLoaded(mutable)) {
                         var state = level.getBlockState(mutable);
@@ -277,6 +284,10 @@ public final class MineDetect extends Skill {
             }
             ORE_CACHE.put(block, result);
             return result;
+        }
+
+        private static int square(int value) {
+            return value * value;
         }
 
         static float[] oreColor(BlockState state) {
@@ -392,7 +403,7 @@ public final class MineDetect extends Skill {
             var uuid = player.getUUID();
             if (!system.ensurePermanentOccupation(
                     uuid,
-                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill.getMaintenanceCost(player),
                     skill
             )) {
                 system.toggleSkill(uuid, skill.getKeyString());

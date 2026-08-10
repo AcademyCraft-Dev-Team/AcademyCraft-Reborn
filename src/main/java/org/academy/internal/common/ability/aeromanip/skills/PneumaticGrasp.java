@@ -147,6 +147,7 @@ public final class PneumaticGrasp extends Skill {
         private static final class Context extends ServerContext {
             private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
             private Entity controlledTarget;
+            private double controlledSpeedCap;
             private double holdDistance = DEFAULT_CONTROL_DISTANCE;
             private int activeTicks;
             private boolean ended;
@@ -167,9 +168,13 @@ public final class PneumaticGrasp extends Skill {
                 var look = player.getLookAngle().normalize();
                 if (look.lengthSqr() <= 1.0e-8) return;
                 var skillLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
-                var range = 20.0 + skillLevel * 2.0;
+                var milestone = skill.getEffectiveProficiencyMilestone(player);
+                var range = 20.0 + skillLevel * 2.0 + (milestone >= 1 ? 4.0 : 0.0);
                 if (!isValidTarget(controlledTarget, skillLevel, range)) {
                     controlledTarget = findTarget(eye, look, skillLevel, range);
+                    controlledSpeedCap = controlledTarget instanceof Projectile
+                            ? Math.max(0.1, controlledTarget.getDeltaMovement().length())
+                            : 0.0;
                 }
                 if (controlledTarget == null) return;
                 activeTicks++;
@@ -178,6 +183,13 @@ public final class PneumaticGrasp extends Skill {
                         2.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
                         skill,
                         10)) {
+                    end();
+                    return;
+                }
+                if (milestone >= 3 && controlledTarget instanceof LivingEntity living
+                        && living.onGround() && activeTicks % 5 == 0
+                        && !AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                        player.getUUID(), 5.0f, skill, 5)) {
                     end();
                     return;
                 }
@@ -219,13 +231,16 @@ public final class PneumaticGrasp extends Skill {
                         || !AeromanipTargeting.canAffectNegatively(player, living)) {
                     return false;
                 }
-                return entity instanceof Enemy || skillLevel >= 2 && !living.onGround();
+                return entity instanceof Enemy
+                        || skillLevel >= 2 && !living.onGround()
+                        || Skills.PNEUMATIC_GRASP.get().hasProficiencyMilestone(player, 3);
             }
 
             private void adjustDistance(int steps) {
                 if (steps == 0) return;
                 var skillLevel = Math.max(0, Math.min(2, Skills.PNEUMATIC_GRASP.get().getLevel(player)));
-                var maxDistance = 10.0 + skillLevel * 2.0;
+                var maxDistance = 10.0 + skillLevel * 2.0
+                        + (Skills.PNEUMATIC_GRASP.get().hasProficiencyMilestone(player, 1) ? 4.0 : 0.0);
                 holdDistance = AeromanipTargeting.adjustControlDistance(
                         holdDistance, steps, DISTANCE_STEP, MIN_CONTROL_DISTANCE, maxDistance);
             }
@@ -246,10 +261,16 @@ public final class PneumaticGrasp extends Skill {
                         || target instanceof Projectile;
                 var hostileLiving = target instanceof Enemy;
                 var forceMultiplier = AeromanipTargeting.forceMultiplier(player, target);
+                if (target instanceof LivingEntity living && living.onGround()
+                        && Skills.PNEUMATIC_GRASP.get().hasProficiencyMilestone(player, 3)) {
+                    forceMultiplier *= 0.5;
+                }
                 if (forceMultiplier <= 0.0) return;
                 var response = (lightTarget ? 0.52 : hostileLiving ? 0.28 + skillLevel * 0.04 : 0.3)
                         * forceMultiplier;
-                var targetSpeed = (lightTarget ? 1.35 : hostileLiving ? 0.6 + skillLevel * 0.1 : 0.7)
+                if (!lightTarget && Skills.PNEUMATIC_GRASP.get().hasProficiencyMilestone(player, 2)) response *= 1.2;
+                var projectileSpeed = target instanceof Projectile ? Math.max(0.1, controlledSpeedCap) : 1.35;
+                var targetSpeed = (lightTarget ? projectileSpeed : hostileLiving ? 0.6 + skillLevel * 0.1 : 0.7)
                         * forceMultiplier;
                 AeromanipTargeting.steerVelocity(target, delta, response, targetSpeed);
                 target.resetFallDistance();
@@ -281,6 +302,7 @@ public final class PneumaticGrasp extends Skill {
             }
             @Override protected void onUnregistered() {
                 controlledTarget = null;
+                controlledSpeedCap = 0.0;
                 ACTIVE.remove(player, this);
             }
         }

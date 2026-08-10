@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -28,6 +29,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.DarkmatterCutSlash;
@@ -121,8 +123,16 @@ public final class DarkmatterCut extends Skill {
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (!(player.level() instanceof ServerLevel level)) return;
+            var skill = Skills.DARKMATTER_CUT.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
             var enhanced = DarkmatterSixWings.Server.isActive(player);
-            var radius = enhanced ? SIX_WINGS_RADIUS : RADIUS;
+            var calculatedRadius = (enhanced ? SIX_WINGS_RADIUS : RADIUS) * (milestone >= 2 ? 1.2 : 1.0);
+            if (enhanced && Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(player, 2)) {
+                calculatedRadius *= 1.1;
+            }
+            var radius = calculatedRadius;
+            var minimumDot = milestone >= 2
+                    ? Math.cos(Math.acos(MIN_DOT) * 1.2) : MIN_DOT;
             var origin = player.position().add(0, player.getBbHeight() * 0.5, 0);
             var look = horizontalLook(player.getLookAngle(), player.getYRot());
             var targets = level.getEntitiesOfClass(LivingEntity.class,
@@ -130,8 +140,9 @@ public final class DarkmatterCut extends Skill {
                             target != player && target.isAlive() && !target.isRemoved()
                                     && !player.isAlliedTo(target)
                                     && insideCone(origin, look, target.getBoundingBox().getCenter(),
-                                    radius, MIN_DOT));
-            var skill = Skills.DARKMATTER_CUT.get();
+                                    radius, minimumDot));
+            var finalRadius = radius;
+            var finalMinimumDot = minimumDot;
             skill.executeActive(player, (context, actualCost) -> {
                 spawnSlash(level, player, enhanced ? 3.0f : 1.0f);
                 level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
@@ -145,6 +156,22 @@ public final class DarkmatterCut extends Skill {
                     level.sendParticles(ParticleTypes.SWEEP_ATTACK,
                             target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
                             6, 0.25, 0.25, 0.25, 0.01);
+                }
+                if (context.milestone() >= 3) {
+                    TimedSkillEffectRuntime.schedule(player, 8, () -> {
+                        if (!player.isAlive() || player.level() != level) return;
+                        spawnSlash(level, player, enhanced ? 2.0f : 0.75f);
+                        var delayedTargets = level.getEntitiesOfClass(LivingEntity.class,
+                                new AABB(origin, origin).inflate(finalRadius), target ->
+                                        target != player && target.isAlive() && !target.isRemoved()
+                                                && !player.isAlliedTo(target)
+                                                && insideCone(origin, look, target.getBoundingBox().getCenter(),
+                                                finalRadius, finalMinimumDot));
+                        for (var target : delayedTargets) {
+                            target.invulnerableTime = 0;
+                            target.hurtServer(level, source, damage * 0.5f);
+                        }
+                    });
                 }
             });
         }

@@ -108,11 +108,12 @@ public final class QuickLocationTeleport extends Skill {
         @SubscribePacket
         public static void handle(RunPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var skill = Skills.QUICK_LOCATION_TELEPORT.get();
             var mark = LocationTeleport.Server.getQuickMark(player);
             if (mark == null) return;
             var level = LocationTeleport.Server.resolveLevel(player, mark);
             if (level == null) return;
-            var picked = pickEntity(player);
+            var picked = pickEntity(player, skill.hasProficiencyMilestone(player, 2) ? PICK_REACH * 1.5 : PICK_REACH);
             Entity target = player;
             var destination = LocationTeleport.Server.safeDestination(player, level, mark);
             if (picked != null && picked.level() == level) {
@@ -131,23 +132,25 @@ public final class QuickLocationTeleport extends Skill {
 
             var finalTarget = target;
             var finalDestination = destination;
-            Skills.QUICK_LOCATION_TELEPORT.get().executeActive(player, (ctx, actualCost) -> {
+            skill.executeActive(player, (ctx, actualCost) -> {
                 if (finalTarget == player) {
                     player.teleportTo(level, finalDestination.x, finalDestination.y, finalDestination.z,
                             Set.of(), player.getYRot(), player.getXRot(), false);
                 } else {
-                    TeleportSync.teleportInstantly(finalTarget, finalDestination);
+                    var hierarchyRoot = ctx.milestone() >= 3 ? finalTarget.getRootVehicle() : finalTarget;
+                    var offset = finalDestination.subtract(finalTarget.position());
+                    TeleportSync.teleportInstantly(hierarchyRoot, hierarchyRoot.position().add(offset));
                 }
                 finalTarget.resetFallDistance();
             });
         }
 
-        private static Entity pickEntity(ServerPlayer player) {
+        private static Entity pickEntity(ServerPlayer player, double reach) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle().normalize();
-            var end = eye.add(look.scale(PICK_REACH));
-            var search = player.getBoundingBox().expandTowards(look.scale(PICK_REACH)).inflate(1.0);
-            var closest = PICK_REACH * PICK_REACH;
+            var end = eye.add(look.scale(reach));
+            var search = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0);
+            var closest = reach * reach;
             Entity best = null;
             for (var entity : player.level().getEntities(player, search,
                     entity -> entity != player && entity.isPickable())) {

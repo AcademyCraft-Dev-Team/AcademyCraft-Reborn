@@ -202,7 +202,11 @@ public class PlasmaGeneration extends Skill {
                 return;
             }
             var chargeTicks = Math.max(0L, level.getGameTime() - state.startTick());
-            var stage = calculateStage(chargeTicks);
+            var skill = Skills.PLASMA_GENERATION.get();
+            var effectiveChargeTicks = skill.hasProficiencyMilestone(player, 2)
+                    ? Math.round(chargeTicks / 0.8)
+                    : chargeTicks;
+            var stage = calculateStage(effectiveChargeTicks);
             if (stage == 0) {
                 plasma.discard();
                 return;
@@ -211,19 +215,23 @@ public class PlasmaGeneration extends Skill {
         }
 
         private static void launch(ServerPlayer player, Plasma plasma, int stage) {
+            var skill = Skills.PLASMA_GENERATION.get();
             var targetPos = findTarget(player);
             var damage = stage * DAMAGE_PER_STAGE
                     * AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
                     * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
-            var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player, Skills.PLASMA_GENERATION.get());
+            var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player, skill);
+            var damageRadius = stage * RADIUS_PER_STAGE
+                    * (skill.hasProficiencyMilestone(player, 2) ? 1.1f : 1.0f);
             plasma.launch(
                     player.getUUID(),
                     targetPos,
                     TRAVEL_SPEED,
                     damage,
-                    stage * RADIUS_PER_STAGE,
+                    damageRadius,
                     destroyBlocks ? stage * BLOCK_BLAST_RADIUS_PER_STAGE : 0.0f,
-                    destroyBlocks
+                    destroyBlocks,
+                    skill.getEffectiveProficiencyMilestone(player)
             );
         }
 

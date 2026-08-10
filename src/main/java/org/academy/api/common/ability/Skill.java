@@ -22,6 +22,9 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
+import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,6 +63,7 @@ public abstract class Skill {
     private final boolean isPassive;
     private final boolean initiallyEnabled;
     private final float cpCost;
+    private final SkillProficiencyProfile proficiencyProfile;
     private final Identifier icon;
     private final List<DevCondition> devConditions;
     @Nullable
@@ -81,6 +85,7 @@ public abstract class Skill {
         isPassive = builder.isPassive;
         initiallyEnabled = builder.initiallyEnabled;
         cpCost = builder.cpCost;
+        proficiencyProfile = builder.proficiencyProfile;
 
         dataFactory = builder.dataFactory;
         var dataClass = builder.dataClass;
@@ -125,7 +130,14 @@ public abstract class Skill {
     protected final boolean executeActive(ServerPlayer player, CostCalculator calculator, SkillAction action) {
         if (!isEnabled(player)) return false;
         return AbilitySystemServer.getSystem(player)
-                .castCpIfPossible(player, this, calculator, action);
+                .castCpIfPossible(player, this, ctx -> {
+                    var baseCost = calculator.calculate(ctx);
+                    var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                            SkillProficiencyProfile.CostKind.CAST, ctx.milestone(), baseCost);
+                    var categoryCost = DarkmatterSixWings.Server.adjustCategoryCost(
+                            player, this, baseCost, proficiencyCost);
+                    return CurrentSymbiosis.Server.adjustNextCastCost(player, this, categoryCost);
+                }, action);
     }
 
     protected final boolean executeActive(ServerPlayer player, SkillAction action) {
@@ -143,7 +155,13 @@ public abstract class Skill {
     ) {
         if (!isEnabled(player)) return false;
         return AbilitySystemServer.getSystem(player)
-                .castContinuousCpIfPossible(player, this, calculator, action, effective);
+                .castContinuousCpIfPossible(player, this, ctx -> {
+                    var baseCost = calculator.calculate(ctx);
+                    var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                            SkillProficiencyProfile.CostKind.CONTINUOUS, ctx.milestone(), baseCost);
+                    return DarkmatterSixWings.Server.adjustCategoryCost(
+                            player, this, baseCost, proficiencyCost);
+                }, action, effective);
     }
 
     protected final boolean executeContinuous(ServerPlayer player, SkillAction action, boolean effective) {
@@ -187,8 +205,7 @@ public abstract class Skill {
 
         if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) return;
         if (!LearningHelper.isSkillAvailableForCategory(system.getPlayerAbilityCategory(uuid), this)) return;
-        var level = getLevel(player);
-        var cost = getMaintenanceCost(level);
+        var cost = getMaintenanceCost(player);
         if (cost <= 0) {
             system.toggleSkill(uuid, getKeyString());
             return;
@@ -300,12 +317,53 @@ public abstract class Skill {
         return AbilitySystemServer.getSystem(player).getPlayerSkillLevel(player.getUUID(), getKeyString());
     }
 
+    public final float getProficiency(ServerPlayer player) {
+        return getRuntimeData(player).map(SkillData::getProficiency).orElse(0.0f);
+    }
+
+    public final int getProficiencyMilestone(ServerPlayer player) {
+        return SkillData.getReachedProficiencyThresholds(getProficiency(player));
+    }
+
+    public final int getEffectiveProficiencyMilestone(ServerPlayer player) {
+        return ProficiencyPolicy.server(player).enabled() ? getProficiencyMilestone(player) : 0;
+    }
+
+    public final boolean hasProficiencyMilestone(ServerPlayer player, int milestone) {
+        return milestone >= 1 && milestone <= 3
+                && getEffectiveProficiencyMilestone(player) >= milestone;
+    }
+
     public float getCpCost(int skillLevel) {
         return cpCost;
     }
 
+    public final float getCpCost(ServerPlayer player) {
+        return adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.CAST,
+                getCpCost(getLevel(player))
+        );
+    }
+
     public float getMaintenanceCost(int skillLevel) {
         return maintenanceCost;
+    }
+
+    public final float getMaintenanceCost(ServerPlayer player) {
+        return adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.MAINTENANCE,
+                getMaintenanceCost(getLevel(player))
+        );
+    }
+
+    public final float adjustProficiencyCost(
+            ServerPlayer player,
+            SkillProficiencyProfile.CostKind kind,
+            float amount
+    ) {
+        return resolvedProficiencyProfile().adjustCost(kind, getEffectiveProficiencyMilestone(player), amount);
     }
 
     public boolean isPassive(int skillLevel) {
@@ -314,6 +372,23 @@ public abstract class Skill {
 
     public int getIterationTicks(int skillLevel) {
         return iterationTicks;
+    }
+
+    public final int getIterationTicks(ServerPlayer player) {
+        return resolvedProficiencyProfile().resolveIterationTicks(
+                getEffectiveProficiencyMilestone(player),
+                getIterationTicks(getLevel(player))
+        );
+    }
+
+    public final SkillProficiencyProfile getProficiencyProfile() {
+        return resolvedProficiencyProfile();
+    }
+
+    private SkillProficiencyProfile resolvedProficiencyProfile() {
+        return proficiencyProfile == SkillProficiencyProfile.NONE
+                ? SkillProficiencyProfiles.forSkill(getKeyString())
+                : proficiencyProfile;
     }
 
     public int getMaxStacks(int skillLevel) {
@@ -360,7 +435,13 @@ public abstract class Skill {
         void execute(SkillContext ctx, float actualCost);
     }
 
-    public record SkillContext(int level, float availableCP, AbilitySystemServer system) {
+    public record SkillContext(
+            int level,
+            float proficiency,
+            int milestone,
+            float availableCP,
+            AbilitySystemServer system
+    ) {
     }
 
     private record DependencyResolver(Skill target, Set<DeferredHolder<Skill, ? extends Skill>> holders) {
@@ -392,6 +473,7 @@ public abstract class Skill {
         private boolean isPassive = false;
         private boolean initiallyEnabled = true;
         private float cpCost = 0;
+        private SkillProficiencyProfile proficiencyProfile = SkillProficiencyProfile.NONE;
         private SkillScope scope = SkillScope.CATEGORY;
 
         private DataFactory dataFactory = _ -> new CommonSkillData();
@@ -429,6 +511,11 @@ public abstract class Skill {
 
         public Builder cpCost(int cpCost) {
             this.cpCost = cpCost;
+            return this;
+        }
+
+        public Builder proficiencyProfile(SkillProficiencyProfile proficiencyProfile) {
+            this.proficiencyProfile = Objects.requireNonNull(proficiencyProfile);
             return this;
         }
 

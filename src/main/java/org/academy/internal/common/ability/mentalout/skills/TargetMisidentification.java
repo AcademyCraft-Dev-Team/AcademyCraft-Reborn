@@ -137,7 +137,8 @@ public final class TargetMisidentification extends Skill {
                 feedback(player, "message.academy.mentalout.roster_empty");
                 return;
             }
-            var target = MentaloutTargeting.findLookedAtLiving(player);
+            var target = MentaloutTargeting.findLookedAtLivingExtended(player,
+                    skill.hasProficiencyMilestone(player, 2) ? 80.0 : 64.0);
             if (target == null) {
                 feedback(player, "message.academy.mentalout.invalid_target");
                 return;

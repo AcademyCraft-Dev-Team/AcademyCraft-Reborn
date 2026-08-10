@@ -15,7 +15,7 @@ class ParticleWaveCannonTest {
                 1.0f,
                 false
         ));
-        assertEquals(61.5f, MeltdownerBeamDamage.calculate(
+        assertEquals(61.0f, MeltdownerBeamDamage.calculate(
                 ParticleWaveCannon.BASE_DAMAGE,
                 ParticleWaveCannon.MAX_HEALTH_DAMAGE_RATIO,
                 100.0f,

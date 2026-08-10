@@ -85,7 +85,10 @@ public final class MentalControlRuntime {
         var selections = new EnumMap<ControlCapability, AdapterSelection>(ControlCapability.class);
         for (var directive : request.directives()) {
             validateDirective(server, subject, directive);
-            var resolution = resolve(subject, directive.capability());
+            var selfMovementOrView = controller == subject
+                    && (directive.capability() == ControlCapability.PATH_CONTROL
+                    || directive.capability() == ControlCapability.VIEW_CONTROL);
+            var resolution = resolve(subject, directive.capability(), selfMovementOrView);
             if (!resolution.evaluation().supported() || resolution.registration() == null) {
                 if (resolution.evaluation().reason() == ControlRejectionReason.PROTECTED_PLAYER
                         || resolution.evaluation().reason() == ControlRejectionReason.IMMUNE_TAG) {
@@ -1043,7 +1046,15 @@ public final class MentalControlRuntime {
     }
 
     private static Resolution resolve(LivingEntity subject, ControlCapability capability) {
-        var protection = MentalControlProtection.rejectionReason(subject);
+        return resolve(subject, capability, false);
+    }
+
+    private static Resolution resolve(
+            LivingEntity subject,
+            ControlCapability capability,
+            boolean ignoreProtection
+    ) {
+        var protection = ignoreProtection ? null : MentalControlProtection.rejectionReason(subject);
         if (protection != null) {
             return Resolution.rejected(capability, protection);
         }

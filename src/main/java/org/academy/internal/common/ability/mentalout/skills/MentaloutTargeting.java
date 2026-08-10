@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 public final class MentaloutTargeting {
     static final double MAX_RANGE = 16.0;
     public static final double MAX_SIGHT_RANGE = 64.0;
+    public static final double PROFICIENCY_MAX_SIGHT_RANGE = 80.0;
 
     private MentaloutTargeting() {
     }
@@ -28,6 +29,10 @@ public final class MentaloutTargeting {
 
     public static LivingEntity findPrecisionLookedAtLiving(ServerPlayer player) {
         return findLookedAtLiving(player, MAX_SIGHT_RANGE, MAX_SIGHT_RANGE);
+    }
+
+    public static LivingEntity findLookedAtLivingExtended(ServerPlayer player, double range) {
+        return findLookedAtLiving(player, range, PROFICIENCY_MAX_SIGHT_RANGE);
     }
 
     private static LivingEntity findLookedAtLiving(ServerPlayer player, double range, double maximumRange) {
@@ -71,7 +76,8 @@ public final class MentaloutTargeting {
 
     public static @Nullable ControlDestination findSightDestination(LivingEntity observer, double range) {
         if (observer == null || !observer.isAlive() || observer.isRemoved()) return null;
-        range = Math.clamp(Double.isFinite(range) ? range : MAX_SIGHT_RANGE, 1.0, MAX_SIGHT_RANGE);
+        range = Math.clamp(Double.isFinite(range) ? range : PROFICIENCY_MAX_SIGHT_RANGE,
+                1.0, PROFICIENCY_MAX_SIGHT_RANGE);
         var level = observer.level();
         var eye = observer.getEyePosition();
         var look = observer.getLookAngle();

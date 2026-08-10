@@ -8,6 +8,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -18,6 +19,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -73,9 +75,13 @@ public final class PressureLock extends Skill {
             private int lockAge;
             private boolean ended;
             private LivingEntity target;
+            private final int proficiencyMilestone;
+            private int lostSightTicks;
+            private Vec3 attemptedDisplacement = Vec3.ZERO;
             private final String imprisonmentSource;
             private Context(ServerPlayer player) {
                 super(player);
+                proficiencyMilestone = Skills.PRESSURE_LOCK.get().getEffectiveProficiencyMilestone(player);
                 imprisonmentSource = "pressure_lock:" + player.getStringUUID();
             }
             private void end() { if (!ended) { ended = true; unregister(); } }
@@ -98,8 +104,9 @@ public final class PressureLock extends Skill {
                     }
                     if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
                             player.getUUID(),
-                            skill.getCpCost(skill.getLevel(player))
-                                    * AeromanipConfig.cpMultiplier(player, SkillNames.PRESSURE_LOCK),
+                            skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.CAST,
+                                    skill.getCpCost(skill.getLevel(player))
+                                            * AeromanipConfig.cpMultiplier(player, SkillNames.PRESSURE_LOCK)),
                             skill,
                             10
                     )) {
@@ -108,12 +115,28 @@ public final class PressureLock extends Skill {
                     }
                     target.stopRiding();
                 }
-                var duration = Math.max(1, Math.round(200
+                var durationTicks = proficiencyMilestone >= 2 ? 240 : 200;
+                var duration = Math.max(1, Math.round(durationTicks
                         * AeromanipConfig.durationMultiplier(player, SkillNames.PRESSURE_LOCK)));
                 if (lockAge++ >= duration || !target.isAlive() || target.isRemoved()
                         || target.level() != player.level() || isProtected(target)) {
                     end();
                     return;
+                }
+                if (!player.hasLineOfSight(target)) {
+                    lostSightTicks++;
+                    if (proficiencyMilestone < 2 || lostSightTicks > 10) {
+                        end();
+                        return;
+                    }
+                } else {
+                    lostSightTicks = 0;
+                }
+                if (proficiencyMilestone >= 3) {
+                    var movement = target.getDeltaMovement();
+                    if (Double.isFinite(movement.x) && Double.isFinite(movement.y) && Double.isFinite(movement.z)) {
+                        attemptedDisplacement = attemptedDisplacement.add(movement);
+                    }
                 }
                 EntityMotionGuard.imprison(target, imprisonmentSource, 2L);
                 skill.reportActivity(player, true);
@@ -147,7 +170,14 @@ public final class PressureLock extends Skill {
             }
 
             @Override protected void onUnregistered() {
-                if (target != null) EntityMotionGuard.release(target, imprisonmentSource);
+                if (target != null) {
+                    EntityMotionGuard.release(target, imprisonmentSource);
+                    if (proficiencyMilestone >= 3 && target.isAlive() && attemptedDisplacement.lengthSqr() > 1.0e-8) {
+                        var direction = attemptedDisplacement.normalize();
+                        var speed = Math.min(1.5, attemptedDisplacement.length());
+                        AeromanipTargeting.addClampedVelocity(target, direction.scale(speed));
+                    }
+                }
                 ACTIVE.remove(player, this);
             }
         }

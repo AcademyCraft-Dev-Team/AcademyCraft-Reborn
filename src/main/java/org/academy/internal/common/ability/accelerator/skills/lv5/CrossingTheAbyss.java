@@ -14,6 +14,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -33,6 +34,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
@@ -178,7 +180,7 @@ public final class CrossingTheAbyss extends Skill {
             if (active) {
                 var system = AbilitySystemServer.getSystem(player);
                 active = system.ensurePermanentOccupation(
-                        player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill);
+                        player.getUUID(), skill.getMaintenanceCost(player), skill);
                 if (!active) forceDeactivate(player);
             } else if (skill.getRuntimeData(player).map(data -> data.isEnabled()).orElse(false)) {
                 forceDeactivate(player);
@@ -359,6 +361,23 @@ public final class CrossingTheAbyss extends Skill {
             if (!isActive(player)) clearForAttacker(player);
         }
 
+        private static void spreadHealingReduction(LivingDeathEvent event) {
+            var attacker = resolvePlayer(event.getSource());
+            if (attacker == null) return;
+            var skill = Skills.CROSSING_THE_ABYSS.get();
+            if (!isActive(attacker) || !skill.hasProficiencyMilestone(attacker, 3)) return;
+            var target = event.getEntity();
+            var level = target.level();
+            for (var nearby : level.getEntitiesOfClass(
+                    LivingEntity.class,
+                    target.getBoundingBox().inflate(6.0),
+                    entity -> entity != attacker && entity != target && entity.isAlive()
+                            && !CtaFriendlyFireWhitelist.shouldProtect(attacker, entity))) {
+                TimedSkillEffectRuntime.put(
+                        attacker, nearby.getUUID(), skill, "healing_reduction", 100, 0.25f);
+            }
+        }
+
         private record PendingHit(UUID attackerId, float healthBefore, float damage, long gameTime) {
         }
 
@@ -384,6 +403,11 @@ public final class CrossingTheAbyss extends Skill {
         @SubscribeEvent
         public static void onDamageApplied(LivingDamageEvent.Post event) {
             Server.commitDamage(event);
+        }
+
+        @SubscribeEvent
+        public static void onDeath(LivingDeathEvent event) {
+            Server.spreadHealingReduction(event);
         }
     }
 

@@ -81,10 +81,7 @@ public final class VectorIncomingDamageCoordinator {
         if (classified != null && VectorExternalInterceptionService.tryFullRefraction(classified)) {
             return VectorIncomingDamageResult.fullRedirect();
         }
-        if (VectorReduction.Server.tryAbsorbDamage(defender, source, damage)) {
-            return VectorIncomingDamageResult.fullRedirect();
-        }
-        return VectorIncomingDamageResult.passThrough(damage);
+        return VectorReduction.Server.applyPartialReduction(defender, source, damage);
     }
 
     public static boolean isAnomalousDamage(float damage) {
