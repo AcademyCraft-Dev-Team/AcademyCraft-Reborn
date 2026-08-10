@@ -65,7 +65,7 @@ public final class ReflectionFilter extends Skill {
                 .energyCost(60_000)
                 .maxStacks(1)
                 .dependsOn(Skills.VECTOR_REFLECTION)
-                .withCustomData(Data.ID, Data.class, _ -> new Data())
+                .withCustomData(Data.ID, Data.class, Data::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition(
                         "Vector Reflection",
@@ -311,7 +311,7 @@ public final class ReflectionFilter extends Skill {
             var raw = map.get(skill.getKeyString());
             if (raw instanceof Data data) return normalizeData(data);
 
-            var data = (Data) skill.createData(player);
+            var data = (Data) skill.createData();
             if (raw != null) mergeProgress(data, raw);
             map.put(skill.getKeyString(), data);
             playerData.markDirty();

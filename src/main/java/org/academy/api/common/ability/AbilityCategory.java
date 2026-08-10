@@ -63,13 +63,13 @@ public abstract class AbilityCategory {
         return Objects.requireNonNull(Registries.ABILITY_CATEGORIES.getKey(this), "This ability category has not been registered.");
     }
 
-    /**
-     * 能力在开发机左侧面板中显示的图标喵
-     */
     public float getProgIncrRate() {
         return 1.0f;
     }
 
+    /**
+     * 能力在开发机左侧面板中显示的图标喵
+     */
     public abstract Identifier getDeveloperIcon();
 
     /**

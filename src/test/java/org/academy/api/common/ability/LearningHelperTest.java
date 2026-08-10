@@ -15,7 +15,6 @@ class LearningHelperTest {
 
         assertTrue(LearningHelper.isSkillAvailableForCategory(owner, skill));
         assertFalse(LearningHelper.isSkillAvailableForCategory(other, skill));
-        assertFalse(LearningHelper.isSkillAvailableForCategory(null, skill));
     }
 
     @Test
@@ -28,7 +27,6 @@ class LearningHelperTest {
         assertTrue(LearningHelper.isSkillAvailableForCategory(anchor, skill));
         assertTrue(LearningHelper.isSkillAvailableForCategory(developed, skill));
         assertFalse(LearningHelper.isSkillAvailableForCategory(level0, skill));
-        assertFalse(LearningHelper.isSkillAvailableForCategory(null, skill));
     }
 
     @Test

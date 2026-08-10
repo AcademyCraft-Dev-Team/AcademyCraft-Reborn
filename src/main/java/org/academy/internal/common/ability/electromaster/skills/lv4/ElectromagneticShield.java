@@ -66,7 +66,7 @@ public final class ElectromagneticShield extends Skill {
                 .withCustomData(
                         ElectromagneticShieldData.ID,
                         ElectromagneticShieldData.class,
-                        _ -> new ElectromagneticShieldData()
+                        ElectromagneticShieldData::new
                 )
                 .dependsOn(Skills.MAGNET_MANIPULATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))

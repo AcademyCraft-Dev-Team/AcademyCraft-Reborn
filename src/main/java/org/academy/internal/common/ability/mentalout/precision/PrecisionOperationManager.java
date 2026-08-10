@@ -63,7 +63,7 @@ public final class PrecisionOperationManager {
             if (schemaVersion != normalized.schemaVersion()) playerData.markDirty();
             return normalized;
         }
-        var data = (PrecisionOperation.Data) skill.createData(player);
+        var data = (PrecisionOperation.Data) skill.createData();
         if (raw != null) mergeProgress(data, raw);
         map.put(skill.getKeyString(), data);
         playerData.markDirty();

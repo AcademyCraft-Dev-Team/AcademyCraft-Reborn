@@ -551,7 +551,7 @@ public class KineticEnergyApplied extends Skill {
                 var skill = Skills.KINETIC_ENERGY_APPLIED.get();
                 var target = map.get(skill.getKeyString());
                 if (target == null) {
-                    target = skill.createData(player);
+                    target = skill.createData();
                     map.put(skill.getKeyString(), target);
                 }
                 mergeProgress(target, legacySuperposition);

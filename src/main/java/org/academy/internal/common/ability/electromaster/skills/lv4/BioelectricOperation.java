@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -236,7 +235,7 @@ public final class BioelectricOperation extends Skill {
                 var skill = Skills.BIOELECTRIC_OPERATION.get();
                 var target = map.get(skill.getKeyString());
                 if (target == null) {
-                    target = skill.createData(player);
+                    target = skill.createData();
                     map.put(skill.getKeyString(), target);
                 }
                 mergeProgress(target, legacy);

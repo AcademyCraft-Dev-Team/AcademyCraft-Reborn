@@ -229,9 +229,8 @@ public abstract class Skill {
         ) && getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
     }
 
-    // 考虑到后续可能需要传入上下文，因此传入ServerPlayer
-    public SkillData createData(ServerPlayer player) {
-        var data = dataFactory.create(player);
+    public SkillData createData() {
+        var data = dataFactory.create();
         data.setEnabled(initiallyEnabled);
         return data;
     }
@@ -346,7 +345,7 @@ public abstract class Skill {
 
     @FunctionalInterface
     public interface DataFactory {
-        SkillData create(ServerPlayer player);
+        SkillData create();
     }
 
     @FunctionalInterface
@@ -393,7 +392,7 @@ public abstract class Skill {
         private float cpCost = 0;
         private SkillScope scope = SkillScope.CATEGORY;
 
-        private DataFactory dataFactory = _ -> new CommonSkillData();
+        private DataFactory dataFactory = CommonSkillData::new;
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
         private Identifier icon = R.textures.gui.icon.close;
