@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -96,7 +97,7 @@ public final class ArcGenerate extends Skill {
             long trunkSeed,
             List<BranchSpec> branchSpecs
     ) {
-        var t = (float) Math.clamp(reflectionProgress, 0.0, 1.0);
+        var t = (float) Mth.clamp(reflectionProgress, 0.0, 1.0);
         var reflectedSpecs = t <= 0.0f
                 ? List.<BranchSpec>of()
                 : branchSpecs.stream().filter(spec -> spec.progress() <= t).toList();
@@ -145,9 +146,6 @@ public final class ArcGenerate extends Skill {
         );
     }
 
-    record BranchSpec(float progress, Vector3f localEnd, long seed) {
-    }
-
     @Override
     public void initClient() {
         var key = getKey();
@@ -162,6 +160,9 @@ public final class ArcGenerate extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    record BranchSpec(float progress, Vector3f localEnd, long seed) {
     }
 
     public static final class Client {
@@ -202,7 +203,7 @@ public final class ArcGenerate extends Skill {
             tryAutomatedAttack(packet.getPacketListener().getPlayer());
         }
 
-        public static boolean tryAutomatedAttack(net.minecraft.server.level.ServerPlayer player) {
+        public static boolean tryAutomatedAttack(ServerPlayer player) {
             var level = player.level();
             return Skills.ARC_GENERATE.get().executeActive(player, (context, _) -> {
                 var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
@@ -250,7 +251,7 @@ public final class ArcGenerate extends Skill {
 
                 var branchSpecs = new ArrayList<BranchSpec>();
                 var branchCount = 4 + MathUtil.RANDOM.nextInt(3);
-                var maxAngleRad = Math.toRadians(10.0);
+                var maxAngleRad = (10.0) * Mth.DEG_TO_RAD;
 
                 for (var i = 0; i < branchCount; i++) {
                     var progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;

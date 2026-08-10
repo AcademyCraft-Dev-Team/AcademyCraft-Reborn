@@ -125,10 +125,19 @@ public final class DarkmatterRadiation extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -310,9 +319,12 @@ public final class DarkmatterRadiation extends Skill {
     public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
         public static final StartPacket INSTANCE = new StartPacket();
         public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private StartPacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
             return PacketTypes.DARKMATTER_RADIATION_START.get();
         }
     }
@@ -321,9 +333,12 @@ public final class DarkmatterRadiation extends Skill {
     public static final class StopPacket extends Packet<ServerGamePacketListenerImpl, StopPacket> {
         public static final StopPacket INSTANCE = new StopPacket();
         public static final StreamCodec<ByteBuf, StopPacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private StopPacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() {
             return PacketTypes.DARKMATTER_RADIATION_STOP.get();
         }
     }

@@ -5,7 +5,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
-/** Global safety checks for all AcademyCraft damage sources, including third-party callers. */
+/**
+ * Global safety checks for all AcademyCraft damage sources, including third-party callers.
+ */
 @EventBusSubscriber
 public final class SkillDamageEvents {
     private SkillDamageEvents() {

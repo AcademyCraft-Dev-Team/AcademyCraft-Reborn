@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.teleport.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -53,6 +54,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Set;
+import net.minecraft.util.Mth;
 
 public final class DefensiveTeleport extends Skill {
     static final double SELECTION_SIZE = 5.0;
@@ -131,7 +133,7 @@ public final class DefensiveTeleport extends Skill {
 
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
-                distance = Math.clamp(distance + event.yOffset, 2.5, MAX_SELECTION_DISTANCE);
+                distance = Mth.clamp(distance + event.yOffset, 2.5, MAX_SELECTION_DISTANCE);
                 event.setCanceled(true);
             }
 
@@ -223,7 +225,7 @@ public final class DefensiveTeleport extends Skill {
             var mark = LocationTeleport.Server.getDefensiveMark(player);
             if (mark == null) return;
             var destinationLevel = LocationTeleport.Server.resolveLevel(player, mark);
-            if (destinationLevel == null || !player.level().hasChunkAt(net.minecraft.core.BlockPos.containing(center))) {
+            if (destinationLevel == null || !player.level().hasChunkAt(BlockPos.containing(center))) {
                 return;
             }
             LocationTeleport.Server.forceDestinationChunk(destinationLevel, mark.x(), mark.z(),
@@ -274,7 +276,7 @@ public final class DefensiveTeleport extends Skill {
             if (!EntityMotionGuard.canApplyMotionFrom(player, entity)) return false;
             if (entity instanceof Projectile projectile) {
                 var owner = projectile.getOwner();
-                return owner != player && (owner == null || !player.isAlliedTo(owner));
+                return owner != player && (!player.isAlliedTo(owner));
             }
             if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
             if (living instanceof ServerPlayer target) {
@@ -289,7 +291,9 @@ public final class DefensiveTeleport extends Skill {
         }
     }
 
-    /** Compatibility helper retained for existing behavioral tests. */
+    /**
+     * Compatibility helper retained for existing behavioral tests.
+     */
     public static final class Events {
         private Events() {
         }

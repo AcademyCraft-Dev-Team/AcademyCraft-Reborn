@@ -1,27 +1,28 @@
 package org.academy.mixin.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.level.GameType;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
-import org.academy.internal.client.renderer.effect.PlatinumCosmosPass;
-import org.academy.internal.client.renderer.effect.WorldLineOverlayPass;
-import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
+import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
-import org.joml.Matrix4fStack;
+import org.academy.internal.client.render.vfx.PlatinumCosmosPass;
+import org.academy.internal.client.render.vfx.WingAvatarRegistry;
+import org.academy.internal.client.render.vfx.WorldLineOverlayPass;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fStack;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -35,20 +36,17 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(GameRenderer.class)
 public abstract class MixinGameRenderer {
+    @Unique
+    private final SubmitNodeStorage academy$hiddenHudEffectSubmitNodeStorage = new SubmitNodeStorage();
     @Shadow
     @Final
     private Minecraft minecraft;
-
     @Shadow
     @Final
     private SubmitNodeStorage handAndScreenSubmitNodeStorage;
-
     @Shadow
     @Final
     private FeatureRenderDispatcher featureRenderDispatcher;
-
-    @Unique
-    private final SubmitNodeStorage academy$hiddenHudEffectSubmitNodeStorage = new SubmitNodeStorage();
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
@@ -59,6 +57,7 @@ public abstract class MixinGameRenderer {
     private void academy$beginPlatinumCosmosFrame(DeltaTracker deltaTracker, CallbackInfo ci) {
         PlatinumCosmosPass.beginFrame(minecraft.level);
         WorldLineOverlayPass.beginFrame(minecraft.level);
+        WingAvatarRegistry.beginFrame();
     }
 
     @Inject(

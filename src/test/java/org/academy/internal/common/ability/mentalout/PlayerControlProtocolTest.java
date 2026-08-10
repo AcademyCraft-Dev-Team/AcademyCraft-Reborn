@@ -3,20 +3,14 @@ package org.academy.internal.common.ability.mentalout;
 import io.netty.buffer.Unpooled;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlDomain;
-import org.academy.api.common.entitycontrol.PlayerControlFrame;
-import org.academy.api.common.entitycontrol.PlayerMovementMode;
+import org.academy.api.common.entitycontrol.*;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PlayerControlProtocolTest {
     @Test
@@ -117,10 +111,10 @@ class PlayerControlProtocolTest {
                 1, 0, 0, 0, true, false, false, false, false, PlayerMovementMode.JUMP);
         var swimming = new PlayerControlFrame(
                 1, 0, 0, 0, false, false, false, false, false, PlayerMovementMode.SWIM);
-        assertEquals(false, PlayerControlSessionManager.validVertical(walking, 1.0));
-        assertEquals(true, PlayerControlSessionManager.validVertical(jumping, 1.0));
-        assertEquals(true, PlayerControlSessionManager.validVertical(swimming, 1.0));
-        assertEquals(false, PlayerControlSessionManager.validVertical(swimming, 3.0));
+        assertFalse(PlayerControlSessionManager.validVertical(walking, 1.0));
+        assertTrue(PlayerControlSessionManager.validVertical(jumping, 1.0));
+        assertTrue(PlayerControlSessionManager.validVertical(swimming, 1.0));
+        assertFalse(PlayerControlSessionManager.validVertical(swimming, 3.0));
     }
 
     @Test
@@ -175,7 +169,7 @@ class PlayerControlProtocolTest {
 
     @Test
     void targetViewCodecRoundTripsHotbarAndCombatState() {
-        var hotbar = new java.util.ArrayList<ItemStack>();
+        var hotbar = new ArrayList<ItemStack>();
         for (var slot = 0; slot < 9; slot++) hotbar.add(ItemStack.EMPTY);
         var state = new PlayerControlSessionManager.TargetViewState(
                 hotbar, 2, ItemStack.EMPTY,
@@ -194,8 +188,8 @@ class PlayerControlProtocolTest {
             assertEquals(4L, decoded.revision());
             assertEquals(9L, decoded.sequence());
             assertEquals(2, decoded.state().selectedSlot());
-            assertEquals(true, decoded.state().selectedItem().isEmpty());
-            assertEquals(true, decoded.state().offhand().isEmpty());
+            assertTrue(decoded.state().selectedItem().isEmpty());
+            assertTrue(decoded.state().offhand().isEmpty());
             assertEquals(13.5f, decoded.state().health());
             assertEquals(InteractionHand.OFF_HAND, decoded.state().useHand());
         } finally {
@@ -205,7 +199,7 @@ class PlayerControlProtocolTest {
 
     @Test
     void ordinaryPlayersHaveNoInputResistanceForNow() {
-        assertEquals(false, PlayerControlSessionManager.isResistant(null));
+        assertFalse(PlayerControlSessionManager.isResistant(null));
         assertEquals(0L, PlayerControlSessionManager.resistanceUntil(null));
     }
 

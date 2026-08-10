@@ -29,20 +29,20 @@ import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
     public static final int MAX_CP_ITERATION_TICKS = 20;
     /** Keep disabled until the skill stack system is redesigned and verified. */
     public static final boolean STACK_LIMITS_ENABLED = false;
-    private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
-
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
     public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
     );
+    private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
     private final AbilityCategory category;
@@ -106,6 +106,15 @@ public abstract class Skill {
 
     public static <T extends Context> Map<Player, T> createContextMap() {
         return new WeakHashMap<>();
+    }
+
+    static boolean hasSufficientCpToEnable(float availableCp, float maintenanceCost,
+                                           float calculationIntensity) {
+        if (!Float.isFinite(availableCp) || !Float.isFinite(maintenanceCost)
+                || !Float.isFinite(calculationIntensity)
+                || maintenanceCost < 0.0f || calculationIntensity < 0.0f) return false;
+        var actualCost = maintenanceCost * calculationIntensity;
+        return Float.isFinite(actualCost) && availableCp - actualCost > TOGGLE_CP_EPSILON;
     }
 
     /**
@@ -179,7 +188,9 @@ public abstract class Skill {
         );
     }
 
-    /** Records one server-confirmed successful activation. */
+    /**
+     * Records one server-confirmed successful activation.
+     */
     public final void reportTrigger(ServerPlayer player) {
         AbilitySystemServer.getSystem(player)
                 .addPlayerSkillProficiency(player.getUUID(), this, ProficiencyEvent.TRIGGER);
@@ -199,8 +210,6 @@ public abstract class Skill {
         if (runtimeData.isEmpty()) return;
         var goingToEnable = !runtimeData.get().isEnabled();
 
-        // Disabling is cleanup, not a new ability use. It must remain possible after overload or a
-        // category transition; otherwise the enabled flag and permanent CP lease become stranded.
         if (!goingToEnable) {
             system.toggleSkill(uuid, getKeyString());
             return;
@@ -220,27 +229,15 @@ public abstract class Skill {
         )) return;
 
         if (system.tryPermanentOccupation(uuid, cost, this)) {
-            // Reserving exactly the last CP enters overload synchronously. Do not commit the
-            // enabled flag after that transition; roll the reservation back as one transaction.
             if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) {
                 system.releaseMaintenanceOccupation(uuid, getKeyString());
                 return;
             }
             system.toggleSkill(uuid, getKeyString());
             if (!runtimeData.get().isEnabled()) {
-                // Defensive rollback if authoritative skill-data mutation was rejected.
                 system.releaseMaintenanceOccupation(uuid, getKeyString());
             }
         }
-    }
-
-    static boolean hasSufficientCpToEnable(float availableCp, float maintenanceCost,
-                                           float calculationIntensity) {
-        if (!Float.isFinite(availableCp) || !Float.isFinite(maintenanceCost)
-                || !Float.isFinite(calculationIntensity)
-                || maintenanceCost < 0.0f || calculationIntensity < 0.0f) return false;
-        var actualCost = maintenanceCost * calculationIntensity;
-        return Float.isFinite(actualCost) && availableCp - actualCost > TOGGLE_CP_EPSILON;
     }
 
     public final boolean isEnabled(ServerPlayer player) {
@@ -250,9 +247,8 @@ public abstract class Skill {
         ) && getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
     }
 
-    // 考虑到后续可能需要传入上下文，因此传入ServerPlayer
-    public SkillData createData(ServerPlayer player) {
-        var data = dataFactory.create(player);
+    public SkillData createData() {
+        var data = dataFactory.create();
         data.setEnabled(initiallyEnabled);
         return data;
     }
@@ -311,8 +307,8 @@ public abstract class Skill {
 
     public int getLevelForProficiency(float proficiency) {
         if (maxSkillLevel <= 0) return 0;
-        var clamped = Math.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY);
-        var level = (int) Math.floor(clamped / SkillData.MAX_PROFICIENCY * (maxSkillLevel + 1));
+        var clamped = Mth.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY);
+        var level = Mth.floor(clamped / SkillData.MAX_PROFICIENCY * (maxSkillLevel + 1));
         return Math.min(maxSkillLevel, level);
     }
 
@@ -425,7 +421,7 @@ public abstract class Skill {
 
     @FunctionalInterface
     public interface DataFactory {
-        SkillData create(ServerPlayer player);
+        SkillData create();
     }
 
     @FunctionalInterface
@@ -479,7 +475,7 @@ public abstract class Skill {
         private SkillProficiencyProfile proficiencyProfile = SkillProficiencyProfile.NONE;
         private SkillScope scope = SkillScope.CATEGORY;
 
-        private DataFactory dataFactory = _ -> new CommonSkillData();
+        private DataFactory dataFactory = CommonSkillData::new;
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
         private Identifier icon = R.textures.gui.icon.close;

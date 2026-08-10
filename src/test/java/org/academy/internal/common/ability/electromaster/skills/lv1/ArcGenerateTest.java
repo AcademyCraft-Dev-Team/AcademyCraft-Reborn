@@ -13,6 +13,22 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ArcGenerateTest {
+    private static void assertLine(ArcPath path, Vec3 expectedStart, Vec3 expectedEnd) {
+        var line = assertInstanceOf(LinePath.class, path.path());
+        assertVector(expectedStart, line.start());
+        assertVector(expectedEnd, line.end());
+    }
+
+    private static void assertVector(Vec3 expected, Vector3fc actual) {
+        assertEquals(expected.x, actual.x(), 1.0e-6);
+        assertEquals(expected.y, actual.y(), 1.0e-6);
+        assertEquals(expected.z, actual.z(), 1.0e-6);
+    }
+
+    private static long jaggedSeed(ArcPath path) {
+        return assertInstanceOf(JaggedModifier.class, path.modifiers().getFirst()).seed();
+    }
+
     @Test
     void damageUsesReferenceBaseAndSharedPlayerMultiplier() {
         assertEquals(4.0f, ArcGenerate.getDamage(1.0f, 1.0f));
@@ -85,21 +101,5 @@ class ArcGenerateTest {
         assertEquals(101L, jaggedSeed(outbound));
         assertEquals(ArcGenerate.deriveReturnSeed(101L), jaggedSeed(returning));
         assertNotEquals(101L, ArcGenerate.deriveReturnSeed(101L));
-    }
-
-    private static void assertLine(ArcPath path, Vec3 expectedStart, Vec3 expectedEnd) {
-        var line = assertInstanceOf(LinePath.class, path.path());
-        assertVector(expectedStart, line.start());
-        assertVector(expectedEnd, line.end());
-    }
-
-    private static void assertVector(Vec3 expected, Vector3fc actual) {
-        assertEquals(expected.x, actual.x(), 1.0e-6);
-        assertEquals(expected.y, actual.y(), 1.0e-6);
-        assertEquals(expected.z, actual.z(), 1.0e-6);
-    }
-
-    private static long jaggedSeed(ArcPath path) {
-        return assertInstanceOf(JaggedModifier.class, path.modifiers().getFirst()).seed();
     }
 }

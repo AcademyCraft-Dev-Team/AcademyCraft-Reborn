@@ -24,7 +24,6 @@ import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.renderer.LineBoxRenderer;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -32,7 +31,8 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.DistortionEffectWrapper;
+import org.academy.internal.client.render.vfx.DistortionVfx;
+import org.academy.internal.client.render.vfx.DistortionVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -50,8 +50,11 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
-/** The 26.2 target for the reference Penetrate Teleport skill. */
+/**
+ * The 26.2 target for the reference Penetrate Teleport skill.
+ */
 public final class CutThrough extends Skill {
     private static final double MAX_DISTANCE = 36.0;
 
@@ -74,7 +77,7 @@ public final class CutThrough extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        RendererManager.registerEffectRenderer(DistortionEffectWrapper.INSTANCE);
+        DistortionVfxClient.register();
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_START,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
@@ -127,7 +130,7 @@ public final class CutThrough extends Skill {
                 MisakaNetworkClient.send(new TeleportPacket(distance));
                 var player = Minecraft.getInstance().player;
                 if (player != null) {
-                    DistortionEffectWrapper.INSTANCE.trigger(
+                    DistortionVfx.INSTANCE.trigger(
                             (float) player.getX(), (float) player.getY() + 1.0f, (float) player.getZ(),
                             1.0f, 1.0f,
                             0.5f, 0.2f, 0.8f, 0.7f,

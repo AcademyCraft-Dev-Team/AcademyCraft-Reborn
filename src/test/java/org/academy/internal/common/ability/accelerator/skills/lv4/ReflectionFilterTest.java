@@ -10,6 +10,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ReflectionFilterTest {
     private static final Gson GSON = new Gson();
 
+    private static ReflectionFilter.Data data(String mode, String whitelist, String blacklist) {
+        return GSON.fromJson("{\"mode\":\"" + mode + "\",\"whitelist\":" + whitelist
+                + ",\"blacklist\":" + blacklist + "}", ReflectionFilter.Data.class);
+    }
+
+    private static boolean accept(ReflectionFilter.Data data, String effectId, MobEffectCategory category) {
+        return ReflectionFilter.shouldAcceptNormalizedEffect(data, effectId, category);
+    }
+
     @Test
     void appliesAllThreeReferenceModes() {
         var data = data("REFLECT_ALL", "[]", "[]");
@@ -40,14 +49,5 @@ class ReflectionFilterTest {
                 ReflectionFilter.Data.class);
 
         assertTrue(data.copy().isForcedMovementProtectionEnabled());
-    }
-
-    private static ReflectionFilter.Data data(String mode, String whitelist, String blacklist) {
-        return GSON.fromJson("{\"mode\":\"" + mode + "\",\"whitelist\":" + whitelist
-                + ",\"blacklist\":" + blacklist + "}", ReflectionFilter.Data.class);
-    }
-
-    private static boolean accept(ReflectionFilter.Data data, String effectId, MobEffectCategory category) {
-        return ReflectionFilter.shouldAcceptNormalizedEffect(data, effectId, category);
     }
 }

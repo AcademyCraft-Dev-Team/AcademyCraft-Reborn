@@ -322,8 +322,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
 
         val event = CharTypedEvent(e.codepoint())
         root.dispatchEvent(event)
-        if (event.isConsumed) return true
-        return this.isHandleContainer && super.charTyped(e)
+        return event.isConsumed || this.isHandleContainer && super.charTyped(e)
     }
 
     override fun hasClickedOutside(mouseX: Double, mouseY: Double, guiLeft: Int, guiTop: Int): Boolean {

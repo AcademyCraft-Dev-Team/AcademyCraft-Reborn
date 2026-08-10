@@ -4,7 +4,9 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Set;
 
-/** Public extension point for player, flight-skill, and vehicle navigation implementations. */
+/**
+ * Public extension point for player, flight-skill, and vehicle navigation implementations.
+ */
 public interface PlayerNavigationAdapter {
     boolean matches(ServerPlayer subject);
 

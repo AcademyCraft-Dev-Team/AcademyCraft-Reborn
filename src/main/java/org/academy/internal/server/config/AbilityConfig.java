@@ -17,11 +17,6 @@ public class AbilityConfig {
     public final Map<String, List<String>> metalBlocks = new HashMap<>();
     @SerializedName("skills")
     public final Map<String, SkillSettings> skills = new HashMap<>();
-
-    @SerializedName("damageMultiplier")
-    public float damageMultiplier = 1.0f;
-    @SerializedName("cpRatingOffset")
-    public float cpRatingOffset = 0.0f;
     @SerializedName("brainDevelopment")
     public final BrainDevelopmentSettings brainDevelopment = new BrainDevelopmentSettings();
     @SerializedName("aeromanip")
@@ -30,6 +25,10 @@ public class AbilityConfig {
     public final MentaloutSettings mentalout = new MentaloutSettings();
     @SerializedName("proficiency")
     public final ProficiencySettings proficiency = new ProficiencySettings();
+    @SerializedName("damageMultiplier")
+    public float damageMultiplier = 1.0f;
+    @SerializedName("cpRatingOffset")
+    public float cpRatingOffset = 0.0f;
 
     public static class ProficiencySettings {
         @SerializedName("enabled")

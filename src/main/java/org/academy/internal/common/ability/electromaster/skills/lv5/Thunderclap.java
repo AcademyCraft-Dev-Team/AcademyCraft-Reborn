@@ -3,11 +3,9 @@ package org.academy.internal.common.ability.electromaster.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
@@ -34,10 +32,10 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
-import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.network.PacketTypes;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -49,6 +47,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public class Thunderclap extends Skill {
     static final double RANGE = 64.0;
@@ -67,6 +66,23 @@ public class Thunderclap extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("Ball Lightning", "academy:ball_lightning"))
         );
+    }
+
+    static @Nullable Vec3 selectNearestTarget(
+            Vec3 start,
+            @Nullable Vec3 blockTarget,
+            @Nullable Vec3 entityTarget
+    ) {
+        if (entityTarget == null) return blockTarget;
+        if (blockTarget == null) return entityTarget;
+        return start.distanceToSqr(entityTarget) <= start.distanceToSqr(blockTarget)
+                ? entityTarget
+                : blockTarget;
+    }
+
+    static float calculateDamage(float maxHealth, float abilityPower) {
+        if (!Float.isFinite(maxHealth) || !Float.isFinite(abilityPower)) return 0;
+        return Math.max(0, maxHealth) * HEALTH_DAMAGE_RATIO * Math.max(0, abilityPower);
     }
 
     @Override
@@ -105,7 +121,7 @@ public class Thunderclap extends Skill {
         private static void registerSettings() {
             if (settingsRegistered) return;
             settingsRegistered = true;
-            SkillSettingsRegistry.register(
+            SkillSettingsRegistry.INSTANCE.register(
                     Skills.THUNDERCLAP.get(),
                     new SkillSettingsRegistry.Module(
                             "sky_strike_feedback",
@@ -150,6 +166,10 @@ public class Thunderclap extends Skill {
             private float flashIntensity = 1.0f;
             private float shakeIntensity = 1.0f;
 
+            private static float sanitizeIntensity(float value) {
+                return Float.isFinite(value) ? Mth.clamp(value, 0.0f, 1.0f) : 1.0f;
+            }
+
             public float getFlashIntensity() {
                 return sanitizeIntensity(flashIntensity);
             }
@@ -164,10 +184,6 @@ public class Thunderclap extends Skill {
 
             public void setShakeIntensity(float shakeIntensity) {
                 this.shakeIntensity = sanitizeIntensity(shakeIntensity);
-            }
-
-            private static float sanitizeIntensity(float value) {
-                return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 1.0f;
             }
 
             public static final class Action implements TypeHandler<Config> {
@@ -256,23 +272,6 @@ public class Thunderclap extends Skill {
                 }
             }
         }
-    }
-
-    static @Nullable Vec3 selectNearestTarget(
-            Vec3 start,
-            @Nullable Vec3 blockTarget,
-            @Nullable Vec3 entityTarget
-    ) {
-        if (entityTarget == null) return blockTarget;
-        if (blockTarget == null) return entityTarget;
-        return start.distanceToSqr(entityTarget) <= start.distanceToSqr(blockTarget)
-                ? entityTarget
-                : blockTarget;
-    }
-
-    static float calculateDamage(float maxHealth, float abilityPower) {
-        if (!Float.isFinite(maxHealth) || !Float.isFinite(abilityPower)) return 0;
-        return Math.max(0, maxHealth) * HEALTH_DAMAGE_RATIO * Math.max(0, abilityPower);
     }
 
     @PacketTarget(ThreadType.SERVER)

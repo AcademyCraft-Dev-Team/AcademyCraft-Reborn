@@ -2,18 +2,15 @@ package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlRejectionReason;
-import org.academy.api.common.entitycontrol.ControlSupport;
-import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import org.academy.api.common.entitycontrol.*;
 
 import java.util.UUID;
 
 public final class WitherMentalControlAdapter implements MentalControlAdapter {
+    private static void clearHeads(WitherBoss wither) {
+        for (var head = 0; head < 3; head++) wither.setAlternativeTarget(head, 0);
+    }
+
     @Override
     public boolean matches(LivingEntity subject) {
         return subject instanceof WitherBoss;
@@ -52,14 +49,9 @@ public final class WitherMentalControlAdapter implements MentalControlAdapter {
             case ControlDirective.ImpressionAlliance ignored -> new RelationBinding(wither);
             case ControlDirective.MoveTo moveTo -> StandardMobControlBindings.create(context, wither, moveTo);
             case ControlDirective.LookAt lookAt -> StandardMobControlBindings.create(context, wither, lookAt);
-            case ControlDirective.DirectControl direct ->
-                    StandardMobControlBindings.create(context, wither, direct);
+            case ControlDirective.DirectControl direct -> StandardMobControlBindings.create(context, wither, direct);
             case ControlDirective.Guard guard -> StandardMobControlBindings.create(context, wither, guard);
         };
-    }
-
-    private static void clearHeads(WitherBoss wither) {
-        for (var head = 0; head < 3; head++) wither.setAlternativeTarget(head, 0);
     }
 
     private static final class ForceTargetBinding implements ControlBinding {
@@ -93,51 +85,43 @@ public final class WitherMentalControlAdapter implements MentalControlAdapter {
         }
     }
 
-    private static final class FreezeBinding implements ControlBinding {
-        private final WitherBoss wither;
-
-        private FreezeBinding(WitherBoss wither) {
+    private record FreezeBinding(WitherBoss wither) implements ControlBinding {
+        private FreezeBinding {
             if (wither.getInvulnerableTicks() > 0) {
                 throw new IllegalStateException("Wither is still in its spawn invulnerability phase");
             }
-            this.wither = wither;
         }
 
-        @Override
-        public void tick() {
-            clearHeads(wither);
-            wither.stopInPlace();
-            wither.getNavigation().stop();
-            wither.setJumping(false);
-            wither.setDeltaMovement(0.0, 0.0, 0.0);
-        }
+            @Override
+            public void tick() {
+                clearHeads(wither);
+                wither.stopInPlace();
+                wither.getNavigation().stop();
+                wither.setJumping(false);
+                wither.setDeltaMovement(0.0, 0.0, 0.0);
+            }
 
-        @Override
-        public void close() {
-        }
-    }
-
-    private static final class RelationBinding implements ControlBinding {
-        private final WitherBoss wither;
-
-        private RelationBinding(WitherBoss wither) {
-            this.wither = wither;
-        }
-
-        @Override
-        public void tick() {
-            MentalControlRuntime.enforceTargetWhitelist(wither);
-            for (var head = 0; head < 3; head++) {
-                var target = wither.level().getEntity(wither.getAlternativeTarget(head));
-                if (target instanceof LivingEntity living
-                        && MentalControlRuntime.attackDecision(wither, living) == AttackDecision.DENY) {
-                    wither.setAlternativeTarget(head, 0);
-                }
+            @Override
+            public void close() {
             }
         }
 
+    private record RelationBinding(WitherBoss wither) implements ControlBinding {
+
         @Override
-        public void close() {
+            public void tick() {
+                MentalControlRuntime.enforceTargetWhitelist(wither);
+                for (var head = 0; head < 3; head++) {
+                    var target = wither.level().getEntity(wither.getAlternativeTarget(head));
+                    if (target instanceof LivingEntity living
+                            && MentalControlRuntime.attackDecision(wither, living) == AttackDecision.DENY) {
+                        wither.setAlternativeTarget(head, 0);
+                    }
+                }
+            }
+
+            @Override
+            public void close() {
+            }
         }
-    }
 }

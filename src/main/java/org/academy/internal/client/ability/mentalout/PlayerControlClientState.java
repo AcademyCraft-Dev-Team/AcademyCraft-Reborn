@@ -1,10 +1,14 @@
 package org.academy.internal.client.ability.mentalout;
 
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec2;
+import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.entitycontrol.PlayerControlFrame;
 import org.academy.api.common.entitycontrol.PlayerMovementMode;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -17,7 +21,9 @@ import org.misaka.MisakaNetworkClient;
 
 import java.util.UUID;
 
-/** Client-side capture/injection endpoint for an authorized player-control session. */
+/**
+ * Client-side capture/injection endpoint for an authorized player-control session.
+ */
 public final class PlayerControlClientState {
     private static UUID sessionId;
     private static UUID subjectUuid;
@@ -135,7 +141,7 @@ public final class PlayerControlClientState {
             float maxCp
     ) {
         if (!matches(requestedSession, requestedRevision)) return;
-        struggle = Math.clamp(requestedStruggle, 0, 100);
+        struggle = Mth.clamp(requestedStruggle, 0, 100);
         controllerCp = Math.max(0.0f, cp);
         controllerMaxCp = Math.max(0.0f, maxCp);
     }
@@ -235,15 +241,17 @@ public final class PlayerControlClientState {
         return virtualPitch;
     }
 
-    /** Receives the same sensitivity/inversion-adjusted deltas vanilla would pass to Entity.turn. */
+    /**
+     * Receives the same sensitivity/inversion-adjusted deltas vanilla would pass to Entity.turn.
+     */
     public static boolean captureViewTurn(double yawDelta, double pitchDelta) {
         if (isSelfControlled()) {
             if (yawDelta != 0.0 || pitchDelta != 0.0) requestStop();
             return false;
         }
         if (!isController()) return false;
-        virtualYaw = net.minecraft.util.Mth.wrapDegrees(virtualYaw + (float) yawDelta * 0.15f);
-        virtualPitch = Math.clamp(virtualPitch + (float) pitchDelta * 0.15f, -90.0f, 90.0f);
+        virtualYaw = Mth.wrapDegrees(virtualYaw + (float) yawDelta * 0.15f);
+        virtualPitch = Mth.clamp(virtualPitch + (float) pitchDelta * 0.15f, -90.0f, 90.0f);
         return true;
     }
 
@@ -285,7 +293,9 @@ public final class PlayerControlClientState {
         revision = 0L;
     }
 
-    /** Projects an authorized frame into the input object actually consumed by LocalPlayer physics. */
+    /**
+     * Projects an authorized frame into the input object actually consumed by LocalPlayer physics.
+     */
     public static void applyAuthorizedInput(LocalPlayer player) {
         if (sessionId == null || player != Minecraft.getInstance().player) return;
         var frame = isInputSubject() ? authorizedFrame : PlayerControlFrame.NEUTRAL;
@@ -425,7 +435,7 @@ public final class PlayerControlClientState {
         previousUse = use;
     }
 
-    private static PlayerMovementMode movementMode(net.minecraft.client.player.LocalPlayer player) {
+    private static PlayerMovementMode movementMode(LocalPlayer player) {
         if (player.isPassenger()) return PlayerMovementMode.MOUNT;
         if (player.isFallFlying()) return PlayerMovementMode.GLIDE;
         if (player.getAbilities().flying) return PlayerMovementMode.FLY;
@@ -442,7 +452,7 @@ public final class PlayerControlClientState {
         ((ClientInputAccessor) player.input).academy$setMoveVector(Vec2.ZERO);
     }
 
-    private static int directionMask(net.minecraft.client.Options options) {
+    private static int directionMask(Options options) {
         var result = 0;
         if (raw(options.keyUp)) result |= 1;
         if (raw(options.keyDown)) result |= 2;
@@ -451,7 +461,7 @@ public final class PlayerControlClientState {
         return result;
     }
 
-    private static boolean raw(net.minecraft.client.KeyMapping mapping) {
+    private static boolean raw(KeyMapping mapping) {
         return InputSystem.isPhysicalDown(mapping);
     }
 

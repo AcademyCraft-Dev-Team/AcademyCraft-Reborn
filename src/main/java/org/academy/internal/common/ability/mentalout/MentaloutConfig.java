@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.mentalout;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.server.config.AbilityConfig;
+import net.minecraft.util.Mth;
 
 public final class MentaloutConfig {
     private MentaloutConfig() {
@@ -58,7 +59,7 @@ public final class MentaloutConfig {
     }
 
     public static int playerControlResistanceTicks(ServerPlayer player) {
-        return Math.clamp(settings(player).playerControlResistanceTicks, 0, 20 * 60 * 10);
+        return Mth.clamp(settings(player).playerControlResistanceTicks, 0, 20 * 60 * 10);
     }
 
     public static float mentalIntrusionCost(ServerPlayer player, int level) {
@@ -70,8 +71,8 @@ public final class MentaloutConfig {
     }
 
     public static double mentalIntrusionRange(ServerPlayer player, int level) {
-        var maximum = Math.clamp(finite(settings(player).mentalIntrusionRange, 16.0f), 1.0f, 16.0f);
-        return maximum * switch (Math.clamp(level, 0, 2)) {
+        var maximum = Mth.clamp(finite(settings(player).mentalIntrusionRange, 16.0f), 1.0f, 16.0f);
+        return maximum * switch (Mth.clamp(level, 0, 2)) {
             case 0 -> 0.75;
             case 1 -> 0.875;
             default -> 1.0;
@@ -79,8 +80,8 @@ public final class MentaloutConfig {
     }
 
     public static int playerIntrusionDuration(ServerPlayer player, int level) {
-        var maximum = Math.clamp(settings(player).playerIntrusionMaxTicks, 20, 200);
-        return Math.max(20, Math.round(maximum * switch (Math.clamp(level, 0, 2)) {
+        var maximum = Mth.clamp(settings(player).playerIntrusionMaxTicks, 20, 200);
+        return Math.max(20, Math.round(maximum * switch (Mth.clamp(level, 0, 2)) {
             case 0 -> 0.6f;
             case 1 -> 0.8f;
             default -> 1.0f;
@@ -88,11 +89,11 @@ public final class MentaloutConfig {
     }
 
     public static int playerIntrusionCooldown(ServerPlayer player) {
-        return Math.clamp(settings(player).playerIntrusionCooldownTicks, 20, 1200);
+        return Mth.clamp(settings(player).playerIntrusionCooldownTicks, 20, 1200);
     }
 
     public static double intrusionMaximumDistance(ServerPlayer player) {
-        return Math.clamp(finite(settings(player).mentalIntrusionMaxDistance, 96.0f), 16.0f, 256.0f);
+        return Mth.clamp(finite(settings(player).mentalIntrusionMaxDistance, 96.0f), 16.0f, 256.0f);
     }
 
     private static AbilityConfig.MentaloutSettings settings(ServerPlayer player) {
@@ -114,7 +115,7 @@ public final class MentaloutConfig {
 
     private static float scaled(float configured, float fallback, int level, float intermediateScale) {
         var base = nonNegative(configured, fallback);
-        return base * switch (Math.clamp(level, 0, 2)) {
+        return base * switch (Mth.clamp(level, 0, 2)) {
             case 0 -> 1.0f;
             case 1 -> intermediateScale;
             default -> 0.7f;

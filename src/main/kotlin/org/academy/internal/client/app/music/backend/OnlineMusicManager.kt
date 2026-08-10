@@ -257,22 +257,25 @@ object OnlineMusicManager {
             revisionCounter.incrementAndGet()
             return
         }
-        MisakaNetworkClient.send(MusicSyncPackets.SharePacket(MusicSyncPackets.TrackSnapshot(
-            info.provider,
-            info.externalId,
-            info.name,
-            info.subtitle,
-            info.durationSeconds,
-            info.vip,
-            info.artworkUrl,
-            backend.currentTime,
-            backend.isPlaying
-        )))
+        MisakaNetworkClient.send(
+            MusicSyncPackets.SharePacket(
+                MusicSyncPackets.TrackSnapshot(
+                    info.provider,
+                    info.externalId,
+                    info.name,
+                    info.subtitle,
+                    info.durationSeconds,
+                    info.vip,
+                    info.artworkUrl,
+                    backend.currentTime,
+                    backend.isPlaying
+                )
+            )
+        )
         status = "已向附近玩家同步：${info.name}"
         revisionCounter.incrementAndGet()
     }
 
-    @JvmStatic
     @SubscribePacket
     fun receiveSync(packet: MusicSyncPackets.SyncPacket) {
         val snapshot = packet.snapshot()

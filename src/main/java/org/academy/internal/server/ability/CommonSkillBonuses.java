@@ -5,8 +5,11 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.Map;
+import net.minecraft.util.Mth;
 
-/** Derived effects supplied by learned common-course skills. */
+/**
+ * Derived effects supplied by learned common-course skills.
+ */
 final class CommonSkillBonuses {
     static final Bonuses NONE = new Bonuses(0.0f, 0, 1.0f, 10.0f, false, 0.0, 0.0, 0.0);
 
@@ -33,7 +36,7 @@ final class CommonSkillBonuses {
         var physicalTier = tier(learnedSkills.get(PHYSICAL_TRAINING));
 
         return new Bonuses(
-                brainTier * Math.clamp(abilityLevel, 0, 5) * 5.0f,
+                brainTier * Mth.clamp(abilityLevel, 0, 5) * 5.0f,
                 stackTier,
                 1.0f + iterationTier * 0.05f,
                 10.0f * (1.0f + spTier * 0.10f),

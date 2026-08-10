@@ -5,12 +5,14 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
@@ -19,6 +21,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalControlRuntim
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -32,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public final class MentalIntrusionManager {
     private static final int READY_TIMEOUT_TICKS = 20;
@@ -65,7 +69,7 @@ public final class MentalIntrusionManager {
         }
         var skill = Skills.MENTAL_INTRUSION.get();
         if (!skill.isEnabled(player)) return StartResult.UNAVAILABLE;
-        var level = Math.clamp(skill.getLevel(player), 0, 2);
+        var level = Mth.clamp(skill.getLevel(player), 0, 2);
         var target = MentaloutTargeting.findLookedAtLiving(
                 player,
                 MentaloutConfig.mentalIntrusionRange(player, level)
@@ -119,7 +123,7 @@ public final class MentalIntrusionManager {
                 target.getUUID()
         ));
         player.level().playSound(null, player.blockPosition(),
-                org.academy.internal.common.sounds.SoundEvents.MENTAL_INTRUSION.get(),
+                SoundEvents.MENTAL_INTRUSION.get(),
                 SoundSource.PLAYERS, 0.7f, 1.0f);
         return StartResult.STARTED;
     }
@@ -128,7 +132,7 @@ public final class MentalIntrusionManager {
         if (player == null || target == null || SESSIONS.containsKey(player.getUUID())) return null;
         var intrusion = Skills.MENTAL_INTRUSION.get();
         if (!intrusion.isEnabled(player)) return null;
-        var level = Math.clamp(intrusion.getLevel(player), 0, 2);
+        var level = Mth.clamp(intrusion.getLevel(player), 0, 2);
         var range = MentaloutConfig.mentalIntrusionRange(player, level);
         if (MentalControlRuntime.isProtectedTarget(target)) {
             MentalControlRuntime.notifyProtectionBlocked(player, target);
@@ -255,7 +259,7 @@ public final class MentalIntrusionManager {
                 session.afterimageUntil = player.level().getGameTime() + 60L;
             }
             player.level().playSound(null, player.blockPosition(),
-                    org.academy.internal.common.sounds.SoundEvents.SENSORY_DISTORTION.get(),
+                    SoundEvents.SENSORY_DISTORTION.get(),
                     SoundSource.PLAYERS, 0.65f, 1.0f);
             return DistortionResult.STARTED;
         } catch (RuntimeException exception) {
@@ -276,7 +280,7 @@ public final class MentalIntrusionManager {
         return session == null ? null : session.target;
     }
 
-    public static void tick(net.minecraft.server.MinecraftServer server) {
+    public static void tick(MinecraftServer server) {
         MentalPerceptionRuntime.tick(server);
         var now = server.overworld().getGameTime();
         for (var session : List.copyOf(SESSIONS.values())) {
@@ -402,6 +406,15 @@ public final class MentalIntrusionManager {
 
     private static void feedback(ServerPlayer player, String key) {
         player.sendOverlayMessage(Component.translatable(key));
+    }
+
+    private static void writeUuid(ByteBuf buf, UUID uuid) {
+        buf.writeLong(uuid.getMostSignificantBits());
+        buf.writeLong(uuid.getLeastSignificantBits());
+    }
+
+    private static UUID readUuid(ByteBuf buf) {
+        return new UUID(buf.readLong(), buf.readLong());
     }
 
     public enum StartResult {
@@ -705,15 +718,6 @@ public final class MentalIntrusionManager {
         public PacketType<ClientPacketListener, PerceptionPacket> getPacketType() {
             return PacketTypes.MENTAL_PERCEPTION_UPDATE.get();
         }
-    }
-
-    private static void writeUuid(ByteBuf buf, UUID uuid) {
-        buf.writeLong(uuid.getMostSignificantBits());
-        buf.writeLong(uuid.getLeastSignificantBits());
-    }
-
-    private static UUID readUuid(ByteBuf buf) {
-        return new UUID(buf.readLong(), buf.readLong());
     }
 
     private record CooldownKey(UUID controllerId, UUID targetId) {

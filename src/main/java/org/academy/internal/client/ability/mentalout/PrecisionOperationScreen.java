@@ -139,17 +139,17 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
         var layoutVariant = compactLeft ? "compact" : compactRight ? "medium" : "wide";
         serializedLayoutId = "precision_operation_" + layoutVariant;
-        var serialized = SerializedUiLayout.load(
+        var serialized = SerializedUiLayout.INSTANCE.load(
                 AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
                 List.of("panel", "palette", "canvas", "inspector", "title_accent"),
                 () -> fallbackLayout(layout)
         );
         serializedLayout = serialized;
         getRoot().addChild("serialized_layout", serialized);
-        panelLayout = SerializedUiLayout.require(serialized, "panel");
-        paletteLayout = SerializedUiLayout.require(serialized, "palette");
-        canvasLayout = SerializedUiLayout.require(serialized, "canvas");
-        inspectorLayout = SerializedUiLayout.require(serialized, "inspector");
+        panelLayout = SerializedUiLayout.INSTANCE.require(serialized, "panel");
+        paletteLayout = SerializedUiLayout.INSTANCE.require(serialized, "palette");
+        canvasLayout = SerializedUiLayout.INSTANCE.require(serialized, "canvas");
+        inspectorLayout = SerializedUiLayout.INSTANCE.require(serialized, "inspector");
 
         search = new EditBox(font, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y,
                 paletteWidth() - 8, 15,

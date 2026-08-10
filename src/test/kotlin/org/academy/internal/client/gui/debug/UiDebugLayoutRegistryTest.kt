@@ -4,9 +4,7 @@ import org.academy.api.client.gui.serialize.WidgetSerializer
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayoutDefaults
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class UiDebugLayoutRegistryTest {

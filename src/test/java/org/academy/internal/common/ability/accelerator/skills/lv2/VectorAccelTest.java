@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv2;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
@@ -17,12 +18,12 @@ class VectorAccelTest {
     @Test
     void referenceSpeedCurveIsBoundedBySeven() {
         assertEquals(
-                Math.sin(0.4) * VectorAccel.Server.MAX_VELOCITY_SCALAR,
+                Mth.sin(0.4f) * VectorAccel.Server.MAX_VELOCITY_SCALAR,
                 VectorAccel.Server.getSpeed(-1.0f),
                 0.0001
         );
         assertEquals(
-                Math.sin(1.0) * VectorAccel.Server.MAX_VELOCITY_SCALAR,
+                Mth.sin(1.0f) * VectorAccel.Server.MAX_VELOCITY_SCALAR,
                 VectorAccel.Server.getSpeed(2.0f),
                 0.0001
         );

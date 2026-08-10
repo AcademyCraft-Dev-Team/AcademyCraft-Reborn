@@ -1,6 +1,7 @@
 package org.academy.internal.client.app.music.netease;
 
-public record NeteaseSearchResult(String id, String title, String artist, int durationSeconds, String albumName, String picUrl, int fee) {
+public record NeteaseSearchResult(String id, String title, String artist, int durationSeconds, String albumName,
+                                  String picUrl, int fee) {
     public NeteaseSearchResult {
         id = id == null ? "" : id;
         title = title == null ? "" : title;

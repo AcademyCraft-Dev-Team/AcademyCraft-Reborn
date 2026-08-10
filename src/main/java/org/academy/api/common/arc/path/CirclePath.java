@@ -17,6 +17,7 @@ import org.joml.Vector3fc;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public record CirclePath(Vector3fc center, Vector3fc normal, float radius) implements BasePath {
     public static final StreamCodec<ByteBuf, CirclePath> CODEC = StreamCodec.composite(
@@ -28,7 +29,7 @@ public record CirclePath(Vector3fc center, Vector3fc normal, float radius) imple
 
     @Override
     public PathData generate(float resolution) {
-        var circumference = 2.0f * (float) Math.PI * radius;
+        var circumference = Mth.TWO_PI * radius;
         var segments = Math.max(3, (int) (circumference * resolution));
         var pointCount = segments + 1;
         List<PathFrame> frames = new ArrayList<>(pointCount);
@@ -37,9 +38,9 @@ public record CirclePath(Vector3fc center, Vector3fc normal, float radius) imple
 
         for (var i = 0; i <= segments; i++) {
             var t = (float) i / segments;
-            var angle = t * 2.0f * (float) Math.PI;
-            var x = (float) Math.cos(angle) * radius;
-            var z = (float) Math.sin(angle) * radius;
+            var angle = t * Mth.TWO_PI;
+            var x = Mth.cos(angle) * radius;
+            var z = Mth.sin(angle) * radius;
 
             var localPos = new Vector3f(x, 0, z);
             var localTangent = new Vector3f(-z, 0, x).normalize();

@@ -8,8 +8,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.Skill;
-import org.jetbrains.annotations.Nullable;
 import org.academy.internal.common.world.damagesource.SkillDamageTypeResolver;
+import org.jetbrains.annotations.Nullable;
 
 public class SkillDamageSource extends DamageSource {
 

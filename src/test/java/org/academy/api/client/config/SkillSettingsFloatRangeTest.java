@@ -19,7 +19,8 @@ class SkillSettingsFloatRangeTest {
                 0.05f,
                 value::get,
                 value::set,
-                () -> { }
+                () -> {
+                }
         );
 
         assertEquals(0.55f, entry.quantize(0.53f), 0.0001f);
@@ -36,8 +37,10 @@ class SkillSettingsFloatRangeTest {
                 1.0f,
                 0.0f,
                 () -> 1.0f,
-                _ -> { },
-                () -> { }
+                _ -> {
+                },
+                () -> {
+                }
         ));
     }
 }

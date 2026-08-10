@@ -7,6 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -44,7 +45,9 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Moves every compatible roster member to the block or entity under the caster's crosshair. */
+/**
+ * Moves every compatible roster member to the block or entity under the caster's crosshair.
+ */
 public final class CommandPositioning extends Skill {
     private static final int CONTROL_PRIORITY = 250;
 
@@ -160,12 +163,12 @@ public final class CommandPositioning extends Skill {
                 return;
             }
 
-            var destinationEntity = destination instanceof ControlDestination.Entity entity
-                    ? entity.uuid()
+            var destinationEntity = destination instanceof ControlDestination.Entity(java.util.UUID uuid)
+                    ? uuid
                     : null;
             var skipped = 0;
-            net.minecraft.world.entity.LivingEntity protectedTarget = null;
-            var subjects = new ArrayList<net.minecraft.world.entity.LivingEntity>();
+            LivingEntity protectedTarget = null;
+            var subjects = new ArrayList<LivingEntity>();
             for (var subject : MentaloutControlContext.subjects(player)) {
                 if (MentalControlRuntime.isProtectedTarget(subject)) {
                     if (protectedTarget == null) protectedTarget = subject;

@@ -9,13 +9,7 @@ import imgui.type.ImString
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import org.academy.api.client.gui.layout.Gravity
-import org.academy.api.client.gui.serialize.PropSpec
-import org.academy.api.client.gui.serialize.PropType
-import org.academy.api.client.gui.serialize.UiJson
-import org.academy.api.client.gui.serialize.UiLayoutCodecs
-import org.academy.api.client.gui.serialize.WidgetCodecRegistry
-import org.academy.api.client.gui.serialize.WidgetNode
-import org.academy.api.client.gui.serialize.WidgetSerializer
+import org.academy.api.client.gui.serialize.*
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.internal.client.gui.debug.UiDebugSession
@@ -148,11 +142,16 @@ object UiLayoutImGuiEditor {
             if (ImGui.button(tr("screen.academy.ui_debug.action.reload"))) editor.reloadDebugDocument()
             ImGui.sameLine()
             val attached = UiDebugSession.attachedLayoutId == editor.debugLayoutId
-            if (ImGui.button(tr(if (attached) {
-                    "screen.academy.ui_debug.action.detach_live"
-                } else {
-                    "screen.academy.ui_debug.action.attach_live"
-                }))) {
+            if (ImGui.button(
+                    tr(
+                        if (attached) {
+                            "screen.academy.ui_debug.action.detach_live"
+                        } else {
+                            "screen.academy.ui_debug.action.attach_live"
+                        }
+                    )
+                )
+            ) {
                 UiDebugSession.attach(if (attached) null else editor.debugLayoutId)
             }
             editor.validationError?.let {
@@ -181,8 +180,10 @@ object UiLayoutImGuiEditor {
             Files.createDirectories(file.parent)
             Files.writeString(file, UiJson.GSON.toJson(editor.documentJson()))
         } catch (e: Exception) {
-            ImGui.textColored(1f, 0.3f, 0.3f, 1f,
-                tr("screen.academy.ui_debug.editor.save_failed", e.message ?: ""))
+            ImGui.textColored(
+                1f, 0.3f, 0.3f, 1f,
+                tr("screen.academy.ui_debug.editor.save_failed", e.message ?: "")
+            )
         }
     }
 
@@ -195,8 +196,10 @@ object UiLayoutImGuiEditor {
                 ?: return
             editor.setDoc(WidgetNode.fromJson(parsed.getAsJsonObject("root") ?: parsed))
         } catch (e: Exception) {
-            ImGui.textColored(1f, 0.3f, 0.3f, 1f,
-                tr("screen.academy.ui_debug.editor.load_failed", e.message ?: ""))
+            ImGui.textColored(
+                1f, 0.3f, 0.3f, 1f,
+                tr("screen.academy.ui_debug.editor.load_failed", e.message ?: "")
+            )
         }
     }
 
@@ -426,31 +429,47 @@ object UiLayoutImGuiEditor {
 
         ImGui.text(tr("screen.academy.ui_debug.editor.gravity.horizontal"))
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.left") + "##gh", Gravity.LEFT) || changed
+        changed = axisRadio(
+            gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.left") + "##gh", Gravity.LEFT
+        ) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.center") + "##gh", Gravity.CENTER_HORIZONTAL) || changed
+        changed = axisRadio(
+            gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.center") + "##gh", Gravity.CENTER_HORIZONTAL
+        ) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.right") + "##gh", Gravity.RIGHT) || changed
+        changed = axisRadio(
+            gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.right") + "##gh", Gravity.RIGHT
+        ) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.fill") + "##gh", Gravity.FILL_HORIZONTAL) || changed
+        changed = axisRadio(
+            gravity, Gravity.HORIZONTAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.fill") + "##gh", Gravity.FILL_HORIZONTAL
+        ) || changed
 
         ImGui.text(tr("screen.academy.ui_debug.editor.gravity.vertical"))
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.top") + "##gv", Gravity.TOP) || changed
+        changed = axisRadio(
+            gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.top") + "##gv", Gravity.TOP
+        ) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.center") + "##gv", Gravity.CENTER_VERTICAL) || changed
+        changed = axisRadio(
+            gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.center") + "##gv", Gravity.CENTER_VERTICAL
+        ) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.bottom") + "##gv", Gravity.BOTTOM) || changed
+        changed = axisRadio(
+            gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.bottom") + "##gv", Gravity.BOTTOM
+        ) || changed
         ImGui.sameLine()
-        changed = axisRadio(gravity, Gravity.VERTICAL_GRAVITY_MASK,
-            tr("screen.academy.ui_debug.direction.fill") + "##gv", Gravity.FILL_VERTICAL) || changed
+        changed = axisRadio(
+            gravity, Gravity.VERTICAL_GRAVITY_MASK,
+            tr("screen.academy.ui_debug.direction.fill") + "##gv", Gravity.FILL_VERTICAL
+        ) || changed
 
         if (changed) {
             obj.addProperty("gravity", gravity.get())
@@ -554,8 +573,10 @@ object UiLayoutImGuiEditor {
                     ?: throw IllegalArgumentException("empty json")
                 editor.setDoc(WidgetNode.fromJson(parsed.getAsJsonObject("root") ?: parsed))
             } catch (e: Exception) {
-                ImGui.textColored(1f, 0.3f, 0.3f, 1f,
-                    tr("screen.academy.ui_debug.editor.json_error", e.message ?: ""))
+                ImGui.textColored(
+                    1f, 0.3f, 0.3f, 1f,
+                    tr("screen.academy.ui_debug.editor.json_error", e.message ?: "")
+                )
             }
         }
         val text = ImString(editor.jsonText, 131072)
@@ -576,20 +597,24 @@ object UiLayoutImGuiEditor {
             tr("screen.academy.ui_debug.size_mode.match_parent"),
             tr("screen.academy.ui_debug.size_mode.wrap_content")
         )
+
         options.contentEquals(VISIBILITY_NAMES) -> arrayOf(
             tr("screen.academy.ui_debug.visibility.visible"),
             tr("screen.academy.ui_debug.visibility.invisible"),
             tr("screen.academy.ui_debug.visibility.gone")
         )
+
         options.contentEquals(arrayOf("HORIZONTAL", "VERTICAL")) -> arrayOf(
             tr("screen.academy.ui_debug.orientation.horizontal"),
             tr("screen.academy.ui_debug.orientation.vertical")
         )
+
         options.contentEquals(arrayOf("CENTER", "LEFT", "RIGHT")) -> arrayOf(
             tr("screen.academy.ui_debug.direction.center"),
             tr("screen.academy.ui_debug.direction.left"),
             tr("screen.academy.ui_debug.direction.right")
         )
+
         else -> options
     }
 

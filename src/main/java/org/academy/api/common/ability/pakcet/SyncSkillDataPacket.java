@@ -20,15 +20,12 @@ import java.util.Map;
 
 @PacketTarget(ThreadType.CLIENT)
 public class SyncSkillDataPacket extends Packet<ClientPacketListener, SyncSkillDataPacket> {
-
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(SkillData.class, new SkillDataSerializer<>())
             .enableComplexMapKeySerialization()
             .create();
-
     private static final Type MAP_TYPE = new TypeToken<Map<String, SkillData>>() {
     }.getType();
-
     public static final StreamCodec<ByteBuf, SyncSkillDataPacket> CODEC = StreamCodec.of(
             (buf, packet) -> {
                 var json = GSON.toJson(packet.skillDataMap, MAP_TYPE);
@@ -40,6 +37,7 @@ public class SyncSkillDataPacket extends Packet<ClientPacketListener, SyncSkillD
                 return new SyncSkillDataPacket(map);
             }
     );
+
     private final Map<String, SkillData> skillDataMap;
 
     public SyncSkillDataPacket(Map<String, SkillData> skillDataMap) {

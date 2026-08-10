@@ -27,9 +27,9 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -49,20 +49,54 @@ public final class VortexPull extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
 
-    @Override public void initClient() {
-        var key = getKey(); AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE); Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_B, InputConstants.RELEASE, InputConstants.MOD_ALT)), _ -> Client.cast());
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.VORTEX_PULL.get(), List.of(), R.textures.vortex_pull_icon, 130, 104));
     }
-    @Override public void initServer(MinecraftServerContext context) { MisakaNetworkServer.NETWORK_MANAGER.register(Server.class); }
-    public static final class Client {
-        public static AbilitySystemClient.SkillInfo SKILL_INFO; public static final String KEY_NAME_CAST = SkillNames.VORTEX_PULL + "_cast"; public static Config CONFIG = new Config();
-        private static void cast() { if (AbilitySystemClient.canUseSkill(Skills.VORTEX_PULL.get())) MisakaNetworkClient.send(CastPacket.INSTANCE); }
-        public static final class Config extends KeyBindingConfig { public static final class Action implements TypeHandler<Config> { public static final TypeHandler<Config> INSTANCE = new Action(); private Action() { } @Override public Config getDefault() { return new Config(); } @Override public Class<Config> getTypeClass() { return Config.class; } } }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
+
+    public static final class Client {
+        public static final String KEY_NAME_CAST = SkillNames.VORTEX_PULL + "_cast";
+        public static AbilitySystemClient.SkillInfo SKILL_INFO;
+        public static Config CONFIG = new Config();
+
+        private static void cast() {
+            if (AbilitySystemClient.canUseSkill(Skills.VORTEX_PULL.get()))
+                MisakaNetworkClient.send(CastPacket.INSTANCE);
+        }
+
+        public static final class Config extends KeyBindingConfig {
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
+        }
+    }
+
     public static final class Server {
-        @SubscribePacket public static void handle(CastPacket packet) {
+        @SubscribePacket
+        public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.VORTEX_PULL.get();
             skill.executeActive(player, context -> skill.getCpCost(context.level())
@@ -170,5 +204,18 @@ public final class VortexPull extends Skill {
         private record CapturedProjectile(Projectile projectile, double speed) {
         }
     }
-    @PacketTarget(ThreadType.SERVER) public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> { public static final CastPacket INSTANCE = new CastPacket(); public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE); private CastPacket() { } @Override public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() { return PacketTypes.VORTEX_PULL_CAST.get(); } }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
+        public static final CastPacket INSTANCE = new CastPacket();
+        public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private CastPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
+            return PacketTypes.VORTEX_PULL_CAST.get();
+        }
+    }
 }

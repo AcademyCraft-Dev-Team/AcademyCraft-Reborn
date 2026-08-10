@@ -5,23 +5,24 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
-import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
+import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -30,8 +31,9 @@ import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -42,6 +44,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.UUID;
 
 public final class TailwindField extends Skill {
     public TailwindField() {
@@ -68,7 +71,7 @@ public final class TailwindField extends Skill {
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(Skills.TAILWIND_FIELD.get(), List.of(AirCushion.Client.SKILL_INFO),
                         R.textures.tailwind_field_icon, 20, 72));
-        ToggleStatusHud.registerStateProvider(Skills.TAILWIND_FIELD.get(), () -> {
+        ToggleStatusHud.Companion.registerStateProvider(Skills.TAILWIND_FIELD.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && AeromanipFieldSyncPacket.Client.snapshot().values().stream()
                     .anyMatch(field -> field.ownerId().equals(player.getUUID())
@@ -82,8 +85,8 @@ public final class TailwindField extends Skill {
     }
 
     public static final class Client {
-        public static AbilitySystemClient.SkillInfo SKILL_INFO;
         public static final String KEY_NAME_TOGGLE = SkillNames.TAILWIND_FIELD + "_toggle";
+        public static AbilitySystemClient.SkillInfo SKILL_INFO;
         public static Config CONFIG = new Config();
 
         private Client() {
@@ -102,8 +105,15 @@ public final class TailwindField extends Skill {
                 private Action() {
                 }
 
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -125,13 +135,13 @@ public final class TailwindField extends Skill {
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var fieldScale = milestone >= 2 ? 1.25 : 1.0;
             var direction = player.getLookAngle();
-            var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), player.level().dimension(),
+            var field = new AirflowField(UUID.randomUUID(), player.getUUID(), player.level().dimension(),
                     AirflowField.Type.TAILWIND, AirflowField.Shape.CAPSULE, player.position(), direction,
                     4.0 * fieldScale, 14.0 * fieldScale, 0.15f + level * 0.05f, Integer.MAX_VALUE, milestone);
             AeromanipFieldManager.activatePersonal(player, skill, field, Server::tick);
         }
 
-        private static void tick(net.minecraft.server.level.ServerPlayer player, AirflowField field, int age) {
+        private static void tick(ServerPlayer player, AirflowField field, int age) {
             var direction = AeromanipTargeting.horizontalDirection(player.getLookAngle());
             if (direction.lengthSqr() <= 1.0e-8) return;
             var currentField = new AirflowField(field.id(), field.ownerId(), field.dimension(), field.type(), field.shape(),
@@ -202,8 +212,8 @@ public final class TailwindField extends Skill {
             }
         }
 
-        private static void boostFriendly(net.minecraft.server.level.ServerPlayer owner, Entity entity,
-                                          net.minecraft.world.phys.Vec3 direction, float strength) {
+        private static void boostFriendly(ServerPlayer owner, Entity entity,
+                                          Vec3 direction, float strength) {
             if (entity.getDeltaMovement().dot(direction) <= 0.01) return;
             var projectile = entity instanceof Projectile;
             var maxSpeed = projectile ? 1.6 : 0.42 + strength * 0.8;
@@ -217,8 +227,12 @@ public final class TailwindField extends Skill {
     public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
         public static final TogglePacket INSTANCE = new TogglePacket();
         public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
-        private TogglePacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+
+        private TogglePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.TAILWIND_FIELD_TOGGLE.get();
         }
     }

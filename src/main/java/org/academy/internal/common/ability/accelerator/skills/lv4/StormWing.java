@@ -23,7 +23,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -32,7 +31,6 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -42,8 +40,8 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.mixin.common.EntitySharedFlagInvoker;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -88,7 +86,6 @@ public final class StormWing extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        RendererManager.registerEffectRenderer(StormWingEffectRenderer.INSTANCE);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(
@@ -97,8 +94,8 @@ public final class StormWing extends Skill {
                         GLFW_RELEASE,
                         GLFW_MOD_ALT
                 )
-        ), ctx -> Client.toggle());
-        ToggleStatusHud.registerStateProvider(Skills.STORM_WING.get(), () -> {
+        ), _ -> Client.toggle());
+        ToggleStatusHud.Companion.registerStateProvider(Skills.STORM_WING.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get());
         });

@@ -11,9 +11,8 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -89,7 +88,7 @@ public class PlasmaGeneration extends Skill {
     }
 
     public static int calculateStage(long chargeTicks) {
-        return Math.clamp((int) (Math.max(0L, chargeTicks) / TICKS_PER_STAGE), 0, MAX_STAGE);
+        return Mth.clamp((int) (Math.max(0L, chargeTicks) / TICKS_PER_STAGE), 0, MAX_STAGE);
     }
 
     public static float getChargeProgress(long startTick, long currentTick) {

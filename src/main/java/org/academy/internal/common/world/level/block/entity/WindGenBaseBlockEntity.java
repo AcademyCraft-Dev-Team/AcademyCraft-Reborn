@@ -23,6 +23,7 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
+import net.minecraft.util.Mth;
 
 public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
     private static final String NBT_COMPLETENESS = "Completeness";
@@ -109,10 +110,10 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
-            var targetStartSeconds = Math.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
+            var targetStartSeconds = Mth.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
-            targetAnimationState.start(Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            targetAnimationState.start((int) Mth.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
         } else {
             targetAnimationState.start(ticks);
         }
@@ -321,7 +322,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     }
 
     public void setEnergyStorage(int energyStorage) {
-        var clamped = Math.clamp(energyStorage, 0, getMaxEnergyStorage());
+        var clamped = Mth.clamp(energyStorage, 0, getMaxEnergyStorage());
         if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();

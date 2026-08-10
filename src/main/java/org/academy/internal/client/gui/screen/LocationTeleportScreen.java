@@ -20,6 +20,7 @@ import org.misaka.MisakaNetworkClient;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class LocationTeleportScreen extends UiScreen implements SerializedUiDebugHost {
     private static final int TEXT = DataTerminalTheme.TEXT;
@@ -61,9 +62,56 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         super(Component.translatable("skill.academy.location_teleport"));
     }
 
+    private static void addSlot(FrameLayoutWidget panel, String name, int x, int y, int width, int height) {
+        var slot = new EmptyWidget();
+        slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
+        panel.addChild(name, slot);
+    }
+
+    private static void place(EditBox box, int x, int y, int width) {
+        box.setX(x);
+        box.setY(y);
+        box.setWidth(width);
+    }
+
+    private static void configureInput(EditBox box) {
+        box.setBordered(false);
+        box.setTextColor(TEXT);
+    }
+
+    private static void renderInputFrame(GuiGraphicsExtractor graphics, EditBox box) {
+        DataTerminalTheme.input(graphics, box.getX(), box.getY(), box.getWidth(), 16,
+                box.isFocused(), ACCENT);
+    }
+
+    private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
+        return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
+    }
+
+    private static boolean inside(double mouseX, double mouseY, Rect bounds) {
+        return inside(mouseX, mouseY, bounds.x, bounds.y, bounds.width, bounds.height);
+    }
+
+    private static Rect rect(Widget widget) {
+        return new Rect(
+                Math.round(widget.getAbsoluteX()),
+                Math.round(widget.getAbsoluteY()),
+                Math.round(widget.getWidth()),
+                Math.round(widget.getHeight())
+        );
+    }
+
+    private static int integer(String value) {
+        try {
+            return Integer.parseInt(value.strip());
+        } catch (RuntimeException ignored) {
+            return 0;
+        }
+    }
+
     @Override
     protected void onInit() {
-        var layout = SerializedUiLayout.load(
+        var layout = SerializedUiLayout.INSTANCE.load(
                 AcademyCraft.academy("ui/layout/location_teleport.json"),
                 List.of(
                         "panel", "name_input", "coordinates", "mark_current", "add_mark",
@@ -73,14 +121,14 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         );
         serializedLayout = layout;
         getRoot().addChild("serialized_layout", layout);
-        panelLayout = SerializedUiLayout.require(layout, "panel");
-        nameInputLayout = SerializedUiLayout.require(layout, "name_input");
-        coordinatesLayout = SerializedUiLayout.require(layout, "coordinates");
-        markCurrentLayout = SerializedUiLayout.require(layout, "mark_current");
-        addMarkLayout = SerializedUiLayout.require(layout, "add_mark");
-        marksLayout = SerializedUiLayout.require(layout, "marks");
-        refreshLayout = SerializedUiLayout.require(layout, "refresh");
-        doneLayout = SerializedUiLayout.require(layout, "done");
+        panelLayout = SerializedUiLayout.INSTANCE.require(layout, "panel");
+        nameInputLayout = SerializedUiLayout.INSTANCE.require(layout, "name_input");
+        coordinatesLayout = SerializedUiLayout.INSTANCE.require(layout, "coordinates");
+        markCurrentLayout = SerializedUiLayout.INSTANCE.require(layout, "mark_current");
+        addMarkLayout = SerializedUiLayout.INSTANCE.require(layout, "add_mark");
+        marksLayout = SerializedUiLayout.INSTANCE.require(layout, "marks");
+        refreshLayout = SerializedUiLayout.INSTANCE.require(layout, "refresh");
+        doneLayout = SerializedUiLayout.INSTANCE.require(layout, "done");
 
         panelX = (width - PANEL_W) / 2;
         panelY = (height - PANEL_H) / 2;
@@ -117,12 +165,6 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         return layout;
     }
 
-    private static void addSlot(FrameLayoutWidget panel, String name, int x, int y, int width, int height) {
-        var slot = new EmptyWidget();
-        slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
-        panel.addChild(name, slot);
-    }
-
     private void syncSerializedLayout() {
         if (panelLayout == null || panelLayout.getWidth() <= 0.0f) return;
         var panel = rect(panelLayout);
@@ -144,12 +186,6 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         listBottom = marks.y + marks.height;
     }
 
-    private static void place(EditBox box, int x, int y, int width) {
-        box.setX(x);
-        box.setY(y);
-        box.setWidth(width);
-    }
-
     private EditBox coordinateBox(int x, int y, int width, String hint) {
         var box = new EditBox(font, x, y, width, 16, Component.empty());
         box.setHint(Component.literal(hint));
@@ -157,11 +193,6 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         configureInput(box);
         addRenderableWidget(box);
         return box;
-    }
-
-    private static void configureInput(EditBox box) {
-        box.setBordered(false);
-        box.setTextColor(TEXT);
     }
 
     @Override
@@ -197,16 +228,11 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         renderMarks(graphics, mouseX, mouseY);
     }
 
-    private static void renderInputFrame(GuiGraphicsExtractor graphics, EditBox box) {
-        DataTerminalTheme.input(graphics, box.getX(), box.getY(), box.getWidth(), 16,
-                box.isFocused(), ACCENT);
-    }
-
     private void renderMarks(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         var left = panelX + 12;
         var right = panelX + panelWidth - 12;
         var visible = Math.max(1, (listBottom - listTop) / ROW_H);
-        scroll = Math.clamp(scroll, 0, Math.max(0, marks.size() - visible));
+        scroll = Mth.clamp(scroll, 0, Math.max(0, marks.size() - visible));
         graphics.enableScissor(left, listTop, right, listBottom);
         for (var row = 0; row < visible && scroll + row < marks.size(); row++) {
             var index = scroll + row;
@@ -369,7 +395,7 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (mouseY >= listTop && mouseY < listBottom) {
-            scroll -= (int) Math.signum(scrollY);
+            scroll -= Mth.sign(scrollY);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -382,10 +408,6 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         this.defensiveMarkIndex = defensiveMarkIndex;
     }
 
-    private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
-        return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
-    }
-
     @Override
     public String debugLayoutId() {
         return "location_teleport";
@@ -394,27 +416,6 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
     @Override
     public FrameLayoutWidget debugLayoutRoot() {
         return serializedLayout;
-    }
-
-    private static boolean inside(double mouseX, double mouseY, Rect bounds) {
-        return inside(mouseX, mouseY, bounds.x, bounds.y, bounds.width, bounds.height);
-    }
-
-    private static Rect rect(Widget widget) {
-        return new Rect(
-                Math.round(widget.getAbsoluteX()),
-                Math.round(widget.getAbsoluteY()),
-                Math.round(widget.getWidth()),
-                Math.round(widget.getHeight())
-        );
-    }
-
-    private static int integer(String value) {
-        try {
-            return Integer.parseInt(value.strip());
-        } catch (RuntimeException ignored) {
-            return 0;
-        }
     }
 
     private record Rect(int x, int y, int width, int height) {

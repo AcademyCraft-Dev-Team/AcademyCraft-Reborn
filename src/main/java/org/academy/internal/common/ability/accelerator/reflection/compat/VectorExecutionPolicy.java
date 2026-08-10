@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.accelerator.reflection.compat;
 
+import net.minecraft.util.Mth;
+
 public record VectorExecutionPolicy(
         boolean piercing,
         boolean continuous,
@@ -16,7 +18,7 @@ public record VectorExecutionPolicy(
     public VectorExecutionPolicy {
         blockPolicy = blockPolicy == null ? VectorBlockPolicy.CLIP_NO_BREAK : blockPolicy;
         visualStyle = visualStyle == null ? VectorVisualStyle.ENERGY : visualStyle;
-        maximumTargets = Math.clamp(maximumTargets, 1, HARD_MAXIMUM_TARGETS);
+        maximumTargets = Mth.clamp(maximumTargets, 1, HARD_MAXIMUM_TARGETS);
         if (!Double.isFinite(maximumRange) || maximumRange <= 0.0) {
             maximumRange = DEFAULT_MAXIMUM_RANGE;
         }

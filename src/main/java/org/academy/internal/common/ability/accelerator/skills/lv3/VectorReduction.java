@@ -29,6 +29,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.reflection.compat.*;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageResult;
@@ -48,6 +49,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorI
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorMotionRedirects;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -57,6 +59,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public class VectorReduction extends Skill {
     private static final double INTERCEPT_MARGIN = 1.0;
@@ -105,7 +108,7 @@ public class VectorReduction extends Skill {
             Vec3 viewDirection,
             Vec3 incomingDirection
     ) {
-        var clampedY = Math.clamp(direction.y, 0.0, MAX_REFRACTION_VERTICAL_COMPONENT);
+        var clampedY = Mth.clamp(direction.y, 0.0, MAX_REFRACTION_VERTICAL_COMPONENT);
         var horizontal = new Vec3(direction.x, 0.0, direction.z);
         if (horizontal.lengthSqr() < 1.0E-8) {
             horizontal = horizontalOrZero(viewDirection);
@@ -116,7 +119,7 @@ public class VectorReduction extends Skill {
         if (horizontal.lengthSqr() < 1.0E-8) {
             horizontal = new Vec3(0.0, 0.0, 1.0);
         }
-        var horizontalLength = Math.sqrt(Math.max(0.0, 1.0 - clampedY * clampedY));
+        var horizontalLength = Mth.sqrt((float) (Math.max(0.0, 1.0 - clampedY * clampedY)));
         return horizontal.normalize().scale(horizontalLength).add(0.0, clampedY, 0.0);
     }
 
@@ -236,7 +239,7 @@ public class VectorReduction extends Skill {
             if (source.getEntity() == player || direct == player) return false;
             if (direct instanceof Projectile projectile
                     && VectorProjectileRedirects.isRedirected(projectile)) return false;
-            return direct == null || !VectorMotionRedirects.isRedirected(direct);
+            return !VectorMotionRedirects.isRedirected(direct);
         }
 
         public static boolean tryAbsorbDamage(

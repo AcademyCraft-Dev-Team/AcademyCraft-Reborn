@@ -93,25 +93,87 @@ public enum SkyStrikeProfile {
         return LIGHTNING_STORM;
     }
 
-    public int wireId() { return wireId; }
-    public float lifetimeTicks() { return lifetimeTicks; }
-    public float columnHeight() { return columnHeight; }
-    public float columnWidth() { return columnWidth; }
-    public int aerialArcCount() { return aerialArcCount; }
-    public int inwardArcCount() { return inwardArcCount; }
-    public int groundArcCount() { return groundArcCount; }
-    public float ringStartRadius() { return ringStartRadius; }
-    public float ringEndRadius() { return ringEndRadius; }
-    public float ringDurationTicks() { return ringDurationTicks; }
-    public float flashAlpha() { return flashAlpha; }
-    public float flashDurationTicks() { return flashDurationTicks; }
-    public float feedbackRange() { return feedbackRange; }
-    public float flashCap() { return flashCap; }
-    public float shakeDegrees() { return shakeDegrees; }
-    public float shakeDurationTicks() { return shakeDurationTicks; }
-    public float shakeRange() { return shakeRange; }
-    public float shakeCapDegrees() { return shakeCapDegrees; }
-    public float thunderVolume() { return thunderVolume; }
-    public float impactVolume() { return impactVolume; }
-    public boolean restrike() { return restrike; }
+    public int wireId() {
+        return wireId;
+    }
+
+    public float lifetimeTicks() {
+        return lifetimeTicks;
+    }
+
+    public float columnHeight() {
+        return columnHeight;
+    }
+
+    public float columnWidth() {
+        return columnWidth;
+    }
+
+    public int aerialArcCount() {
+        return aerialArcCount;
+    }
+
+    public int inwardArcCount() {
+        return inwardArcCount;
+    }
+
+    public int groundArcCount() {
+        return groundArcCount;
+    }
+
+    public float ringStartRadius() {
+        return ringStartRadius;
+    }
+
+    public float ringEndRadius() {
+        return ringEndRadius;
+    }
+
+    public float ringDurationTicks() {
+        return ringDurationTicks;
+    }
+
+    public float flashAlpha() {
+        return flashAlpha;
+    }
+
+    public float flashDurationTicks() {
+        return flashDurationTicks;
+    }
+
+    public float feedbackRange() {
+        return feedbackRange;
+    }
+
+    public float flashCap() {
+        return flashCap;
+    }
+
+    public float shakeDegrees() {
+        return shakeDegrees;
+    }
+
+    public float shakeDurationTicks() {
+        return shakeDurationTicks;
+    }
+
+    public float shakeRange() {
+        return shakeRange;
+    }
+
+    public float shakeCapDegrees() {
+        return shakeCapDegrees;
+    }
+
+    public float thunderVolume() {
+        return thunderVolume;
+    }
+
+    public float impactVolume() {
+        return impactVolume;
+    }
+
+    public boolean restrike() {
+        return restrike;
+    }
 }

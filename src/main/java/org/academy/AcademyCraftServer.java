@@ -8,10 +8,14 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.common.network.MusicSyncPackets;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.Player;
@@ -29,7 +33,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 /**
- * MinecraftServer, 不区分 IntegratedServer 或 DedicatedServer
+ * MinecraftServer, 不区分 IntegratedServer 或 DedicatedServer 喵
  */
 @EventBusSubscriber
 public final class AcademyCraftServer {
@@ -44,9 +48,6 @@ public final class AcademyCraftServer {
     private final MinecraftServer server;
     private long lastSaveTick = 0;
 
-    /**
-     * 一个 MinecraftServer 实例对应一个 MinecraftServerContext
-     */
     private AcademyCraftServer(MinecraftServerContext context) {
         context.setAcademyCraftServer(this);
         server = context.getMinecraftServer();

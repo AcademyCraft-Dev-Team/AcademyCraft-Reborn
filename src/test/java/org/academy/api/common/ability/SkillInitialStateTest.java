@@ -13,14 +13,14 @@ class SkillInitialStateTest {
     void skillsAreEnabledByDefault() {
         var skill = new TestSkill(new TestCategory("enabled"), false);
 
-        assertTrue(skill.createData(null).isEnabled());
+        assertTrue(skill.createData().isEnabled());
     }
 
     @Test
     void toggleSkillsCanStartDisabled() {
         var skill = new TestSkill(new TestCategory("disabled"), true);
 
-        assertFalse(skill.createData(null).isEnabled());
+        assertFalse(skill.createData().isEnabled());
     }
 
     @Test

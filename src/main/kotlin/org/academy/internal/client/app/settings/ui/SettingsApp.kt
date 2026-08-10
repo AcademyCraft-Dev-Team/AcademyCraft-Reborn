@@ -1,6 +1,5 @@
 package org.academy.internal.client.app.settings.ui
 
-import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.client.Minecraft
 import net.minecraft.locale.Language
@@ -9,8 +8,8 @@ import net.minecraft.util.ARGB
 import net.neoforged.fml.ModList
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
-import org.academy.api.client.app.App
 import org.academy.api.client.ability.AbilitySystemClient
+import org.academy.api.client.app.App
 import org.academy.api.client.config.KeyBindingConfig
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
@@ -20,29 +19,16 @@ import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.widget.AbstractWidget
-import org.academy.api.client.gui.widget.ButtonWidget
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.RadioButtonWidget
-import org.academy.api.client.gui.widget.RadioGroupWidget
-import org.academy.api.client.gui.widget.ScrollPanelWidget
-import org.academy.api.client.gui.widget.ToggleButtonWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
-import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.hud.terminal.TerminalConfig
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
+import org.academy.internal.client.hud.HudLayoutEditorScreen
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
-import org.academy.internal.client.hud.HudLayoutEditorScreen
-import org.misaka.MisakaNetworkClient
 import org.lwjgl.glfw.GLFW
+import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 
@@ -179,14 +165,18 @@ object SettingsApp : App {
             tabBar.spacing = 2f
             tabBar.layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
-            tabBar.addChild("general", createTabButton(
-                Language.getInstance().getOrDefault("app.academy.settings.tab.general"),
-                PAGE_GENERAL
-            ))
-            tabBar.addChild("keybindings", createTabButton(
-                Language.getInstance().getOrDefault("app.academy.settings.tab.keybindings"),
-                PAGE_KEYBINDINGS
-            ))
+            tabBar.addChild(
+                "general", createTabButton(
+                    Language.getInstance().getOrDefault("app.academy.settings.tab.general"),
+                    PAGE_GENERAL
+                )
+            )
+            tabBar.addChild(
+                "keybindings", createTabButton(
+                    Language.getInstance().getOrDefault("app.academy.settings.tab.keybindings"),
+                    PAGE_KEYBINDINGS
+                )
+            )
             tabBar.addChild("about", createTabButton("About", PAGE_ABOUT))
             tabBar.selectButton(tabBar.children.values.first() as RadioButtonWidget)
             return tabBar
@@ -253,18 +243,20 @@ object SettingsApp : App {
                 .sizeMode(SizeMode.MATCH_PARENT)
 
             val player = Minecraft.getInstance().player
-            page.addChild("friendly_fire", createSettingToggle(
-                Language.getInstance().getOrDefault("app.academy.settings.general.friendly_fire"),
-                player?.let(FriendlyFireSetting::isFriendlyFireEnabled) ?: true
-            ) { enabled ->
-                MisakaNetworkClient.send(FriendlyFireSetting.SetPacket(enabled))
-            })
-            page.addChild("destroy_blocks", createSettingToggle(
-                Language.getInstance().getOrDefault("app.academy.settings.general.destroy_blocks"),
-                player?.let(DestroyBlocksSetting::isDestroyBlocksEnabled) ?: true
-            ) { enabled ->
-                MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
-            })
+            page.addChild(
+                "friendly_fire", createSettingToggle(
+                    Language.getInstance().getOrDefault("app.academy.settings.general.friendly_fire"),
+                    player?.let(FriendlyFireSetting::isFriendlyFireEnabled) ?: true
+                ) { enabled ->
+                    MisakaNetworkClient.send(FriendlyFireSetting.SetPacket(enabled))
+                })
+            page.addChild(
+                "destroy_blocks", createSettingToggle(
+                    Language.getInstance().getOrDefault("app.academy.settings.general.destroy_blocks"),
+                    player?.let(DestroyBlocksSetting::isDestroyBlocksEnabled) ?: true
+                ) { enabled ->
+                    MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
+                })
             page.addChild("hud_layout", createHudLayoutRow())
             return page
         }
@@ -276,14 +268,15 @@ object SettingsApp : App {
             row.layoutParams = WidgetContainer.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(18f)
-            row.addChild("label", LabelWidget(
-                Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout")
-            ).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(0f)
-                    .gravity(Gravity.CENTER_LEFT)
-            })
+            row.addChild(
+                "label", LabelWidget(
+                    Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout")
+                ).apply {
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .weight(1f)
+                        .height(0f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
             row.addChild("open", ButtonWidget().apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(72f, 14f)
@@ -292,14 +285,15 @@ object SettingsApp : App {
                     val minecraft = Minecraft.getInstance()
                     minecraft.gui.setScreen(HudLayoutEditorScreen(minecraft.gui.screen()))
                 }
-                addChild("text", LabelWidget(
-                    Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout.open")
-                ).apply {
-                    scale = 0.65f
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT)
-                        .gravity(Gravity.CENTER)
-                })
+                addChild(
+                    "text", LabelWidget(
+                        Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout.open")
+                    ).apply {
+                        scale = 0.65f
+                        layoutParams = FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
+                            .gravity(Gravity.CENTER)
+                    })
             })
             return row
         }
@@ -357,15 +351,16 @@ object SettingsApp : App {
             columnHeader.addChild("key_spacer", FillWidget(0).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(44f, 0f)
             })
-            columnHeader.addChild("toggle_title", LabelWidget(
-                Language.getInstance().getOrDefault("app.academy.settings.keybind.toggle")
-            ).apply {
-                scale = 0.65f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .width(22f)
-                    .height(10f)
-                    .gravity(Gravity.CENTER)
-            })
+            columnHeader.addChild(
+                "toggle_title", LabelWidget(
+                    Language.getInstance().getOrDefault("app.academy.settings.keybind.toggle")
+                ).apply {
+                    scale = 0.65f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .width(22f)
+                        .height(10f)
+                        .gravity(Gravity.CENTER)
+                })
             columnHeader.addChild("rebind_spacer", FillWidget(0).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
             })
@@ -508,14 +503,15 @@ object SettingsApp : App {
             rebindButton.onClickListener = { _: Widget? ->
                 startCapture(section, bindingName)
             }
-            rebindButton.addChild("text", LabelWidget(
-                Language.getInstance().getOrDefault("app.academy.settings.keybind.rebind")
-            ).apply {
-                scale = 0.7f
-                layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                    .gravity(Gravity.CENTER)
-            })
+            rebindButton.addChild(
+                "text", LabelWidget(
+                    Language.getInstance().getOrDefault("app.academy.settings.keybind.rebind")
+                ).apply {
+                    scale = 0.7f
+                    layoutParams = FrameLayoutWidget.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT)
+                        .gravity(Gravity.CENTER)
+                })
             row.addChild("rebind", rebindButton)
 
             val resetButton = ButtonWidget()
@@ -525,14 +521,15 @@ object SettingsApp : App {
             resetButton.onClickListener = { _: Widget? ->
                 resetBinding(section, bindingName)
             }
-            resetButton.addChild("text", LabelWidget(
-                Language.getInstance().getOrDefault("app.academy.settings.keybind.reset")
-            ).apply {
-                scale = 0.7f
-                layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                    .gravity(Gravity.CENTER)
-            })
+            resetButton.addChild(
+                "text", LabelWidget(
+                    Language.getInstance().getOrDefault("app.academy.settings.keybind.reset")
+                ).apply {
+                    scale = 0.7f
+                    layoutParams = FrameLayoutWidget.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT)
+                        .gravity(Gravity.CENTER)
+                })
             row.addChild("reset", resetButton)
 
             return row
@@ -591,8 +588,6 @@ object SettingsApp : App {
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
                         val target = capturing ?: return
                         val current = target.section.config.getKeyBinding(target.bindingName)
-                            ?: InputSystem.getKeyBinding(target.bindingName)
-                            ?: return
                         resetCaptureState()
                         applyCapture(InputSystem.unbound(current))
                         return
@@ -641,8 +636,6 @@ object SettingsApp : App {
             val type = pendingType ?: return null
             val target = capturing ?: return null
             val current = target.section.config.getKeyBinding(target.bindingName)
-                ?: InputSystem.getKeyBinding(target.bindingName)
-                ?: return null
             return when (type) {
                 InputSystem.InputType.KEYBOARD -> {
                     if (pendingKeys.isEmpty()) return null
@@ -651,6 +644,7 @@ object SettingsApp : App {
                         current.action, pendingModifiers, current.availableWhenScreen
                     )
                 }
+
                 InputSystem.InputType.MOUSE -> {
                     if (pendingMouseButton < 0) return null
                     InputSystem.combo(
@@ -717,8 +711,8 @@ object SettingsApp : App {
                 val preview = buildPendingCombo()?.let(::displayBinding)
                     ?: Language.getInstance().getOrDefault("app.academy.skill_settings.capture.key")
                 Language.getInstance().getOrDefault("app.academy.skill_settings.capture.hint")
-                    .replace("%1\$s", Language.getInstance().getOrDefault("key.academy.${target.bindingName}"))
-                    .replace("%2\$s", preview)
+                    .replace($$"%1$s", Language.getInstance().getOrDefault("key.academy.${target.bindingName}"))
+                    .replace($$"%2$s", preview)
             } else {
                 ""
             }

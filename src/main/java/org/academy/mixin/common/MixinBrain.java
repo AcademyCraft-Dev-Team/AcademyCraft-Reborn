@@ -10,7 +10,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Prevents special Brain-based mobs from reacquiring autonomous targets during exclusive control. */
+/**
+ * Prevents special Brain-based mobs from reacquiring autonomous targets during exclusive control.
+ */
 @Mixin(Brain.class)
 public abstract class MixinBrain<E extends LivingEntity> {
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)

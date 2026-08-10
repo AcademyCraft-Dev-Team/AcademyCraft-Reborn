@@ -10,7 +10,9 @@ import org.academy.internal.common.ability.meltdowner.Meltdowner;
 import org.academy.internal.common.ability.teleport.Teleport;
 import org.jetbrains.annotations.Nullable;
 
-/** Maps category-owned skills to their canonical damage type. */
+/**
+ * Maps category-owned skills to their canonical damage type.
+ */
 public final class SkillDamageTypeResolver {
     private SkillDamageTypeResolver() {
     }

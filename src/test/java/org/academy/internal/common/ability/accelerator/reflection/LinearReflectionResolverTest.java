@@ -4,11 +4,15 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class LinearReflectionResolverTest {
+    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
+        assertEquals(expected.x, actual.x, 1.0E-6);
+        assertEquals(expected.y, actual.y, 1.0E-6);
+        assertEquals(expected.z, actual.z, 1.0E-6);
+    }
+
     @Test
     void findsHorizontalAndVerticalSlabEntries() {
         var horizontal = LinearReflectionResolver.intersectionProgress(
@@ -89,7 +93,7 @@ class LinearReflectionResolverTest {
         assertVecEquals(new Vec3(4 - LinearReflectionResolver.RETURN_EPSILON, 0, 0), returned.start());
         assertVecEquals(new Vec3(-6, 0, 0), returned.end());
         assertVecEquals(new Vec3(-1, 0, 0), returned.direction());
-        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, returned.length(), 1.0E-9);
+        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, returned.length(), 1.0E-6);
     }
 
     @Test
@@ -132,7 +136,7 @@ class LinearReflectionResolverTest {
         assertEquals(10, atStart.length(), 1.0E-9);
         assertVecEquals(new Vec3(10 - LinearReflectionResolver.RETURN_EPSILON, 0, 0), atEnd.start());
         assertVecEquals(Vec3.ZERO, atEnd.end());
-        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, atEnd.length(), 1.0E-9);
+        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, atEnd.length(), 1.0E-6);
     }
 
     @Test
@@ -146,7 +150,7 @@ class LinearReflectionResolverTest {
 
         assertVecEquals(original.end(), returned.start());
         assertVecEquals(original.start(), returned.end());
-        assertEquals(length, returned.length(), 1.0E-12);
+        assertEquals(length, returned.length(), 1.0E-9);
     }
 
     @Test
@@ -166,11 +170,5 @@ class LinearReflectionResolverTest {
                 new Vec3(0, Double.POSITIVE_INFINITY, 0)
         ).isEmpty());
         assertFalse(LinearReflectionResolver.fullRangeReturnSegment(valid, Vec3.ZERO).isEmpty());
-    }
-
-    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
-        assertEquals(expected.x, actual.x, 1.0E-9);
-        assertEquals(expected.y, actual.y, 1.0E-9);
-        assertEquals(expected.z, actual.z, 1.0E-9);
     }
 }

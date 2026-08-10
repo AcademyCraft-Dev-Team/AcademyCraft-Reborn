@@ -3,16 +3,35 @@ package org.academy.internal.client.ability.mentalout;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class MentaloutRosterClientStateTest {
+    private static void tick(int count) {
+        for (var index = 0; index < count; index++) MentaloutRosterClientState.tick();
+    }
+
+    private static MentaloutRosterClientState.Entry entry(String name) {
+        return new MentaloutRosterClientState.Entry(
+                UUID.randomUUID(),
+                1,
+                "minecraft:zombie",
+                name,
+                20.0f,
+                20.0f,
+                3.0f,
+                MentaloutRosterClientState.SUPPORT_FULL,
+                (byte) 0,
+                0
+        );
+    }
+
     @AfterEach
     void resetState() {
         MentaloutRosterClientState.setResyncRequester(null);
@@ -92,7 +111,7 @@ class MentaloutRosterClientStateTest {
     void eachNewFullChunkExtendsTheTransferDeadline() {
         var requests = new AtomicInteger();
         MentaloutRosterClientState.setResyncRequester(_ -> requests.incrementAndGet());
-        var firstChunk = java.util.Collections.nCopies(64, entry("first"));
+        var firstChunk = Collections.nCopies(64, entry("first"));
         MentaloutRosterClientState.applyFullStart(5L, 2, 65, 30, 20);
 
         tick(MentaloutRosterClientState.FULL_TRANSFER_TIMEOUT_TICKS - 1);
@@ -185,7 +204,7 @@ class MentaloutRosterClientStateTest {
 
     @Test
     void outOfOrderFullChunksPublishOnlyAfterAllChunksArrive() {
-        var entries = new java.util.ArrayList<MentaloutRosterClientState.Entry>(65);
+        var entries = new ArrayList<MentaloutRosterClientState.Entry>(65);
         for (var index = 0; index < 65; index++) entries.add(entry("entry-" + index));
         MentaloutRosterClientState.applyFullStart(5L, 2, 65, 30, 20);
 
@@ -194,24 +213,5 @@ class MentaloutRosterClientStateTest {
         assertTrue(MentaloutRosterClientState.applyFullChunk(5L, 0, entries.subList(0, 64)));
         assertEquals(5L, MentaloutRosterClientState.snapshot().revision());
         assertEquals(65, MentaloutRosterClientState.snapshot().entries().size());
-    }
-
-    private static void tick(int count) {
-        for (var index = 0; index < count; index++) MentaloutRosterClientState.tick();
-    }
-
-    private static MentaloutRosterClientState.Entry entry(String name) {
-        return new MentaloutRosterClientState.Entry(
-                UUID.randomUUID(),
-                1,
-                "minecraft:zombie",
-                name,
-                20.0f,
-                20.0f,
-                3.0f,
-                MentaloutRosterClientState.SUPPORT_FULL,
-                (byte) 0,
-                0
-        );
     }
 }

@@ -31,6 +31,14 @@ public final class KineticShockwave extends RenderOnlyEntity {
         setNoGravity(true);
     }
 
+    private static Vec3 normalizeOrDefault(Vec3 direction) {
+        if (direction == null || !Double.isFinite(direction.x) || !Double.isFinite(direction.y)
+                || !Double.isFinite(direction.z) || direction.lengthSqr() < 1.0E-6) {
+            return new Vec3(0.0, 1.0, 0.0);
+        }
+        return direction.normalize();
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(MAX_RADIUS, 3.0f);
@@ -74,13 +82,5 @@ public final class KineticShockwave extends RenderOnlyEntity {
 
     public Vec3 getShockwaveDirection() {
         return new Vec3(entityData.get(DIRECTION_X), entityData.get(DIRECTION_Y), entityData.get(DIRECTION_Z));
-    }
-
-    private static Vec3 normalizeOrDefault(Vec3 direction) {
-        if (direction == null || !Double.isFinite(direction.x) || !Double.isFinite(direction.y)
-                || !Double.isFinite(direction.z) || direction.lengthSqr() < 1.0E-6) {
-            return new Vec3(0.0, 1.0, 0.0);
-        }
-        return direction.normalize();
     }
 }

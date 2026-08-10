@@ -253,7 +253,6 @@ class CommandExecutor : AutoCloseable {
         }
         if (!scissorEnabled) renderPass.disableScissor()
 
-        RenderSystem.bindDefaultUniforms(renderPass)
         renderPass.setUniform("Projection", projectionUbo)
         renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo)
 
