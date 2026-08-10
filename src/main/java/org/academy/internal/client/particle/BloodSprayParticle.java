@@ -32,7 +32,7 @@ public final class BloodSprayParticle extends SingleQuadParticle {
         gCol = 0.03f;
         bCol = 0.03f;
         alpha = INITIAL_ALPHA;
-        roll = random.nextFloat() * (float) (Math.PI * 2.0);
+        roll = random.nextFloat() * Mth.TWO_PI;
         oRoll = roll;
     }
 

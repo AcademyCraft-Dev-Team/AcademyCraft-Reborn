@@ -54,6 +54,7 @@ import java.awt.Color;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.util.Mth;
 
 public final class MineDetect extends Skill {
     static final int RADIUS = 64;
@@ -294,7 +295,7 @@ public final class MineDetect extends Skill {
             if (path.contains("debris")) return new float[]{0.52f, 0.25f, 0.32f, 0.92f};
 
             var hash = path.hashCode();
-            var hue = Math.floorMod(hash, 360) / 360.0f;
+            var hue = Mth.positiveModulo(hash, 360) / 360.0f;
             var rgb = Color.HSBtoRGB(hue, 0.72f, 1.0f);
             return new float[]{
                     ((rgb >> 16) & 0xff) / 255.0f,

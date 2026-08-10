@@ -18,8 +18,9 @@ import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
-import org.academy.internal.client.renderer.effect.PlatinumCosmosPass;
-import org.academy.internal.client.renderer.effect.WorldLineOverlayPass;
+import org.academy.internal.client.render.vfx.PlatinumCosmosPass;
+import org.academy.internal.client.render.vfx.WingAvatarRegistry;
+import org.academy.internal.client.render.vfx.WorldLineOverlayPass;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix4fc;
@@ -56,6 +57,7 @@ public abstract class MixinGameRenderer {
     private void academy$beginPlatinumCosmosFrame(DeltaTracker deltaTracker, CallbackInfo ci) {
         PlatinumCosmosPass.beginFrame(minecraft.level);
         WorldLineOverlayPass.beginFrame(minecraft.level);
+        WingAvatarRegistry.beginFrame();
     }
 
     @Inject(

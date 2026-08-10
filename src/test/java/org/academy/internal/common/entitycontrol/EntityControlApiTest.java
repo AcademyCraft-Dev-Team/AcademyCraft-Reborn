@@ -59,7 +59,7 @@ class EntityControlApiTest {
     }
 
     private static final class GetterAndFieldHealth extends VanillaHealth {
-        private final float realHealth = 48.0f;
+        private final float realHealth = Float.parseFloat("48.0");
 
         public float getRealHealth() {
             return realHealth;

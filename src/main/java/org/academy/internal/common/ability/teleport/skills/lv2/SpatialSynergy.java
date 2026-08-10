@@ -64,7 +64,7 @@ public class SpatialSynergy extends Skill {
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
                         InputConstants.PRESS, InputConstants.MOD_ALT)
         ), ctx -> Client.onToggle());
-        ToggleStatusHud.registerStateProvider(Skills.SPATIAL_SYNERGY.get(),
+        ToggleStatusHud.Companion.registerStateProvider(Skills.SPATIAL_SYNERGY.get(),
                 () -> AbilitySystemClient.canUseSkillSilently(Skills.SPATIAL_SYNERGY.get()));
     }
 

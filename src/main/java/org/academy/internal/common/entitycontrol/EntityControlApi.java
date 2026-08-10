@@ -5,7 +5,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -497,7 +496,7 @@ public final class EntityControlApi {
                     setter.invoke(instance, convert(value, setter.getParameterTypes()[0]));
                     return true;
                 }
-                if (field != null && !Modifier.isFinal(field.getModifiers())) {
+                if (field != null) {
                     field.set(instance, convert(value, field.getType()));
                     return true;
                 }

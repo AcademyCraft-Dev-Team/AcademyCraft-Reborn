@@ -80,19 +80,14 @@ object UiDebugLayoutRegistry {
         )
     ).associateBy { it.id }
 
-    @JvmStatic
     fun all(): List<UiDebugLayoutDefinition> = definitions.values.toList()
 
-    @JvmStatic
     fun gui(): List<UiDebugLayoutDefinition> = all().filter { it.kind == UiDebugLayoutKind.GUI }
 
-    @JvmStatic
     fun hud(): List<UiDebugLayoutDefinition> = all().filter { it.kind == UiDebugLayoutKind.HUD }
 
-    @JvmStatic
     fun find(id: String): UiDebugLayoutDefinition? = definitions[id]
 
-    @JvmStatic
     fun require(id: String): UiDebugLayoutDefinition = definitions[id]
         ?: throw IllegalArgumentException("Unknown debug UI layout '$id'")
 

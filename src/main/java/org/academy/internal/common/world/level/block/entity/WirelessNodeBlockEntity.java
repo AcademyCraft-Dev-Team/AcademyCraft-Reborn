@@ -30,6 +30,7 @@ import java.util.*;
 
 import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
 import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
+import net.minecraft.util.Mth;
 
 public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -131,7 +132,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     @Override
     public void setEnergyStored(int energy) {
         var oldEnergy = energyStored;
-        energyStored = Math.clamp(energy, 0, getMaxEnergyStorage());
+        energyStored = Mth.clamp(energy, 0, getMaxEnergyStorage());
         if (oldEnergy != energyStored) {
             setChanged();
             if (level != null && !level.isClientSide()) {
@@ -220,7 +221,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         super.loadAdditional(input);
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(input, items);
-        energyStored = Math.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
+        energyStored = Mth.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
         connectedUsersCount = Math.max(0, input.getIntOr("connected_users_count", 0));
         maxConnectedUsers = Math.max(0, input.getIntOr("max_connected_users", 0));
         radius = Math.max(0, input.getIntOr("radius", 0));

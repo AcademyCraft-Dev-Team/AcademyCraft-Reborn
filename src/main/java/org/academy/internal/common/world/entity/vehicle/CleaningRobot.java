@@ -78,9 +78,9 @@ public class CleaningRobot extends Entity {
 
         var speed = 0.35F;
         var moveVec = new Vec3(
-                -speed * forwardInput * Mth.sin(getYRot() * ((float) Math.PI / 180F)),
+                -speed * forwardInput * Mth.sin(getYRot() * (Mth.PI / 180F)),
                 getDeltaMovement().y,
-                speed * forwardInput * Mth.cos(getYRot() * ((float) Math.PI / 180F))
+                speed * forwardInput * Mth.cos(getYRot() * (Mth.PI / 180F))
         );
         setDeltaMovement(moveVec);
 

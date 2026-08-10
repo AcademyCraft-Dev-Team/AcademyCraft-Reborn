@@ -7,6 +7,7 @@ import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor.layout
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.util.GlyphCommandGenerator
 import kotlin.math.min
+import net.minecraft.util.Mth
 
 open class LabelWidget(text: String) : AbstractWidget() {
     var baseFontSize: Float = DEFAULT_BASE_FONT_SIZE
@@ -58,7 +59,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
 
         val finalScale = min(scaleX, scaleY)
 
-        return Math.clamp(finalScale, 0.0f, 1.0f)
+        return Mth.clamp(finalScale, 0.0f, 1.0f)
     }
 
     private fun ensureMeasured(text: String) {

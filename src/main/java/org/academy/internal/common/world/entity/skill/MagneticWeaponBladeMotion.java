@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
 
 public final class MagneticWeaponBladeMotion {
     public static final int PREP_END_TICK = 2;
@@ -27,7 +28,7 @@ public final class MagneticWeaponBladeMotion {
     public static Vec3 idlePosition(Vec3 ownerPosition, float ownerYaw, long age) {
         var forward = Vec3.directionFromRotation(0.0f, ownerYaw).normalize();
         var right = new Vec3(-forward.z, 0.0, forward.x);
-        var bob = Math.sin(age * 0.16) * 0.06;
+        var bob = Mth.sin(age * 0.16) * 0.06;
         return ownerPosition
                 .subtract(forward.scale(0.72))
                 .add(right.scale(0.42))
@@ -41,7 +42,7 @@ public final class MagneticWeaponBladeMotion {
         var side = normalizedOr(strikeDirection.cross(UP), new Vec3(1.0, 0.0, 0.0));
         var sideSign = (attackSequence & 1) == 0 ? 1.0 : -1.0;
         var distance = attackOrigin.distanceTo(targetPosition);
-        var curve = Math.clamp(distance * 0.18, 0.35, 1.2);
+        var curve = Mth.clamp(distance * 0.18, 0.35, 1.2);
         var windup = attackOrigin.subtract(strikeDirection.scale(0.18)).add(0.0, 0.08, 0.0);
 
         return switch (phase) {
@@ -53,7 +54,7 @@ public final class MagneticWeaponBladeMotion {
             case STRIKE -> {
                 var raw = (attackTick - PREP_END_TICK)
                         / (double) (IMPACT_TICK - PREP_END_TICK);
-                var progress = Math.clamp(raw * raw, 0.0, 1.0);
+                var progress = Mth.clamp(raw * raw, 0.0, 1.0);
                 var control1 = windup
                         .add(strikeDirection.scale(distance * 0.25))
                         .add(side.scale(curve * sideSign));
@@ -67,7 +68,7 @@ public final class MagneticWeaponBladeMotion {
             case RETURN -> {
                 var raw = (attackTick - IMPACT_TICK)
                         / (double) (ATTACK_END_TICK - IMPACT_TICK);
-                var progress = Math.clamp(raw * (2.0 - raw), 0.0, 1.0);
+                var progress = Mth.clamp(raw * (2.0 - raw), 0.0, 1.0);
                 var returnDirection = normalizedOr(idlePosition.subtract(targetPosition), strikeDirection.reverse());
                 var returnSide = side.scale(-sideSign);
                 var control1 = targetPosition.add(returnSide.scale(curve)).add(0.0, 0.4, 0.0);
@@ -86,18 +87,18 @@ public final class MagneticWeaponBladeMotion {
             case STRIKE -> {
                 var raw = (attackTick - PREP_END_TICK)
                         / (double) (IMPACT_TICK - PREP_END_TICK);
-                yield (float) (sideSign * 18.0 * Math.sin(Math.PI * raw));
+                yield (float) (sideSign * 18.0 * Mth.sin(Mth.PI * raw));
             }
             case RETURN -> {
                 var raw = (attackTick - IMPACT_TICK)
                         / (double) (ATTACK_END_TICK - IMPACT_TICK);
-                yield (float) (-sideSign * 12.0 * Math.sin(Math.PI * raw));
+                yield (float) (-sideSign * 12.0 * Mth.sin(Mth.PI * raw));
             }
         };
     }
 
     public static Vec3 cubic(Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, double progress) {
-        var t = Math.clamp(progress, 0.0, 1.0);
+        var t = Mth.clamp(progress, 0.0, 1.0);
         var inverse = 1.0 - t;
         return p0.scale(inverse * inverse * inverse)
                 .add(p1.scale(3.0 * inverse * inverse * t))
@@ -106,7 +107,7 @@ public final class MagneticWeaponBladeMotion {
     }
 
     private static Vec3 cubicDerivative(Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, double progress) {
-        var t = Math.clamp(progress, 0.0, 1.0);
+        var t = Mth.clamp(progress, 0.0, 1.0);
         var inverse = 1.0 - t;
         return p1.subtract(p0).scale(3.0 * inverse * inverse)
                 .add(p2.subtract(p1).scale(6.0 * inverse * t))
@@ -122,7 +123,7 @@ public final class MagneticWeaponBladeMotion {
     }
 
     private static double smoothstep(double value) {
-        var t = Math.clamp(value, 0.0, 1.0);
+        var t = Mth.clamp(value, 0.0, 1.0);
         return t * t * (3.0 - 2.0 * t);
     }
 

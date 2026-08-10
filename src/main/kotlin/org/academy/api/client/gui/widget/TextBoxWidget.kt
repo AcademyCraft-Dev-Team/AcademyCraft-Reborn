@@ -18,6 +18,7 @@ import java.util.function.Consumer
 import java.util.function.Predicate
 import kotlin.math.max
 import kotlin.math.min
+import net.minecraft.util.Mth
 
 open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     protected val stringBuilder: StringBuilder = StringBuilder()
@@ -183,7 +184,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
             return
         }
 
-        caretPos = Math.clamp(caretPos.toLong(), 0, stringBuilder.codePointCount(0, stringBuilder.length))
+        caretPos = Mth.clamp(caretPos, 0, stringBuilder.codePointCount(0, stringBuilder.length))
 
         if (hasSelection) {
             deleteSelectedText()
@@ -615,7 +616,6 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         @Volatile
         private var activeTextBox: TextBoxWidget? = null
 
-        @JvmStatic
         fun handlePreeditInput(event: PreeditEvent?): Boolean {
             return activeTextBox?.updatePreedit(event) == true
         }

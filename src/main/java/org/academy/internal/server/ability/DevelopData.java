@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public class DevelopData {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -114,7 +115,7 @@ public class DevelopData {
         }
 
         elapsedTicks = nextElapsed;
-        progress = Math.clamp((float) elapsedTicks / totalTicks, 0.0f, 1.0f);
+        progress = Mth.clamp((float) elapsedTicks / totalTicks, 0.0f, 1.0f);
         message = "Developing... " + (int) (progress * 100.0f) + "%";
         if (elapsedTicks < totalTicks) return;
 

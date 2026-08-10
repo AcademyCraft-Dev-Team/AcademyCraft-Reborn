@@ -43,9 +43,9 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         blockEntity.ticks++;
 
         var target = level.getBrightness(LightLayer.SKY, pos) - level.getSkyDarken();
-        var sunAngle = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, pos) * (float) (Math.PI / 180.0);
+        var sunAngle = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, pos) * (float) (Mth.PI / 180.0);
         if (target > 0) {
-            var offset = sunAngle < (float) Math.PI ? 0.0F : (float) (Math.PI * 2);
+            var offset = sunAngle < Mth.PI ? 0.0F : Mth.TWO_PI;
             sunAngle += (offset - sunAngle) * 0.2F;
             target = Math.round(target * Mth.cos(sunAngle));
         }
@@ -106,7 +106,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
     }
 
     public void setEnergyStored(int newEnergy) {
-        var clamped = Math.clamp(newEnergy, 0, getMaxEnergyStorage());
+        var clamped = Mth.clamp(newEnergy, 0, getMaxEnergyStorage());
         if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();

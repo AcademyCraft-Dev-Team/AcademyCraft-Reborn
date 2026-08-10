@@ -34,8 +34,7 @@ import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBloc
 import org.apache.commons.lang3.RandomStringUtils
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.atan2
-import kotlin.math.sqrt
+import net.minecraft.util.Mth
 
 class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()) {
     private val blockEntity: AbilityDeveloperBlockEntity
@@ -763,7 +762,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val depCy = depPos.y() + 8f
         val dx = depCx - childCx
         val dy = depCy - childCy
-        val dist = sqrt(dx * dx + dy * dy)
+        val dist = Mth.sqrt(dx * dx + dy * dy)
         val shortDist = (dist - 24.4f).coerceAtLeast(0f)
         val ux = if (dist > 0f) dx / dist * 12.2f else 0f
         val uy = if (dist > 0f) dy / dist * 12.2f else 0f
@@ -771,7 +770,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         lp.marginLeft = childCx + ux
         lp.marginTop = childCy + uy - 2.25f
         line.width = shortDist
-        line.rotation = if (dist > 0f) Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() else 0f
+        line.rotation = if (dist > 0f) (Mth.atan2(dy.toDouble(), dx.toDouble()) * Mth.RAD_TO_DEG).toFloat() else 0f
     }
 
     private fun updateSkillLines() {

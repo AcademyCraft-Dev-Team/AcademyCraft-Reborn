@@ -15,6 +15,7 @@ import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public record WarpModifier(
         AttributeCurve strength,
@@ -41,7 +42,7 @@ public record WarpModifier(
         }
 
         var subTickProgress = time % 1.0f;
-        var cycleMultiplier = (float) Math.sin(subTickProgress * Math.PI * 2.0 * frequency);
+        var cycleMultiplier = Mth.sin(subTickProgress * Mth.TWO_PI * frequency);
 
         if (Math.abs(cycleMultiplier) < 1.0E-6f) {
             return data;
@@ -60,7 +61,7 @@ public record WarpModifier(
                 falloffFactor = 0.0f;
             } else {
                 var normalizedDistance = distanceToPeak / halfWidth;
-                falloffFactor = (float) Math.cos(normalizedDistance * Math.PI * 0.5);
+                falloffFactor = Mth.cos(normalizedDistance * Mth.PI * 0.5);
             }
 
             if (falloffFactor <= 1.0E-6f) {

@@ -94,7 +94,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
             float progress
     ) {
         submitBeam(nodeCollector, poseStack, length,
-                progress * 0.32f, POS_COLOR_QUADS_BLOOM_ADDITIVE, 1.0f, 1.0f, 1.0f, 1.0f);
+                progress * 0.32f, POS_COLOR_QUADS_GLOW_ADDITIVE, 1.0f, 1.0f, 1.0f, 1.0f);
         submitBeam(nodeCollector, poseStack, length,
                 progress * 0.18f, POS_COLOR_QUADS_NO_DEPTH_WRITE, 1.0f, 1.0f, 1.0f, 0.98f);
     }

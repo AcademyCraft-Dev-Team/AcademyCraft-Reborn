@@ -24,6 +24,7 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import net.minecraft.util.Mth;
 
 /**
  * Applies the linear bonuses derived from effective P.R.O.P.S player attributes.
@@ -101,7 +102,7 @@ public final class PlayerAttributeRuntime {
         if (event.getAmount() <= 0) return;
         var multiplier = perceptionExperienceMultiplier(event.getEntity());
         if (multiplier <= 1.0) return;
-        var scaled = (long) Math.floor(event.getAmount() * multiplier);
+        var scaled = Mth.lfloor(event.getAmount() * multiplier);
         event.setAmount((int) Math.min(Integer.MAX_VALUE, scaled));
     }
 
@@ -154,7 +155,7 @@ public final class PlayerAttributeRuntime {
     }
 
     public static double trueResistance(Player player) {
-        return Math.clamp(value(player, PlayerAttributes.TRUE_RESISTANCE), 0.0, 8.0);
+        return Mth.clamp(value(player, PlayerAttributes.TRUE_RESISTANCE), 0.0, 8.0);
     }
 
     public static void syncTrueResistanceModifier(Player player, Identifier id,

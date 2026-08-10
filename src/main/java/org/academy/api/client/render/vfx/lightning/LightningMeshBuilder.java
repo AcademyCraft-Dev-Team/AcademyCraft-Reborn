@@ -6,10 +6,11 @@ import org.jspecify.annotations.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class LightningMeshBuilder implements TubeMeshView {
     private static final int NOT_INITIALIZED = -1;
-    private static final float DEG_TO_RAD = (float) Math.PI / 180.0f;
+    private static final float DEG_TO_RAD = Mth.PI / 180.0f;
 
     private int totalPointsCount = NOT_INITIALIZED;
     private int segmentResolution = NOT_INITIALIZED;
@@ -140,8 +141,8 @@ public final class LightningMeshBuilder implements TubeMeshView {
         for (int i = 0; i < segmentResolution; i++) {
             float pointPercentage = (float) i / (segmentResolution - 1);
             float angle = DEG_TO_RAD * pointPercentage * 360f;
-            ringCos[i] = (float) Math.cos(angle);
-            ringSin[i] = (float) Math.sin(angle);
+            ringCos[i] = Mth.cos(angle);
+            ringSin[i] = Mth.sin(angle);
         }
     }
 

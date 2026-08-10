@@ -56,27 +56,22 @@ object UiDebugSession {
         val successful: Boolean get() = error == null
     }
 
-    @JvmStatic
     fun isAvailable(): Boolean {
         return Dev.HAS_IM_GUI && System.getenv("IS_DEV")?.toBooleanStrictOrNull() == true
     }
 
-    @JvmStatic
     fun document(id: String): Document = synchronized(lock) {
         documents.getOrPut(id) { loadDocument(UiDebugLayoutRegistry.require(id)) }
     }
 
-    @JvmStatic
     fun documentJson(id: String): JsonObject = synchronized(lock) {
         document(id).draft.deepCopy()
     }
 
-    @JvmStatic
     fun status(id: String): Document = synchronized(lock) {
         document(id).copy(draft = document(id).draft.deepCopy(), initial = document(id).initial.deepCopy())
     }
 
-    @JvmStatic
     fun sourceTranslationKey(id: String): String {
         val override = WidgetSerializer.layoutDir().resolve("$id.json")
         return if (Files.isRegularFile(override)) {
@@ -86,7 +81,6 @@ object UiDebugSession {
         }
     }
 
-    @JvmStatic
     fun update(id: String, json: JsonObject): UpdateResult = synchronized(lock) {
         val state = document(id)
         val validation = validate(state.definition, json)
@@ -100,7 +94,6 @@ object UiDebugSession {
         UpdateResult(true)
     }
 
-    @JvmStatic
     fun capture(host: SerializedUiDebugHost) {
         if (!shouldAttach(host)) return
         val root = host.debugLayoutRoot()
@@ -113,25 +106,21 @@ object UiDebugSession {
         update(host.debugLayoutId(), encoded)
     }
 
-    @JvmStatic
     fun runtimeLayout(id: String): FrameLayoutWidget? = synchronized(lock) {
         if (!isAvailable()) return@synchronized null
         val state = documents[id] ?: return@synchronized null
         runCatching { WidgetSerializer.decode(state.draft.deepCopy()) as FrameLayoutWidget }.getOrNull()
     }
 
-    @JvmStatic
     fun attach(id: String?) {
         attachedLayoutId = id
         if (id != null) document(id)
     }
 
-    @JvmStatic
     fun shouldAttach(host: SerializedUiDebugHost): Boolean {
         return isAvailable() && (host.alwaysShowDebugEditor() || attachedLayoutId == host.debugLayoutId())
     }
 
-    @JvmStatic
     fun revert(id: String) = synchronized(lock) {
         val state = document(id)
         state.draft = state.initial.deepCopy()
@@ -139,23 +128,19 @@ object UiDebugSession {
         state.error = null
     }
 
-    @JvmStatic
     fun reload(id: String) = synchronized(lock) {
         documents[id] = loadDocument(UiDebugLayoutRegistry.require(id))
     }
 
-    @JvmStatic
     fun hasUnsavedChanges(): Boolean = synchronized(lock) {
         documents.values.any { it.dirty || it.pendingPublish } || hudDefaultsDirty || hudDefaultsPendingPublish
     }
 
-    @JvmStatic
     fun hudDefaults(): HudLayoutDefaults.Config = synchronized(lock) {
         ensureHudDefaults()
         hudDefaultsDraft!!.copyDeep()
     }
 
-    @JvmStatic
     fun updateHudDefaults(config: HudLayoutDefaults.Config): UpdateResult = synchronized(lock) {
         ensureHudDefaults()
         for ((name, value) in config.regions) {
@@ -174,7 +159,6 @@ object UiDebugSession {
         UpdateResult(true)
     }
 
-    @JvmStatic
     fun revertHudDefaults() = synchronized(lock) {
         ensureHudDefaults()
         hudDefaultsDraft = hudDefaultsInitial!!.copyDeep()
@@ -182,7 +166,6 @@ object UiDebugSession {
         HudLayoutDefaults.replace(hudDefaultsDraft!!)
     }
 
-    @JvmStatic
     fun publish(): PublishResult = synchronized(lock) {
         val dirty = documents.values.filter { it.dirty || it.pendingPublish }
         ensureHudDefaults()
@@ -258,7 +241,6 @@ object UiDebugSession {
         }
     }
 
-    @JvmStatic
     fun close() {
         if (hasUnsavedChanges()) logger.warn("[UiDebug] Client stopped with unpublished UI layout changes")
         documents.clear()

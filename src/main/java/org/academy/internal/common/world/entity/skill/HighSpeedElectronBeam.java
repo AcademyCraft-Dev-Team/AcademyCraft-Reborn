@@ -20,6 +20,7 @@ import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public static final int MAX_CHARGE_TICKS = 40;
@@ -117,7 +118,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 !destroyBlocks,
                 breaker
         );
-        return Math.clamp(result.getValue(), 0.0, segment.length());
+        return Mth.clamp(result.getValue(), 0.0, segment.length());
     }
 
     private static void spawnBetaTrail(ServerLevel level, ResolvedLinearAttack attack) {
@@ -228,13 +229,13 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             var amplitude = 0.00075f;
 
             var uuidHash = getUUID().hashCode();
-            var phaseX = (uuidHash % 1000) / 1000.0f * (float) Math.PI * 2;
-            var phaseY = (((float) uuidHash / 1000) % 1000) / 1000.0f * (float) Math.PI * 2;
-            var phaseZ = (((float) uuidHash / 1000000) % 1000) / 1000.0f * (float) Math.PI * 2;
+            var phaseX = (uuidHash % 1000) / 1000.0f * Mth.TWO_PI;
+            var phaseY = (((float) uuidHash / 1000) % 1000) / 1000.0f * Mth.TWO_PI;
+            var phaseZ = (((float) uuidHash / 1000000) % 1000) / 1000.0f * Mth.TWO_PI;
 
-            var offsetX = (float) Math.sin(tickCount * frequency + phaseX) * amplitude;
-            var offsetY = (float) Math.sin(tickCount * frequency * 2 + phaseY) * amplitude * 2;
-            var offsetZ = (float) Math.cos(tickCount * frequency + phaseZ) * amplitude;
+            var offsetX = Mth.sin(tickCount * frequency + phaseX) * amplitude;
+            var offsetY = Mth.sin(tickCount * frequency * 2 + phaseY) * amplitude * 2;
+            var offsetZ = Mth.cos(tickCount * frequency + phaseZ) * amplitude;
 
             push(offsetX, offsetY, offsetZ);
         }
@@ -354,7 +355,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     }
 
     public void setAttackDelayTicks(int ticks) {
-        entityData.set(ATTACK_DELAY_TICKS, Math.clamp(ticks, 0, 20 * 60));
+        entityData.set(ATTACK_DELAY_TICKS, Mth.clamp(ticks, 0, 20 * 60));
     }
 
     public float getBeamLength() {

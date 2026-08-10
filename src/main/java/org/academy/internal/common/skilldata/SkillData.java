@@ -2,6 +2,7 @@ package org.academy.internal.common.skilldata;
 
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 
 public abstract class SkillData {
     public static final float MIN_PROFICIENCY = 0.0f;
@@ -88,7 +89,7 @@ public abstract class SkillData {
 
     public void setProficiency(float proficiency) {
         this.proficiency = Float.isFinite(proficiency)
-                ? Math.clamp(proficiency, MIN_PROFICIENCY, MAX_PROFICIENCY)
+                ? Mth.clamp(proficiency, MIN_PROFICIENCY, MAX_PROFICIENCY)
                 : MIN_PROFICIENCY;
         legacyProgress = false;
     }

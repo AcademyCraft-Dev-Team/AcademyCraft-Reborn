@@ -31,6 +31,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import net.minecraft.util.Mth;
 
 public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
@@ -485,7 +486,7 @@ public final class AbilitySystemClient {
     }
 
     public static float getSkillProficiencyProgress(Skill skill) {
-        return Math.clamp(getSkillProficiency(skill) / SkillData.MAX_PROFICIENCY, 0.0f, 1.0f);
+        return Mth.clamp(getSkillProficiency(skill) / SkillData.MAX_PROFICIENCY, 0.0f, 1.0f);
     }
 
     public static void setSkillProficiency(Skill skill, float proficiency) {

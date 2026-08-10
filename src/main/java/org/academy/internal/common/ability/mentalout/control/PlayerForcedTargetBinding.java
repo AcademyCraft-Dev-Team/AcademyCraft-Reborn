@@ -99,14 +99,14 @@ final class PlayerForcedTargetBinding implements ControlBinding {
 
     private Aim aimAt(LivingEntity target) {
         var delta = target.getBoundingBox().getCenter().subtract(subject.getEyePosition());
-        var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+        var horizontal = Mth.sqrt((float) (delta.x * delta.x + delta.z * delta.z));
         var yaw = horizontal <= 1.0e-6
                 ? subject.getYRot()
                 : (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0f;
         var pitch = delta.lengthSqr() <= 1.0e-6
                 ? subject.getXRot()
-                : (float) -Math.toDegrees(Math.atan2(delta.y, Math.max(horizontal, 1.0e-6)));
-        return new Aim(Mth.wrapDegrees(yaw), Math.clamp(pitch, -90.0f, 90.0f));
+                : (float) -(Mth.atan2(delta.y, Math.max(horizontal, 1.0e-6))) * Mth.RAD_TO_DEG;
+        return new Aim(Mth.wrapDegrees(yaw), Mth.clamp(pitch, -90.0f, 90.0f));
     }
 
     private void applyAim(Aim aim) {

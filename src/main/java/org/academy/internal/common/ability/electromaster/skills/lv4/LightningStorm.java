@@ -43,6 +43,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public class LightningStorm extends Skill {
     private static final int STRIKE_COUNT = 21;
@@ -86,7 +87,7 @@ public class LightningStorm extends Skill {
         private static void registerSettings() {
             if (settingsRegistered) return;
             settingsRegistered = true;
-            SkillSettingsRegistry.register(
+            SkillSettingsRegistry.INSTANCE.register(
                     Skills.LIGHTNING_STORM.get(),
                     new SkillSettingsRegistry.Module(
                             "sky_strike_feedback",
@@ -134,7 +135,7 @@ public class LightningStorm extends Skill {
             private float shakeIntensity = 1.0f;
 
             private static float sanitizeIntensity(float value) {
-                return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 1.0f;
+                return Float.isFinite(value) ? Mth.clamp(value, 0.0f, 1.0f) : 1.0f;
             }
 
             public float getFlashIntensity() {
@@ -212,10 +213,10 @@ public class LightningStorm extends Skill {
             cooldown = 3;
 
             strikesLeft--;
-            var r = (float) Math.sqrt(Math.random()) * RADIUS;
-            var theta = Math.random() * 2 * Math.PI;
-            var strikeX = center.x + r * Math.cos(theta);
-            var strikeZ = center.z + r * Math.sin(theta);
+            var r = Mth.sqrt((float) (Math.random())) * RADIUS;
+            var theta = Math.random() * Mth.TWO_PI;
+            var strikeX = center.x + r * Mth.cos(theta);
+            var strikeZ = center.z + r * Mth.sin(theta);
 
             if (level() instanceof ServerLevel serverLevel) {
                 skill.reportActivity(player, true);

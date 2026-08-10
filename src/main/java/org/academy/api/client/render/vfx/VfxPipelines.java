@@ -145,8 +145,74 @@ public final class VfxPipelines {
                     .build())
             .build();
 
+    public static final RenderPipeline BLOCK_MESH = builder()
+            .withLocation(academy("pipeline/vfx_block_mesh"))
+            .withVertexShader(R.shaders.core.vfx_block_mesh)
+            .withFragmentShader(R.shaders.core.vfx_block_mesh)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
+            .withPrimitiveTopology(PrimitiveTopology.QUADS)
+            .withVertexBinding(0, VertexFormat.builder(0)
+                    .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+                    .addAttribute("UV0", GpuFormat.RG32_FLOAT)
+                    .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
+                    .build())
+            .build();
+
+    public static final RenderPipeline COLOR_MESH = builder()
+            .withLocation(academy("pipeline/vfx_color_mesh"))
+            .withVertexShader(R.shaders.core.vfx_color_mesh)
+            .withFragmentShader(R.shaders.core.vfx_color_mesh)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+            .build();
+
+    public static final RenderPipeline MODEL_MESH = builder()
+            .withLocation(academy("pipeline/vfx_model_mesh"))
+            .withVertexShader(R.shaders.core.vfx_model_mesh)
+            .withFragmentShader(R.shaders.core.vfx_model_mesh)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexBinding(0, VertexFormat.builder(0)
+                    .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+                    .addAttribute("UV0", GpuFormat.RG32_FLOAT)
+                    .build())
+            .build();
+
+    public static final RenderPipeline WING_RING_COSMIC = builder()
+            .withLocation(academy("pipeline/vfx_wing_ring_cosmic"))
+            .withVertexShader(R.shaders.core.wing_ring_cosmic)
+            .withFragmentShader(R.shaders.core.wing_ring_cosmic)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.QUADS)
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+            .withVertexBinding(1, VertexFormat.builder(1)
+                    .addAttribute("InstanceMat", GpuFormat.RGBA32_FLOAT, 4)
+                    .build())
+            .build();
+
     public static final RenderPipeline LIGHTNING_TUBE = lightningTube(
-            academy("pipeline/vfx_lightning"), null, GpuFormat.RGBA8_UNORM
+            academy("pipeline/vfx_lightning"), null
     );
     public static final RenderPipeline SCREEN_FLASH = builder()
             .withLocation(academy("pipeline/vfx_screen_flash"))
@@ -161,7 +227,7 @@ public final class VfxPipelines {
                     .build())
             .build();
     public static final RenderPipeline LIGHTNING_TUBE_BLOOM = lightningTube(
-            academy("pipeline/vfx_lightning_bloom"), BlendFunction.ADDITIVE, GpuFormat.RGBA8_UNORM
+            academy("pipeline/vfx_lightning_bloom"), BlendFunction.ADDITIVE
     );
     private static final VertexFormat SKY_STRIKE_QUAD_INSTANCE_FORMAT = VertexFormat.builder(1)
             .addAttribute("Corner0Pos", GpuFormat.RGB32_FLOAT)
@@ -187,8 +253,7 @@ public final class VfxPipelines {
 
     private static RenderPipeline lightningTube(
             Identifier location,
-            @Nullable BlendFunction blend,
-            GpuFormat colorFormat
+            @Nullable BlendFunction blend
     ) {
         return builder()
                 .withLocation(location)
@@ -202,7 +267,7 @@ public final class VfxPipelines {
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(
                         blend == null ? Optional.empty() : Optional.of(blend),
-                        colorFormat,
+                        GpuFormat.RGBA8_UNORM,
                         ColorTargetState.WRITE_ALL
                 ))
                 .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))

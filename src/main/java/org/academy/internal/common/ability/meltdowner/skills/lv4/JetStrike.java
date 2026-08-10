@@ -17,7 +17,6 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -27,8 +26,8 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.ParticleEffectWrapper;
-import org.academy.internal.client.renderer.effect.TrailEffectWrapper;
+import org.academy.internal.client.render.vfx.TrailVfx;
+import org.academy.internal.client.render.vfx.TrailVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -84,8 +83,7 @@ public final class JetStrike extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(TrailEffectWrapper.INSTANCE);
-        RendererManager.registerEffectRenderer(ParticleEffectWrapper.INSTANCE);
+        TrailVfxClient.register();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -119,18 +117,8 @@ public final class JetStrike extends Skill {
             var player = Minecraft.getInstance().player;
             if (player == null) return;
             MisakaNetworkClient.send(DashPacket.INSTANCE);
-            TrailEffectWrapper.INSTANCE.createTrail(1.5f, 0.1f, 1.0f, 0.4f, 0.1f)
+            TrailVfx.INSTANCE.createTrail(1.5f, 0.1f, 1.0f, 0.4f, 0.1f)
                     .addPoint((float) player.getX(), (float) player.getY(), (float) player.getZ());
-            var emitter = ParticleEffectWrapper.INSTANCE.createEmitter(
-                    (float) player.getX(),
-                    (float) player.getY() + 0.5f,
-                    (float) player.getZ()
-            );
-            emitter.setColor(1.0f, 0.6f, 0.2f);
-            emitter.setEmissionRate(0);
-            emitter.burst(15);
-            emitter.setLifetime(1.5f, 0.5f);
-            emitter.setVelocity(0.5f, 0.3f);
         }
 
         public static class Config extends KeyBindingConfig {

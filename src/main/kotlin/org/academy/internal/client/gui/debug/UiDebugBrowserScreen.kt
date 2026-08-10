@@ -89,12 +89,10 @@ class UiDebugBrowserScreen : Screen(Component.translatable("screen.academy.ui_de
     }
 
     companion object {
-        @JvmStatic
         fun open() {
             Minecraft.getInstance().execute { Minecraft.getInstance().gui.setScreen(UiDebugBrowserScreen()) }
         }
 
-        @JvmStatic
         fun notifyPublish(result: UiDebugSession.PublishResult) {
             val message = when {
                 result.successful -> Component.translatable(

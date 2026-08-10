@@ -15,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 /**
  * Limits only the audiovisual feedback produced by continuous positional
@@ -191,9 +192,9 @@ public final class VectorEnvironmentalFeedbackController {
 
     private static Vec3 closestPoint(AABB bounds, Vec3 point) {
         return new Vec3(
-                Math.clamp(point.x, bounds.minX, bounds.maxX),
-                Math.clamp(point.y, bounds.minY, bounds.maxY),
-                Math.clamp(point.z, bounds.minZ, bounds.maxZ)
+                Mth.clamp(point.x, bounds.minX, bounds.maxX),
+                Mth.clamp(point.y, bounds.minY, bounds.maxY),
+                Mth.clamp(point.z, bounds.minZ, bounds.maxZ)
         );
     }
 

@@ -53,6 +53,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 public final class ReflectionFilter extends Skill {
     static final int MAX_EFFECT_LIST_SIZE = 256;
@@ -510,17 +511,17 @@ public final class ReflectionFilter extends Skill {
         protected void onInit() {
             var compact = width < PREFERRED_W + 24 || height < PREFERRED_H + 24;
             serializedLayoutId = "reflection_filter_" + (compact ? "compact" : "wide");
-            var layout = SerializedUiLayout.loadBundled(
+            var layout = SerializedUiLayout.INSTANCE.loadBundled(
                     AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
                     List.of("panel", "left_column", "middle_column", "right_column", "title_accent"),
                     () -> fallbackLayout(compact)
             );
             serializedLayout = layout;
             getRoot().addChild("serialized_layout", layout);
-            panelLayout = SerializedUiLayout.require(layout, "panel");
-            leftColumnLayout = SerializedUiLayout.require(layout, "left_column");
-            middleColumnLayout = SerializedUiLayout.require(layout, "middle_column");
-            rightColumnLayout = SerializedUiLayout.require(layout, "right_column");
+            panelLayout = SerializedUiLayout.INSTANCE.require(layout, "panel");
+            leftColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "left_column");
+            middleColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "middle_column");
+            rightColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "right_column");
 
             panelW = Math.min(PREFERRED_W, Math.max(MIN_W, width - 24));
             panelW = Math.min(panelW, width - 12);
@@ -629,7 +630,7 @@ public final class ReflectionFilter extends Skill {
                     filteredEffects.add(entry);
                 }
             }
-            effectScroll = Math.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), effectVisibleRows()));
+            effectScroll = Mth.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), effectVisibleRows()));
         }
 
         @Override
@@ -661,7 +662,7 @@ public final class ReflectionFilter extends Skill {
 
         private void renderEffects(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
             var visible = effectVisibleRows();
-            effectScroll = Math.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), visible));
+            effectScroll = Mth.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), visible));
             graphics.enableScissor(leftX + 4, listY, leftX + leftW - 4, listBottom);
             for (var row = 0; row < visible && effectScroll + row < filteredEffects.size(); row++) {
                 var entry = filteredEffects.get(effectScroll + row);
@@ -744,7 +745,7 @@ public final class ReflectionFilter extends Skill {
         private void renderIdList(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                   List<String> ids, int x, int width, boolean white) {
             var visible = sideVisibleRows();
-            var scroll = Math.clamp(white ? whiteScroll : blackScroll, 0, maxScroll(ids.size(), visible));
+            var scroll = Mth.clamp(white ? whiteScroll : blackScroll, 0, maxScroll(ids.size(), visible));
             if (white) whiteScroll = scroll;
             else blackScroll = scroll;
             graphics.enableScissor(x, sideListY, x + width, sideListBottom);
@@ -863,20 +864,20 @@ public final class ReflectionFilter extends Skill {
 
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-            var step = (int) Math.signum(scrollY);
+            var step = Mth.sign(scrollY);
             if (inside(mouseX, mouseY, leftX, listY, leftW, listBottom - listY)) {
-                effectScroll = Math.clamp(effectScroll - step, 0,
+                effectScroll = Mth.clamp(effectScroll - step, 0,
                         maxScroll(filteredEffects.size(), effectVisibleRows()));
                 return true;
             }
             var listW = (rightW - 8) / 2;
             if (inside(mouseX, mouseY, whiteX, sideListY, listW, sideListBottom - sideListY)) {
-                whiteScroll = Math.clamp(whiteScroll - step, 0,
+                whiteScroll = Mth.clamp(whiteScroll - step, 0,
                         maxScroll(data.whitelist.size(), sideVisibleRows()));
                 return true;
             }
             if (inside(mouseX, mouseY, blackX, sideListY, listW, sideListBottom - sideListY)) {
-                blackScroll = Math.clamp(blackScroll - step, 0,
+                blackScroll = Mth.clamp(blackScroll - step, 0,
                         maxScroll(data.blacklist.size(), sideVisibleRows()));
                 return true;
             }

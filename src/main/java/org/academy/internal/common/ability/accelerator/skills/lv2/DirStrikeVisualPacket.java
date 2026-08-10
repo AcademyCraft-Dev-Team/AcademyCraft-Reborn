@@ -8,8 +8,8 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
-import org.academy.internal.client.renderer.effect.DirStrikeGroundEffect;
+import org.academy.internal.client.render.vfx.DirStrikeGroundEffect;
+import org.academy.internal.client.render.vfx.DirStrikeGroundVfxClient;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -68,7 +68,7 @@ public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, Di
         if (clientInitialized) return;
         clientInitialized = true;
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
-        NeoForge.EVENT_BUS.register(DirStrikeGroundEffect.class);
+        DirStrikeGroundVfxClient.register();
     }
 
     public static void broadcast(ServerLevel level, Vec3 center, BlockPos origin, int radius,
