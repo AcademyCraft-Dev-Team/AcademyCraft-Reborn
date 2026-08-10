@@ -1295,7 +1295,7 @@ public final class MentaloutGameTests {
                     ));
                     helper.runAtTickTime(370L, () -> {
                         var delta = cow.getEyePosition().subtract(dragon.getEyePosition());
-                        var expectedYaw = (float) (Math.atan2(delta.z, delta.x) * 180.0 / Math.PI) - 90.0F;
+                        var expectedYaw = (float) (Mth.atan2(delta.z, delta.x) * 180.0 / Mth.PI) - 90.0F;
                         helper.assertTrue(Mth.degreesDifferenceAbs(
                                         dragon.getYRot(), expectedYaw) <= 5.0F,
                                 "Dragon view control was overwritten by its phase AI");

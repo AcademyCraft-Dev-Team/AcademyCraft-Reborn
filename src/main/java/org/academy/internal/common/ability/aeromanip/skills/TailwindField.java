@@ -68,7 +68,7 @@ public final class TailwindField extends Skill {
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(Skills.TAILWIND_FIELD.get(), List.of(AirCushion.Client.SKILL_INFO),
                         R.textures.tailwind_field_icon, 20, 72));
-        ToggleStatusHud.registerStateProvider(Skills.TAILWIND_FIELD.get(), () -> {
+        ToggleStatusHud.Companion.registerStateProvider(Skills.TAILWIND_FIELD.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && AeromanipFieldSyncPacket.Client.snapshot().values().stream()
                     .anyMatch(field -> field.ownerId().equals(player.getUUID())

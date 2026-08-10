@@ -184,7 +184,7 @@ public class KineticEnergyApplied extends Skill {
                                 InputConstants.PRESS, 0)),
                 ctx -> Client.cycleImpactLevel());
 
-        ToggleStatusHud.registerDetailProvider(Skills.KINETIC_ENERGY_APPLIED.get(), Client::statusText);
+        ToggleStatusHud.Companion.registerDetailProvider(Skills.KINETIC_ENERGY_APPLIED.get(), Client::statusText);
     }
 
     @Override
@@ -217,7 +217,7 @@ public class KineticEnergyApplied extends Skill {
         private static void registerSettings() {
             if (settingsRegistered) return;
             settingsRegistered = true;
-            SkillSettingsRegistry.register(
+            SkillSettingsRegistry.INSTANCE.register(
                     Skills.KINETIC_ENERGY_APPLIED.get(),
                     new SkillSettingsRegistry.Module(
                             "shockwave",
@@ -438,7 +438,7 @@ public class KineticEnergyApplied extends Skill {
             shockwave.setPos(center.x, center.y, center.z);
             shockwave.setYRot((float) (Mth.atan2(normalized.z, normalized.x) * Mth.RAD_TO_DEG) - 90.0f);
             shockwave.setXRot((float) (-(Mth.atan2(normalized.y,
-                    Math.sqrt(normalized.x * normalized.x + normalized.z * normalized.z)) * Mth.RAD_TO_DEG)));
+                    Mth.sqrt((float) (normalized.x * normalized.x + normalized.z * normalized.z))) * Mth.RAD_TO_DEG)));
             level.addFreshEntity(shockwave);
 
             var soundPosition = audiblePosition(player, center);

@@ -88,7 +88,7 @@ public class PlasmaGeneration extends Skill {
     }
 
     public static int calculateStage(long chargeTicks) {
-        return Math.clamp((int) (Math.max(0L, chargeTicks) / TICKS_PER_STAGE), 0, MAX_STAGE);
+        return Mth.clamp((int) (Math.max(0L, chargeTicks) / TICKS_PER_STAGE), 0, MAX_STAGE);
     }
 
     public static float getChargeProgress(long startTick, long currentTick) {

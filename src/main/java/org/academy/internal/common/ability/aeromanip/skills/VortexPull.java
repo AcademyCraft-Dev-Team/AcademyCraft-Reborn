@@ -39,6 +39,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public final class VortexPull extends Skill {
     public VortexPull() {
@@ -127,7 +128,7 @@ public final class VortexPull extends Skill {
                 if (delta.lengthSqr() <= 1.0e-8) continue;
                 var multiplier = AeromanipTargeting.forceMultiplier(owner, target);
                 if (multiplier <= 0.0) continue;
-                var distance = Math.sqrt(delta.lengthSqr());
+                var distance = Mth.sqrt((float) (delta.lengthSqr()));
                 var targetSpeed = Math.min(1.65, 0.9 + distance * 0.12) * multiplier;
                 AeromanipTargeting.steerVelocity(target, delta, 0.44, targetSpeed);
                 target.resetFallDistance();

@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.accelerator.reflection;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Objects;
+import net.minecraft.util.Mth;
 
 public record LinearSegment(Vec3 start, Vec3 end) {
     private static final double MIN_LENGTH_SQR = 1.0E-12;
@@ -25,19 +26,19 @@ public record LinearSegment(Vec3 start, Vec3 end) {
     }
 
     public double length() {
-        return Math.sqrt(lengthSqr());
+        return Mth.sqrt((float) (lengthSqr()));
     }
 
     public Vec3 direction() {
         var delta = delta();
         var lengthSqr = delta.lengthSqr();
         if (!(lengthSqr > MIN_LENGTH_SQR) || !Double.isFinite(lengthSqr)) return Vec3.ZERO;
-        return delta.scale(1.0 / Math.sqrt(lengthSqr));
+        return delta.scale(1.0 / Mth.sqrt((float) (lengthSqr)));
     }
 
     public Vec3 pointAt(double progress) {
         if (!Double.isFinite(progress)) return start;
-        return start.add(delta().scale(Math.clamp(progress, 0.0, 1.0)));
+        return start.add(delta().scale(Mth.clamp(progress, 0.0, 1.0)));
     }
 
     public LinearSegment reversed() {

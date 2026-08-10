@@ -15,13 +15,14 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
+import net.minecraft.util.Mth;
 
 public final class DarkmatterEquipmentEvents {
     private DarkmatterEquipmentEvents() {
     }
 
     static float damageMultiplier(int protectedPieces) {
-        return Math.max(0, 1.0f - Math.clamp(protectedPieces, 0, 4) * 0.1f);
+        return Math.max(0, 1.0f - Mth.clamp(protectedPieces, 0, 4) * 0.1f);
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)

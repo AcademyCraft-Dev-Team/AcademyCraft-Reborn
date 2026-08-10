@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.mentalout.precision;
 import org.academy.api.common.entitycontrol.ControlCapability;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
     public static final int MAX_NODES = 32;
@@ -594,8 +595,8 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
                     id,
                     kind,
                     parameter,
-                    Math.clamp(x, -100_000.0, 100_000.0),
-                    Math.clamp(y, -100_000.0, 100_000.0)
+                    Mth.clamp(x, -100_000.0, 100_000.0),
+                    Mth.clamp(y, -100_000.0, 100_000.0)
             );
         }
     }

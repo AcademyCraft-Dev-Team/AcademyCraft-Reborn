@@ -7,6 +7,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
+import net.minecraft.util.Mth;
 
 public class RailgunRay extends RenderOnlyEntity {
     public static final float DEFAULT_LENGTH = 50.0f;
@@ -100,7 +101,7 @@ public class RailgunRay extends RenderOnlyEntity {
                 ? Math.max(0.0f, widthMultiplier)
                 : 1.0f;
         var safeReflectionDistance = Float.isFinite(reflectionDistance)
-                ? Math.clamp(reflectionDistance, 0.0f, safeLength)
+                ? Mth.clamp(reflectionDistance, 0.0f, safeLength)
                 : 0.0f;
         var safeReturnLength = Float.isFinite(returnLength) ? Math.max(0.0f, returnLength) : 0.0f;
         var directionLengthSqr = returnDirection == null ? 0.0 : returnDirection.lengthSqr();

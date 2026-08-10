@@ -201,14 +201,14 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
         }
 
         private static double heuristic(BlockPos left, BlockPos right) {
-            return Math.sqrt(left.distSqr(right));
+            return Mth.sqrt((float) (left.distSqr(right)));
         }
 
         private static double moveCost(NodeKey from, NodeKey to) {
             var dx = to.pos.getX() - from.pos.getX();
             var dy = to.pos.getY() - from.pos.getY();
             var dz = to.pos.getZ() - from.pos.getZ();
-            return Math.sqrt(dx * dx + dy * dy + dz * dz) + switch (to.mode) {
+            return Mth.sqrt((float) (dx * dx + dy * dy + dz * dz)) + switch (to.mode) {
                 case JUMP -> 0.4;
                 case DROP -> 0.25;
                 case FLY -> 0.55;
@@ -357,14 +357,14 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             var yaw = horizontalSqr <= 1.0e-6
                     ? subject.getYRot()
                     : (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0f;
-            var horizontal = Math.sqrt(horizontalSqr);
+            var horizontal = Mth.sqrt((float) (horizontalSqr));
             var waterExit = step.mode == PlayerMovementMode.JUMP && subject.isInWater();
             var verticalMode = step.mode == PlayerMovementMode.FLY
                     || step.mode == PlayerMovementMode.SWIM
                     || step.mode == PlayerMovementMode.GLIDE
                     || waterExit;
             var pitch = verticalMode && delta.lengthSqr() > 1.0e-6
-                    ? (float) -Math.toDegrees(Math.atan2(delta.y, Math.max(horizontal, 1.0e-6)))
+                    ? (float) -(Mth.atan2(delta.y, Math.max(horizontal, 1.0e-6))) * Mth.RAD_TO_DEG
                     : subject.getXRot();
             var jump = false;
             var sneak = false;

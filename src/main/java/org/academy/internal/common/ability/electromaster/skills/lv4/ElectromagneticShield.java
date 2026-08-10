@@ -43,6 +43,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Locale;
+import net.minecraft.util.Mth;
 
 public final class ElectromagneticShield extends Skill {
     static final float BASE_CAPACITY = 100.0f;
@@ -75,7 +76,7 @@ public final class ElectromagneticShield extends Skill {
     static AbsorptionResult absorbDamage(float storedDamage, float capacity, float incomingDamage) {
         var safeCapacity = Float.isFinite(capacity) ? Math.max(0, capacity) : 0;
         var safeStored = Float.isFinite(storedDamage)
-                ? Math.clamp(storedDamage, 0, safeCapacity)
+                ? Mth.clamp(storedDamage, 0, safeCapacity)
                 : 0;
         var safeIncoming = Float.isFinite(incomingDamage) ? Math.max(0, incomingDamage) : 0;
         var absorbed = Math.min(safeIncoming, safeCapacity - safeStored);
@@ -105,7 +106,7 @@ public final class ElectromagneticShield extends Skill {
                 ),
                 _ -> Client.toggle()
         );
-        ToggleStatusHud.registerDetailProvider(
+        ToggleStatusHud.Companion.registerDetailProvider(
                 Skills.ELECTROMAGNETIC_SHIELD.get(), Client::statusText);
     }
 

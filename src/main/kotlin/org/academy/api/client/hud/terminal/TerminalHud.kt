@@ -56,7 +56,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import kotlin.concurrent.Volatile
-import kotlin.math.abs
 import kotlin.math.sign
 import kotlin.math.tan
 
@@ -271,7 +270,7 @@ class TerminalHud private constructor() {
         val viewMatrix = Matrix4f().identity()
 
         val z = -2.5125f
-        val scale = (2 * abs(z) * tan((fovY / 2).toDouble()) / guiHeight).toFloat()
+        val scale = (2 * Math.abs(z) * tan((fovY / 2).toDouble()) / guiHeight).toFloat()
 
         viewMatrix.translate(0.0f, 0.0f, z)
         viewMatrix.scale(scale, scale, scale)
@@ -624,7 +623,7 @@ class TerminalHud private constructor() {
             val currentProgress = viewStateProgress
             main.cancelAnimations()
 
-            val distance = abs(target - currentProgress)
+            val distance = Math.abs(target - currentProgress)
             val baseDuration = 400L
             val newDuration = (baseDuration * distance).toLong()
 
@@ -674,7 +673,7 @@ class TerminalHud private constructor() {
             startDelay: Long = 0
         ): ObjectAnimator {
             val currentAlpha = widget.alpha
-            val distance = abs(targetAlpha - currentAlpha)
+            val distance = Math.abs(targetAlpha - currentAlpha)
             val duration = (baseDuration * distance).toLong().coerceAtLeast(1)
 
             val anim = ofFloat({ widget.alpha = it }, currentAlpha, targetAlpha)
@@ -767,12 +766,10 @@ class TerminalHud private constructor() {
 
         lateinit var INSTANCE: TerminalHud
 
-        @JvmStatic
         fun handleCharacterInput(event: CharacterEvent): Boolean {
             return this::INSTANCE.isInitialized && INSTANCE.onCharacterInput(event)
         }
 
-        @JvmStatic
         fun handlePreeditInput(event: PreeditEvent?): Boolean {
             return this::INSTANCE.isInitialized && INSTANCE.onPreeditInput(event)
         }
@@ -788,10 +785,8 @@ class TerminalHud private constructor() {
             NeoForge.EVENT_BUS.register(INSTANCE)
         }
 
-        @JvmStatic
-        fun getBlurRadius(): Float = INSTANCE.config?.blurRadius?.coerceIn(0f, 20f) ?: 20f
+        fun getBlurRadius(): Float = INSTANCE.config.blurRadius.coerceIn(0f, 20f)
 
-        @JvmStatic
         fun setBlurRadius(value: Float) {
             val terminal = INSTANCE
             terminal.config.blurRadius = value.coerceIn(0f, 20f)

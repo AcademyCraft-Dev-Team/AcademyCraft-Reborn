@@ -8,6 +8,7 @@ import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinear
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public final class ContinuousBeamReflection {
     private ContinuousBeamReflection() {
@@ -95,7 +96,7 @@ public final class ContinuousBeamReflection {
 
     static int nextPulse(int currentTick, int interval) {
         if (interval <= 0) return currentTick;
-        var remainder = Math.floorMod(currentTick, interval);
+        var remainder = Mth.positiveModulo(currentTick, interval);
         return remainder == 0 ? currentTick : currentTick + interval - remainder;
     }
 }

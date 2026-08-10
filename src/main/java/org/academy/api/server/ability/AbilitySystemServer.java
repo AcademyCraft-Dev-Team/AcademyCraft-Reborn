@@ -430,7 +430,7 @@ public final class AbilitySystemServer {
 
     private static int resolveIterationPoints(int configuredPoints, float baseCost) {
         if (configuredPoints > 0) return configuredPoints;
-        return Math.max(1, (int) Math.ceil(baseCost * 0.5f));
+        return Math.max(1, Mth.ceil(baseCost * 0.5f));
     }
 
     private void removeContext(ServerContext serverContext) {

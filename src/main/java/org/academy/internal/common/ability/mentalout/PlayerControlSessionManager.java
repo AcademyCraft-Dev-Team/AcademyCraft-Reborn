@@ -892,7 +892,7 @@ public final class PlayerControlSessionManager {
         var pitch = buf.readShort() / 100.0f;
         var actions = buf.readUnsignedByte();
         var modes = PlayerMovementMode.values();
-        var mode = modes[Math.clamp(buf.readUnsignedByte(), 0, modes.length - 1)];
+        var mode = modes[Mth.clamp(buf.readUnsignedByte(), 0, modes.length - 1)];
         return new PlayerControlFrame(
                 forward, strafe, yaw, pitch,
                 (actions & 1) != 0, (actions & 2) != 0, (actions & 4) != 0,
@@ -938,7 +938,7 @@ public final class PlayerControlSessionManager {
         var attackStrength = buf.readFloat();
         var usingItem = buf.readBoolean();
         var hands = InteractionHand.values();
-        var useHand = hands[Math.clamp(buf.readUnsignedByte(), 0, hands.length - 1)];
+        var useHand = hands[Mth.clamp(buf.readUnsignedByte(), 0, hands.length - 1)];
         var useRemainingTicks = ByteBufCodecs.VAR_INT.decode(buf);
         return new TargetViewState(
                 hotbar, selectedSlot, offhand, health, maxHealth, absorption,
@@ -1290,7 +1290,7 @@ public final class PlayerControlSessionManager {
                     writeUuid(buf, packet.subjectUuid);
                 },
                 buf -> new BeginPacket(readUuid(buf), buf.readLong(),
-                        Role.values()[Math.clamp(buf.readUnsignedByte(), 0, Role.values().length - 1)],
+                        Role.values()[Mth.clamp(buf.readUnsignedByte(), 0, Role.values().length - 1)],
                         ByteBufCodecs.VAR_INT.decode(buf), readUuid(buf)));
         private final UUID sessionId;
         private final long revision;
@@ -1433,7 +1433,7 @@ public final class PlayerControlSessionManager {
                     buf.writeByte(packet.reason.ordinal());
                 },
                 buf -> new EndPacket(readUuid(buf), buf.readLong(),
-                        EndReason.values()[Math.clamp(buf.readUnsignedByte(), 0, EndReason.values().length - 1)]));
+                        EndReason.values()[Mth.clamp(buf.readUnsignedByte(), 0, EndReason.values().length - 1)]));
         private final UUID sessionId;
         private final long revision;
         private final EndReason reason;
@@ -1481,19 +1481,19 @@ public final class PlayerControlSessionManager {
         public TargetViewState {
             if (hotbar.size() != 9) throw new IllegalArgumentException("Target hotbar must have nine slots");
             hotbar = hotbar.stream().map(ItemStack::copy).toList();
-            selectedSlot = Math.clamp(selectedSlot, 0, 8);
+            selectedSlot = Mth.clamp(selectedSlot, 0, 8);
             offhand = offhand.copy();
             health = Math.max(0.0f, health);
             maxHealth = Math.max(1.0f, maxHealth);
             absorption = Math.max(0.0f, absorption);
-            armor = Math.clamp(armor, 0, 20);
-            food = Math.clamp(food, 0, 20);
+            armor = Mth.clamp(armor, 0, 20);
+            food = Mth.clamp(food, 0, 20);
             saturation = Math.max(0.0f, saturation);
             air = Math.max(0, air);
             maxAir = Math.max(1, maxAir);
-            experienceProgress = Math.clamp(experienceProgress, 0.0f, 1.0f);
+            experienceProgress = Mth.clamp(experienceProgress, 0.0f, 1.0f);
             experienceLevel = Math.max(0, experienceLevel);
-            attackStrength = Math.clamp(attackStrength, 0.0f, 1.0f);
+            attackStrength = Mth.clamp(attackStrength, 0.0f, 1.0f);
             useHand = Objects.requireNonNull(useHand, "useHand");
             useRemainingTicks = Math.max(0, useRemainingTicks);
         }

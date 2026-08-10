@@ -8,7 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.internal.client.renderer.effect.WingEffectRenderer;
+import org.academy.internal.client.render.vfx.WingVfx;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
@@ -79,8 +79,8 @@ public final class AdvancedWingSweepPacket extends Packet<ClientPacketListener, 
 
         @SubscribePacket
         public static void handleSweep(AdvancedWingSweepPacket packet) {
-            WingEffectRenderer.enqueueSweep(
-                    packet.kind,
+            WingVfx.enqueueSweep(
+                    toVfxKind(packet.kind),
                     packet.entityId,
                     packet.leftWing,
                     packet.yawOffsetDeg,
@@ -90,12 +90,20 @@ public final class AdvancedWingSweepPacket extends Packet<ClientPacketListener, 
 
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
-            WingEffectRenderer.clientTick();
+            WingVfx.clientTick();
         }
 
         @SubscribeEvent
         public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
-            WingEffectRenderer.clearSweeps();
+            WingVfx.clearSweeps();
+        }
+
+        private static org.academy.internal.client.render.vfx.WingKind toVfxKind(AdvancedWingSweepPacket.WingKind kind) {
+            return switch (kind) {
+                case BLACK -> org.academy.internal.client.render.vfx.WingKind.BLACK;
+                case WHITE -> org.academy.internal.client.render.vfx.WingKind.WHITE;
+                case PLATINUM -> org.academy.internal.client.render.vfx.WingKind.PLATINUM;
+            };
         }
     }
 }

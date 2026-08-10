@@ -49,6 +49,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class SelfTeleport extends Skill {
     private static final double MAX_DISTANCE = 20.0;
@@ -218,7 +219,7 @@ public final class SelfTeleport extends Skill {
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
                 distance += event.yOffset;
-                distance = Math.clamp(distance, 0, MAX_DISTANCE);
+                distance = Mth.clamp(distance, 0, MAX_DISTANCE);
                 event.setCanceled(true);
             }
 

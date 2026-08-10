@@ -16,6 +16,7 @@ import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
+import net.minecraft.util.Mth;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
 
@@ -51,10 +52,10 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
-            var targetStartSeconds = Math.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
+            var targetStartSeconds = Mth.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
-            targetAnimationState.start(Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            targetAnimationState.start((int) Mth.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
         } else {
             targetAnimationState.start(ticks);
         }
@@ -73,10 +74,10 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         if (elapsedMillis > 0) {
             var elapsedSeconds = elapsedMillis / 1000.0f;
             var totalDuration = targetAnimationDefinition.lengthInSeconds();
-            var targetStartSeconds = Math.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
+            var targetStartSeconds = Mth.clamp(totalDuration - elapsedSeconds, 0.0f, totalDuration);
             var targetElapsedTicks = (long) (targetStartSeconds * 20.0f);
             var adjustedStartTick = ticks - targetElapsedTicks;
-            targetAnimationState.start(Math.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            targetAnimationState.start((int) Mth.clamp(adjustedStartTick, Integer.MIN_VALUE, Integer.MAX_VALUE));
         } else {
             targetAnimationState.start(ticks);
         }
@@ -155,7 +156,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     }
 
     public void setEnergyStored(int newEnergy) {
-        var clamped = Math.clamp(newEnergy, 0, getMaxEnergyStorage());
+        var clamped = Mth.clamp(newEnergy, 0, getMaxEnergyStorage());
         if (clamped != energyStored) {
             energyStored = clamped;
             setChanged();
@@ -186,7 +187,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         if (isMain()) {
-            energyStored = Math.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
+            energyStored = Mth.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
             connectedNodePos = null;
             input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
             isOpen = input.getBooleanOr("is_open", false);

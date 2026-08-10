@@ -20,9 +20,9 @@ open class ImageWidget : AbstractWidget {
     private var sampler: GpuSampler? = null
 
     fun getSampler(): GpuSampler {
-        return sampler ?: RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)?.also {
+        return sampler ?: RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST).also {
             sampler = it
-        } ?: throw IllegalStateException("Sampler cache unavailable")
+        }
     }
 
     var u0: Float = 0f
@@ -76,7 +76,7 @@ open class ImageWidget : AbstractWidget {
     override fun renderInternal(context: RenderContext) {
         background?.draw(context, this)
         resolveAndPrepareTexture()
-        if (textureView == null) return
+        val textureView = textureView ?: return
 
         val lp = layoutParams
         val paddedWidth = width - lp.paddingLeft - lp.paddingRight
@@ -90,7 +90,7 @@ open class ImageWidget : AbstractWidget {
         run {
             context.pose().translate(lp.paddingLeft, lp.paddingTop)
             val command = generateDrawCommand(
-                textureView!!, getSampler(), paddedWidth, paddedHeight, u0, v0, u1, v1, u2, v2, u3, v3,
+                textureView, getSampler(), paddedWidth, paddedHeight, u0, v0, u1, v1, u2, v2, u3, v3,
                 this.brightness, green, blue, finalAlpha
             )
             context.submit(command)

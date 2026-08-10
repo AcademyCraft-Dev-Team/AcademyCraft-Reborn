@@ -4,6 +4,7 @@ import org.academy.api.common.registries.Registries;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 /**
  * Judging utilities about ability development costs.
@@ -50,7 +51,7 @@ public final class LearningHelper {
 
     public static float getAbilityProgress(AbilityCategory category, int currentLevel, float abilityExp) {
         var required = getAbilityExpRequirement(category, currentLevel);
-        return required <= 0.0f ? 1.0f : Math.clamp(abilityExp / required, 0.0f, 1.0f);
+        return required <= 0.0f ? 1.0f : Mth.clamp(abilityExp / required, 0.0f, 1.0f);
     }
 
     /**

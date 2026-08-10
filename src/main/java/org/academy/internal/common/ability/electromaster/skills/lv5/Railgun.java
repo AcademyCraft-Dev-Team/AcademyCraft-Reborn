@@ -30,7 +30,6 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
@@ -44,7 +43,7 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
 import org.academy.api.server.sync.ServerSyncManager;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
+import org.academy.internal.client.render.vfx.RailgunVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -131,7 +130,7 @@ public final class Railgun extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(RailgunEffectRenderer.INSTANCE);
+        RailgunVfxClient.register();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CLIENT_CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);

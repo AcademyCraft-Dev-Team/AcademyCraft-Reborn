@@ -54,6 +54,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.util.Mth;
 
 public final class PneumaticGrasp extends Skill {
     private static final double MIN_CONTROL_DISTANCE = 2.0;
@@ -111,7 +112,7 @@ public final class PneumaticGrasp extends Skill {
         private static final class ControlContext extends ClientContext {
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
-                var steps = (int) Math.signum(event.yOffset);
+                var steps = Mth.sign(event.yOffset);
                 if (steps == 0) return;
                 MisakaNetworkClient.send(new AdjustDistancePacket(steps));
                 event.setCanceled(true);
@@ -293,7 +294,7 @@ public final class PneumaticGrasp extends Skill {
                 if (!(player.level() instanceof ServerLevel level) || (activeTicks & 1) != 0) return;
                 var targetCenter = target.getBoundingBox().getCenter();
                 var beam = targetCenter.subtract(eye);
-                var pointCount = Math.max(3, Math.min(7, (int) Math.ceil(beam.length() / 2.0)));
+                var pointCount = Math.max(3, Math.min(7, Mth.ceil(beam.length() / 2.0)));
                 for (var index = 1; index <= pointCount; index++) {
                     var point = eye.add(beam.scale((double) index / (pointCount + 1)));
                     level.sendParticles(ParticleTypes.CLOUD,
@@ -303,8 +304,8 @@ public final class PneumaticGrasp extends Skill {
                     var radius = Math.max(0.4, target.getBbWidth() * 0.7);
                     var phase = activeTicks * 0.18;
                     for (var index = 0; index < 6; index++) {
-                        var angle = phase + index * Math.PI / 3.0;
-                        var point = targetCenter.add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+                        var angle = phase + index * Mth.PI / 3.0;
+                        var point = targetCenter.add(Mth.cos(angle) * radius, 0.0, Mth.sin(angle) * radius);
                         level.sendParticles(ParticleTypes.CLOUD,
                                 point.x, point.y, point.z, 1, 0.01, 0.02, 0.01, 0.002);
                     }

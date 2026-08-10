@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public final class MentalIntrusionManager {
     private static final int READY_TIMEOUT_TICKS = 20;
@@ -64,7 +65,7 @@ public final class MentalIntrusionManager {
         }
         var skill = Skills.MENTAL_INTRUSION.get();
         if (!skill.isEnabled(player)) return StartResult.UNAVAILABLE;
-        var level = Math.clamp(skill.getLevel(player), 0, 2);
+        var level = Mth.clamp(skill.getLevel(player), 0, 2);
         var target = MentaloutTargeting.findLookedAtLiving(
                 player,
                 MentaloutConfig.mentalIntrusionRange(player, level)
@@ -124,7 +125,7 @@ public final class MentalIntrusionManager {
         if (player == null || target == null || SESSIONS.containsKey(player.getUUID())) return null;
         var intrusion = Skills.MENTAL_INTRUSION.get();
         if (!intrusion.isEnabled(player)) return null;
-        var level = Math.clamp(intrusion.getLevel(player), 0, 2);
+        var level = Mth.clamp(intrusion.getLevel(player), 0, 2);
         var range = MentaloutConfig.mentalIntrusionRange(player, level);
         if (MentalControlRuntime.isProtectedTarget(target)) {
             MentalControlRuntime.notifyProtectionBlocked(player, target);
@@ -202,7 +203,7 @@ public final class MentalIntrusionManager {
             MentalControlRuntime.notifyProtectionBlocked(player, session.target);
             return DistortionResult.PROTECTED_NOTIFIED;
         }
-        var level = Math.clamp(skill.getLevel(player), 0, 2);
+        var level = Mth.clamp(skill.getLevel(player), 0, 2);
         var cost = MentaloutConfig.sensoryDistortionCost(player, level);
         if (MentalControlRuntime.isBossCost(session.target)) {
             cost *= MentaloutConfig.bossCostMultiplier(player);

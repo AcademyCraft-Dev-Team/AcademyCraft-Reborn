@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LinearReflectionResolverTest {
     private static void assertVecEquals(Vec3 expected, Vec3 actual) {
-        assertEquals(expected.x, actual.x, 1.0E-9);
-        assertEquals(expected.y, actual.y, 1.0E-9);
-        assertEquals(expected.z, actual.z, 1.0E-9);
+        assertEquals(expected.x, actual.x, 1.0E-6);
+        assertEquals(expected.y, actual.y, 1.0E-6);
+        assertEquals(expected.z, actual.z, 1.0E-6);
     }
 
     @Test
@@ -93,7 +93,7 @@ class LinearReflectionResolverTest {
         assertVecEquals(new Vec3(4 - LinearReflectionResolver.RETURN_EPSILON, 0, 0), returned.start());
         assertVecEquals(new Vec3(-6, 0, 0), returned.end());
         assertVecEquals(new Vec3(-1, 0, 0), returned.direction());
-        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, returned.length(), 1.0E-9);
+        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, returned.length(), 1.0E-6);
     }
 
     @Test
@@ -136,7 +136,7 @@ class LinearReflectionResolverTest {
         assertEquals(10, atStart.length(), 1.0E-9);
         assertVecEquals(new Vec3(10 - LinearReflectionResolver.RETURN_EPSILON, 0, 0), atEnd.start());
         assertVecEquals(Vec3.ZERO, atEnd.end());
-        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, atEnd.length(), 1.0E-9);
+        assertEquals(10 - LinearReflectionResolver.RETURN_EPSILON, atEnd.length(), 1.0E-6);
     }
 
     @Test
@@ -150,7 +150,7 @@ class LinearReflectionResolverTest {
 
         assertVecEquals(original.end(), returned.start());
         assertVecEquals(original.start(), returned.end());
-        assertEquals(length, returned.length(), 1.0E-12);
+        assertEquals(length, returned.length(), 1.0E-9);
     }
 
     @Test

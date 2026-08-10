@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.util.Mth;
 
 public final class VectorBlast extends Skill {
     static final double RANGE = 64.0;
@@ -278,7 +279,7 @@ public final class VectorBlast extends Skill {
                     ? player.getEyePosition().subtract(targetCenter)
                     : targetCenter.subtract(player.getEyePosition());
             if (delta.lengthSqr() <= 1.0e-6) return;
-            var distance = Math.sqrt(delta.lengthSqr());
+            var distance = Mth.sqrt((float) (delta.lengthSqr()));
             var strength = state.mode == ControlMode.PULL
                     ? Math.min(0.48, 0.18 + distance * 0.018)
                     : Math.min(0.62, 0.26 + distance * 0.022);
@@ -415,7 +416,7 @@ public final class VectorBlast extends Skill {
     @PacketTarget(ThreadType.SERVER)
     public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
         public static final StreamCodec<ByteBuf, UsePacket> CODEC = ByteBufCodecs.VAR_INT.map(
-                ordinal -> new UsePacket(Action.values()[Math.clamp(ordinal, 0, Action.values().length - 1)]),
+                ordinal -> new UsePacket(Action.values()[Mth.clamp(ordinal, 0, Action.values().length - 1)]),
                 packet -> packet.action.ordinal()
         );
         private final Action action;

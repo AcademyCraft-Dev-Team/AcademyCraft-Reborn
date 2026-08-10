@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.neoforged.bus.api.Event;
-import org.academy.internal.client.renderer.effect.WorldLineOverlayPass;
+import org.academy.internal.client.render.vfx.WorldLineOverlayPass;
 
 import java.util.function.BiConsumer;
 

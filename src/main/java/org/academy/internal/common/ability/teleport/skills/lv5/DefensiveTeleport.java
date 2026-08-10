@@ -51,6 +51,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Set;
+import net.minecraft.util.Mth;
 
 public final class DefensiveTeleport extends Skill {
     static final double SELECTION_SIZE = 5.0;
@@ -129,7 +130,7 @@ public final class DefensiveTeleport extends Skill {
 
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
-                distance = Math.clamp(distance + event.yOffset, 2.5, MAX_SELECTION_DISTANCE);
+                distance = Mth.clamp(distance + event.yOffset, 2.5, MAX_SELECTION_DISTANCE);
                 event.setCanceled(true);
             }
 

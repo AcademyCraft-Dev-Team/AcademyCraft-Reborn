@@ -8,6 +8,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import net.minecraft.util.Mth;
 
 public final class TrailRenderer {
     private final Deque<TrailPoint> points = new ArrayDeque<>();
@@ -52,7 +53,7 @@ public final class TrailRenderer {
     }
 
     public void setTaperRatio(float ratio) {
-        taperRatio = Math.clamp(ratio, 0, 1);
+        taperRatio = Mth.clamp(ratio, 0, 1);
     }
 
     public float getR() {

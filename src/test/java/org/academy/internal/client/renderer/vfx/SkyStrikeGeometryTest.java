@@ -2,6 +2,7 @@ package org.academy.internal.client.renderer.vfx;
 
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.path.LinePath;
+import org.academy.internal.client.render.vfx.SkyStrikeGeometry;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.junit.jupiter.api.Test;
 

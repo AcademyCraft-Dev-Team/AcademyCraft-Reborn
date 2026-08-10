@@ -90,7 +90,7 @@ public final class DarkmatterCutSlashRenderer
     public void extractRenderState(DarkmatterCutSlash entity,
                                    DarkmatterCutSlashRenderState state, float partialTick) {
         super.extractRenderState(entity, state, partialTick);
-        state.progress = Math.clamp((entity.tickCount + partialTick) / entity.getDuration(), 0, 1);
+        state.progress = Mth.clamp((entity.tickCount + partialTick) / entity.getDuration(), 0, 1);
         state.scale = entity.getScale();
         state.xRot = entity.getXRot();
         state.yRot = entity.getYRot();

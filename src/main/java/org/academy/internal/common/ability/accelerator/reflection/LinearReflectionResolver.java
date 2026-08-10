@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import net.minecraft.util.Mth;
 
 public final class LinearReflectionResolver {
     public static final double RETURN_EPSILON = 1.0E-4;
@@ -192,9 +193,9 @@ public final class LinearReflectionResolver {
 
     private static Vec3 randomShieldDirection(ServerPlayer player) {
         var random = player.getRandom();
-        var yaw = random.nextDouble() * Math.PI * 2.0;
+        var yaw = random.nextDouble() * Mth.TWO_PI;
         var y = random.nextDouble() * 0.7 - 0.2;
-        return new Vec3(Math.cos(yaw), y, Math.sin(yaw)).normalize();
+        return new Vec3(Mth.cos(yaw), y, Mth.sin(yaw)).normalize();
     }
 
     private static Vec3 randomSideDirection(ServerPlayer player) {
@@ -257,7 +258,7 @@ public final class LinearReflectionResolver {
         var direction = end.subtract(start);
         var lengthSqr = direction.lengthSqr();
         if (!(lengthSqr > 1.0E-12) || !Double.isFinite(lengthSqr)) return 0.0;
-        return Math.clamp(point.subtract(start).dot(direction) / lengthSqr, 0.0, 1.0);
+        return Mth.clamp(point.subtract(start).dot(direction) / lengthSqr, 0.0, 1.0);
     }
 
     private static boolean clipAxis(

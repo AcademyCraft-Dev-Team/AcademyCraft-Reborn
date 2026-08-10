@@ -7,6 +7,7 @@ import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.Mth;
 
 public final class BloodSplashParticle extends SingleQuadParticle {
     private static final int SPLASH_LIFETIME = 6;
@@ -33,7 +34,7 @@ public final class BloodSplashParticle extends SingleQuadParticle {
         gCol = 0.05f;
         bCol = 0.05f;
         alpha = 0.9f;
-        roll = random.nextFloat() * (float) (Math.PI * 2.0);
+        roll = random.nextFloat() * Mth.TWO_PI;
         oRoll = roll;
         setSpriteFromAge(sprites);
     }

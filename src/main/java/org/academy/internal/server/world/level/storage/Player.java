@@ -10,6 +10,7 @@ import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 public final class Player {
     private static final Map<String, String> LEGACY_SKILL_ALIASES = Map.ofEntries(
@@ -171,12 +172,12 @@ public final class Player {
     }
 
     public float getChallengeCpBonus() {
-        return Math.clamp(challengeCpBonus, 0.0f, 200.0f);
+        return Mth.clamp(challengeCpBonus, 0.0f, 200.0f);
     }
 
     public boolean addChallengeCpBonus(float amount) {
         if (!Float.isFinite(amount) || amount <= 0.0f) return false;
-        var next = Math.clamp(getChallengeCpBonus() + amount, 0.0f, 200.0f);
+        var next = Mth.clamp(getChallengeCpBonus() + amount, 0.0f, 200.0f);
         if (Float.compare(challengeCpBonus, next) == 0) return false;
         challengeCpBonus = next;
         markDirty();
@@ -277,7 +278,7 @@ public final class Player {
         if (!changed) return false;
 
         if (legacyLevel != null) {
-            cpData.setLevel(AbilityLevel.fromLevelCode(Math.clamp(legacyLevel, 0, 6)));
+            cpData.setLevel(AbilityLevel.fromLevelCode(Mth.clamp(legacyLevel, 0, 6)));
         }
         if (legacyMaxComputingPower != null && Float.isFinite(legacyMaxComputingPower)) {
             cpData.setMaxCP(Math.max(0.0f, legacyMaxComputingPower));
@@ -300,7 +301,7 @@ public final class Player {
             if (proficiency == null || !Float.isFinite(proficiency)) return;
             migrated.merge(
                     canonicalizeSkillId(skillId),
-                    Math.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY),
+                    Mth.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY),
                     Math::max
             );
         });

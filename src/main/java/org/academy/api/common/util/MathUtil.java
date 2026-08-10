@@ -15,6 +15,7 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.function.Predicate;
+import net.minecraft.util.Mth;
 
 public class MathUtil {
     public static final RandomSource RANDOM_SOURCE = RandomSource.create();
@@ -154,7 +155,7 @@ public class MathUtil {
         if (Math.abs(a) > 1e-6) {
             var delta = b * b - 4 * a * c;
             if (delta >= 0) {
-                var sqrtDelta = (float) Math.sqrt(delta);
+                var sqrtDelta = Mth.sqrt((float) (delta));
                 var t1 = (-b - sqrtDelta) / (2 * a);
                 var t2 = (-b + sqrtDelta) / (2 * a);
 
@@ -196,7 +197,7 @@ public class MathUtil {
     }
 
     public static double calculateVerticalFov(double horizontalFovDegrees, double aspectRatio) {
-        return 2 * Math.atan(Math.tan(Math.toRadians(horizontalFovDegrees) / 2) / aspectRatio);
+        return 2 * Math.atan(Math.tan((horizontalFovDegrees) * Mth.DEG_TO_RAD / 2) / aspectRatio);
     }
 
     /**
@@ -327,7 +328,7 @@ public class MathUtil {
                 return false;
             }
 
-            var rayLengthLocal = (float) Math.sqrt(lengthSq);
+            var rayLengthLocal = Mth.sqrt((float) (lengthSq));
             rayDirLocal.div(rayLengthLocal);
 
             var nearFar = new Vector2f();

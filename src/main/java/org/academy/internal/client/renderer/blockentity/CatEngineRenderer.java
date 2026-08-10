@@ -44,10 +44,10 @@ public final class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlo
 
         f1 %= Mth.TWO_PI;
 
-        if (f1 >= (float) Math.PI) {
+        if (f1 >= Mth.PI) {
             f1 -= Mth.TWO_PI;
         }
-        if (f1 < -(float) Math.PI) {
+        if (f1 < -Mth.PI) {
             f1 += Mth.TWO_PI;
         }
         var f2 = renderState.oRot + f1 * renderState.partialTick;

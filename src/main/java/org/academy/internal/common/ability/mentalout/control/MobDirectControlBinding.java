@@ -100,7 +100,7 @@ final class MobDirectControlBinding implements ControlBinding {
                         * Mth.RAD_TO_DEG) - 90.0f;
                 cubeMove.academy$setMentalControlDirection(movementYaw, true);
                 cubeMove.academy$setMentalControlMovement(
-                        Math.min(1.0, Math.sqrt(horizontalSqr)) * (frame.sprint() ? 1.3 : 1.0));
+                        Math.min(1.0, Mth.sqrt((float) (horizontalSqr))) * (frame.sprint() ? 1.3 : 1.0));
             }
             mob.setAggressive(frame.attack());
             return;

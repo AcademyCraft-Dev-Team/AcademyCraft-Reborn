@@ -22,6 +22,7 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionOperatio
 
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.util.Mth;
 
 public final class PrecisionOperationScreen extends UiScreen implements SerializedUiDebugHost {
     static final int NODE_W = 80;
@@ -100,7 +101,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     PrecisionOperationScreen(int slot, PrecisionGraph graph, long revision) {
         super(Component.translatable("screen.academy.precision_operation.title"));
-        this.slot = Math.clamp(slot, 0, 3);
+        this.slot = Mth.clamp(slot, 0, 3);
         this.graph = graph == null ? PrecisionGraph.EMPTY : graph;
         this.revision = revision;
     }
@@ -257,17 +258,17 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
         var layoutVariant = compactLeft ? "compact" : compactRight ? "medium" : "wide";
         serializedLayoutId = "precision_operation_" + layoutVariant;
-        var serialized = SerializedUiLayout.load(
+        var serialized = SerializedUiLayout.INSTANCE.load(
                 AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
                 List.of("panel", "palette", "canvas", "inspector", "title_accent"),
                 () -> fallbackLayout(layout)
         );
         serializedLayout = serialized;
         getRoot().addChild("serialized_layout", serialized);
-        panelLayout = SerializedUiLayout.require(serialized, "panel");
-        paletteLayout = SerializedUiLayout.require(serialized, "palette");
-        canvasLayout = SerializedUiLayout.require(serialized, "canvas");
-        inspectorLayout = SerializedUiLayout.require(serialized, "inspector");
+        panelLayout = SerializedUiLayout.INSTANCE.require(serialized, "panel");
+        paletteLayout = SerializedUiLayout.INSTANCE.require(serialized, "palette");
+        canvasLayout = SerializedUiLayout.INSTANCE.require(serialized, "canvas");
+        inspectorLayout = SerializedUiLayout.INSTANCE.require(serialized, "inspector");
 
         search = new EditBox(font, paletteX() + 4, panelY + TOP_H + 25, paletteWidth() - 8, 15,
                 Component.empty());
@@ -471,7 +472,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var listY = canvasY + 44;
         var listBottom = canvasY + canvasH - 3;
         var visibleRows = Math.max(1, (listBottom - listY) / ROW_H);
-        paletteScroll = Math.clamp(paletteScroll, 0, Math.max(0, kinds.size() - visibleRows));
+        paletteScroll = Mth.clamp(paletteScroll, 0, Math.max(0, kinds.size() - visibleRows));
         for (var row = 0; row < visibleRows && paletteScroll + row < kinds.size(); row++) {
             var kind = kinds.get(paletteScroll + row);
             var y = listY + row * ROW_H;
@@ -677,8 +678,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var rows = Math.min(12, quickInsert.kinds.size());
         var w = 112;
         var h = rows * ROW_H + 4;
-        var x = Math.clamp(quickInsert.x, panelX + 2, panelX + panelW - w - 2);
-        var y = Math.clamp(quickInsert.y, canvasY + 2, canvasY + canvasH - h - 2);
+        var x = Mth.clamp(quickInsert.x, panelX + 2, panelX + panelW - w - 2);
+        var y = Mth.clamp(quickInsert.y, canvasY + 2, canvasY + canvasH - h - 2);
         graphics.fill(x, y, x + w, y + h, DataTerminalTheme.PANEL_BACKGROUND);
         border(graphics, x, y, w, h, BORDER);
         for (var row = 0; row < rows; row++) {
@@ -759,11 +760,11 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (paletteVisible() && inside(mouseX, mouseY, paletteX(), canvasY, paletteWidth(), canvasH)) {
-            paletteScroll = Math.max(0, paletteScroll - (int) Math.signum(scrollY));
+            paletteScroll = Math.max(0, paletteScroll - Mth.sign(scrollY));
             return true;
         }
         if (inside(mouseX, mouseY, canvasX, canvasY, canvasW, canvasH)) {
-            zoomAt(mouseX, mouseY, zoom + Math.signum(scrollY) * 0.1);
+            zoomAt(mouseX, mouseY, zoom + Mth.sign(scrollY) * 0.1);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -918,7 +919,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var x = inspectorX() + 5;
         var w = inspectorWidth() - 10;
         var description = Component.translatable(nodeDescriptionKey(selected.kind()));
-        var descriptionHeight = (int) Math.ceil(font.wordWrapHeight(
+        var descriptionHeight = Mth.ceil(font.wordWrapHeight(
                 description, (int) (w / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
         var y = canvasY + Math.min(92, Math.max(58, descriptionHeight + 40));
         var parameterKind = selected.kind().parameterKind();
@@ -927,7 +928,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 || parameterKind == PrecisionGraph.ParameterKind.HEALTH_PERCENT)
                 && inside(mouseX, mouseY, x, y + 9, w, 12)) {
             var max = parameterKind == PrecisionGraph.ParameterKind.RANGE ? 32.0 : 100.0;
-            var value = 1.0 + Math.clamp((mouseX - x) / Math.max(1.0, w), 0.0, 1.0) * (max - 1.0);
+            var value = 1.0 + Mth.clamp((mouseX - x) / Math.max(1.0, w), 0.0, 1.0) * (max - 1.0);
             setParameter(selected, Math.rint(value));
             return true;
         }
@@ -996,8 +997,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var rows = Math.min(12, quickInsert.kinds.size());
         var w = 112;
         var h = rows * ROW_H + 4;
-        var x = Math.clamp(quickInsert.x, panelX + 2, panelX + panelW - w - 2);
-        var y = Math.clamp(quickInsert.y, canvasY + 2, canvasY + canvasH - h - 2);
+        var x = Mth.clamp(quickInsert.x, panelX + 2, panelX + panelW - w - 2);
+        var y = Mth.clamp(quickInsert.y, canvasY + 2, canvasY + canvasH - h - 2);
         if (!inside(mouseX, mouseY, x, y, w, h)) {
             quickInsert = null;
             return false;
@@ -1191,7 +1192,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var maxY = graph.nodes().stream().mapToDouble(node -> node.y() + nodeHeight(node)).max().orElse(MIN_NODE_H);
         var fit = Math.min((canvasW - 20.0) / Math.max(1.0, maxX - minX),
                 (canvasH - 20.0) / Math.max(1.0, maxY - minY));
-        zoom = Math.clamp(fit, initial ? 0.65 : MIN_ZOOM, initial ? 1.0 : MAX_ZOOM);
+        zoom = Mth.clamp(fit, initial ? 0.65 : MIN_ZOOM, initial ? 1.0 : MAX_ZOOM);
         panX = (canvasW - (minX + maxX) * zoom) / 2.0;
         panY = (canvasH - (minY + maxY) * zoom) / 2.0;
     }
@@ -1524,7 +1525,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var x = inspectorX() + 5;
         var width = inspectorWidth() - 10;
         var description = Component.translatable(nodeDescriptionKey(selected.kind()));
-        var descriptionHeight = (int) Math.ceil(font.wordWrapHeight(
+        var descriptionHeight = Mth.ceil(font.wordWrapHeight(
                 description, (int) (width / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
         var parameterY = canvasY + Math.min(92, Math.max(58, descriptionHeight + 40));
         durationInput.setX(x);
@@ -1622,7 +1623,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             graphics.text(font, lines.get(index), 0, index * 9, color, false);
         }
         pose.popMatrix();
-        return (int) Math.ceil(lines.size() * 9 * SMALL_TEXT_SCALE);
+        return Mth.ceil(lines.size() * 9 * SMALL_TEXT_SCALE);
     }
 
     private void button(

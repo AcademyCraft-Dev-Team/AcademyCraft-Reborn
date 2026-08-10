@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.PostEffect;
-import org.academy.internal.client.renderer.effect.WorldPostEffectSubmission;
 import org.academy.internal.client.renderer.entity.state.KineticShockwaveRenderState;
 import org.academy.internal.common.world.entity.skill.KineticShockwave;
 
@@ -37,7 +36,6 @@ public final class KineticShockwaveRenderer
     @Override
     public void submit(KineticShockwaveRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
-        if (!WorldPostEffectSubmission.isActive()) return;
         if (state.radius <= 0.01f || state.progress >= 1.0f) return;
         var fade = 1.0f - state.progress;
         var strength = Mth.clamp(0.018f + state.intensity * 0.006f, 0.02f, 0.055f) * fade;

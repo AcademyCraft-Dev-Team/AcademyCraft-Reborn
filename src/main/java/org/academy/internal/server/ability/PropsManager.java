@@ -39,6 +39,7 @@ import org.academy.internal.server.world.level.storage.PropsData;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 /**
  * Server-authoritative acquisition and synchronization for P.R.O.P.S factors.
@@ -268,7 +269,7 @@ public final class PropsManager implements AbilitySubsystem {
 
     @SubscribeEvent
     public void onDamage(LivingDamageEvent.Post event) {
-        var wholeDamage = Math.floor(Math.max(0.0, event.getHealthDamage()));
+        var wholeDamage = Mth.floor(Math.max(0.0, event.getHealthDamage()));
         if (wholeDamage <= 0.0) return;
 
         if (event.getEntity() instanceof ServerPlayer victim

@@ -23,10 +23,10 @@ public final class VertexUtil {
                 var u0 = (float) i / segments;
                 var u1 = (float) (i + 1) / segments;
 
-                var cos1 = (float) Math.cos(angle1);
-                var sin1 = (float) Math.sin(angle1);
-                var cos2 = (float) Math.cos(angle2);
-                var sin2 = (float) Math.sin(angle2);
+                var cos1 = Mth.cos(angle1);
+                var sin1 = Mth.sin(angle1);
+                var cos2 = Mth.cos(angle2);
+                var sin2 = Mth.sin(angle2);
 
                 var x1 = cos1 * radius;
                 var z1 = sin1 * radius;
@@ -63,17 +63,17 @@ public final class VertexUtil {
             var vertexComponents = 8;
 
             var vertexBuffer = new float[totalVertices][vertexComponents];
-            var angleStepd = 2.0d * Math.PI / faces;
+            var angleStepd = 2.0d * Mth.PI / faces;
             var vertexIndex = 0;
 
             for (var i = 0; i < faces; i++) {
                 var angle1d = i * angleStepd;
                 var angle2d = (i + 1) * angleStepd;
 
-                var x1d = radius * Math.cos(angle1d);
-                var z1d = radius * Math.sin(angle1d);
-                var x2d = radius * Math.cos(angle2d);
-                var z2d = radius * Math.sin(angle2d);
+                var x1d = radius * Mth.cos(angle1d);
+                var z1d = radius * Mth.sin(angle1d);
+                var x2d = radius * Mth.cos(angle2d);
+                var z2d = radius * Mth.sin(angle2d);
 
                 var u1f = (float) i / faces;
                 var u2f = (float) (i + 1) / faces;
@@ -81,8 +81,8 @@ public final class VertexUtil {
                 var vTopf = 1.0f;
 
                 var midAngled = (angle1d + angle2d) / 2.0d;
-                var faceNormalXd = Math.cos(midAngled);
-                var faceNormalZd = Math.sin(midAngled);
+                var faceNormalXd = Mth.cos(midAngled);
+                var faceNormalZd = Mth.sin(midAngled);
 
                 var nx = (float) faceNormalXd;
                 var nz = (float) faceNormalZd;
@@ -103,10 +103,10 @@ public final class VertexUtil {
                     var angle1d = i * angleStepd;
                     var angle2d = (i + 1) * angleStepd;
 
-                    var x1d = radius * Math.cos(angle1d);
-                    var z1d = radius * Math.sin(angle1d);
-                    var x2d = radius * Math.cos(angle2d);
-                    var z2d = radius * Math.sin(angle2d);
+                    var x1d = radius * Mth.cos(angle1d);
+                    var z1d = radius * Mth.sin(angle1d);
+                    var x2d = radius * Mth.cos(angle2d);
+                    var z2d = radius * Mth.sin(angle2d);
 
                     var u1f = (float) (x1d / (2.0d * radius) + 0.5d);
                     var v1f = (float) (z1d / (2.0d * radius) + 0.5d);
@@ -128,10 +128,10 @@ public final class VertexUtil {
                     var angle1d = i * angleStepd;
                     var angle2d = (i + 1) * angleStepd;
 
-                    var x1d = radius * Math.cos(angle1d);
-                    var z1d = radius * Math.sin(angle1d);
-                    var x2d = radius * Math.cos(angle2d);
-                    var z2d = radius * Math.sin(angle2d);
+                    var x1d = radius * Mth.cos(angle1d);
+                    var z1d = radius * Mth.sin(angle1d);
+                    var x2d = radius * Mth.cos(angle2d);
+                    var z2d = radius * Mth.sin(angle2d);
 
                     var u1f = (float) (x1d / (2.0d * radius) + 0.5d);
                     var v1f = (float) (z1d / (2.0d * radius) + 0.5d);
@@ -167,21 +167,21 @@ public final class VertexUtil {
             var vertexBuffer = new float[totalVertices][6];
             var vertexIndex = 0;
 
-            var angleStepd = 2.0d * Math.PI / faces;
+            var angleStepd = 2.0d * Mth.PI / faces;
 
             for (var i = 0; i < faces; i++) {
                 var angle1d = i * angleStepd;
                 var angle2d = (i + 1) * angleStepd;
 
-                var x1d = radius * Math.cos(angle1d);
-                var z1d = radius * Math.sin(angle1d);
-                var x2d = radius * Math.cos(angle2d);
-                var z2d = radius * Math.sin(angle2d);
+                var x1d = radius * Mth.cos(angle1d);
+                var z1d = radius * Mth.sin(angle1d);
+                var x2d = radius * Mth.cos(angle2d);
+                var z2d = radius * Mth.sin(angle2d);
 
-                var nx1f = (float) Math.cos(angle1d);
-                var nz1f = (float) Math.sin(angle1d);
-                var nx2f = (float) Math.cos(angle2d);
-                var nz2f = (float) Math.sin(angle2d);
+                var nx1f = Mth.cos(angle1d);
+                var nz1f = Mth.sin(angle1d);
+                var nx2f = Mth.cos(angle2d);
+                var nz2f = Mth.sin(angle2d);
 
                 var x1f = (float) x1d;
                 var z1f = (float) z1d;
@@ -249,7 +249,7 @@ public final class VertexUtil {
 
     public static final class Ball {
         private static float[] normalize(float[] v) {
-            var length = (float) Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+            var length = Mth.sqrt((float) (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]));
             if (length > 1e-6) {
                 return new float[]{v[0] / length, v[1] / length, v[2] / length};
             }
@@ -295,7 +295,7 @@ public final class VertexUtil {
         public static float[][] getIcosphereVertexBuffer(float radius, int subdivisions, boolean smoothNormals) {
             var vertices = new ArrayList<float[]>();
             var faces = new ArrayList<TriangleIndices>();
-            var t = (1.0f + (float) Math.sqrt(5.0)) / 2.0f;
+            var t = (1.0f + Mth.sqrt((float) (5.0))) / 2.0f;
 
             vertices.add(normalize(new float[]{-1, t, 0}));
             vertices.add(normalize(new float[]{1, t, 0}));

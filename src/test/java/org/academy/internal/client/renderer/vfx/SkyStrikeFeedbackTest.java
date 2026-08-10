@@ -1,5 +1,7 @@
 package org.academy.internal.client.renderer.vfx;
 
+import org.academy.internal.client.render.vfx.CameraShakeManager;
+import org.academy.internal.client.render.vfx.SkyStrikeVfxClient;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

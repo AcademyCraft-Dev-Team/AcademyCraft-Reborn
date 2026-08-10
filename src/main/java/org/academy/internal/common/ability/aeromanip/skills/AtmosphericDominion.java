@@ -56,7 +56,7 @@ public final class AtmosphericDominion extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.RELEASE, InputConstants.MOD_ALT)), _ -> Client.cast());
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.ATMOSPHERIC_DOMINION.get(), List.of(AtmosphereBlastGun.Client.SKILL_INFO, VortexPull.Client.SKILL_INFO), R.textures.atmospheric_dominion_icon, 150, 168));
-        ToggleStatusHud.registerStateProvider(Skills.ATMOSPHERIC_DOMINION.get(), () -> {
+        ToggleStatusHud.Companion.registerStateProvider(Skills.ATMOSPHERIC_DOMINION.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && AeromanipFieldSyncPacket.Client.snapshot().values().stream()
                     .anyMatch(field -> field.ownerId().equals(player.getUUID())

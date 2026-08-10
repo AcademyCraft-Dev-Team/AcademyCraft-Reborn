@@ -25,6 +25,7 @@ import org.academy.internal.client.profiler.ProfilerClientHooks
 import org.joml.Vector4f
 import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.roundToInt
 
 /**
  * 负责管理本模组内置的 UI 帧缓冲区与 HUD 喵
@@ -96,14 +97,14 @@ object HudManager {
             val drewStencil = AtomicBoolean()
 
             AcademyProfiler.push("academy.hud.terminal")
-            TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
             if (!isHudEditorOpen()) {
                 AcademyProfiler.popPush("academy.hud.ability")
-                AbilityInfoHud.instance.render(ui)
+                AbilityInfoHud.instance.render(main)
                 AcademyProfiler.popPush("academy.hud.toggle")
-                ToggleStatusHud.instance.render(ui)
-                ControlledTargetsHud.instance.render(ui)
+                ToggleStatusHud.instance.render(main)
+                ControlledTargetsHud.instance.render(main)
             }
+            TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
             AcademyProfiler.pop()
 
             if (drewStencil.get()) {
@@ -112,7 +113,7 @@ object HudManager {
                     mainColor,
                     blurColor,
                     uiDepth,
-                    Math.round(TerminalHud.getBlurRadius())
+                    TerminalHud.getBlurRadius().roundToInt()
                 )
                 Render.runBlitPass(
                     mainColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,

@@ -53,6 +53,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public final class VacuumDomain extends Skill {
     static final double RADIUS = 12.0;
@@ -275,8 +276,8 @@ public final class VacuumDomain extends Skill {
         private static void spawnVisual(ServerLevel level, Vec3 center, double radius, int ticks) {
             if (ticks % 4 != 0) return;
             for (var segment = 0; segment < 24; segment++) {
-                var angle = segment * Math.PI * 2.0 / 24.0 + ticks * 0.025;
-                var point = center.add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+                var angle = segment * Mth.TWO_PI / 24.0 + ticks * 0.025;
+                var point = center.add(Mth.cos(angle) * radius, 0.0, Mth.sin(angle) * radius);
                 level.sendParticles(ParticleTypes.REVERSE_PORTAL,
                         point.x, point.y, point.z, 1, 0.08, 0.25, 0.08, 0.02);
             }

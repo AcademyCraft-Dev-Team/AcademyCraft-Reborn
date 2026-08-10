@@ -1,6 +1,7 @@
 package org.academy.api.common.data;
 
 import org.academy.api.common.ability.AbilityLevel;
+import net.minecraft.util.Mth;
 
 public class AbilityData {
     public static final int FIXED_MAX_SP = 1_000;
@@ -143,13 +144,13 @@ public class AbilityData {
 
     public void setCurrSP(int currSP) {
         normalizeSpLimit();
-        this.currSP = Math.clamp(currSP, 0, FIXED_MAX_SP);
+        this.currSP = Mth.clamp(currSP, 0, FIXED_MAX_SP);
         markDirty();
     }
 
     public void addSP(int amount) {
         normalizeSpLimit();
-        currSP = Math.clamp(currSP + amount, 0, FIXED_MAX_SP);
+        currSP = Mth.clamp(currSP + amount, 0, FIXED_MAX_SP);
         markDirty();
     }
 
@@ -178,7 +179,7 @@ public class AbilityData {
     }
 
     private void normalizeSpLimit() {
-        var normalized = Math.clamp(currSP, 0, FIXED_MAX_SP);
+        var normalized = Mth.clamp(currSP, 0, FIXED_MAX_SP);
         if (maxSP == FIXED_MAX_SP && currSP == normalized) return;
         maxSP = FIXED_MAX_SP;
         currSP = normalized;
@@ -213,12 +214,12 @@ public class AbilityData {
     }
 
     public void setCurrMP(float currMP) {
-        this.currMP = Math.clamp(maxMP, 0, currMP);
+        this.currMP = Mth.clamp(maxMP, 0, currMP);
         markDirty();
     }
 
     public void addMP(float amount) {
-        currMP = Math.clamp(maxMP, 0, currMP + amount);
+        currMP = Mth.clamp(maxMP, 0, currMP + amount);
         markDirty();
     }
 
@@ -284,7 +285,7 @@ public class AbilityData {
         }
 
         public Builder currSP(int currSP) {
-            data.currSP = Math.clamp(currSP, 0, FIXED_MAX_SP);
+            data.currSP = Mth.clamp(currSP, 0, FIXED_MAX_SP);
             return this;
         }
 

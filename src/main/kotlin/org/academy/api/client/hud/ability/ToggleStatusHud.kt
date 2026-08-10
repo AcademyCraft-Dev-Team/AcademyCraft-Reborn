@@ -49,7 +49,7 @@ class ToggleStatusHud private constructor() {
     }
 
     private class Context : WidgetContext {
-        private lateinit var statuses: LinearLayoutWidget
+        private var statuses: LinearLayoutWidget
         private val root = object : FrameLayoutWidget() {
             override fun tick() {
                 applyHudLayout()
@@ -168,12 +168,10 @@ class ToggleStatusHud private constructor() {
         val instance: ToggleStatusHud
             get() = INSTANCE
 
-        @JvmStatic
         fun registerStateProvider(skill: Skill, provider: BooleanSupplier) {
             stateProviders[skill] = provider
         }
 
-        @JvmStatic
         fun registerDetailProvider(skill: Skill, provider: Supplier<String>) {
             detailProviders[skill] = provider
         }

@@ -6,9 +6,9 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.util.Mth;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.PostEffect;
-import org.academy.internal.client.renderer.effect.WorldPostEffectSubmission;
 import org.academy.internal.client.renderer.entity.state.GlowCircleRenderState;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 
@@ -20,12 +20,11 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
     }
 
     private float sizeCurve(float p) {
-        return MAX_RADIUS * (float) Math.sin(p * Math.PI);
+        return MAX_RADIUS * Mth.sin(p * Mth.PI);
     }
 
     @Override
     public void submit(GlowCircleRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        if (!WorldPostEffectSubmission.isActive()) return;
         var yaw = renderState.yRot;
         var pitch = renderState.xRot;
         var distortionStrength = 0.025f;

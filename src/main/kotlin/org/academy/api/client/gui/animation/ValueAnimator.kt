@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.animation
 
 import java.util.function.Consumer
+import net.minecraft.util.Mth
 
 open class ValueAnimator protected constructor() : Animator() {
     private var startValue = 0f
@@ -90,7 +91,7 @@ open class ValueAnimator protected constructor() : Animator() {
             }
         }
 
-        fraction = Math.clamp(fraction, 0.0f, 1.0f)
+        fraction = Mth.clamp(fraction, 0.0f, 1.0f)
 
         val effectiveFraction = if (isReversing) (1.0f - fraction) else fraction
         val interpolatedFraction = interpolator.getInterpolation(effectiveFraction)

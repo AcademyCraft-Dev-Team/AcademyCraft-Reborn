@@ -12,6 +12,7 @@ import org.academy.internal.common.ability.accelerator.reflection.*;
 import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
 
 import java.util.function.Predicate;
+import net.minecraft.util.Mth;
 
 public final class MeltdownerBeamActions {
     private MeltdownerBeamActions() {
@@ -156,6 +157,6 @@ public final class MeltdownerBeamActions {
                 simulate,
                 breaker
         );
-        return Math.clamp(result.getValue(), 0.0, segment.length());
+        return Mth.clamp(result.getValue(), 0.0, segment.length());
     }
 }

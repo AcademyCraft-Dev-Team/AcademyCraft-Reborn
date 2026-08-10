@@ -8,7 +8,7 @@ import net.minecraft.util.LightCoordsUtil;
 import org.academy.api.client.render.post.Phase;
 import org.joml.Matrix4f;
 
-import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM;
+import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS;
 
 public final class CylinderRenderer {
     private CylinderRenderer() {
@@ -18,7 +18,7 @@ public final class CylinderRenderer {
                                       float red, float green, float blue, float alpha) {
         var pose = poseStack.last();
         var matrix = pose.pose();
-        var vertexConsumer = phase.getBuffer(POS_COLOR_QUADS_BLOOM);
+        var vertexConsumer = phase.getBuffer(POS_COLOR_QUADS);
         renderCylinder(matrix, vertexConsumer, vertexBuffer, red, green, blue, alpha);
     }
 

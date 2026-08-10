@@ -81,7 +81,7 @@ public final class CrossingTheAbyss extends Skill {
                 Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, GLFW_KEY_L, GLFW_RELEASE, GLFW_MOD_ALT)
         ), _ -> Client.toggle());
-        ToggleStatusHud.registerStateProvider(Skills.CROSSING_THE_ABYSS.get(), () -> {
+        ToggleStatusHud.Companion.registerStateProvider(Skills.CROSSING_THE_ABYSS.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && player.getData(AttachmentTypes.CROSSING_THE_ABYSS_ACTIVE.get());
         });

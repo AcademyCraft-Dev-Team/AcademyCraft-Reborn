@@ -588,7 +588,6 @@ object SettingsApp : App {
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
                         val target = capturing ?: return
                         val current = target.section.config.getKeyBinding(target.bindingName)
-                            ?: return
                         resetCaptureState()
                         applyCapture(InputSystem.unbound(current))
                         return
@@ -637,7 +636,6 @@ object SettingsApp : App {
             val type = pendingType ?: return null
             val target = capturing ?: return null
             val current = target.section.config.getKeyBinding(target.bindingName)
-                ?: return null
             return when (type) {
                 InputSystem.InputType.KEYBOARD -> {
                     if (pendingKeys.isEmpty()) return null
@@ -713,8 +711,8 @@ object SettingsApp : App {
                 val preview = buildPendingCombo()?.let(::displayBinding)
                     ?: Language.getInstance().getOrDefault("app.academy.skill_settings.capture.key")
                 Language.getInstance().getOrDefault("app.academy.skill_settings.capture.hint")
-                    .replace("%1\$s", Language.getInstance().getOrDefault("key.academy.${target.bindingName}"))
-                    .replace("%2\$s", preview)
+                    .replace($$"%1$s", Language.getInstance().getOrDefault("key.academy.${target.bindingName}"))
+                    .replace($$"%2$s", preview)
             } else {
                 ""
             }

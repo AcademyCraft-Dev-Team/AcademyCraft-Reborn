@@ -15,6 +15,7 @@ import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public record StretchModifier(AttributeCurve strength, Vector3fc direction, float frequency) implements PathModifier {
     public static final StreamCodec<ByteBuf, StretchModifier> CODEC = StreamCodec.composite(
@@ -33,7 +34,7 @@ public record StretchModifier(AttributeCurve strength, Vector3fc direction, floa
         }
 
         var subTickProgress = time % 1.0f;
-        var cycleMultiplier = (float) Math.sin(subTickProgress * 2.0 * Math.PI * frequency);
+        var cycleMultiplier = Mth.sin(subTickProgress * Mth.TWO_PI * frequency);
 
         if (Math.abs(cycleMultiplier) < 1.0E-6f) {
             return data;

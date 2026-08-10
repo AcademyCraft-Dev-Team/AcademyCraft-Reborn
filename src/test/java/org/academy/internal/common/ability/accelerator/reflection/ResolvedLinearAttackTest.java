@@ -9,9 +9,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ResolvedLinearAttackTest {
     private static void assertVecEquals(Vec3 expected, Vec3 actual) {
-        assertEquals(expected.x, actual.x, 1.0E-9);
-        assertEquals(expected.y, actual.y, 1.0E-9);
-        assertEquals(expected.z, actual.z, 1.0E-9);
+        assertEquals(expected.x, actual.x, 1.0E-6);
+        assertEquals(expected.y, actual.y, 1.0E-6);
+        assertEquals(expected.z, actual.z, 1.0E-6);
     }
 
     @Test
@@ -48,7 +48,7 @@ class ResolvedLinearAttackTest {
         assertEquals(
                 3.0 + LinearReflectionResolver.RETURN_EPSILON,
                 ResolvedLinearAttack.calculateReturnVisualLength(mirrorPoint, limited),
-                1.0E-9
+                1.0E-6
         );
         assertEquals(0.0, ResolvedLinearAttack.calculateReturnVisualLength(mirrorPoint, null), 1.0E-9);
     }

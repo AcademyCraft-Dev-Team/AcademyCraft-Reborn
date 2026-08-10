@@ -14,6 +14,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.renderer.ArcFactory;
 import org.academy.internal.common.world.entity.EntityTypes;
+import net.minecraft.util.Mth;
 
 public class Arc extends Entity {
     public static final EntityDataAccessor<Float> ID_LENGTH = SynchedEntityData.defineId(Arc.class, EntityDataSerializers.FLOAT);
@@ -29,8 +30,8 @@ public class Arc extends Entity {
         super(EntityTypes.ARC.get(), level);
         setPos(handPos);
         var dir = targetPos.subtract(handPos).normalize();
-        var yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
-        var pitch = (float) Math.toDegrees(-Math.asin(dir.y));
+        var yaw = (float) (Mth.atan2(-dir.x, dir.z)) * Mth.RAD_TO_DEG;
+        var pitch = (float) (-Math.asin(dir.y)) * Mth.RAD_TO_DEG;
         setYRot(yaw);
         setXRot(pitch);
     }

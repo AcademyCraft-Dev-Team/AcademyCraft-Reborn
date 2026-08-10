@@ -5,6 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
+import net.minecraft.util.Mth;
 
 public class Smoke extends RenderOnlyEntity {
     private static final int DEFAULT_LIFETIME_TICKS = 80;
@@ -39,7 +40,7 @@ public class Smoke extends RenderOnlyEntity {
     }
 
     public void setLifetimeTicks(int lifetimeTicks) {
-        this.lifetimeTicks = Math.clamp(lifetimeTicks, 1, DEFAULT_LIFETIME_TICKS);
+        this.lifetimeTicks = Mth.clamp(lifetimeTicks, 1, DEFAULT_LIFETIME_TICKS);
     }
 
     @Override

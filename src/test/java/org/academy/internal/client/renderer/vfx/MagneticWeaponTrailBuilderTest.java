@@ -4,6 +4,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.modifier.ColorModifier;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.modifier.TaperModifier;
+import org.academy.internal.client.render.vfx.MagneticWeaponTrailBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;

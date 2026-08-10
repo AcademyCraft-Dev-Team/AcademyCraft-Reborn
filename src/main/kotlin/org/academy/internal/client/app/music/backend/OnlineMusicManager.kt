@@ -276,7 +276,6 @@ object OnlineMusicManager {
         revisionCounter.incrementAndGet()
     }
 
-    @JvmStatic
     @SubscribePacket
     fun receiveSync(packet: MusicSyncPackets.SyncPacket) {
         val snapshot = packet.snapshot()

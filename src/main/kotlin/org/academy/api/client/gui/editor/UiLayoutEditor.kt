@@ -10,12 +10,10 @@ import java.nio.file.Files
  * 编辑器入口, 供命令/调试工具调用.
  */
 object UiLayoutEditor {
-    @JvmStatic
     fun open() {
         UiLayoutEditorScreen.open(null)
     }
 
-    @JvmStatic
     fun open(fileName: String) {
         if (UiDebugLayoutRegistry.find(fileName) != null) {
             UiLayoutEditorScreen.openDebug(fileName)

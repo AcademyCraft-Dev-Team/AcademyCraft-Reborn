@@ -35,6 +35,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
@@ -67,7 +68,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 CONFIG_ATTACK_DELAY_TICKS,
                 (float) DEFAULT_ATTACK_DELAY_TICKS
         );
-        return Math.clamp(Math.round(configuredDelay), 0, 20 * 60);
+        return Mth.clamp(Math.round(configuredDelay), 0, 20 * 60);
     }
 
     @Override
@@ -146,12 +147,12 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 var randomOffsetZ = (random.nextDouble() * 1.5 - 0.75) * offsetFactor;
                 var randomOffsetY = (random.nextDouble() * 0.5 - 0.25) * offsetFactor;
                 var beamDistance = 1.75;
-                var yawRad = Math.toRadians(yaw);
-                var pitchRad = Math.toRadians(pitch);
+                var yawRad = (yaw) * Mth.DEG_TO_RAD;
+                var pitchRad = (pitch) * Mth.DEG_TO_RAD;
                 var spawnPos = eyePos.add(
-                        -Math.sin(yawRad) * Math.cos(pitchRad) * beamDistance,
-                        -Math.sin(pitchRad) * beamDistance,
-                        Math.cos(yawRad) * Math.cos(pitchRad) * beamDistance
+                        -Mth.sin(yawRad) * Mth.cos(pitchRad) * beamDistance,
+                        -Mth.sin(pitchRad) * beamDistance,
+                        Mth.cos(yawRad) * Mth.cos(pitchRad) * beamDistance
                 ).add(randomOffsetX, randomOffsetY, randomOffsetZ);
                 var system = AbilitySystemServer.getSystem(player);
                 beam.configure(

@@ -3,6 +3,7 @@ package org.academy.internal.client.renderer.vfx;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.path.LinePath;
+import org.academy.internal.client.render.vfx.ArcTube;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 

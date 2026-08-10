@@ -16,7 +16,6 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -25,7 +24,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.DarkmatterSixWingsEffectRenderer;
+import org.academy.internal.client.render.vfx.DarkmatterSixWingsVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -68,7 +67,7 @@ public final class DarkmatterSixWings extends Skill {
 
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(DarkmatterSixWingsEffectRenderer.INSTANCE);
+        DarkmatterSixWingsVfxClient.register();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);

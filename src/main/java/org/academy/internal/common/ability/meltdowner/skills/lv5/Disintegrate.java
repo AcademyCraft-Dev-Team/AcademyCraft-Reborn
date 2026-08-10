@@ -40,6 +40,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public class Disintegrate extends Skill {
     private static final double PRIMARY_RANGE = 30.0;
@@ -179,7 +180,7 @@ public class Disintegrate extends Skill {
             var delta = end.subtract(start);
             if (delta.lengthSqr() <= 1.0e-8) return;
             if (stage < 2) markTargetsAlongBeam(player, start, end, stage, level.getGameTime());
-            var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+            var horizontal = Mth.sqrt((float) (delta.x * delta.x + delta.z * delta.z));
             var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
             var multiplier = AbilitySystemServer.getSystem(player)
                     .getPlayerDamageMultiplier(player.getUUID());
@@ -197,8 +198,8 @@ public class Disintegrate extends Skill {
             beam.setBeamScale(stage == 0 ? 1.45f : 1.05f);
             beam.setBetaTrailOnFire(true);
             beam.setPos(start);
-            beam.setYRot((float) Math.toDegrees(Math.atan2(-delta.x, delta.z)));
-            beam.setXRot((float) Math.toDegrees(Math.atan2(-delta.y, horizontal)));
+            beam.setYRot((float) (Mth.atan2(-delta.x, delta.z)) * Mth.RAD_TO_DEG);
+            beam.setXRot((float) (Mth.atan2(-delta.y, horizontal)) * Mth.RAD_TO_DEG);
             level.addFreshEntity(beam);
         }
 
@@ -230,7 +231,7 @@ public class Disintegrate extends Skill {
             var segment = end.subtract(start);
             var lengthSqr = segment.lengthSqr();
             if (lengthSqr < 1.0e-9) return point.distanceToSqr(start);
-            var progress = Math.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
+            var progress = Mth.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
             return point.distanceToSqr(start.add(segment.scale(progress)));
         }
 

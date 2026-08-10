@@ -37,6 +37,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.util.Mth;
 
 public class Cloudroom extends Skill {
     private static final float RADIUS = 16.0f;
@@ -166,7 +167,7 @@ public class Cloudroom extends Skill {
                 var lastPos = lastPositions.get(entity);
                 if (lastPos != null
                         && lastPos.distanceToSqr(currentPos) >= MIN_TRAIL_DISTANCE_SQR
-                        && Math.floorMod(entity.tickCount + entity.getId(), TRAIL_INTERVAL_TICKS) == 0
+                        && Mth.positiveModulo(entity.tickCount + entity.getId(), TRAIL_INTERVAL_TICKS) == 0
                         && spawnedTrails < MAX_TRAILS_PER_TICK
                         && Server.tryClaimTrailSlot(level().getGameTime())) {
                     var smoke = new Smoke(EntityTypes.SMOKE.get(), level());

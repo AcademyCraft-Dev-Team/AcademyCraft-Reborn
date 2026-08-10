@@ -27,7 +27,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -35,7 +34,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.ElectromasterWeaponEffectRenderer;
+import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -86,8 +85,8 @@ public class MagneticWeapon extends Skill {
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
                                 InputConstants.PRESS, 0)),
                 _ -> Client.onToggle());
-        ToggleStatusHud.registerStateProvider(Skills.MAGNETIC_WEAPON.get(), Client::isActive);
-        RendererManager.registerEffectRenderer(ElectromasterWeaponEffectRenderer.INSTANCE);
+        ToggleStatusHud.Companion.registerStateProvider(Skills.MAGNETIC_WEAPON.get(), Client::isActive);
+        ElectromasterWeaponVfxClient.register();
     }
 
     @Override

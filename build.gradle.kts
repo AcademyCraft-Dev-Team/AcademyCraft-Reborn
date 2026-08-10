@@ -266,6 +266,8 @@ neoForge {
             // due to shit iris
             systemProperty("neoforge.disableGlValidation", "true")
 
+            systemProperty("mixin.debug.export", "true")
+
             val vmVendor = System.getProperty("java.vm.vendor", "")
             val runtimeName = System.getProperty("java.runtime.name", "")
             if (vmVendor.contains("JetBrains", ignoreCase = true)

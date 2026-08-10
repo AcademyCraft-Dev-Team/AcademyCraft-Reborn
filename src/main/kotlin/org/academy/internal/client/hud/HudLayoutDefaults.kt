@@ -32,7 +32,6 @@ object HudLayoutDefaults {
     @Volatile
     private var loaded: Config? = null
 
-    @JvmStatic
     fun get(): Config {
         loaded?.let { return it }
         synchronized(this) {
@@ -41,17 +40,14 @@ object HudLayoutDefaults {
         }
     }
 
-    @JvmStatic
     fun region(name: String): RegionValue {
         return get().regions[name] ?: defaults().regions.getValue(name)
     }
 
-    @JvmStatic
     fun replace(config: Config) {
         loaded = config.copyDeep()
     }
 
-    @JvmStatic
     fun defaults(): Config = Config(
         linkedMapOf(
             "toggle_status" to RegionValue(Anchor.TOP_LEFT, 8f, 8f, 1f),
@@ -61,7 +57,6 @@ object HudLayoutDefaults {
         )
     )
 
-    @JvmStatic
     fun loadJson(json: JsonObject): Config {
         val result = defaults()
         val regions = json.getAsJsonObject("regions") ?: return result
@@ -83,7 +78,6 @@ object HudLayoutDefaults {
         return result
     }
 
-    @JvmStatic
     fun toJson(config: Config): JsonObject {
         val root = JsonObject()
         root.addProperty("version", 1)
@@ -100,7 +94,6 @@ object HudLayoutDefaults {
         return root
     }
 
-    @JvmStatic
     fun loadSourceJson(): JsonObject {
         val override = WidgetSerializer.layoutDir().resolve(FILE_NAME)
         if (Files.isRegularFile(override)) {

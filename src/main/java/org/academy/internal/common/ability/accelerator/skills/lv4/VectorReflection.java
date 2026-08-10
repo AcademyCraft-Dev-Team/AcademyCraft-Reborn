@@ -61,6 +61,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.util.Mth;
 
 public class VectorReflection extends Skill {
     public VectorReflection() {
@@ -717,8 +718,8 @@ public class VectorReflection extends Skill {
         public static void spawnGlowCircle(ServerPlayer player, Vec3 direction, Vec3 position) {
             var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
             glowCircle.setPos(position);
-            var yaw = (float) Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90.0f;
-            var pitch = (float) -Math.toDegrees(Math.asin(direction.y));
+            var yaw = (float) (Mth.atan2(direction.z, direction.x)) * Mth.RAD_TO_DEG - 90.0f;
+            var pitch = (float) -(Math.asin(direction.y)) * Mth.RAD_TO_DEG;
             glowCircle.setYRot(yaw);
             glowCircle.setXRot(pitch);
             player.level().addFreshEntity(glowCircle);
