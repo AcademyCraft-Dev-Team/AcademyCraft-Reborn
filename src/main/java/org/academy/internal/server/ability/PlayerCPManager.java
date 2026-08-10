@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.minecraft.util.Mth;
 
 public class PlayerCPManager implements AbilitySubsystem {
     static final float BASE_MAX_CP = 100.0f;
@@ -105,7 +106,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         var accumulated = normalizedRemainder + recovered;
         var spCost = Math.min(currentSp,
-                (int) Math.floor((accumulated + CP_EPSILON) / safeRecoveredCpPerSp));
+                Mth.floor((accumulated + CP_EPSILON) / safeRecoveredCpPerSp));
         var nextRemainder = accumulated - spCost * safeRecoveredCpPerSp;
         if (nextRemainder < CP_EPSILON) nextRemainder = 0.0f;
         return new CpRecoveryPlan(
@@ -301,7 +302,7 @@ public class PlayerCPManager implements AbilitySubsystem {
                     * PlayerAttributeRuntime.neuralIterationMultiplier(player)
                     * getBonuses(player.getUUID()).iterationMultiplier());
             var progress = cpIterationProgress.merge(player.getUUID(), recoveryRate, Float::sum);
-            recoverySteps = (int) Math.floor(progress / TICKS_PER_ITERATION_POINT);
+            recoverySteps = Mth.floor(progress / TICKS_PER_ITERATION_POINT);
             if (recoverySteps > 0) {
                 cpIterationProgress.put(
                         player.getUUID(),
@@ -406,7 +407,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         var effectiveIterationTicks = iterationTicks;
         if (!isPermanent && effectiveIterationTicks <= 0) {
-            effectiveIterationTicks = Math.max(1, (int) Math.ceil(amount * 0.5f));
+            effectiveIterationTicks = Math.max(1, Mth.ceil(amount * 0.5f));
         }
         occupations.add(new AbilityData.CpOccupationData(
                 amount,
@@ -589,7 +590,7 @@ public class PlayerCPManager implements AbilitySubsystem {
                 ? 0
                 : iterationTicks > 0
                 ? iterationTicks
-                : Math.max(1, (int) Math.ceil(timedAmount * 0.5f));
+                : Math.max(1, Mth.ceil(timedAmount * 0.5f));
         return new AtomicOccupationPlan(
                 playerData,
                 Map.copyOf(permanentAmounts),
@@ -825,7 +826,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getDamageMultiplier(UUID uuid) {
-        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
+        var ratio = Mth.clamp(getFreeCPRatio(uuid), 0, 1);
         var cpMultiplier = ratio >= 0.5f
                 ? 1.0f
                 : 0.25f + (ratio / 0.5f) * 0.75f;
@@ -917,13 +918,13 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getRangeMultiplier(UUID uuid) {
-        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
+        var ratio = Mth.clamp(getFreeCPRatio(uuid), 0, 1);
         if (ratio >= 0.5f) return 1.0f;
         return 0.50f + (ratio / 0.5f) * 0.50f;
     }
 
     public float getEffectiveDistanceMultiplier(UUID uuid) {
-        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
+        var ratio = Mth.clamp(getFreeCPRatio(uuid), 0, 1);
         if (ratio >= 0.5f) return 1.0f;
         return 0.40f + (ratio / 0.5f) * 0.60f;
     }

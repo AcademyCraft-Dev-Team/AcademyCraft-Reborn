@@ -25,6 +25,7 @@ import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class PrecisionOperation extends Skill {
     public PrecisionOperation() {
@@ -155,12 +156,12 @@ public final class PrecisionOperation extends Skill {
 
         public PrecisionGraph slot(int slot) {
             normalizeData(this);
-            return slots.get(Math.clamp(slot, 0, 3));
+            return slots.get(Mth.clamp(slot, 0, 3));
         }
 
         public void replaceSlot(int slot, PrecisionGraph graph) {
             normalizeData(this);
-            slots.set(Math.clamp(slot, 0, 3), graph);
+            slots.set(Mth.clamp(slot, 0, 3), graph);
             revision++;
         }
 

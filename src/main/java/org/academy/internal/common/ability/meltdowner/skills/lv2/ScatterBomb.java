@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.util.Mth;
 
 public final class ScatterBomb extends Skill {
     static final int MIN_CHARGE_TICKS = 20;
@@ -226,7 +227,7 @@ public final class ScatterBomb extends Skill {
         private static void release(ServerPlayer player) {
             var state = CHARGING.remove(player.getUUID());
             if (state == null) return;
-            var chargeTicks = Math.clamp(
+            var chargeTicks = Mth.clamp(
                     (int) (player.level().getGameTime() - state.startTick), 0, MAX_CHARGE_TICKS);
             if (chargeTicks < MIN_CHARGE_TICKS || state.level != player.level()) {
                 state.cleanup();
@@ -269,7 +270,7 @@ public final class ScatterBomb extends Skill {
                 state.cleanup();
                 return;
             }
-            var elapsed = Math.clamp(
+            var elapsed = Mth.clamp(
                     (int) (player.level().getGameTime() - state.startTick), 0, MAX_CHARGE_TICKS);
             Skills.SCATTER_BOMB.get().reportActivity(player, false);
             var desired = Math.min(BEAM_COUNT, 1 + elapsed / SPAWN_INTERVAL_TICKS);
@@ -294,9 +295,9 @@ public final class ScatterBomb extends Skill {
                 if (right.lengthSqr() < 1.0e-6) right = new Vec3(1.0, 0.0, 0.0);
                 right = right.normalize();
                 var up = right.cross(forward).normalize();
-                var angle = index * Math.PI * 2.0 / BEAM_COUNT;
-                var offset = right.scale(Math.cos(angle) * 0.9)
-                        .add(up.scale(Math.sin(angle) * 0.405));
+                var angle = index * Mth.TWO_PI / BEAM_COUNT;
+                var offset = right.scale(Mth.cos(angle) * 0.9)
+                        .add(up.scale(Mth.sin(angle) * 0.405));
                 beam.setPos(eyePos.add(forward.scale(1.75)).add(offset));
                 beam.setYRot(player.getYRot());
                 beam.setXRot(player.getXRot());

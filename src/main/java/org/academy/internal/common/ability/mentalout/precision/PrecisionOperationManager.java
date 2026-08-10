@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public final class PrecisionOperationManager {
     private static final Map<UUID, CachedPrograms> COMPILED = new HashMap<>();
@@ -267,7 +268,7 @@ public final class PrecisionOperationManager {
                 int affectedCount
         ) {
             MisakaNetworkServer.send(player, new ResultPacket(
-                    Math.clamp(slot, 0, 3),
+                    Mth.clamp(slot, 0, 3),
                     type,
                     revision,
                     diagnostic,

@@ -88,7 +88,7 @@ public final class ControlledPlayerHudRenderer {
         if (state.attackStrength() < 1.0f) {
             var x = offhandArm == HumanoidArm.RIGHT ? center - 113 : center + 97;
             var y = bottom - 20;
-            var progress = Math.clamp((int) (state.attackStrength() * 19.0f), 0, 18);
+            var progress = Mth.clamp((int) (state.attackStrength() * 19.0f), 0, 18);
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ATTACK_BACKGROUND, x, y, 18, 18);
             if (progress > 0) {
                 graphics.blitSprite(

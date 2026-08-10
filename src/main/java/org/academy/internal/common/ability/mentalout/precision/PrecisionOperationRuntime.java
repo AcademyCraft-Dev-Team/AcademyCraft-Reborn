@@ -20,6 +20,7 @@ import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 public final class PrecisionOperationRuntime {
     public static final int PRIORITY = 200;
@@ -42,7 +43,7 @@ public final class PrecisionOperationRuntime {
         if (!skill.isEnabled(player)) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
         }
-        var level = Math.clamp(skill.getLevel(player), 0, 2);
+        var level = Mth.clamp(skill.getLevel(player), 0, 2);
         var targetLimit = switch (level) {
             case 0 -> 4;
             case 1 -> 6;
@@ -110,7 +111,7 @@ public final class PrecisionOperationRuntime {
                             if (intrusionSession == null) throw new IllegalStateException("Intrusion rejected");
                             fixedCost += MentaloutConfig.mentalIntrusionCost(
                                     player,
-                                    Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2)
+                                    Mth.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2)
                             );
                         }
                         case END_INTRUSION, REMOVE_CONTROL -> {
@@ -460,7 +461,7 @@ public final class PrecisionOperationRuntime {
                         var hidden = requireEntity(input(program, values, node, 1));
                         ensureUnprotected(player, observers);
                         requireSkill(Skills.SENSORY_DISTORTION.get(), player);
-                        var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
+                        var sensoryLevel = Mth.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.sensoryDistortionCost(player, sensoryLevel) * observers.size();
                         addTargets(uniqueTargets, observers, hidden);
                         actions.add(PendingAction.withBoth(
@@ -471,7 +472,7 @@ public final class PrecisionOperationRuntime {
                         var target = requireEntity(input(program, values, node, 0));
                         ensureUnprotected(player, List.of(target));
                         requireSkill(Skills.MENTAL_INTRUSION.get(), player);
-                        var intrusionLevel = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
+                        var intrusionLevel = Mth.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.mentalIntrusionCost(player, intrusionLevel);
                         addTargets(uniqueTargets, List.of(), target);
                         actions.add(PendingAction.withEntity(
@@ -891,7 +892,7 @@ public final class PrecisionOperationRuntime {
             Map<UUID, List<AutoCloseable>> subjectHandles,
             Map<UUID, Float> subjectCosts
     ) {
-        var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
+        var sensoryLevel = Mth.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
         var cost = MentaloutConfig.sensoryDistortionCost(player, sensoryLevel);
         for (var observer : observers) {
             if (MentalControlRuntime.isProtectedTarget(observer)) {

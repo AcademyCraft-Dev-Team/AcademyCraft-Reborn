@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.util.Mth;
 
 public class DirStrike extends Skill {
     public static final int EFFECT_RADIUS = 12;
@@ -56,7 +57,7 @@ public class DirStrike extends Skill {
     private static final int EFFECT_MAX_Y_OFFSET = 5;
     private static final float BASE_DAMAGE = 12.0f;
     private static final double DIVE_SPEED = 2.5;
-    private static final double GROUND_SECTOR_COS = Math.cos(Math.toRadians(45.0));
+    private static final double GROUND_SECTOR_COS = Mth.cos((45.0) * Mth.DEG_TO_RAD);
 
     public DirStrike() {
         super(Builder
@@ -261,7 +262,7 @@ public class DirStrike extends Skill {
             var distanceSquared = xOffset * xOffset + zOffset * zOffset;
             if (distanceSquared > radius * radius) return false;
             if (airborne || distanceSquared <= 1.0e-8) return true;
-            var inverseDistance = 1.0 / Math.sqrt(distanceSquared);
+            var inverseDistance = 1.0 / Mth.sqrt((float) (distanceSquared));
             return (xOffset * look.x + zOffset * look.z) * inverseDistance >= GROUND_SECTOR_COS;
         }
 

@@ -44,6 +44,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public class ThunderLance extends Skill {
     static final float QUICK_BASE_DAMAGE = 16.0f;
@@ -103,7 +104,7 @@ public class ThunderLance extends Skill {
             List<Long> seeds
     ) {
         validateStrands(offsets, seeds);
-        var t = Math.clamp(reflectionProgress, 0.0, 1.0);
+        var t = Mth.clamp(reflectionProgress, 0.0, 1.0);
         var reflectionPoints = new ArrayList<Vec3>(offsets.size());
         var returnEndpoints = new ArrayList<Vec3>(offsets.size());
         var paths = new ArrayList<ArcPath>(offsets.size() * 2);

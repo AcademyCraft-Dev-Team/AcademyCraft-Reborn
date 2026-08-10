@@ -1,6 +1,7 @@
 package org.academy.api.common.entitycontrol;
 
 import java.util.Objects;
+import net.minecraft.util.Mth;
 
 /**
  * A single authorized input frame for a controlled player. Frames describe input, never a
@@ -29,9 +30,9 @@ public record PlayerControlFrame(
                 || !Float.isFinite(yaw) || !Float.isFinite(pitch)) {
             throw new IllegalArgumentException("Player control frame values must be finite");
         }
-        forward = Math.clamp(forward, -1.0f, 1.0f);
-        strafe = Math.clamp(strafe, -1.0f, 1.0f);
-        pitch = Math.clamp(pitch, -90.0f, 90.0f);
+        forward = Mth.clamp(forward, -1.0f, 1.0f);
+        strafe = Mth.clamp(strafe, -1.0f, 1.0f);
+        pitch = Mth.clamp(pitch, -90.0f, 90.0f);
         mode = Objects.requireNonNull(mode, "mode");
     }
 

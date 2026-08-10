@@ -28,7 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 /**
- * MinecraftServer, 不区分 IntegratedServer 或 DedicatedServer
+ * MinecraftServer, 不区分 IntegratedServer 或 DedicatedServer 喵
  */
 @EventBusSubscriber
 public final class AcademyCraftServer {
@@ -43,9 +43,6 @@ public final class AcademyCraftServer {
     private final MinecraftServer server;
     private long lastSaveTick = 0;
 
-    /**
-     * 一个 MinecraftServer 实例对应一个 MinecraftServerContext
-     */
     private AcademyCraftServer(MinecraftServerContext context) {
         context.setAcademyCraftServer(this);
         server = context.getMinecraftServer();

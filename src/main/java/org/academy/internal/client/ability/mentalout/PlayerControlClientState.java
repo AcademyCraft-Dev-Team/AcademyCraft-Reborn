@@ -133,7 +133,7 @@ public final class PlayerControlClientState {
             float maxCp
     ) {
         if (!matches(requestedSession, requestedRevision)) return;
-        struggle = Math.clamp(requestedStruggle, 0, 100);
+        struggle = Mth.clamp(requestedStruggle, 0, 100);
         controllerCp = Math.max(0.0f, cp);
         controllerMaxCp = Math.max(0.0f, maxCp);
     }
@@ -231,7 +231,7 @@ public final class PlayerControlClientState {
     public static boolean captureViewTurn(double yawDelta, double pitchDelta) {
         if (!isController()) return false;
         virtualYaw = Mth.wrapDegrees(virtualYaw + (float) yawDelta * 0.15f);
-        virtualPitch = Math.clamp(virtualPitch + (float) pitchDelta * 0.15f, -90.0f, 90.0f);
+        virtualPitch = Mth.clamp(virtualPitch + (float) pitchDelta * 0.15f, -90.0f, 90.0f);
         return true;
     }
 

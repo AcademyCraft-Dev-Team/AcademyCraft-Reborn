@@ -34,10 +34,10 @@ class HudDebugScreen(private val previousScreen: Screen?) :
 
     override fun onInit() {
         UiDebugSession.hudEditorOpen = true
-        for (definition in UiDebugLayoutRegistry.hud()) {
-            val layout = WidgetSerializer.decode(UiDebugSession.documentJson(definition.id)) as FrameLayoutWidget
-            layoutRoots[definition.id] = layout
-            root.addChild(definition.id, layout)
+        for ((id) in UiDebugLayoutRegistry.hud()) {
+            val layout = WidgetSerializer.decode(UiDebugSession.documentJson(id)) as FrameLayoutWidget
+            layoutRoots[id] = layout
+            root.addChild(id, layout)
         }
         mounts[HudLayout.Region.CP] = SerializedUiLayout.require(layoutRoots.getValue("ability_cp_hud"), "cp")
         mounts[HudLayout.Region.SKILL_WHEEL] = SerializedUiLayout.require(
@@ -70,12 +70,12 @@ class HudDebugScreen(private val previousScreen: Screen?) :
         }
     }
 
-    override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
+    override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
         graphics.fill(0, 0, width, height, 0x88000000.toInt())
     }
 
-    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick)
+    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
+        super.extractRenderState(graphics, mouseX, mouseY, a)
         val defaults = UiDebugSession.hudDefaults()
         drawSamples(graphics, defaults)
         drawRegions(graphics, defaults)
@@ -194,7 +194,7 @@ class HudDebugScreen(private val previousScreen: Screen?) :
 
     private fun drawRegions(graphics: GuiGraphicsExtractor, defaults: HudLayoutDefaults.Config) {
         val minecraft = Minecraft.getInstance()
-        for (region in HudLayout.Region.values()) {
+        for (region in HudLayout.Region.entries) {
             val rect = region.rect(minecraft, defaults, false)
             val x = rect.x().roundToInt()
             val y = rect.y().roundToInt()
@@ -215,54 +215,54 @@ class HudDebugScreen(private val previousScreen: Screen?) :
         }
     }
 
-    override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
-        if (event.button() != 0) return super.mouseClicked(event, doubleClick)
+    override fun mouseClicked(e: MouseButtonEvent, isDoubleClick: Boolean): Boolean {
+        if (e.button() != 0) return super.mouseClicked(e, isDoubleClick)
         val buttonY = height - 24
-        if (inside(event.x(), event.y(), width / 2 - 156, buttonY, 96, 18)) {
+        if (inside(e.x(), e.y(), width / 2 - 156, buttonY, 96, 18)) {
             UiDebugSession.revertHudDefaults()
             return true
         }
-        if (inside(event.x(), event.y(), width / 2 - 48, buttonY, 96, 18)) {
+        if (inside(e.x(), e.y(), width / 2 - 48, buttonY, 96, 18)) {
             org.academy.internal.client.gui.debug.UiDebugBrowserScreen.notifyPublish(UiDebugSession.publish())
             return true
         }
-        if (inside(event.x(), event.y(), width / 2 + 60, buttonY, 96, 18)) {
+        if (inside(e.x(), e.y(), width / 2 + 60, buttonY, 96, 18)) {
             onClose()
             return true
         }
         val defaults = UiDebugSession.hudDefaults()
         val mc = Minecraft.getInstance()
-        for (region in HudLayout.Region.values()) {
+        for (region in HudLayout.Region.entries) {
             val rect = region.rect(mc, defaults, false)
-            if (overHandle(region, rect, event.x(), event.y())) {
+            if (overHandle(region, rect, e.x(), e.y())) {
                 select(region)
-                beginGrab(region, rect, event, true)
+                beginGrab(region, rect, e, true)
                 return true
             }
         }
-        for (region in HudLayout.Region.values()) {
+        for (region in HudLayout.Region.entries) {
             val rect = region.rect(mc, defaults, false)
-            if (rect.contains(event.x(), event.y())) {
+            if (rect.contains(e.x(), e.y())) {
                 select(region)
-                beginGrab(region, rect, event, false)
+                beginGrab(region, rect, e, false)
                 return true
             }
         }
         return true
     }
 
-    override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
-        val region = grabbed ?: return super.mouseDragged(event, dragX, dragY)
+    override fun mouseDragged(e: MouseButtonEvent, mouseX: Double, mouseY: Double): Boolean {
+        val region = grabbed ?: return super.mouseDragged(e, mouseX, mouseY)
         val config = UiDebugSession.hudDefaults()
         val value = config.regions.getValue(region.configKey())
         if (resizing) {
-            val horizontal = if (usesLeftHandle(region)) pressX - event.x() else event.x() - pressX
-            value.scale = (initialScale + ((horizontal + event.y() - pressY) / 220.0).toFloat())
+            val horizontal = if (usesLeftHandle(region)) pressX - e.x() else e.x() - pressX
+            value.scale = (initialScale + ((horizontal + e.y() - pressY) / 220.0).toFloat())
                 .coerceIn(HudLayout.MIN_SCALE, HudLayout.MAX_SCALE)
         } else {
             val current = region.rect(Minecraft.getInstance(), config, false)
             setDefaultTopLeft(
-                region, value, event.x() - grabOffsetX, event.y() - grabOffsetY,
+                region, value, e.x() - grabOffsetX, e.y() - grabOffsetY,
                 current.width(), current.height()
             )
         }
@@ -270,10 +270,10 @@ class HudDebugScreen(private val previousScreen: Screen?) :
         return true
     }
 
-    override fun mouseReleased(event: MouseButtonEvent): Boolean {
+    override fun mouseReleased(e: MouseButtonEvent): Boolean {
         grabbed = null
         resizing = false
-        return super.mouseReleased(event)
+        return super.mouseReleased(e)
     }
 
     override fun onClose() {
@@ -384,7 +384,6 @@ class HudDebugScreen(private val previousScreen: Screen?) :
     }
 
     companion object {
-        @JvmStatic
         fun open() {
             val minecraft = Minecraft.getInstance()
             val previous = minecraft.gui.screen()

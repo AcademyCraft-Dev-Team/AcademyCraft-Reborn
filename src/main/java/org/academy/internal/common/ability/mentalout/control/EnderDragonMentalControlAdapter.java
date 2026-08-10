@@ -41,17 +41,17 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
 
     private static void lookAt(EnderDragon dragon, Vec3 target) {
         var delta = target.subtract(dragon.getEyePosition());
-        var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-        dragon.setYRot((float) (Math.atan2(delta.z, delta.x) * 180.0 / Math.PI) - 90.0F);
+        var horizontal = Mth.sqrt((float) (delta.x * delta.x + delta.z * delta.z));
+        dragon.setYRot((float) (Mth.atan2(delta.z, delta.x) * 180.0 / Mth.PI) - 90.0F);
         dragon.yHeadRot = dragon.getYRot();
-        dragon.setXRot((float) -(Math.atan2(delta.y, horizontal) * 180.0 / Math.PI));
+        dragon.setXRot((float) -(Mth.atan2(delta.y, horizontal) * 180.0 / Mth.PI));
     }
 
     private static void steerFlight(EnderDragon dragon, Vec3 target) {
         var delta = target.subtract(dragon.position());
         if (delta.x * delta.x + delta.z * delta.z <= 1.0E-6) return;
         dragon.setYRot(Mth.wrapDegrees(
-                180.0F - (float) Math.toDegrees(Math.atan2(delta.x, delta.z))));
+                180.0F - (float) (Mth.atan2(delta.x, delta.z)) * Mth.RAD_TO_DEG));
         dragon.yBodyRot = dragon.getYRot();
     }
 

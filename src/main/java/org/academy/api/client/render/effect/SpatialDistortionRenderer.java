@@ -3,6 +3,7 @@ package org.academy.api.client.render.effect;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
+import net.minecraft.util.Mth;
 
 public final class SpatialDistortionRenderer {
     private final float intensity;
@@ -92,13 +93,13 @@ public final class SpatialDistortionRenderer {
             var ringA = (coreA + (edgeA - coreA) * t) * alpha;
 
             for (var seg = 0; seg < segments; seg++) {
-                var a1 = (float) seg / segments * (float) Math.PI * 2;
-                var a2 = (float) (seg + 1) / segments * (float) Math.PI * 2;
+                var a1 = (float) seg / segments * Mth.TWO_PI;
+                var a2 = (float) (seg + 1) / segments * Mth.TWO_PI;
 
-                var cos1 = (float) Math.cos(a1);
-                var sin1 = (float) Math.sin(a1);
-                var cos2 = (float) Math.cos(a2);
-                var sin2 = (float) Math.sin(a2);
+                var cos1 = Mth.cos(a1);
+                var sin1 = Mth.sin(a1);
+                var cos2 = Mth.cos(a2);
+                var sin2 = Mth.sin(a2);
 
                 var x1 = relX + cos1 * r1;
                 var z1 = relZ + sin1 * r1;

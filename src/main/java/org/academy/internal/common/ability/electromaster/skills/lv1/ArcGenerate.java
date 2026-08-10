@@ -96,7 +96,7 @@ public final class ArcGenerate extends Skill {
             long trunkSeed,
             List<BranchSpec> branchSpecs
     ) {
-        var t = (float) Math.clamp(reflectionProgress, 0.0, 1.0);
+        var t = (float) Mth.clamp(reflectionProgress, 0.0, 1.0);
         var reflectedSpecs = t <= 0.0f
                 ? List.<BranchSpec>of()
                 : branchSpecs.stream().filter(spec -> spec.progress() <= t).toList();
@@ -205,7 +205,7 @@ public final class ArcGenerate extends Skill {
         public static boolean tryAutomatedAttack(ServerPlayer player) {
             var level = player.level();
             return Skills.ARC_GENERATE.get().executeActive(player, (_, _) -> {
-                var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
+                var yawRad = (float) (-player.getVisualRotationYInDegrees()) * Mth.DEG_TO_RAD;
                 var eyePos = player.getEyePosition();
 
                 var playerOrientation = new Quaternionf().rotateY(yawRad);
@@ -250,7 +250,7 @@ public final class ArcGenerate extends Skill {
 
                 var branchSpecs = new ArrayList<BranchSpec>();
                 var branchCount = 4 + MathUtil.RANDOM.nextInt(3);
-                var maxAngleRad = Math.toRadians(10.0);
+                var maxAngleRad = (10.0) * Mth.DEG_TO_RAD;
 
                 for (var i = 0; i < branchCount; i++) {
                     var progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;

@@ -412,7 +412,7 @@ final class StandardMobControlBindings {
             // PathFinder uses Manhattan block distance, which may stop more than one Euclidean
             // block away when given a reach range of one. Request the next tighter path and let
             // the precise radius check above decide when the destination has been reached.
-            reachRange = Math.max(0, (int) Math.ceil(arrivalRadius) - 1);
+            reachRange = Math.max(0, Mth.ceil(arrivalRadius) - 1);
             arrivalRadiusSqr = arrivalRadius * arrivalRadius;
         }
 
@@ -617,7 +617,7 @@ final class StandardMobControlBindings {
             var delta = position.subtract(mob.position());
             var distance = delta.length();
             if (distance > MAX_DIRECT_APPROACH_DISTANCE || !canOccupy(position)) return false;
-            var samples = Math.max(1, (int) Math.ceil(distance / DIRECT_COLLISION_SAMPLE_STEP));
+            var samples = Math.max(1, Mth.ceil(distance / DIRECT_COLLISION_SAMPLE_STEP));
             var bounds = mob.getBoundingBox();
             for (var sample = 1; sample <= samples; sample++) {
                 var offset = delta.scale((double) sample / samples);
@@ -644,7 +644,7 @@ final class StandardMobControlBindings {
                 return;
             }
             if (dx * dx + dz * dz > 1.0E-6) {
-                var yRot = (float) (Mth.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
+                var yRot = (float) (Mth.atan2(dz, dx) * 180.0 / Mth.PI) - 90.0F;
                 // Cube mobs only jump when their controller's aggressive cadence expires. Use
                 // that shorter cadence for mental navigation as well; it changes no target or
                 // damage decision, but prevents a valid route from spending most of its lease idle.
@@ -652,7 +652,7 @@ final class StandardMobControlBindings {
             }
             cubeMove.academy$setMentalControlMovement(speed);
             if (dx * dx + dz * dz > 1.0E-6) {
-                var horizontalLength = Math.sqrt(dx * dx + dz * dz);
+                var horizontalLength = Mth.sqrt((float) (dx * dx + dz * dz));
                 var movement = mob.getDeltaMovement();
                 var desiredSpeed = 0.16 * speed;
                 mob.setDeltaMovement(

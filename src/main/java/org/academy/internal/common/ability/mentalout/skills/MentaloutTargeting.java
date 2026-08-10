@@ -10,6 +10,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.ControlDestination;
 import org.jspecify.annotations.Nullable;
+import net.minecraft.util.Mth;
 
 public final class MentaloutTargeting {
     public static final double MAX_SIGHT_RANGE = 64.0;
@@ -31,7 +32,7 @@ public final class MentaloutTargeting {
     }
 
     private static LivingEntity findLookedAtLiving(ServerPlayer player, double range, double maximumRange) {
-        range = Math.clamp(Double.isFinite(range) ? range : maximumRange, 1.0, maximumRange);
+        range = Mth.clamp(Double.isFinite(range) ? range : maximumRange, 1.0, maximumRange);
         var level = player.level();
         var eye = player.getEyePosition();
         var look = player.getLookAngle();
@@ -71,7 +72,7 @@ public final class MentaloutTargeting {
 
     public static @Nullable ControlDestination findSightDestination(LivingEntity observer, double range) {
         if (observer == null || !observer.isAlive() || observer.isRemoved()) return null;
-        range = Math.clamp(Double.isFinite(range) ? range : MAX_SIGHT_RANGE, 1.0, MAX_SIGHT_RANGE);
+        range = Mth.clamp(Double.isFinite(range) ? range : MAX_SIGHT_RANGE, 1.0, MAX_SIGHT_RANGE);
         var level = observer.level();
         var eye = observer.getEyePosition();
         var look = observer.getLookAngle();
@@ -124,7 +125,7 @@ public final class MentaloutTargeting {
             double range,
             double maximumRange
     ) {
-        range = Math.clamp(Double.isFinite(range) ? range : maximumRange, 1.0, maximumRange);
+        range = Mth.clamp(Double.isFinite(range) ? range : maximumRange, 1.0, maximumRange);
         return target != player
                 && target.isAlive()
                 && !target.isRemoved()

@@ -20,6 +20,7 @@ import org.misaka.MisakaNetworkClient;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class LocationTeleportScreen extends UiScreen implements SerializedUiDebugHost {
     private static final int TEXT = DataTerminalTheme.TEXT;
@@ -110,7 +111,7 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
 
     @Override
     protected void onInit() {
-        var layout = SerializedUiLayout.load(
+        var layout = SerializedUiLayout.INSTANCE.load(
                 AcademyCraft.academy("ui/layout/location_teleport.json"),
                 List.of(
                         "panel", "name_input", "coordinates", "mark_current", "add_mark",
@@ -120,14 +121,14 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         );
         serializedLayout = layout;
         getRoot().addChild("serialized_layout", layout);
-        panelLayout = SerializedUiLayout.require(layout, "panel");
-        nameInputLayout = SerializedUiLayout.require(layout, "name_input");
-        coordinatesLayout = SerializedUiLayout.require(layout, "coordinates");
-        markCurrentLayout = SerializedUiLayout.require(layout, "mark_current");
-        addMarkLayout = SerializedUiLayout.require(layout, "add_mark");
-        marksLayout = SerializedUiLayout.require(layout, "marks");
-        refreshLayout = SerializedUiLayout.require(layout, "refresh");
-        doneLayout = SerializedUiLayout.require(layout, "done");
+        panelLayout = SerializedUiLayout.INSTANCE.require(layout, "panel");
+        nameInputLayout = SerializedUiLayout.INSTANCE.require(layout, "name_input");
+        coordinatesLayout = SerializedUiLayout.INSTANCE.require(layout, "coordinates");
+        markCurrentLayout = SerializedUiLayout.INSTANCE.require(layout, "mark_current");
+        addMarkLayout = SerializedUiLayout.INSTANCE.require(layout, "add_mark");
+        marksLayout = SerializedUiLayout.INSTANCE.require(layout, "marks");
+        refreshLayout = SerializedUiLayout.INSTANCE.require(layout, "refresh");
+        doneLayout = SerializedUiLayout.INSTANCE.require(layout, "done");
 
         panelX = (width - PANEL_W) / 2;
         panelY = (height - PANEL_H) / 2;
@@ -231,7 +232,7 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
         var left = panelX + 12;
         var right = panelX + panelWidth - 12;
         var visible = Math.max(1, (listBottom - listTop) / ROW_H);
-        scroll = Math.clamp(scroll, 0, Math.max(0, marks.size() - visible));
+        scroll = Mth.clamp(scroll, 0, Math.max(0, marks.size() - visible));
         graphics.enableScissor(left, listTop, right, listBottom);
         for (var row = 0; row < visible && scroll + row < marks.size(); row++) {
             var index = scroll + row;
@@ -394,7 +395,7 @@ public final class LocationTeleportScreen extends UiScreen implements Serialized
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (mouseY >= listTop && mouseY < listBottom) {
-            scroll -= (int) Math.signum(scrollY);
+            scroll -= Mth.sign(scrollY);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);

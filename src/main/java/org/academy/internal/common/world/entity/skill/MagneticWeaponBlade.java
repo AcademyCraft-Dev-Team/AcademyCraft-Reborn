@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
+import net.minecraft.util.Mth;
 
 public final class MagneticWeaponBlade extends RenderOnlyEntity {
     public static final int ATTACK_ANIMATION_TICKS = MagneticWeaponBladeMotion.ATTACK_END_TICK;
@@ -106,7 +107,7 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
     }
 
     public void setAttackTick(int attackTick) {
-        entityData.set(ATTACK_TICKS, Math.clamp(attackTick, 0, ATTACK_ANIMATION_TICKS));
+        entityData.set(ATTACK_TICKS, Mth.clamp(attackTick, 0, ATTACK_ANIMATION_TICKS));
     }
 
     public int getAttackSequence() {
@@ -164,8 +165,8 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
     private void orientAlong(Vec3 tangent) {
         if (tangent.lengthSqr() < 1.0E-8) return;
         var direction = tangent.normalize();
-        var horizontal = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
-        setYRot((float) Math.toDegrees(Math.atan2(-direction.x, direction.z)));
-        setXRot((float) Math.toDegrees(Math.atan2(-direction.y, horizontal)));
+        var horizontal = Mth.sqrt((float) (direction.x * direction.x + direction.z * direction.z));
+        setYRot((float) (Mth.atan2(-direction.x, direction.z)) * Mth.RAD_TO_DEG);
+        setXRot((float) (Mth.atan2(-direction.y, horizontal)) * Mth.RAD_TO_DEG);
     }
 }

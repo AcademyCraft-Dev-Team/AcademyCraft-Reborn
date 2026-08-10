@@ -45,6 +45,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.util.Mth;
 
 public class SpacialExcision extends Skill {
     public SpacialExcision() {
@@ -191,7 +192,7 @@ public class SpacialExcision extends Skill {
                         SoundSource.PLAYERS, 0.6f, 0.65f + ticks / (float) MAX_TICKS * 0.5f);
 
                 if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.SPACIAL_EXCISION.get())) {
-                    var intRadius = (int) Math.ceil(radius);
+                    var intRadius = Mth.ceil(radius);
                     var centerBlock = player.blockPosition();
                     var radiusSq = radius * radius;
                     for (var dx = -intRadius; dx <= intRadius; dx++) {

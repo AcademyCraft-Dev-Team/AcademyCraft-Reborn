@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import net.minecraft.util.Mth;
 
 @Mixin(Hud.class)
 public abstract class MixinHud {
@@ -68,7 +69,7 @@ public abstract class MixinHud {
                 && !PlayerControlClientState.isActive()) return;
         var width = graphics.guiWidth();
         var height = graphics.guiHeight();
-        var pulse = (int) (36 + (Math.sin(System.nanoTime() * 0.000000003) + 1.0) * 22);
+        var pulse = (int) (36 + (Mth.sin(System.nanoTime() * 0.000000003) + 1.0) * 22);
         var color = (pulse << 24) | (MentalIntrusionClientState.hasFilters() ? 0xB45CE8 : 0x53C7E8);
         graphics.fill(0, 0, width, 3, color);
         graphics.fill(0, height - 3, width, height, color);
@@ -85,7 +86,7 @@ public abstract class MixinHud {
             var maxCp = PlayerControlClientState.controllerMaxCp();
             if (maxCp > 0.0f) {
                 graphics.fill(left, top + 9,
-                        left + Math.round(barWidth * Math.clamp(
+                        left + Math.round(barWidth * Mth.clamp(
                                 PlayerControlClientState.controllerCp() / maxCp, 0.0f, 1.0f)),
                         top + 11, 0xD85CB9D9);
             }

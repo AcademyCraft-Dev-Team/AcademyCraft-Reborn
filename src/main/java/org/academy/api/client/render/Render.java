@@ -36,7 +36,7 @@ import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
 import org.academy.api.client.compatibility.IrisCompat;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.resources.R;
 import org.joml.Matrix4f;
@@ -57,7 +57,7 @@ import static net.minecraft.client.renderer.rendertype.RenderType.create;
 import static org.academy.AcademyCraft.academy;
 import static org.academy.api.client.render.Render.GaussianSamples.MAX_GAUSSIAN_SAMPLES;
 import static org.academy.api.client.render.Render.GaussianSamples.getGaussianSamples;
-import static org.academy.api.client.render.post.BloomEffect.BLOOM_TARGET;
+import static org.academy.api.client.render.post.GlowEffect.GLOW_TARGET;
 
 public final class Render {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -71,7 +71,7 @@ public final class Render {
     }
 
     public static void resize() {
-        BloomEffect.onResize();
+        GlowEffect.onResize();
         Buffers.getResourcePool().clear();
         if (Buffers.instance != null) {
             Buffers.getInstance().recreateSDC();
@@ -641,16 +641,16 @@ public final class Render {
                 )
                 .build();
 
-        public static final RenderPipeline BLOOM_BLEND = builder(BLIT_SCREEN_SNIPPET)
-                .withLocation(academy("pipeline/bloom_blend"))
-                .withFragmentShader(R.shaders.core.bloom_blend)
+        public static final RenderPipeline GLOW_BLEND = builder(BLIT_SCREEN_SNIPPET)
+                .withLocation(academy("pipeline/glow_blend"))
+                .withFragmentShader(R.shaders.core.glow_blend)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
                                 .withSampler("BlurTexture1")
                                 .withSampler("BlurTexture2")
                                 .withSampler("BlurTexture3")
-                                .withUniform("BloomInfo", UniformType.UNIFORM_BUFFER)
+                                .withUniform("GlowInfo", UniformType.UNIFORM_BUFFER)
                                 .build()
                 )
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
@@ -857,8 +857,8 @@ public final class Render {
 
         public static final RenderPipeline PLATINUM_COSMIC_WING = builder()
                 .withLocation(academy("pipeline/platinum_cosmic_wing"))
-                .withVertexShader(R.shaders.core.PLATINUM_COSMIC_WING)
-                .withFragmentShader(R.shaders.core.PLATINUM_COSMIC_WING)
+                .withVertexShader(R.shaders.core.platinum_cosmic_wing)
+                .withFragmentShader(R.shaders.core.platinum_cosmic_wing)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -872,8 +872,8 @@ public final class Render {
 
         public static final RenderPipeline PLATINUM_COSMIC_WING_NO_DEPTH_WRITE = builder()
                 .withLocation(academy("pipeline/platinum_cosmic_wing_no_depth_write"))
-                .withVertexShader(R.shaders.core.PLATINUM_COSMIC_WING)
-                .withFragmentShader(R.shaders.core.PLATINUM_COSMIC_WING)
+                .withVertexShader(R.shaders.core.platinum_cosmic_wing)
+                .withFragmentShader(R.shaders.core.platinum_cosmic_wing)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
                 .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
@@ -945,18 +945,6 @@ public final class Render {
                         .addAttribute("UV0", DefaultVertexFormat.UV0_FORMAT)
                         .addAttribute("Normal", DefaultVertexFormat.NORMAL_FORMAT)
                         .build())
-                .build();
-
-        public static final RenderPipeline LEVEL_POS_TEX_COLOR_ADDITIVE_BLOOM = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                .withLocation(academy("pipeline/level_pos_tex_color_additive_bloom"))
-                .withVertexShader(R.shaders.position_tex_color)
-                .withFragmentShader(R.shaders.core.particle_additive)
-                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
-                .withCull(false)
-                .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
-                .withPrimitiveTopology(PrimitiveTopology.QUADS)
-                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
                 .build();
 
         public static final RenderPipeline SPATIAL_DISTORTION = builder()
@@ -1133,7 +1121,7 @@ public final class Render {
                                 "Sampler0", R.textures.ability.electromaster.skill.arc_generate.effect.line_segment,
                                 () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                         )
-                        .setOutputTarget(BLOOM_TARGET)
+                        .setOutputTarget(GLOW_TARGET)
                         .sortOnUpload()
                         .createRenderSetup()
         );
@@ -1158,10 +1146,10 @@ public final class Render {
                         .createRenderSetup()
         );
 
-        public static final RenderType POS_COLOR_QUADS_BLOOM_ADDITIVE = create(
-                "pos_color_quads_bloom_additive",
+        public static final RenderType POS_COLOR_QUADS_GLOW_ADDITIVE = create(
+                "pos_color_quads_glow_additive",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE)
-                        .setOutputTarget(BLOOM_TARGET)
+                        .setOutputTarget(GLOW_TARGET)
                         .createRenderSetup()
         );
 
@@ -1171,59 +1159,30 @@ public final class Render {
                         .createRenderSetup()
         );
 
-        public static final RenderType POS_COLOR_TRANGLES_BLOOM_ADDITIVE = create(
-                "pos_color_trangles_bloom_additive",
+        public static final RenderType POS_COLOR_TRANGLES_GLOW_ADDITIVE = create(
+                "pos_color_trangles_glow_additive",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES_ADDITIVE)
-                        .setOutputTarget(BLOOM_TARGET)
-                        .createRenderSetup()
-        );
-
-        // 记得使用对应的 BufferSource 喵
-
-        /**
-         * 同时输出到 Main 与 INPUT 喵
-         */
-        public static final RenderType POS_COLOR_QUADS_BLOOM = create(
-                "pos_color_quads_bloom",
-                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
-                        //  .setOutputTarget(BLOOM_TARGET)
+                        .setOutputTarget(GLOW_TARGET)
                         .createRenderSetup()
         );
 
         /**
          * 同时输出到 Main 与 INPUT 喵
          */
-        public static final RenderType POS_COLOR_TRANGLES_BLOOM = create(
-                "pos_color_trangles_bloom",
+        public static final RenderType POS_COLOR_TRANGLES_GLOW = create(
+                "pos_color_trangles_glow",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES)
-                        .setOutputTarget(BLOOM_TARGET)
+                        .setOutputTarget(GLOW_TARGET)
                         .createRenderSetup()
         );
 
         /**
          * 只输出到 INPUT 喵
          */
-        public static final RenderType POS_COLOR_QUADS_BLOOM_POST = create(
-                "pos_color_quads_bloom_post",
+        public static final RenderType POS_COLOR_QUADS_GLOW_POST = create(
+                "pos_color_quads_glow_post",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
-                        .setOutputTarget(BLOOM_TARGET)
-                        .createRenderSetup()
-        );
-
-        /**
-         * 只输出到 INPUT 喵
-         */
-        public static final RenderType POS_COLOR_TRANGLES_BLOOM_POST = create(
-                "pos_color_trangles_bloom_post",
-                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_TRANGLES)
-                        .setOutputTarget(BLOOM_TARGET)
-                        .createRenderSetup()
-        );
-
-        public static final RenderType SPATIAL_DISTORTION = create(
-                "spatial_distortion",
-                RenderSetup.builder(RenderPipelines.SPATIAL_DISTORTION)
-                        .sortOnUpload()
+                        .setOutputTarget(GLOW_TARGET)
                         .createRenderSetup()
         );
 

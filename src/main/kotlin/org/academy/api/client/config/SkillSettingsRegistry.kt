@@ -16,13 +16,11 @@ import kotlin.math.roundToInt
 object SkillSettingsRegistry {
     private val modulesBySkill = LinkedHashMap<Identifier, LinkedHashMap<String, Module>>()
 
-    @JvmStatic
     @Synchronized
     fun register(skill: Skill, module: Module) {
         register(skill.key, module)
     }
 
-    @JvmStatic
     @Synchronized
     fun register(skillId: Identifier, module: Module) {
         val modules = modulesBySkill.getOrPut(skillId) { LinkedHashMap() }
@@ -31,7 +29,6 @@ object SkillSettingsRegistry {
         }
     }
 
-    @JvmStatic
     @Synchronized
     fun unregister(skillId: Identifier, moduleId: String) {
         modulesBySkill[skillId]?.let { modules ->
@@ -40,7 +37,6 @@ object SkillSettingsRegistry {
         }
     }
 
-    @JvmStatic
     @Synchronized
     fun getModules(skill: Skill): List<Module> {
         return modulesBySkill[skill.key]?.values?.toList() ?: emptyList()

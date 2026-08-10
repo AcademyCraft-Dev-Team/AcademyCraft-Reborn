@@ -49,6 +49,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 public final class AutoCruiseBeamCannon extends Skill {
     static final int DETECT_INTERVAL_TICKS = 10;
@@ -280,8 +281,8 @@ public final class AutoCruiseBeamCannon extends Skill {
             var fromSpawn = center.subtract(spawn);
             var distance = fromSpawn.length();
             if (distance <= 1.0e-3) return;
-            var yaw = Math.toDegrees(Math.atan2(-fromSpawn.x, fromSpawn.z));
-            var pitch = Math.toDegrees(-Math.asin(Math.clamp(fromSpawn.y / distance, -1.0, 1.0)));
+            var yaw = (Mth.atan2(-fromSpawn.x, fromSpawn.z)) * Mth.RAD_TO_DEG;
+            var pitch = (-Math.asin(Mth.clamp(fromSpawn.y / distance, -1.0, 1.0))) * Mth.RAD_TO_DEG;
             var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
             beam.configure(
                     owner,

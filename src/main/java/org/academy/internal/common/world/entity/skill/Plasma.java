@@ -54,15 +54,15 @@ public class Plasma extends RenderOnlyEntity {
             float radius
     ) {
         final var rayCount = 24;
-        final var goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
+        final var goldenAngle = Mth.PI * (3.0 - Mth.sqrt((float) (5.0)));
         for (var index = 0; index < rayCount; index++) {
             var y = 1.0 - 2.0 * (index + 0.5) / rayCount;
-            var horizontal = Math.sqrt(Math.max(0.0, 1.0 - y * y));
+            var horizontal = Mth.sqrt((float) (Math.max(0.0, 1.0 - y * y)));
             var angle = index * goldenAngle;
             var direction = new Vec3(
-                    Math.cos(angle) * horizontal,
+                    Mth.cos(angle) * horizontal,
                     y,
-                    Math.sin(angle) * horizontal
+                    Mth.sin(angle) * horizontal
             );
             LevelUtil.destroyBlocksAlongPath(
                     level,

@@ -36,8 +36,8 @@ public final class InputSystem {
     public static int currentMouseButton = -1;
     public static int currentMouseAction = -1;
     public static int currentMouseModifier = -1;
-    private static Config config;
-    private static RebindSession rebindSession;
+    private static @Nullable Config config;
+    private static @Nullable RebindSession rebindSession;
     private static long bindingRevision;
 
     private InputSystem() {
@@ -104,8 +104,7 @@ public final class InputSystem {
 
     public static void beginRebind(String keyName, Runnable onFinished) {
         if (!KEY_BINDINGS.containsKey(keyName)) return;
-        rebindSession = new RebindSession(keyName, onFinished == null ? () -> {
-        } : onFinished);
+        rebindSession = new RebindSession(keyName, onFinished);
         bindingRevision++;
     }
 
@@ -203,11 +202,7 @@ public final class InputSystem {
         return stateOf(type).getOrDefault(key, InputConstants.RELEASE) != InputConstants.RELEASE;
     }
 
-    /**
-     * Returns the hardware state behind a vanilla key mapping, unaffected by injected key state.
-     */
     public static boolean isPhysicalDown(KeyMapping mapping) {
-        if (mapping == null) return false;
         var key = mapping.getKey();
         var type = key.getType() == InputConstants.Type.MOUSE
                 ? InputType.MOUSE

@@ -43,6 +43,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class LaminarCutter extends Skill {
     private static final double BLADE_LENGTH = 5.0;
@@ -185,7 +186,7 @@ public final class LaminarCutter extends Skill {
                     || !DestroyBlocksSetting.canDestroyBlocks(player, Skills.LAMINAR_CUTTER.get())) return;
             var min = new Vec3(Math.min(start.x, end.x), Math.min(start.y, end.y), Math.min(start.z, end.z));
             var max = new Vec3(Math.max(start.x, end.x), Math.max(start.y, end.y), Math.max(start.z, end.z));
-            var padding = (int) Math.ceil(BLADE_HALF_WIDTH) + 1;
+            var padding = Mth.ceil(BLADE_HALF_WIDTH) + 1;
             var from = BlockPos.containing(min).offset(-padding, -2, -padding);
             var to = BlockPos.containing(max).offset(padding, 2, padding);
             for (var pos : BlockPos.betweenClosed(from, to)) {

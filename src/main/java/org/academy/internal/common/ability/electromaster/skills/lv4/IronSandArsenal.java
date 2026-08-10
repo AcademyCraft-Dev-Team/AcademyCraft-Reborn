@@ -25,7 +25,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -33,7 +32,8 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.ElectromasterWeaponEffectRenderer;
+import org.academy.internal.client.render.vfx.ElectromasterWeaponVfx;
+import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -50,13 +50,14 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.util.Mth;
 
 public class IronSandArsenal extends Skill {
     public static final float PROXIMITY_DAMAGE = 4.0f;
     public static final float SWEEP_DAMAGE = 10.0f;
     public static final double PROXIMITY_RADIUS = 2.0;
     public static final double SWEEP_RADIUS = 12.0;
-    private static final double SWEEP_HALF_ANGLE_COS = Math.cos(Math.toRadians(60.0));
+    private static final double SWEEP_HALF_ANGLE_COS = Mth.cos((60.0) * Mth.DEG_TO_RAD);
     private static final int HIT_COOLDOWN = 10;
 
     public IronSandArsenal() {
@@ -80,8 +81,8 @@ public class IronSandArsenal extends Skill {
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
                                 InputConstants.PRESS, InputConstants.MOD_ALT)),
                 _ -> Client.onToggle());
-        ToggleStatusHud.registerStateProvider(Skills.IRON_SAND_ARSENAL.get(), Client::isActive);
-        RendererManager.registerEffectRenderer(ElectromasterWeaponEffectRenderer.INSTANCE);
+        ToggleStatusHud.Companion.registerStateProvider(Skills.IRON_SAND_ARSENAL.get(), Client::isActive);
+        ElectromasterWeaponVfxClient.register();
     }
 
     @Override
@@ -114,17 +115,17 @@ public class IronSandArsenal extends Skill {
 
         @SubscribePacket
         public static void handleSweepVisual(SweepVisualPacket packet) {
-            ElectromasterWeaponEffectRenderer.enqueueIronSandSweep(packet.entityId());
+            ElectromasterWeaponVfx.enqueueIronSandSweep(packet.entityId());
         }
 
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
-            ElectromasterWeaponEffectRenderer.clientTick();
+            ElectromasterWeaponVfx.clientTick();
         }
 
         @SubscribeEvent
         public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
-            ElectromasterWeaponEffectRenderer.clearSweeps();
+            ElectromasterWeaponVfx.clearSweeps();
         }
 
         public static class Config extends KeyBindingConfig {

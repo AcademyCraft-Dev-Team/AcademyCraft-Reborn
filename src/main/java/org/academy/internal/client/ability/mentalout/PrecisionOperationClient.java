@@ -12,6 +12,7 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionOperatio
 import org.misaka.MisakaNetworkClient;
 
 import java.util.Locale;
+import net.minecraft.util.Mth;
 
 public final class PrecisionOperationClient {
     private static final PrecisionGraph[] GRAPHS = new PrecisionGraph[]{
@@ -64,7 +65,7 @@ public final class PrecisionOperationClient {
     public static void execute(int slot) {
         if (Minecraft.getInstance().gui.screen() != null
                 || !AbilitySystemClient.canUseSkill(Skills.PRECISION_OPERATION.get())) return;
-        selectedSlot = Math.clamp(slot, 0, 3);
+        selectedSlot = Mth.clamp(slot, 0, 3);
         MisakaNetworkClient.send(new PrecisionOperationManager.ExecutePacket(
                 selectedSlot,
                 MentaloutRequestGuard.nextClientSequence()
@@ -98,7 +99,7 @@ public final class PrecisionOperationClient {
             int port,
             int affectedCount
     ) {
-        slot = Math.clamp(slot, 0, 3);
+        slot = Mth.clamp(slot, 0, 3);
         if (serverRevision > revision) revision = serverRevision;
         if (type == PrecisionOperationManager.FeedbackType.ERROR) {
             LAST_DIAGNOSTICS[slot] = diagnostic;
@@ -125,11 +126,11 @@ public final class PrecisionOperationClient {
     }
 
     static PrecisionGraph graph(int slot) {
-        return GRAPHS[Math.clamp(slot, 0, 3)];
+        return GRAPHS[Mth.clamp(slot, 0, 3)];
     }
 
     static PrecisionGraph serverGraph(int slot) {
-        return SERVER_GRAPHS[Math.clamp(slot, 0, 3)];
+        return SERVER_GRAPHS[Mth.clamp(slot, 0, 3)];
     }
 
     static long revision() {
@@ -137,11 +138,11 @@ public final class PrecisionOperationClient {
     }
 
     static void selectSlot(int slot) {
-        selectedSlot = Math.clamp(slot, 0, 3);
+        selectedSlot = Mth.clamp(slot, 0, 3);
     }
 
     static void updateLocal(int slot, PrecisionGraph graph) {
-        GRAPHS[Math.clamp(slot, 0, 3)] = graph;
+        GRAPHS[Mth.clamp(slot, 0, 3)] = graph;
     }
 
     static void save(int slot, PrecisionGraph graph, long expectedRevision) {
@@ -171,22 +172,22 @@ public final class PrecisionOperationClient {
     }
 
     static void clearDiagnostic(int slot) {
-        slot = Math.clamp(slot, 0, 3);
+        slot = Mth.clamp(slot, 0, 3);
         LAST_DIAGNOSTICS[slot] = PrecisionGraph.Diagnostic.OK;
         LAST_NODES[slot] = -1;
         LAST_PORTS[slot] = -1;
     }
 
     static PrecisionGraph.Diagnostic diagnostic(int slot) {
-        return LAST_DIAGNOSTICS[Math.clamp(slot, 0, 3)];
+        return LAST_DIAGNOSTICS[Mth.clamp(slot, 0, 3)];
     }
 
     static int diagnosticNode(int slot) {
-        return LAST_NODES[Math.clamp(slot, 0, 3)];
+        return LAST_NODES[Mth.clamp(slot, 0, 3)];
     }
 
     static int diagnosticPort(int slot) {
-        return LAST_PORTS[Math.clamp(slot, 0, 3)];
+        return LAST_PORTS[Mth.clamp(slot, 0, 3)];
     }
 
     private static void showActionBar(String key, int slot) {

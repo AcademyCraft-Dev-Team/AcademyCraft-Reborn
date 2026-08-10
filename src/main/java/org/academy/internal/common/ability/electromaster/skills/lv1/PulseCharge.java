@@ -100,7 +100,7 @@ public final class PulseCharge extends Skill {
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
                                 InputConstants.RELEASE, 0)),
                 ctx -> Client.stop());
-        ToggleStatusHud.registerStateProvider(Skills.PULSE_CHARGE.get(), () -> Client.active);
+        ToggleStatusHud.Companion.registerStateProvider(Skills.PULSE_CHARGE.get(), () -> Client.active);
     }
 
     @Override

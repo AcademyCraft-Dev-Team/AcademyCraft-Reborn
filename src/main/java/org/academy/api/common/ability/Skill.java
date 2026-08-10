@@ -26,6 +26,7 @@ import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import net.minecraft.util.Mth;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
@@ -289,8 +290,8 @@ public abstract class Skill {
 
     public int getLevelForProficiency(float proficiency) {
         if (maxSkillLevel <= 0) return 0;
-        var clamped = Math.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY);
-        var level = (int) Math.floor(clamped / SkillData.MAX_PROFICIENCY * (maxSkillLevel + 1));
+        var clamped = Mth.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY);
+        var level = Mth.floor(clamped / SkillData.MAX_PROFICIENCY * (maxSkillLevel + 1));
         return Math.min(maxSkillLevel, level);
     }
 

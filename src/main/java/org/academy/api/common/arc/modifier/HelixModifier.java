@@ -13,6 +13,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public record HelixModifier(float radius, float turns, float phaseOffset) implements PathModifier {
     public static final StreamCodec<ByteBuf, HelixModifier> CODEC = StreamCodec.composite(
@@ -43,11 +44,11 @@ public record HelixModifier(float radius, float turns, float phaseOffset) implem
         for (var i = 0; i < originalFrames.size(); i++) {
             var frame = originalFrames.get(i);
             var progress = distanceTraveled / totalLength;
-            var angle = phaseOffset + turns * 2.0f * (float) Math.PI * progress;
+            var angle = phaseOffset + turns * Mth.TWO_PI * progress;
 
             var binormal = new Vector3f(frame.tangent()).cross(frame.normal());
-            var offset = new Vector3f(frame.normal()).mul((float) Math.cos(angle) * radius)
-                    .add(binormal.mul((float) Math.sin(angle) * radius));
+            var offset = new Vector3f(frame.normal()).mul(Mth.cos(angle) * radius)
+                    .add(binormal.mul(Mth.sin(angle) * radius));
 
             newPositions.add(new Vector3f(frame.position()).add(offset));
 
