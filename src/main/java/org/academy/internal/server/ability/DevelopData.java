@@ -3,8 +3,8 @@ package org.academy.internal.server.ability;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.DevState;
 import org.academy.api.common.ability.DevelopAction;
@@ -28,6 +28,11 @@ public class DevelopData {
 
     public DevelopData(UUID playerId) {
         this.playerId = playerId;
+    }
+
+    static int targetEnergy(int totalCost, int totalTicks, int elapsedTicks) {
+        if (totalCost <= 0 || totalTicks <= 0 || elapsedTicks <= 0) return 0;
+        return (int) ((long) totalCost * Math.min(elapsedTicks, totalTicks) / totalTicks);
     }
 
     public UUID getPlayerId() {
@@ -126,11 +131,6 @@ public class DevelopData {
             LOGGER.error("Failed to complete ability development for player {}", playerId, exception);
             fail("Completion failed");
         }
-    }
-
-    static int targetEnergy(int totalCost, int totalTicks, int elapsedTicks) {
-        if (totalCost <= 0 || totalTicks <= 0 || elapsedTicks <= 0) return 0;
-        return (int) ((long) totalCost * Math.min(elapsedTicks, totalTicks) / totalTicks);
     }
 
     private @Nullable AbilityDeveloperBlockEntity resolveDeveloper(ServerPlayer player) {

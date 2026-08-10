@@ -11,18 +11,17 @@ import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
 
 import java.lang.ref.WeakReference;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public final class VectorReflectionClientRuntime {
-    private static WeakReference<LocalPlayer> currentPlayer = new WeakReference<>(null);
     private static final Map<Integer, Long> PENDING_HURT_CLEARS = new HashMap<>();
     private static final Map<UUID, String> HEALTH_RECORDS = new HashMap<>();
     private static final Set<UUID> IMAGINE_BREAKER_MUTATIONS = new HashSet<>();
     private static final Set<UUID> FORCED_DEACTIVATIONS = new HashSet<>();
+    private static WeakReference<LocalPlayer> currentPlayer = new WeakReference<>(null);
+
+    private VectorReflectionClientRuntime() {
+    }
 
     public static void tick(Minecraft minecraft) {
         tickFeedbackTokens(minecraft);
@@ -196,8 +195,5 @@ public final class VectorReflectionClientRuntime {
         PlayerAttributeRuntime.runWithoutResistance(
                 () -> EntityControlApi.forceSetTrueHealth(player, health)
         );
-    }
-
-    private VectorReflectionClientRuntime() {
     }
 }

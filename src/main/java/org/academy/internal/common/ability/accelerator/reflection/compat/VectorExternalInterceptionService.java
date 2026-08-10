@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.accelerator.reflection.compat;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
@@ -38,7 +39,7 @@ public final class VectorExternalInterceptionService {
                 || VectorReduction.Server.canMaintain(defender)) {
             var reflection = VectorReflection.Server.hurtServer(
                     defender,
-                    (net.minecraft.server.level.ServerLevel) defender.level(),
+                    defender.level(),
                     event.getSource(),
                     event.getAmount()
             );
@@ -245,12 +246,12 @@ public final class VectorExternalInterceptionService {
 
     public static boolean tryDirectRefraction(
             ServerPlayer defender,
-            net.minecraft.world.damagesource.DamageSource source,
+            DamageSource source,
             float damage
     ) {
         if (!VectorReduction.Server.isActive(defender)) return false;
         var attack = VectorExternalAttackClassifier.classify(defender, source, damage).orElse(null);
-        return attack != null && tryFullRefraction(attack);
+        return tryFullRefraction(attack);
     }
 
     @SubscribeEvent

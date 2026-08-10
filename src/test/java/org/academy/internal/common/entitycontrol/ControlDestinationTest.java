@@ -2,20 +2,13 @@ package org.academy.internal.common.entitycontrol;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlDomain;
+import org.academy.api.common.entitycontrol.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ControlDestinationTest {
     @Test

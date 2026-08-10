@@ -95,7 +95,8 @@ public final class PlasmaCoreRenderer implements VfxRenderer<PlasmaCoreData> {
                 OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.TEX_BILLBOARD_TRANSLUCENT);
-            RenderSystem.bindDefaultUniforms(renderPass);
+            var projection = RenderSystem.getProjectionMatrixBuffer();
+            if (projection != null) renderPass.setUniform("Projection", projection);
             var transform = RenderSystem.getDynamicUniforms()
                     .writeTransform(RenderSystem.getModelViewMatrixCopy());
             renderPass.setUniform("DynamicTransforms", transform);

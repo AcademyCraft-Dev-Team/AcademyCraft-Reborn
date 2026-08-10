@@ -38,8 +38,10 @@ class UiDebugBrowserScreen : Screen(Component.translatable("screen.academy.ui_de
                 state.dirty -> "  [${tr("screen.academy.ui_debug.status.modified")}]"
                 else -> ""
             }
-            graphics.text(font, displayName(definition.id) + " [${variant(definition.id)}]" + suffix, panelX + 13, y + 3,
-                if (state.error != null) 0xFFFF7777.toInt() else 0xFFE8F5F8.toInt(), false)
+            graphics.text(
+                font, displayName(definition.id) + " [${variant(definition.id)}]" + suffix, panelX + 13, y + 3,
+                if (state.error != null) 0xFFFF7777.toInt() else 0xFFE8F5F8.toInt(), false
+            )
             graphics.text(
                 font,
                 definition.id + " - " + tr(UiDebugSession.sourceTranslationKey(definition.id)),
@@ -50,10 +52,14 @@ class UiDebugBrowserScreen : Screen(Component.translatable("screen.academy.ui_de
             )
         }
         val bottomY = panelY + panelHeight - 25
-        drawButton(graphics, panelX + 8, bottomY, 96, 17,
-            tr("screen.academy.ui_debug.action.publish"), mouseX, mouseY)
-        drawButton(graphics, panelX + panelWidth - 104, bottomY, 96, 17,
-            tr("screen.academy.ui_debug.action.close"), mouseX, mouseY)
+        drawButton(
+            graphics, panelX + 8, bottomY, 96, 17,
+            tr("screen.academy.ui_debug.action.publish"), mouseX, mouseY
+        )
+        drawButton(
+            graphics, panelX + panelWidth - 104, bottomY, 96, 17,
+            tr("screen.academy.ui_debug.action.close"), mouseX, mouseY
+        )
     }
 
     override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
@@ -96,18 +102,20 @@ class UiDebugBrowserScreen : Screen(Component.translatable("screen.academy.ui_de
                     result.saved,
                     (result.sourceRoot ?: result.workingDirectory).toString()
                 )
+
                 result.saved > 0 -> Component.translatable(
                     "message.academy.ui_debug.publish.pending",
                     result.saved,
                     result.workingDirectory.toString(),
                     result.error ?: ""
                 )
+
                 else -> Component.translatable(
                     "message.academy.ui_debug.publish.failed",
                     result.error ?: ""
                 )
             }
-            Minecraft.getInstance().gui.hud.getChat().addClientSystemMessage(message)
+            Minecraft.getInstance().gui.hud.chat.addClientSystemMessage(message)
         }
 
         private fun inside(mouseX: Double, mouseY: Double, x: Int, y: Int, width: Int, height: Int): Boolean {

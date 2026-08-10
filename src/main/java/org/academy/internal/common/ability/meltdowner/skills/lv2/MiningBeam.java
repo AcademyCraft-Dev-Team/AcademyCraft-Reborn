@@ -60,6 +60,7 @@ public final class MiningBeam extends Skill {
     static final float BASE_DAMAGE = 12.0f;
     static final float BREAK_RADIUS = 0.35f;
     static final int MINING_TIER = 3;
+
     public MiningBeam() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
@@ -74,6 +75,16 @@ public final class MiningBeam extends Skill {
                         "Single High-Speed Electron Beam",
                         "academy:single_high_speed_electron_beam"
                 ))
+        );
+    }
+
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(
+                BASE_DAMAGE * Math.max(0.0f, abilityPower),
+                0.0f,
+                0.0f,
+                playerMultiplier,
+                false
         );
     }
 
@@ -176,11 +187,11 @@ public final class MiningBeam extends Skill {
 
     public static final class Context extends ServerContext {
         private final ServerLevel initialLevel;
+        private final HighSpeedElectronBeam visual;
+        private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
         private boolean ended;
         private int ticks;
         private float currentLength = MAX_LENGTH;
-        private final HighSpeedElectronBeam visual;
-        private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
 
         private Context(ServerPlayer player) {
             super(player);
@@ -209,7 +220,7 @@ public final class MiningBeam extends Skill {
             visual.setPos(start);
             if (ticks % CP_INTERVAL_TICKS == 0
                     && !skill.executeContinuous(player, (_, _) -> {
-                    }, false)) {
+            }, false)) {
                 end();
                 return;
             }
@@ -321,16 +332,6 @@ public final class MiningBeam extends Skill {
             Server.CONTEXT_MAP.remove(player, this);
             ContinuousBeam.kill(visual);
         }
-    }
-
-    static float calculateDamage(float abilityPower, float playerMultiplier) {
-        return MeltdownerBeamDamage.calculate(
-                BASE_DAMAGE * Math.max(0.0f, abilityPower),
-                0.0f,
-                0.0f,
-                playerMultiplier,
-                false
-        );
     }
 
     @PacketTarget(ThreadType.SERVER)

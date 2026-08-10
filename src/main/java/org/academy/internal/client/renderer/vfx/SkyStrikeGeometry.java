@@ -107,7 +107,7 @@ public record SkyStrikeGeometry(
     private static ArcPath arc(Vec3 start, Vec3 end, float jaggedness, float thickness, long seed) {
         return new ArcPath(
                 new LinePath(start.toVector3f(), end.toVector3f()),
-                List.<PathModifier>of(
+                List.of(
                         new JaggedModifier(jaggedness, 4, seed),
                         new TaperModifier(TAPER, thickness),
                         new ColorModifier(BLUE_WHITE)

@@ -8,7 +8,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-/** Persistent, server-authoritative P.R.O.P.S state. */
+/**
+ * Persistent, server-authoritative P.R.O.P.S state.
+ */
 public final class PropsData {
     public static final int CURRENT_VERSION = 1;
     private static final int VALID_LOCK_MASK = (1 << AbilityFactor.values().length) - 1;

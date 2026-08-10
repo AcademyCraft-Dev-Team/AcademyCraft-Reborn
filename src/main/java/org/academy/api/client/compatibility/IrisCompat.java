@@ -10,10 +10,10 @@ import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class IrisCompat {
-    private static boolean hasIris = false;
     private static final ThreadLocal<ArrayDeque<Boolean>> BYPASS_STATES =
             ThreadLocal.withInitial(ArrayDeque::new);
     private static final AtomicBoolean HAND_BRIDGE_WARNING_LOGGED = new AtomicBoolean();
+    private static boolean hasIris = false;
     private static volatile boolean handBridgeMounted;
 
     private IrisCompat() {

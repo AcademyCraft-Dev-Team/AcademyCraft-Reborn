@@ -9,6 +9,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkyStrikeGeometryTest {
+    private static void assertFinite(SkyStrikeGeometry geometry) {
+        for (var path : geometry.paths()) {
+            var line = (LinePath) path.path();
+            assertTrue(Float.isFinite(line.start().x()));
+            assertTrue(Float.isFinite(line.start().y()));
+            assertTrue(Float.isFinite(line.start().z()));
+            assertTrue(Float.isFinite(line.end().x()));
+            assertTrue(Float.isFinite(line.end().y()));
+            assertTrue(Float.isFinite(line.end().z()));
+        }
+    }
+
     @Test
     void thunderclapBuildsTheFullDeterministicLayerSet() {
         var impact = new Vec3(4.5, 72.0, -8.5);
@@ -53,17 +65,5 @@ class SkyStrikeGeometryTest {
         assertEquals(0, reduced.groundArcCount());
         assertEquals(16, reduced.paths().size());
         assertTrue(far.paths().isEmpty());
-    }
-
-    private static void assertFinite(SkyStrikeGeometry geometry) {
-        for (var path : geometry.paths()) {
-            var line = (LinePath) path.path();
-            assertTrue(Float.isFinite(line.start().x()));
-            assertTrue(Float.isFinite(line.start().y()));
-            assertTrue(Float.isFinite(line.start().z()));
-            assertTrue(Float.isFinite(line.end().x()));
-            assertTrue(Float.isFinite(line.end().y()));
-            assertTrue(Float.isFinite(line.end().z()));
-        }
     }
 }

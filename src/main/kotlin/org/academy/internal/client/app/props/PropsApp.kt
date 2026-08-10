@@ -8,17 +8,7 @@ import org.academy.api.client.app.App
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.widget.ButtonWidget
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.TextBoxWidget
-import org.academy.api.client.gui.widget.ToggleButtonWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
-import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.resources.R
 import org.academy.api.common.attribute.AbilityFactor
@@ -26,7 +16,7 @@ import org.academy.api.common.attribute.PlayerAttributes
 import org.academy.internal.common.attribute.PropsMath
 import org.academy.internal.common.attribute.PropsPackets
 import org.misaka.MisakaNetworkClient
-import java.util.Locale
+import java.util.*
 
 object PropsApp : App {
     override fun createContext(): WidgetContext = Context()
@@ -65,56 +55,58 @@ object PropsApp : App {
         }
 
         private fun createDashboard(): LinearLayoutWidget = LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                spacing = 1f
-                layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                addChild("top_bar", createTopBar())
-                addChild("separator", FillWidget(0xBFFFFFFF.toInt()).apply {
-                    layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f).padding(2f, 0f)
-                })
-                addChild("main", LinearLayoutWidget().apply {
-                    orientation = Orientation.HORIZONTAL
-                    spacing = 4f
+            orientation = Orientation.VERTICAL
+            spacing = 1f
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            addChild("top_bar", createTopBar())
+            addChild("separator", FillWidget(0xBFFFFFFF.toInt()).apply {
+                layoutParams =
+                    LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f).padding(2f, 0f)
+            })
+            addChild("main", LinearLayoutWidget().apply {
+                orientation = Orientation.HORIZONTAL
+                spacing = 4f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .padding(5f, 4f)
+                addChild("overview", LinearLayoutWidget().apply {
+                    orientation = Orientation.VERTICAL
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .padding(5f, 4f)
-                    addChild("overview", LinearLayoutWidget().apply {
-                        orientation = Orientation.VERTICAL
+                        .heightMode(SizeMode.MATCH_PARENT)
+                    addChild("chart", RadarChartWidget().apply {
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .weight(1f)
-                            .heightMode(SizeMode.MATCH_PARENT)
-                        addChild("chart", RadarChartWidget().apply {
-                            layoutParams = LinearLayoutWidget.LayoutParams()
-                                .weight(1f)
-                                .widthMode(SizeMode.MATCH_PARENT)
-                        })
-                        addChild("footer", dynamicLabel { footerText() }.apply {
-                            scale = 0.68f
-                            layoutParams = LinearLayoutWidget.LayoutParams()
-                                .widthMode(SizeMode.MATCH_PARENT)
-                                .height(22f)
-                                .gravity(Gravity.CENTER)
-                        })
+                            .widthMode(SizeMode.MATCH_PARENT)
                     })
-                    addChild("rows", LinearLayoutWidget().apply {
-                        orientation = Orientation.VERTICAL
-                        spacing = 2f
+                    addChild("footer", dynamicLabel { footerText() }.apply {
+                        scale = 0.68f
                         layoutParams = LinearLayoutWidget.LayoutParams()
-                            .width(178f)
-                            .heightMode(SizeMode.MATCH_PARENT)
-                        AbilityFactor.values().forEach { factor -> addChild(factor.name.lowercase(), createFactorRow(factor)) }
+                            .widthMode(SizeMode.MATCH_PARENT)
+                            .height(22f)
+                            .gravity(Gravity.CENTER)
                     })
                 })
-                addChild("warning", dynamicLabel {
-                    if (PropsClientState.isLocked(AbilityFactor.NEURAL_ACTIVITY)) tr("app.academy.props.neural_lock_warning") else ""
-                }.apply {
-                    scale = 0.68f
+                addChild("rows", LinearLayoutWidget().apply {
+                    orientation = Orientation.VERTICAL
+                    spacing = 2f
                     layoutParams = LinearLayoutWidget.LayoutParams()
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .height(9f)
-                        .gravity(Gravity.CENTER)
+                        .width(178f)
+                        .heightMode(SizeMode.MATCH_PARENT)
+                    AbilityFactor.values()
+                        .forEach { factor -> addChild(factor.name.lowercase(), createFactorRow(factor)) }
                 })
+            })
+            addChild("warning", dynamicLabel {
+                if (PropsClientState.isLocked(AbilityFactor.NEURAL_ACTIVITY)) tr("app.academy.props.neural_lock_warning") else ""
+            }.apply {
+                scale = 0.68f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(9f)
+                    .gravity(Gravity.CENTER)
+            })
         }
 
         private fun createConsole(): LinearLayoutWidget = LinearLayoutWidget().apply {
@@ -218,11 +210,13 @@ object PropsApp : App {
                         "%s  %s".format(Locale.ROOT, factorName(factor), formatDecimal(PropsClientState.get(factor)))
                     }.apply {
                         scale = 0.78f
-                        layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT).gravity(Gravity.CENTER_LEFT)
+                        layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT)
+                            .gravity(Gravity.CENTER_LEFT)
                     })
                     addChild("effect", dynamicLabel { effectText(factor) }.apply {
                         scale = 0.58f
-                        layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT).gravity(Gravity.CENTER_LEFT)
+                        layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT)
+                            .gravity(Gravity.CENTER_LEFT)
                     })
                 })
                 addChild("lock", ToggleButtonWidget().apply {
@@ -251,11 +245,32 @@ object PropsApp : App {
             val player = Minecraft.getInstance().player
             val effective = player?.getAttributeValue(attribute(factor)) ?: PropsClientState.get(factor)
             return when (factor) {
-                AbilityFactor.MUSCLE_STRENGTH -> tr("app.academy.props.effect.muscle").format(Locale.ROOT, formatDecimal(PropsMath.muscleDamageBonus(effective)))
-                AbilityFactor.ENDURANCE -> tr("app.academy.props.effect.endurance").format(Locale.ROOT, formatDecimal(PropsMath.enduranceHealthBonus(effective)))
-                AbilityFactor.DEXTERITY -> tr("app.academy.props.effect.dexterity").format(Locale.ROOT, formatDecimal(effective * 0.2), formatDecimal(effective * 0.5))
-                AbilityFactor.PERCEPTION -> tr("app.academy.props.effect.perception").format(Locale.ROOT, PropsMath.perceptionEnchantmentBonus(effective), formatDecimal((PropsMath.perceptionExperienceMultiplier(effective) - 1.0) * 100.0))
-                AbilityFactor.NEURAL_ACTIVITY -> tr("app.academy.props.effect.neural").format(Locale.ROOT, formatDecimal((PropsMath.neuralIterationMultiplier(effective) - 1.0) * 100.0))
+                AbilityFactor.MUSCLE_STRENGTH -> tr("app.academy.props.effect.muscle").format(
+                    Locale.ROOT,
+                    formatDecimal(PropsMath.muscleDamageBonus(effective))
+                )
+
+                AbilityFactor.ENDURANCE -> tr("app.academy.props.effect.endurance").format(
+                    Locale.ROOT,
+                    formatDecimal(PropsMath.enduranceHealthBonus(effective))
+                )
+
+                AbilityFactor.DEXTERITY -> tr("app.academy.props.effect.dexterity").format(
+                    Locale.ROOT,
+                    formatDecimal(effective * 0.2),
+                    formatDecimal(effective * 0.5)
+                )
+
+                AbilityFactor.PERCEPTION -> tr("app.academy.props.effect.perception").format(
+                    Locale.ROOT,
+                    PropsMath.perceptionEnchantmentBonus(effective),
+                    formatDecimal((PropsMath.perceptionExperienceMultiplier(effective) - 1.0) * 100.0)
+                )
+
+                AbilityFactor.NEURAL_ACTIVITY -> tr("app.academy.props.effect.neural").format(
+                    Locale.ROOT,
+                    formatDecimal((PropsMath.neuralIterationMultiplier(effective) - 1.0) * 100.0)
+                )
             }
         }
 

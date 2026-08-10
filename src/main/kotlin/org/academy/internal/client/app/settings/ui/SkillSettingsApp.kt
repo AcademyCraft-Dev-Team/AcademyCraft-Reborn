@@ -15,27 +15,15 @@ import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.widget.AbstractWidget
-import org.academy.api.client.gui.widget.ButtonWidget
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.ScrollPanelWidget
-import org.academy.api.client.gui.widget.SeekBarWidget
-import org.academy.api.client.gui.widget.ToggleButtonWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
-import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.hud.ability.AbilityInfoHud
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
 import org.academy.api.common.ability.Skill
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
-import org.misaka.MisakaNetworkClient
 import org.lwjgl.glfw.GLFW
+import org.misaka.MisakaNetworkClient
 import kotlin.math.roundToInt
 
 object SkillSettingsApp : App {
@@ -190,15 +178,16 @@ object SkillSettingsApp : App {
             page.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
 
             val category = AbilitySystemClient.getCategory()
-            page.addChild("category", LabelWidget(
-                translate("app.academy.skill_settings.current_category") + category.displayName
-            ).apply {
-                scale = 0.8f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(10f)
-                    .gravity(Gravity.CENTER_LEFT)
-            })
+            page.addChild(
+                "category", LabelWidget(
+                    translate("app.academy.skill_settings.current_category") + category.displayName
+                ).apply {
+                    scale = 0.8f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.MATCH_PARENT)
+                        .height(10f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
 
             val columnHeader = LinearLayoutWidget()
             columnHeader.orientation = Orientation.HORIZONTAL
@@ -212,15 +201,16 @@ object SkillSettingsApp : App {
             columnHeader.addChild("key_spacer", FillWidget(0).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(44f, 0f)
             })
-            columnHeader.addChild("toggle_title", LabelWidget(
-                translate("app.academy.settings.keybind.toggle")
-            ).apply {
-                scale = 0.65f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .width(22f)
-                    .height(10f)
-                    .gravity(Gravity.CENTER)
-            })
+            columnHeader.addChild(
+                "toggle_title", LabelWidget(
+                    translate("app.academy.settings.keybind.toggle")
+                ).apply {
+                    scale = 0.65f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .width(22f)
+                        .height(10f)
+                        .gravity(Gravity.CENTER)
+                })
             columnHeader.addChild("rebind_spacer", FillWidget(0).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
             })
@@ -295,15 +285,16 @@ object SkillSettingsApp : App {
                     .height(1f)
                     .marginTop(1f)
             })
-            section.addChild("advanced_title", LabelWidget(
-                translate("app.academy.skill_settings.advanced.title")
-            ).apply {
-                scale = 0.8f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(10f)
-                    .gravity(Gravity.CENTER_LEFT)
-            })
+            section.addChild(
+                "advanced_title", LabelWidget(
+                    translate("app.academy.skill_settings.advanced.title")
+                ).apply {
+                    scale = 0.8f
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.MATCH_PARENT)
+                        .height(10f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
             if (DestroyBlocksSetting.supportsSkillBlockDestruction(skill)) {
                 section.addChild("block_destruction", createSkillDestroyBlocksRow(skill))
             }
@@ -458,7 +449,8 @@ object SkillSettingsApp : App {
                 var end = 1
                 var lastSpace = -1
                 while (end <= remaining.length
-                    && LabelWidget.getTextWidth(remaining.substring(0, end), TOOLTIP_FONT_SIZE) <= maxWidth) {
+                    && LabelWidget.getTextWidth(remaining.substring(0, end), TOOLTIP_FONT_SIZE) <= maxWidth
+                ) {
                     if (remaining[end - 1].isWhitespace()) lastSpace = end - 1
                     end++
                 }
@@ -480,14 +472,15 @@ object SkillSettingsApp : App {
             row.spacing = 2f
             row.layoutParams = WidgetContainer.LayoutParams().widthMode(SizeMode.MATCH_PARENT)
 
-            row.addChild("name", LabelWidget(
-                Language.getInstance().getOrDefault("key.academy.$bindingName")
-            ).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(10f)
-                    .gravity(Gravity.CENTER_LEFT)
-            })
+            row.addChild(
+                "name", LabelWidget(
+                    Language.getInstance().getOrDefault("key.academy.$bindingName")
+                ).apply {
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .weight(1f)
+                        .height(10f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
             row.addChild("key", LabelWidget(displayBinding(combo)).apply {
                 scale = 0.7f
                 layoutParams = LinearLayoutWidget.LayoutParams()
@@ -545,14 +538,15 @@ object SkillSettingsApp : App {
             row.layoutParams = WidgetContainer.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .paddingLeft(3f)
-            row.addChild("label", LabelWidget(
-                translate("app.academy.skill_settings.advanced.block_destruction")
-            ).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(11f)
-                    .gravity(Gravity.CENTER_LEFT)
-            })
+            row.addChild(
+                "label", LabelWidget(
+                    translate("app.academy.skill_settings.advanced.block_destruction")
+                ).apply {
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .weight(1f)
+                        .height(11f)
+                        .gravity(Gravity.CENTER_LEFT)
+                })
             row.addChild("control", ToggleButtonWidget().apply {
                 val player = Minecraft.getInstance().player
                 setChecked(player == null || DestroyBlocksSetting.isSkillDestroyBlocksEnabled(player, skill))
@@ -607,6 +601,7 @@ object SkillSettingsApp : App {
                             .height(10f)
                             .gravity(Gravity.CENTER)
                     }
+
                     fun change(delta: Int) {
                         val updated = (entry.getter.asInt + delta).coerceIn(entry.min, entry.max)
                         entry.setter.accept(updated)
@@ -747,7 +742,6 @@ object SkillSettingsApp : App {
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
                         val target = capturing ?: return
                         val current = target.section.config.getKeyBinding(target.bindingName)
-                            ?: InputSystem.getKeyBinding(target.bindingName)
                             ?: return
                         resetCaptureState()
                         applyCapture(InputSystem.unbound(current))
@@ -791,7 +785,6 @@ object SkillSettingsApp : App {
         private fun buildPendingCombo(): InputSystem.KeyCombination? {
             val target = capturing ?: return null
             val current = target.section.config.getKeyBinding(target.bindingName)
-                ?: InputSystem.getKeyBinding(target.bindingName)
                 ?: return null
             return when (pendingType ?: return null) {
                 InputSystem.InputType.KEYBOARD -> {

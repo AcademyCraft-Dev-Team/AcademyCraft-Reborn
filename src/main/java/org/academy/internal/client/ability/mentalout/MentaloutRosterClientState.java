@@ -2,13 +2,7 @@ package org.academy.internal.client.ability.mentalout;
 
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.LongConsumer;
 
 public final class MentaloutRosterClientState {
@@ -25,10 +19,9 @@ public final class MentaloutRosterClientState {
 
     public static final byte DELTA_UPSERT = 0;
     public static final byte DELTA_REMOVE = 1;
-    private static final int MAX_FULL_CHUNK_ENTRIES = 64;
     static final int FULL_TRANSFER_TIMEOUT_TICKS = 40;
     static final int RESYNC_RETRY_TICKS = 40;
-
+    private static final int MAX_FULL_CHUNK_ENTRIES = 64;
     private static volatile Snapshot snapshot = Snapshot.EMPTY;
     private static @Nullable FullTransfer pendingFull;
     private static @Nullable LongConsumer resyncRequester;
@@ -271,10 +264,6 @@ public final class MentaloutRosterClientState {
             misidentificationTicks = Math.max(0, misidentificationTicks);
         }
 
-        public boolean hasFlag(byte flag) {
-            return (flags & flag) != 0;
-        }
-
         private static String normalizeText(@Nullable String value, int maxLength, String fallback) {
             if (value == null || value.isBlank()) return fallback;
             return value.length() <= maxLength ? value : value.substring(0, maxLength);
@@ -282,6 +271,10 @@ public final class MentaloutRosterClientState {
 
         private static float finiteNonNegative(float value) {
             return Float.isFinite(value) ? Math.max(0.0f, value) : 0.0f;
+        }
+
+        public boolean hasFlag(byte flag) {
+            return (flags & flag) != 0;
         }
     }
 

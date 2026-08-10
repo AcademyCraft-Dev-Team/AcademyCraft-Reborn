@@ -58,6 +58,10 @@ public final class ReflectedSkillDamageSource extends SkillDamageSource
         );
     }
 
+    public static boolean isReflected(DamageSource source) {
+        return VectorRedirectedDamageSourceInfo.isRedirected(source);
+    }
+
     public int reflectionDepth() {
         return reflectionDepth;
     }
@@ -85,9 +89,5 @@ public final class ReflectedSkillDamageSource extends SkillDamageSource
         return AbilitySystemServer.getSystem(reflector)
                 .getPlayerData(reflector.getUUID())
                 .isSkillLearned(getSkill().getKeyString());
-    }
-
-    public static boolean isReflected(DamageSource source) {
-        return VectorRedirectedDamageSourceInfo.isRedirected(source);
     }
 }

@@ -18,7 +18,6 @@ import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
@@ -91,7 +90,8 @@ public final class SmokeRenderer implements VfxRenderer<SmokeData> {
                 () -> "VFX Smoke", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.TEX_BILLBOARD_TRANSLUCENT);
-            RenderSystem.bindDefaultUniforms(renderPass);
+            var projection = RenderSystem.getProjectionMatrixBuffer();
+            if (projection != null) renderPass.setUniform("Projection", projection);
             var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
             renderPass.setUniform("DynamicTransforms", transform);
 

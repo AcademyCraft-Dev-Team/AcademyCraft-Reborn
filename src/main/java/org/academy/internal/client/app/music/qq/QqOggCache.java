@@ -21,8 +21,8 @@ public final class QqOggCache {
 
     private static final Object LOCK = new Object();
     private static final LinkedHashMap<String, ByteBuffer> MEMORY_CACHE = new LinkedHashMap<>(16, 0.75f, true);
-    private static long memoryBytes = 0L;
     private static final Map<String, CompletableFuture<ByteBuffer>> IN_FLIGHT = new LinkedHashMap<>();
+    private static long memoryBytes = 0L;
 
     private QqOggCache() {
     }

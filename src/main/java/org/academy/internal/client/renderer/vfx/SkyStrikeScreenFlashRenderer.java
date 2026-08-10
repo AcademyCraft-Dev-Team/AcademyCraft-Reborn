@@ -3,6 +3,7 @@ package org.academy.internal.client.renderer.vfx;
 import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.GpuDevice;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -71,7 +72,7 @@ public final class SkyStrikeScreenFlashRenderer implements VfxRenderer<SkyStrike
             pass.setPipeline(VfxPipelines.SCREEN_FLASH);
             pass.setVertexBuffer(0, quadBuffer.slice());
             pass.setVertexBuffer(1, colorBuffer.slice());
-            var sequential = com.mojang.blaze3d.systems.RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+            var sequential = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
             pass.setIndexBuffer(sequential.getBuffer(6), sequential.type());
             pass.drawIndexed(6, 1, 0, 0, 0);
         }

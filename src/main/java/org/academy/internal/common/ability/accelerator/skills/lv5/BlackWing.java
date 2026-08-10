@@ -46,9 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_B;
-import static org.lwjgl.glfw.GLFW.GLFW_MOD_ALT;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.lwjgl.glfw.GLFW.*;
 
 public final class BlackWing extends Skill {
     public BlackWing() {

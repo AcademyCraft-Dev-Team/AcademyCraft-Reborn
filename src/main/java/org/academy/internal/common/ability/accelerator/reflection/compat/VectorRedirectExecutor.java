@@ -19,7 +19,7 @@ public final class VectorRedirectExecutor {
 
     public static ExecutionResult execute(VectorRedirectPlan plan) {
         if (!plan.hasWorldPath()) return new ExecutionResult(0, 0.0);
-        var level = (ServerLevel) plan.redirector().level();
+        var level = plan.redirector().level();
         var direction = plan.redirectedDirection().normalize();
         var start = plan.mirrorPoint().add(direction.scale(START_EPSILON));
         var end = start.add(direction.scale(plan.redirectedLength()));

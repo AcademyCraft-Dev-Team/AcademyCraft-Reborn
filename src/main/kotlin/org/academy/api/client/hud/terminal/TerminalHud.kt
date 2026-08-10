@@ -27,15 +27,11 @@ import org.academy.api.client.gui.animation.*
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
 import org.academy.api.client.gui.animation.ValueAnimator.Companion.ofFloat
 import org.academy.api.client.gui.command.PosTexRectDrawCommand
-import org.academy.api.client.gui.event.EventType
-import org.academy.api.client.gui.event.CharTypedEvent
-import org.academy.api.client.gui.event.KeyEvent
+import org.academy.api.client.gui.event.*
 import org.academy.api.client.gui.event.MouseEvent.Companion.createDragEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createMoveEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createPressEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createReleaseEvent
-import org.academy.api.client.gui.event.OnClickListener
-import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
@@ -460,8 +456,7 @@ class TerminalHud private constructor() {
     }
 
     private fun onPreeditInput(event: PreeditEvent?): Boolean {
-        if (!isActive || !ClientUtil.hasNoScreen()) return false
-        return TextBoxWidget.handlePreeditInput(event)
+        return !(!isActive || !ClientUtil.hasNoScreen()) && TextBoxWidget.handlePreeditInput(event)
     }
 
     @SubscribeEvent
@@ -794,11 +789,11 @@ class TerminalHud private constructor() {
         }
 
         @JvmStatic
-        fun getBlurRadius(): Float = INSTANCE?.config?.blurRadius?.coerceIn(0f, 20f) ?: 20f
+        fun getBlurRadius(): Float = INSTANCE.config?.blurRadius?.coerceIn(0f, 20f) ?: 20f
 
         @JvmStatic
         fun setBlurRadius(value: Float) {
-            val terminal = INSTANCE ?: return
+            val terminal = INSTANCE
             terminal.config.blurRadius = value.coerceIn(0f, 20f)
             AcademyCraftClient.Config.INSTANCE.save()
         }

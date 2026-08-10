@@ -94,4 +94,60 @@ object ProfileDump {
             collectSelf(child, map)
         }
     }
+
+    /** 命令用：当前采集状态总览。 */
+    @JvmStatic
+    fun status(snapshot: ProfilerSnapshot): String {
+        val sb = StringBuilder()
+        sb.append("== AcademyCraft Profiler Status ==\n")
+            .append("Zone capture: ").append(if (snapshot.zonesEnabled) "ON" else "OFF").append('\n')
+        val sampler = snapshot.sampler
+        sb.append("Sampling: ").append(if (snapshot.sampling) "ON" else "OFF")
+        if (snapshot.sampling) {
+            sb.append(" (paused: ").append(if (snapshot.samplingPaused) "yes" else "no").append(')')
+            if (sampler != null) {
+                sb.append("\n  samples: ").append(sampler.totalSamples)
+                    .append("  duration: ").append("%.1f".format(sampler.durationSeconds)).append(" s")
+            }
+        }
+        sb.append("\nThreads:\n")
+        for (ref in AcademyProfiler.samplerThreads()) {
+            sb.append("  ").append(ref.name).append(" (id ").append(ref.id).append(") ")
+                .append(if (ref.enabled) "enabled" else "disabled").append('\n')
+        }
+        return sb.toString()
+    }
+
+    /** 命令用：zone 树详细查看（可按线程过滤）。 */
+    @JvmStatic
+    fun zonesText(snapshot: ProfilerSnapshot, threadName: String?, maxDepth: Int): String {
+        val zones = snapshot.zones
+        if (zones.isEmpty()) {
+            val state = if (snapshot.zonesEnabled) "capture ON" else "capture OFF"
+            return "== Zone Profile ==\nNo zone data ($state). " +
+                    "Start capture, then trigger the effect, then stop.\n"
+        }
+        val targets = if (threadName != null) zones.filterKeys { it == threadName } else zones
+        if (targets.isEmpty()) {
+            return "== Zone Profile ==\nThread '$threadName' not found. Available: " +
+                    zones.keys.joinToString(", ") + ".\n"
+        }
+        val sb = StringBuilder()
+        for ((name, zoneSnapshot) in targets) {
+            sb.append(dumpZones(zoneSnapshot, maxDepth)).append('\n')
+        }
+        return sb.toString()
+    }
+
+    /** 命令用：采样式方法级 top 查看。 */
+    @JvmStatic
+    fun samplerText(snapshot: ProfilerSnapshot, topN: Int): String {
+        val sampler = snapshot.sampler
+        if (sampler == null) {
+            val state = if (snapshot.sampling) "sampling ON" else "sampling OFF"
+            return "== Sampling Profile ==\nNo sampler data ($state). " +
+                    "Start sampling, then trigger the effect, then stop.\n"
+        }
+        return dumpSampler(sampler, topN)
+    }
 }

@@ -1,6 +1,8 @@
 package org.academy.internal.common.attribute;
 
-/** Pure calculations shared by the P.R.O.P.S server and client. */
+/**
+ * Pure calculations shared by the P.R.O.P.S server and client.
+ */
 public final class PropsMath {
     public static final double MAX_TOTAL = 2_000.0;
     public static final double ACQUISITION_LOG_FACTOR = 0.1075;

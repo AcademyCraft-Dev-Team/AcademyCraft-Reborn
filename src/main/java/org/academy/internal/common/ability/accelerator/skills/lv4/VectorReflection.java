@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
@@ -32,38 +31,23 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.ReflectionHealthRecordCodec;
+import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.accelerator.reflection.compat.*;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageCoordinator;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageResult;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorReflectedDamageAccumulator;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorMotionRedirects;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackPacket;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityEffectLimiter;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorEnvironmentalFeedbackController;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
@@ -75,11 +59,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class VectorReflection extends Skill {
@@ -108,8 +88,8 @@ public class VectorReflection extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT)
-                ), ctx -> Client.onToggle());
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT)
+        ), ctx -> Client.onToggle());
     }
 
     @Override
@@ -129,6 +109,7 @@ public class VectorReflection extends Skill {
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
         public static Config CONFIG = new Config();
+
         public static void onToggle() {
             if (!AbilitySystemClient.beginToggleRequest(Skills.VECTOR_REFLECTION.get())) return;
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
@@ -186,10 +167,10 @@ public class VectorReflection extends Skill {
             var maintenanceCost = ReflectionFilter.getReflectionMaintenanceCost(player);
             if (system.getPlayerStatus(player.getUUID()) != AbilityData.Status.NORMAL
                     || !hasSufficientCpToEnable(
-                            system.getPlayerAvailableCP(player.getUUID()),
-                            maintenanceCost,
-                            system.getPlayerCalculationIntensity(player.getUUID())
-                    )) {
+                    system.getPlayerAvailableCP(player.getUUID()),
+                    maintenanceCost,
+                    system.getPlayerCalculationIntensity(player.getUUID())
+            )) {
                 clearProtection(player);
                 return;
             }
@@ -267,9 +248,8 @@ public class VectorReflection extends Skill {
                     && skillSource.getSkill() == Skills.VECTOR_REFLECTION.get()) return false;
             if (damageSource.getDirectEntity() instanceof Projectile projectile
                     && VectorProjectileRedirects.isRedirected(projectile)) return false;
-            if (damageSource.getDirectEntity() != null
-                    && VectorMotionRedirects.isRedirected(damageSource.getDirectEntity())) return false;
-            return true;
+            return damageSource.getDirectEntity() == null
+                    || !VectorMotionRedirects.isRedirected(damageSource.getDirectEntity());
         }
 
         public static boolean reflectAnomalousDamage(
@@ -283,7 +263,7 @@ public class VectorReflection extends Skill {
                     || !canReflectSource(player, source)) {
                 return false;
             }
-            applyReflection(player, (ServerLevel) player.level(), source, damage);
+            applyReflection(player, player.level(), source, damage);
             player.invulnerableTime = 0;
             VectorDefenseFeedbackTickets.commitFull(player, source);
             return true;
@@ -748,7 +728,9 @@ public class VectorReflection extends Skill {
             tryPlayReflectionSound(player);
         }
 
-        /** Plays the shared reflection cue once per feedback cooldown window. */
+        /**
+         * Plays the shared reflection cue once per feedback cooldown window.
+         */
         public static boolean tryPlayReflectionSound(ServerPlayer player) {
             var tick = player.level().getGameTime();
             var last = LAST_SOUND_TICK.get(player.getUUID());

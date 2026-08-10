@@ -4,14 +4,7 @@ import com.google.gson.JsonObject
 import org.academy.api.client.gui.serialize.PropSpec
 import org.academy.api.client.gui.serialize.PropType
 import org.academy.api.client.gui.serialize.WidgetCodec
-import org.academy.api.client.gui.widget.ButtonWidget
-import org.academy.api.client.gui.widget.EmptyWidget
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.MonochromeImageWidget
-import org.academy.api.client.gui.widget.ParallaxImageWidget
-import org.academy.api.client.gui.widget.TextBoxWidget
+import org.academy.api.client.gui.widget.*
 
 class LabelCodec : WidgetCodec<LabelWidget> {
     override val typeName = "label"

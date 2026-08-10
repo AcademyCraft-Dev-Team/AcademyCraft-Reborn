@@ -4,11 +4,15 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class LinearReflectionResolverTest {
+    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
+        assertEquals(expected.x, actual.x, 1.0E-9);
+        assertEquals(expected.y, actual.y, 1.0E-9);
+        assertEquals(expected.z, actual.z, 1.0E-9);
+    }
+
     @Test
     void findsHorizontalAndVerticalSlabEntries() {
         var horizontal = LinearReflectionResolver.intersectionProgress(
@@ -166,11 +170,5 @@ class LinearReflectionResolverTest {
                 new Vec3(0, Double.POSITIVE_INFINITY, 0)
         ).isEmpty());
         assertFalse(LinearReflectionResolver.fullRangeReturnSegment(valid, Vec3.ZERO).isEmpty());
-    }
-
-    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
-        assertEquals(expected.x, actual.x, 1.0E-9);
-        assertEquals(expected.y, actual.y, 1.0E-9);
-        assertEquals(expected.z, actual.z, 1.0E-9);
     }
 }

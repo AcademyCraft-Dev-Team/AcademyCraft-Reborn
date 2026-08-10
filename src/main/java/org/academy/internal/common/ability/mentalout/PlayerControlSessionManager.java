@@ -2,12 +2,12 @@ package org.academy.internal.common.ability.mentalout;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,20 +17,13 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.item.ItemStack;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlHandle;
-import org.academy.api.common.entitycontrol.ControlRequest;
-import org.academy.api.common.entitycontrol.MentalControlApi;
-import org.academy.api.common.entitycontrol.PlayerControlFrame;
-import org.academy.api.common.entitycontrol.PlayerMovementMode;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.ability.Skills;
@@ -46,13 +39,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.ArrayDeque;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public final class PlayerControlSessionManager {
     public static final int DIRECT_CONTROL_PRIORITY = 300;
@@ -396,7 +383,9 @@ public final class PlayerControlSessionManager {
         FREEZE_ANCHORS.clear();
     }
 
-    /** Returns true when the packet was corrected and vanilla handling must be cancelled. */
+    /**
+     * Returns true when the packet was corrected and vanilla handling must be cancelled.
+     */
     public static boolean validateMovePlayer(ServerPlayer player, ServerboundMovePlayerPacket packet) {
         var controlled = BY_SUBJECT.get(player.getUUID());
         if (controlled != null && controlled.state == State.ACTIVE) {
@@ -655,8 +644,7 @@ public final class PlayerControlSessionManager {
             if (id.equals("boat") || id.endsWith("_boat")) mode = PlayerMovementMode.BOAT;
             else if (id.contains("minecart")) mode = PlayerMovementMode.RAIL;
             else mode = PlayerMovementMode.MOUNT;
-        }
-        else if (subject.isFallFlying()) mode = PlayerMovementMode.GLIDE;
+        } else if (subject.isFallFlying()) mode = PlayerMovementMode.GLIDE;
         else if (subject.getAbilities().flying) mode = PlayerMovementMode.FLY;
         else if (subject.isInWater()) mode = PlayerMovementMode.SWIM;
         else if (subject.onClimbable()) mode = PlayerMovementMode.CLIMB;
@@ -667,7 +655,9 @@ public final class PlayerControlSessionManager {
         );
     }
 
-    /** Path frames originate on the server, so their planned movement mode is authoritative. */
+    /**
+     * Path frames originate on the server, so their planned movement mode is authoritative.
+     */
     static PlayerControlFrame normalizePathFrame(PlayerControlFrame frame) {
         return new PlayerControlFrame(
                 frame.forward(), frame.strafe(), Mth.wrapDegrees(frame.yaw()), frame.pitch(),
@@ -709,7 +699,7 @@ public final class PlayerControlSessionManager {
                 ClipContext.Fluid.ANY,
                 subject
         ));
-        var level = (ServerLevel) subject.level();
+        var level = subject.level();
         var stack = subject.getItemInHand(InteractionHand.MAIN_HAND);
         if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
             subject.gameMode.useItemOn(subject, level, stack, InteractionHand.MAIN_HAND, blockHit);
@@ -819,7 +809,7 @@ public final class PlayerControlSessionManager {
         if (session.kind != Kind.DIRECT || session.state != State.ACTIVE) return;
         var subject = session.subject;
         var inventory = subject.getInventory();
-        var hotbar = new java.util.ArrayList<ItemStack>(9);
+        var hotbar = new ArrayList<ItemStack>(9);
         for (var slot = 0; slot < 9; slot++) hotbar.add(inventory.getItem(slot).copy());
         var state = new TargetViewState(
                 hotbar,
@@ -878,6 +868,92 @@ public final class PlayerControlSessionManager {
 
     private static void feedback(ServerPlayer player, String key) {
         player.sendOverlayMessage(Component.translatable(key));
+    }
+
+    private static void writeFrame(ByteBuf buf, PlayerControlFrame frame) {
+        buf.writeByte(Math.round(frame.forward() * 127.0f));
+        buf.writeByte(Math.round(frame.strafe() * 127.0f));
+        buf.writeShort(Math.round(Mth.wrapDegrees(frame.yaw()) * 100.0f));
+        buf.writeShort(Math.round(frame.pitch() * 100.0f));
+        var actions = 0;
+        if (frame.jump()) actions |= 1;
+        if (frame.sneak()) actions |= 2;
+        if (frame.sprint()) actions |= 4;
+        if (frame.attack()) actions |= 8;
+        if (frame.use()) actions |= 16;
+        buf.writeByte(actions);
+        buf.writeByte(frame.mode().ordinal());
+    }
+
+    private static PlayerControlFrame readFrame(ByteBuf buf) {
+        var forward = buf.readByte() / 127.0f;
+        var strafe = buf.readByte() / 127.0f;
+        var yaw = buf.readShort() / 100.0f;
+        var pitch = buf.readShort() / 100.0f;
+        var actions = buf.readUnsignedByte();
+        var modes = PlayerMovementMode.values();
+        var mode = modes[Math.clamp(buf.readUnsignedByte(), 0, modes.length - 1)];
+        return new PlayerControlFrame(
+                forward, strafe, yaw, pitch,
+                (actions & 1) != 0, (actions & 2) != 0, (actions & 4) != 0,
+                (actions & 8) != 0, (actions & 16) != 0, mode
+        );
+    }
+
+    private static void writeTargetViewState(ByteBuf buf, TargetViewState state) {
+        for (var stack : state.hotbar) ITEM_STACK_CODEC.encode(buf, stack);
+        buf.writeByte(state.selectedSlot);
+        ITEM_STACK_CODEC.encode(buf, state.offhand);
+        buf.writeFloat(state.health);
+        buf.writeFloat(state.maxHealth);
+        buf.writeFloat(state.absorption);
+        buf.writeByte(state.armor);
+        buf.writeByte(state.food);
+        buf.writeFloat(state.saturation);
+        ByteBufCodecs.VAR_INT.encode(buf, state.air);
+        ByteBufCodecs.VAR_INT.encode(buf, state.maxAir);
+        buf.writeFloat(state.experienceProgress);
+        ByteBufCodecs.VAR_INT.encode(buf, state.experienceLevel);
+        buf.writeFloat(state.attackStrength);
+        buf.writeBoolean(state.usingItem);
+        buf.writeByte(state.useHand.ordinal());
+        ByteBufCodecs.VAR_INT.encode(buf, state.useRemainingTicks);
+    }
+
+    private static TargetViewState readTargetViewState(ByteBuf buf) {
+        var hotbar = new ArrayList<ItemStack>(9);
+        for (var slot = 0; slot < 9; slot++) hotbar.add(ITEM_STACK_CODEC.decode(buf));
+        var selectedSlot = buf.readUnsignedByte();
+        var offhand = ITEM_STACK_CODEC.decode(buf);
+        var health = buf.readFloat();
+        var maxHealth = buf.readFloat();
+        var absorption = buf.readFloat();
+        var armor = buf.readUnsignedByte();
+        var food = buf.readUnsignedByte();
+        var saturation = buf.readFloat();
+        var air = ByteBufCodecs.VAR_INT.decode(buf);
+        var maxAir = ByteBufCodecs.VAR_INT.decode(buf);
+        var experienceProgress = buf.readFloat();
+        var experienceLevel = ByteBufCodecs.VAR_INT.decode(buf);
+        var attackStrength = buf.readFloat();
+        var usingItem = buf.readBoolean();
+        var hands = InteractionHand.values();
+        var useHand = hands[Math.clamp(buf.readUnsignedByte(), 0, hands.length - 1)];
+        var useRemainingTicks = ByteBufCodecs.VAR_INT.decode(buf);
+        return new TargetViewState(
+                hotbar, selectedSlot, offhand, health, maxHealth, absorption,
+                armor, food, saturation, air, maxAir, experienceProgress,
+                experienceLevel, attackStrength, usingItem, useHand, useRemainingTicks
+        );
+    }
+
+    private static void writeUuid(ByteBuf buf, UUID uuid) {
+        buf.writeLong(uuid.getMostSignificantBits());
+        buf.writeLong(uuid.getLeastSignificantBits());
+    }
+
+    private static UUID readUuid(ByteBuf buf) {
+        return new UUID(buf.readLong(), buf.readLong());
     }
 
     public enum Role {
@@ -1374,92 +1450,6 @@ public final class PlayerControlSessionManager {
         }
     }
 
-    private static void writeFrame(ByteBuf buf, PlayerControlFrame frame) {
-        buf.writeByte(Math.round(frame.forward() * 127.0f));
-        buf.writeByte(Math.round(frame.strafe() * 127.0f));
-        buf.writeShort(Math.round(Mth.wrapDegrees(frame.yaw()) * 100.0f));
-        buf.writeShort(Math.round(frame.pitch() * 100.0f));
-        var actions = 0;
-        if (frame.jump()) actions |= 1;
-        if (frame.sneak()) actions |= 2;
-        if (frame.sprint()) actions |= 4;
-        if (frame.attack()) actions |= 8;
-        if (frame.use()) actions |= 16;
-        buf.writeByte(actions);
-        buf.writeByte(frame.mode().ordinal());
-    }
-
-    private static PlayerControlFrame readFrame(ByteBuf buf) {
-        var forward = buf.readByte() / 127.0f;
-        var strafe = buf.readByte() / 127.0f;
-        var yaw = buf.readShort() / 100.0f;
-        var pitch = buf.readShort() / 100.0f;
-        var actions = buf.readUnsignedByte();
-        var modes = PlayerMovementMode.values();
-        var mode = modes[Math.clamp(buf.readUnsignedByte(), 0, modes.length - 1)];
-        return new PlayerControlFrame(
-                forward, strafe, yaw, pitch,
-                (actions & 1) != 0, (actions & 2) != 0, (actions & 4) != 0,
-                (actions & 8) != 0, (actions & 16) != 0, mode
-        );
-    }
-
-    private static void writeTargetViewState(ByteBuf buf, TargetViewState state) {
-        for (var stack : state.hotbar) ITEM_STACK_CODEC.encode(buf, stack);
-        buf.writeByte(state.selectedSlot);
-        ITEM_STACK_CODEC.encode(buf, state.offhand);
-        buf.writeFloat(state.health);
-        buf.writeFloat(state.maxHealth);
-        buf.writeFloat(state.absorption);
-        buf.writeByte(state.armor);
-        buf.writeByte(state.food);
-        buf.writeFloat(state.saturation);
-        ByteBufCodecs.VAR_INT.encode(buf, state.air);
-        ByteBufCodecs.VAR_INT.encode(buf, state.maxAir);
-        buf.writeFloat(state.experienceProgress);
-        ByteBufCodecs.VAR_INT.encode(buf, state.experienceLevel);
-        buf.writeFloat(state.attackStrength);
-        buf.writeBoolean(state.usingItem);
-        buf.writeByte(state.useHand.ordinal());
-        ByteBufCodecs.VAR_INT.encode(buf, state.useRemainingTicks);
-    }
-
-    private static TargetViewState readTargetViewState(ByteBuf buf) {
-        var hotbar = new java.util.ArrayList<ItemStack>(9);
-        for (var slot = 0; slot < 9; slot++) hotbar.add(ITEM_STACK_CODEC.decode(buf));
-        var selectedSlot = buf.readUnsignedByte();
-        var offhand = ITEM_STACK_CODEC.decode(buf);
-        var health = buf.readFloat();
-        var maxHealth = buf.readFloat();
-        var absorption = buf.readFloat();
-        var armor = buf.readUnsignedByte();
-        var food = buf.readUnsignedByte();
-        var saturation = buf.readFloat();
-        var air = ByteBufCodecs.VAR_INT.decode(buf);
-        var maxAir = ByteBufCodecs.VAR_INT.decode(buf);
-        var experienceProgress = buf.readFloat();
-        var experienceLevel = ByteBufCodecs.VAR_INT.decode(buf);
-        var attackStrength = buf.readFloat();
-        var usingItem = buf.readBoolean();
-        var hands = InteractionHand.values();
-        var useHand = hands[Math.clamp(buf.readUnsignedByte(), 0, hands.length - 1)];
-        var useRemainingTicks = ByteBufCodecs.VAR_INT.decode(buf);
-        return new TargetViewState(
-                hotbar, selectedSlot, offhand, health, maxHealth, absorption,
-                armor, food, saturation, air, maxAir, experienceProgress,
-                experienceLevel, attackStrength, usingItem, useHand, useRemainingTicks
-        );
-    }
-
-    private static void writeUuid(ByteBuf buf, UUID uuid) {
-        buf.writeLong(uuid.getMostSignificantBits());
-        buf.writeLong(uuid.getLeastSignificantBits());
-    }
-
-    private static UUID readUuid(ByteBuf buf) {
-        return new UUID(buf.readLong(), buf.readLong());
-    }
-
     private record Anchor(Vec3 position, float yaw, float pitch) {
     }
 
@@ -1504,7 +1494,7 @@ public final class PlayerControlSessionManager {
             experienceProgress = Math.clamp(experienceProgress, 0.0f, 1.0f);
             experienceLevel = Math.max(0, experienceLevel);
             attackStrength = Math.clamp(attackStrength, 0.0f, 1.0f);
-            useHand = java.util.Objects.requireNonNull(useHand, "useHand");
+            useHand = Objects.requireNonNull(useHand, "useHand");
             useRemainingTicks = Math.max(0, useRemainingTicks);
         }
 
@@ -1522,6 +1512,8 @@ public final class PlayerControlSessionManager {
         private final ControlHandle handle;
         private final long readyDeadline;
         private final Anchor controllerAnchor;
+        private final ArrayDeque<AuthorizedFrame> authorizedFrames = new ArrayDeque<>();
+        private final ArrayDeque<AcknowledgedFrame> acknowledgedFrames = new ArrayDeque<>();
         private State state = State.HANDSHAKE;
         private boolean controllerReady;
         private boolean subjectReady;
@@ -1542,8 +1534,6 @@ public final class PlayerControlSessionManager {
         private int invalidMoves;
         private Vec3 lastGoodPosition;
         private PlayerControlFrame authorizedFrame = PlayerControlFrame.NEUTRAL;
-        private final ArrayDeque<AuthorizedFrame> authorizedFrames = new ArrayDeque<>();
-        private final ArrayDeque<AcknowledgedFrame> acknowledgedFrames = new ArrayDeque<>();
 
         private Session(
                 UUID id,

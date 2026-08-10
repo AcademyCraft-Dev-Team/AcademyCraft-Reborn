@@ -102,7 +102,8 @@ public final class PlasmaCloudRenderer implements VfxRenderer<PlasmaCloudData> {
                 OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.TEX_RING_TRANSLUCENT);
-            RenderSystem.bindDefaultUniforms(renderPass);
+            var projection = RenderSystem.getProjectionMatrixBuffer();
+            if (projection != null) renderPass.setUniform("Projection", projection);
             var transform = RenderSystem.getDynamicUniforms()
                     .writeTransform(RenderSystem.getModelViewMatrixCopy());
             renderPass.setUniform("DynamicTransforms", transform);

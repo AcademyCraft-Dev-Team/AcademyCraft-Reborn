@@ -15,7 +15,9 @@ import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
 
-/** VFX-pipeline port of the original layered plasma layout. */
+/**
+ * VFX-pipeline port of the original layered plasma layout.
+ */
 public final class PlasmaVfx implements Vfx {
     private static final int SOURCE_LAYER_COUNT = 28;
     private static final int UPPER_LAYER_COUNT = SOURCE_LAYER_COUNT / 2;
@@ -31,6 +33,15 @@ public final class PlasmaVfx implements Vfx {
 
     public PlasmaVfx(Plasma plasma) {
         this.plasma = plasma;
+    }
+
+    private static void sampleCore(VfxSink sink, double x, double y, double z,
+                                   float progress, float time) {
+        var pulse = 0.5f + 0.5f * Mth.sin(time * 0.34f);
+        var innerRadius = (0.9f + progress * 2.7f) * (0.96f + pulse * 0.08f);
+        var position = new Vector3f((float) x, (float) y, (float) z);
+        sink.push(new PlasmaCoreData(position, innerRadius * 2.9f, 0.32f));
+        sink.push(new PlasmaCoreData(position, innerRadius * 2.0f, 0.98f));
     }
 
     @Override
@@ -103,15 +114,6 @@ public final class PlasmaVfx implements Vfx {
         }
         cloudInstances.flip();
         sink.push(new PlasmaCloudData(cloudInstances));
-    }
-
-    private static void sampleCore(VfxSink sink, double x, double y, double z,
-                                   float progress, float time) {
-        var pulse = 0.5f + 0.5f * Mth.sin(time * 0.34f);
-        var innerRadius = (0.9f + progress * 2.7f) * (0.96f + pulse * 0.08f);
-        var position = new Vector3f((float) x, (float) y, (float) z);
-        sink.push(new PlasmaCoreData(position, innerRadius * 2.9f, 0.32f));
-        sink.push(new PlasmaCoreData(position, innerRadius * 2.0f, 0.98f));
     }
 
     @Override

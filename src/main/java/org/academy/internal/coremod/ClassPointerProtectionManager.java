@@ -11,6 +11,9 @@ public final class ClassPointerProtectionManager {
     private static final Object LOCK = new Object();
     private static final Map<Object, ProtectionState> STATES = new IdentityHashMap<>();
 
+    private ClassPointerProtectionManager() {
+    }
+
     public static boolean ensureServerPlayer(ServerPlayer player) {
         return ensure(player, Side.SERVER);
     }
@@ -158,11 +161,11 @@ public final class ClassPointerProtectionManager {
 
     private static final class ProtectionState {
         private final Side side;
-        private volatile ProtectionBackend backend;
         private final Class<?> originalType;
         private final Class<?> dispatchType;
         private final long originalWord;
         private final long dispatchWord;
+        private volatile ProtectionBackend backend;
         private volatile String failureReason;
         private volatile boolean failureLogged;
         private volatile long lastRepairLogNanos;
@@ -178,8 +181,5 @@ public final class ClassPointerProtectionManager {
             this.dispatchWord = dispatchWord;
             this.failureReason = failureReason;
         }
-    }
-
-    private ClassPointerProtectionManager() {
     }
 }

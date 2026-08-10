@@ -120,7 +120,8 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
         try (var renderPass = passEncoder.createRenderPass(
                 () -> glow ? "VFX Beam Glow" : "VFX Beam Core", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
-            RenderSystem.bindDefaultUniforms(renderPass);
+            var projection = RenderSystem.getProjectionMatrixBuffer();
+            if (projection != null) renderPass.setUniform("Projection", projection);
             var transform = RenderSystem.getDynamicUniforms().writeTransform(baseModelView, colorModulator);
             renderPass.setUniform("DynamicTransforms", transform);
 

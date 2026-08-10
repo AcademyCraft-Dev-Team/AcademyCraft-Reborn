@@ -92,14 +92,27 @@ public final class AreaTeleportState {
     }
 
     public record Region(ResourceKey<Level> dimension, BlockPos min, BlockPos max) {
-        public int sizeX() { return max.getX() - min.getX() + 1; }
-        public int sizeY() { return max.getY() - min.getY() + 1; }
-        public int sizeZ() { return max.getZ() - min.getZ() + 1; }
-        public long volume() { return (long) sizeX() * sizeY() * sizeZ(); }
+        public int sizeX() {
+            return max.getX() - min.getX() + 1;
+        }
+
+        public int sizeY() {
+            return max.getY() - min.getY() + 1;
+        }
+
+        public int sizeZ() {
+            return max.getZ() - min.getZ() + 1;
+        }
+
+        public long volume() {
+            return (long) sizeX() * sizeY() * sizeZ();
+        }
+
         public boolean withinLimit() {
             return sizeX() > 0 && sizeY() > 0 && sizeZ() > 0
                     && sizeX() <= MAX_REGION_SIZE && sizeY() <= MAX_REGION_SIZE && sizeZ() <= MAX_REGION_SIZE;
         }
+
         public AABB box() {
             return new AABB(min.getX(), min.getY(), min.getZ(),
                     max.getX() + 1.0, max.getY() + 1.0, max.getZ() + 1.0);

@@ -13,22 +13,15 @@ import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.internal.client.gui.DataTerminalTheme;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.OptionalInt;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public final class PrecisionOperationScreen extends UiScreen implements SerializedUiDebugHost {
     static final int NODE_W = 80;
@@ -112,6 +105,138 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         this.revision = revision;
     }
 
+    private static void addLayoutSlot(
+            FrameLayoutWidget panel,
+            String name,
+            int x,
+            int y,
+            int width,
+            int height
+    ) {
+        var slot = new EmptyWidget();
+        slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
+        panel.addChild(name, slot);
+    }
+
+    private static void renderPort(
+            GuiGraphicsExtractor graphics,
+            int centerX,
+            int centerY,
+            int color,
+            boolean openEnd
+    ) {
+        graphics.fill(centerX - 3, centerY - 3, centerX + 3, centerY + 3, color);
+        if (openEnd) {
+            graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2,
+                    DataTerminalTheme.CANVAS_BACKGROUND);
+        }
+    }
+
+    private static int inputOffsetY(int port) {
+        return NODE_HEADER_H + 4 + port * PORT_ROW_H;
+    }
+
+    private static int outputOffsetY(int port) {
+        return NODE_HEADER_H + 4 + port * PORT_ROW_H;
+    }
+
+    static boolean isDurationInsertionAllowed(String input) {
+        return input.chars().allMatch(Character::isDigit);
+    }
+
+    static OptionalInt parseDurationSeconds(String value) {
+        if (value.isEmpty()) return OptionalInt.of(0);
+        try {
+            var parsed = Integer.parseInt(value);
+            return parsed >= 1 && parsed <= 3600 ? OptionalInt.of(parsed) : OptionalInt.empty();
+        } catch (NumberFormatException ignored) {
+            return OptionalInt.empty();
+        }
+    }
+
+    private static String nodeDescriptionKey(PrecisionGraph.NodeKind kind) {
+        return "screen.academy.precision_operation.node."
+                + kind.name().toLowerCase(Locale.ROOT) + ".description";
+    }
+
+    private static String portKey(String key) {
+        return "screen.academy.precision_operation.port." + key;
+    }
+
+    private static String groupKey(PrecisionGraph.NodeGroup group) {
+        return "screen.academy.precision_operation.group." + group.name().toLowerCase(Locale.ROOT);
+    }
+
+    private static String groupGlyph(PrecisionGraph.NodeGroup group) {
+        return switch (group) {
+            case TARGET -> "T";
+            case COLLECTION -> "S";
+            case FILTER -> "F";
+            case MENTAL_ACTION -> "M";
+            case CONTROL_ACTION -> "C";
+        };
+    }
+
+    private static int categoryColor(PrecisionGraph.NodeCategory category) {
+        return switch (category) {
+            case SOURCE -> 0xFFE2C85D;
+            case COLLECTION -> 0xFFB8955F;
+            case FILTER -> 0xFF78B77A;
+            case ACTION -> 0xFFD98250;
+            case CONTROL -> 0xFFC86F7D;
+        };
+    }
+
+    private static int portColor(PrecisionGraph.PortType type) {
+        return switch (type) {
+            case ENTITY -> 0xFFFFCF70;
+            case ENTITY_SET -> 0xFF75D7A7;
+            case DESTINATION -> 0xFF72B9E8;
+            case FLOW -> 0xFFDB82E8;
+        };
+    }
+
+    private static void orthogonalLine(
+            GuiGraphicsExtractor graphics,
+            int x1,
+            int y1,
+            int x2,
+            int y2,
+            int color
+    ) {
+        var mid = (x1 + x2) / 2;
+        line(graphics, x1, y1, mid, y1, color);
+        line(graphics, mid, y1, mid, y2, color);
+        line(graphics, mid, y2, x2, y2, color);
+    }
+
+    private static void line(GuiGraphicsExtractor graphics, int x1, int y1, int x2, int y2, int color) {
+        graphics.fill(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2) + 1, Math.max(y1, y2) + 1, color);
+    }
+
+    private static void border(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
+        DataTerminalTheme.border(graphics, x, y, width, height, color);
+    }
+
+    private static boolean inside(double x, double y, double left, double top, double width, double height) {
+        return x >= left && x < left + width && y >= top && y < top + height;
+    }
+
+    private static Rect rect(Widget widget) {
+        return new Rect(
+                Math.round(widget.getAbsoluteX()),
+                Math.round(widget.getAbsoluteY()),
+                Math.round(widget.getWidth()),
+                Math.round(widget.getHeight())
+        );
+    }
+
+    private static <T> List<T> reversed(List<T> values) {
+        var result = new ArrayList<>(values);
+        Collections.reverse(result);
+        return result;
+    }
+
     @Override
     protected void onInit() {
         var layout = PrecisionEditorGeometry.layout(width, height);
@@ -191,19 +316,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 geometry.rightW(), geometry.canvasH());
         layout.addChild("panel", panel);
         return layout;
-    }
-
-    private static void addLayoutSlot(
-            FrameLayoutWidget panel,
-            String name,
-            int x,
-            int y,
-            int width,
-            int height
-    ) {
-        var slot = new EmptyWidget();
-        slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
-        panel.addChild(name, slot);
     }
 
     private void syncSerializedLayout() {
@@ -463,20 +575,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         }
     }
 
-    private static void renderPort(
-            GuiGraphicsExtractor graphics,
-            int centerX,
-            int centerY,
-            int color,
-            boolean openEnd
-    ) {
-        graphics.fill(centerX - 3, centerY - 3, centerX + 3, centerY + 3, color);
-        if (openEnd) {
-            graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2,
-                    DataTerminalTheme.CANVAS_BACKGROUND);
-        }
-    }
-
     private void renderConnectionPreview(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (connection == null) return;
         var anchor = endpointScreen(connection.endpoint);
@@ -547,7 +645,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         smallText(graphics, Component.translatable("screen.academy.precision_operation.parameter",
                 formatParameter(node)).getString(), x, y, TEXT, width);
         if (kind == PrecisionGraph.ParameterKind.DURATION_SECONDS) {
-            return;
         } else if (kind == PrecisionGraph.ParameterKind.RANGE
                 || kind == PrecisionGraph.ParameterKind.HEALTH_PERCENT) {
             var min = 1.0;
@@ -888,7 +985,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         }
         if (moved) {
             var candidates = compatibleKinds(connection.endpoint).stream().limit(12).toList();
-            if (!candidates.isEmpty()) quickInsert = new QuickInsert((int) mouseX, (int) mouseY, candidates, connection.endpoint);
+            if (!candidates.isEmpty())
+                quickInsert = new QuickInsert((int) mouseX, (int) mouseY, candidates, connection.endpoint);
             connection = null;
         }
     }
@@ -979,7 +1077,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         return node;
     }
 
-    private java.util.Optional<PrecisionGraph.Node> tailAction() {
+    private Optional<PrecisionGraph.Node> tailAction() {
         var sources = graph.edges().stream()
                 .filter(edge -> {
                     var source = node(edge.fromNode());
@@ -987,7 +1085,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                             && source.kind().outputDefinitions().get(edge.fromPort()).type() == PrecisionGraph.PortType.FLOW;
                 })
                 .map(PrecisionGraph.Edge::fromNode)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         return graph.nodes().stream().filter(node -> node.kind().isAction())
                 .filter(node -> !sources.contains(node.id()))
                 .min(Comparator.comparingInt(PrecisionGraph.Node::id));
@@ -1002,7 +1100,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (selected.kind().isAction()) {
             for (var edge : graph.edges()) {
                 if (edge.toNode() == selected.id() && edge.toPort() == selected.kind().flowInputPort()) before = edge;
-                if (edge.fromNode() == selected.id() && edge.fromPort() == selected.kind().flowOutputPort()) after = edge;
+                if (edge.fromNode() == selected.id() && edge.fromPort() == selected.kind().flowOutputPort())
+                    after = edge;
             }
         }
         var edges = new ArrayList<>(graph.edges().stream().filter(edge ->
@@ -1071,7 +1170,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private List<PrecisionGraph.Node> orderedActions() {
         var validation = graph.validate();
         if (validation.valid()) {
-            var byId = graph.nodes().stream().collect(java.util.stream.Collectors.toMap(
+            var byId = graph.nodes().stream().collect(Collectors.toMap(
                     PrecisionGraph.Node::id, node -> node));
             return validation.actionOrder().stream().map(byId::get).toList();
         }
@@ -1109,7 +1208,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var kind = node.kind().parameterKind();
         var max = switch (kind) {
             case COUNT -> 8;
-            case CAPABILITY -> org.academy.api.common.entitycontrol.ControlCapability.values().length - 1;
+            case CAPABILITY -> ControlCapability.values().length - 1;
             case SORT_DIRECTION -> 1;
             case ENTITY_TYPE -> 3;
             default -> Integer.MAX_VALUE;
@@ -1205,7 +1304,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private List<PrecisionGraph.NodeKind> visibleKinds() {
         var query = search == null ? "" : search.getValue().strip().toLowerCase(Locale.ROOT);
-        return java.util.Arrays.stream(PrecisionGraph.NodeKind.values()).filter(kind -> {
+        return Arrays.stream(PrecisionGraph.NodeKind.values()).filter(kind -> {
             if (query.isEmpty()) return kind.group() == selectedGroup;
             var label = nodeLabel(kind).getString().toLowerCase(Locale.ROOT);
             var description = Component.translatable(nodeDescriptionKey(kind)).getString().toLowerCase(Locale.ROOT);
@@ -1216,7 +1315,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     }
 
     private List<PrecisionGraph.NodeKind> compatibleKinds(Endpoint anchor) {
-        return java.util.Arrays.stream(PrecisionGraph.NodeKind.values())
+        return Arrays.stream(PrecisionGraph.NodeKind.values())
                 .filter(kind -> anchor.input
                         ? kind.outputDefinitions().stream().anyMatch(port ->
                         PrecisionGraph.isPortCompatible(port.type(), anchor.type))
@@ -1369,14 +1468,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 + Math.max(node.kind().inputDefinitions().size(), node.kind().outputDefinitions().size()) * PORT_ROW_H + 3);
     }
 
-    private static int inputOffsetY(int port) {
-        return NODE_HEADER_H + 4 + port * PORT_ROW_H;
-    }
-
-    private static int outputOffsetY(int port) {
-        return NODE_HEADER_H + 4 + port * PORT_ROW_H;
-    }
-
     private double screenToGraphX(double screenX) {
         return PrecisionEditorGeometry.screenToGraph(screenX, canvasX, panX, zoom);
     }
@@ -1464,20 +1555,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (valid && selected.parameter() != parsed.getAsInt()) setParameter(selected, parsed.getAsInt());
     }
 
-    static boolean isDurationInsertionAllowed(String input) {
-        return input.chars().allMatch(Character::isDigit);
-    }
-
-    static OptionalInt parseDurationSeconds(String value) {
-        if (value.isEmpty()) return OptionalInt.of(0);
-        try {
-            var parsed = Integer.parseInt(value);
-            return parsed >= 1 && parsed <= 3600 ? OptionalInt.of(parsed) : OptionalInt.empty();
-        } catch (NumberFormatException ignored) {
-            return OptionalInt.empty();
-        }
-    }
-
     private String formatParameter(PrecisionGraph.Node node) {
         return switch (node.kind().parameterKind()) {
             case NONE -> "-";
@@ -1504,29 +1581,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private Component nodeLabel(PrecisionGraph.NodeKind kind) {
         return Component.translatable("screen.academy.precision_operation.node."
                 + kind.name().toLowerCase(Locale.ROOT));
-    }
-
-    private static String nodeDescriptionKey(PrecisionGraph.NodeKind kind) {
-        return "screen.academy.precision_operation.node."
-                + kind.name().toLowerCase(Locale.ROOT) + ".description";
-    }
-
-    private static String portKey(String key) {
-        return "screen.academy.precision_operation.port." + key;
-    }
-
-    private static String groupKey(PrecisionGraph.NodeGroup group) {
-        return "screen.academy.precision_operation.group." + group.name().toLowerCase(Locale.ROOT);
-    }
-
-    private static String groupGlyph(PrecisionGraph.NodeGroup group) {
-        return switch (group) {
-            case TARGET -> "T";
-            case COLLECTION -> "S";
-            case FILTER -> "F";
-            case MENTAL_ACTION -> "M";
-            case CONTROL_ACTION -> "C";
-        };
     }
 
     private void showTransient(PrecisionGraph.Diagnostic shown) {
@@ -1606,66 +1660,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         DataTerminalTheme.button(graphics, x, y, TOOL_SIZE, TOOL_SIZE, !disabled, false, hover);
         smallText(graphics, glyph, x + 4, y + 4,
                 disabled ? DataTerminalTheme.TEXT_DISABLED : TEXT, 8);
-    }
-
-    private static int categoryColor(PrecisionGraph.NodeCategory category) {
-        return switch (category) {
-            case SOURCE -> 0xFFE2C85D;
-            case COLLECTION -> 0xFFB8955F;
-            case FILTER -> 0xFF78B77A;
-            case ACTION -> 0xFFD98250;
-            case CONTROL -> 0xFFC86F7D;
-        };
-    }
-
-    private static int portColor(PrecisionGraph.PortType type) {
-        return switch (type) {
-            case ENTITY -> 0xFFFFCF70;
-            case ENTITY_SET -> 0xFF75D7A7;
-            case DESTINATION -> 0xFF72B9E8;
-            case FLOW -> 0xFFDB82E8;
-        };
-    }
-
-    private static void orthogonalLine(
-            GuiGraphicsExtractor graphics,
-            int x1,
-            int y1,
-            int x2,
-            int y2,
-            int color
-    ) {
-        var mid = (x1 + x2) / 2;
-        line(graphics, x1, y1, mid, y1, color);
-        line(graphics, mid, y1, mid, y2, color);
-        line(graphics, mid, y2, x2, y2, color);
-    }
-
-    private static void line(GuiGraphicsExtractor graphics, int x1, int y1, int x2, int y2, int color) {
-        graphics.fill(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2) + 1, Math.max(y1, y2) + 1, color);
-    }
-
-    private static void border(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
-        DataTerminalTheme.border(graphics, x, y, width, height, color);
-    }
-
-    private static boolean inside(double x, double y, double left, double top, double width, double height) {
-        return x >= left && x < left + width && y >= top && y < top + height;
-    }
-
-    private static Rect rect(Widget widget) {
-        return new Rect(
-                Math.round(widget.getAbsoluteX()),
-                Math.round(widget.getAbsoluteY()),
-                Math.round(widget.getWidth()),
-                Math.round(widget.getHeight())
-        );
-    }
-
-    private static <T> List<T> reversed(List<T> values) {
-        var result = new ArrayList<>(values);
-        java.util.Collections.reverse(result);
-        return result;
     }
 
     private record Endpoint(int nodeId, int port, boolean input, PrecisionGraph.PortType type) {

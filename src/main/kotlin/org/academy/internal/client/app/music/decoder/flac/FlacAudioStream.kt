@@ -61,8 +61,7 @@ class FlacAudioStream(audioData: ByteBuffer) : AudioStream {
     }
 
     private fun ensureDataAvailable(): Boolean {
-        if (!isStagingBufferEmpty()) return true
-        return fetchNextFrame()
+        return !isStagingBufferEmpty() || fetchNextFrame()
     }
 
     private fun isStagingBufferEmpty(): Boolean =

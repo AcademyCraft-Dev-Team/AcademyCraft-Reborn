@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -107,7 +108,7 @@ public class IronSandArsenal extends Skill {
         }
 
         private static boolean isActive() {
-            var player = net.minecraft.client.Minecraft.getInstance().player;
+            var player = Minecraft.getInstance().player;
             return player != null && player.getData(AttachmentTypes.IRON_SAND_DATA.get()).active();
         }
 
@@ -347,7 +348,9 @@ public class IronSandArsenal extends Skill {
         }
     }
 
-    /** Kept for protocol compatibility with older clients; forms no longer exist. */
+    /**
+     * Kept for protocol compatibility with older clients; forms no longer exist.
+     */
     @PacketTarget(ThreadType.SERVER)
     public static final class FormSelectPacket extends Packet<ServerGamePacketListenerImpl, FormSelectPacket> {
         public static final FormSelectPacket INSTANCE = new FormSelectPacket();

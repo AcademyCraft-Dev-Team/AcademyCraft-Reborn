@@ -2,12 +2,7 @@ package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.warden.Warden;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlSupport;
-import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import org.academy.api.common.entitycontrol.*;
 
 public final class WardenMentalControlAdapter implements MentalControlAdapter {
     @Override

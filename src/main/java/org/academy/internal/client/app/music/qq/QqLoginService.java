@@ -6,24 +6,17 @@ import org.academy.AcademyCraft;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class QqLoginService {
@@ -49,7 +42,6 @@ public final class QqLoginService {
     private static final Pattern META_REFRESH_PATTERN = Pattern.compile("url=([^\"'>\\s]+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("(\\d+)");
     private static final Map<String, String> AUTH_SESSION_COOKIES = new LinkedHashMap<>();
-    private static volatile String lastStatusText = "QQ 音乐：未登录";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(new ThreadFactory() {
         private final AtomicInteger counter = new AtomicInteger(1);
 
@@ -60,20 +52,9 @@ public final class QqLoginService {
             return thread;
         }
     });
+    private static volatile String lastStatusText = "QQ 音乐：未登录";
 
     private QqLoginService() {
-    }
-
-    public enum LoginState {
-        IDLE,
-        FETCHING_QR,
-        WAITING_SCAN,
-        SUCCESS,
-        FAILED,
-        QR_EXPIRED
-    }
-
-    public record QrCodeSession(byte[] imageBytes, String qrsig) {
     }
 
     public static String getLastStatusText() {
@@ -85,13 +66,12 @@ public final class QqLoginService {
             try {
                 updateStatus("QQ 音乐：阶段 1/4 获取二维码");
                 clearAuthSessionCookies();
-                var urlBuilder = new StringBuilder(QR_SHOW_URL);
-                urlBuilder.append("?appid=").append(APPID);
-                urlBuilder.append("&e=2&l=M&s=3&d=72&v=4&t=0.787&daid=383");
-                urlBuilder.append("&pt_3rd_aid=").append(THIRD_APPID);
-                urlBuilder.append("&u1=").append(URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8));
+                String urlBuilder = QR_SHOW_URL + "?appid=" + APPID +
+                        "&e=2&l=M&s=3&d=72&v=4&t=0.787&daid=383" +
+                        "&pt_3rd_aid=" + THIRD_APPID +
+                        "&u1=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8);
 
-                var connection = (HttpURLConnection) new URL(urlBuilder.toString()).openConnection();
+                var connection = (HttpURLConnection) new URL(urlBuilder).openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(15000);
@@ -141,16 +121,15 @@ public final class QqLoginService {
                 }
                 updateStatus("QQ 音乐：阶段 2/4 等待扫码确认");
                 var ptqrtoken = calculatePtqrtoken(qrsig);
-                var urlBuilder = new StringBuilder(QR_LOGIN_URL);
-                urlBuilder.append("?u1=").append(URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8));
-                urlBuilder.append("&ptqrtoken=").append(ptqrtoken);
-                urlBuilder.append("&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052");
-                urlBuilder.append("&js_ver=25072815&js_type=1&login_sig=&pt_uistyle=40");
-                urlBuilder.append("&aid=").append(APPID);
-                urlBuilder.append("&daid=383");
-                urlBuilder.append("&pt_3rd_aid=").append(THIRD_APPID);
+                String urlBuilder = QR_LOGIN_URL + "?u1=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8) +
+                        "&ptqrtoken=" + ptqrtoken +
+                        "&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052" +
+                        "&js_ver=25072815&js_type=1&login_sig=&pt_uistyle=40" +
+                        "&aid=" + APPID +
+                        "&daid=383" +
+                        "&pt_3rd_aid=" + THIRD_APPID;
 
-                var connection = (HttpURLConnection) new URL(urlBuilder.toString()).openConnection();
+                var connection = (HttpURLConnection) new URL(urlBuilder).openConnection();
                 connection.setRequestMethod("GET");
                 connection.setRequestProperty("Cookie", "qrsig=" + qrsig);
                 connection.setConnectTimeout(10000);
@@ -592,21 +571,6 @@ public final class QqLoginService {
         }
     }
 
-    enum CredentialSource {
-        JSON,
-        COOKIE,
-        NONE
-    }
-
-    record LoginExchangeResult(
-            int rootCode,
-            int serviceCode,
-            String responseKey,
-            CredentialSource credentialSource,
-            QqCredential credential
-    ) {
-    }
-
     private static String readResponse(HttpURLConnection connection) throws IOException {
         var stream = connection.getResponseCode() >= 400 ? connection.getErrorStream() : connection.getInputStream();
         if (stream == null) {
@@ -797,17 +761,17 @@ public final class QqLoginService {
         for (int port : ports) {
             HttpURLConnection connection = null;
             try {
-                var builder = new StringBuilder(LOCAL_PTLOGIN_HOST)
-                        .append(':').append(port)
-                        .append("/pt_get_st?clientuin=").append(normalizedUin)
-                        .append("&r=").append(Math.random())
-                        .append("&pt_local_tk=").append(URLEncoder.encode(ptLocalToken, StandardCharsets.UTF_8))
-                        .append("&pt_aid=").append(APPID)
-                        .append("&daid=383")
-                        .append("&pt_3rd_aid=").append(THIRD_APPID)
-                        .append("&u1=").append(URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8))
-                        .append("&callback=__jp0");
-                connection = (HttpURLConnection) new URL(builder.toString()).openConnection();
+                String builder = LOCAL_PTLOGIN_HOST +
+                        ':' + port +
+                        "/pt_get_st?clientuin=" + normalizedUin +
+                        "&r=" + Math.random() +
+                        "&pt_local_tk=" + URLEncoder.encode(ptLocalToken, StandardCharsets.UTF_8) +
+                        "&pt_aid=" + APPID +
+                        "&daid=383" +
+                        "&pt_3rd_aid=" + THIRD_APPID +
+                        "&u1=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8) +
+                        "&callback=__jp0";
+                connection = (HttpURLConnection) new URL(builder).openConnection();
                 connection.setRequestMethod("GET");
                 connection.setInstanceFollowRedirects(false);
                 connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
@@ -838,16 +802,16 @@ public final class QqLoginService {
     private static String requestPtloginJumpCode(String normalizedUin, PtLocalSession session) {
         HttpURLConnection connection = null;
         try {
-            var builder = new StringBuilder(PTLOGIN_JUMP_URL)
-                    .append("?clientuin=").append(normalizedUin)
-                    .append("&keyindex=").append(session.keyIndex())
-                    .append("&pt_aid=").append(APPID)
-                    .append("&daid=383")
-                    .append("&u1=").append(URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8))
-                    .append("&pt_local_tk=").append(session.localTk())
-                    .append("&pt_3rd_aid=").append(THIRD_APPID)
-                    .append("&ptopt=1&style=40");
-            connection = (HttpURLConnection) new URL(builder.toString()).openConnection();
+            String builder = PTLOGIN_JUMP_URL +
+                    "?clientuin=" + normalizedUin +
+                    "&keyindex=" + session.keyIndex() +
+                    "&pt_aid=" + APPID +
+                    "&daid=383" +
+                    "&u1=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8) +
+                    "&pt_local_tk=" + session.localTk() +
+                    "&pt_3rd_aid=" + THIRD_APPID +
+                    "&ptopt=1&style=40";
+            connection = (HttpURLConnection) new URL(builder).openConnection();
             connection.setRequestMethod("GET");
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
@@ -942,20 +906,19 @@ public final class QqLoginService {
     }
 
     private static String buildXloginUrl() {
-        var builder = new StringBuilder(XLOGIN_URL);
-        builder.append("?appid=").append(APPID);
-        builder.append("&daid=383");
-        builder.append("&style=33");
-        builder.append("&login_text=").append(URLEncoder.encode("登录", StandardCharsets.UTF_8));
-        builder.append("&hide_title_bar=1");
-        builder.append("&hide_border=1");
-        builder.append("&target=self");
-        builder.append("&s_url=").append(URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8));
-        builder.append("&pt_3rd_aid=").append(THIRD_APPID);
-        builder.append("&pt_feedback_link=")
-                .append(URLEncoder.encode("https://support.qq.com/products/77942?customInfo=.appid" + THIRD_APPID, StandardCharsets.UTF_8));
-        builder.append("&theme=2&verify_theme=");
-        return builder.toString();
+        String builder = XLOGIN_URL + "?appid=" + APPID +
+                "&daid=383" +
+                "&style=33" +
+                "&login_text=" + URLEncoder.encode("登录", StandardCharsets.UTF_8) +
+                "&hide_title_bar=1" +
+                "&hide_border=1" +
+                "&target=self" +
+                "&s_url=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8) +
+                "&pt_3rd_aid=" + THIRD_APPID +
+                "&pt_feedback_link=" +
+                URLEncoder.encode("https://support.qq.com/products/77942?customInfo=.appid" + THIRD_APPID, StandardCharsets.UTF_8) +
+                "&theme=2&verify_theme=";
+        return builder;
     }
 
     private static void updateStatus(String text) {
@@ -1090,9 +1053,6 @@ public final class QqLoginService {
         return null;
     }
 
-    private record PtLocalSession(int port, String localTk, String keyIndex) {
-    }
-
     private static String extractNextUrl(String body, String refresh) {
         if (refresh != null && !refresh.isBlank()) {
             var refreshMatcher = META_REFRESH_PATTERN.matcher(refresh);
@@ -1192,5 +1152,35 @@ public final class QqLoginService {
             hash += (hash << 5) + skey.charAt(i);
         }
         return hash & 0x7fffffff;
+    }
+
+    public enum LoginState {
+        IDLE,
+        FETCHING_QR,
+        WAITING_SCAN,
+        SUCCESS,
+        FAILED,
+        QR_EXPIRED
+    }
+
+    enum CredentialSource {
+        JSON,
+        COOKIE,
+        NONE
+    }
+
+    public record QrCodeSession(byte[] imageBytes, String qrsig) {
+    }
+
+    record LoginExchangeResult(
+            int rootCode,
+            int serviceCode,
+            String responseKey,
+            CredentialSource credentialSource,
+            QqCredential credential
+    ) {
+    }
+
+    private record PtLocalSession(int port, String localTk, String keyIndex) {
     }
 }

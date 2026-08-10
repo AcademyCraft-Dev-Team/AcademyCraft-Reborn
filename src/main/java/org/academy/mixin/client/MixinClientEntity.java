@@ -12,7 +12,9 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Keeps the client player recoverable while the agent repairs a displaced klass pointer. */
+/**
+ * Keeps the client player recoverable while the agent repairs a displaced klass pointer.
+ */
 @Mixin(Entity.class)
 public abstract class MixinClientEntity {
     @Inject(method = "remove", at = @At("HEAD"), cancellable = true)

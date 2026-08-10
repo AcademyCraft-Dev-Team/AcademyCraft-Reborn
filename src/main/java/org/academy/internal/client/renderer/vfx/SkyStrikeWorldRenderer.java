@@ -4,6 +4,7 @@ import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -14,15 +15,12 @@ import org.academy.api.client.render.vfx.VfxRenderContext;
 import org.academy.api.client.render.vfx.VfxRenderer;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalDouble;
+import java.util.*;
 
 public final class SkyStrikeWorldRenderer implements VfxRenderer<SkyStrikeWorldData> {
     private static final int INSTANCE_STRIDE = 4 * (3 + 2 + 4) * Float.BYTES;
@@ -40,6 +38,20 @@ public final class SkyStrikeWorldRenderer implements VfxRenderer<SkyStrikeWorldD
 
     public SkyStrikeWorldRenderer(boolean glow) {
         this.glow = glow;
+    }
+
+    private static void putCorner(
+            ByteBuffer target,
+            Vector3f position,
+            Vector2f uv,
+            Vector4f color,
+            Vector3f camera
+    ) {
+        target.putFloat(position.x - camera.x);
+        target.putFloat(position.y - camera.y);
+        target.putFloat(position.z - camera.z);
+        target.putFloat(uv.x).putFloat(uv.y);
+        target.putFloat(color.x).putFloat(color.y).putFloat(color.z).putFloat(color.w);
     }
 
     @Override
@@ -80,8 +92,8 @@ public final class SkyStrikeWorldRenderer implements VfxRenderer<SkyStrikeWorldD
 
     private void renderBatch(
             VfxRenderContext context,
-            com.mojang.blaze3d.textures.GpuTextureView colorTarget,
-            com.mojang.blaze3d.textures.GpuTextureView depthTarget,
+            GpuTextureView colorTarget,
+            GpuTextureView depthTarget,
             Identifier textureId,
             List<SkyStrikeWorldData> data
     ) {
@@ -122,20 +134,6 @@ public final class SkyStrikeWorldRenderer implements VfxRenderer<SkyStrikeWorldD
             pass.setIndexBuffer(sequential.getBuffer(6), sequential.type());
             pass.drawIndexed(6, data.size(), 0, 0, 0);
         }
-    }
-
-    private static void putCorner(
-            ByteBuffer target,
-            Vector3f position,
-            Vector2f uv,
-            org.joml.Vector4f color,
-            Vector3f camera
-    ) {
-        target.putFloat(position.x - camera.x);
-        target.putFloat(position.y - camera.y);
-        target.putFloat(position.z - camera.z);
-        target.putFloat(uv.x).putFloat(uv.y);
-        target.putFloat(color.x).putFloat(color.y).putFloat(color.z).putFloat(color.w);
     }
 
     private void grow(int requiredQuads) {

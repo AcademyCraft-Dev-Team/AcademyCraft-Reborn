@@ -1,18 +1,21 @@
 package org.academy.internal.common.attribute;
 
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.enchanting.EnchantedEntityLootEvent;
 import net.neoforged.neoforge.event.enchanting.EnchantedBlockLootEvent;
+import net.neoforged.neoforge.event.enchanting.EnchantedEntityLootEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerXpEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
@@ -22,7 +25,9 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-/** Applies the linear bonuses derived from effective P.R.O.P.S player attributes. */
+/**
+ * Applies the linear bonuses derived from effective P.R.O.P.S player attributes.
+ */
 @EventBusSubscriber
 public final class PlayerAttributeRuntime {
     private static final Identifier MUSCLE_DAMAGE = AcademyCraft.academy("attribute_bonus.muscle_damage");
@@ -219,7 +224,7 @@ public final class PlayerAttributeRuntime {
         return Math.min(health, Math.max(0.0f, newMaxHealth));
     }
 
-    private static double value(Player player, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute) {
+    private static double value(Player player, Holder<Attribute> attribute) {
         return Math.max(0.0, player.getAttributeValue(attribute));
     }
 
@@ -263,7 +268,7 @@ public final class PlayerAttributeRuntime {
         if (source.getEntity() instanceof Player player) return player;
         if (source.getDirectEntity() instanceof Player player) return player;
         Entity direct = source.getDirectEntity();
-        if (direct instanceof net.minecraft.world.entity.projectile.Projectile projectile
+        if (direct instanceof Projectile projectile
                 && projectile.getOwner() instanceof Player player) return player;
         return null;
     }

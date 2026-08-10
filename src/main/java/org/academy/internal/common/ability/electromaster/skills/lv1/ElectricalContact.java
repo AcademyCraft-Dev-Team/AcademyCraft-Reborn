@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -29,6 +28,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -148,7 +148,7 @@ public class ElectricalContact extends Skill {
 
             if (!(level instanceof ServerLevel serverLevel)) return;
             var damageSource = SkillDamageSource.of(player, skill,
-                    org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE);
+                    DamageTypes.ELECTRO_DAMAGE);
             var system = AbilitySystemServer.getSystem(player);
             var damage = calculateDamage(
                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
@@ -180,7 +180,7 @@ public class ElectricalContact extends Skill {
                     );
                     livingAttacker.hurtServer(serverLevel,
                             SkillDamageSource.of(player, skill,
-                                    org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE),
+                                    DamageTypes.ELECTRO_DAMAGE),
                             damage);
                 }
             }

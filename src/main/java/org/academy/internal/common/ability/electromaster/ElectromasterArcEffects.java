@@ -6,7 +6,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.PathModifier;
 import org.academy.api.common.arc.modifier.HelixModifier;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.modifier.TaperModifier;
@@ -20,7 +19,6 @@ import org.academy.internal.common.world.entity.skill.ArcEffect;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Lightweight builders for the shared VFX-backed electric arc renderer. */
 public final class ElectromasterArcEffects {
     private static final AttributeCurve FULL_THICKNESS = new AttributeCurve(List.of(
             new Knot(0.0f, 1.0f),
@@ -29,6 +27,18 @@ public final class ElectromasterArcEffects {
     ));
 
     private ElectromasterArcEffects() {
+    }
+
+    /**
+     * 一条锯齿电弧路径：LinePath + JaggedModifier，视觉等价于闪电。
+     */
+    public static ArcPath arc(Vec3 start, Vec3 end, long seed) {
+        return new ArcPath(
+                new LinePath(start.toVector3f(), end.toVector3f()),
+                List.of(new JaggedModifier(0.18f, 4, seed)),
+                2.0f,
+                List.of()
+        );
     }
 
     public static List<ArcPath> intertwinedBundle(Vec3 start, Vec3 end, int strands, float radius) {
@@ -68,7 +78,7 @@ public final class ElectromasterArcEffects {
                     List.of()
             ));
         }
-        spawn(level, paths, 8, segment.start());
+        spawnArc(level, paths, 8, segment.start());
     }
 
     public static void spawnShieldArcs(ServerLevel level, Vec3 center, long age) {
@@ -80,12 +90,14 @@ public final class ElectromasterArcEffects {
             var y1 = 0.25 + ((i + 1) % 3) * 0.62;
             var start = center.add(Math.cos(angle0) * 0.78, y0, Math.sin(angle0) * 0.78);
             var end = center.add(Math.cos(angle1) * 0.78, y1, Math.sin(angle1) * 0.78);
-            paths.add(thickArc(start, end, 0.30f, 1.0f));
+            paths.add(arc(start, end, randomSeed()));
         }
-        spawn(level, paths, 5, center);
+        spawnArc(level, paths, 5, center);
     }
 
-    /** Emits a short-lived electric ring on the shield face struck by a remote effect. */
+    /**
+     * Emits a short-lived electric ring on the shield face struck by a remote effect.
+     */
     public static void spawnShieldInterceptRing(ServerLevel level, Vec3 center, Vec3 direction) {
         if (level == null || center == null || direction == null
                 || !Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1.0E-8) {
@@ -111,7 +123,7 @@ public final class ElectromasterArcEffects {
                 4.0f,
                 List.of()
         ));
-        spawn(level, paths, 6, center);
+        spawnArc(level, paths, 6, center);
     }
 
     public static void spawnNovaRing(ServerLevel level, Vec3 center, double radius, long age) {
@@ -124,9 +136,9 @@ public final class ElectromasterArcEffects {
                     Math.sin(angle0) * radius);
             var end = center.add(Math.cos(angle1) * radius, Math.sin(angle1 * 3.0) * 0.16,
                     Math.sin(angle1) * radius);
-            paths.add(thickArc(start, end, 0.24f, 0.75f));
+            paths.add(arc(start, end, randomSeed()));
         }
-        spawn(level, paths, 4, center);
+        spawnArc(level, paths, 4, center);
     }
 
     public static void spawnSkyStrike(ServerLevel level, Vec3 impact) {
@@ -159,19 +171,7 @@ public final class ElectromasterArcEffects {
         );
     }
 
-    public static ArcPath thickArc(Vec3 start, Vec3 end, float jaggedness, float thickness) {
-        return new ArcPath(
-                new LinePath(start.toVector3f(), end.toVector3f()),
-                List.<PathModifier>of(
-                        new JaggedModifier(jaggedness, 4, randomSeed()),
-                        new TaperModifier(FULL_THICKNESS, thickness)
-                ),
-                2.5f,
-                List.of()
-        );
-    }
-
-    private static void spawn(ServerLevel level, List<ArcPath> paths, int lifetime, Vec3 origin) {
+    public static void spawnArc(ServerLevel level, List<ArcPath> paths, int lifetime, Vec3 origin) {
         if (paths.isEmpty()) return;
         var effect = new ArcEffect(level, lifetime);
         effect.setPos(origin);

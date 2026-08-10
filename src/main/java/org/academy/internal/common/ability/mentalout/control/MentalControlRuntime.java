@@ -4,53 +4,20 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityReference;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import org.academy.AcademyCraft;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlApplyException;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDomain;
-import org.academy.api.common.entitycontrol.ControlEvaluation;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.ControlHandle;
-import org.academy.api.common.entitycontrol.ControlInspection;
-import org.academy.api.common.entitycontrol.ControlRejectionReason;
-import org.academy.api.common.entitycontrol.ControlRequest;
-import org.academy.api.common.entitycontrol.ControlSupport;
-import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.mentalout.MentalControlMemory;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.PriorityQueue;
-import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 public final class MentalControlRuntime {
     static final Identifier IMPRESSION_GUARD_SOURCE = AcademyCraft.academy("impression_guard_target");
@@ -262,6 +229,7 @@ public final class MentalControlRuntime {
         }
         return MentalPerceptionRuntime.isAffected(subject);
     }
+
     public static boolean isFrozen(Mob mob) {
         return isFrozen((LivingEntity) mob);
     }
@@ -398,7 +366,7 @@ public final class MentalControlRuntime {
         var state = stateIfPresent(attacker.level().getServer());
         if (state == null) {
             return MentalPerceptionRuntime.decision(attacker, target)
-                    == org.academy.api.common.entitycontrol.PerceptionDecision.HIDDEN
+                    == PerceptionDecision.HIDDEN
                     ? AttackDecision.DENY
                     : AttackDecision.PASS;
         }
@@ -410,8 +378,8 @@ public final class MentalControlRuntime {
                 selectedGuardTarget = state.guardTargets.get(attacker.getUUID());
             }
             var controller = attacker.level().getServer().getPlayerList().getPlayer(guard.controllerId());
-            var protectsDestination = guardDirective.destination() instanceof ControlDestination.Entity entity
-                    && entity.uuid().equals(target.getUUID());
+            var protectsDestination = guardDirective.destination() instanceof ControlDestination.Entity(UUID uuid)
+                    && uuid.equals(target.getUUID());
             var protectsController = controller != null && (target == controller
                     || controller.isAlliedTo(target)
                     || FriendlyFireSetting.shouldPrevent(controller, target));
@@ -429,7 +397,7 @@ public final class MentalControlRuntime {
         );
         if (controlledDecision != AttackDecision.PASS) return controlledDecision;
         if (MentalPerceptionRuntime.decision(attacker, target)
-                == org.academy.api.common.entitycontrol.PerceptionDecision.HIDDEN) {
+                == PerceptionDecision.HIDDEN) {
             return AttackDecision.DENY;
         }
 
@@ -494,11 +462,11 @@ public final class MentalControlRuntime {
         if (attackerRelation != null
                 && attackerRelation.directive() instanceof ControlDirective.ImpressionAlliance
                 && targetWhitelist.allows(
-                        attackerId,
-                        targetId,
-                        attackerRelation.leaseId(),
-                        now
-                )) {
+                attackerId,
+                targetId,
+                attackerRelation.leaseId(),
+                now
+        )) {
             return AttackDecision.ALLOW;
         }
 
@@ -801,11 +769,11 @@ public final class MentalControlRuntime {
                         || MentalControlProtection.rejectionReason(subject) != null
                         || lease.source().equals(IMPRESSION_GUARD_SOURCE)
                         && !state.leases.hasImpressionAlliance(
-                                lease.controllerId(),
-                                lease.subjectId(),
-                                lease.guardianRelationLeaseId(),
-                                effectiveNow
-                        )) {
+                        lease.controllerId(),
+                        lease.subjectId(),
+                        lease.guardianRelationLeaseId(),
+                        effectiveNow
+                )) {
                     invalidLeaseIds.add(lease.id());
                     continue;
                 }
@@ -868,7 +836,7 @@ public final class MentalControlRuntime {
                     .filter(Map.Entry::getValue)
                     .map(Map.Entry::getKey)
                     .filter(leaseId -> !completionFailures.contains(leaseId))
-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                    .collect(Collectors.toUnmodifiableSet());
             if (!completedLeases.isEmpty()) {
                 for (var active : state.activeBindings.values()) {
                     if (!completedLeases.contains(active.leaseId())) continue;
@@ -1020,6 +988,7 @@ public final class MentalControlRuntime {
         }
         removeEmptyState(server, state);
     }
+
     public static void clear(MinecraftServer server) {
         Objects.requireNonNull(server, "server");
         ServerState state;
@@ -1204,12 +1173,12 @@ public final class MentalControlRuntime {
             LivingEntity subject,
             ControlDirective directive
     ) {
-        if (directive instanceof ControlDirective.ForceTarget forceTarget) {
-            validateTarget(server, subject, forceTarget.targetUuid(), directive.capability());
+        if (directive instanceof ControlDirective.ForceTarget(UUID uuid)) {
+            validateTarget(server, subject, uuid, directive.capability());
         } else if (directive instanceof ControlDirective.MoveTo moveTo) {
             validateDestination(server, subject, moveTo.destination(), directive.capability());
-        } else if (directive instanceof ControlDirective.LookAt lookAt) {
-            validateTarget(server, subject, lookAt.targetUuid(), directive.capability());
+        } else if (directive instanceof ControlDirective.LookAt(UUID targetUuid)) {
+            validateTarget(server, subject, targetUuid, directive.capability());
         } else if (directive instanceof ControlDirective.Guard guard) {
             validateDestination(server, subject, guard.destination(), directive.capability());
         }
@@ -1231,10 +1200,10 @@ public final class MentalControlRuntime {
         return switch (directive) {
             case ControlDirective.ForceTarget forceTarget -> forceTarget.targetUuid();
             case ControlDirective.LookAt lookAt -> lookAt.targetUuid();
-            case ControlDirective.MoveTo moveTo -> moveTo.destination() instanceof ControlDestination.Entity entity
-                    ? entity.uuid() : null;
-            case ControlDirective.Guard guard -> guard.destination() instanceof ControlDestination.Entity entity
-                    ? entity.uuid() : null;
+            case ControlDirective.MoveTo moveTo -> moveTo.destination() instanceof ControlDestination.Entity(UUID uuid)
+                    ? uuid : null;
+            case ControlDirective.Guard guard -> guard.destination() instanceof ControlDestination.Entity(UUID uuid)
+                    ? uuid : null;
             default -> null;
         };
     }
@@ -1275,6 +1244,7 @@ public final class MentalControlRuntime {
             );
         }
     }
+
     private static void releaseLease(MinecraftServer server, UUID leaseId) {
         var state = stateIfPresent(server);
         if (state == null) return;
@@ -1827,8 +1797,8 @@ public final class MentalControlRuntime {
 
         synchronized @Nullable UUID forcedTarget(UUID subjectId, long now) {
             var effective = effective(subjectId, ControlCapability.FORCE_TARGET, now);
-            return effective != null && effective.directive() instanceof ControlDirective.ForceTarget forceTarget
-                    ? forceTarget.targetUuid()
+            return effective != null && effective.directive() instanceof ControlDirective.ForceTarget(UUID targetUuid)
+                    ? targetUuid
                     : null;
         }
 
@@ -1883,7 +1853,7 @@ public final class MentalControlRuntime {
                             now
                     ))
                     .map(LeaseRecord::id)
-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                    .collect(Collectors.toUnmodifiableSet());
             return removeAll(invalid);
         }
 
@@ -1958,6 +1928,7 @@ public final class MentalControlRuntime {
                     .toList();
             return removeAll(Set.copyOf(ids));
         }
+
         synchronized RemovalResult expire(long now) {
             var result = new RemovalResult();
             while (!expirations.isEmpty() && expirations.peek().expiresAt() <= now) {
@@ -1986,7 +1957,7 @@ public final class MentalControlRuntime {
                             .map(DomainLease::directive)
                             .map(MentalControlRuntime::referencedTarget)
                             .filter(Objects::nonNull)
-                            .collect(java.util.stream.Collectors.toUnmodifiableSet()),
+                            .collect(Collectors.toUnmodifiableSet()),
                     lease.input().guardianRelationLeaseId()
             )).toList();
         }
@@ -2060,8 +2031,8 @@ public final class MentalControlRuntime {
             if (subject == null) return;
             for (var entry : lease.entries().entrySet()) {
                 subject.domain(entry.getKey()).remove(entry.getValue());
-                if (entry.getValue().directive() instanceof ControlDirective.ForceTarget forceTarget) {
-                    result.addTarget(subjectId, forceTarget.targetUuid());
+                if (entry.getValue().directive() instanceof ControlDirective.ForceTarget(UUID targetUuid)) {
+                    result.addTarget(subjectId, targetUuid);
                 }
             }
             subject.removeEmptyDomains();
@@ -2090,7 +2061,7 @@ public final class MentalControlRuntime {
 
         private static final class DomainState {
             private final Map<ReplacementKey, DomainLease> bySource = new HashMap<>();
-            private final java.util.NavigableSet<DomainLease> ordered = new java.util.TreeSet<>(WINNER_ORDER);
+            private final NavigableSet<DomainLease> ordered = new TreeSet<>(WINNER_ORDER);
             private @Nullable DomainLease currentWinner;
 
             private @Nullable DomainLease put(DomainLease lease) {

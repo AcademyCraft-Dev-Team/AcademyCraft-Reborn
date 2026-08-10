@@ -3,15 +3,14 @@ package org.academy.internal.client.renderer.vfx;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.render.vfx.VfxPhase;
 import org.academy.api.client.render.vfx.VfxRegistry;
-import org.academy.api.client.resources.R;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.electromaster.SkyStrikeVisualPacket;
 import org.academy.internal.common.ability.electromaster.skills.lv4.LightningStorm;
@@ -27,16 +26,6 @@ public final class SkyStrikeVfxClient {
     public static void register() {
         if (registered) return;
         registered = true;
-        VfxRegistry.register(
-                SkyStrikeArcCoreData.class,
-                VfxPhase.WORLD_TRANSLUCENT,
-                new ArcRenderer(false, R.textures.ability.electromaster.skill.sky_strike.effect.lightning_ribbon)
-        );
-        VfxRegistry.register(
-                SkyStrikeArcGlowData.class,
-                VfxPhase.WORLD_GLOW,
-                new ArcRenderer(true, R.textures.ability.electromaster.skill.sky_strike.effect.lightning_ribbon)
-        );
         VfxRegistry.register(
                 SkyStrikeWorldCoreData.class,
                 VfxPhase.WORLD_TRANSLUCENT,

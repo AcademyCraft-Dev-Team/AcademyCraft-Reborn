@@ -77,6 +77,16 @@ public final class LinearAttackPayload {
         hitEffect.onHit(target, reflected, hurt);
     }
 
+    @FunctionalInterface
+    public interface DamageCalculator {
+        float calculate(Entity target);
+    }
+
+    @FunctionalInterface
+    public interface HitEffect {
+        void onHit(Entity target, boolean reflected, boolean hurt);
+    }
+
     public static final class Builder {
         private final ServerPlayer attacker;
         private final Skill skill;
@@ -132,15 +142,5 @@ public final class LinearAttackPayload {
         public LinearAttackPayload build() {
             return new LinearAttackPayload(this);
         }
-    }
-
-    @FunctionalInterface
-    public interface DamageCalculator {
-        float calculate(Entity target);
-    }
-
-    @FunctionalInterface
-    public interface HitEffect {
-        void onHit(Entity target, boolean reflected, boolean hurt);
     }
 }

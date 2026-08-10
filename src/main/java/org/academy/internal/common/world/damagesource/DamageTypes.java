@@ -2,8 +2,8 @@ package org.academy.internal.common.world.damagesource;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
 import org.academy.AcademyCraft;
 

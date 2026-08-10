@@ -28,23 +28,10 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.reflection.compat.*;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorContinuousInterceptionLeases;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorInterceptionTickets;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityEffectLimiter;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorEnvironmentalFeedbackController;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackFingerprint;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageCoordinator;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorMotionRedirects;
-import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -229,7 +216,7 @@ public class VectorReduction extends Skill {
             if (source.getEntity() == player || direct == player) return false;
             if (direct instanceof Projectile projectile
                     && VectorProjectileRedirects.isRedirected(projectile)) return false;
-            return direct == null || !VectorMotionRedirects.isRedirected(direct);
+            return !VectorMotionRedirects.isRedirected(direct);
         }
 
         public static boolean tryAbsorbDamage(

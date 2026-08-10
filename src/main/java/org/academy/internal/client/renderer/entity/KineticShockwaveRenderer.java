@@ -19,6 +19,21 @@ public final class KineticShockwaveRenderer
         super(context);
     }
 
+    private static void emitRing(PoseStack poseStack, float radius, float strength,
+                                 float width, float blur, float xRot, float yRot, float zRot) {
+        poseStack.pushPose();
+        if (yRot != 0.0f) poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
+        if (zRot != 0.0f) poseStack.mulPose(Axis.ZP.rotationDegrees(zRot));
+        if (xRot != 0.0f) poseStack.mulPose(Axis.XP.rotationDegrees(xRot));
+        var matrix = poseStack.last().pose();
+        var consumer = PostEffect.getPre().getBuffer(Render.RenderTypes.DISTORTION_RING);
+        consumer.addVertex(matrix, -radius, 0, -radius).setUv(0, 0).setNormal(strength, width, blur);
+        consumer.addVertex(matrix, radius, 0, -radius).setUv(1, 0).setNormal(strength, width, blur);
+        consumer.addVertex(matrix, radius, 0, radius).setUv(1, 1).setNormal(strength, width, blur);
+        consumer.addVertex(matrix, -radius, 0, radius).setUv(0, 1).setNormal(strength, width, blur);
+        poseStack.popPose();
+    }
+
     @Override
     public void submit(KineticShockwaveRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
@@ -34,21 +49,6 @@ public final class KineticShockwaveRenderer
         emitRing(poseStack, state.radius, strength * 0.8f, width, blur, 0.0f, 0.0f, 90.0f);
         emitRing(poseStack, state.radius, strength, width * 0.8f, blur,
                 180.0f, 90.0f - state.yRot, 90.0f + state.xRot);
-    }
-
-    private static void emitRing(PoseStack poseStack, float radius, float strength,
-                                 float width, float blur, float xRot, float yRot, float zRot) {
-        poseStack.pushPose();
-        if (yRot != 0.0f) poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
-        if (zRot != 0.0f) poseStack.mulPose(Axis.ZP.rotationDegrees(zRot));
-        if (xRot != 0.0f) poseStack.mulPose(Axis.XP.rotationDegrees(xRot));
-        var matrix = poseStack.last().pose();
-        var consumer = PostEffect.getPre().getBuffer(Render.RenderTypes.DISTORTION_RING);
-        consumer.addVertex(matrix, -radius, 0, -radius).setUv(0, 0).setNormal(strength, width, blur);
-        consumer.addVertex(matrix, radius, 0, -radius).setUv(1, 0).setNormal(strength, width, blur);
-        consumer.addVertex(matrix, radius, 0, radius).setUv(1, 1).setNormal(strength, width, blur);
-        consumer.addVertex(matrix, -radius, 0, radius).setUv(0, 1).setNormal(strength, width, blur);
-        poseStack.popPose();
     }
 
     @Override

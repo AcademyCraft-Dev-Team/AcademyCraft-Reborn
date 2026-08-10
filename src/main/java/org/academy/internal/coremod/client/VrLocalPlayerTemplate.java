@@ -13,7 +13,9 @@ import net.minecraft.world.entity.player.Input;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
 
-/** Field-free bytecode template for generated local-player dispatch subclasses. */
+/**
+ * Field-free bytecode template for generated local-player dispatch subclasses.
+ */
 public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreakerHealthAccess {
     public VrLocalPlayerTemplate(Minecraft minecraft, ClientLevel level, ClientPacketListener connection,
                                  StatsCounter stats, ClientRecipeBook recipeBook, Input lastSentInput,
@@ -45,7 +47,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
     @Override
     public boolean isDeadOrDying() {
-        return academy$protected() ? false : super.isDeadOrDying();
+        return !academy$protected() && super.isDeadOrDying();
     }
 
     @Override
@@ -85,7 +87,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
     @Override
     public boolean isInvisible() {
-        return academy$protected() ? false : super.isInvisible();
+        return !academy$protected() && super.isInvisible();
     }
 
     @Override

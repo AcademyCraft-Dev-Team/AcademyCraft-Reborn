@@ -17,7 +17,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 
@@ -95,7 +94,8 @@ public final class StormWingRenderer implements VfxRenderer<StormWingData> {
                 () -> "VFX Storm Wing", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.TEX_RING_TRANSLUCENT);
-            RenderSystem.bindDefaultUniforms(renderPass);
+            var projection = RenderSystem.getProjectionMatrixBuffer();
+            if (projection != null) renderPass.setUniform("Projection", projection);
             var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
             renderPass.setUniform("DynamicTransforms", transform);
 

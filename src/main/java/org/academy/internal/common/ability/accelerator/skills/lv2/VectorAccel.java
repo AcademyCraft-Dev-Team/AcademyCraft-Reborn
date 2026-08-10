@@ -8,7 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -43,8 +42,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -158,6 +157,10 @@ public final class VectorAccel extends Skill {
                 this.player = player;
                 chargeStartTick = player.tickCount
                         + Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+            }
+
+            private static float modifiedFriction(float friction, float modifier) {
+                return Mth.clamp(1.0f - (1.0f - friction) * modifier, 0.0f, 1.0f);
             }
 
             public void release() {
@@ -281,10 +284,6 @@ public final class VectorAccel extends Skill {
                         movementY * verticalFriction,
                         movement.z * horizontalFriction
                 );
-            }
-
-            private static float modifiedFriction(float friction, float modifier) {
-                return Mth.clamp(1.0f - (1.0f - friction) * modifier, 0.0f, 1.0f);
             }
 
             private Vec3 calculateLeftHandOffset(float partialTick) {

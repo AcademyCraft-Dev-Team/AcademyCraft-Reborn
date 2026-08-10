@@ -61,6 +61,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -68,7 +69,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Locale;
@@ -104,9 +104,16 @@ public class MagnetManipulation extends Skill {
             EquipmentSlot.FEET
     };
 
-    enum PullMode {
-        PLAYER_TO_TARGET,
-        TARGET_TO_PLAYER
+    public MagnetManipulation() {
+        super(Builder
+                .of(AbilityCategories.ELECTROMASTER.get())
+                .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.ARC_GENERATE)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+        );
     }
 
     static Vec3 calculateMoveVelocity(Vec3 origin, Vec3 target, Vec3 fallbackDirection) {
@@ -117,7 +124,7 @@ public class MagnetManipulation extends Skill {
     }
 
     static Vec3 calculatePullVelocity(Vec3 currentVelocity, Vec3 origin, Vec3 target,
-                                       Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
+                                      Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
         if (!isFinite(currentVelocity) || !isFinite(origin) || !isFinite(target) || !isFinite(fallbackDirection)) {
             return Vec3.ZERO;
         }
@@ -187,18 +194,6 @@ public class MagnetManipulation extends Skill {
         return false;
     }
 
-    public MagnetManipulation() {
-        super(Builder
-                .of(AbilityCategories.ELECTROMASTER.get())
-                .level(AbilityLevel.LEVEL3)
-                .energyCost(30_000)
-                .iterationTicks(10)
-                .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.ARC_GENERATE)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
-        );
-    }
-
     @Override
     public void initClient() {
         RendererManager.registerEffectRenderer(EMFieldEffectWrapper.INSTANCE);
@@ -232,6 +227,11 @@ public class MagnetManipulation extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    enum PullMode {
+        PLAYER_TO_TARGET,
+        TARGET_TO_PLAYER
     }
 
     public static final class Client {

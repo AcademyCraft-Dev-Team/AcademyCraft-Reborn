@@ -1,17 +1,15 @@
 package org.academy.internal.server.ability;
 
-import org.academy.api.common.ability.SkillScope;
-import org.academy.api.common.ability.SkillActivity;
 import org.academy.api.common.ability.ProficiencyEvent;
+import org.academy.api.common.ability.SkillActivity;
+import org.academy.api.common.ability.SkillScope;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SkillDataManagerTest {
     @Test
@@ -51,6 +49,6 @@ class SkillDataManagerTest {
                 SkillDataManager.resolveContinuousEvent(false, SkillActivity.EFFECTIVE));
         assertEquals(ProficiencyEvent.PASSIVE_TICK,
                 SkillDataManager.resolveContinuousEvent(true, SkillActivity.EFFECTIVE));
-        assertEquals(null, SkillDataManager.resolveContinuousEvent(false, null));
+        assertNull(SkillDataManager.resolveContinuousEvent(false, null));
     }
 }

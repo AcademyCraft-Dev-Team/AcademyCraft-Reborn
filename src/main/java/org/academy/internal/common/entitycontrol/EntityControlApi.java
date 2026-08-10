@@ -426,33 +426,6 @@ public final class EntityControlApi {
             return null;
         }
 
-        float read(Object instance, float fallback) {
-            try {
-                Object value;
-                if (getter != null) value = getter.invoke(instance);
-                else if (field != null) value = field.get(instance);
-                else return fallback;
-                return value instanceof Number number ? number.floatValue() : fallback;
-            } catch (Throwable ignored) {
-                return fallback;
-            }
-        }
-
-        boolean write(Object instance, float value) {
-            try {
-                if (setter != null) {
-                    setter.invoke(instance, convert(value, setter.getParameterTypes()[0]));
-                    return true;
-                }
-                if (field != null && !Modifier.isFinal(field.getModifiers())) {
-                    field.set(instance, convert(value, field.getType()));
-                    return true;
-                }
-            } catch (Throwable ignored) {
-            }
-            return false;
-        }
-
         private static Method findGetter(Class<?> type, String name) {
             for (var current = type; current != null; current = current.getSuperclass()) {
                 try {
@@ -504,6 +477,33 @@ public final class EntityControlApi {
 
         private static String normalize(String value) {
             return value.replace("_", "").toLowerCase(Locale.ROOT);
+        }
+
+        float read(Object instance, float fallback) {
+            try {
+                Object value;
+                if (getter != null) value = getter.invoke(instance);
+                else if (field != null) value = field.get(instance);
+                else return fallback;
+                return value instanceof Number number ? number.floatValue() : fallback;
+            } catch (Throwable ignored) {
+                return fallback;
+            }
+        }
+
+        boolean write(Object instance, float value) {
+            try {
+                if (setter != null) {
+                    setter.invoke(instance, convert(value, setter.getParameterTypes()[0]));
+                    return true;
+                }
+                if (field != null && !Modifier.isFinal(field.getModifiers())) {
+                    field.set(instance, convert(value, field.getType()));
+                    return true;
+                }
+            } catch (Throwable ignored) {
+            }
+            return false;
         }
     }
 }

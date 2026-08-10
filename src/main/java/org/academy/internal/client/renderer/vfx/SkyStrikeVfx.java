@@ -6,10 +6,12 @@ import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.api.client.resources.R;
-import org.academy.internal.client.renderer.arc.PathProcessor;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class SkyStrikeVfx implements Vfx {
     private static final int MAX_DETAILED_EFFECTS = 12;
@@ -18,6 +20,7 @@ public final class SkyStrikeVfx implements Vfx {
     private final Vec3 impact;
     private final SkyStrikeProfile profile;
     private final SkyStrikeGeometry geometry;
+    private final List<ArcTube> arcTubes = new ArrayList<>();
     private final float flashIntensity;
     private final float feedbackAttenuation;
     private final boolean detailedSlot;
@@ -41,6 +44,73 @@ public final class SkyStrikeVfx implements Vfx {
         this.detail = claimDetail(requestedDetail);
         this.detailedSlot = this.detail != SkyStrikeGeometry.Detail.COLUMN_ONLY;
         this.geometry = SkyStrikeGeometry.build(profile, impact, seed, this.detail);
+    }
+
+    private static void pushVerticalBillboard(
+            VfxSink sink,
+            Identifier texture,
+            Vec3 bottomCenter,
+            Vec3 cameraPos,
+            float width,
+            float height,
+            Vector4f color,
+            boolean glow
+    ) {
+        var dx = cameraPos.x - bottomCenter.x;
+        var dz = cameraPos.z - bottomCenter.z;
+        var length = Math.sqrt(dx * dx + dz * dz);
+        var rightX = length > 1.0E-6 ? dz / length : 1.0;
+        var rightZ = length > 1.0E-6 ? -dx / length : 0.0;
+        var halfWidth = width * 0.5;
+        var p0 = new Vector3f(
+                (float) (bottomCenter.x - rightX * halfWidth),
+                (float) bottomCenter.y,
+                (float) (bottomCenter.z - rightZ * halfWidth)
+        );
+        var p1 = new Vector3f(
+                (float) (bottomCenter.x + rightX * halfWidth),
+                (float) bottomCenter.y,
+                (float) (bottomCenter.z + rightZ * halfWidth)
+        );
+        var p2 = new Vector3f(p1).add(0, height, 0);
+        var p3 = new Vector3f(p0).add(0, height, 0);
+        pushQuad(sink, texture, p0, p1, p2, p3, color, glow);
+    }
+
+    private static void pushQuad(
+            VfxSink sink,
+            Identifier texture,
+            Vector3f p0,
+            Vector3f p1,
+            Vector3f p2,
+            Vector3f p3,
+            Vector4f color,
+            boolean glow
+    ) {
+        if (glow) {
+            sink.push(new SkyStrikeWorldGlowData(texture, p0, p1, p2, p3, color));
+        } else {
+            sink.push(new SkyStrikeWorldCoreData(texture, p0, p1, p2, p3, color));
+        }
+    }
+
+    private static float smooth(float value) {
+        return value * value * (3.0f - 2.0f * value);
+    }
+
+    private static synchronized SkyStrikeGeometry.Detail claimDetail(SkyStrikeGeometry.Detail requested) {
+        if (requested == SkyStrikeGeometry.Detail.COLUMN_ONLY) return requested;
+        if (activeDetailedEffects >= MAX_DETAILED_EFFECTS) return SkyStrikeGeometry.Detail.COLUMN_ONLY;
+        activeDetailedEffects++;
+        return requested;
+    }
+
+    static synchronized void clearConcurrency() {
+        activeDetailedEffects = 0;
+    }
+
+    private static float clamp01(float value) {
+        return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 0.0f;
     }
 
     @Override
@@ -79,16 +149,19 @@ public final class SkyStrikeVfx implements Vfx {
     }
 
     private void pushArcs(VfxFrameContext context, VfxSink sink, float pulse) {
-        for (var path : geometry.paths()) {
-            var renderData = PathProcessor.process(
-                    path,
-                    ageTicks * 1.25f,
-                    context.camera().pos(),
-                    0.1f * Math.max(0.08f, pulse)
-            );
-            if (renderData.quads.isEmpty() && renderData.branches.isEmpty()) continue;
-            sink.push(new SkyStrikeArcCoreData(renderData));
-            sink.push(new SkyStrikeArcGlowData(renderData));
+        var paths = geometry.paths();
+        while (arcTubes.size() < paths.size()) {
+            arcTubes.add(new ArcTube());
+        }
+        while (arcTubes.size() > paths.size()) {
+            arcTubes.remove(arcTubes.size() - 1);
+        }
+        for (var i = 0; i < paths.size(); i++) {
+            var tube = arcTubes.get(i);
+            tube.build(paths.get(i), ageTicks * 1.25f);
+            if (tube.mesh().isEmpty()) continue;
+            sink.push(new LightningCoreData(tube));
+            sink.push(new LightningRenderData(tube));
         }
     }
 
@@ -163,54 +236,6 @@ public final class SkyStrikeVfx implements Vfx {
                 p0, p1, p2, p3, new Vector4f(0.20f, 0.55f, 1.0f, alpha * 0.72f), true);
     }
 
-    private static void pushVerticalBillboard(
-            VfxSink sink,
-            Identifier texture,
-            Vec3 bottomCenter,
-            Vec3 cameraPos,
-            float width,
-            float height,
-            Vector4f color,
-            boolean glow
-    ) {
-        var dx = cameraPos.x - bottomCenter.x;
-        var dz = cameraPos.z - bottomCenter.z;
-        var length = Math.sqrt(dx * dx + dz * dz);
-        var rightX = length > 1.0E-6 ? dz / length : 1.0;
-        var rightZ = length > 1.0E-6 ? -dx / length : 0.0;
-        var halfWidth = width * 0.5;
-        var p0 = new Vector3f(
-                (float) (bottomCenter.x - rightX * halfWidth),
-                (float) bottomCenter.y,
-                (float) (bottomCenter.z - rightZ * halfWidth)
-        );
-        var p1 = new Vector3f(
-                (float) (bottomCenter.x + rightX * halfWidth),
-                (float) bottomCenter.y,
-                (float) (bottomCenter.z + rightZ * halfWidth)
-        );
-        var p2 = new Vector3f(p1).add(0, height, 0);
-        var p3 = new Vector3f(p0).add(0, height, 0);
-        pushQuad(sink, texture, p0, p1, p2, p3, color, glow);
-    }
-
-    private static void pushQuad(
-            VfxSink sink,
-            Identifier texture,
-            Vector3f p0,
-            Vector3f p1,
-            Vector3f p2,
-            Vector3f p3,
-            Vector4f color,
-            boolean glow
-    ) {
-        if (glow) {
-            sink.push(new SkyStrikeWorldGlowData(texture, p0, p1, p2, p3, color));
-        } else {
-            sink.push(new SkyStrikeWorldCoreData(texture, p0, p1, p2, p3, color));
-        }
-    }
-
     private float pulse(float age) {
         if (profile.restrike()) {
             if (age <= 1.0f) return 1.0f;
@@ -231,31 +256,12 @@ public final class SkyStrikeVfx implements Vfx {
         return Math.min(1.0f, initial + restrike);
     }
 
-    private static float smooth(float value) {
-        return value * value * (3.0f - 2.0f * value);
-    }
-
-    private static synchronized SkyStrikeGeometry.Detail claimDetail(SkyStrikeGeometry.Detail requested) {
-        if (requested == SkyStrikeGeometry.Detail.COLUMN_ONLY) return requested;
-        if (activeDetailedEffects >= MAX_DETAILED_EFFECTS) return SkyStrikeGeometry.Detail.COLUMN_ONLY;
-        activeDetailedEffects++;
-        return requested;
-    }
-
     private synchronized void releaseSlot() {
         if (!detailedSlot || released) return;
         released = true;
         synchronized (SkyStrikeVfx.class) {
             activeDetailedEffects = Math.max(0, activeDetailedEffects - 1);
         }
-    }
-
-    static synchronized void clearConcurrency() {
-        activeDetailedEffects = 0;
-    }
-
-    private static float clamp01(float value) {
-        return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 0.0f;
     }
 
     @Override

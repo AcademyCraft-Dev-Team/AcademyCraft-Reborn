@@ -1,12 +1,13 @@
 package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.ControlRejectionReason;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
@@ -66,7 +67,7 @@ final class MentalControlProtection {
             var center = player.getBoundingBox().getCenter().add(normal.scale(offset));
             VectorReflection.Server.spawnGlowCircle(player, normal, center);
         } else if (kind == Kind.ELECTROMAGNETIC_FIELD
-                && player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+                && player.level() instanceof ServerLevel level) {
             var normal = direction.normalize();
             var offset = Math.max(player.getBbWidth() * 0.95, 0.75);
             var center = player.getBoundingBox().getCenter().add(normal.scale(offset));

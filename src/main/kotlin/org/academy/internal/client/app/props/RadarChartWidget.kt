@@ -6,11 +6,7 @@ import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.common.attribute.AbilityFactor
 import org.academy.internal.common.attribute.PropsMath
-import kotlin.math.PI
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.hypot
-import kotlin.math.sin
+import kotlin.math.*
 
 class RadarChartWidget : AbstractWidget() {
     private data class Point(val x: Float, val y: Float)
@@ -85,14 +81,16 @@ class RadarChartWidget : AbstractWidget() {
         context.pose().pushPose()
         context.pose().translate(from.x, from.y - thickness / 2f)
         context.pose().mulPose(Axis.ZP.rotationDegrees(Math.toDegrees(atan2(dy, dx).toDouble()).toFloat()))
-        context.submit(FillRectDrawCommand(
-            length,
-            thickness,
-            red,
-            green,
-            blue,
-            alpha * context.accumulatedAlpha
-        ))
+        context.submit(
+            FillRectDrawCommand(
+                length,
+                thickness,
+                red,
+                green,
+                blue,
+                alpha * context.accumulatedAlpha
+            )
+        )
         context.pose().popPose()
     }
 }

@@ -1,15 +1,14 @@
 package org.academy.internal.client.app.music.ui
 
+import com.mojang.blaze3d.platform.NativeImage
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
-import com.mojang.blaze3d.platform.NativeImage
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import org.academy.AcademyCraft
-import org.academy.api.client.resources.R
 import org.academy.api.client.app.App
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
@@ -22,6 +21,7 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.SeekBarWidget.OnSeekBarChangeListener
 import org.academy.api.client.hud.terminal.TerminalHud
+import org.academy.api.client.resources.R
 import org.academy.internal.client.app.music.backend.AlbumArtworkCache
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend
 import org.academy.internal.client.app.music.backend.OnlineMusicManager
@@ -105,7 +105,7 @@ object MusicApp : App {
                             .margin(2f, 2f, 2f, 0f)
                             .size(16f, 16f)
                         backButton.onClickListener = { _: Widget? ->
-                            TerminalHud.Companion.INSTANCE.closeApp()
+                            TerminalHud.INSTANCE.closeApp()
                         }
                         topBar.addChild("back_button", backButton)
                         run {
@@ -304,12 +304,13 @@ object MusicApp : App {
             searchRow.addChild("search", createTextButton(tr("app.academy.music_player.search"), 24f) {
                 search(searchBox.text)
             })
-            searchRow.addChild("return_list", createTextButton(
-                tr("app.academy.music_player.back_to_list"), 24f, 0.5f
-            ) {
-                showingSearchResults = false
-                libraryViewRevision++
-            })
+            searchRow.addChild(
+                "return_list", createTextButton(
+                    tr("app.academy.music_player.back_to_list"), 24f, 0.5f
+                ) {
+                    showingSearchResults = false
+                    libraryViewRevision++
+                })
             panel.addChild("search_row", searchRow)
 
             val providers = LinearLayoutWidget().apply {
@@ -373,7 +374,7 @@ object MusicApp : App {
                 init {
                     orientation = Orientation.VERTICAL
                     spacing = 2f
-                    layoutParams = LinearLayoutWidget.LayoutParams()
+                    layoutParams = LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .heightMode(SizeMode.WRAP_CONTENT)
                 }
@@ -411,15 +412,16 @@ object MusicApp : App {
                             .widthMode(SizeMode.MATCH_PARENT)
                             .height(24f)
                     }
-                    row.addChild("name", LabelWidget(
-                        (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist
-                    ).apply {
-                        scale = 0.62f
-                        layoutParams = LinearLayoutWidget.LayoutParams()
-                            .weight(1f)
-                            .height(0f)
-                            .gravity(Gravity.CENTER_LEFT)
-                    })
+                    row.addChild(
+                        "name", LabelWidget(
+                            (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist
+                        ).apply {
+                            scale = 0.62f
+                            layoutParams = LinearLayoutWidget.LayoutParams()
+                                .weight(1f)
+                                .height(0f)
+                                .gravity(Gravity.CENTER_LEFT)
+                        })
                     row.addChild("add", createTextButton("+", 16f) {
                         OnlineMusicManager.add(entry)
                     })
@@ -507,7 +509,8 @@ object MusicApp : App {
             override fun tick() {
                 super.tick()
                 val bytes = OnlineMusicManager.qrBytes
-                visibility = if (bytes == null || bytes.isEmpty()) Widget.Visibility.INVISIBLE else Widget.Visibility.VISIBLE
+                visibility =
+                    if (bytes == null || bytes.isEmpty()) Widget.Visibility.INVISIBLE else Widget.Visibility.VISIBLE
                 if (bytes == null || bytes.isEmpty() || bytes === uploadedBytes) return
                 runCatching {
                     val image = NativeImage.read(ByteArrayInputStream(bytes))

@@ -129,6 +129,10 @@ public final class FleshRipping extends Skill {
                 this.player = player;
             }
 
+            private static LivingEntity findTarget(LocalPlayer player) {
+                return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
+            }
+
             @SubscribeEvent
             public void onLevelRender(LevelRenderEvent event) {
                 if (currentContext != this || player.isRemoved()
@@ -162,10 +166,6 @@ public final class FleshRipping extends Skill {
                                 targetEntityId >= 0 ? 1.0f : 0.1f,
                                 1.0f));
                 matrices.popPose();
-            }
-
-            private static LivingEntity findTarget(LocalPlayer player) {
-                return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
             }
 
             private void cleanup() {

@@ -16,8 +16,7 @@ import org.academy.internal.client.hud.HudLayoutDefaults
 import java.nio.file.Files
 import java.nio.file.Path
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.WeakHashMap
+import java.util.*
 
 object UiDebugSession {
     private val logger = AcademyCraft.getLogger()
@@ -161,13 +160,16 @@ object UiDebugSession {
         ensureHudDefaults()
         for ((name, value) in config.regions) {
             if (!value.offsetX.isFinite() || !value.offsetY.isFinite() || !value.scale.isFinite()) {
-                return@synchronized UpdateResult(false,
-                    tr("screen.academy.ui_debug.error.invalid_hud_defaults", name))
+                return@synchronized UpdateResult(
+                    false,
+                    tr("screen.academy.ui_debug.error.invalid_hud_defaults", name)
+                )
             }
             value.scale = value.scale.coerceIn(0.5f, 2.0f)
         }
         hudDefaultsDraft = config.copyDeep()
-        hudDefaultsDirty = HudLayoutDefaults.toJson(hudDefaultsDraft!!) != HudLayoutDefaults.toJson(hudDefaultsInitial!!)
+        hudDefaultsDirty =
+            HudLayoutDefaults.toJson(hudDefaultsDraft!!) != HudLayoutDefaults.toJson(hudDefaultsInitial!!)
         HudLayoutDefaults.replace(hudDefaultsDraft!!)
         UpdateResult(true)
     }

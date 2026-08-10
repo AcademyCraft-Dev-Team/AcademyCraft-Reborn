@@ -54,7 +54,12 @@ object AlbumArtworkCache {
                 if (throwable != null) {
                     pending.completeExceptionally(throwable)
                     retryAfter[key] = System.currentTimeMillis() + RETRY_DELAY_MS
-                    AcademyCraft.LOGGER.warn("Failed to cache album artwork for {}:{}", info.provider, info.externalId, throwable)
+                    AcademyCraft.LOGGER.warn(
+                        "Failed to cache album artwork for {}:{}",
+                        info.provider,
+                        info.externalId,
+                        throwable
+                    )
                 } else {
                     pending.complete(Unit)
                     retryAfter.remove(key)
@@ -138,6 +143,12 @@ object AlbumArtworkCache {
 
     private fun ensureCacheDirectory() {
         runCatching { Files.createDirectories(cacheDirectory) }
-            .onFailure { AcademyCraft.LOGGER.warn("Failed to create album artwork cache directory {}", cacheDirectory, it) }
+            .onFailure {
+                AcademyCraft.LOGGER.warn(
+                    "Failed to create album artwork cache directory {}",
+                    cacheDirectory,
+                    it
+                )
+            }
     }
 }

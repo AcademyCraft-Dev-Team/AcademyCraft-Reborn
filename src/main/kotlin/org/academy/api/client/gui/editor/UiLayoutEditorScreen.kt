@@ -8,9 +8,9 @@ import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.serialize.WidgetNode
 import org.academy.api.client.gui.serialize.WidgetSerializer
-import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.api.client.gui.widget.Widget
@@ -184,7 +184,7 @@ class UiLayoutEditorScreen(
 
     // ============ 预览选中框 ============
 
-    private inner class SelectionBorderWidget(private val target: () -> Widget?) : AbstractWidget() {
+    private class SelectionBorderWidget(private val target: () -> Widget?) : AbstractWidget() {
         override fun renderInternal(context: RenderContext) {
             val t = target() ?: return
             val host = parent ?: return

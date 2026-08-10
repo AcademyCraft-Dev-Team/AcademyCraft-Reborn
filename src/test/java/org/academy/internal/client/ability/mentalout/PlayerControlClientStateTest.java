@@ -4,9 +4,7 @@ import org.academy.api.common.entitycontrol.PlayerControlFrame;
 import org.academy.api.common.entitycontrol.PlayerMovementMode;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PlayerControlClientStateTest {
     @Test

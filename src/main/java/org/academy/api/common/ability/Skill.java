@@ -29,16 +29,17 @@ import java.util.*;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
-    /** Keep disabled until the skill stack system is redesigned and verified. */
+    /**
+     * Keep disabled until the skill stack system is redesigned and verified.
+     */
     public static final boolean STACK_LIMITS_ENABLED = false;
-    private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
-
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
     public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
     );
+    private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
     private final AbilityCategory category;
@@ -100,6 +101,15 @@ public abstract class Skill {
         return new WeakHashMap<>();
     }
 
+    static boolean hasSufficientCpToEnable(float availableCp, float maintenanceCost,
+                                           float calculationIntensity) {
+        if (!Float.isFinite(availableCp) || !Float.isFinite(maintenanceCost)
+                || !Float.isFinite(calculationIntensity)
+                || maintenanceCost < 0.0f || calculationIntensity < 0.0f) return false;
+        var actualCost = maintenanceCost * calculationIntensity;
+        return Float.isFinite(actualCost) && availableCp - actualCost > TOGGLE_CP_EPSILON;
+    }
+
     /**
      * 技能击中目标时触发，默认行为为增加经验。
      * 伤害类型需要设置为 SkillDamageSource 才能自动触发此事件
@@ -158,7 +168,9 @@ public abstract class Skill {
         );
     }
 
-    /** Records one server-confirmed successful activation. */
+    /**
+     * Records one server-confirmed successful activation.
+     */
     public final void reportTrigger(ServerPlayer player) {
         AbilitySystemServer.getSystem(player)
                 .addPlayerSkillProficiency(player.getUUID(), this, ProficiencyEvent.TRIGGER);
@@ -178,8 +190,6 @@ public abstract class Skill {
         if (runtimeData.isEmpty()) return;
         var goingToEnable = !runtimeData.get().isEnabled();
 
-        // Disabling is cleanup, not a new ability use. It must remain possible after overload or a
-        // category transition; otherwise the enabled flag and permanent CP lease become stranded.
         if (!goingToEnable) {
             system.toggleSkill(uuid, getKeyString());
             return;
@@ -200,27 +210,15 @@ public abstract class Skill {
         )) return;
 
         if (system.tryPermanentOccupation(uuid, cost, this)) {
-            // Reserving exactly the last CP enters overload synchronously. Do not commit the
-            // enabled flag after that transition; roll the reservation back as one transaction.
             if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) {
                 system.releaseMaintenanceOccupation(uuid, getKeyString());
                 return;
             }
             system.toggleSkill(uuid, getKeyString());
             if (!runtimeData.get().isEnabled()) {
-                // Defensive rollback if authoritative skill-data mutation was rejected.
                 system.releaseMaintenanceOccupation(uuid, getKeyString());
             }
         }
-    }
-
-    static boolean hasSufficientCpToEnable(float availableCp, float maintenanceCost,
-                                           float calculationIntensity) {
-        if (!Float.isFinite(availableCp) || !Float.isFinite(maintenanceCost)
-                || !Float.isFinite(calculationIntensity)
-                || maintenanceCost < 0.0f || calculationIntensity < 0.0f) return false;
-        var actualCost = maintenanceCost * calculationIntensity;
-        return Float.isFinite(actualCost) && availableCp - actualCost > TOGGLE_CP_EPSILON;
     }
 
     public final boolean isEnabled(ServerPlayer player) {

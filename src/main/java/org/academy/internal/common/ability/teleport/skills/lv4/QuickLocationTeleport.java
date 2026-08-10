@@ -7,7 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -37,7 +36,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 public final class QuickLocationTeleport extends Skill {
@@ -96,10 +94,19 @@ public final class QuickLocationTeleport extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -167,9 +174,12 @@ public final class QuickLocationTeleport extends Skill {
     public static final class RunPacket extends Packet<ServerGamePacketListenerImpl, RunPacket> {
         public static final RunPacket INSTANCE = new RunPacket();
         public static final StreamCodec<ByteBuf, RunPacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private RunPacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, RunPacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, RunPacket> getPacketType() {
             return PacketTypes.QUICK_LOCATION_TELEPORT_RUN.get();
         }
     }

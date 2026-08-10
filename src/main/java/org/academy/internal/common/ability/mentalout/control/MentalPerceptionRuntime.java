@@ -2,25 +2,21 @@ package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
-import net.minecraft.server.level.ServerLevel;
 import org.academy.api.common.entitycontrol.PerceptionDecision;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-/** Server-authoritative, source-aware perception masks. */
+/**
+ * Server-authoritative, source-aware perception masks.
+ */
 public final class MentalPerceptionRuntime {
     private static final Map<PairKey, Relation> RELATIONS = new HashMap<>();
     private static final Map<UUID, Lease> LEASES = new HashMap<>();
@@ -113,6 +109,7 @@ public final class MentalPerceptionRuntime {
         return RELATIONS.values().stream()
                 .anyMatch(relation -> relation.observer == entity && !relation.leases.isEmpty());
     }
+
     public static void releaseController(UUID controllerId) {
         closeIndexed(BY_CONTROLLER, controllerId);
     }
@@ -194,7 +191,7 @@ public final class MentalPerceptionRuntime {
     }
 
     private static <T> void clearIfEqual(
-            net.minecraft.world.entity.ai.Brain<?> brain,
+            Brain<?> brain,
             MemoryModuleType<T> type,
             T value
     ) {

@@ -33,9 +33,9 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -287,6 +287,21 @@ public final class ScatterBomb extends Skill {
                 this.startTick = startTick;
             }
 
+            private static void position(ServerPlayer player, HighSpeedElectronBeam beam, int index) {
+                var eyePos = player.getEyePosition().add(0.0, -0.5, 0.0);
+                var forward = player.getLookAngle().normalize();
+                var right = forward.cross(new Vec3(0.0, 1.0, 0.0));
+                if (right.lengthSqr() < 1.0e-6) right = new Vec3(1.0, 0.0, 0.0);
+                right = right.normalize();
+                var up = right.cross(forward).normalize();
+                var angle = index * Math.PI * 2.0 / BEAM_COUNT;
+                var offset = right.scale(Math.cos(angle) * 0.9)
+                        .add(up.scale(Math.sin(angle) * 0.405));
+                beam.setPos(eyePos.add(forward.scale(1.75)).add(offset));
+                beam.setYRot(player.getYRot());
+                beam.setXRot(player.getXRot());
+            }
+
             private void ensureAllBeams(ServerPlayer player) {
                 ensureBeamCount(player, BEAM_COUNT);
                 follow(player);
@@ -312,21 +327,6 @@ public final class ScatterBomb extends Skill {
                     var beam = beams.get(i);
                     if (!beam.isRemoved()) position(player, beam, i);
                 }
-            }
-
-            private static void position(ServerPlayer player, HighSpeedElectronBeam beam, int index) {
-                var eyePos = player.getEyePosition().add(0.0, -0.5, 0.0);
-                var forward = player.getLookAngle().normalize();
-                var right = forward.cross(new Vec3(0.0, 1.0, 0.0));
-                if (right.lengthSqr() < 1.0e-6) right = new Vec3(1.0, 0.0, 0.0);
-                right = right.normalize();
-                var up = right.cross(forward).normalize();
-                var angle = index * Math.PI * 2.0 / BEAM_COUNT;
-                var offset = right.scale(Math.cos(angle) * 0.9)
-                        .add(up.scale(Math.sin(angle) * 0.405));
-                beam.setPos(eyePos.add(forward.scale(1.75)).add(offset));
-                beam.setYRot(player.getYRot());
-                beam.setXRot(player.getXRot());
             }
 
             private void cleanup() {

@@ -6,7 +6,9 @@ import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.Map;
 
-/** Derived effects supplied by learned common-course skills. */
+/**
+ * Derived effects supplied by learned common-course skills.
+ */
 final class CommonSkillBonuses {
     static final Bonuses NONE = new Bonuses(0.0f, 0, 1.0f, 10.0f, false, 0.0, 0.0, 0.0);
 

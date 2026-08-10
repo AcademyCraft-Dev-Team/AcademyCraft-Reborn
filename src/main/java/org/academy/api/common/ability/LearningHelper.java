@@ -27,9 +27,6 @@ public final class LearningHelper {
         return DEVELOPER_CPS * 5 * (currentLevel + 1);
     }
 
-    /**
-     * Estimated energy consumption for developing a skill.
-     */
     public static int getEstimatedSkillConsumption(Skill skill) {
         return skill.getEnergyCostToLearn();
     }

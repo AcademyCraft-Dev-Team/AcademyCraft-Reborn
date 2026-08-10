@@ -1,19 +1,19 @@
 package org.academy.mixin.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -43,7 +43,7 @@ public abstract class MixinItemInHandRenderer implements ControlledItemInHandRen
         offHandItem = state.offhand();
         try {
             var attack = player.getAttackAnim(partialTick);
-            ((ItemInHandRendererInvoker) (Object) this).academy$submitArmWithItem(
+            ((ItemInHandRendererInvoker) this).academy$submitArmWithItem(
                     player,
                     partialTick,
                     PlayerControlClientState.controllerViewPitch(),
@@ -55,7 +55,7 @@ public abstract class MixinItemInHandRenderer implements ControlledItemInHandRen
                     collector,
                     packedLight
             );
-            ((ItemInHandRendererInvoker) (Object) this).academy$submitArmWithItem(
+            ((ItemInHandRendererInvoker) this).academy$submitArmWithItem(
                     player,
                     partialTick,
                     PlayerControlClientState.controllerViewPitch(),

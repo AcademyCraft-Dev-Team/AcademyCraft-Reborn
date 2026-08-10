@@ -14,11 +14,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Limits only the audiovisual feedback produced by continuous positional
@@ -228,25 +224,6 @@ public final class VectorEnvironmentalFeedbackController {
                 && Double.isFinite(value.z);
     }
 
-    record EnvironmentalFeedbackOrigin(Vec3 sourcePosition, Vec3 ringPosition, Vec3 normal) {
-    }
-
-    private record FeedbackKey(
-            UUID defenderId,
-            ResourceKey<Level> dimension,
-            VectorRedirectKind redirectKind,
-            String damageTypeId
-    ) {
-    }
-
-    private static final class FeedbackState {
-        private long lastSeenTick = Long.MIN_VALUE;
-        private long lastVisualTick = Long.MIN_VALUE;
-        private long lastSoundTick = Long.MIN_VALUE;
-        private long lastOriginTick = Long.MIN_VALUE;
-        private EnvironmentalFeedbackOrigin lastOrigin;
-    }
-
     private enum EnvironmentKind {
         LAVA(true),
         CACTUS(false),
@@ -304,5 +281,24 @@ public final class VectorEnvironmentalFeedbackController {
                     pos.getX() + 1.0, pos.getY() + 1.0, pos.getZ() + 1.0
             );
         }
+    }
+
+    record EnvironmentalFeedbackOrigin(Vec3 sourcePosition, Vec3 ringPosition, Vec3 normal) {
+    }
+
+    private record FeedbackKey(
+            UUID defenderId,
+            ResourceKey<Level> dimension,
+            VectorRedirectKind redirectKind,
+            String damageTypeId
+    ) {
+    }
+
+    private static final class FeedbackState {
+        private long lastSeenTick = Long.MIN_VALUE;
+        private long lastVisualTick = Long.MIN_VALUE;
+        private long lastSoundTick = Long.MIN_VALUE;
+        private long lastOriginTick = Long.MIN_VALUE;
+        private EnvironmentalFeedbackOrigin lastOrigin;
     }
 }

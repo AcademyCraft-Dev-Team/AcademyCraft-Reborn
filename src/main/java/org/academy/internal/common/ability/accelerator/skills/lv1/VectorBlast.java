@@ -17,9 +17,9 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -42,6 +42,7 @@ import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -73,6 +74,15 @@ public final class VectorBlast extends Skill {
                 .dependsOn(Skills.VECTOR_ACCEL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
+    }
+
+    static boolean isInsideBeam(Vec3 origin, Vec3 direction, Vec3 target, double length) {
+        if (direction.lengthSqr() <= 1.0e-6 || length <= 0.0) return false;
+        var normalized = direction.normalize();
+        var relative = target.subtract(origin);
+        var forward = relative.dot(normalized);
+        if (forward <= 0.0 || forward >= length) return false;
+        return relative.subtract(normalized.scale(forward)).lengthSqr() <= BEAM_RADIUS * BEAM_RADIUS;
     }
 
     @Override
@@ -150,15 +160,6 @@ public final class VectorBlast extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    static boolean isInsideBeam(Vec3 origin, Vec3 direction, Vec3 target, double length) {
-        if (direction.lengthSqr() <= 1.0e-6 || length <= 0.0) return false;
-        var normalized = direction.normalize();
-        var relative = target.subtract(origin);
-        var forward = relative.dot(normalized);
-        if (forward <= 0.0 || forward >= length) return false;
-        return relative.subtract(normalized.scale(forward)).lengthSqr() <= BEAM_RADIUS * BEAM_RADIUS;
     }
 
     public static final class Client {
@@ -332,7 +333,7 @@ public final class VectorBlast extends Skill {
             var source = SkillDamageSource.of(
                     player,
                     Skills.VECTOR_BLAST.get(),
-                    org.academy.internal.common.world.damagesource.DamageTypes.VEC
+                    DamageTypes.VEC
             );
             var search = new AABB(origin, end).inflate(BEAM_RADIUS);
             for (var target : level.getEntitiesOfClass(
@@ -377,7 +378,7 @@ public final class VectorBlast extends Skill {
                         SkillDamageSource.of(
                                 player,
                                 Skills.VECTOR_BLAST.get(),
-                                org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                                DamageTypes.CTA
                         ),
                         damage
                 );

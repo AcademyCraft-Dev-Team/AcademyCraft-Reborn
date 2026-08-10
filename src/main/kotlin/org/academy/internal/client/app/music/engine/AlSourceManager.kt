@@ -78,7 +78,7 @@ class AlSourceManager {
         get() = alSource != -1 && AL11.alIsSource(alSource)
 
     val isPlaying: Boolean
-        get() = if (isValid) AL11.alGetSourcei(alSource, AL11.AL_SOURCE_STATE) == AL11.AL_PLAYING else false
+        get() = isValid && AL11.alGetSourcei(alSource, AL11.AL_SOURCE_STATE) == AL11.AL_PLAYING
 
     companion object {
         private const val BUFFER_COUNT = 4

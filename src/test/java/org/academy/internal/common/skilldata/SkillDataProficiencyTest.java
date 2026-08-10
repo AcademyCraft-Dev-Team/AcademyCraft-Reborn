@@ -2,9 +2,7 @@ package org.academy.internal.common.skilldata;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SkillDataProficiencyTest {
     @Test
@@ -16,6 +14,7 @@ class SkillDataProficiencyTest {
         assertEquals(4, SkillData.getProficiencyTier(3000.0f));
         assertEquals(3, SkillData.getReachedProficiencyThresholds(3000.0f));
     }
+
     @Test
     void proficiencyIsClampedToCanonicalRange() {
         var data = new CommonSkillData();

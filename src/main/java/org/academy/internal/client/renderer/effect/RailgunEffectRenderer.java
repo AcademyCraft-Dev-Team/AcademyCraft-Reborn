@@ -31,62 +31,6 @@ public final class RailgunEffectRenderer implements EffectRenderer {
     private RailgunEffectRenderer() {
     }
 
-    @Override
-    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
-                       AvatarRenderState renderState, float yRot, float xRot) {
-        var data = renderState.getRenderData(CONTEXT_KEY);
-        if (data == null) return;
-
-        var ticks = data.ticks() + renderState.partialTick;
-        var strength = getVisualStrength(data, ticks);
-        if (strength <= 0.0f) return;
-
-        var handX = data.rightHand() ? -0.32f : 0.32f;
-        poseStack.pushPose();
-        poseStack.translate(handX, 0.55f, -0.16f);
-        submitHandRings(poseStack, collector, renderState.ageInTicks, strength, false);
-        if (!data.released()) {
-            submitCoin(poseStack, collector, packedLight, renderState.ageInTicks, 0.23f);
-        }
-        poseStack.popPose();
-
-        if (data.coinReturnHint()) {
-            var mainHandX = data.mainHandRight() ? -0.32f : 0.32f;
-            poseStack.pushPose();
-            poseStack.translate(mainHandX, 0.55f, -0.16f);
-            submitCoinReturnHint(poseStack, collector, renderState.ageInTicks, false);
-            poseStack.popPose();
-        }
-    }
-
-    @Override
-    public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector collector,
-                                  LocalPlayer player, int packedLight, float partialTick) {
-        var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
-        if (data == null) return;
-
-        var ticks = data.ticks() + partialTick;
-        var strength = getVisualStrength(data, ticks);
-        if (strength <= 0.0f) return;
-
-        var handX = data.rightHand() ? 0.34f : -0.34f;
-        poseStack.pushPose();
-        poseStack.translate(handX, -0.20f, -0.30f);
-        submitHandRings(poseStack, collector, player.tickCount + partialTick, strength, true);
-        if (!data.released()) {
-            submitCoin(poseStack, collector, packedLight, player.tickCount + partialTick, 0.12f);
-        }
-        poseStack.popPose();
-
-        if (data.coinReturnHint()) {
-            var mainHandX = data.mainHandRight() ? 0.34f : -0.34f;
-            poseStack.pushPose();
-            poseStack.translate(mainHandX, -0.20f, -0.30f);
-            submitCoinReturnHint(poseStack, collector, player.tickCount + partialTick, true);
-            poseStack.popPose();
-        }
-    }
-
     private static float getVisualStrength(Railgun.Data data, float ticks) {
         if (data.released()) {
             return Mth.clamp(1.0f - ticks / RELEASE_VISUAL_TICKS, 0.0f, 1.0f);
@@ -186,5 +130,61 @@ public final class RailgunEffectRenderer implements EffectRenderer {
         );
         state.submit(poseStack, collector, packedLight, OverlayTexture.NO_OVERLAY, 0);
         poseStack.popPose();
+    }
+
+    @Override
+    public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
+                       AvatarRenderState renderState, float yRot, float xRot) {
+        var data = renderState.getRenderData(CONTEXT_KEY);
+        if (data == null) return;
+
+        var ticks = data.ticks() + renderState.partialTick;
+        var strength = getVisualStrength(data, ticks);
+        if (strength <= 0.0f) return;
+
+        var handX = data.rightHand() ? -0.32f : 0.32f;
+        poseStack.pushPose();
+        poseStack.translate(handX, 0.55f, -0.16f);
+        submitHandRings(poseStack, collector, renderState.ageInTicks, strength, false);
+        if (!data.released()) {
+            submitCoin(poseStack, collector, packedLight, renderState.ageInTicks, 0.23f);
+        }
+        poseStack.popPose();
+
+        if (data.coinReturnHint()) {
+            var mainHandX = data.mainHandRight() ? -0.32f : 0.32f;
+            poseStack.pushPose();
+            poseStack.translate(mainHandX, 0.55f, -0.16f);
+            submitCoinReturnHint(poseStack, collector, renderState.ageInTicks, false);
+            poseStack.popPose();
+        }
+    }
+
+    @Override
+    public void renderFirstPerson(PoseStack poseStack, SubmitNodeCollector collector,
+                                  LocalPlayer player, int packedLight, float partialTick) {
+        var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
+        if (data == null) return;
+
+        var ticks = data.ticks() + partialTick;
+        var strength = getVisualStrength(data, ticks);
+        if (strength <= 0.0f) return;
+
+        var handX = data.rightHand() ? 0.34f : -0.34f;
+        poseStack.pushPose();
+        poseStack.translate(handX, -0.20f, -0.30f);
+        submitHandRings(poseStack, collector, player.tickCount + partialTick, strength, true);
+        if (!data.released()) {
+            submitCoin(poseStack, collector, packedLight, player.tickCount + partialTick, 0.12f);
+        }
+        poseStack.popPose();
+
+        if (data.coinReturnHint()) {
+            var mainHandX = data.mainHandRight() ? 0.34f : -0.34f;
+            poseStack.pushPose();
+            poseStack.translate(mainHandX, -0.20f, -0.30f);
+            submitCoinReturnHint(poseStack, collector, player.tickCount + partialTick, true);
+            poseStack.popPose();
+        }
     }
 }

@@ -130,10 +130,19 @@ public final class AreaTeleportSelect extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -184,9 +193,14 @@ public final class AreaTeleportSelect extends Skill {
     public static final class MarkPacket extends Packet<ServerGamePacketListenerImpl, MarkPacket> {
         public static final MarkPacket INSTANCE = new MarkPacket();
         public static final StreamCodec<ByteBuf, MarkPacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private MarkPacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, MarkPacket> getPacketType() { return PacketTypes.AREA_TELEPORT_SELECT_MARK.get(); }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, MarkPacket> getPacketType() {
+            return PacketTypes.AREA_TELEPORT_SELECT_MARK.get();
+        }
     }
 
     @PacketTarget(ThreadType.CLIENT)
@@ -213,7 +227,14 @@ public final class AreaTeleportSelect extends Skill {
                 }
         );
         private final List<Preview> previews;
-        public SyncPacket(List<Preview> previews) { this.previews = List.copyOf(previews); }
-        @Override public PacketType<ClientPacketListener, SyncPacket> getPacketType() { return PacketTypes.AREA_TELEPORT_SYNC.get(); }
+
+        public SyncPacket(List<Preview> previews) {
+            this.previews = List.copyOf(previews);
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, SyncPacket> getPacketType() {
+            return PacketTypes.AREA_TELEPORT_SYNC.get();
+        }
     }
 }

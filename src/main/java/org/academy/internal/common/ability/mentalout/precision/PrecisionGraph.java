@@ -2,13 +2,7 @@ package org.academy.internal.common.ability.mentalout.precision;
 
 import org.academy.api.common.entitycontrol.ControlCapability;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
     public static final int MAX_NODES = 32;
@@ -21,10 +15,6 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
     public PrecisionGraph {
         nodes = nodes == null ? List.of() : List.copyOf(nodes);
         edges = edges == null ? List.of() : List.copyOf(edges);
-    }
-
-    public Validation validate() {
-        return validate(true);
     }
 
     public static Migration migrateLegacy(PrecisionGraph graph) {
@@ -53,6 +43,43 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         return validation.valid
                 ? new Migration(validation.normalized, Diagnostic.OK)
                 : new Migration(EMPTY, validation.diagnostic);
+    }
+
+    private static int findFlowCycleNode(Set<Integer> actionIds, Map<Integer, Integer> flowTargets) {
+        var complete = new HashSet<Integer>();
+        for (var start : actionIds) {
+            if (complete.contains(start)) continue;
+            var path = new HashSet<Integer>();
+            var current = start;
+            while (current != null && actionIds.contains(current) && !complete.contains(current)) {
+                if (!path.add(current)) return current;
+                current = flowTargets.get(current);
+            }
+            complete.addAll(path);
+        }
+        return -1;
+    }
+
+    private static Integer flowTarget(
+            int source,
+            Map<Integer, Node> byId,
+            Map<Integer, Map<Integer, Edge>> incoming
+    ) {
+        for (var entry : incoming.entrySet()) {
+            var node = byId.get(entry.getKey());
+            if (node == null || !node.kind.isAction()) continue;
+            var edge = entry.getValue().get(node.kind.flowInputPort());
+            if (edge != null && edge.fromNode == source) return node.id;
+        }
+        return null;
+    }
+
+    public static boolean isPortCompatible(PortType output, PortType input) {
+        return output == input || output == PortType.ENTITY && input == PortType.DESTINATION;
+    }
+
+    public Validation validate() {
+        return validate(true);
     }
 
     private Validation validate(boolean requireFlow) {
@@ -150,7 +177,7 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
             }
         }
 
-        var ready = new java.util.PriorityQueue<Integer>();
+        var ready = new PriorityQueue<Integer>();
         indegree.forEach((id, degree) -> {
             if (degree == 0) ready.add(id);
         });
@@ -228,44 +255,11 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         return new FlowPosition(true, incoming, outgoing);
     }
 
-    private static int findFlowCycleNode(Set<Integer> actionIds, Map<Integer, Integer> flowTargets) {
-        var complete = new HashSet<Integer>();
-        for (var start : actionIds) {
-            if (complete.contains(start)) continue;
-            var path = new HashSet<Integer>();
-            var current = start;
-            while (current != null && actionIds.contains(current) && !complete.contains(current)) {
-                if (!path.add(current)) return current;
-                current = flowTargets.get(current);
-            }
-            complete.addAll(path);
-        }
-        return -1;
-    }
-
-    private static Integer flowTarget(
-            int source,
-            Map<Integer, Node> byId,
-            Map<Integer, Map<Integer, Edge>> incoming
-    ) {
-        for (var entry : incoming.entrySet()) {
-            var node = byId.get(entry.getKey());
-            if (node == null || !node.kind.isAction()) continue;
-            var edge = entry.getValue().get(node.kind.flowInputPort());
-            if (edge != null && edge.fromNode == source) return node.id;
-        }
-        return null;
-    }
-
     public enum PortType {
         ENTITY,
         ENTITY_SET,
         DESTINATION,
         FLOW
-    }
-
-    public static boolean isPortCompatible(PortType output, PortType input) {
-        return output == input || output == PortType.ENTITY && input == PortType.DESTINATION;
     }
 
     public enum PortDirection {
@@ -298,27 +292,6 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         ENTITY_TYPE,
         HEALTH_PERCENT,
         DURATION_SECONDS
-    }
-
-    public record PortDefinition(
-            String key,
-            PortType type,
-            PortDirection direction,
-            boolean required,
-            int maxConnections
-    ) {
-    }
-
-    public record FlowPosition(boolean action, boolean hasIncoming, boolean hasOutgoing) {
-        public static final FlowPosition NOT_ACTION = new FlowPosition(false, false, false);
-
-        public boolean isOpenInput() {
-            return action && !hasIncoming;
-        }
-
-        public boolean isOpenOutput() {
-            return action && !hasOutgoing;
-        }
     }
 
     public enum NodeKind {
@@ -445,6 +418,40 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
             return BY_WIRE_ID.get(wireId);
         }
 
+        private static List<PortDefinition> definePorts(
+                List<PortDefinition> ports,
+                PortDirection direction,
+                boolean required
+        ) {
+            return ports.stream().map(port -> new PortDefinition(
+                    port.key,
+                    port.type,
+                    direction,
+                    required,
+                    direction == PortDirection.INPUT ? 1 : Integer.MAX_VALUE
+            )).toList();
+        }
+
+        private static List<PortDefinition> in(PortDefinition... ports) {
+            return List.of(ports);
+        }
+
+        private static List<PortDefinition> out(PortDefinition... ports) {
+            return List.of(ports);
+        }
+
+        private static PortDefinition entity(String key) {
+            return new PortDefinition(key, PortType.ENTITY, PortDirection.INPUT, true, 1);
+        }
+
+        private static PortDefinition set(String key) {
+            return new PortDefinition(key, PortType.ENTITY_SET, PortDirection.INPUT, true, 1);
+        }
+
+        private static PortDefinition destination(String key) {
+            return new PortDefinition(key, PortType.DESTINATION, PortDirection.INPUT, true, 1);
+        }
+
         public int wireId() {
             return wireId;
         }
@@ -517,55 +524,6 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
                 default -> 0.0;
             };
         }
-
-        private static List<PortDefinition> definePorts(
-                List<PortDefinition> ports,
-                PortDirection direction,
-                boolean required
-        ) {
-            return ports.stream().map(port -> new PortDefinition(
-                    port.key,
-                    port.type,
-                    direction,
-                    required,
-                    direction == PortDirection.INPUT ? 1 : Integer.MAX_VALUE
-            )).toList();
-        }
-
-        private static List<PortDefinition> in(PortDefinition... ports) {
-            return List.of(ports);
-        }
-
-        private static List<PortDefinition> out(PortDefinition... ports) {
-            return List.of(ports);
-        }
-
-        private static PortDefinition entity(String key) {
-            return new PortDefinition(key, PortType.ENTITY, PortDirection.INPUT, true, 1);
-        }
-
-        private static PortDefinition set(String key) {
-            return new PortDefinition(key, PortType.ENTITY_SET, PortDirection.INPUT, true, 1);
-        }
-
-        private static PortDefinition destination(String key) {
-            return new PortDefinition(key, PortType.DESTINATION, PortDirection.INPUT, true, 1);
-        }
-    }
-
-    public record Node(int id, NodeKind kind, double parameter, double x, double y) {
-        public Node normalized() {
-            return new Node(
-                    id,
-                    kind,
-                    parameter,
-                    Math.clamp(x, -100_000.0, 100_000.0),
-                    Math.clamp(y, -100_000.0, 100_000.0)
-            );
-        }
-    }
-
-    public record Edge(int fromNode, int fromPort, int toNode, int toPort) {
     }
 
     public enum Diagnostic {
@@ -605,8 +563,44 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         ADAPTER_ERROR;
 
         public String translationKey() {
-            return "message.academy.precision_operation." + name().toLowerCase(java.util.Locale.ROOT);
+            return "message.academy.precision_operation." + name().toLowerCase(Locale.ROOT);
         }
+    }
+
+    public record PortDefinition(
+            String key,
+            PortType type,
+            PortDirection direction,
+            boolean required,
+            int maxConnections
+    ) {
+    }
+
+    public record FlowPosition(boolean action, boolean hasIncoming, boolean hasOutgoing) {
+        public static final FlowPosition NOT_ACTION = new FlowPosition(false, false, false);
+
+        public boolean isOpenInput() {
+            return action && !hasIncoming;
+        }
+
+        public boolean isOpenOutput() {
+            return action && !hasOutgoing;
+        }
+    }
+
+    public record Node(int id, NodeKind kind, double parameter, double x, double y) {
+        public Node normalized() {
+            return new Node(
+                    id,
+                    kind,
+                    parameter,
+                    Math.clamp(x, -100_000.0, 100_000.0),
+                    Math.clamp(y, -100_000.0, 100_000.0)
+            );
+        }
+    }
+
+    public record Edge(int fromNode, int fromPort, int toNode, int toPort) {
     }
 
     public record Validation(

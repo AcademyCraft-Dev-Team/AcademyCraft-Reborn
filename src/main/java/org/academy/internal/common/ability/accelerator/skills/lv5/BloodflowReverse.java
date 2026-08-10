@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Direction;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,8 +12,8 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -42,6 +43,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -77,6 +79,13 @@ public class BloodflowReverse extends Skill {
         );
     }
 
+    private static double distanceToBoxSqr(Vec3 point, AABB box) {
+        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
+        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
+        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     @Override
     public void initClient() {
         var key = getKey();
@@ -85,7 +94,7 @@ public class BloodflowReverse extends Skill {
 
         InputSystem.addKeyBinding(Client.KEY_NAME, Client.CONFIG.getKeyBinding(Client.KEY_NAME,
                 InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_RIGHT,
-                                InputConstants.RELEASE, InputConstants.MOD_ALT)
+                        InputConstants.RELEASE, InputConstants.MOD_ALT)
         ), ctx -> Client.reverseBloodflow());
         NeoForge.EVENT_BUS.register(Client.class);
     }
@@ -216,7 +225,7 @@ public class BloodflowReverse extends Skill {
                         SkillDamageSource.of(
                                 player,
                                 Skills.BLOODFLOW_REVERSE.get(),
-                                org.academy.internal.common.world.damagesource.DamageTypes.VEC
+                                DamageTypes.VEC
                         ), damage);
                 if (!damaged) return;
 
@@ -262,7 +271,7 @@ public class BloodflowReverse extends Skill {
             }
         }
 
-        private static Vec3 randomSurfaceOffset(ServerLevel level, net.minecraft.core.Direction face) {
+        private static Vec3 randomSurfaceOffset(ServerLevel level, Direction face) {
             var first = (level.getRandom().nextDouble() - 0.5) * 0.18;
             var second = (level.getRandom().nextDouble() - 0.5) * 0.18;
             return switch (face.getAxis()) {
@@ -320,13 +329,6 @@ public class BloodflowReverse extends Skill {
             var data = entity.getPersistentData();
             data.putInt(EFFECT_KEY, stacks);
         }
-    }
-
-    private static double distanceToBoxSqr(Vec3 point, AABB box) {
-        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
-        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
-        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
-        return dx * dx + dy * dy + dz * dz;
     }
 
     @PacketTarget(ThreadType.SERVER)

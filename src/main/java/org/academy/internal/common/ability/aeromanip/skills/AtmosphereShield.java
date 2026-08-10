@@ -13,8 +13,9 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -35,8 +36,8 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -197,7 +198,7 @@ public final class AtmosphereShield extends Skill {
             var skill = Skills.ATMOSPHERE_SHIELD.get();
             if (!skill.isEnabled(player)) return;
             if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
-                projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                projectile.setDeltaMovement(Vec3.ZERO);
                 projectile.hurtMarked = true;
                 event.setCanceled(true);
                 return;
@@ -234,7 +235,7 @@ public final class AtmosphereShield extends Skill {
                     player.getBoundingBox().inflate(1.0),
                     projectile -> projectile.isAlive() && projectile.getOwner() != player
             )) {
-                projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                projectile.setDeltaMovement(Vec3.ZERO);
                 projectile.hurtMarked = true;
             }
         }

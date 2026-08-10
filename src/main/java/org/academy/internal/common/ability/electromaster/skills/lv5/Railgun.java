@@ -6,8 +6,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -36,8 +36,8 @@ import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -46,23 +46,23 @@ import org.academy.api.server.sync.ServerSyncManager;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.RailgunEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv3.ThunderLance;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
+import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.Items;
 import org.jspecify.annotations.Nullable;
@@ -95,6 +95,28 @@ public final class Railgun extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition("Thunder Lance", "academy:thunder_lance"))
         );
+    }
+
+    static boolean isVanillaAmmo(ItemStack stack) {
+        return isVanillaAmmoId(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    }
+
+    static boolean isVanillaAmmoId(Identifier id) {
+        return AmmoKind.fromVanillaId(id) != null;
+    }
+
+    static boolean isAmmo(ItemStack stack) {
+        return ammoKind(stack) != null;
+    }
+
+    private static @Nullable AmmoKind ammoKind(ItemStack stack) {
+        if (stack.is(Items.COIN.get())) return AmmoKind.COIN;
+        return AmmoKind.fromVanillaId(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    }
+
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        if (!Float.isFinite(abilityPower) || !Float.isFinite(playerMultiplier)) return 0;
+        return 150.0f * Math.max(0, abilityPower) * Math.max(0, playerMultiplier);
     }
 
     @Override
@@ -138,6 +160,55 @@ public final class Railgun extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_END, endBinding, _ -> Client.end());
 
         ClientSyncManager.register(SyncKeys.RAILGUN_CHARGING.get(), Client::setCharging);
+    }
+
+    enum AmmoKind {
+        COIN(0, 1.0f, 0.0f, 0.8f),
+        IRON_INGOT(10, 1.5f, 8.0f, 1.0f),
+        IRON_BLOCK(20, 2.0f, 16.0f, 1.5f),
+        ANVIL(30, 2.5f, 24.0f, 2.0f);
+
+        private final int minimumChargeTicks;
+        private final float beamWidthMultiplier;
+        private final float rangeBonus;
+        private final float damageMultiplier;
+
+        AmmoKind(
+                int minimumChargeTicks,
+                float beamWidthMultiplier,
+                float rangeBonus,
+                float damageMultiplier
+        ) {
+            this.minimumChargeTicks = minimumChargeTicks;
+            this.beamWidthMultiplier = beamWidthMultiplier;
+            this.rangeBonus = rangeBonus;
+            this.damageMultiplier = damageMultiplier;
+        }
+
+        private static @Nullable AmmoKind fromVanillaId(Identifier id) {
+            if (Identifier.withDefaultNamespace("iron_ingot").equals(id)) return IRON_INGOT;
+            if (Identifier.withDefaultNamespace("iron_block").equals(id)) return IRON_BLOCK;
+            if (Identifier.withDefaultNamespace("anvil").equals(id)
+                    || Identifier.withDefaultNamespace("chipped_anvil").equals(id)
+                    || Identifier.withDefaultNamespace("damaged_anvil").equals(id)) return ANVIL;
+            return null;
+        }
+
+        int minimumChargeTicks() {
+            return minimumChargeTicks;
+        }
+
+        float beamWidthMultiplier() {
+            return beamWidthMultiplier;
+        }
+
+        float beamLength() {
+            return RailgunRay.DEFAULT_LENGTH + rangeBonus;
+        }
+
+        float damageMultiplier() {
+            return damageMultiplier;
+        }
     }
 
     public static final class Client {
@@ -304,6 +375,18 @@ public final class Railgun extends Skill {
             return null;
         }
 
+        private static void startReleaseVisual(
+                ServerPlayer player,
+                boolean rightHand,
+                boolean mainHandRight
+        ) {
+            var previous = RELEASE_VISUALS.get(player);
+            if (previous != null) previous.end();
+            var context = new ReleaseVisualContext(player, rightHand, mainHandRight);
+            RELEASE_VISUALS.put(player, context);
+            AbilitySystemServer.registerContext(context);
+        }
+
         public static class Context extends ServerContext {
             private final boolean rightHand;
             private final boolean mainHandRight;
@@ -320,6 +403,25 @@ public final class Railgun extends Skill {
                         == (hand == InteractionHand.MAIN_HAND);
                 mainHandRight = player.getMainArm() == HumanoidArm.RIGHT;
                 dimension = player.level().dimension();
+            }
+
+            private static void destroyBlocksAlongSegment(
+                    LinearSegment segment,
+                    ServerPlayer breaker,
+                    float radius
+            ) {
+                LevelUtil.destroyBlocksAlongPath(
+                        breaker.level(),
+                        segment.start(),
+                        segment.end(),
+                        radius,
+                        3,
+                        !breaker.isCreative(),
+                        false,
+                        false,
+                        false,
+                        breaker
+                );
             }
 
             @Override
@@ -480,43 +582,12 @@ public final class Railgun extends Skill {
                 );
             }
 
-            private static void destroyBlocksAlongSegment(
-                    LinearSegment segment,
-                    ServerPlayer breaker,
-                    float radius
-            ) {
-                LevelUtil.destroyBlocksAlongPath(
-                        breaker.level(),
-                        segment.start(),
-                        segment.end(),
-                        radius,
-                        3,
-                        !breaker.isCreative(),
-                        false,
-                        false,
-                        false,
-                        breaker
-                );
-            }
-
             public void end() {
                 if (ended) return;
                 ended = true;
                 unregister();
             }
 
-        }
-
-        private static void startReleaseVisual(
-                ServerPlayer player,
-                boolean rightHand,
-                boolean mainHandRight
-        ) {
-            var previous = RELEASE_VISUALS.get(player);
-            if (previous != null) previous.end();
-            var context = new ReleaseVisualContext(player, rightHand, mainHandRight);
-            RELEASE_VISUALS.put(player, context);
-            AbilitySystemServer.registerContext(context);
         }
 
         private static final class ReleaseVisualContext extends ServerContext {
@@ -587,77 +658,6 @@ public final class Railgun extends Skill {
                     player.getItemInHand(hand).shrink(1);
                 }
             }
-        }
-    }
-
-    static boolean isVanillaAmmo(ItemStack stack) {
-        return isVanillaAmmoId(BuiltInRegistries.ITEM.getKey(stack.getItem()));
-    }
-
-    static boolean isVanillaAmmoId(Identifier id) {
-        return AmmoKind.fromVanillaId(id) != null;
-    }
-
-    static boolean isAmmo(ItemStack stack) {
-        return ammoKind(stack) != null;
-    }
-
-    private static @Nullable AmmoKind ammoKind(ItemStack stack) {
-        if (stack.is(Items.COIN.get())) return AmmoKind.COIN;
-        return AmmoKind.fromVanillaId(BuiltInRegistries.ITEM.getKey(stack.getItem()));
-    }
-
-    static float calculateDamage(float abilityPower, float playerMultiplier) {
-        if (!Float.isFinite(abilityPower) || !Float.isFinite(playerMultiplier)) return 0;
-        return 150.0f * Math.max(0, abilityPower) * Math.max(0, playerMultiplier);
-    }
-
-    enum AmmoKind {
-        COIN(0, 1.0f, 0.0f, 0.8f),
-        IRON_INGOT(10, 1.5f, 8.0f, 1.0f),
-        IRON_BLOCK(20, 2.0f, 16.0f, 1.5f),
-        ANVIL(30, 2.5f, 24.0f, 2.0f);
-
-        private final int minimumChargeTicks;
-        private final float beamWidthMultiplier;
-        private final float rangeBonus;
-        private final float damageMultiplier;
-
-        AmmoKind(
-                int minimumChargeTicks,
-                float beamWidthMultiplier,
-                float rangeBonus,
-                float damageMultiplier
-        ) {
-            this.minimumChargeTicks = minimumChargeTicks;
-            this.beamWidthMultiplier = beamWidthMultiplier;
-            this.rangeBonus = rangeBonus;
-            this.damageMultiplier = damageMultiplier;
-        }
-
-        int minimumChargeTicks() {
-            return minimumChargeTicks;
-        }
-
-        float beamWidthMultiplier() {
-            return beamWidthMultiplier;
-        }
-
-        float beamLength() {
-            return RailgunRay.DEFAULT_LENGTH + rangeBonus;
-        }
-
-        float damageMultiplier() {
-            return damageMultiplier;
-        }
-
-        private static @Nullable AmmoKind fromVanillaId(Identifier id) {
-            if (Identifier.withDefaultNamespace("iron_ingot").equals(id)) return IRON_INGOT;
-            if (Identifier.withDefaultNamespace("iron_block").equals(id)) return IRON_BLOCK;
-            if (Identifier.withDefaultNamespace("anvil").equals(id)
-                    || Identifier.withDefaultNamespace("chipped_anvil").equals(id)
-                    || Identifier.withDefaultNamespace("damaged_anvil").equals(id)) return ANVIL;
-            return null;
         }
     }
 

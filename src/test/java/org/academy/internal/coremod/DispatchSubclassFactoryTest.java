@@ -8,9 +8,9 @@ import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.lang.reflect.Modifier;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class DispatchSubclassFactoryTest {
     @Test
@@ -20,7 +20,7 @@ class DispatchSubclassFactoryTest {
         assertSame(CustomServerPlayer.class, result.dispatchType().getSuperclass());
         assertTrue(HotSpotClassPointerAccess.hasNoInstanceFields(result.dispatchType()));
         assertTrue(ImagineBreakerHealthAccess.class.isAssignableFrom(result.dispatchType()));
-        assertTrue(java.lang.reflect.Modifier.isPublic(result.dispatchType()
+        assertTrue(Modifier.isPublic(result.dispatchType()
                 .getMethod("imaginebreaker", float.class).getModifiers()));
         assertSame(result.dispatchType(),
                 DispatchSubclassFactory.forPlayerType(CustomServerPlayer.class).dispatchType());

@@ -9,7 +9,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -66,6 +65,20 @@ public final class JetStrike extends Skill {
                 .dependsOn(Skills.LIGHT_SHIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition("Light Shield", "academy:light_shield"))
+        );
+    }
+
+    static @Nullable Vec3 normalizeDirection(Vec3 direction) {
+        return direction.lengthSqr() <= 1.0e-8 ? null : direction.normalize();
+    }
+
+    static float calculateDamage(float abilityPower, float playerMultiplier) {
+        return MeltdownerBeamDamage.calculate(
+                BASE_DAMAGE * Math.max(0.0f, abilityPower),
+                0.0f,
+                0.0f,
+                playerMultiplier,
+                false
         );
     }
 
@@ -218,20 +231,6 @@ public final class JetStrike extends Skill {
                 initialLevel.addFreshEntity(smoke);
             }
         }
-    }
-
-    static @Nullable Vec3 normalizeDirection(Vec3 direction) {
-        return direction.lengthSqr() <= 1.0e-8 ? null : direction.normalize();
-    }
-
-    static float calculateDamage(float abilityPower, float playerMultiplier) {
-        return MeltdownerBeamDamage.calculate(
-                BASE_DAMAGE * Math.max(0.0f, abilityPower),
-                0.0f,
-                0.0f,
-                playerMultiplier,
-                false
-        );
     }
 
     @PacketTarget(ThreadType.SERVER)

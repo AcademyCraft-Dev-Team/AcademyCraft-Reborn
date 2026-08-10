@@ -57,6 +57,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+
 public class BallLightning extends Skill {
     public static final String KEY_NAME_ACTIVATE = SkillNames.BALL_LIGHTNING + "_activate";
     public static final float MAX_RADIUS = 64.0F;

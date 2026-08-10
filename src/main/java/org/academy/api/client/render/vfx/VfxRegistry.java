@@ -3,11 +3,7 @@ package org.academy.api.client.render.vfx;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public final class VfxRegistry {
     private static final Map<Class<?>, Registration<?>> REGISTRATIONS = new HashMap<>();

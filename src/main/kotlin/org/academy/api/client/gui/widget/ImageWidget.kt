@@ -20,7 +20,7 @@ open class ImageWidget : AbstractWidget {
     private var sampler: GpuSampler? = null
 
     fun getSampler(): GpuSampler {
-        return sampler ?: RenderSystem.getSamplerCache()?.getClampToEdge(FilterMode.NEAREST)?.also {
+        return sampler ?: RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)?.also {
             sampler = it
         } ?: throw IllegalStateException("Sampler cache unavailable")
     }
@@ -135,7 +135,7 @@ open class ImageWidget : AbstractWidget {
     }
 
     fun setSampler(mode: FilterMode, useMipmap: Boolean): ImageWidget {
-        return setSampler(RenderSystem.getSamplerCache()?.getClampToEdge(mode, useMipmap))
+        return setSampler(RenderSystem.getSamplerCache().getClampToEdge(mode, useMipmap))
     }
 
     fun setSampler(sampler: GpuSampler?): ImageWidget {

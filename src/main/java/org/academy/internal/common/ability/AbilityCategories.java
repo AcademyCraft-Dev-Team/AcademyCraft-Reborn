@@ -7,12 +7,12 @@ import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.aeromanip.Aeromanip;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.electromaster.Electromaster;
 import org.academy.internal.common.ability.level0.Level0;
 import org.academy.internal.common.ability.meltdowner.Meltdowner;
 import org.academy.internal.common.ability.mentalout.Mentalout;
 import org.academy.internal.common.ability.teleport.Teleport;
-import org.academy.internal.common.ability.darkmatter.Darkmatter;
 
 public final class AbilityCategories {
     public static final DeferredRegister<AbilityCategory> ABILITY_CATEGORIES = DeferredRegister.create(Registries.Keys.ABILITY_CATEGORIES, AcademyCraft.MOD_ID);

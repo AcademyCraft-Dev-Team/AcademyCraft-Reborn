@@ -6,6 +6,7 @@ import io.netty.handler.codec.EncoderException;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -23,6 +24,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -33,14 +35,6 @@ public final class PrecisionOperationManager {
     private static boolean serverInitialized;
 
     private PrecisionOperationManager() {
-    }
-
-    public enum FeedbackType {
-        SAVE,
-        STARTED,
-        CANCELLED,
-        COMPLETED,
-        ERROR
     }
 
     public static synchronized void initClient() {
@@ -86,7 +80,7 @@ public final class PrecisionOperationManager {
         PrecisionOperationRuntime.releaseController(player);
     }
 
-    public static void clear(net.minecraft.server.MinecraftServer server) {
+    public static void clear(MinecraftServer server) {
         COMPILED.clear();
         PrecisionOperationRuntime.clear(server);
     }
@@ -107,7 +101,7 @@ public final class PrecisionOperationManager {
         var cache = COMPILED.computeIfAbsent(player.getUUID(), _ -> new CachedPrograms());
         if (cache.revision != data.revision()) {
             cache.revision = data.revision();
-            java.util.Arrays.fill(cache.programs, null);
+            Arrays.fill(cache.programs, null);
         }
         var program = cache.programs[slot];
         if (program != null) {
@@ -134,6 +128,44 @@ public final class PrecisionOperationManager {
     static void runtimeCompleted(ServerPlayer player, int slot) {
         Server.result(player, slot, FeedbackType.COMPLETED, getOrCreateData(player).revision(),
                 PrecisionGraph.Diagnostic.OK, -1, -1, 0);
+    }
+
+    private static void writeBytes(ByteBuf buf, byte[] bytes) {
+        if (bytes == null || bytes.length > PrecisionGraph.MAX_ENCODED_BYTES) {
+            throw new EncoderException("Precision program exceeds 16 KiB");
+        }
+        ByteBufCodecs.VAR_INT.encode(buf, bytes.length);
+        buf.writeBytes(bytes);
+    }
+
+    private static byte[] readBytes(ByteBuf buf) {
+        var length = ByteBufCodecs.VAR_INT.decode(buf);
+        if (length < 0 || length > PrecisionGraph.MAX_ENCODED_BYTES || length > buf.readableBytes()) {
+            throw new DecoderException("Invalid precision program length");
+        }
+        var bytes = new byte[length];
+        buf.readBytes(bytes);
+        return bytes;
+    }
+
+    private static PrecisionGraph.Diagnostic diagnostic(int ordinal) {
+        var values = PrecisionGraph.Diagnostic.values();
+        return ordinal >= 0 && ordinal < values.length
+                ? values[ordinal]
+                : PrecisionGraph.Diagnostic.MALFORMED;
+    }
+
+    private static FeedbackType feedbackType(int ordinal) {
+        var values = FeedbackType.values();
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : FeedbackType.ERROR;
+    }
+
+    public enum FeedbackType {
+        SAVE,
+        STARTED,
+        CANCELLED,
+        COMPLETED,
+        ERROR
     }
 
     public static final class Server {
@@ -449,38 +481,8 @@ public final class PrecisionOperationManager {
         }
     }
 
-    private static void writeBytes(ByteBuf buf, byte[] bytes) {
-        if (bytes == null || bytes.length > PrecisionGraph.MAX_ENCODED_BYTES) {
-            throw new EncoderException("Precision program exceeds 16 KiB");
-        }
-        ByteBufCodecs.VAR_INT.encode(buf, bytes.length);
-        buf.writeBytes(bytes);
-    }
-
-    private static byte[] readBytes(ByteBuf buf) {
-        var length = ByteBufCodecs.VAR_INT.decode(buf);
-        if (length < 0 || length > PrecisionGraph.MAX_ENCODED_BYTES || length > buf.readableBytes()) {
-            throw new DecoderException("Invalid precision program length");
-        }
-        var bytes = new byte[length];
-        buf.readBytes(bytes);
-        return bytes;
-    }
-
-    private static PrecisionGraph.Diagnostic diagnostic(int ordinal) {
-        var values = PrecisionGraph.Diagnostic.values();
-        return ordinal >= 0 && ordinal < values.length
-                ? values[ordinal]
-                : PrecisionGraph.Diagnostic.MALFORMED;
-    }
-
-    private static FeedbackType feedbackType(int ordinal) {
-        var values = FeedbackType.values();
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : FeedbackType.ERROR;
-    }
-
     private static final class CachedPrograms {
-        private long revision = Long.MIN_VALUE;
         private final CompiledPrecisionProgram[] programs = new CompiledPrecisionProgram[4];
+        private long revision = Long.MIN_VALUE;
     }
 }

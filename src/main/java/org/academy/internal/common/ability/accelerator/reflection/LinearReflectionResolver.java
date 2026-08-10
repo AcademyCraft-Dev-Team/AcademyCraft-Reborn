@@ -4,9 +4,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
@@ -15,8 +15,8 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.function.Predicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public final class LinearReflectionResolver {
     public static final double RETURN_EPSILON = 1.0E-4;
@@ -122,10 +122,8 @@ public final class LinearReflectionResolver {
                     candidate.mirrorPoint(),
                     candidate.incomingDirection()
             );
-            case ELECTROMAGNETIC_SHIELD_REFRACTION ->
-                    ElectromagneticShield.Server.isActive(candidate.reflector());
-            case LIGHT_SHIELD_REFRACTION ->
-                    candidate.reflector().getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get());
+            case ELECTROMAGNETIC_SHIELD_REFRACTION -> ElectromagneticShield.Server.isActive(candidate.reflector());
+            case LIGHT_SHIELD_REFRACTION -> candidate.reflector().getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get());
         };
     }
 

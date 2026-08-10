@@ -57,7 +57,6 @@ public final class SyncAbilityDataPacket extends Packet<ClientPacketListener, Sy
                     OCCUPATION_LIST_CODEC.decode(buf)
             )
     );
-
     private final AbilityData cpData;
     private final float calculationIntensity;
     private final List<SkillOccupationSnapshot> skillOccupations;
@@ -100,26 +99,13 @@ public final class SyncAbilityDataPacket extends Packet<ClientPacketListener, Sy
         return new SyncAbilityDataPacket(data, calculationIntensity, skillOccupations);
     }
 
-    public AbilityData getAbilityData() {
-        return cpData;
-    }
-
-    public float getCalculationIntensity() {
-        return calculationIntensity;
-    }
-
-    public List<SkillOccupationSnapshot> getSkillOccupations() {
-        return skillOccupations;
-    }
-
     public static List<SkillOccupationSnapshot> summarizeOccupations(
             List<AbilityData.CpOccupationData> occupations
     ) {
-        if (occupations == null || occupations.isEmpty()) return List.of();
+        if (occupations.isEmpty()) return List.of();
         var summaries = new TreeMap<String, SkillOccupationSnapshot>();
         for (var occupation : occupations) {
-            if (occupation == null || occupation.isPermanent()
-                    || occupation.getSkillId() == null || occupation.getSkillId().isBlank()) {
+            if (occupation.isPermanent() || occupation.getSkillId().isBlank()) {
                 continue;
             }
             var snapshot = new SkillOccupationSnapshot(
@@ -133,6 +119,23 @@ public final class SyncAbilityDataPacket extends Packet<ClientPacketListener, Sy
         return List.copyOf(summaries.values());
     }
 
+    public AbilityData getAbilityData() {
+        return cpData;
+    }
+
+    public float getCalculationIntensity() {
+        return calculationIntensity;
+    }
+
+    public List<SkillOccupationSnapshot> getSkillOccupations() {
+        return skillOccupations;
+    }
+
+    @Override
+    public PacketType<ClientPacketListener, SyncAbilityDataPacket> getPacketType() {
+        return PacketTypes.SYNC_ABILITY_DATA.get();
+    }
+
     public record SkillOccupationSnapshot(
             String skillId,
             int stackCount,
@@ -140,7 +143,6 @@ public final class SyncAbilityDataPacket extends Packet<ClientPacketListener, Sy
             float occupiedCp
     ) {
         public SkillOccupationSnapshot {
-            skillId = skillId == null ? "" : skillId;
             stackCount = Math.max(0, stackCount);
             remainingIterationPoints = Math.max(0, remainingIterationPoints);
             occupiedCp = Float.isFinite(occupiedCp) ? Math.max(0.0f, occupiedCp) : 0.0f;
@@ -154,10 +156,5 @@ public final class SyncAbilityDataPacket extends Packet<ClientPacketListener, Sy
                     occupiedCp + other.occupiedCp
             );
         }
-    }
-
-    @Override
-    public PacketType<ClientPacketListener, SyncAbilityDataPacket> getPacketType() {
-        return PacketTypes.SYNC_ABILITY_DATA.get();
     }
 }

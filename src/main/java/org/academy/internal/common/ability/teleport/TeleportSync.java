@@ -9,7 +9,9 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-/** Forces ability-driven teleports to use an absolute entity-position update. */
+/**
+ * Forces ability-driven teleports to use an absolute entity-position update.
+ */
 public final class TeleportSync {
     private static final Set<Entity> PENDING_ABSOLUTE_SYNCS =
             Collections.newSetFromMap(new WeakHashMap<>());

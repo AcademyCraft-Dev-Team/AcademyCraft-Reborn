@@ -8,8 +8,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -30,9 +30,9 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.SkillFlightController;
-import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -110,10 +110,19 @@ public final class DarkmatterSixWings extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -195,9 +204,12 @@ public final class DarkmatterSixWings extends Skill {
     public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
         public static final TogglePacket INSTANCE = new TogglePacket();
         public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private TogglePacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.DARKMATTER_SIX_WINGS_TOGGLE.get();
         }
     }

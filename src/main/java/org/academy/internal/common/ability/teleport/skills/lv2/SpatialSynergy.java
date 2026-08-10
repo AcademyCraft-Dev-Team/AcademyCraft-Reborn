@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.teleport.skills.lv2;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -16,8 +15,8 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
-import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
+import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
@@ -26,8 +25,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.TeleportSafety;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -36,6 +35,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.Set;
 
 public class SpatialSynergy extends Skill {
     private static final float RADIUS = 4.0f;
@@ -127,7 +128,7 @@ public class SpatialSynergy extends Skill {
                     TeleportSync.teleportInstantly(teammate, safe);
                 } else {
                     teammate.teleportTo(destinationLevel, safe.x, safe.y, safe.z,
-                            java.util.Set.of(), teammate.getYRot(), teammate.getXRot(), false);
+                            Set.of(), teammate.getYRot(), teammate.getXRot(), false);
                 }
                 teammate.resetFallDistance();
             }

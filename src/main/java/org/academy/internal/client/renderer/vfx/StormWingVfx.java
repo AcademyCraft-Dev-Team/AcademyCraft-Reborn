@@ -181,6 +181,10 @@ public final class StormWingVfx implements Vfx {
         return Math.max(0.015f * SIZE, width);
     }
 
+    private static @Nullable Matrix4f getModelRootMatrix(AvatarRendererContext context) {
+        return context.takeModelRootMatrix();
+    }
+
     @Override
     public void sample(VfxFrameContext ctx, VfxSink sink) {
         if (IrisCompat.isShaderPackInUse()) return;
@@ -212,9 +216,5 @@ public final class StormWingVfx implements Vfx {
     @Override
     public boolean isAlive() {
         return true;
-    }
-
-    private static @Nullable Matrix4f getModelRootMatrix(AvatarRendererContext context) {
-        return context.takeModelRootMatrix();
     }
 }

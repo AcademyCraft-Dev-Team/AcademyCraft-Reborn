@@ -7,14 +7,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.phys.AABB;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.ControlHandle;
-import org.academy.api.common.entitycontrol.ControlRequest;
-import org.academy.api.common.entitycontrol.MentalControlApi;
+import org.academy.api.common.ability.Skill;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
@@ -25,15 +19,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRun
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public final class PrecisionOperationRuntime {
     public static final int PRIORITY = 200;
@@ -101,46 +87,46 @@ public final class PrecisionOperationRuntime {
                 UUID intrusionSession = null;
                 try {
                     switch (action.kind) {
-                    case TARGET_MISIDENTIFICATION -> applyMisidentification(
-                            player, action.entities, action.entity, action.expiresAt,
-                            subjectHandles, subjectCosts);
-                    case MENTAL_STUPOR -> applyDirective(
-                            player, action.entities, new ControlDirective.FreezeAi(),
-                            PrecisionGraph.NodeKind.MENTAL_STUPOR, action.expiresAt,
-                            subjectHandles, subjectCosts);
-                    case IMPRESSION_MANIPULATION -> applyDirective(
-                            player, action.entities, new ControlDirective.ImpressionAlliance(),
-                            PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, action.expiresAt,
-                            subjectHandles, subjectCosts);
-                    case PERCEPTION_MASK -> applyPerception(
-                            player, action.entities, action.entity, action.expiresAt,
-                            subjectHandles, subjectCosts);
-                    case START_INTRUSION -> {
-                        intrusionSession = MentalIntrusionManager.startPrecision(
-                                player,
-                                action.entity,
-                                action.expiresAt
-                        );
-                        if (intrusionSession == null) throw new IllegalStateException("Intrusion rejected");
-                        fixedCost += MentaloutConfig.mentalIntrusionCost(
-                                player,
-                                Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2)
-                        );
-                    }
-                    case END_INTRUSION, REMOVE_CONTROL -> {
-                    }
-                    case PATH_TO -> applyDirective(
-                            player, action.entities, new ControlDirective.MoveTo(action.destination),
-                            PrecisionGraph.NodeKind.PATH_TO, action.expiresAt,
-                            subjectHandles, subjectCosts);
-                    case VIEW_CONTROL -> applyDirective(
-                            player, action.entities, new ControlDirective.LookAt(action.entity.getUUID()),
-                            PrecisionGraph.NodeKind.VIEW_CONTROL, action.expiresAt,
-                            subjectHandles, subjectCosts);
-                    case GUARD_MODE -> applyDirective(
-                            player, action.entities, new ControlDirective.Guard(action.destination),
-                            PrecisionGraph.NodeKind.GUARD_MODE, action.expiresAt,
-                            subjectHandles, subjectCosts);
+                        case TARGET_MISIDENTIFICATION -> applyMisidentification(
+                                player, action.entities, action.entity, action.expiresAt,
+                                subjectHandles, subjectCosts);
+                        case MENTAL_STUPOR -> applyDirective(
+                                player, action.entities, new ControlDirective.FreezeAi(),
+                                PrecisionGraph.NodeKind.MENTAL_STUPOR, action.expiresAt,
+                                subjectHandles, subjectCosts);
+                        case IMPRESSION_MANIPULATION -> applyDirective(
+                                player, action.entities, new ControlDirective.ImpressionAlliance(),
+                                PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, action.expiresAt,
+                                subjectHandles, subjectCosts);
+                        case PERCEPTION_MASK -> applyPerception(
+                                player, action.entities, action.entity, action.expiresAt,
+                                subjectHandles, subjectCosts);
+                        case START_INTRUSION -> {
+                            intrusionSession = MentalIntrusionManager.startPrecision(
+                                    player,
+                                    action.entity,
+                                    action.expiresAt
+                            );
+                            if (intrusionSession == null) throw new IllegalStateException("Intrusion rejected");
+                            fixedCost += MentaloutConfig.mentalIntrusionCost(
+                                    player,
+                                    Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2)
+                            );
+                        }
+                        case END_INTRUSION, REMOVE_CONTROL -> {
+                        }
+                        case PATH_TO -> applyDirective(
+                                player, action.entities, new ControlDirective.MoveTo(action.destination),
+                                PrecisionGraph.NodeKind.PATH_TO, action.expiresAt,
+                                subjectHandles, subjectCosts);
+                        case VIEW_CONTROL -> applyDirective(
+                                player, action.entities, new ControlDirective.LookAt(action.entity.getUUID()),
+                                PrecisionGraph.NodeKind.VIEW_CONTROL, action.expiresAt,
+                                subjectHandles, subjectCosts);
+                        case GUARD_MODE -> applyDirective(
+                                player, action.entities, new ControlDirective.Guard(action.destination),
+                                PrecisionGraph.NodeKind.GUARD_MODE, action.expiresAt,
+                                subjectHandles, subjectCosts);
                     }
                 } catch (RuntimeException exception) {
                     subjectHandles.values().forEach(PrecisionOperationRuntime::closeReverse);
@@ -171,7 +157,7 @@ public final class PrecisionOperationRuntime {
             }
             slots[slot] = activeActions.isEmpty() ? null : new ActiveContext(activeActions);
             if (evaluated.endIntrusion) MentalIntrusionManager.stopAny(player);
-            if (java.util.Arrays.stream(slots).allMatch(java.util.Objects::isNull)) {
+            if (Arrays.stream(slots).allMatch(Objects::isNull)) {
                 ACTIVE.remove(player.getUUID());
             }
             return activeActions.isEmpty() ? ExecutionResult.completed() : ExecutionResult.started();
@@ -222,7 +208,7 @@ public final class PrecisionOperationRuntime {
                             player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
                 }
             }
-            if (java.util.Arrays.stream(entry.getValue()).allMatch(java.util.Objects::isNull)) {
+            if (Arrays.stream(entry.getValue()).allMatch(Objects::isNull)) {
                 ACTIVE.remove(entry.getKey());
             }
         }
@@ -258,7 +244,7 @@ public final class PrecisionOperationRuntime {
                             player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
                 }
             }
-            if (java.util.Arrays.stream(entry.getValue()).allMatch(java.util.Objects::isNull)) {
+            if (Arrays.stream(entry.getValue()).allMatch(Objects::isNull)) {
                 ACTIVE.remove(entry.getKey());
             }
         }
@@ -685,7 +671,7 @@ public final class PrecisionOperationRuntime {
         }
     }
 
-    private static void requireSkill(org.academy.api.common.ability.Skill skill, ServerPlayer player) {
+    private static void requireSkill(Skill skill, ServerPlayer player) {
         if (!skill.isEnabled(player)) throw new IllegalStateException("Required skill unavailable");
     }
 
@@ -710,7 +696,7 @@ public final class PrecisionOperationRuntime {
             ControlDestination destination
     ) {
         entities.forEach(target -> targetIds.add(target.getUUID()));
-        if (destination instanceof ControlDestination.Entity entity) targetIds.add(entity.uuid());
+        if (destination instanceof ControlDestination.Entity(UUID uuid)) targetIds.add(uuid);
     }
 
     private static List<LivingEntity> usableSet(Object value, ServerPlayer player) {
@@ -747,8 +733,8 @@ public final class PrecisionOperationRuntime {
             List<LivingEntity> subjects,
             ControlDestination destination
     ) {
-        if (!(destination instanceof ControlDestination.Entity entity)) return subjects;
-        return subjects.stream().filter(subject -> !subject.getUUID().equals(entity.uuid())).toList();
+        if (!(destination instanceof ControlDestination.Entity(UUID uuid))) return subjects;
+        return subjects.stream().filter(subject -> !subject.getUUID().equals(uuid)).toList();
     }
 
     private static LivingEntity effectiveTarget(LivingEntity entity) {
@@ -924,6 +910,7 @@ public final class PrecisionOperationRuntime {
             subjectCosts.merge(observer.getUUID(), cost, Float::sum);
         }
     }
+
     private static void stop(ServerPlayer player, int slot) {
         var slots = ACTIVE.get(player.getUUID());
         if (slots == null || slot < 0 || slot >= slots.length) return;
@@ -943,14 +930,8 @@ public final class PrecisionOperationRuntime {
                     Skills.PRECISION_OPERATION.get()
             );
         }
-        if (java.util.Arrays.stream(slots).allMatch(java.util.Objects::isNull)) {
+        if (Arrays.stream(slots).allMatch(Objects::isNull)) {
             ACTIVE.remove(player.getUUID());
-        }
-    }
-
-    private static final class ProtectedTargetException extends RuntimeException {
-        private ProtectedTargetException() {
-            super(null, null, false, false);
         }
     }
 
@@ -983,11 +964,33 @@ public final class PrecisionOperationRuntime {
         }
     }
 
+    private static boolean isHandleClosed(AutoCloseable handle) {
+        if (handle instanceof ControlHandle control) return control.isClosed();
+        if (handle instanceof MentalPerceptionRuntime.Handle perception) return perception.isClosed();
+        return false;
+    }
+
+    private static PrecisionGraph.Diagnostic diagnostic(ControlFailureReason reason) {
+        return switch (reason) {
+            case UNREACHABLE_DESTINATION -> PrecisionGraph.Diagnostic.UNREACHABLE_DESTINATION;
+            case TARGET_UNAVAILABLE -> PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE;
+            case CONTROL_RESISTANCE, UNSUPPORTED_MOVEMENT_MODE,
+                 PLANNING_BUDGET_EXHAUSTED, CLIENT_TIMEOUT -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
+            case ADAPTER_ERROR -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
+        };
+    }
+
     public enum ExecutionState {
         STARTED,
         CANCELLED,
         COMPLETED,
         FAILED
+    }
+
+    private static final class ProtectedTargetException extends RuntimeException {
+        private ProtectedTargetException() {
+            super(null, null, false, false);
+        }
     }
 
     public record ExecutionResult(
@@ -1109,83 +1112,81 @@ public final class PrecisionOperationRuntime {
         private Set<UUID> dependencyIds() {
             var result = new HashSet<UUID>();
             if (entity != null) result.add(entity.getUUID());
-            if (destination instanceof ControlDestination.Entity target) result.add(target.uuid());
+            if (destination instanceof ControlDestination.Entity(UUID uuid)) result.add(uuid);
             return Set.copyOf(result);
         }
     }
 
-    private static final class ActiveContext {
-        private final List<ActiveAction> actions;
-
-        private ActiveContext(List<ActiveAction> actions) {
-            this.actions = new ArrayList<>(actions);
-        }
-
-        private float cost() {
-            var total = 0.0f;
-            for (var action : actions) total += action.cost();
-            return total;
-        }
-
-        private void close(ServerPlayer player) {
-            actions.forEach(action -> action.close(player));
-            actions.clear();
-        }
-
-        private float releaseSubjects(Set<UUID> subjects) {
-            var released = 0.0f;
-            for (var action : actions) released += action.releaseSubjects(subjects);
-            actions.removeIf(ActiveAction::empty);
-            return released;
-        }
-
-        private float subjectCost(Set<UUID> subjects) {
-            var result = 0.0f;
-            for (var action : actions) result += action.subjectCost(subjects);
-            return result;
-        }
-
-        private boolean releaseEntity(ServerPlayer player, UUID entityId) {
-            var changed = false;
-            var iterator = actions.iterator();
-            while (iterator.hasNext()) {
-                var action = iterator.next();
-                if (!action.releaseEntity(player, entityId)) continue;
-                changed = true;
-                if (action.empty()) iterator.remove();
+    private record ActiveContext(List<ActiveAction> actions) {
+            private ActiveContext(List<ActiveAction> actions) {
+                this.actions = new ArrayList<>(actions);
             }
-            return changed;
-        }
 
-        private ContextTick tick(ServerPlayer player, long now) {
-            var changed = false;
-            var failures = new HashMap<FailureKey, Integer>();
-            var iterator = actions.iterator();
-            while (iterator.hasNext()) {
-                var action = iterator.next();
-                var tick = action.tick(player, now);
-                changed |= tick.changed();
-                for (var failure : tick.failures()) {
-                    failures.merge(
-                            new FailureKey(failure.diagnostic(), failure.nodeId()),
-                            failure.affectedCount(),
-                            Integer::sum
-                    );
+            private float cost() {
+                var total = 0.0f;
+                for (var action : actions) total += action.cost();
+                return total;
+            }
+
+            private void close(ServerPlayer player) {
+                actions.forEach(action -> action.close(player));
+                actions.clear();
+            }
+
+            private float releaseSubjects(Set<UUID> subjects) {
+                var released = 0.0f;
+                for (var action : actions) released += action.releaseSubjects(subjects);
+                actions.removeIf(ActiveAction::empty);
+                return released;
+            }
+
+            private float subjectCost(Set<UUID> subjects) {
+                var result = 0.0f;
+                for (var action : actions) result += action.subjectCost(subjects);
+                return result;
+            }
+
+            private boolean releaseEntity(ServerPlayer player, UUID entityId) {
+                var changed = false;
+                var iterator = actions.iterator();
+                while (iterator.hasNext()) {
+                    var action = iterator.next();
+                    if (!action.releaseEntity(player, entityId)) continue;
+                    changed = true;
+                    if (action.empty()) iterator.remove();
                 }
-                if (action.empty()) iterator.remove();
+                return changed;
             }
-            return new ContextTick(changed, failures.entrySet().stream()
-                    .map(entry -> new ActionFailure(
-                            entry.getKey().diagnostic(),
-                            entry.getKey().nodeId(),
-                            entry.getValue()
-                    )).toList());
-        }
 
-        private boolean empty() {
-            return actions.isEmpty();
+            private ContextTick tick(ServerPlayer player, long now) {
+                var changed = false;
+                var failures = new HashMap<FailureKey, Integer>();
+                var iterator = actions.iterator();
+                while (iterator.hasNext()) {
+                    var action = iterator.next();
+                    var tick = action.tick(player, now);
+                    changed |= tick.changed();
+                    for (var failure : tick.failures()) {
+                        failures.merge(
+                                new FailureKey(failure.diagnostic(), failure.nodeId()),
+                                failure.affectedCount(),
+                                Integer::sum
+                        );
+                    }
+                    if (action.empty()) iterator.remove();
+                }
+                return new ContextTick(changed, failures.entrySet().stream()
+                        .map(entry -> new ActionFailure(
+                                entry.getKey().diagnostic(),
+                                entry.getKey().nodeId(),
+                                entry.getValue()
+                        )).toList());
+            }
+
+            private boolean empty() {
+                return actions.isEmpty();
+            }
         }
-    }
 
     private static final class ActiveAction {
         private final int nodeId;
@@ -1238,7 +1239,7 @@ public final class PrecisionOperationRuntime {
                         .filter(ControlHandle.class::isInstance)
                         .map(ControlHandle.class::cast)
                         .map(ControlHandle::failureReason)
-                        .flatMap(java.util.Optional::stream)
+                        .flatMap(Optional::stream)
                         .findFirst()
                         .map(PrecisionOperationRuntime::diagnostic)
                         .orElse(null);
@@ -1301,22 +1302,6 @@ public final class PrecisionOperationRuntime {
         private boolean empty() {
             return subjectHandles.isEmpty() && fixedCost <= 0.0f && intrusionSession == null;
         }
-    }
-
-    private static boolean isHandleClosed(AutoCloseable handle) {
-        if (handle instanceof ControlHandle control) return control.isClosed();
-        if (handle instanceof MentalPerceptionRuntime.Handle perception) return perception.isClosed();
-        return false;
-    }
-
-    private static PrecisionGraph.Diagnostic diagnostic(ControlFailureReason reason) {
-        return switch (reason) {
-            case UNREACHABLE_DESTINATION -> PrecisionGraph.Diagnostic.UNREACHABLE_DESTINATION;
-            case TARGET_UNAVAILABLE -> PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE;
-            case CONTROL_RESISTANCE, UNSUPPORTED_MOVEMENT_MODE,
-                    PLANNING_BUDGET_EXHAUSTED, CLIENT_TIMEOUT -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
-            case ADAPTER_ERROR -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
-        };
     }
 
     private record FailureKey(PrecisionGraph.Diagnostic diagnostic, int nodeId) {
