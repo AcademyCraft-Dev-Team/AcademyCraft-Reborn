@@ -59,7 +59,7 @@ public final class DarkmatterCreation extends Skill {
                 .maxStacks(2)
                 .dependsOn(Skills.DARKMATTER_REPAIR)
                 .withCustomData(DarkmatterCreationData.ID, DarkmatterCreationData.class,
-                        player -> new DarkmatterCreationData())
+                        DarkmatterCreationData::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition(
                         "Dark Matter Repair", "academy:darkmatter_repair"))

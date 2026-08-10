@@ -73,7 +73,7 @@ public final class LocationTeleport extends Skill {
                 .iterationTicks(40)
                 .maxStacks(1)
                 .dependsOn(Skills.CUT_THROUGH)
-                .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, player -> new LocationTeleportData())
+                .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, LocationTeleportData::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:cut_through"))
         );

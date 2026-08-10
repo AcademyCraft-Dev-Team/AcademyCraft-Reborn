@@ -259,7 +259,7 @@ public final class PulseCharge extends Skill {
                 var skill = Skills.PULSE_CHARGE.get();
                 var target = map.get(skill.getKeyString());
                 if (target == null) {
-                    target = skill.createData(player);
+                    target = skill.createData();
                     map.put(skill.getKeyString(), target);
                 }
                 mergeProgress(target, legacy);
