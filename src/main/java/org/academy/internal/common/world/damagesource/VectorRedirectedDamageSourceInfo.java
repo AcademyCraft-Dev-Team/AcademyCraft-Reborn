@@ -7,14 +7,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 public interface VectorRedirectedDamageSourceInfo {
+    static boolean isRedirected(DamageSource source) {
+        return source instanceof VectorRedirectedDamageSourceInfo redirected
+                && redirected.redirectDepth() > 0;
+    }
+
     int redirectDepth();
 
     @Nullable UUID originalAttackerId();
 
     VectorRedirectKind redirectKind();
-
-    static boolean isRedirected(DamageSource source) {
-        return source instanceof VectorRedirectedDamageSourceInfo redirected
-                && redirected.redirectDepth() > 0;
-    }
 }

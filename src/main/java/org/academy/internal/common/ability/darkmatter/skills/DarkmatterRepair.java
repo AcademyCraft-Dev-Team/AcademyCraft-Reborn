@@ -99,10 +99,19 @@ public final class DarkmatterRepair extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -160,9 +169,12 @@ public final class DarkmatterRepair extends Skill {
     public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
         public static final TogglePacket INSTANCE = new TogglePacket();
         public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private TogglePacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.DARKMATTER_REPAIR_TOGGLE.get();
         }
     }

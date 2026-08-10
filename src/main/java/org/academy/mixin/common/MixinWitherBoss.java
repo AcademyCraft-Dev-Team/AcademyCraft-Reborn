@@ -3,9 +3,10 @@ package org.academy.mixin.common;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.DirectMobMovementAccess;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,8 +14,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(WitherBoss.class)
 public abstract class MixinWitherBoss implements DirectMobMovementAccess {
+    private static void clearDeniedHeads(WitherBoss wither, ServerLevel level) {
+        for (var head = 0; head < 3; head++) {
+            var entity = level.getEntity(wither.getAlternativeTarget(head));
+            if (entity instanceof LivingEntity target
+                    && MentalControlRuntime.attackDecision(wither, target) == AttackDecision.DENY) {
+                wither.setAlternativeTarget(head, 0);
+            }
+        }
+    }
+
+    private static void clearHeads(WitherBoss wither) {
+        for (var head = 0; head < 3; head++) wither.setAlternativeTarget(head, 0);
+    }
+
     @Override
-    public void academy$moveDirectly(net.minecraft.world.phys.Vec3 destination, double speedModifier) {
+    public void academy$moveDirectly(Vec3 destination, double speedModifier) {
         var wither = (WitherBoss) (Object) this;
         wither.getNavigation().stop();
         wither.getMoveControl().setWantedPosition(
@@ -68,19 +83,5 @@ public abstract class MixinWitherBoss implements DirectMobMovementAccess {
             return;
         }
         clearDeniedHeads(wither, level);
-    }
-
-    private static void clearDeniedHeads(WitherBoss wither, ServerLevel level) {
-        for (var head = 0; head < 3; head++) {
-            var entity = level.getEntity(wither.getAlternativeTarget(head));
-            if (entity instanceof LivingEntity target
-                    && MentalControlRuntime.attackDecision(wither, target) == AttackDecision.DENY) {
-                wither.setAlternativeTarget(head, 0);
-            }
-        }
-    }
-
-    private static void clearHeads(WitherBoss wither) {
-        for (var head = 0; head < 3; head++) wither.setAlternativeTarget(head, 0);
     }
 }

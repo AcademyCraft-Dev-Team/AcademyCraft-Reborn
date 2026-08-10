@@ -17,67 +17,13 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_ADDITIVE;
-import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_BLOOM_ADDITIVE;
-import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE;
+import static org.academy.api.client.render.Render.RenderTypes.*;
 
 public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRenderState> {
     public static final float[][] BUFFERED_VERTEX = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 16, true);
 
     public RailgunRayRenderer(EntityRendererProvider.Context context) {
         super(context);
-    }
-
-    @Override
-    public void submit(RailgunRayRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        poseStack.pushPose();
-
-        var widthMultiplier = Float.isFinite(renderState.widthMultiplier)
-                ? Math.max(0.0f, renderState.widthMultiplier)
-                : 1.0f;
-        var progress = Math.max(0.0f,
-                MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5))
-                * 0.1f * widthMultiplier;
-        var originalLength = ReflectedBeamVisualGeometry.safeLength(renderState.length);
-        var outgoingLength = renderState.reflectionActive
-                ? Math.min(originalLength, ReflectedBeamVisualGeometry.safeLength(renderState.reflectionDistance))
-                : originalLength;
-        var outgoingDirection = Vec3.directionFromRotation(renderState.xRot, renderState.yRot).normalize();
-        submitBeamShellLayersAlong(
-                nodeCollector, poseStack, Vec3.ZERO, outgoingDirection, outgoingLength, progress
-        );
-
-        if (renderState.reflectionActive) {
-            var reflectionPoint = outgoingDirection.scale(outgoingLength);
-            submitBeamShellLayersAlong(
-                    nodeCollector,
-                    poseStack,
-                    reflectionPoint,
-                    renderState.reflectionReturnDirection,
-                    ReflectedBeamVisualGeometry.safeLength(renderState.reflectionReturnLength),
-                    progress * 1.08f
-            );
-        }
-
-        submitBeamCoreLayersAlong(
-                nodeCollector, poseStack, Vec3.ZERO, outgoingDirection, outgoingLength, progress
-        );
-
-        if (renderState.reflectionActive) {
-            var reflectionPoint = outgoingDirection.scale(outgoingLength);
-            submitBeamCoreLayersAlong(
-                    nodeCollector,
-                    poseStack,
-                    reflectionPoint,
-                    renderState.reflectionReturnDirection,
-                    ReflectedBeamVisualGeometry.safeLength(renderState.reflectionReturnLength),
-                    progress * 1.08f
-            );
-            submitReflectionHighlight(
-                    nodeCollector, poseStack, reflectionPoint, outgoingDirection, outgoingLength, progress
-            );
-        }
-        poseStack.popPose();
     }
 
     private static void submitBeamShellLayersAlong(
@@ -148,7 +94,7 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
             float progress
     ) {
         submitBeam(nodeCollector, poseStack, length,
-                progress * 0.32f, POS_COLOR_QUADS_BLOOM_ADDITIVE, 1.0f, 1.0f, 1.0f, 1.0f);
+                progress * 0.32f, POS_COLOR_QUADS_GLOW_ADDITIVE, 1.0f, 1.0f, 1.0f, 1.0f);
         submitBeam(nodeCollector, poseStack, length,
                 progress * 0.18f, POS_COLOR_QUADS_NO_DEPTH_WRITE, 1.0f, 1.0f, 1.0f, 0.98f);
     }
@@ -220,6 +166,58 @@ public class RailgunRayRenderer extends EntityRenderer<RailgunRay, RailgunRayRen
             float red, float green, float blue, float alpha
     ) {
         consumer.addVertex(matrix, x, y, z).setColor(red, green, blue, alpha);
+    }
+
+    @Override
+    public void submit(RailgunRayRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
+        poseStack.pushPose();
+
+        var widthMultiplier = Float.isFinite(renderState.widthMultiplier)
+                ? Math.max(0.0f, renderState.widthMultiplier)
+                : 1.0f;
+        var progress = Math.max(0.0f,
+                MathUtil.getFlatTopParabolaHeight(renderState.ageInTicks, 20, 5))
+                * 0.1f * widthMultiplier;
+        var originalLength = ReflectedBeamVisualGeometry.safeLength(renderState.length);
+        var outgoingLength = renderState.reflectionActive
+                ? Math.min(originalLength, ReflectedBeamVisualGeometry.safeLength(renderState.reflectionDistance))
+                : originalLength;
+        var outgoingDirection = Vec3.directionFromRotation(renderState.xRot, renderState.yRot).normalize();
+        submitBeamShellLayersAlong(
+                nodeCollector, poseStack, Vec3.ZERO, outgoingDirection, outgoingLength, progress
+        );
+
+        if (renderState.reflectionActive) {
+            var reflectionPoint = outgoingDirection.scale(outgoingLength);
+            submitBeamShellLayersAlong(
+                    nodeCollector,
+                    poseStack,
+                    reflectionPoint,
+                    renderState.reflectionReturnDirection,
+                    ReflectedBeamVisualGeometry.safeLength(renderState.reflectionReturnLength),
+                    progress * 1.08f
+            );
+        }
+
+        submitBeamCoreLayersAlong(
+                nodeCollector, poseStack, Vec3.ZERO, outgoingDirection, outgoingLength, progress
+        );
+
+        if (renderState.reflectionActive) {
+            var reflectionPoint = outgoingDirection.scale(outgoingLength);
+            submitBeamCoreLayersAlong(
+                    nodeCollector,
+                    poseStack,
+                    reflectionPoint,
+                    renderState.reflectionReturnDirection,
+                    ReflectedBeamVisualGeometry.safeLength(renderState.reflectionReturnLength),
+                    progress * 1.08f
+            );
+            submitReflectionHighlight(
+                    nodeCollector, poseStack, reflectionPoint, outgoingDirection, outgoingLength, progress
+            );
+        }
+        poseStack.popPose();
     }
 
     @Override

@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -15,10 +16,12 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.level.ClipContext;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -37,8 +40,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -51,6 +54,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.util.Mth;
 
 public final class PneumaticGrasp extends Skill {
     private static final double MIN_CONTROL_DISTANCE = 2.0;
@@ -67,7 +71,8 @@ public final class PneumaticGrasp extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2)));
     }
 
-    @Override public void initClient() {
+    @Override
+    public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -80,12 +85,15 @@ public final class PneumaticGrasp extends Skill {
                         R.textures.pneumatic_grasp_icon, 75, 72));
     }
 
-    @Override public void initServer(MinecraftServerContext context) { MisakaNetworkServer.NETWORK_MANAGER.register(Server.class); }
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
 
     public static final class Client {
-        public static AbilitySystemClient.SkillInfo SKILL_INFO;
         public static final String KEY_NAME_START = SkillNames.PNEUMATIC_GRASP + "_start";
         public static final String KEY_NAME_STOP = SkillNames.PNEUMATIC_GRASP + "_stop";
+        public static AbilitySystemClient.SkillInfo SKILL_INFO;
         public static Config CONFIG = new Config();
         private static ControlContext currentContext;
 
@@ -104,7 +112,7 @@ public final class PneumaticGrasp extends Skill {
         private static final class ControlContext extends ClientContext {
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
-                var steps = (int) Math.signum(event.yOffset);
+                var steps = Mth.sign(event.yOffset);
                 if (steps == 0) return;
                 MisakaNetworkClient.send(new AdjustDistancePacket(steps));
                 event.setCanceled(true);
@@ -119,16 +127,28 @@ public final class PneumaticGrasp extends Skill {
         public static final class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() { }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
 
     public static final class Server {
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
-        @SubscribePacket public static void handle(StartPacket packet) {
+
+        @SubscribePacket
+        public static void handle(StartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (ACTIVE.containsKey(player) || !Skills.PNEUMATIC_GRASP.get().isEnabled(player)) return;
             var context = new Context(player);
@@ -136,27 +156,41 @@ public final class PneumaticGrasp extends Skill {
             AbilitySystemServer.registerContext(context);
             Skills.PNEUMATIC_GRASP.get().reportTrigger(player);
         }
-        @SubscribePacket public static void handle(StopPacket packet) {
+
+        @SubscribePacket
+        public static void handle(StopPacket packet) {
             var context = ACTIVE.get(packet.getPacketListener().getPlayer());
             if (context != null) context.end();
         }
-        @SubscribePacket public static void handle(AdjustDistancePacket packet) {
+
+        @SubscribePacket
+        public static void handle(AdjustDistancePacket packet) {
             var context = ACTIVE.get(packet.getPacketListener().getPlayer());
             if (context != null) context.adjustDistance(packet.steps());
         }
+
         private static final class Context extends ServerContext {
-            private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
+            private final ResourceKey<Level> dimension;
             private Entity controlledTarget;
             private double controlledSpeedCap;
             private double holdDistance = DEFAULT_CONTROL_DISTANCE;
             private int activeTicks;
             private boolean ended;
+
             private Context(ServerPlayer player) {
                 super(player);
                 dimension = player.level().dimension();
             }
-            private void end() { if (!ended) { ended = true; unregister(); } }
-            @SubscribeEvent public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Pre event) {
+
+            private void end() {
+                if (!ended) {
+                    ended = true;
+                    unregister();
+                }
+            }
+
+            @SubscribeEvent
+            public void onTick(ServerTickEvent.Pre event) {
                 var skill = Skills.PNEUMATIC_GRASP.get();
                 if (ended || player.hasDisconnected() || !player.isAlive()
                         || !player.level().dimension().equals(dimension) || !skill.isEnabled(player)) {
@@ -281,7 +315,7 @@ public final class PneumaticGrasp extends Skill {
                 if (!(player.level() instanceof ServerLevel level) || (activeTicks & 1) != 0) return;
                 var targetCenter = target.getBoundingBox().getCenter();
                 var beam = targetCenter.subtract(eye);
-                var pointCount = Math.max(3, Math.min(7, (int) Math.ceil(beam.length() / 2.0)));
+                var pointCount = Math.max(3, Math.min(7, Mth.ceil(beam.length() / 2.0)));
                 for (var index = 1; index <= pointCount; index++) {
                     var point = eye.add(beam.scale((double) index / (pointCount + 1)));
                     level.sendParticles(ParticleTypes.CLOUD,
@@ -291,8 +325,8 @@ public final class PneumaticGrasp extends Skill {
                     var radius = Math.max(0.4, target.getBbWidth() * 0.7);
                     var phase = activeTicks * 0.18;
                     for (var index = 0; index < 6; index++) {
-                        var angle = phase + index * Math.PI / 3.0;
-                        var point = targetCenter.add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+                        var angle = phase + index * Mth.PI / 3.0;
+                        var point = targetCenter.add(Mth.cos(angle) * radius, 0.0, Mth.sin(angle) * radius);
                         level.sendParticles(ParticleTypes.CLOUD,
                                 point.x, point.y, point.z, 1, 0.01, 0.02, 0.01, 0.002);
                     }
@@ -300,7 +334,9 @@ public final class PneumaticGrasp extends Skill {
                             destination.x, destination.y, destination.z, 1, 0.05, 0.05, 0.05, 0.0);
                 }
             }
-            @Override protected void onUnregistered() {
+
+            @Override
+            protected void onUnregistered() {
                 controlledTarget = null;
                 controlledSpeedCap = 0.0;
                 ACTIVE.remove(player, this);
@@ -312,16 +348,30 @@ public final class PneumaticGrasp extends Skill {
     public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
         public static final StartPacket INSTANCE = new StartPacket();
         public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private StartPacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() { return PacketTypes.PNEUMATIC_GRASP_START.get(); }
+
+        private StartPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+            return PacketTypes.PNEUMATIC_GRASP_START.get();
+        }
     }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class StopPacket extends Packet<ServerGamePacketListenerImpl, StopPacket> {
         public static final StopPacket INSTANCE = new StopPacket();
         public static final StreamCodec<ByteBuf, StopPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private StopPacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() { return PacketTypes.PNEUMATIC_GRASP_STOP.get(); }
+
+        private StopPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() {
+            return PacketTypes.PNEUMATIC_GRASP_STOP.get();
+        }
     }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class AdjustDistancePacket extends Packet<ServerGamePacketListenerImpl, AdjustDistancePacket> {
         public static final StreamCodec<ByteBuf, AdjustDistancePacket> CODEC = ByteBufCodecs.VAR_INT.map(
@@ -336,7 +386,8 @@ public final class PneumaticGrasp extends Skill {
             return steps;
         }
 
-        @Override public PacketType<ServerGamePacketListenerImpl, AdjustDistancePacket> getPacketType() {
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, AdjustDistancePacket> getPacketType() {
             return PacketTypes.PNEUMATIC_GRASP_ADJUST_DISTANCE.get();
         }
     }

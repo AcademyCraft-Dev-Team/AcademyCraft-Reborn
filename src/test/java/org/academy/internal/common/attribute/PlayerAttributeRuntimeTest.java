@@ -1,5 +1,6 @@
 package org.academy.internal.common.attribute;
 
+import net.minecraft.util.Mth;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,7 +13,7 @@ class PlayerAttributeRuntimeTest {
         assertEquals(0.1, PlayerAttributeRuntime.enduranceHealthBonus(1.0));
         assertEquals(0.002,
                 PlayerAttributeRuntime.dexteritySpeedBonus(1.0), 1.0E-12);
-        assertEquals(Math.sqrt(1.005) - 1.0,
+        assertEquals(Mth.sqrt(1.005f) - 1.0,
                 PlayerAttributeRuntime.dexterityJumpStrengthBonus(1.0), 1.0E-12);
         assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(199.99));
         assertEquals(1, PlayerAttributeRuntime.logarithmicLevel(200.0));

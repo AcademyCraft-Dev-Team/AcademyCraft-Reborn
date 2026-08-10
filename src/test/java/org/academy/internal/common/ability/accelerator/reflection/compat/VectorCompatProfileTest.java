@@ -4,9 +4,9 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class VectorCompatProfileTest {
     @Test
@@ -30,8 +30,8 @@ class VectorCompatProfileTest {
 
         var profile = VectorCompatProfile.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
 
-        assertEquals(java.util.List.of("thirdparty:particle_lance"), profile.damageTypes());
-        assertEquals(java.util.List.of("thirdparty:beam_anchor"), profile.directEntityTypes());
+        assertEquals(List.of("thirdparty:particle_lance"), profile.damageTypes());
+        assertEquals(List.of("thirdparty:beam_anchor"), profile.directEntityTypes());
         assertEquals(VectorCompatProfile.DirectionMode.SOURCE_POSITION, profile.direction());
         assertEquals(110.0, profile.range());
         assertEquals(0.75, profile.radius());
@@ -59,8 +59,8 @@ class VectorCompatProfileTest {
     void unsafeProfileValuesAreClamped() {
         var profile = new VectorCompatProfile(
                 false,
-                java.util.List.of(" ThirdParty:Beam ", "thirdparty:beam"),
-                java.util.List.of(),
+                List.of(" ThirdParty:Beam ", "thirdparty:beam"),
+                List.of(),
                 null,
                 null,
                 Double.POSITIVE_INFINITY,
@@ -73,7 +73,7 @@ class VectorCompatProfileTest {
                 0
         );
 
-        assertEquals(java.util.List.of("thirdparty:beam"), profile.damageTypes());
+        assertEquals(List.of("thirdparty:beam"), profile.damageTypes());
         assertEquals(VectorExecutionPolicy.DEFAULT_MAXIMUM_RANGE, profile.range());
         assertEquals(8.0, profile.radius());
         assertEquals(VectorBlockPolicy.CLIP_NO_BREAK, profile.blockPolicy());

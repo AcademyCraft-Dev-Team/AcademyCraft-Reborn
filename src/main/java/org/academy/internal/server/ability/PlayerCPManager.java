@@ -17,29 +17,31 @@ import org.academy.api.common.ability.event.AbilityRecoveryEvent;
 import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.server.config.AbilityConfig;
+import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.BooleanSupplier;
+import net.minecraft.util.Mth;
 
 public class PlayerCPManager implements AbilitySubsystem {
     static final float BASE_MAX_CP = 100.0f;
     static final float MAX_SKILL_PROFICIENCY_CP_BONUS = 300.0f;
     static final float MAX_CHALLENGE_CP_BONUS = 200.0f;
     static final int OVERLOAD_TICKS = 200;
+    static final float RECOVERED_CP_PER_SP = 10.0f;
     private static final float TICKS_PER_ITERATION_POINT = 20.0f;
     private static final int FOOD_SP_RECOVERY_TICKS_PER_NUTRITION = 20 * 10;
-    static final float RECOVERED_CP_PER_SP = 10.0f;
     private static final float CP_EPSILON = 1.0e-4f;
 
     private final PlayerDataManager playerDataManager;
@@ -52,6 +54,128 @@ public class PlayerCPManager implements AbilitySubsystem {
         playerDataManager = manager;
         this.syncManager = syncManager;
 
+    }
+
+    private static void enterOverload(AbilityData cpData, ServerPlayer player) {
+        cpData.setStatus(AbilityData.Status.OVERLOAD);
+        cpData.setStateTimer(OVERLOAD_TICKS);
+        NeoForge.EVENT_BUS.post(new AbilityOverloadEvent(player));
+    }
+
+    /**
+     * Advances every timed stack independently so one cast never waits for earlier stacks.
+     */
+    static boolean advanceTimedOccupationIterations(
+            List<AbilityData.CpOccupationData> occupations,
+            int recoverySteps
+    ) {
+        if (occupations == null || occupations.isEmpty() || recoverySteps <= 0) return false;
+        var changed = false;
+        for (var occupation : occupations) {
+            if (occupation == null || occupation.isPermanent()) continue;
+            var previous = occupation.getIterationTicks();
+            var next = Math.max(previous - recoverySteps, 0);
+            if (next == previous) continue;
+            occupation.setIterationTicks(next);
+            changed = true;
+        }
+        return changed;
+    }
+
+    static CpRecoveryPlan planCpRecovery(float requestedCp, float remainderCp, int currentSp) {
+        return planCpRecovery(requestedCp, remainderCp, currentSp, RECOVERED_CP_PER_SP);
+    }
+
+    static CpRecoveryPlan planCpRecovery(float requestedCp, float remainderCp, int currentSp,
+                                         float recoveredCpPerSp) {
+        var safeRecoveredCpPerSp = Float.isFinite(recoveredCpPerSp) && recoveredCpPerSp > 0.0f
+                ? recoveredCpPerSp : RECOVERED_CP_PER_SP;
+        if (!Float.isFinite(requestedCp) || requestedCp <= 0.0f || currentSp <= 0) {
+            return new CpRecoveryPlan(
+                    0.0f,
+                    normalizeRecoveryRemainder(remainderCp, safeRecoveredCpPerSp),
+                    0
+            );
+        }
+        var normalizedRemainder = normalizeRecoveryRemainder(remainderCp, safeRecoveredCpPerSp);
+        var recoverableBeforeEmpty = currentSp * safeRecoveredCpPerSp - normalizedRemainder;
+        var recovered = Math.min(requestedCp, Math.max(0.0f, recoverableBeforeEmpty));
+        if (recovered <= CP_EPSILON) {
+            return new CpRecoveryPlan(0.0f, normalizedRemainder, 0);
+        }
+
+        var accumulated = normalizedRemainder + recovered;
+        var spCost = Math.min(currentSp,
+                Mth.floor((accumulated + CP_EPSILON) / safeRecoveredCpPerSp));
+        var nextRemainder = accumulated - spCost * safeRecoveredCpPerSp;
+        if (nextRemainder < CP_EPSILON) nextRemainder = 0.0f;
+        return new CpRecoveryPlan(
+                recovered,
+                normalizeRecoveryRemainder(nextRemainder, safeRecoveredCpPerSp),
+                spCost
+        );
+    }
+
+    private static float normalizeRecoveryRemainder(float remainderCp, float recoveredCpPerSp) {
+        if (!Float.isFinite(remainderCp) || remainderCp <= 0.0f) return 0.0f;
+        var normalized = remainderCp % recoveredCpPerSp;
+        return normalized < CP_EPSILON ? 0.0f : normalized;
+    }
+
+    static boolean isAutomaticSkillDebugPlayer(String playerName) {
+        return "Dev".equals(playerName) || "Dusk_ark".equals(playerName);
+    }
+
+    static int getCpIterationRate(boolean skillDebugMode) {
+        return skillDebugMode ? 5 : 1;
+    }
+
+    static boolean isAtomicReplacementAffordable(float available, float released, float required) {
+        if (!Float.isFinite(available)
+                || !Float.isFinite(released) || released < 0
+                || !Float.isFinite(required) || required < 0) {
+            return false;
+        }
+        if (required <= released) return true;
+        var additionalRequired = required - released;
+        return Float.isFinite(additionalRequired) && available >= additionalRequired;
+    }
+
+    private static int getSkillLevel(
+            Player playerData,
+            Skill skill
+    ) {
+        var data = playerData.getSkillDataMap().get(skill.getKeyString());
+        return data == null ? 0 : skill.getLevelForProficiency(data.getProficiency());
+    }
+
+    static int foodSpRecoveryDurationTicks(int nutrition) {
+        return (int) Math.min(
+                Integer.MAX_VALUE,
+                (long) Math.max(0, nutrition) * FOOD_SP_RECOVERY_TICKS_PER_NUTRITION
+        );
+    }
+
+    static float normalizeDebugMaxCP(float maxCP) {
+        return Float.isFinite(maxCP) ? Math.max(0.0f, maxCP) : 0.0f;
+    }
+
+    static float resolveEffectiveMaxCP(float naturalMaxCP, Float debugOverride) {
+        return debugOverride == null
+                ? normalizeDebugMaxCP(naturalMaxCP)
+                : normalizeDebugMaxCP(debugOverride);
+    }
+
+    static float calculationEfficiency(float maxCp) {
+        return Float.isFinite(maxCp) ? Math.max(0.0f, maxCp) * 0.0005f : 0.0f;
+    }
+
+    static float abilityLevelCpBonus(int level) {
+        if (level >= 5) return 300.0f;
+        if (level == 4) return 140.0f;
+        if (level == 3) return 60.0f;
+        if (level == 2) return 20.0f;
+        return 0.0f;
     }
 
     @Override
@@ -133,12 +257,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return true;
     }
 
-    private static void enterOverload(AbilityData cpData, ServerPlayer player) {
-        cpData.setStatus(AbilityData.Status.OVERLOAD);
-        cpData.setStateTimer(OVERLOAD_TICKS);
-        NeoForge.EVENT_BUS.post(new AbilityOverloadEvent(player));
-    }
-
     private boolean enterOverloadIfDepleted(UUID uuid, AbilityData cpData) {
         if (cpData.getAvailableCP() > 0.0f
                 || cpData.getStatus() == AbilityData.Status.OVERLOAD
@@ -184,7 +302,7 @@ public class PlayerCPManager implements AbilitySubsystem {
                     * PlayerAttributeRuntime.neuralIterationMultiplier(player)
                     * getBonuses(player.getUUID()).iterationMultiplier());
             var progress = cpIterationProgress.merge(player.getUUID(), recoveryRate, Float::sum);
-            recoverySteps = (int) Math.floor(progress / TICKS_PER_ITERATION_POINT);
+            recoverySteps = Mth.floor(progress / TICKS_PER_ITERATION_POINT);
             if (recoverySteps > 0) {
                 cpIterationProgress.put(
                         player.getUUID(),
@@ -201,7 +319,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         while (it.hasNext()) {
             var occupation = it.next();
 
-            // 永久占用，跳过迭代
             if (occupation.isPermanent()) continue;
             if (!occupation.isFree()) continue;
             var recovered = occupation.getAmount();
@@ -228,67 +345,6 @@ public class PlayerCPManager implements AbilitySubsystem {
             dirty = true;
         }
         return dirty;
-    }
-
-    /** Advances every timed stack independently so one cast never waits for earlier stacks. */
-    static boolean advanceTimedOccupationIterations(
-            List<AbilityData.CpOccupationData> occupations,
-            int recoverySteps
-    ) {
-        if (occupations == null || occupations.isEmpty() || recoverySteps <= 0) return false;
-        var changed = false;
-        for (var occupation : occupations) {
-            if (occupation == null || occupation.isPermanent()) continue;
-            var previous = occupation.getIterationTicks();
-            var next = Math.max(previous - recoverySteps, 0);
-            if (next == previous) continue;
-            occupation.setIterationTicks(next);
-            changed = true;
-        }
-        return changed;
-    }
-
-    static CpRecoveryPlan planCpRecovery(float requestedCp, float remainderCp, int currentSp) {
-        return planCpRecovery(requestedCp, remainderCp, currentSp, RECOVERED_CP_PER_SP);
-    }
-
-    static CpRecoveryPlan planCpRecovery(float requestedCp, float remainderCp, int currentSp,
-                                         float recoveredCpPerSp) {
-        var safeRecoveredCpPerSp = Float.isFinite(recoveredCpPerSp) && recoveredCpPerSp > 0.0f
-                ? recoveredCpPerSp : RECOVERED_CP_PER_SP;
-        if (!Float.isFinite(requestedCp) || requestedCp <= 0.0f || currentSp <= 0) {
-            return new CpRecoveryPlan(
-                    0.0f,
-                    normalizeRecoveryRemainder(remainderCp, safeRecoveredCpPerSp),
-                    0
-            );
-        }
-        var normalizedRemainder = normalizeRecoveryRemainder(remainderCp, safeRecoveredCpPerSp);
-        var recoverableBeforeEmpty = currentSp * safeRecoveredCpPerSp - normalizedRemainder;
-        var recovered = Math.min(requestedCp, Math.max(0.0f, recoverableBeforeEmpty));
-        if (recovered <= CP_EPSILON) {
-            return new CpRecoveryPlan(0.0f, normalizedRemainder, 0);
-        }
-
-        var accumulated = normalizedRemainder + recovered;
-        var spCost = Math.min(currentSp,
-                (int) Math.floor((accumulated + CP_EPSILON) / safeRecoveredCpPerSp));
-        var nextRemainder = accumulated - spCost * safeRecoveredCpPerSp;
-        if (nextRemainder < CP_EPSILON) nextRemainder = 0.0f;
-        return new CpRecoveryPlan(
-                recovered,
-                normalizeRecoveryRemainder(nextRemainder, safeRecoveredCpPerSp),
-                spCost
-        );
-    }
-
-    private static float normalizeRecoveryRemainder(float remainderCp, float recoveredCpPerSp) {
-        if (!Float.isFinite(remainderCp) || remainderCp <= 0.0f) return 0.0f;
-        var normalized = remainderCp % recoveredCpPerSp;
-        return normalized < CP_EPSILON ? 0.0f : normalized;
-    }
-
-    record CpRecoveryPlan(float recoveredCp, float remainderCp, int spCost) {
     }
 
     private boolean releaseInactiveMaintenanceOccupations(
@@ -324,14 +380,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return true;
     }
 
-    static boolean isAutomaticSkillDebugPlayer(String playerName) {
-        return "Dev".equals(playerName) || "Dusk_ark".equals(playerName);
-    }
-
-    static int getCpIterationRate(boolean skillDebugMode) {
-        return skillDebugMode ? 5 : 1;
-    }
-
     public boolean tryOccupation(UUID uuid, float amount, Skill skill, int iterationTicks, boolean isPermanent) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
@@ -358,7 +406,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         var effectiveIterationTicks = iterationTicks;
         if (!isPermanent && effectiveIterationTicks <= 0) {
-            effectiveIterationTicks = Math.max(1, (int) Math.ceil(amount * 0.5f));
+            effectiveIterationTicks = Math.max(1, Mth.ceil(amount * 0.5f));
         }
         occupations.add(new AbilityData.CpOccupationData(
                 amount,
@@ -417,11 +465,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return tryOccupation(uuid, amount, skill, 0, true);
     }
 
-    /**
-     * Atomically replaces the permanent occupations for the supplied skills and optionally adds one
-     * timed occupation. Existing permanent reservations remain untouched when the complete change
-     * cannot be afforded.
-     */
     public boolean replacePermanentOccupationsAndTryOccupation(
             UUID uuid,
             Map<Skill, Float> permanentAmounts,
@@ -499,7 +542,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (!Float.isFinite(timedAmount) || timedAmount < 0) return null;
         if (timedAmount > 0 && timedSkill == null) return null;
 
-        var replacementIds = new java.util.HashSet<String>();
+        var replacementIds = new HashSet<String>();
         var replacementTotal = 0.0f;
         for (var entry : permanentAmounts.entrySet()) {
             var skill = entry.getKey();
@@ -541,7 +584,7 @@ public class PlayerCPManager implements AbilitySubsystem {
                 ? 0
                 : iterationTicks > 0
                 ? iterationTicks
-                : Math.max(1, (int) Math.ceil(timedAmount * 0.5f));
+                : Math.max(1, Mth.ceil(timedAmount * 0.5f));
         return new AtomicOccupationPlan(
                 playerData,
                 Map.copyOf(permanentAmounts),
@@ -582,44 +625,12 @@ public class PlayerCPManager implements AbilitySubsystem {
         return tryOccupation(uuid, amount, skill, iterationTicks, false);
     }
 
-    static boolean isAtomicReplacementAffordable(float available, float released, float required) {
-        if (!Float.isFinite(available)
-                || !Float.isFinite(released) || released < 0
-                || !Float.isFinite(required) || required < 0) {
-            return false;
-        }
-        if (required <= released) return true;
-        var additionalRequired = required - released;
-        return Float.isFinite(additionalRequired) && available >= additionalRequired;
-    }
-
-    private static int getSkillLevel(
-            org.academy.internal.server.world.level.storage.Player playerData,
-            Skill skill
-    ) {
-        var data = playerData.getSkillDataMap().get(skill.getKeyString());
-        return data == null ? 0 : skill.getLevelForProficiency(data.getProficiency());
-    }
-
     int getMaxStacks(UUID uuid, Skill skill, int skillLevel) {
         var base = skill.getMaxStacks(skillLevel);
         return base == Skill.NO_STACK_LIMIT
                 ? Skill.NO_STACK_LIMIT
                 : Math.max(0, base + getBonuses(uuid).stackBonus());
     }
-
-    private record AtomicOccupationPlan(
-            org.academy.internal.server.world.level.storage.Player playerData,
-            Map<Skill, Float> permanentAmounts,
-            Set<String> replacementIds,
-            Skill timedSkill,
-            float timedAmount,
-            int iterationTicks,
-            float availableAfterRelease,
-            float totalRequired
-    ) {
-    }
-
 
     @SubscribeEvent
     public void onPlayerEat(LivingEntityUseItemEvent.Finish event) {
@@ -638,13 +649,6 @@ public class PlayerCPManager implements AbilitySubsystem {
                 }
             }
         }
-    }
-
-    static int foodSpRecoveryDurationTicks(int nutrition) {
-        return (int) Math.min(
-                Integer.MAX_VALUE,
-                (long) Math.max(0, nutrition) * FOOD_SP_RECOVERY_TICKS_PER_NUTRITION
-        );
     }
 
     @SubscribeEvent
@@ -755,16 +759,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return resolveEffectiveMaxCP(naturalMaxCP, debugMaxCpOverrides.get(uuid));
     }
 
-    static float normalizeDebugMaxCP(float maxCP) {
-        return Float.isFinite(maxCP) ? Math.max(0.0f, maxCP) : 0.0f;
-    }
-
-    static float resolveEffectiveMaxCP(float naturalMaxCP, Float debugOverride) {
-        return debugOverride == null
-                ? normalizeDebugMaxCP(naturalMaxCP)
-                : normalizeDebugMaxCP(debugOverride);
-    }
-
     public float getAvailableCP(UUID uuid) {
         return query(uuid, AbilityData::getAvailableCP, 0f);
     }
@@ -826,7 +820,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getDamageMultiplier(UUID uuid) {
-        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
+        var ratio = Mth.clamp(getFreeCPRatio(uuid), 0, 1);
         var cpMultiplier = ratio >= 0.5f
                 ? 1.0f
                 : 0.25f + (ratio / 0.5f) * 0.75f;
@@ -835,10 +829,6 @@ public class PlayerCPManager implements AbilitySubsystem {
 
     public float getCalculationEfficiency(UUID uuid) {
         return calculationEfficiency(getMaxCP(uuid));
-    }
-
-    static float calculationEfficiency(float maxCp) {
-        return Float.isFinite(maxCp) ? Math.max(0.0f, maxCp) * 0.0005f : 0.0f;
     }
 
     public float getCalculationIntensity(UUID uuid) {
@@ -909,14 +899,6 @@ public class PlayerCPManager implements AbilitySubsystem {
                 + getBonuses(uuid).maxCp();
     }
 
-    static float abilityLevelCpBonus(int level) {
-        if (level >= 5) return 300.0f;
-        if (level == 4) return 140.0f;
-        if (level == 3) return 60.0f;
-        if (level == 2) return 20.0f;
-        return 0.0f;
-    }
-
     private CommonSkillBonuses.Bonuses getBonuses(UUID uuid) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return CommonSkillBonuses.NONE;
@@ -930,13 +912,13 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getRangeMultiplier(UUID uuid) {
-        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
+        var ratio = Mth.clamp(getFreeCPRatio(uuid), 0, 1);
         if (ratio >= 0.5f) return 1.0f;
         return 0.50f + (ratio / 0.5f) * 0.50f;
     }
 
     public float getEffectiveDistanceMultiplier(UUID uuid) {
-        var ratio = Math.clamp(getFreeCPRatio(uuid), 0, 1);
+        var ratio = Mth.clamp(getFreeCPRatio(uuid), 0, 1);
         if (ratio >= 0.5f) return 1.0f;
         return 0.40f + (ratio / 0.5f) * 0.60f;
     }
@@ -966,5 +948,20 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (currMP < amount) return false;
         setCurrMP(uuid, currMP - amount);
         return true;
+    }
+
+    record CpRecoveryPlan(float recoveredCp, float remainderCp, int spCost) {
+    }
+
+    private record AtomicOccupationPlan(
+            Player playerData,
+            Map<Skill, Float> permanentAmounts,
+            Set<String> replacementIds,
+            Skill timedSkill,
+            float timedAmount,
+            int iterationTicks,
+            float availableAfterRelease,
+            float totalRequired
+    ) {
     }
 }

@@ -78,27 +78,10 @@ public final class LocationTeleport extends Skill {
                 .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.CUT_THROUGH)
-                .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, player -> new LocationTeleportData())
+                .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, LocationTeleportData::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:cut_through"))
         );
-    }
-
-    @Override
-    public void initClient() {
-        var key = getKey();
-        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
-        InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_OPEN,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_L, InputConstants.PRESS, 0)
-        ), ctx -> Client.open());
-    }
-
-    @Override
-    public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     static String deathMarkName(LocalDateTime deathTime) {
@@ -133,6 +116,23 @@ public final class LocationTeleport extends Skill {
                 position.getZ()
         ));
         return true;
+    }
+
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+        InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_OPEN,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_L, InputConstants.PRESS, 0)
+        ), ctx -> Client.open());
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static final class Client {
@@ -372,9 +372,12 @@ public final class LocationTeleport extends Skill {
     public static final class RequestMarksPacket extends Packet<ServerGamePacketListenerImpl, RequestMarksPacket> {
         public static final RequestMarksPacket INSTANCE = new RequestMarksPacket();
         public static final StreamCodec<ByteBuf, RequestMarksPacket> CODEC = StreamCodec.unit(INSTANCE);
+
         private RequestMarksPacket() {
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, RequestMarksPacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, RequestMarksPacket> getPacketType() {
             return PacketTypes.LOCATION_TELEPORT_REQUEST.get();
         }
     }
@@ -397,6 +400,7 @@ public final class LocationTeleport extends Skill {
         private final int x;
         private final int y;
         private final int z;
+
         public SaveMarkPacket(boolean useCurrent, String name, int x, int y, int z) {
             this.useCurrent = useCurrent;
             this.name = name == null ? "" : name;
@@ -404,23 +408,41 @@ public final class LocationTeleport extends Skill {
             this.y = y;
             this.z = z;
         }
-        public String getName() { return name; }
-        @Override public PacketType<ServerGamePacketListenerImpl, SaveMarkPacket> getPacketType() {
+
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SaveMarkPacket> getPacketType() {
             return PacketTypes.LOCATION_TELEPORT_SAVE.get();
         }
     }
 
     public abstract static class IndexPacket<T extends IndexPacket<T>> extends Packet<ServerGamePacketListenerImpl, T> {
         protected final int index;
-        protected IndexPacket(int index) { this.index = index; }
-        public int getIndex() { return index; }
+
+        protected IndexPacket(int index) {
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class RemoveMarkPacket extends IndexPacket<RemoveMarkPacket> {
         public static final StreamCodec<ByteBuf, RemoveMarkPacket> CODEC = ByteBufCodecs.VAR_INT.map(RemoveMarkPacket::new, RemoveMarkPacket::getIndex);
-        public RemoveMarkPacket(int index) { super(index); }
-        @Override public PacketType<ServerGamePacketListenerImpl, RemoveMarkPacket> getPacketType() { return PacketTypes.LOCATION_TELEPORT_REMOVE.get(); }
+
+        public RemoveMarkPacket(int index) {
+            super(index);
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, RemoveMarkPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_REMOVE.get();
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
@@ -436,18 +458,30 @@ public final class LocationTeleport extends Skill {
                 )
         );
         private final boolean defensive;
+
         public SelectMarkPacket(int index, boolean defensive) {
             super(index);
             this.defensive = defensive;
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, SelectMarkPacket> getPacketType() { return PacketTypes.LOCATION_TELEPORT_SELECT.get(); }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SelectMarkPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_SELECT.get();
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class TeleportToMarkPacket extends IndexPacket<TeleportToMarkPacket> {
         public static final StreamCodec<ByteBuf, TeleportToMarkPacket> CODEC = ByteBufCodecs.VAR_INT.map(TeleportToMarkPacket::new, TeleportToMarkPacket::getIndex);
-        public TeleportToMarkPacket(int index) { super(index); }
-        @Override public PacketType<ServerGamePacketListenerImpl, TeleportToMarkPacket> getPacketType() { return PacketTypes.LOCATION_TELEPORT_RUN.get(); }
+
+        public TeleportToMarkPacket(int index) {
+            super(index);
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TeleportToMarkPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_RUN.get();
+        }
     }
 
     @PacketTarget(ThreadType.CLIENT)
@@ -482,15 +516,29 @@ public final class LocationTeleport extends Skill {
         private final List<Mark> marks;
         private final int quickMarkIndex;
         private final int defensiveMarkIndex;
+
         public MarksSyncPacket(List<Mark> marks, int quickMarkIndex, int defensiveMarkIndex) {
             this.marks = List.copyOf(marks);
             this.quickMarkIndex = quickMarkIndex;
             this.defensiveMarkIndex = defensiveMarkIndex;
         }
-        public List<Mark> getMarks() { return marks; }
-        public int getQuickMarkIndex() { return quickMarkIndex; }
-        public int getDefensiveMarkIndex() { return defensiveMarkIndex; }
-        @Override public PacketType<ClientPacketListener, MarksSyncPacket> getPacketType() { return PacketTypes.LOCATION_TELEPORT_SYNC.get(); }
+
+        public List<Mark> getMarks() {
+            return marks;
+        }
+
+        public int getQuickMarkIndex() {
+            return quickMarkIndex;
+        }
+
+        public int getDefensiveMarkIndex() {
+            return defensiveMarkIndex;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, MarksSyncPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_SYNC.get();
+        }
     }
 
     private record ReturnAnchor(ResourceKey<Level> dimension, Vec3 position, long expiresAt, int markIndex) {

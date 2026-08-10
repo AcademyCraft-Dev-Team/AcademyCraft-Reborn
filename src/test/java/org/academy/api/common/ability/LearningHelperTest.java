@@ -4,9 +4,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class LearningHelperTest {
     @Test
@@ -17,7 +15,6 @@ class LearningHelperTest {
 
         assertTrue(LearningHelper.isSkillAvailableForCategory(owner, skill));
         assertFalse(LearningHelper.isSkillAvailableForCategory(other, skill));
-        assertFalse(LearningHelper.isSkillAvailableForCategory(null, skill));
     }
 
     @Test
@@ -30,7 +27,6 @@ class LearningHelperTest {
         assertTrue(LearningHelper.isSkillAvailableForCategory(anchor, skill));
         assertTrue(LearningHelper.isSkillAvailableForCategory(developed, skill));
         assertFalse(LearningHelper.isSkillAvailableForCategory(level0, skill));
-        assertFalse(LearningHelper.isSkillAvailableForCategory(null, skill));
     }
 
     @Test

@@ -26,6 +26,9 @@ final class DispatchSubclassFactory {
         }
     };
 
+    private DispatchSubclassFactory() {
+    }
+
     static GenerationResult forPlayerType(Class<?> originalType) {
         if (originalType == null) return GenerationResult.failure("missing original player type");
         return CACHE.get(originalType);
@@ -206,8 +209,5 @@ final class DispatchSubclassFactory {
             if (internalName.equals(generatedInternal)) return originalType;
             return Class.forName(internalName.replace('/', '.'), false, loader);
         }
-    }
-
-    private DispatchSubclassFactory() {
     }
 }

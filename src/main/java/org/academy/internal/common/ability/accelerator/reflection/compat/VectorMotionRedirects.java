@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.accelerator.reflection.compat;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +43,7 @@ public final class VectorMotionRedirects {
         if (!plan.attack().executionPolicy().safeMotionRedirect()) return false;
         var direct = plan.attack().attribution().directEntity();
         if (direct == null
-                || direct instanceof net.minecraft.world.entity.projectile.Projectile
+                || direct instanceof Projectile
                 || direct.isRemoved()
                 || isRedirected(direct)) {
             return false;

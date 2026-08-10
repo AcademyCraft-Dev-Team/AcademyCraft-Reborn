@@ -19,14 +19,12 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.WingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -46,9 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_B;
-import static org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.lwjgl.glfw.GLFW.*;
 
 public final class WhiteWing extends Skill {
     public WhiteWing() {
@@ -68,7 +64,6 @@ public final class WhiteWing extends Skill {
     @Override
     public void initClient() {
         AdvancedWingSweepPacket.initClient();
-        RendererManager.registerEffectRenderer(WingEffectRenderer.WHITE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -76,7 +71,7 @@ public final class WhiteWing extends Skill {
                 Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, GLFW_KEY_B, GLFW_RELEASE, GLFW_MOD_SHIFT)
         ), _ -> Client.toggle());
-        ToggleStatusHud.registerStateProvider(Skills.WHITE_WING.get(), () -> {
+        ToggleStatusHud.Companion.registerStateProvider(Skills.WHITE_WING.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && player.getData(AttachmentTypes.ACTIVATED_WHITE_WING.get());
         });

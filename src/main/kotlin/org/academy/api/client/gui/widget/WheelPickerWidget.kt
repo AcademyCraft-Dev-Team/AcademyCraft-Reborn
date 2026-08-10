@@ -301,7 +301,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         val chaseDuration = if (isFlinging) FLING_CHASE_DURATION else SNAP_CHASE_DURATION
         val factor = ClientUtil.animationFactor(chaseDuration)
         val newOffset = Mth.lerp(factor, scrollOffset, scrollTarget)
-        if (abs(scrollTarget - newOffset) < SNAP_THRESHOLD_PX) {
+        if (Math.abs(scrollTarget - newOffset) < SNAP_THRESHOLD_PX) {
             scrollOffset = scrollTarget
             settleToTarget()
         } else {
@@ -338,15 +338,15 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     private fun renderItems(context: RenderContext, centerY: Float, contentTop: Float, contentBottom: Float) {
         if (itemCount == 0 || itemHeight <= 0f) return
 
-        val start = floor(_selectedPosition + (contentTop - centerY - scrollOffset) / itemHeight).toInt() - 1
-        val end = ceil(_selectedPosition + (contentBottom - centerY - scrollOffset) / itemHeight).toInt() + 1
+        val start = Mth.floor(_selectedPosition + (contentTop - centerY - scrollOffset) / itemHeight) - 1
+        val end = Mth.ceil(_selectedPosition + (contentBottom - centerY - scrollOffset) / itemHeight) + 1
 
         val list = items
         for (i in start..end) {
             val contentIndex = if (isCyclic) normalizePosition(i) else i
             if (contentIndex < 0 || contentIndex >= list.size) continue
             val itemCenterY = centerY + (i - _selectedPosition) * itemHeight + scrollOffset
-            val distanceRatio = abs(itemCenterY - centerY) / itemHeight
+            val distanceRatio = Math.abs(itemCenterY - centerY) / itemHeight
             renderItem(context, list[contentIndex], itemCenterY, distanceRatio)
         }
     }
@@ -414,13 +414,13 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     /** Alpha of an item based on its distance from the center in item units. */
     protected open fun computeItemAlpha(distanceRatio: Float): Float {
         if (!isAtmospheric) return 1f
-        return Math.clamp(1.0f - distanceRatio * 0.4f, 0.15f, 1.0f)
+        return Mth.clamp(1.0f - distanceRatio * 0.4f, 0.15f, 1.0f)
     }
 
     /** Scale of an item based on its distance from the center in item units. */
     protected open fun computeItemScale(distanceRatio: Float): Float {
         if (!isSelectedScaleEnabled) return 1f
-        return 1f - Math.clamp(distanceRatio * 0.08f, 0.0f, 0.08f)
+        return 1f - Mth.clamp(distanceRatio * 0.08f, 0.0f, 0.08f)
     }
 
     /** Draws the curtain highlight over the selected row. */
@@ -715,7 +715,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         if (itemCount == 0) return
         var targetPos = computeSnapTarget().first
         isFlinging = false
-        if (abs(velocityY) > FLING_VELOCITY_THRESHOLD) {
+        if (Math.abs(velocityY) > FLING_VELOCITY_THRESHOLD) {
             val v = velocityY.toFloat()
             var extra = round(v / itemHeight * FLING_MOMENTUM_FACTOR).toInt()
             if (extra == 0) extra = if (v > 0) 1 else -1

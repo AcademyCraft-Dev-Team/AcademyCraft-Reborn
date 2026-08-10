@@ -34,10 +34,10 @@ class HudDebugScreen(private val previousScreen: Screen?) :
 
     override fun onInit() {
         UiDebugSession.hudEditorOpen = true
-        for (definition in UiDebugLayoutRegistry.hud()) {
-            val layout = WidgetSerializer.decode(UiDebugSession.documentJson(definition.id)) as FrameLayoutWidget
-            layoutRoots[definition.id] = layout
-            root.addChild(definition.id, layout)
+        for ((id) in UiDebugLayoutRegistry.hud()) {
+            val layout = WidgetSerializer.decode(UiDebugSession.documentJson(id)) as FrameLayoutWidget
+            layoutRoots[id] = layout
+            root.addChild(id, layout)
         }
         mounts[HudLayout.Region.CP] = SerializedUiLayout.require(layoutRoots.getValue("ability_cp_hud"), "cp")
         mounts[HudLayout.Region.SKILL_WHEEL] = SerializedUiLayout.require(
@@ -70,25 +70,33 @@ class HudDebugScreen(private val previousScreen: Screen?) :
         }
     }
 
-    override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
+    override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
         graphics.fill(0, 0, width, height, 0x88000000.toInt())
     }
 
-    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick)
+    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
+        super.extractRenderState(graphics, mouseX, mouseY, a)
         val defaults = UiDebugSession.hudDefaults()
         drawSamples(graphics, defaults)
         drawRegions(graphics, defaults)
         graphics.centeredText(font, title, width / 2, 6, 0xFFFFFFFF.toInt())
-        graphics.centeredText(font, Component.translatable("screen.academy.ui_debug.hud.hint"),
-            width / 2, 18, 0xFFB8C8CE.toInt())
+        graphics.centeredText(
+            font, Component.translatable("screen.academy.ui_debug.hud.hint"),
+            width / 2, 18, 0xFFB8C8CE.toInt()
+        )
         val buttonY = height - 24
-        drawButton(graphics, width / 2 - 156, buttonY, 96,
-            Component.translatable("screen.academy.ui_debug.action.revert"), mouseX, mouseY)
-        drawButton(graphics, width / 2 - 48, buttonY, 96,
-            Component.translatable("screen.academy.ui_debug.action.publish"), mouseX, mouseY)
-        drawButton(graphics, width / 2 + 60, buttonY, 96,
-            Component.translatable("screen.academy.ui_debug.action.done"), mouseX, mouseY)
+        drawButton(
+            graphics, width / 2 - 156, buttonY, 96,
+            Component.translatable("screen.academy.ui_debug.action.revert"), mouseX, mouseY
+        )
+        drawButton(
+            graphics, width / 2 - 48, buttonY, 96,
+            Component.translatable("screen.academy.ui_debug.action.publish"), mouseX, mouseY
+        )
+        drawButton(
+            graphics, width / 2 + 60, buttonY, 96,
+            Component.translatable("screen.academy.ui_debug.action.done"), mouseX, mouseY
+        )
     }
 
     private fun drawSamples(graphics: GuiGraphicsExtractor, defaults: HudLayoutDefaults.Config) {
@@ -101,8 +109,10 @@ class HudDebugScreen(private val previousScreen: Screen?) :
             val h = rect.height().roundToInt()
             graphics.fill(x + 3, y + 7, x + w - 3, y + h - 4, 0xCC17242B.toInt())
             graphics.fill(x + 5, y + 9, x + 5 + ((w - 10) * 0.65f).roundToInt(), y + h - 6, 0xDD43C8E8.toInt())
-            graphics.text(font, Component.translatable("screen.academy.ui_debug.hud.sample.cp", 65),
-                x + 8, y + 10, 0xFFFFFFFF.toInt(), false)
+            graphics.text(
+                font, Component.translatable("screen.academy.ui_debug.hud.sample.cp", 65),
+                x + 8, y + 10, 0xFFFFFFFF.toInt(), false
+            )
         }
         run {
             val rect = HudLayout.Region.SKILL_WHEEL.rect(mc, defaults, false)
@@ -113,10 +123,14 @@ class HudDebugScreen(private val previousScreen: Screen?) :
                 val size = if (index == 2) 18 else 14
                 val rowY = y + 8 + index * 21
                 val left = x + w - size - 7
-                graphics.fill(left, rowY, left + size, rowY + size,
-                    if (index == 2) 0xFF55D5F2.toInt() else 0xAA30434D.toInt())
-                graphics.text(font, Component.translatable("screen.academy.ui_debug.hud.sample.skill", index + 1),
-                    left - 18, rowY + 3, 0xFFE4F2F5.toInt(), false)
+                graphics.fill(
+                    left, rowY, left + size, rowY + size,
+                    if (index == 2) 0xFF55D5F2.toInt() else 0xAA30434D.toInt()
+                )
+                graphics.text(
+                    font, Component.translatable("screen.academy.ui_debug.hud.sample.skill", index + 1),
+                    left - 18, rowY + 3, 0xFFE4F2F5.toInt(), false
+                )
             }
         }
         run {
@@ -126,37 +140,41 @@ class HudDebugScreen(private val previousScreen: Screen?) :
             val w = rect.width().roundToInt()
             listOf("skill.academy.vector_reflection", "skill.academy.tailwind_field")
                 .forEachIndexed { index, skillKey ->
-                val rowY = y + 5 + index * 19
-                graphics.fill(x + 3, rowY, x + w - 3, rowY + 16, 0xA0151D22.toInt())
-                graphics.text(
-                    font,
-                    Component.translatable(
-                        "screen.academy.ui_debug.hud.sample.toggle",
-                        Component.translatable(skillKey),
-                        Component.translatable("hud.academy.toggle_status.on")
-                    ),
-                    x + 7,
-                    rowY + 4,
-                    0xFFBFF8D0.toInt(),
-                    false
-                )
-            }
+                    val rowY = y + 5 + index * 19
+                    graphics.fill(x + 3, rowY, x + w - 3, rowY + 16, 0xA0151D22.toInt())
+                    graphics.text(
+                        font,
+                        Component.translatable(
+                            "screen.academy.ui_debug.hud.sample.toggle",
+                            Component.translatable(skillKey),
+                            Component.translatable("hud.academy.toggle_status.on")
+                        ),
+                        x + 7,
+                        rowY + 4,
+                        0xFFBFF8D0.toInt(),
+                        false
+                    )
+                }
         }
         run {
             val rect = HudLayout.Region.MENTAL_CONTROL.rect(mc, defaults, false)
             val x = rect.x().roundToInt()
             val y = rect.y().roundToInt()
             val w = rect.width().roundToInt()
-            graphics.text(font, Component.translatable("screen.academy.ui_debug.hud.sample.mental_control", 3),
-                x + 7, y + 6, 0xFF18302A.toInt(), false)
+            graphics.text(
+                font, Component.translatable("screen.academy.ui_debug.hud.sample.mental_control", 3),
+                x + 7, y + 6, 0xFF18302A.toInt(), false
+            )
             listOf(
                 Triple("entity.minecraft.zombie", 18, 20),
                 Triple("screen.academy.ui_debug.hud.sample.player", 20, 20),
                 Triple("entity.minecraft.warden", 420, 500)
             ).forEachIndexed { index, target ->
                 val rowY = y + 22 + index * 20
-                graphics.fill(x + 5, rowY, x + w - 5, rowY + 17,
-                    if (index % 2 == 0) 0x88E5ECE9.toInt() else 0x88D8E4DF.toInt())
+                graphics.fill(
+                    x + 5, rowY, x + w - 5, rowY + 17,
+                    if (index % 2 == 0) 0x88E5ECE9.toInt() else 0x88D8E4DF.toInt()
+                )
                 graphics.text(
                     font,
                     Component.translatable(
@@ -176,7 +194,7 @@ class HudDebugScreen(private val previousScreen: Screen?) :
 
     private fun drawRegions(graphics: GuiGraphicsExtractor, defaults: HudLayoutDefaults.Config) {
         val minecraft = Minecraft.getInstance()
-        for (region in HudLayout.Region.values()) {
+        for (region in HudLayout.Region.entries) {
             val rect = region.rect(minecraft, defaults, false)
             val x = rect.x().roundToInt()
             val y = rect.y().roundToInt()
@@ -186,72 +204,76 @@ class HudDebugScreen(private val previousScreen: Screen?) :
             border(graphics, x, y, w, h, if (active) 0xFF66FFCC.toInt() else 0xFFFFFFFF.toInt())
             val handleX = if (usesLeftHandle(region)) x else x + w - 9
             graphics.fill(handleX, y + h - 9, handleX + 9, y + h, 0xD0FFE34D.toInt())
-            graphics.text(font, Component.translatable(
-                "screen.academy.ui_debug.hud.region_scale",
-                Component.translatable(region.nameKey()),
-                defaults.regions.getValue(region.configKey()).scale.times(100).roundToInt()
-            ),
-                x + 2, y + 2, if (active) 0xFF66FFCC.toInt() else 0xFFFFFFFF.toInt(), true)
+            graphics.text(
+                font, Component.translatable(
+                    "screen.academy.ui_debug.hud.region_scale",
+                    Component.translatable(region.nameKey()),
+                    defaults.regions.getValue(region.configKey()).scale.times(100).roundToInt()
+                ),
+                x + 2, y + 2, if (active) 0xFF66FFCC.toInt() else 0xFFFFFFFF.toInt(), true
+            )
         }
     }
 
-    override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
-        if (event.button() != 0) return super.mouseClicked(event, doubleClick)
+    override fun mouseClicked(e: MouseButtonEvent, isDoubleClick: Boolean): Boolean {
+        if (e.button() != 0) return super.mouseClicked(e, isDoubleClick)
         val buttonY = height - 24
-        if (inside(event.x(), event.y(), width / 2 - 156, buttonY, 96, 18)) {
+        if (inside(e.x(), e.y(), width / 2 - 156, buttonY, 96, 18)) {
             UiDebugSession.revertHudDefaults()
             return true
         }
-        if (inside(event.x(), event.y(), width / 2 - 48, buttonY, 96, 18)) {
+        if (inside(e.x(), e.y(), width / 2 - 48, buttonY, 96, 18)) {
             org.academy.internal.client.gui.debug.UiDebugBrowserScreen.notifyPublish(UiDebugSession.publish())
             return true
         }
-        if (inside(event.x(), event.y(), width / 2 + 60, buttonY, 96, 18)) {
+        if (inside(e.x(), e.y(), width / 2 + 60, buttonY, 96, 18)) {
             onClose()
             return true
         }
         val defaults = UiDebugSession.hudDefaults()
         val mc = Minecraft.getInstance()
-        for (region in HudLayout.Region.values()) {
+        for (region in HudLayout.Region.entries) {
             val rect = region.rect(mc, defaults, false)
-            if (overHandle(region, rect, event.x(), event.y())) {
+            if (overHandle(region, rect, e.x(), e.y())) {
                 select(region)
-                beginGrab(region, rect, event, true)
+                beginGrab(region, rect, e, true)
                 return true
             }
         }
-        for (region in HudLayout.Region.values()) {
+        for (region in HudLayout.Region.entries) {
             val rect = region.rect(mc, defaults, false)
-            if (rect.contains(event.x(), event.y())) {
+            if (rect.contains(e.x(), e.y())) {
                 select(region)
-                beginGrab(region, rect, event, false)
+                beginGrab(region, rect, e, false)
                 return true
             }
         }
         return true
     }
 
-    override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
-        val region = grabbed ?: return super.mouseDragged(event, dragX, dragY)
+    override fun mouseDragged(e: MouseButtonEvent, mouseX: Double, mouseY: Double): Boolean {
+        val region = grabbed ?: return super.mouseDragged(e, mouseX, mouseY)
         val config = UiDebugSession.hudDefaults()
         val value = config.regions.getValue(region.configKey())
         if (resizing) {
-            val horizontal = if (usesLeftHandle(region)) pressX - event.x() else event.x() - pressX
-            value.scale = (initialScale + ((horizontal + event.y() - pressY) / 220.0).toFloat())
+            val horizontal = if (usesLeftHandle(region)) pressX - e.x() else e.x() - pressX
+            value.scale = (initialScale + ((horizontal + e.y() - pressY) / 220.0).toFloat())
                 .coerceIn(HudLayout.MIN_SCALE, HudLayout.MAX_SCALE)
         } else {
             val current = region.rect(Minecraft.getInstance(), config, false)
-            setDefaultTopLeft(region, value, event.x() - grabOffsetX, event.y() - grabOffsetY,
-                current.width(), current.height())
+            setDefaultTopLeft(
+                region, value, e.x() - grabOffsetX, e.y() - grabOffsetY,
+                current.width(), current.height()
+            )
         }
         UiDebugSession.updateHudDefaults(config)
         return true
     }
 
-    override fun mouseReleased(event: MouseButtonEvent): Boolean {
+    override fun mouseReleased(e: MouseButtonEvent): Boolean {
         grabbed = null
         resizing = false
-        return super.mouseReleased(event)
+        return super.mouseReleased(e)
     }
 
     override fun onClose() {
@@ -362,7 +384,6 @@ class HudDebugScreen(private val previousScreen: Screen?) :
     }
 
     companion object {
-        @JvmStatic
         fun open() {
             val minecraft = Minecraft.getInstance()
             val previous = minecraft.gui.screen()

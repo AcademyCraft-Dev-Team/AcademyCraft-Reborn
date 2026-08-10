@@ -23,8 +23,6 @@ import java.util.stream.Stream;
 import static org.academy.AcademyCraft.academy;
 
 public final class WirelessNetworkData extends SavedData {
-    private static final Logger LOGGER = AcademyCraft.getLogger();
-
     private static final Codec<BlockPos> BLOCKPOS_AS_STRING_CODEC = Codec.STRING.flatXmap(
             s -> {
                 try {
@@ -42,7 +40,6 @@ public final class WirelessNetworkData extends SavedData {
             },
             pos -> DataResult.success(pos.getX() + ", " + pos.getY() + ", " + pos.getZ())
     ).stable();
-
     public static final Codec<WirelessNetworkData> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     Codec.simpleMap(BLOCKPOS_AS_STRING_CODEC, NodeConfig.CODEC, Keyable.forStrings(Stream::empty))
@@ -50,12 +47,12 @@ public final class WirelessNetworkData extends SavedData {
                             .forGetter(data -> data.nodes.getPrimaryMap())
             ).apply(instance, WirelessNetworkData::new)
     );
-
     public static final SavedDataType<WirelessNetworkData> SAVED_DATA_TYPE = new SavedDataType<>(
             academy("wireless"),
             WirelessNetworkData::new,
             CODEC
     );
+    private static final Logger LOGGER = AcademyCraft.getLogger();
 
     private final DualKeyMap<BlockPos, String, NodeConfig> nodes =
             new DualKeyMap<>(nodeConfig -> nodeConfig.name);

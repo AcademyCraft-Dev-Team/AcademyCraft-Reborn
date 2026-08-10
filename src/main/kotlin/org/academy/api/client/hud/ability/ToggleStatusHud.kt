@@ -6,25 +6,18 @@ import net.minecraft.locale.Language
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
+import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.UiContext
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
-import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.vanilla.ResizeDisplayEvent
-import org.academy.api.common.ability.Skill
 import org.academy.api.common.ability.LearningHelper
+import org.academy.api.common.ability.Skill
 import org.academy.api.common.registries.Registries
-import org.academy.AcademyCraft
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
 import java.util.concurrent.ConcurrentHashMap
@@ -56,7 +49,7 @@ class ToggleStatusHud private constructor() {
     }
 
     private class Context : WidgetContext {
-        private lateinit var statuses: LinearLayoutWidget
+        private var statuses: LinearLayoutWidget
         private val root = object : FrameLayoutWidget() {
             override fun tick() {
                 applyHudLayout()
@@ -175,12 +168,10 @@ class ToggleStatusHud private constructor() {
         val instance: ToggleStatusHud
             get() = INSTANCE
 
-        @JvmStatic
         fun registerStateProvider(skill: Skill, provider: BooleanSupplier) {
             stateProviders[skill] = provider
         }
 
-        @JvmStatic
         fun registerDetailProvider(skill: Skill, provider: Supplier<String>) {
             detailProviders[skill] = provider
         }

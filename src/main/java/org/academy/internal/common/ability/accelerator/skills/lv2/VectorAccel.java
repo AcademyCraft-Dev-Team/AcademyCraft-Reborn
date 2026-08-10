@@ -8,7 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -52,6 +51,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -165,6 +165,10 @@ public final class VectorAccel extends Skill {
                 this.player = player;
                 chargeStartTick = player.tickCount
                         + Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+            }
+
+            private static float modifiedFriction(float friction, float modifier) {
+                return Mth.clamp(1.0f - (1.0f - friction) * modifier, 0.0f, 1.0f);
             }
 
             public void release() {
@@ -290,10 +294,6 @@ public final class VectorAccel extends Skill {
                 );
             }
 
-            private static float modifiedFriction(float friction, float modifier) {
-                return Mth.clamp(1.0f - (1.0f - friction) * modifier, 0.0f, 1.0f);
-            }
-
             private Vec3 calculateLeftHandOffset(float partialTick) {
                 var yaw = Mth.lerp(partialTick, player.yRotO, player.getYRot());
                 var forward = Vec3.directionFromRotation(0.0f, yaw);
@@ -361,10 +361,10 @@ public final class VectorAccel extends Skill {
                     for (var i = 0; i < segments; i++) {
                         var angle1 = (float) i / segments * Mth.TWO_PI;
                         var angle2 = (float) (i + 1) / segments * Mth.TWO_PI;
-                        var x1 = (float) Math.cos(angle1) * ringRadius;
-                        var z1 = (float) Math.sin(angle1) * ringRadius;
-                        var x2 = (float) Math.cos(angle2) * ringRadius;
-                        var z2 = (float) Math.sin(angle2) * ringRadius;
+                        var x1 = Mth.cos(angle1) * ringRadius;
+                        var z1 = Mth.sin(angle1) * ringRadius;
+                        var x2 = Mth.cos(angle2) * ringRadius;
+                        var z2 = Mth.sin(angle2) * ringRadius;
 
                         consumer.addVertex(matrix, x1, y_bottom, z1).setColor(1f, 1f, 1f, ringAlpha);
                         consumer.addVertex(matrix, x2, y_bottom, z2).setColor(1f, 1f, 1f, ringAlpha);
@@ -378,7 +378,7 @@ public final class VectorAccel extends Skill {
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
                 distance += event.yOffset;
-                distance = Math.clamp(distance, 0, 20);
+                distance = Mth.clamp(distance, 0, 20);
                 event.setCanceled(true);
             }
 
@@ -448,7 +448,7 @@ public final class VectorAccel extends Skill {
 
         public static double getSpeed(float chargeRatio) {
             var speedScalarProg = Mth.lerp(Mth.clamp(chargeRatio, 0.0f, 1.0f), 0.4f, 1.0f);
-            return Math.sin(speedScalarProg) * MAX_VELOCITY_SCALAR;
+            return Mth.sin(speedScalarProg) * MAX_VELOCITY_SCALAR;
         }
 
         @SubscribePacket

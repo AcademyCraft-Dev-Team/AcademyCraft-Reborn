@@ -11,6 +11,64 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class PrecisionOperationDataTest {
+    private static PrecisionGraph validGraph() {
+        return new PrecisionGraph(
+                List.of(
+                        new PrecisionGraph.Node(1, PrecisionGraph.NodeKind.ROSTER, 0.0, 8.0, 8.0),
+                        new PrecisionGraph.Node(2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0, 24.0, 8.0)
+                ),
+                List.of(new PrecisionGraph.Edge(1, 0, 2, 0))
+        );
+    }
+
+    private static PrecisionGraph invalidGraph() {
+        return new PrecisionGraph(
+                List.of(new PrecisionGraph.Node(
+                        1,
+                        PrecisionGraph.NodeKind.END_INTRUSION,
+                        0.0,
+                        Double.NaN,
+                        0.0
+                )),
+                List.of()
+        );
+    }
+
+    private static PrecisionGraph legacyMultiActionGraph() {
+        return new PrecisionGraph(
+                List.of(
+                        new PrecisionGraph.Node(1, PrecisionGraph.NodeKind.ROSTER, 0.0, 8.0, 8.0),
+                        new PrecisionGraph.Node(2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0, 24.0, 8.0),
+                        new PrecisionGraph.Node(3, PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, 0.0, 40.0, 8.0)
+                ),
+                List.of(
+                        new PrecisionGraph.Edge(1, 0, 2, 0),
+                        new PrecisionGraph.Edge(1, 0, 3, 0)
+                )
+        );
+    }
+
+    private static PrecisionGraph flowGraph() {
+        return new PrecisionGraph(
+                List.of(
+                        new PrecisionGraph.Node(1, PrecisionGraph.NodeKind.ROSTER, 0.0, 8.0, 8.0),
+                        new PrecisionGraph.Node(2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0, 24.0, 8.0),
+                        new PrecisionGraph.Node(3, PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, 20.0, 40.0, 8.0)
+                ),
+                List.of(
+                        new PrecisionGraph.Edge(1, 0, 2, 0),
+                        new PrecisionGraph.Edge(1, 0, 3, 0),
+                        new PrecisionGraph.Edge(2, 0, 3, 1)
+                )
+        );
+    }
+
+    private static void setField(Object target, String name, Object value) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
     @Test
     void dataAlwaysExposesFourNormalizedSlots() throws ReflectiveOperationException {
         var data = new PrecisionOperation.Data();
@@ -83,63 +141,5 @@ class PrecisionOperationDataTest {
         assertEquals(0.0, data.slot(0).nodes().stream()
                 .filter(node -> node.kind() == PrecisionGraph.NodeKind.MENTAL_STUPOR)
                 .findFirst().orElseThrow().parameter());
-    }
-
-    private static PrecisionGraph validGraph() {
-        return new PrecisionGraph(
-                List.of(
-                        new PrecisionGraph.Node(1, PrecisionGraph.NodeKind.ROSTER, 0.0, 8.0, 8.0),
-                        new PrecisionGraph.Node(2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0, 24.0, 8.0)
-                ),
-                List.of(new PrecisionGraph.Edge(1, 0, 2, 0))
-        );
-    }
-
-    private static PrecisionGraph invalidGraph() {
-        return new PrecisionGraph(
-                List.of(new PrecisionGraph.Node(
-                        1,
-                        PrecisionGraph.NodeKind.END_INTRUSION,
-                        0.0,
-                        Double.NaN,
-                        0.0
-                )),
-                List.of()
-        );
-    }
-
-    private static PrecisionGraph legacyMultiActionGraph() {
-        return new PrecisionGraph(
-                List.of(
-                        new PrecisionGraph.Node(1, PrecisionGraph.NodeKind.ROSTER, 0.0, 8.0, 8.0),
-                        new PrecisionGraph.Node(2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0, 24.0, 8.0),
-                        new PrecisionGraph.Node(3, PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, 0.0, 40.0, 8.0)
-                ),
-                List.of(
-                        new PrecisionGraph.Edge(1, 0, 2, 0),
-                        new PrecisionGraph.Edge(1, 0, 3, 0)
-                )
-        );
-    }
-
-    private static PrecisionGraph flowGraph() {
-        return new PrecisionGraph(
-                List.of(
-                        new PrecisionGraph.Node(1, PrecisionGraph.NodeKind.ROSTER, 0.0, 8.0, 8.0),
-                        new PrecisionGraph.Node(2, PrecisionGraph.NodeKind.MENTAL_STUPOR, 0.0, 24.0, 8.0),
-                        new PrecisionGraph.Node(3, PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, 20.0, 40.0, 8.0)
-                ),
-                List.of(
-                        new PrecisionGraph.Edge(1, 0, 2, 0),
-                        new PrecisionGraph.Edge(1, 0, 3, 0),
-                        new PrecisionGraph.Edge(2, 0, 3, 1)
-                )
-        );
-    }
-
-    private static void setField(Object target, String name, Object value) throws ReflectiveOperationException {
-        Field field = target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        field.set(target, value);
     }
 }

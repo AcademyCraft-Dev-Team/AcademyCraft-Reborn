@@ -74,7 +74,9 @@ public final class DestroyBlocksSetting {
                 && canDestroyBlocks(player);
     }
 
-    /** Checks only the per-skill switch shown in the skill settings advanced section. */
+    /**
+     * Checks only the per-skill switch shown in the skill settings advanced section.
+     */
     public static boolean canDestroyBlocksBySkillSetting(Player player, Skill skill) {
         return supportsSkillBlockDestruction(skill)
                 && isSkillDestroyBlocksEnabled(player, skill);

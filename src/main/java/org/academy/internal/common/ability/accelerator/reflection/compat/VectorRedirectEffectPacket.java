@@ -4,10 +4,9 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.vfx.VfxManager;
-import org.academy.internal.client.renderer.vfx.VectorRedirectVfx;
+import org.academy.internal.client.render.vfx.VectorRedirectVfx;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -92,7 +91,7 @@ public final class VectorRedirectEffectPacket
                 plan.attack().executionPolicy().visualStyle(),
                 plan.attack().fingerprint()
         );
-        var level = (ServerLevel) plan.redirector().level();
+        var level = plan.redirector().level();
         for (var observer : level.players()) {
             if (observer.distanceToSqr(plan.mirrorPoint()) <= 128.0 * 128.0) {
                 MisakaNetworkServer.send(observer, packet);
@@ -100,13 +99,13 @@ public final class VectorRedirectEffectPacket
         }
     }
 
+    private static <E> E enumValue(E[] values, int ordinal, E fallback) {
+        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : fallback;
+    }
+
     @Override
     public PacketType<ClientPacketListener, VectorRedirectEffectPacket> getPacketType() {
         return PacketTypes.VECTOR_REDIRECT_EFFECT.get();
-    }
-
-    private static <E> E enumValue(E[] values, int ordinal, E fallback) {
-        return ordinal >= 0 && ordinal < values.length ? values[ordinal] : fallback;
     }
 
     public static final class Client {

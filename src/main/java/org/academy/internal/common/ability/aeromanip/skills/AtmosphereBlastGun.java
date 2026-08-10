@@ -4,8 +4,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,7 +28,9 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -58,6 +60,20 @@ public final class AtmosphereBlastGun extends Skill {
                 .dependsOn(Skills.ATMOSPHERE_SHIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
         );
+    }
+
+    static boolean isInsideBlastVolume(Vec3 eye, Vec3 look, Vec3 target, double targetRadius) {
+        return isInsideBlastVolume(eye, look, target, targetRadius, LENGTH, HALF_WIDTH);
+    }
+
+    static boolean isInsideBlastVolume(Vec3 eye, Vec3 look, Vec3 target, double targetRadius, double length, double halfWidth) {
+        if (look.lengthSqr() <= 1.0e-6) return false;
+        var direction = look.normalize();
+        var toTarget = target.subtract(eye);
+        var forward = toTarget.dot(direction);
+        if (forward < 0 || forward > length) return false;
+        var lateral = toTarget.subtract(direction.scale(forward)).length();
+        return lateral <= halfWidth + Math.max(0, targetRadius);
     }
 
     @Override
@@ -94,20 +110,6 @@ public final class AtmosphereBlastGun extends Skill {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
-    static boolean isInsideBlastVolume(Vec3 eye, Vec3 look, Vec3 target, double targetRadius) {
-        return isInsideBlastVolume(eye, look, target, targetRadius, LENGTH, HALF_WIDTH);
-    }
-
-    static boolean isInsideBlastVolume(Vec3 eye, Vec3 look, Vec3 target, double targetRadius, double length, double halfWidth) {
-        if (look.lengthSqr() <= 1.0e-6) return false;
-        var direction = look.normalize();
-        var toTarget = target.subtract(eye);
-        var forward = toTarget.dot(direction);
-        if (forward < 0 || forward > length) return false;
-        var lateral = toTarget.subtract(direction.scale(forward)).length();
-        return lateral <= halfWidth + Math.max(0, targetRadius);
-    }
-
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.AEROMANIP.get(),
@@ -131,10 +133,15 @@ public final class AtmosphereBlastGun extends Skill {
             if (!AbilitySystemClient.canUseSkill(Skills.ATMOSPHERE_BLAST_GUN.get())) return;
             MisakaNetworkClient.send(CastPacket.INSTANCE);
         }
+
         private static void start() {
-            if (AbilitySystemClient.canUseSkill(Skills.ATMOSPHERE_BLAST_GUN.get())) MisakaNetworkClient.send(StartPacket.INSTANCE);
+            if (AbilitySystemClient.canUseSkill(Skills.ATMOSPHERE_BLAST_GUN.get()))
+                MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
-        private static void stop() { MisakaNetworkClient.send(StopPacket.INSTANCE); }
+
+        private static void stop() {
+            MisakaNetworkClient.send(StopPacket.INSTANCE);
+        }
 
         public static final class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
@@ -158,6 +165,7 @@ public final class AtmosphereBlastGun extends Skill {
 
     public static final class Server {
         private static final Map<ServerPlayer, Long> CHARGING = new WeakHashMap<>();
+
         private Server() {
         }
 
@@ -212,7 +220,7 @@ public final class AtmosphereBlastGun extends Skill {
                         target -> target != player
                                 && target.isAlive()
                                 && !target.isSpectator()
-                                && (org.academy.internal.common.ability.mentalout.control.MentalControlRuntime
+                                && (MentalControlRuntime
                                 .canForceAttack(player, target)
                                 || AeromanipTargeting.canAffectNegatively(player, target))
                                 && player.hasLineOfSight(target)
@@ -231,7 +239,7 @@ public final class AtmosphereBlastGun extends Skill {
                         * context.system().getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, Skills.ATMOSPHERE_BLAST_GUN.get());
                 level.playSound(null, player.blockPosition(),
-                        org.academy.internal.common.sounds.SoundEvents.AIRFLOW_IMPACT.get(),
+                        SoundEvents.AIRFLOW_IMPACT.get(),
                         SoundSource.PLAYERS, 0.8f, focused ? 0.75f : 1.0f);
                 var direction = look.normalize();
                 for (var target : targets) {
@@ -309,15 +317,27 @@ public final class AtmosphereBlastGun extends Skill {
     public static final class StartPacket extends Packet<ServerGamePacketListenerImpl, StartPacket> {
         public static final StartPacket INSTANCE = new StartPacket();
         public static final StreamCodec<ByteBuf, StartPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private StartPacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() { return PacketTypes.ATMOSPHERE_BLAST_GUN_START.get(); }
+
+        private StartPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
+            return PacketTypes.ATMOSPHERE_BLAST_GUN_START.get();
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class StopPacket extends Packet<ServerGamePacketListenerImpl, StopPacket> {
         public static final StopPacket INSTANCE = new StopPacket();
         public static final StreamCodec<ByteBuf, StopPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private StopPacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() { return PacketTypes.ATMOSPHERE_BLAST_GUN_STOP.get(); }
+
+        private StopPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, StopPacket> getPacketType() {
+            return PacketTypes.ATMOSPHERE_BLAST_GUN_STOP.get();
+        }
     }
 }

@@ -44,7 +44,8 @@ public final class AreaTeleportSetup extends Skill {
                 .devCondition(new DevCondition.DependencyCondition("Area Teleport Select", "academy:area_teleport_select")));
     }
 
-    @Override public void initClient() {
+    @Override
+    public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -58,7 +59,8 @@ public final class AreaTeleportSetup extends Skill {
                 ctx -> Client.toggleSwap());
     }
 
-    @Override public void initServer(MinecraftServerContext context) {
+    @Override
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
@@ -70,6 +72,7 @@ public final class AreaTeleportSetup extends Skill {
         public static final String KEY_NAME_MARK = SkillNames.AREA_TELEPORT_SETUP + "_mark";
         public static final String KEY_NAME_SWAP = SkillNames.AREA_TELEPORT_SETUP + "_swap";
         public static Config CONFIG = new Config();
+
         private static void mark() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SETUP.get())) return;
             MisakaNetworkClient.send(MarkPacket.MARK);
@@ -79,19 +82,30 @@ public final class AreaTeleportSetup extends Skill {
                     || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SETUP.get())) return;
             MisakaNetworkClient.send(MarkPacket.TOGGLE_SWAP);
         }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
+
                 private Action() {
                 }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
 
     public static final class Server {
-        @SubscribePacket public static void handle(MarkPacket packet) {
+        @SubscribePacket
+        public static void handle(MarkPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (!Skills.AREA_TELEPORT_SETUP.get().isEnabled(player)
                     || AreaTeleportState.selected(player.getUUID()) == null) return;
@@ -132,6 +146,10 @@ public final class AreaTeleportSetup extends Skill {
         private MarkPacket(boolean toggleSwap) {
             this.toggleSwap = toggleSwap;
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, MarkPacket> getPacketType() { return PacketTypes.AREA_TELEPORT_SETUP_MARK.get(); }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, MarkPacket> getPacketType() {
+            return PacketTypes.AREA_TELEPORT_SETUP_MARK.get();
+        }
     }
 }

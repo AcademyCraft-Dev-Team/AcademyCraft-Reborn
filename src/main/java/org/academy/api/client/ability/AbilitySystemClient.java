@@ -7,9 +7,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
-import org.academy.AcademyCraft;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.AbilityInfoHud;
 import org.academy.api.client.input.InputSystem;
@@ -31,6 +31,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import net.minecraft.util.Mth;
 
 public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
@@ -44,14 +45,13 @@ public final class AbilitySystemClient {
     private static final Map<String, Long> PENDING_TOGGLE_REQUESTS = new ConcurrentHashMap<>();
     private static final Map<AbilityCategory, List<SkillInfo>> SKILL_INFOS = new HashMap<>();
     private static final List<SkillInfo> COMMON_SKILL_INFOS = new ArrayList<>();
+    private static final long SKILL_DENIAL_MESSAGE_INTERVAL_MS = 1_500L;
+    private static final long TOGGLE_REQUEST_TIMEOUT_MS = 750L;
     @Nullable
     public static AbilityCategory category;
     private static boolean activeHUD = false;
     private static AbilityData cpData = new AbilityData();
     private static float calculationIntensity = 1.0f;
-    private static final long SKILL_DENIAL_MESSAGE_INTERVAL_MS = 1_500L;
-    private static final long TOGGLE_REQUEST_TIMEOUT_MS = 750L;
-
     private static volatile DevState devState = DevState.IDLE;
     private static volatile float devProgress = 0f;
     private static volatile String devMessage = "";
@@ -134,12 +134,6 @@ public final class AbilitySystemClient {
         ensureCompleteSkillInfos();
     }
 
-    /**
-     * Keeps the HUD and developer screen complete even while a newly ported skill has not yet
-     * received a hand-authored tree node. Explicit registrations remain authoritative for
-     * textures and positions, while all dependency links are rebuilt from the server-side
-     * {@link Skill} definitions after registration has completed.
-     */
     private static void ensureCompleteSkillInfos() {
         for (var category : Registries.ABILITY_CATEGORIES) {
             var infos = SKILL_INFOS.computeIfAbsent(category, ignored -> new ArrayList<>());
@@ -297,7 +291,6 @@ public final class AbilitySystemClient {
         LEARNED_SKILLS.clear();
         newData.keySet().forEach(skillId -> Registries.SKILLS.get(Identifier.parse(skillId))
                 .ifPresent(holder -> LEARNED_SKILLS.add(holder.value())));
-        // This full snapshot is the authoritative acknowledgement for every outstanding toggle.
         PENDING_TOGGLE_REQUESTS.clear();
     }
 
@@ -421,15 +414,8 @@ public final class AbilitySystemClient {
                 && LEARNED_SKILLS.contains(skill);
     }
 
-    /**
-     * Starts one stateless toggle request and suppresses a second key/HUD dispatch until the
-     * authoritative skill snapshot arrives. Without this gate two rapid packets toggle twice and
-     * leave the player observing no state change.
-     */
     public static boolean beginToggleRequest(Skill skill) {
         if (skill == null) return false;
-        // A stale enabled state must always be allowed to request shutdown, even while category
-        // synchronization is transitioning and the skill is no longer available for activation.
         var shuttingDown = getSkillData(skill).map(SkillData::isEnabled).orElse(false);
         if (!shuttingDown && !canToggleSkill(skill)) return false;
         var now = Util.getMillis();
@@ -542,7 +528,7 @@ public final class AbilitySystemClient {
     }
 
     public static float getSkillProficiencyProgress(Skill skill) {
-        return Math.clamp(getSkillProficiency(skill) / SkillData.MAX_PROFICIENCY, 0.0f, 1.0f);
+        return Mth.clamp(getSkillProficiency(skill) / SkillData.MAX_PROFICIENCY, 0.0f, 1.0f);
     }
 
     public static void setSkillProficiency(Skill skill, float proficiency) {
@@ -573,6 +559,20 @@ public final class AbilitySystemClient {
         MisakaNetworkClient.NETWORK_MANAGER.unregister(clientContext);
     }
 
+    public static void addSkillProficiency(Skill skill, float amount) {
+        setSkillProficiency(skill, getSkillProficiency(skill) + amount);
+    }
+
+    public enum SkillUseFailure {
+        NONE,
+        UNAVAILABLE,
+        DISABLED,
+        OVERLOAD,
+        INSUFFICIENT_CP,
+        STACK_LIMIT,
+        SERVER_COOLDOWN
+    }
+
     public static class Config extends KeyBindingConfig {
         public static final class Action implements TypeHandler<Config> {
             public static final TypeHandler<Config> INSTANCE = new Action();
@@ -595,16 +595,6 @@ public final class AbilitySystemClient {
     public record SkillInfo(Skill skill, List<SkillInfo> dependencies, Identifier texture, float x, float y) {
     }
 
-    public enum SkillUseFailure {
-        NONE,
-        UNAVAILABLE,
-        DISABLED,
-        OVERLOAD,
-        INSUFFICIENT_CP,
-        STACK_LIMIT,
-        SERVER_COOLDOWN
-    }
-
     public record SkillUseStatus(
             boolean allowed,
             SkillUseFailure failure,
@@ -617,9 +607,5 @@ public final class AbilitySystemClient {
         private static SkillUseStatus denied(SkillUseFailure failure) {
             return new SkillUseStatus(false, failure, 0.0f, 0.0f, 0, 0, 0);
         }
-    }
-
-    public static void addSkillProficiency(Skill skill, float amount) {
-        setSkillProficiency(skill, getSkillProficiency(skill) + amount);
     }
 }

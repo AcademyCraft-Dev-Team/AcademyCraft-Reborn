@@ -1,0 +1,84 @@
+package org.academy.api.common.profiler;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
+public class ZoneSnapshot {
+    private final String threadName;
+    private final Map<String, ZoneSlice> slices;
+    private final long rootTotalNs;
+
+    public ZoneSnapshot(String threadName, Map<String, ZoneSlice> slices, long rootTotalNs) {
+        this.threadName = threadName;
+        this.slices = slices;
+        this.rootTotalNs = rootTotalNs;
+    }
+
+    public String getThreadName() {
+        return threadName;
+    }
+
+    public long getRootTotalNs() {
+        return rootTotalNs;
+    }
+
+    public ZoneSlice getRoot() {
+        return slices.get(ZoneProfiler.ROOT);
+    }
+
+    public ZoneSlice sliceAt(String path) {
+        return slices.get(path);
+    }
+
+    public List<ZoneSlice> childrenOf(String path) {
+        List<ZoneSlice> children = new ArrayList<>();
+        for (ZoneSlice slice : slices.values()) {
+            if (isDirectChild(path, slice.getPath())) {
+                children.add(slice);
+            }
+        }
+        children.sort(Comparator.comparingLong(ZoneSlice::getTotalNs).reversed());
+        return children;
+    }
+
+    public List<ZoneSlice> topSlices(int limit, boolean excludeRoot) {
+        List<ZoneSlice> top = new ArrayList<>();
+        for (ZoneSlice slice : slices.values()) {
+            if (excludeRoot && slice.getPath().equals(ZoneProfiler.ROOT)) {
+                continue;
+            }
+            top.add(slice);
+        }
+        top.sort(Comparator.comparingLong(ZoneSlice::getTotalNs).reversed());
+        return top.subList(0, Math.min(limit, top.size()));
+    }
+
+    public double parentPercent(ZoneSlice slice) {
+        String parentPath = parentPathOf(slice.getPath());
+        ZoneSlice parent = slices.get(parentPath);
+        long parentTotal = parent != null ? parent.getTotalNs() : rootTotalNs;
+        return parentTotal > 0 ? slice.getTotalNs() * 100.0 / parentTotal : 0.0;
+    }
+
+    private String parentPathOf(String path) {
+        if (path.equals(ZoneProfiler.ROOT)) {
+            return ZoneProfiler.ROOT;
+        }
+        int idx = path.lastIndexOf(ZoneProfiler.PATH_SEPARATOR);
+        return idx < 0 ? ZoneProfiler.ROOT : path.substring(0, idx);
+    }
+
+    private boolean isDirectChild(String parentPath, String path) {
+        if (path.equals(parentPath)) {
+            return false;
+        }
+        String prefix = parentPath + ZoneProfiler.PATH_SEPARATOR;
+        if (!path.startsWith(prefix)) {
+            return false;
+        }
+        String rest = path.substring(prefix.length());
+        return rest.indexOf(ZoneProfiler.PATH_SEPARATOR) < 0;
+    }
+}

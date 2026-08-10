@@ -12,7 +12,7 @@ import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.context.ContextKey;
 import org.academy.api.client.render.Render;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.GlowEffect;
 
 import static org.academy.AcademyCraft.academy;
 
@@ -36,8 +36,8 @@ public class QuantumInterferenceLayer<S extends LivingEntityRenderState, M exten
         var g = ((color >> 8) & 0xFF) / 255.0f;
         var b = (color & 0xFF) / 255.0f;
 
-        var renderType = Render.RenderTypes.POS_COLOR_QUADS_BLOOM_POST;
-        var vertexConsumer = BloomEffect.getAfter().getBuffer(renderType);
+        var renderType = Render.RenderTypes.POS_COLOR_QUADS_GLOW_POST;
+        var vertexConsumer = GlowEffect.getAfter().getBuffer(renderType);
 
         var model = getParentModel();
         model.renderToBuffer(

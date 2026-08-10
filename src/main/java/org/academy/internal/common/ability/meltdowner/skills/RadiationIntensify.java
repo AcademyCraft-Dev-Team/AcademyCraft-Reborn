@@ -40,11 +40,6 @@ public final class RadiationIntensify extends Skill {
         );
     }
 
-    @Override
-    public void initClient() {
-        Client.initialize();
-    }
-
     public static boolean isMarked(LivingEntity target, long gameTime) {
         return target.getPersistentData().getLong(TARGET_MARK_UNTIL_KEY).orElse(0L) > gameTime;
     }
@@ -74,6 +69,11 @@ public final class RadiationIntensify extends Skill {
         return gameTime > Long.MAX_VALUE - MARK_DURATION_TICKS
                 ? Long.MAX_VALUE
                 : gameTime + MARK_DURATION_TICKS;
+    }
+
+    @Override
+    public void initClient() {
+        Client.initialize();
     }
 
     public static final class Client {

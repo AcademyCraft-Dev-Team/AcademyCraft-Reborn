@@ -2,8 +2,8 @@ package org.academy.internal.common.event;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.AnvilUpdateEvent;
@@ -15,9 +15,14 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
+import net.minecraft.util.Mth;
 
 public final class DarkmatterEquipmentEvents {
     private DarkmatterEquipmentEvents() {
+    }
+
+    static float damageMultiplier(int protectedPieces) {
+        return Math.max(0, 1.0f - Mth.clamp(protectedPieces, 0, 4) * 0.1f);
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -62,9 +67,5 @@ public final class DarkmatterEquipmentEvents {
             event.setMaterialCost(1);
             event.setXpCost(3);
         }
-    }
-
-    static float damageMultiplier(int protectedPieces) {
-        return Math.max(0, 1.0f - Math.clamp(protectedPieces, 0, 4) * 0.1f);
     }
 }

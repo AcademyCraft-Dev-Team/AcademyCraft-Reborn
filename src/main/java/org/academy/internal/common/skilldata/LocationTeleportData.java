@@ -22,6 +22,11 @@ public final class LocationTeleportData extends SkillData {
     @SerializedName("defensiveMarkIndex")
     private int defensiveMarkIndex = -1;
 
+    private static int adjustedAfterRemoval(int selected, int removed) {
+        if (selected == removed) return -1;
+        return selected > removed ? selected - 1 : selected;
+    }
+
     @Override
     public Identifier getType() {
         return ID;
@@ -80,11 +85,6 @@ public final class LocationTeleportData extends SkillData {
 
     private int validIndex(int index) {
         return index >= 0 && index < getMarks().size() ? index : -1;
-    }
-
-    private static int adjustedAfterRemoval(int selected, int removed) {
-        if (selected == removed) return -1;
-        return selected > removed ? selected - 1 : selected;
     }
 
     public record Mark(

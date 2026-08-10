@@ -23,9 +23,9 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -35,12 +35,25 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
     public static final int DEFAULT_ATTACK_DELAY_TICKS = 10;
     static final float BASE_DAMAGE = 20.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
+
+    public SingleHighSpeedElectronBeam() {
+        super(Builder
+                .of(AbilityCategories.MELTDOWNER.get())
+                .level(AbilityLevel.LEVEL1)
+                .energyCost(5_000)
+                .cpCost(20)
+                .iterationTicks(10)
+                .maxStacks(1)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
+        );
+    }
 
     public static int getConfiguredAttackDelayTicks(ServerPlayer player) {
         var server = player.level().getServer();
@@ -55,19 +68,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 CONFIG_ATTACK_DELAY_TICKS,
                 (float) DEFAULT_ATTACK_DELAY_TICKS
         );
-        return Math.clamp(Math.round(configuredDelay), 0, 20 * 60);
-    }
-
-    public SingleHighSpeedElectronBeam() {
-        super(Builder
-                .of(AbilityCategories.MELTDOWNER.get())
-                .level(AbilityLevel.LEVEL1)
-                .energyCost(5_000)
-                .cpCost(20)
-                .iterationTicks(10)
-                .maxStacks(1)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
-        );
+        return Mth.clamp(Math.round(configuredDelay), 0, 20 * 60);
     }
 
     @Override
@@ -146,12 +147,12 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 var randomOffsetZ = (random.nextDouble() * 1.5 - 0.75) * offsetFactor;
                 var randomOffsetY = (random.nextDouble() * 0.5 - 0.25) * offsetFactor;
                 var beamDistance = 1.75;
-                var yawRad = Math.toRadians(yaw);
-                var pitchRad = Math.toRadians(pitch);
+                var yawRad = (yaw) * Mth.DEG_TO_RAD;
+                var pitchRad = (pitch) * Mth.DEG_TO_RAD;
                 var spawnPos = eyePos.add(
-                        -Math.sin(yawRad) * Math.cos(pitchRad) * beamDistance,
-                        -Math.sin(pitchRad) * beamDistance,
-                        Math.cos(yawRad) * Math.cos(pitchRad) * beamDistance
+                        -Mth.sin(yawRad) * Mth.cos(pitchRad) * beamDistance,
+                        -Mth.sin(pitchRad) * beamDistance,
+                        Mth.cos(yawRad) * Mth.cos(pitchRad) * beamDistance
                 ).add(randomOffsetX, randomOffsetY, randomOffsetZ);
                 var system = AbilitySystemServer.getSystem(player);
                 beam.configure(

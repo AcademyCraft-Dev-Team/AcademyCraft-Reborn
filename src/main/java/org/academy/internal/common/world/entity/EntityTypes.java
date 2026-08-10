@@ -4,9 +4,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.*;
-import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 
 import static org.academy.AcademyCraft.MODID;
@@ -35,7 +35,8 @@ public class EntityTypes {
             );
     public static final DeferredHolder<EntityType<?>, EntityType<ArcEffect>> ARC_EFFECT =
             ENTITY_TYPES.registerEntityType(
-                    "arc_effect", ArcEffect::new, MobCategory.MISC
+                    "arc_effect", ArcEffect::new, MobCategory.MISC,
+                    builder -> builder.sized(0.1f, 0.1f).clientTrackingRange(64).updateInterval(1)
             );
     public static final DeferredHolder<EntityType<?>, EntityType<HighSpeedElectronBeam>> HIGH_SPEED_ELECTRON_BEAM =
             ENTITY_TYPES.registerEntityType(

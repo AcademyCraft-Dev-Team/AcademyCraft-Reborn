@@ -1,14 +1,10 @@
 package org.academy.mixin.common;
 
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
-import net.minecraft.network.protocol.game.ServerboundInteractPacket;
-import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
-import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
-import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
-import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinServerGamePacketListenerImpl {
     private static final String ENSURE_MAIN_THREAD =
             "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/server/level/ServerLevel;)V";
+
     @Inject(
             method = "handleMovePlayer",
             at = @At(
@@ -79,7 +76,7 @@ public abstract class MixinServerGamePacketListenerImpl {
     private boolean academy$blocksUntrustedAction() {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
         return PlayerControlSessionManager.blocksUntrustedWorldAction(player)
-                || org.academy.internal.common.ability.mentalout.control.MentalControlRuntime
+                || MentalControlRuntime
                 .isFrozen(player);
     }
 }

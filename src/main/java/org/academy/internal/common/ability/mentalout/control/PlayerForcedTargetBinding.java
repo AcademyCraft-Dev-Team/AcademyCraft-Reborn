@@ -6,24 +6,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.AxeItem;
-import net.minecraft.world.item.BowItem;
-import net.minecraft.world.item.CrossbowItem;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.MaceItem;
-import net.minecraft.world.item.ProjectileWeaponItem;
-import net.minecraft.world.item.TridentItem;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.PlayerControlFrame;
-import org.academy.api.common.entitycontrol.PlayerMovementMode;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.*;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 
 import java.util.Optional;
 import java.util.UUID;
 
-/** Drives a rostered player toward, aims at, and attacks an explicit misidentification target. */
+/**
+ * Drives a rostered player toward, aims at, and attacks an explicit misidentification target.
+ */
 final class PlayerForcedTargetBinding implements ControlBinding {
     private static final double MELEE_RANGE = 2.8;
     private static final double RANGED_RANGE = 24.0;
@@ -104,16 +97,16 @@ final class PlayerForcedTargetBinding implements ControlBinding {
         submit(0.0f, aim, false, false);
     }
 
-    private Aim aimAt(net.minecraft.world.entity.LivingEntity target) {
+    private Aim aimAt(LivingEntity target) {
         var delta = target.getBoundingBox().getCenter().subtract(subject.getEyePosition());
-        var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+        var horizontal = Mth.sqrt((float) (delta.x * delta.x + delta.z * delta.z));
         var yaw = horizontal <= 1.0e-6
                 ? subject.getYRot()
                 : (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0f;
         var pitch = delta.lengthSqr() <= 1.0e-6
                 ? subject.getXRot()
-                : (float) -Math.toDegrees(Math.atan2(delta.y, Math.max(horizontal, 1.0e-6)));
-        return new Aim(Mth.wrapDegrees(yaw), Math.clamp(pitch, -90.0f, 90.0f));
+                : (float) -(Mth.atan2(delta.y, Math.max(horizontal, 1.0e-6))) * Mth.RAD_TO_DEG;
+        return new Aim(Mth.wrapDegrees(yaw), Mth.clamp(pitch, -90.0f, 90.0f));
     }
 
     private void applyAim(Aim aim) {

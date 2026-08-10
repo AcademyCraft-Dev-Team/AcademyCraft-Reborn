@@ -54,8 +54,8 @@ public final class ServerPlayerMentalControlAdapter implements MentalControlAdap
         if (directive instanceof ControlDirective.MoveTo moveTo) {
             return PlayerNavigationRuntime.activate(context, subject, moveTo);
         }
-        if (directive instanceof ControlDirective.ForceTarget forceTarget) {
-            return new PlayerForcedTargetBinding(context, subject, forceTarget.targetUuid());
+        if (directive instanceof ControlDirective.ForceTarget(java.util.UUID targetUuid)) {
+            return new PlayerForcedTargetBinding(context, subject, targetUuid);
         }
         if (directive instanceof ControlDirective.LookAt lookAt && context.controller() == subject) {
             return new SelfViewBinding(context, subject, lookAt.targetUuid());

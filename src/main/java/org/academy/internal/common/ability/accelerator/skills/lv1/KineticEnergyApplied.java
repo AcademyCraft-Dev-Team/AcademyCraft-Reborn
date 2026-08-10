@@ -186,7 +186,9 @@ public class KineticEnergyApplied extends Skill {
                                 InputConstants.PRESS, 0)),
                 ctx -> Client.cycleImpactLevel());
 
-        ToggleStatusHud.registerDetailProvider(Skills.KINETIC_ENERGY_APPLIED.get(), Client::statusText);
+        ToggleStatusHud.Companion.registerDetailProvider(
+                Skills.KINETIC_ENERGY_APPLIED.get(), Client::statusText
+        );
     }
 
     @Override
@@ -219,7 +221,7 @@ public class KineticEnergyApplied extends Skill {
         private static void registerSettings() {
             if (settingsRegistered) return;
             settingsRegistered = true;
-            SkillSettingsRegistry.register(
+            SkillSettingsRegistry.INSTANCE.register(
                     Skills.KINETIC_ENERGY_APPLIED.get(),
                     new SkillSettingsRegistry.Module(
                             "shockwave",
@@ -577,7 +579,7 @@ public class KineticEnergyApplied extends Skill {
                 var skill = Skills.KINETIC_ENERGY_APPLIED.get();
                 var target = map.get(skill.getKeyString());
                 if (target == null) {
-                    target = skill.createData(player);
+                    target = skill.createData();
                     map.put(skill.getKeyString(), target);
                 }
                 mergeProgress(target, legacySuperposition);

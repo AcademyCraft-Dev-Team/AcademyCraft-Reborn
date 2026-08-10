@@ -15,16 +15,17 @@ public final class RecipeSerializers {
             DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
     static final StreamCodec<RegistryFriendlyByteBuf, DarkmatterDuplicationRecipe>
             DARKMATTER_DUPLICATION_STREAM_CODEC = StreamCodec.of(
-                    (buffer, recipe) -> {
-                    },
-                    buffer -> new DarkmatterDuplicationRecipe()
-            );
+            (_, _) -> {
+            },
+            _ -> new DarkmatterDuplicationRecipe()
+    );
+
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<DarkmatterDuplicationRecipe>>
             DARKMATTER_DUPLICATION = RECIPE_SERIALIZERS.register("darkmatter_duplication", () ->
-                    new RecipeSerializer<>(
-                            MapCodec.unit(DarkmatterDuplicationRecipe::new),
-                            DARKMATTER_DUPLICATION_STREAM_CODEC
-                    ));
+            new RecipeSerializer<>(
+                    MapCodec.unit(DarkmatterDuplicationRecipe::new),
+                    DARKMATTER_DUPLICATION_STREAM_CODEC
+            ));
 
     private RecipeSerializers() {
     }

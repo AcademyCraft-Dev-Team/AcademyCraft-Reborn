@@ -12,11 +12,10 @@ import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxContexts;
 import org.academy.api.client.render.vfx.VfxManager;
-import org.academy.internal.client.renderer.effect.WorldPostEffectSubmission;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,17 +25,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LevelRenderer.class)
 public abstract class MixinLevelRenderer {
-    @Inject(method = "submitEntities", at = @At("HEAD"))
-    private void academy$beginWorldPostEffectSubmission(
-            PoseStack poseStack,
-            LevelRenderState levelRenderState,
-            SubmitNodeCollector output,
-            CallbackInfo ci
-    ) {
-        WorldPostEffectSubmission.begin();
-    }
-
     @Inject(
+            // 在 iris$endLevelRender 之后调用以兼容 Iris 喵
+            order = Integer.MAX_VALUE,
             method = "render",
             at = @At(
                     value = "INVOKE",
@@ -55,7 +46,7 @@ public abstract class MixinLevelRenderer {
             CallbackInfo ci
     ) {
         VfxManager.INSTANCE.renderFrame();
-        BloomEffect.getInstance().process();
+        GlowEffect.getInstance().process();
         PostEffect.pre();
         PostEffect.post();
     }
@@ -67,7 +58,6 @@ public abstract class MixinLevelRenderer {
             SubmitNodeCollector output,
             CallbackInfo ci
     ) {
-        WorldPostEffectSubmission.end();
         VfxContexts.submit(
                 Minecraft.getInstance().getDeltaTracker(),
                 levelRenderState.cameraRenderState

@@ -20,8 +20,11 @@ import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 import java.util.UUID;
+import net.minecraft.util.Mth;
 
 public class HighSpeedElectronBeam extends RenderOnlyEntity {
+    public static final int MAX_CHARGE_TICKS = 40;
+    public static final int MAX_RAY_LIFE_TICKS = 15;
     private static final int BLOCK_MINING_TIER = 3;
     private static final EntityDataAccessor<Float> BEAM_LENGTH = SynchedEntityData.defineId(
             HighSpeedElectronBeam.class,
@@ -79,9 +82,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             HighSpeedElectronBeam.class,
             EntityDataSerializers.FLOAT
     );
-    public static final int MAX_CHARGE_TICKS = 40;
-    public static final int MAX_RAY_LIFE_TICKS = 15;
-
     public int currentChargerTicks = 0;
     public int currentRayLifeTicks = MAX_RAY_LIFE_TICKS;
     public boolean shouldStopRay = true;
@@ -99,6 +99,47 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
         super(entityType, level);
         setNoGravity(false);
+    }
+
+    private static double executeBlocks(
+            ServerLevel level,
+            ServerPlayer breaker,
+            LinearSegment segment,
+            boolean destroyBlocks
+    ) {
+        var result = LevelUtil.destroyBlocksAlongPath(
+                level,
+                segment.start(),
+                segment.end(),
+                0.25f,
+                destroyBlocks ? BLOCK_MINING_TIER : -1,
+                false,
+                destroyBlocks,
+                true,
+                !destroyBlocks,
+                breaker
+        );
+        return Mth.clamp(result.getValue(), 0.0, segment.length());
+    }
+
+    private static void spawnBetaTrail(ServerLevel level, ResolvedLinearAttack attack) {
+        for (var segment : attack.segments()) {
+            var delta = segment.delta();
+            for (var step = 0; step <= 12; step++) {
+                var point = segment.start().add(delta.scale(step / 12.0));
+                level.sendParticles(
+                        ParticleTypes.ELECTRIC_SPARK,
+                        point.x,
+                        point.y,
+                        point.z,
+                        1,
+                        0.02,
+                        0.02,
+                        0.02,
+                        0.01
+                );
+            }
+        }
     }
 
     public void configure(
@@ -204,13 +245,13 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             var amplitude = 0.00075f;
 
             var uuidHash = getUUID().hashCode();
-            var phaseX = (uuidHash % 1000) / 1000.0f * (float) Math.PI * 2;
-            var phaseY = (((float) uuidHash / 1000) % 1000) / 1000.0f * (float) Math.PI * 2;
-            var phaseZ = (((float) uuidHash / 1000000) % 1000) / 1000.0f * (float) Math.PI * 2;
+            var phaseX = (uuidHash % 1000) / 1000.0f * Mth.TWO_PI;
+            var phaseY = (((float) uuidHash / 1000) % 1000) / 1000.0f * Mth.TWO_PI;
+            var phaseZ = (((float) uuidHash / 1000000) % 1000) / 1000.0f * Mth.TWO_PI;
 
-            var offsetX = (float) Math.sin(tickCount * frequency + phaseX) * amplitude;
-            var offsetY = (float) Math.sin(tickCount * frequency * 2 + phaseY) * amplitude * 2;
-            var offsetZ = (float) Math.cos(tickCount * frequency + phaseZ) * amplitude;
+            var offsetX = Mth.sin(tickCount * frequency + phaseX) * amplitude;
+            var offsetY = Mth.sin(tickCount * frequency * 2 + phaseY) * amplitude * 2;
+            var offsetZ = Mth.cos(tickCount * frequency + phaseZ) * amplitude;
 
             push(offsetX, offsetY, offsetZ);
         }
@@ -326,47 +367,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         }
     }
 
-    private static double executeBlocks(
-            ServerLevel level,
-            ServerPlayer breaker,
-            LinearSegment segment,
-            boolean destroyBlocks
-    ) {
-        var result = LevelUtil.destroyBlocksAlongPath(
-                level,
-                segment.start(),
-                segment.end(),
-                0.25f,
-                destroyBlocks ? BLOCK_MINING_TIER : -1,
-                false,
-                destroyBlocks,
-                true,
-                !destroyBlocks,
-                breaker
-        );
-        return Math.clamp(result.getValue(), 0.0, segment.length());
-    }
-
-    private static void spawnBetaTrail(ServerLevel level, ResolvedLinearAttack attack) {
-        for (var segment : attack.segments()) {
-            var delta = segment.delta();
-            for (var step = 0; step <= 12; step++) {
-                var point = segment.start().add(delta.scale(step / 12.0));
-                level.sendParticles(
-                        ParticleTypes.ELECTRIC_SPARK,
-                        point.x,
-                        point.y,
-                        point.z,
-                        1,
-                        0.02,
-                        0.02,
-                        0.02,
-                        0.01
-                );
-            }
-        }
-    }
-
     private ServerPlayer resolveOwner(ServerLevel level) {
         if (ownerId == null || sourceSkill == null) return null;
         var owner = level.getServer().getPlayerList().getPlayer(ownerId);
@@ -383,12 +383,16 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         return currentChargerTicks < getAttackDelayTicks();
     }
 
-    public void setAttackDelayTicks(int ticks) {
-        entityData.set(ATTACK_DELAY_TICKS, Math.clamp(ticks, 0, 20 * 60));
-    }
-
     public int getAttackDelayTicks() {
         return entityData.get(ATTACK_DELAY_TICKS);
+    }
+
+    public void setAttackDelayTicks(int ticks) {
+        entityData.set(ATTACK_DELAY_TICKS, Mth.clamp(ticks, 0, 20 * 60));
+    }
+
+    public float getBeamLength() {
+        return entityData.get(BEAM_LENGTH);
     }
 
     public void setBeamLength(float length) {
@@ -397,40 +401,36 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         entityData.set(BEAM_LENGTH, safeLength);
     }
 
-    public float getBeamLength() {
-        return entityData.get(BEAM_LENGTH);
+    public float getBeamScale() {
+        return entityData.get(BEAM_SCALE);
     }
 
     public void setBeamScale(float scale) {
         entityData.set(BEAM_SCALE, Float.isFinite(scale) ? Math.max(0.0f, scale) : 0.0f);
     }
 
-    public float getBeamScale() {
-        return entityData.get(BEAM_SCALE);
+    public float getVisualSideOffset() {
+        return entityData.get(VISUAL_SIDE_OFFSET);
     }
 
     public void setVisualSideOffset(float offset) {
         entityData.set(VISUAL_SIDE_OFFSET, Float.isFinite(offset) ? offset : 0.0f);
     }
 
-    public float getVisualSideOffset() {
-        return entityData.get(VISUAL_SIDE_OFFSET);
+    public boolean isContinuous() {
+        return entityData.get(CONTINUOUS);
     }
 
     public void setContinuous(boolean continuous) {
         entityData.set(CONTINUOUS, continuous);
     }
 
-    public boolean isContinuous() {
-        return entityData.get(CONTINUOUS);
+    public boolean isHeldCharge() {
+        return entityData.get(HELD_CHARGE);
     }
 
     public void setHeldCharge(boolean heldCharge) {
         entityData.set(HELD_CHARGE, heldCharge);
-    }
-
-    public boolean isHeldCharge() {
-        return entityData.get(HELD_CHARGE);
     }
 
     public boolean destroysBlocks() {

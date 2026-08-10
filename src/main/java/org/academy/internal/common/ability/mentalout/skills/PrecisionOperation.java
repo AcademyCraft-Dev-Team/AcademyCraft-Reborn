@@ -10,7 +10,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
@@ -26,6 +25,7 @@ import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class PrecisionOperation extends Skill {
     public PrecisionOperation() {
@@ -42,8 +42,33 @@ public final class PrecisionOperation extends Skill {
                         "Impression Manipulation", "academy:impression_manipulation"))
                 .devCondition(new DevCondition.DependencyCondition(
                         "Mental Stupor", "academy:mental_stupor"))
-                .withCustomData(Data.ID, Data.class, _ -> new Data())
+                .withCustomData(Data.ID, Data.class, Data::new)
         );
+    }
+
+    public static Data normalizeData(Data data) {
+        if (data == null) data = new Data();
+        var migrateFlow = data.schemaVersion == 1;
+        var legacy = data.schemaVersion > 0 && data.schemaVersion < Data.SCHEMA_VERSION;
+        data.revision = Math.max(0L, data.revision);
+        var normalized = new ArrayList<PrecisionGraph>(4);
+        var source = data.slots == null ? List.<PrecisionGraph>of() : data.slots;
+        for (var slot = 0; slot < 4; slot++) {
+            var graph = slot < source.size() && source.get(slot) != null
+                    ? source.get(slot)
+                    : PrecisionGraph.EMPTY;
+            if (migrateFlow) {
+                var migration = PrecisionGraph.migrateLegacy(graph);
+                normalized.add(migration.valid() ? migration.graph() : PrecisionGraph.EMPTY);
+            } else {
+                var validation = graph.validate();
+                normalized.add(validation.valid() ? validation.normalized() : PrecisionGraph.EMPTY);
+            }
+        }
+        data.slots = normalized;
+        if (legacy) data.revision++;
+        data.schemaVersion = Data.SCHEMA_VERSION;
+        return data;
     }
 
     @Override
@@ -105,31 +130,6 @@ public final class PrecisionOperation extends Skill {
         PrecisionOperationManager.initServer();
     }
 
-    public static Data normalizeData(Data data) {
-        if (data == null) data = new Data();
-        var migrateFlow = data.schemaVersion == 1;
-        var legacy = data.schemaVersion > 0 && data.schemaVersion < Data.SCHEMA_VERSION;
-        data.revision = Math.max(0L, data.revision);
-        var normalized = new ArrayList<PrecisionGraph>(4);
-        var source = data.slots == null ? List.<PrecisionGraph>of() : data.slots;
-        for (var slot = 0; slot < 4; slot++) {
-            var graph = slot < source.size() && source.get(slot) != null
-                    ? source.get(slot)
-                    : PrecisionGraph.EMPTY;
-            if (migrateFlow) {
-                var migration = PrecisionGraph.migrateLegacy(graph);
-                normalized.add(migration.valid() ? migration.graph() : PrecisionGraph.EMPTY);
-            } else {
-                var validation = graph.validate();
-                normalized.add(validation.valid() ? validation.normalized() : PrecisionGraph.EMPTY);
-            }
-        }
-        data.slots = normalized;
-        if (legacy) data.revision++;
-        data.schemaVersion = Data.SCHEMA_VERSION;
-        return data;
-    }
-
     public static final class Data extends SkillData {
         public static final int SCHEMA_VERSION = 3;
         public static final Identifier ID = AcademyCraft.academy("precision_operation");
@@ -156,12 +156,12 @@ public final class PrecisionOperation extends Skill {
 
         public PrecisionGraph slot(int slot) {
             normalizeData(this);
-            return slots.get(Math.clamp(slot, 0, 3));
+            return slots.get(Mth.clamp(slot, 0, 3));
         }
 
         public void replaceSlot(int slot, PrecisionGraph graph) {
             normalizeData(this);
-            slots.set(Math.clamp(slot, 0, 3), graph);
+            slots.set(Mth.clamp(slot, 0, 3), graph);
             revision++;
         }
 

@@ -2,8 +2,10 @@ package org.academy.internal.common.ability.electromaster.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -15,6 +17,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -23,14 +26,13 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.ElectromasterWeaponEffectRenderer;
+import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -67,6 +69,10 @@ public class MagneticWeapon extends Skill {
                 .dependsOn(Skills.MAGNET_MANIPULATION));
     }
 
+    public static boolean isSword(ItemStack stack) {
+        return !stack.isEmpty() && stack.is(ItemTags.SWORDS);
+    }
+
     @Override
     public void initClient() {
         var key = getKey();
@@ -76,8 +82,8 @@ public class MagneticWeapon extends Skill {
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
                                 InputConstants.PRESS, 0)),
                 _ -> Client.onToggle());
-        ToggleStatusHud.registerStateProvider(Skills.MAGNETIC_WEAPON.get(), Client::isActive);
-        RendererManager.registerEffectRenderer(ElectromasterWeaponEffectRenderer.INSTANCE);
+        ToggleStatusHud.Companion.registerStateProvider(Skills.MAGNETIC_WEAPON.get(), Client::isActive);
+        ElectromasterWeaponVfxClient.register();
     }
 
     @Override
@@ -108,7 +114,7 @@ public class MagneticWeapon extends Skill {
         }
 
         private static boolean isActive() {
-            var player = net.minecraft.client.Minecraft.getInstance().player;
+            var player = Minecraft.getInstance().player;
             return player != null && player.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get()).active();
         }
 
@@ -206,6 +212,29 @@ public class MagneticWeapon extends Skill {
             syncData();
         }
 
+        private static boolean isEnemy(ServerPlayer player, LivingEntity entity) {
+            if (entity == player || !entity.isAlive() || player.isAlliedTo(entity)) return false;
+            if (entity instanceof ServerPlayer target
+                    && (target.isCreative() || target.isSpectator())) return false;
+            return player.getLastHurtByMob() == entity
+                    || player.getLastHurtByPlayer() == entity
+                    || entity instanceof Mob mob && mob.getTarget() == player;
+        }
+
+        private static void playArcSound(ServerLevel level, Vec3 position,
+                                         float volume, float pitch) {
+            level.playSound(
+                    null,
+                    position.x,
+                    position.y,
+                    position.z,
+                    SoundEvents.ARC_WEAK.get(),
+                    SoundSource.PLAYERS,
+                    volume,
+                    pitch
+            );
+        }
+
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             var skill = Skills.MAGNETIC_WEAPON.get();
@@ -262,15 +291,6 @@ public class MagneticWeapon extends Skill {
                 if (target != null) startAttack(target, stack);
             }
             syncData();
-        }
-
-        private static boolean isEnemy(ServerPlayer player, LivingEntity entity) {
-            if (entity == player || !entity.isAlive() || player.isAlliedTo(entity)) return false;
-            if (entity instanceof net.minecraft.server.level.ServerPlayer target
-                    && (target.isCreative() || target.isSpectator())) return false;
-            return player.getLastHurtByMob() == entity
-                    || player.getLastHurtByPlayer() == entity
-                    || entity instanceof Mob mob && mob.getTarget() == player;
         }
 
         private void startAttack(LivingEntity target, ItemStack stack) {
@@ -356,20 +376,6 @@ public class MagneticWeapon extends Skill {
                 }
             }
             playArcSound(level, target.getBoundingBox().getCenter(), 0.55f, 0.95f);
-        }
-
-        private static void playArcSound(ServerLevel level, net.minecraft.world.phys.Vec3 position,
-                                         float volume, float pitch) {
-            level.playSound(
-                    null,
-                    position.x,
-                    position.y,
-                    position.z,
-                    SoundEvents.ARC_WEAK.get(),
-                    SoundSource.PLAYERS,
-                    volume,
-                    pitch
-            );
         }
 
         private void syncData() {

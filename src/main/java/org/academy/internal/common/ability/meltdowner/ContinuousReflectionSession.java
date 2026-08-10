@@ -7,6 +7,11 @@ public final class ContinuousReflectionSession {
     private UUID reflectorId;
     private long nextChargeTick = Long.MIN_VALUE;
 
+    private static long saturatingAdd(long value, int increment) {
+        if (value > Long.MAX_VALUE - increment) return Long.MAX_VALUE;
+        return value + increment;
+    }
+
     public boolean activate(
             UUID candidateId,
             long currentTick,
@@ -60,10 +65,5 @@ public final class ContinuousReflectionSession {
     public void clear() {
         reflectorId = null;
         nextChargeTick = Long.MIN_VALUE;
-    }
-
-    private static long saturatingAdd(long value, int increment) {
-        if (value > Long.MAX_VALUE - increment) return Long.MAX_VALUE;
-        return value + increment;
     }
 }

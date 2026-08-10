@@ -9,6 +9,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
 public final class ParticleEmitter {
     private final List<Particle> particles = new ArrayList<>();
@@ -67,7 +68,7 @@ public final class ParticleEmitter {
         colorVariation = 0.1f;
         startAlpha = 1.0f;
         endAlpha = 0.0f;
-        spreadAngle = (float) Math.PI;
+        spreadAngle = Mth.PI;
         useRotation = false;
         rotationSpeedBase = 1.0f;
         rotationSpeedVariation = 0.5f;
@@ -221,8 +222,8 @@ public final class ParticleEmitter {
             );
 
             if (useRotation && Math.abs(p.rotation) > 0.001f) {
-                var cos = (float) Math.cos(p.rotation);
-                var sin = (float) Math.sin(p.rotation);
+                var cos = Mth.cos(p.rotation);
+                var sin = Mth.sin(p.rotation);
 
                 // Rotated right vector scaled by half width
                 var rx = (tmpCamRight.x * cos - tmpCamUp.x * sin) * currentSize * 0.5f;
@@ -283,44 +284,44 @@ public final class ParticleEmitter {
                 particleEndSize,
                 baseLifetime + (random.nextFloat() - 0.5f) * 2 * lifetimeVariation,
                 ageOffset * baseLifetime,
-                useRotation ? (random.nextFloat() - 0.5f) * 2 * (float) Math.PI : 0,
+                useRotation ? (random.nextFloat() - 0.5f) * Mth.TWO_PI : 0,
                 useRotation ? rotationSpeedBase + (random.nextFloat() - 0.5f) * 2 * rotationSpeedVariation : 0
         );
     }
 
     private float clampColor(float c) {
-        return Math.clamp(c, 0, 1);
+        return Mth.clamp(c, 0, 1);
     }
 
     private Vector3f generateDirection() {
         return switch (spreadMode) {
             case SPHERE -> {
-                var theta = random.nextFloat() * (float) Math.PI * 2;
+                var theta = random.nextFloat() * Mth.TWO_PI;
                 var phi = (float) Math.acos(2 * random.nextFloat() - 1);
                 yield new Vector3f(
-                        (float) (Math.sin(phi) * Math.cos(theta)),
-                        (float) (Math.sin(phi) * Math.sin(theta)),
-                        (float) Math.cos(phi)
+                        (float) (Mth.sin(phi) * Mth.cos(theta)),
+                        (float) (Mth.sin(phi) * Mth.sin(theta)),
+                        Mth.cos(phi)
                 );
             }
             case HEMISPHERE_UP -> {
-                var theta = random.nextFloat() * (float) Math.PI * 2;
+                var theta = random.nextFloat() * Mth.TWO_PI;
                 var phi = (float) Math.acos(random.nextFloat());
                 yield new Vector3f(
-                        (float) (Math.sin(phi) * Math.cos(theta)),
-                        (float) Math.cos(phi),
-                        (float) (Math.sin(phi) * Math.sin(theta))
+                        (float) (Mth.sin(phi) * Mth.cos(theta)),
+                        Mth.cos(phi),
+                        (float) (Mth.sin(phi) * Mth.sin(theta))
                 );
             }
             case CONE -> {
                 var halfAngle = spreadAngle * 0.5f;
-                var cosHalfAngle = (float) Math.cos(halfAngle);
+                var cosHalfAngle = Mth.cos(halfAngle);
                 var phi = (float) Math.acos(1 - random.nextFloat() * (1 - cosHalfAngle));
-                var theta = random.nextFloat() * (float) Math.PI * 2;
+                var theta = random.nextFloat() * Mth.TWO_PI;
                 var localDir = new Vector3f(
-                        (float) (Math.sin(phi) * Math.cos(theta)),
-                        (float) Math.cos(phi),
-                        (float) (Math.sin(phi) * Math.sin(theta))
+                        (float) (Mth.sin(phi) * Mth.cos(theta)),
+                        Mth.cos(phi),
+                        (float) (Mth.sin(phi) * Mth.sin(theta))
                 );
                 var axis = new Vector3f();
                 var worldUp = new Vector3f(0, 1, 0);
@@ -335,21 +336,21 @@ public final class ParticleEmitter {
                 yield localDir;
             }
             case HORIZONTAL_RING -> {
-                var theta = random.nextFloat() * (float) Math.PI * 2;
-                var phi = (float) (Math.PI / 2 + (random.nextFloat() - 0.5f) * spreadAngle);
+                var theta = random.nextFloat() * Mth.TWO_PI;
+                var phi = (float) (Mth.PI / 2 + (random.nextFloat() - 0.5f) * spreadAngle);
                 yield new Vector3f(
-                        (float) (Math.sin(phi) * Math.cos(theta)),
+                        (float) (Mth.sin(phi) * Mth.cos(theta)),
                         0,
-                        (float) (Math.sin(phi) * Math.sin(theta))
+                        (float) (Mth.sin(phi) * Mth.sin(theta))
                 ).normalize();
             }
             case VERTICAL_DISC -> {
-                var theta = random.nextFloat() * (float) Math.PI * 2;
+                var theta = random.nextFloat() * Mth.TWO_PI;
                 var spread = (random.nextFloat() - 0.5f) * spreadAngle;
                 yield new Vector3f(
-                        (float) Math.cos(theta),
-                        (float) Math.sin(spread),
-                        (float) Math.sin(theta)
+                        Mth.cos(theta),
+                        Mth.sin(spread),
+                        Mth.sin(theta)
                 ).normalize();
             }
         };

@@ -4,9 +4,14 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.UUID;
 
-/** Obfuscates reflection health snapshots kept in process memory. */
+/**
+ * Obfuscates reflection health snapshots kept in process memory.
+ */
 public final class ReflectionHealthRecordCodec {
     private static final int PROCESS_MASK = new SecureRandom().nextInt();
+
+    private ReflectionHealthRecordCodec() {
+    }
 
     public static String encode(UUID owner, float health) {
         var bits = Float.floatToRawIntBits(sanitize(health));
@@ -56,8 +61,5 @@ public final class ReflectionHealthRecordCodec {
         var mixed = most ^ Long.rotateLeft(least, 23);
         var mask = PROCESS_MASK ^ (int) (mixed ^ mixed >>> 32);
         return mask == 0 ? 0x6A09E667 : mask;
-    }
-
-    private ReflectionHealthRecordCodec() {
     }
 }

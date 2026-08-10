@@ -15,6 +15,9 @@ final class HotSpotClassPointerAccess {
     private static final Map<Class<?>, Long> CLASS_WORDS = new ConcurrentHashMap<>();
     private static final State STATE = initialize();
 
+    private HotSpotClassPointerAccess() {
+    }
+
     static Capability capability() {
         return STATE.capability;
     }
@@ -175,8 +178,5 @@ final class HotSpotClassPointerAccess {
     }
 
     private static final class ProbeOther {
-    }
-
-    private HotSpotClassPointerAccess() {
     }
 }

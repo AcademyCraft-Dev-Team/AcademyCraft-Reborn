@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import net.minecraft.util.Mth;
 
 public final class VfxContexts {
     private VfxContexts() {
@@ -28,6 +29,6 @@ public final class VfxContexts {
     }
 
     private static float fov(CameraRenderState cameraState) {
-        return (float) (2.0 * Math.toDegrees(Math.atan(1.0 / cameraState.projectionMatrix.m11())));
+        return (float) (2.0 * (Math.atan(1.0 / cameraState.projectionMatrix.m11())) * Mth.RAD_TO_DEG);
     }
 }

@@ -6,12 +6,9 @@ import org.academy.AcademyCraft;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -22,19 +19,6 @@ import java.util.concurrent.CompletableFuture;
 public final class NeteaseLoginService {
     private static final String BASE_URL = "https://music.163.com";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 NeteaseMusicDesktop/3.1.6";
-
-    public enum LoginState {
-        IDLE,
-        FETCHING_QR,
-        WAITING_SCAN,
-        SUCCESS,
-        FAILED,
-        QR_EXPIRED
-    }
-
-    public record QrCodeSession(byte[] imageBytes, String uniKey) {
-    }
-
     private static String lastStatusText = "";
     private static String sessionCookie = "";
 
@@ -208,5 +192,17 @@ public final class NeteaseLoginService {
         sessionCookie = "";
         NeteaseCredentialManager.setCookieHeader("");
         NeteaseCredentialManager.clear();
+    }
+
+    public enum LoginState {
+        IDLE,
+        FETCHING_QR,
+        WAITING_SCAN,
+        SUCCESS,
+        FAILED,
+        QR_EXPIRED
+    }
+
+    public record QrCodeSession(byte[] imageBytes, String uniKey) {
     }
 }

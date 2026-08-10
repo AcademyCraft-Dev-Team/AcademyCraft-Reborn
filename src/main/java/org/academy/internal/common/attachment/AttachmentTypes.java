@@ -7,10 +7,10 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
-import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirectData;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirectData;
+import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
 
 import java.util.HashMap;
 import java.util.Map;

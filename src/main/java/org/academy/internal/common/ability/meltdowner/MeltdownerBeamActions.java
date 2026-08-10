@@ -8,15 +8,12 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
-import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
-import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
-import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
-import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
-import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
+import org.academy.internal.common.ability.accelerator.reflection.*;
 import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
 import org.academy.internal.common.ability.Skills;
 
 import java.util.function.Predicate;
+import net.minecraft.util.Mth;
 
 public final class MeltdownerBeamActions {
     private MeltdownerBeamActions() {
@@ -164,6 +161,6 @@ public final class MeltdownerBeamActions {
                 simulate,
                 breaker
         );
-        return Math.clamp(result.getValue(), 0.0, segment.length());
+        return Mth.clamp(result.getValue(), 0.0, segment.length());
     }
 }
