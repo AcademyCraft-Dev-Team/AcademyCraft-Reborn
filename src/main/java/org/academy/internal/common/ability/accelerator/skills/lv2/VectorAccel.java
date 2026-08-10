@@ -17,6 +17,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -24,6 +25,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -38,11 +42,14 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -415,7 +422,12 @@ public final class VectorAccel extends Skill {
         private static final Map<ServerPlayer, Long> CHARGE_START_TICKS = new WeakHashMap<>();
 
         public static float getChargeRatio(double startTick, double releaseTick) {
-            return Mth.clamp((float) Math.max(0, releaseTick - startTick) / MAX_CHARGE_TICKS, 0.0f, 1.0f);
+            return getChargeRatio(startTick, releaseTick, MAX_CHARGE_TICKS);
+        }
+
+        public static float getChargeRatio(double startTick, double releaseTick, long maxChargeTicks) {
+            return Mth.clamp((float) Math.max(0, releaseTick - startTick)
+                    / Math.max(1L, maxChargeTicks), 0.0f, 1.0f);
         }
 
         public static Vec3 normalizeDashDirection(Vec3 direction) {
@@ -451,8 +463,10 @@ public final class VectorAccel extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var startTick = CHARGE_START_TICKS.remove(player);
             if (startTick == null) return;
-            var chargeRatio = getChargeRatio(startTick, player.level().getGameTime());
-            Skills.VECTOR_ACCEL.get().executeActive(player, (_, _) -> {
+            var skill = Skills.VECTOR_ACCEL.get();
+            var maxChargeTicks = skill.hasProficiencyMilestone(player, 2) ? 30L : MAX_CHARGE_TICKS;
+            var chargeRatio = getChargeRatio(startTick, player.level().getGameTime(), maxChargeTicks);
+            skill.executeActive(player, (_, _) -> {
                 var direction = normalizeDashDirection(player.getLookAngle());
                 EntityMotionGuard.runWithMotionSource(
                         player,
@@ -462,7 +476,50 @@ public final class VectorAccel extends Skill {
                 player.level().playSound(null, player.blockPosition(), SoundEvents.VECTOR_ACCEL.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
+                if (skill.hasProficiencyMilestone(player, 3)) {
+                    TimedSkillEffectRuntime.put(player, player.getUUID(), skill,
+                            "dash_impact", 40, 6.0f);
+                }
             });
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            var skill = Skills.VECTOR_ACCEL.get();
+            var now = player.level().getGameTime();
+            var impact = TimedSkillEffectRuntime.get(
+                    player.getUUID(), player.getUUID(), skill, "dash_impact", now).orElse(null);
+            if (impact == null) return;
+            var target = player.level().getEntitiesOfClass(
+                    LivingEntity.class,
+                    player.getBoundingBox().inflate(0.45),
+                    entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity)
+            ).stream().findFirst().orElse(null);
+            if (target == null) return;
+            TimedSkillEffectRuntime.consume(
+                    player.getUUID(), player.getUUID(), skill, "dash_impact", now);
+            var system = AbilitySystemServer.getSystem(player);
+            var damage = impact.value()
+                    * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                    * system.getPlayerDamageMultiplier(player.getUUID());
+            target.hurtServer(
+                    player.level(),
+                    SkillDamageSource.of(player, skill,
+                            org.academy.internal.common.world.damagesource.DamageTypes.VEC),
+                    damage
+            );
+            var direction = Server.normalizeDashDirection(player.getLookAngle());
+            target.setDeltaMovement(target.getDeltaMovement().add(direction.scale(1.2)));
+            target.hurtMarked = true;
+            player.setDeltaMovement(player.getDeltaMovement().scale(0.5));
+            player.connection.send(new ClientboundSetEntityMotionPacket(player));
         }
     }
 

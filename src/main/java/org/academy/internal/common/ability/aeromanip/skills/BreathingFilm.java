@@ -128,17 +128,23 @@ public final class BreathingFilm extends Skill {
                 system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
                 return;
             }
-            var hazardous = player.isEyeInFluid(FluidTags.WATER)
-                    || player.getAirSupply() < player.getMaxAirSupply();
-            if (!hazardous) {
+            var sharedTargets = skill.hasProficiencyMilestone(player, 2)
+                    ? player.level().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(4.0),
+                    target -> target != player && target.isAlive() && player.isAlliedTo(target)
+                            && target.distanceToSqr(player) <= 16.0
+                            && isHazardous(target))
+                    : List.<ServerPlayer>of();
+            var hazardous = isHazardous(player);
+            if (!hazardous && sharedTargets.isEmpty()) {
                 system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
                 return;
             }
             if (!runtimeData.orElseThrow().isEnabled()) system.toggleSkill(player.getUUID(), skill.getKeyString());
             if (!system.ensurePermanentOccupation(
                     player.getUUID(),
-                    skill.getMaintenanceCost(skill.getLevel(player))
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_FILM),
+                    skill.getMaintenanceCost(player)
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_FILM)
+                            + (sharedTargets.isEmpty() ? 0.0f : 5.0f),
                     skill
             )) {
                 return;
@@ -148,6 +154,12 @@ public final class BreathingFilm extends Skill {
             if (player.getAirSupply() < maxAir) {
                 player.setAirSupply(maxAir);
             }
+            for (var target : sharedTargets) target.setAirSupply(target.getMaxAirSupply());
+        }
+
+        private static boolean isHazardous(ServerPlayer player) {
+            return player.isEyeInFluid(FluidTags.WATER)
+                    || player.getAirSupply() < player.getMaxAirSupply();
         }
     }
 

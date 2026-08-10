@@ -49,6 +49,9 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.WeakHashMap;
 
 public final class SelfTeleport extends Skill {
     private static final double MAX_DISTANCE = 20.0;
@@ -94,28 +97,50 @@ public final class SelfTeleport extends Skill {
     }
 
     public static final class Server {
+        private static final Map<UUID, ReturnAnchor> RETURN_ANCHORS = new WeakHashMap<>();
+
         @SubscribePacket
         public static void handleTeleport(SelfTeleportPacket packet) {
             var serverPlayer = packet.getPacketListener().getPlayer();
-            var targetCenter = resolveTargetCenter(serverPlayer, packet.getPosition());
-            if (targetCenter == null) return;
-
-            Skills.SELF_TELEPORT.get().executeActive(serverPlayer, (ctx, actualCost) -> {
+            var skill = Skills.SELF_TELEPORT.get();
+            var maxDistance = skill.hasProficiencyMilestone(serverPlayer, 2) ? 24.0 : MAX_DISTANCE;
+            var now = serverPlayer.level().getGameTime();
+            var anchor = skill.hasProficiencyMilestone(serverPlayer, 3)
+                    ? RETURN_ANCHORS.get(serverPlayer.getUUID()) : null;
+            var returning = serverPlayer.isShiftKeyDown() && anchor != null && anchor.expiresAt >= now;
+            Vec3 destination;
+            if (returning) {
+                destination = org.academy.internal.common.ability.teleport.TeleportSafety.findSafe(
+                        serverPlayer, serverPlayer.level(), anchor.position);
+            } else {
+                var targetCenter = resolveTargetCenter(serverPlayer, packet.getPosition(), maxDistance);
+                if (targetCenter == null) return;
                 var dimensions = serverPlayer.getDimensions(Pose.STANDING);
-                var teleportY = targetCenter.y() - dimensions.height() / 2.0;
-                var destination = new Vec3(targetCenter.x(), teleportY, targetCenter.z());
+                destination = new Vec3(targetCenter.x(), targetCenter.y() - dimensions.height() / 2.0,
+                        targetCenter.z());
+            }
+            if (destination == null) return;
+            var origin = serverPlayer.position();
+
+            skill.executeActive(serverPlayer, ctx -> returning ? 5.0f : 10.0f, (ctx, actualCost) -> {
                 SpatialSynergy.Server.teleportNearbyTeam(serverPlayer, serverPlayer.level(), destination);
-                serverPlayer.teleportTo(targetCenter.x(), teleportY, targetCenter.z());
+                serverPlayer.teleportTo(destination.x, destination.y, destination.z);
                 serverPlayer.resetFallDistance();
                 serverPlayer.setDeltaMovement(0, 0.25, 0);
                 serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(serverPlayer));
                 serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEvents.SELF_TELEPORT.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
+                if (returning) {
+                    RETURN_ANCHORS.remove(serverPlayer.getUUID());
+                } else if (ctx.milestone() >= 3) {
+                    RETURN_ANCHORS.put(serverPlayer.getUUID(), new ReturnAnchor(origin, now + 60));
+                }
             });
         }
 
         private static @Nullable Vec3 resolveTargetCenter(ServerPlayer player,
-                                                          Vec3 requested) {
+                                                          Vec3 requested,
+                                                          double maxDistance) {
             if (!Double.isFinite(requested.x()) || !Double.isFinite(requested.y())
                     || !Double.isFinite(requested.z())) {
                 return null;
@@ -124,7 +149,7 @@ public final class SelfTeleport extends Skill {
             var offset = requested.subtract(eye);
             var requestedDistance = offset.length();
             if (!Double.isFinite(requestedDistance)) return null;
-            var distance = Math.min(MAX_DISTANCE, requestedDistance);
+            var distance = Math.min(maxDistance, requestedDistance);
             var direction = requestedDistance < 1.0e-6 ? player.getLookAngle() : offset.scale(1.0 / requestedDistance);
             var dimensions = player.getDimensions(Pose.STANDING);
             var halfWidth = dimensions.width() / 2.0;
@@ -140,6 +165,9 @@ public final class SelfTeleport extends Skill {
                 if (player.level().noCollision(player, box)) return center;
             }
             return null;
+        }
+
+        private record ReturnAnchor(Vec3 position, long expiresAt) {
         }
     }
 
@@ -218,7 +246,9 @@ public final class SelfTeleport extends Skill {
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
                 distance += event.yOffset;
-                distance = Math.clamp(distance, 0, MAX_DISTANCE);
+                var maxDistance = AbilitySystemClient.getSkillProficiencyMilestone(Skills.SELF_TELEPORT.get()) >= 2
+                        ? 24.0 : MAX_DISTANCE;
+                distance = Math.clamp(distance, 0, maxDistance);
                 event.setCanceled(true);
             }
 

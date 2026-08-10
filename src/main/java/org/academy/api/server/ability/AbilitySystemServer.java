@@ -500,7 +500,7 @@ public final class AbilitySystemServer {
 
     @SubscribeEvent
     public void onOverloadRecovered(AbilityRecoveryEvent event) {
-        var player = event.getEntity();
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
         var uuid = player.getUUID();
         var playerData = getPlayerData(uuid);
 
@@ -508,9 +508,9 @@ public final class AbilitySystemServer {
             if (!data.isEnabled()) return;
             Registries.SKILLS.get(Identifier.parse(skillId)).ifPresent(skillRef -> {
                 var skill = skillRef.value();
-                var level = getPlayerSkillLevel(uuid, skillId);
-                if (skill.getMaintenanceCost(level) > 0) {
-                    tryPermanentOccupation(uuid, skill.getMaintenanceCost(level), skill);
+                var maintenanceCost = skill.getMaintenanceCost(player);
+                if (maintenanceCost > 0) {
+                    tryPermanentOccupation(uuid, maintenanceCost, skill);
                 }
             });
         });
@@ -714,12 +714,20 @@ public final class AbilitySystemServer {
                                      boolean effective) {
         var uuid = player.getUUID();
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
-        var ctx = new Skill.SkillContext(level, playerCPManager.getAvailableCP(uuid), this);
+        var proficiency = skill.getProficiency(player);
+        var milestone = skill.getEffectiveProficiencyMilestone(player);
+        var ctx = new Skill.SkillContext(
+                level,
+                proficiency,
+                milestone,
+                playerCPManager.getAvailableCP(uuid),
+                this
+        );
 
         var baseCost = calculator.calculate(ctx);
         if (!Float.isFinite(baseCost) || baseCost < 0) return false;
         var actualCost = Math.max(0, baseCost * playerCPManager.getCalculationIntensity(uuid));
-        var iterationPoints = resolveIterationPoints(skill.getIterationTicks(level), baseCost);
+        var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCost);
         if (playerCPManager.tryOccupation(uuid, actualCost, skill, iterationPoints, false)) {
             EntityMotionGuard.runWithMotionSource(
                     player,
@@ -755,7 +763,7 @@ public final class AbilitySystemServer {
                 uuid,
                 actualCost,
                 skill,
-                resolveIterationPoints(skill.getIterationTicks(level), cost),
+                resolveIterationPoints(skill.getIterationTicks(player), cost),
                 () -> Boolean.TRUE.equals(EntityMotionGuard.callWithMotionSource(
                         player,
                         action::getAsBoolean
@@ -776,6 +784,15 @@ public final class AbilitySystemServer {
     public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill) {
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         return tryTimedOccupation(uuid, amount, skill, skill.getIterationTicks(level));
+    }
+
+    public boolean tryTimedOccupation(ServerPlayer player, float amount, Skill skill) {
+        var adjusted = skill.adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.DYNAMIC,
+                amount
+        );
+        return tryTimedOccupation(player.getUUID(), adjusted, skill, skill.getIterationTicks(player));
     }
 
     public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill, int iterationPoints) {

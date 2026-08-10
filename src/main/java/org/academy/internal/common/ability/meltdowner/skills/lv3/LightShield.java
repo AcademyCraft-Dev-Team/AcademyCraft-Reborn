@@ -267,6 +267,7 @@ public final class LightShield extends Skill {
     public static final class Context extends ServerContext {
         private final ServerLevel initialLevel;
         private int ticks;
+        private int refundedThisSecond;
         private boolean ended;
 
         private Context(ServerPlayer player) {
@@ -304,6 +305,7 @@ public final class LightShield extends Skill {
             }
 
             ticks++;
+            if (ticks % 20 == 1) refundedThisSecond = 0;
             skill.reportActivity(player, true);
             var system = AbilitySystemServer.getSystem(player);
             if (ticks % CP_INTERVAL_TICKS == 0
@@ -321,6 +323,8 @@ public final class LightShield extends Skill {
         }
 
         private void destroyIncomingProjectiles() {
+            var skill = Skills.LIGHT_SHIELD.get();
+            if (!skill.hasProficiencyMilestone(player, 3)) return;
             var origin = player.getEyePosition();
             var forward = player.getLookAngle().normalize();
             var right = forward.cross(new Vec3(0.0, 1.0, 0.0));
@@ -337,6 +341,13 @@ public final class LightShield extends Skill {
                 if (forwardDistance >= 0.0 && forwardDistance <= 3.0
                         && sideDistance <= 1.0 && Math.abs(delta.y) <= 1.5) {
                     projectile.discard();
+                    if (refundedThisSecond < 10) {
+                        var refund = Math.min(2, 10 - refundedThisSecond);
+                        var system = AbilitySystemServer.getSystem(player);
+                        system.setPlayerAvailableCP(player.getUUID(),
+                                system.getPlayerAvailableCP(player.getUUID()) + refund);
+                        refundedThisSecond += refund;
+                    }
                 }
             }
         }
@@ -346,7 +357,7 @@ public final class LightShield extends Skill {
             var source = SkillDamageSource.of(player, skill);
             var targets = initialLevel.getEntitiesOfClass(
                     Mob.class,
-                    player.getBoundingBox().inflate(ATTACK_RADIUS),
+                    player.getBoundingBox().inflate(skill.hasProficiencyMilestone(player, 2) ? 4.5 : ATTACK_RADIUS),
                     mob -> mob.isAlive()
                             && mob.getType().getCategory() == MobCategory.MONSTER
                             && !player.isAlliedTo(mob)
@@ -359,7 +370,8 @@ public final class LightShield extends Skill {
                     direction = new Vec3(look.x, 0.0, look.z);
                 }
                 if (direction.lengthSqr() > 1.0e-8) {
-                    direction = direction.normalize().scale(0.65);
+                    direction = direction.normalize().scale(
+                            skill.hasProficiencyMilestone(player, 2) ? 0.78 : 0.65);
                     target.push(direction.x, 0.25, direction.z);
                 }
                 target.hurtServer(initialLevel, source, damage);

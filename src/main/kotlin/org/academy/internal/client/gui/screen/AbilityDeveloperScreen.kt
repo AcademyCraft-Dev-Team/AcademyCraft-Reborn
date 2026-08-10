@@ -29,6 +29,7 @@ import org.academy.api.common.ability.*
 import org.academy.api.common.util.L10n
 import org.academy.api.common.wireless.GetCurrentNodePacket
 import org.academy.internal.common.ability.AbilityCategories
+import org.academy.internal.common.ability.ProficiencyPolicy
 import org.academy.internal.common.ability.level0.Level0
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity
 import org.apache.commons.lang3.RandomStringUtils
@@ -590,10 +591,12 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             CoursePage.ABILITY -> AbilitySystemClient.getCategorySkillInfos(category)
         }
             .filter { info ->
-                AbilitySystemClient.isSkillLearned(info.skill) || (
-                    info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) } &&
-                        info.skill.devConditions.all { it.accepts() }
-                    )
+                SkillTreeVisibility.shouldDisplay(
+                    info.skill.scope,
+                    AbilitySystemClient.isSkillLearned(info.skill),
+                    info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) },
+                    info.skill.devConditions.all { it.accepts() }
+                )
             }
 
         val bg = object : ParallaxImageWidget(R.textures.gui.developer.skill_panel_back) {
@@ -1277,12 +1280,60 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                         .gravity(Gravity.CENTER)
                     textArea.addChild("exp", expLabel)
 
+                    val detailsPanel = ScrollPanelWidget()
+                    detailsPanel.layoutParams = LinearLayoutWidget.LayoutParams()
+                        .gravity(Gravity.CENTER)
+                        .size(240f, 112f)
+                    val details = LinearLayoutWidget()
+                    details.orientation = Orientation.VERTICAL
+                    details.spacing = 2f
+                    details.layoutParams = WidgetContainer.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+
                     val descLabel = LabelWidget(skill.translatedDescription)
-                    descLabel.baseFontSize = 9f
+                    descLabel.baseFontSize = 8f
                     descLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER)
-                        .width(200f)
-                    textArea.addChild("desc", descLabel)
+                        .width(228f)
+                    details.addChild("desc", descLabel)
+
+                    if (SkillProficiencyProfiles.isDeclared(skill.keyString)) {
+                        val milestone = AbilitySystemClient.getSkillProficiencyMilestone(skill)
+                        listOf(1000, 2000, 3000).forEachIndexed { index, threshold ->
+                            val reached = milestone > index
+                            val next = milestone == index
+                            val marker = if (reached) "✓" else if (next) "→" else "•"
+                            val key = "${skill.descriptionId}.proficiency.$threshold"
+                            val label = LabelWidget("$marker $threshold  ${Language.getInstance().getOrDefault(key)}")
+                            label.baseFontSize = 7f
+                            label.layoutParams = WidgetContainer.LayoutParams()
+                                .gravity(Gravity.LEFT)
+                                .width(228f)
+                            when {
+                                reached -> {
+                                    label.setRed(0.35f); label.setGreen(0.95f); label.setBlue(1.0f)
+                                }
+                                next -> {
+                                    label.setRed(1.0f); label.setGreen(0.78f); label.setBlue(0.25f)
+                                }
+                                else -> {
+                                    label.setRed(0.55f); label.setGreen(0.58f); label.setBlue(0.63f)
+                                }
+                            }
+                            details.addChild("proficiency_$threshold", label)
+                        }
+                        if (ProficiencyPolicy.clientHasRestriction(skill)) {
+                            val restricted = LabelWidget(L10n["academy.ability_developer.proficiency_restricted"])
+                            restricted.baseFontSize = 7f
+                            restricted.setRed(1.0f); restricted.setGreen(0.38f); restricted.setBlue(0.3f)
+                            restricted.layoutParams = WidgetContainer.LayoutParams()
+                                .gravity(Gravity.LEFT)
+                                .width(228f)
+                            details.addChild("proficiency_restricted", restricted)
+                        }
+                    }
+                    detailsPanel.setContent(details)
+                    textArea.addChild("details", detailsPanel)
                 } else {
                     val lvlLabel = LabelWidget("${skill.translatedName} (LV ${skill.recommendedLevel.levelCode})")
                     lvlLabel.baseFontSize = 12f

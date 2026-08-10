@@ -28,12 +28,15 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
@@ -164,7 +167,7 @@ public final class AtmosphereShield extends Skill {
                 var system = AbilitySystemServer.getSystem(player);
                 enabled = player.isAlive() && !player.hasDisconnected() && system.ensurePermanentOccupation(
                         player.getUUID(),
-                        skill.getMaintenanceCost(skill.getLevel(player))
+                        skill.getMaintenanceCost(player)
                                 * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
                         skill
                 );
@@ -199,23 +202,29 @@ public final class AtmosphereShield extends Skill {
             if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
                 projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 projectile.hurtMarked = true;
+                expireStoppedProjectile(player, projectile, skill);
                 event.setCanceled(true);
                 return;
             }
             if (event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
             var system = AbilitySystemServer.getSystem(player);
-            if (event.getAmount() < 4.0f && system.tryTimedOccupation(
-                    player.getUUID(), 10.0f, skill, 5
+            var immunityThreshold = skill.hasProficiencyMilestone(player, 3) ? 6.0f : 4.0f;
+            var lowDamageCost = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC, 10.0f);
+            if (event.getAmount() < immunityThreshold && system.tryTimedOccupation(
+                    player.getUUID(), lowDamageCost, skill, 5
             )) {
                 event.setCanceled(true);
                 return;
             }
             var level = Math.max(0, Math.min(2, skill.getLevel(player)));
             var reduction = REDUCTION[level];
+            if (skill.hasProficiencyMilestone(player, 3)) reduction = Math.min(0.5f, reduction + 0.1f);
             var prevented = event.getAmount() * reduction;
-            if (!system.tryTimedOccupation(player.getUUID(),
+            var defenseCost = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC,
                     Math.min(30.0f, 4.0f + prevented * 2.0f)
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD));
+            if (!system.tryTimedOccupation(player.getUUID(),
+                    defenseCost,
                     skill, 10)) return;
             event.setAmount(event.getAmount() - prevented);
             player.level().playSound(
@@ -229,14 +238,30 @@ public final class AtmosphereShield extends Skill {
         }
 
         private static void stopNearbyProjectiles(ServerPlayer player) {
+            var handled = 0;
+            var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
             for (var projectile : player.level().getEntitiesOfClass(
                     Projectile.class,
                     player.getBoundingBox().inflate(1.0),
                     projectile -> projectile.isAlive() && projectile.getOwner() != player
             )) {
+                if (handled++ >= cap) break;
                 projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 projectile.hurtMarked = true;
+                expireStoppedProjectile(player, projectile, Skills.ATMOSPHERE_SHIELD.get());
             }
+        }
+
+        private static void expireStoppedProjectile(ServerPlayer player, Projectile projectile, Skill skill) {
+            if (!skill.hasProficiencyMilestone(player, 2)) return;
+            var now = player.level().getGameTime();
+            if (TimedSkillEffectRuntime.get(player.getUUID(), projectile.getUUID(), skill,
+                    "stopped_projectile", now).isPresent()) return;
+            if (!TimedSkillEffectRuntime.put(player, projectile.getUUID(), skill,
+                    "stopped_projectile", 20, 1.0f)) return;
+            TimedSkillEffectRuntime.schedule(player, 20, () -> {
+                if (projectile.isAlive()) projectile.discard();
+            });
         }
 
         private static void syncModifier(

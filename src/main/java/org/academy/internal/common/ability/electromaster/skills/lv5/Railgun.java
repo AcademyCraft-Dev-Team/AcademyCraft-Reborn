@@ -308,6 +308,7 @@ public final class Railgun extends Skill {
             private final boolean rightHand;
             private final boolean mainHandRight;
             private final ResourceKey<Level> dimension;
+            private final int proficiencyMilestone;
             private int ticks = 0;
             private int coinReturnHintTicks;
             @Nullable
@@ -320,6 +321,7 @@ public final class Railgun extends Skill {
                         == (hand == InteractionHand.MAIN_HAND);
                 mainHandRight = player.getMainArm() == HumanoidArm.RIGHT;
                 dimension = player.level().dimension();
+                proficiencyMilestone = Skills.RAILGUN.get().getEffectiveProficiencyMilestone(player);
             }
 
             @Override
@@ -358,7 +360,7 @@ public final class Railgun extends Skill {
             private void updateChargeReadyHint() {
                 var hand = findHeldAmmoHand(player, false);
                 var kind = hand == null ? null : ammoKind(player.getItemInHand(hand));
-                if (kind == null || kind == AmmoKind.COIN || ticks < kind.minimumChargeTicks()) {
+                if (kind == null || kind == AmmoKind.COIN || ticks < minimumChargeTicks(kind)) {
                     readyHintAmmo = null;
                     return;
                 }
@@ -374,7 +376,7 @@ public final class Railgun extends Skill {
             private void release() {
                 if (ended) return;
                 var ammo = findAmmo(player);
-                if (ammo == null || ticks < ammo.kind().minimumChargeTicks()) {
+                if (ammo == null || ticks < minimumChargeTicks(ammo.kind())) {
                     end();
                     return;
                 }
@@ -403,7 +405,8 @@ public final class Railgun extends Skill {
                 var profile = ammo.kind();
                 var beamRadius = 0.125f * profile.beamWidthMultiplier();
                 var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
-                var endPos = startPos.add(lookDir.scale(profile.beamLength()));
+                var beamLength = profile.beamLength() * (proficiencyMilestone >= 2 ? 1.2f : 1.0f);
+                var endPos = startPos.add(lookDir.scale(beamLength));
                 railgunRay.setPos(startPos);
                 railgunRay.setYRot(player.getYRot());
                 railgunRay.setXRot(player.getXRot());
@@ -418,13 +421,20 @@ public final class Railgun extends Skill {
                         system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                         system.getPlayerDamageMultiplier(player.getUUID())
                 ) * profile.damageMultiplier();
+                var hitIndex = new java.util.concurrent.atomic.AtomicInteger();
+                var shockTriggered = new java.util.concurrent.atomic.AtomicBoolean();
                 var payload = LinearAttackPayload.builder(
                                 player,
                                 skill,
                                 damageSource,
                                 beamRadius
                         )
-                        .damage(_ -> damage)
+                        .damage(_ -> damage * (proficiencyMilestone >= 2 && hitIndex.getAndIncrement() > 0 ? 0.6f : 1.0f))
+                        .onHit((target, _, hurt) -> {
+                            if (hurt && proficiencyMilestone >= 3 && shockTriggered.compareAndSet(false, true)) {
+                                triggerImpactShock(player, target.position(), damage * 0.25f, target);
+                            }
+                        })
                         .build();
                 var resolved = LinearReflectionResolver.resolve(
                         player.level(),
@@ -478,6 +488,26 @@ public final class Railgun extends Skill {
                         1.0f,
                         1.0f
                 );
+            }
+
+            private int minimumChargeTicks(AmmoKind kind) {
+                return proficiencyMilestone >= 1
+                        ? Math.max(0, (int) Math.ceil(kind.minimumChargeTicks() * 0.9))
+                        : kind.minimumChargeTicks();
+            }
+
+            private static void triggerImpactShock(ServerPlayer owner, Vec3 center, float damage,
+                                                   net.minecraft.world.entity.Entity primary) {
+                var source = SkillDamageSource.of(owner, Skills.RAILGUN.get());
+                for (var target : owner.level().getEntities(owner, new AABB(center, center).inflate(4.0),
+                        entity -> entity.isAlive() && entity != primary && !owner.isAlliedTo(entity))) {
+                    target.hurtServer(owner.level(), source, damage);
+                    var away = target.position().subtract(center);
+                    if (away.lengthSqr() > 1.0e-8) {
+                        target.setDeltaMovement(target.getDeltaMovement().add(away.normalize().scale(1.1)).add(0, 0.25, 0));
+                        target.hurtMarked = true;
+                    }
+                }
             }
 
             private static void destroyBlocksAlongSegment(

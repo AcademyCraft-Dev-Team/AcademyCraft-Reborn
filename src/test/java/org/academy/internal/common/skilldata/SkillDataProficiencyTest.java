@@ -12,8 +12,15 @@ class SkillDataProficiencyTest {
         assertEquals(1, SkillData.getProficiencyTier(0.0f));
         assertEquals(1, SkillData.getProficiencyTier(999.99f));
         assertEquals(2, SkillData.getProficiencyTier(1000.0f));
+        assertEquals(2, SkillData.getProficiencyTier(1999.99f));
         assertEquals(3, SkillData.getProficiencyTier(2000.0f));
+        assertEquals(3, SkillData.getProficiencyTier(2999.99f));
         assertEquals(4, SkillData.getProficiencyTier(3000.0f));
+        assertEquals(0, SkillData.getReachedProficiencyThresholds(999.99f));
+        assertEquals(1, SkillData.getReachedProficiencyThresholds(1000.0f));
+        assertEquals(1, SkillData.getReachedProficiencyThresholds(1999.99f));
+        assertEquals(2, SkillData.getReachedProficiencyThresholds(2000.0f));
+        assertEquals(2, SkillData.getReachedProficiencyThresholds(2999.99f));
         assertEquals(3, SkillData.getReachedProficiencyThresholds(3000.0f));
     }
     @Test

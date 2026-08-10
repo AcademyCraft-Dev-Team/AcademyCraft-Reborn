@@ -144,15 +144,17 @@ public final class JetStrike extends Skill {
         @SubscribePacket
         public static void handle(DashPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var skill = Skills.JET_STRIKE.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
             var direction = normalizeDirection(player.getLookAngle());
             if (direction == null) return;
-            var base = player.position().add(direction.scale(DISTANCE));
+            var base = player.position().add(direction.scale(milestone >= 2 ? 10.0 : DISTANCE));
             var safe = findSafe(player, base);
             var delta = safe == null ? Vec3.ZERO : safe.subtract(player.position());
-            Skills.JET_STRIKE.get().executeActive(player, (_, _) -> dash(player, delta));
+            skill.executeActive(player, (context, _) -> dash(player, delta, context.milestone()));
         }
 
-        private static void dash(ServerPlayer player, Vec3 delta) {
+        private static void dash(ServerPlayer player, Vec3 delta, int milestone) {
             var level = player.level();
             if (delta.lengthSqr() > 1.0e-8) {
                 player.resetFallDistance();
@@ -167,14 +169,17 @@ public final class JetStrike extends Skill {
                     system.getPlayerDamageMultiplier(player.getUUID())
             );
             var source = SkillDamageSource.of(player, skill);
-            var targetBox = player.getBoundingBox().move(delta).inflate(DAMAGE_RADIUS);
+            var radius = milestone >= 2 ? DAMAGE_RADIUS * 1.2 : DAMAGE_RADIUS;
+            var targetBox = player.getBoundingBox().move(delta).inflate(radius);
             var targets = level.getEntitiesOfClass(
                     LivingEntity.class,
                     targetBox,
                     target -> target != player && target.isAlive() && !player.isAlliedTo(target)
             );
             for (var target : targets) target.hurtServer(level, source, damage);
-            if (delta.lengthSqr() > 1.0e-8) AbilitySystemServer.registerContext(new TrailContext(player));
+            if (delta.lengthSqr() > 1.0e-8) {
+                AbilitySystemServer.registerContext(new TrailContext(player, milestone, damage));
+            }
         }
 
         private static @Nullable Vec3 findSafe(ServerPlayer player, Vec3 base) {
@@ -199,11 +204,16 @@ public final class JetStrike extends Skill {
 
     public static final class TrailContext extends ServerContext {
         private final ServerLevel initialLevel;
+        private final int proficiencyMilestone;
+        private final float damage;
+        private final java.util.Set<java.util.UUID> hitTargets = new java.util.HashSet<>();
         private int ticks = TRAIL_TICKS;
 
-        private TrailContext(ServerPlayer player) {
+        private TrailContext(ServerPlayer player, int proficiencyMilestone, float damage) {
             super(player);
             initialLevel = player.level();
+            this.proficiencyMilestone = proficiencyMilestone;
+            this.damage = damage;
         }
 
         @SubscribeEvent
@@ -216,6 +226,16 @@ public final class JetStrike extends Skill {
                 var smoke = new Smoke(EntityTypes.SMOKE.get(), initialLevel);
                 smoke.setPos(player.position().add(0, 0.5, 0));
                 initialLevel.addFreshEntity(smoke);
+            }
+            if (proficiencyMilestone >= 3) {
+                var source = SkillDamageSource.of(player, Skills.JET_STRIKE.get());
+                for (var target : initialLevel.getEntitiesOfClass(LivingEntity.class,
+                        player.getBoundingBox().inflate(1.25),
+                        target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                                && !hitTargets.contains(target.getUUID()))) {
+                    hitTargets.add(target.getUUID());
+                    target.hurtServer(initialLevel, source, damage * 0.4f);
+                }
             }
         }
     }

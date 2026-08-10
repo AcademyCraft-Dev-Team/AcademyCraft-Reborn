@@ -22,6 +22,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -30,6 +31,8 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorIncomingDamageResult;
+import org.academy.internal.common.ability.accelerator.reflection.VectorDefenseProficiency;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
@@ -69,7 +72,10 @@ public class VectorReduction extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(75)
-                .iterationTicks(40)
+                .iterationTicks(10)
+                .proficiencyProfile(SkillProficiencyProfile.builder()
+                        .iterationTicks(10, 10, 10, 5)
+                        .build())
                 .dependsOn(Skills.KINETIC_ENERGY_APPLIED)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -190,10 +196,11 @@ public class VectorReduction extends Skill {
         }
 
         public static boolean isActive(ServerPlayer player) {
+            var system = AbilitySystemServer.getSystem(player);
             return canMaintain(player)
                     && !VectorReflection.Server.canMaintainLinearReflectionLease(player)
-                    && AbilitySystemServer.getSystem(player)
-                    .getPlayerAvailableCP(player.getUUID()) > 0.0f;
+                    && (system.isPlayerSkillDebugMode(player.getUUID())
+                    || system.getPlayerAvailableCP(player.getUUID()) > 0.0f);
         }
 
         public static boolean canMaintain(ServerPlayer player) {
@@ -237,12 +244,33 @@ public class VectorReduction extends Skill {
                 DamageSource source,
                 float incomingDamage
         ) {
+            return applyPartialReduction(player, source, incomingDamage).status()
+                    == VectorIncomingDamageResult.Status.FULL_REDIRECT;
+        }
+
+        public static VectorIncomingDamageResult applyPartialReduction(
+                ServerPlayer player,
+                DamageSource source,
+                float incomingDamage
+        ) {
             if (!isActive(player)
                     || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || !canRefractSource(player, source)
                     || !(incomingDamage > 0.0f)
                     || !Float.isFinite(incomingDamage)) {
-                return false;
+                return VectorIncomingDamageResult.passThrough(incomingDamage);
+            }
+            var skill = Skills.VECTOR_REDUCTION.get();
+            var system = AbilitySystemServer.getSystem(player);
+            var result = VectorDefenseProficiency.calculate(
+                    incomingDamage,
+                    system.getPlayerAvailableCP(player.getUUID()),
+                    system.getPlayerCalculationIntensity(player.getUUID()),
+                    VectorDefenseProficiency.effectiveMilestone(player, skill),
+                    system.isPlayerSkillDebugMode(player.getUUID())
+            );
+            if (!(result.processedDamage() > 0.0f)) {
+                return VectorIncomingDamageResult.passThrough(incomingDamage);
             }
             var attribution = VectorAttackAttributionResolver.resolve(player, source);
             var incoming = attribution.effectDirection().scale(-1.0);
@@ -253,9 +281,9 @@ public class VectorReduction extends Skill {
             var finalDirection = direction;
             var effectKey = VectorAttackFingerprint.computeLeaseKey(
                     player.getId(), source, incoming);
-            var executed = Skills.VECTOR_REDUCTION.get().executeContinuous(
+            var executed = skill.executeContinuous(
                     player,
-                    _ -> Math.max(1.0f, incomingDamage),
+                    _ -> result.baseCpCost(),
                     (_, _) -> VectorEnvironmentalFeedbackController.emitRefraction(
                             player,
                             source,
@@ -265,10 +293,13 @@ public class VectorReduction extends Skill {
                     ),
                     true
             );
-            if (!executed) return false;
+            if (!executed) return VectorIncomingDamageResult.passThrough(incomingDamage);
             player.invulnerableTime = 0;
-            VectorDefenseFeedbackTickets.commitFull(player, source);
-            return true;
+            if (result.isFull()) {
+                VectorDefenseFeedbackTickets.commitFull(player, source);
+                return VectorIncomingDamageResult.fullRedirect();
+            }
+            return VectorIncomingDamageResult.partial(result.remainingDamage());
         }
 
         public static boolean absorbAnomalousDamage(
@@ -326,9 +357,18 @@ public class VectorReduction extends Skill {
                 return false;
             }
             var skill = Skills.VECTOR_REDUCTION.get();
+            var system = AbilitySystemServer.getSystem(player);
+            var result = VectorDefenseProficiency.calculate(
+                    incomingDamage,
+                    system.getPlayerAvailableCP(player.getUUID()),
+                    system.getPlayerCalculationIntensity(player.getUUID()),
+                    VectorDefenseProficiency.effectiveMilestone(player, skill),
+                    system.isPlayerSkillDebugMode(player.getUUID())
+            );
+            if (!result.isFull()) return false;
             return skill.executeContinuous(
                     player,
-                    _ -> Math.max(1.0f, incomingDamage),
+                    _ -> result.baseCpCost(),
                     (_, _) -> {
                         if (emitFeedback) {
                             var direction = refractedDirection(player.getLookAngle(), incomingDirection);
@@ -393,7 +433,7 @@ public class VectorReduction extends Skill {
             var skill = Skills.VECTOR_REDUCTION.get();
             if (!skill.isEnabled(player)) return;
             if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
-                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                    player.getUUID(), skill.getMaintenanceCost(player), skill)) {
                 Server.forceDeactivate(player);
                 return;
             }

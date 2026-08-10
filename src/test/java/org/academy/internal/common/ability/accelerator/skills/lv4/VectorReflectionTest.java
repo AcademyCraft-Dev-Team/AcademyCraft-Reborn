@@ -28,7 +28,7 @@ class VectorReflectionTest {
 
     @Test
     void limitsReflectedDamageByAvailableComputingPower() {
-        assertEquals(1.2f, VectorReflection.Server.calculateReflectedDamage(10, 12, 3, false));
+        assertEquals(8.0f, VectorReflection.Server.calculateReflectedDamage(10, 12, 3, false));
         assertEquals(10.0f, VectorReflection.Server.calculateReflectedDamage(10, 100, 3, false));
         assertEquals(0.0f, VectorReflection.Server.calculateReflectedDamage(10, 0, 3, false));
         assertEquals(10.0f, VectorReflection.Server.calculateReflectedDamage(10, 0, 3, true));
@@ -37,14 +37,14 @@ class VectorReflectionTest {
     @Test
     void preservesUnreflectedDamageWhenComputingPowerIsInsufficient() {
         var partial = VectorReflection.Server.calculateReflection(10.0f, 12.0f, 3.0f, false);
-        assertEquals(1.2f, partial.reflectedDamage(), 1.0E-6f);
-        assertEquals(8.8f, partial.remainingDamage(), 1.0E-6f);
+        assertEquals(8.0f, partial.reflectedDamage(), 1.0E-6f);
+        assertEquals(2.0f, partial.remainingDamage(), 1.0E-6f);
         assertEquals(4.0f, partial.baseCpCost(), 1.0E-6f);
 
         var full = VectorReflection.Server.calculateReflection(10.0f, 30.0f, 3.0f, false);
         assertEquals(10.0f, full.reflectedDamage(), 1.0E-6f);
         assertEquals(0.0f, full.remainingDamage(), 1.0E-6f);
-        assertEquals(10.0f, full.baseCpCost(), 1.0E-6f);
+        assertEquals(5.0f, full.baseCpCost(), 1.0E-6f);
     }
 
     @Test

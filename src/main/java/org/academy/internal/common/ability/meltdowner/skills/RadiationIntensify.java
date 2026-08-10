@@ -3,6 +3,11 @@ package org.academy.internal.common.ability.meltdowner.skills;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
@@ -10,6 +15,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 
 import java.util.List;
@@ -49,6 +55,17 @@ public final class RadiationIntensify extends Skill {
         target.getPersistentData().putLong(TARGET_MARK_UNTIL_KEY, markExpiry(gameTime));
     }
 
+    public static void mark(ServerPlayer owner, LivingEntity target, long gameTime) {
+        var skill = Skills.RADIATION_INTENSIFY.get();
+        var milestone = skill.getEffectiveProficiencyMilestone(owner);
+        var duration = milestone >= 1 ? 240 : (int) MARK_DURATION_TICKS;
+        target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration / 2, 0, false, false, true));
+        target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration / 2, 0, false, false, true));
+        target.getPersistentData().putLong(TARGET_MARK_UNTIL_KEY,
+                gameTime > Long.MAX_VALUE - duration ? Long.MAX_VALUE : gameTime + duration);
+        TimedSkillEffectRuntime.put(owner, target.getUUID(), skill, "radiation_mark", duration, milestone);
+    }
+
     public static float amplifyDamage(float damage, boolean marked) {
         return MeltdownerBeamDamage.amplify(damage, marked);
     }
@@ -75,6 +92,36 @@ public final class RadiationIntensify extends Skill {
         }
 
         private static void initialize() {
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() { }
+
+        @SubscribeEvent
+        public static void onDeath(LivingDeathEvent event) {
+            if (!(event.getEntity().level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+            var skill = Skills.RADIATION_INTENSIFY.get();
+            var now = level.getGameTime();
+            var sourceId = TimedSkillEffectRuntime.sourceForTarget(event.getEntity().getUUID(), skill,
+                    "radiation_mark", now).orElse(null);
+            if (sourceId == null) return;
+            var owner = level.getServer().getPlayerList().getPlayer(sourceId);
+            if (owner == null) return;
+            var entry = TimedSkillEffectRuntime.get(sourceId, event.getEntity().getUUID(), skill,
+                    "radiation_mark", now).orElse(null);
+            if (entry == null || entry.value() < 3.0f) return;
+            var remaining = Math.max(1, (int) Math.min(Integer.MAX_VALUE, entry.expiresAt() - now));
+            var spread = 0;
+            for (var target : level.getEntitiesOfClass(LivingEntity.class,
+                    event.getEntity().getBoundingBox().inflate(5.0),
+                    target -> target.isAlive() && target != owner && !owner.isAlliedTo(target))) {
+                if (spread++ >= 3) break;
+                target.getPersistentData().putLong(TARGET_MARK_UNTIL_KEY, now + remaining);
+                TimedSkillEffectRuntime.put(owner, target.getUUID(), skill,
+                        "radiation_mark", remaining, 3.0f);
+            }
         }
     }
 }

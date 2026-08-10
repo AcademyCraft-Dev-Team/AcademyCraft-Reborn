@@ -94,6 +94,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private float playerDamageMultiplier;
     private boolean radiationEnabled;
     private boolean betaTrailOnFire;
+    private int proficiencyMilestone;
 
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -135,6 +136,21 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         this.playerDamageMultiplier = Math.max(0.0f, playerDamageMultiplier);
         this.radiationEnabled = radiationEnabled;
         entityData.set(DESTROYS_BLOCKS, destroysBlocks);
+    }
+
+    public void configure(
+            ServerPlayer owner,
+            Skill sourceSkill,
+            float baseDamage,
+            float targetMaxHealthDamageRatio,
+            float playerDamageMultiplier,
+            boolean radiationEnabled,
+            boolean destroysBlocks,
+            int proficiencyMilestone
+    ) {
+        configure(owner, sourceSkill, baseDamage, targetMaxHealthDamageRatio,
+                playerDamageMultiplier, radiationEnabled, destroysBlocks);
+        this.proficiencyMilestone = Math.max(0, Math.min(3, proficiencyMilestone));
     }
 
     @Override
@@ -254,17 +270,34 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             end = start.add(getLookAngle().scale(getBeamLength()));
         }
 
-        var payload = MeltdownerBeamActions.createPayload(
-                level,
-                owner,
-                sourceSkill,
-                0.125f,
-                baseDamage,
-                targetMaxHealthDamageRatio,
-                playerDamageMultiplier,
-                radiationEnabled,
-                target -> target.getType() != getType()
-        );
+        var hitIndex = new java.util.concurrent.atomic.AtomicInteger();
+        var source = org.academy.api.common.damage.SkillDamageSource.of(owner, sourceSkill);
+        var payload = org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload
+                .builder(owner, sourceSkill, source, 0.125f)
+                .targetFilter(target -> target.getType() != getType())
+                .outboundTargetFilter(target -> !owner.isAlliedTo(target))
+                .damage(target -> {
+                    var living = target instanceof net.minecraft.world.entity.LivingEntity entity ? entity : null;
+                    var index = hitIndex.getAndIncrement();
+                    if (index > (proficiencyMilestone >= 3 ? 1 : 0)) return 0.0f;
+                    var marked = radiationEnabled && living != null
+                            && org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify
+                            .isMarked(living, level.getGameTime());
+                    var markMultiplier = org.academy.internal.common.ability.Skills.RADIATION_INTENSIFY.get()
+                            .hasProficiencyMilestone(owner, 2) ? 1.6f : 1.5f;
+                    return org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage.calculate(
+                            index == 0 ? baseDamage : baseDamage * 0.6f,
+                            index == 0 ? targetMaxHealthDamageRatio : 0.0f,
+                            living == null ? 0.0f : living.getMaxHealth(),
+                            playerDamageMultiplier, marked, markMultiplier);
+                })
+                .onHit((target, _, hurt) -> {
+                    if (hurt && radiationEnabled && target instanceof net.minecraft.world.entity.LivingEntity living) {
+                        org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify
+                                .mark(owner, living, level.getGameTime());
+                    }
+                })
+                .build();
         var attack = LinearReflectionResolver.resolve(level, new LinearSegment(start, end), payload);
 
         if (destroysBlocks()) executeBlocks(level, owner, attack.outbound(), true);

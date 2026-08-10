@@ -27,6 +27,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
@@ -71,21 +72,29 @@ public final class WindCorridor extends Skill {
         @SubscribePacket public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.WIND_CORRIDOR.get();
-            skill.executeActive(player, context -> skill.getCpCost(context.level())
-                    * AeromanipConfig.cpMultiplier(player, SkillNames.WIND_CORRIDOR), (_, _) -> {
+            var redirect = skill.hasProficiencyMilestone(player, 3)
+                    && AeromanipFieldManager.getPlacedField(player, AirflowField.Type.WIND_CORRIDOR).isPresent();
+            skill.executeActive(player, context -> skill.getCpCost(context.level()) * (redirect ? 0.5f : 1.0f)
+                    * AeromanipConfig.cpMultiplier(player, SkillNames.WIND_CORRIDOR), (context, _) -> {
                 if (!(player.level() instanceof ServerLevel level)) return;
                 var direction = player.getLookAngle().normalize(); var center = player.getEyePosition();
                 var range = AeromanipConfig.rangeMultiplier(player, SkillNames.WIND_CORRIDOR);
-                var duration = Math.max(1, Math.round(160 * AeromanipConfig.durationMultiplier(player, SkillNames.WIND_CORRIDOR)));
+                var durationTicks = context.milestone() >= 2 ? 220 : 160;
+                var duration = Math.max(1, Math.round(durationTicks * AeromanipConfig.durationMultiplier(player, SkillNames.WIND_CORRIDOR)));
+                if (redirect) duration = Math.max(1, duration / 2);
+                var length = context.milestone() >= 2 ? 30.0 : 24.0;
                 var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.WIND_CORRIDOR,
-                        AirflowField.Shape.CAPSULE, center, direction, 2.5 * range, 24.0 * range, 1.0f, duration);
+                        AirflowField.Shape.CAPSULE, center, direction, 2.5 * range, length * range, 1.0f, duration, context.milestone());
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });
         }
         private static void tick(net.minecraft.server.level.ServerPlayer owner, AirflowField field, int age) {
             spawnVisual(owner, field, age);
             transport(owner, owner, field);
+            var handled = 0;
+            var cap = ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick();
             for (var target : owner.level().getEntities(owner, field.bounds().inflate(1.0), Entity::isAlive)) {
+                if (handled++ >= cap) break;
                 if (!field.contains(target.getBoundingBox().getCenter(), target.getBbWidth() * 0.5)) continue;
                 var transportable = target instanceof Projectile
                         || target instanceof ItemEntity

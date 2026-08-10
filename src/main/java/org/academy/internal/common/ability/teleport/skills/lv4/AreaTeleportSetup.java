@@ -19,6 +19,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.teleport.AreaTeleportState;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -50,6 +51,11 @@ public final class AreaTeleportSetup extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_MARK, Client.CONFIG.getKeyBinding(Client.KEY_NAME_MARK,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
                         InputConstants.PRESS, InputConstants.MOD_ALT)), ctx -> Client.mark());
+        InputSystem.addKeyBinding(Client.KEY_NAME_SWAP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_SWAP,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
+                        InputConstants.PRESS,
+                        InputConstants.MOD_ALT | InputConstants.MOD_CONTROL)),
+                ctx -> Client.toggleSwap());
     }
 
     @Override public void initServer(MinecraftServerContext context) {
@@ -62,10 +68,16 @@ public final class AreaTeleportSetup extends Skill {
                         Skills.AREA_TELEPORT_SETUP.get(), List.of(AreaTeleportSelect.Client.SKILL_INFO),
                         R.textures.area_teleport_setup_icon, 146, 86));
         public static final String KEY_NAME_MARK = SkillNames.AREA_TELEPORT_SETUP + "_mark";
+        public static final String KEY_NAME_SWAP = SkillNames.AREA_TELEPORT_SETUP + "_swap";
         public static Config CONFIG = new Config();
         private static void mark() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SETUP.get())) return;
-            MisakaNetworkClient.send(MarkPacket.INSTANCE);
+            MisakaNetworkClient.send(MarkPacket.MARK);
+        }
+        private static void toggleSwap() {
+            if (ClientUtil.hasScreen()
+                    || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SETUP.get())) return;
+            MisakaNetworkClient.send(MarkPacket.TOGGLE_SWAP);
         }
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
@@ -83,6 +95,25 @@ public final class AreaTeleportSetup extends Skill {
             var player = packet.getPacketListener().getPlayer();
             if (!Skills.AREA_TELEPORT_SETUP.get().isEnabled(player)
                     || AreaTeleportState.selected(player.getUUID()) == null) return;
+            var skill = Skills.AREA_TELEPORT_SETUP.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var policy = ProficiencyPolicy.server(player);
+            if (packet.toggleSwap) {
+                if (milestone >= 3 && policy.allowAreaTeleportSwap()) {
+                    var enabled = AreaTeleportState.toggleSwap(player.getUUID());
+                    player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                            enabled
+                                    ? "message.academy.area_teleport.swap_enabled"
+                                    : "message.academy.area_teleport.swap_disabled"));
+                    AreaTeleportSelect.Server.sync(player);
+                }
+                return;
+            }
+            if (player.isShiftKeyDown() && milestone >= 2 && policy.allowAreaTeleportTransforms()) {
+                AreaTeleportState.cycleTransform(player.getUUID(), milestone >= 3);
+                AreaTeleportSelect.Server.sync(player);
+                return;
+            }
             var pos = AreaTeleportSelect.Server.pickBlock(player);
             if (pos == null) return;
             AreaTeleportState.setDestination(player.getUUID(), player.level().dimension(), pos);
@@ -92,9 +123,14 @@ public final class AreaTeleportSetup extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class MarkPacket extends Packet<ServerGamePacketListenerImpl, MarkPacket> {
-        public static final MarkPacket INSTANCE = new MarkPacket();
-        public static final StreamCodec<ByteBuf, MarkPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private MarkPacket() {
+        public static final MarkPacket MARK = new MarkPacket(false);
+        public static final MarkPacket TOGGLE_SWAP = new MarkPacket(true);
+        public static final StreamCodec<ByteBuf, MarkPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> buf.writeBoolean(packet.toggleSwap),
+                buf -> buf.readBoolean() ? TOGGLE_SWAP : MARK);
+        private final boolean toggleSwap;
+        private MarkPacket(boolean toggleSwap) {
+            this.toggleSwap = toggleSwap;
         }
         @Override public PacketType<ServerGamePacketListenerImpl, MarkPacket> getPacketType() { return PacketTypes.AREA_TELEPORT_SETUP_MARK.get(); }
     }

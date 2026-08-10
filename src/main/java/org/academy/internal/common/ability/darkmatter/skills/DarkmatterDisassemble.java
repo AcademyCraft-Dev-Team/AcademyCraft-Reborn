@@ -11,6 +11,10 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.GameMasterBlock;
@@ -21,6 +25,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -52,6 +57,8 @@ import java.util.List;
 public final class DarkmatterDisassemble extends Skill {
     static final double RANGE = 32.0;
     static final float BASE_DAMAGE = 12.0f;
+    private static final Identifier ARMOR_PENETRATION_ID =
+            AcademyCraft.academy("darkmatter_disassemble_penetration");
 
     public DarkmatterDisassemble() {
         super(Builder
@@ -136,13 +143,15 @@ public final class DarkmatterDisassemble extends Skill {
         }
 
         private static Hit pick(ServerLevel level, ServerPlayer player) {
+            var range = Skills.DARKMATTER_DISASSEMBLE.get().hasProficiencyMilestone(player, 2)
+                    ? 40.0 : RANGE;
             var start = player.getEyePosition();
             var direction = player.getLookAngle().normalize();
-            var end = start.add(direction.scale(RANGE));
+            var end = start.add(direction.scale(range));
             var block = level.clip(new ClipContext(start, end,
                     ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
             var bestDistance = block.getType() == HitResult.Type.MISS
-                    ? RANGE * RANGE
+                    ? range * range
                     : start.distanceToSqr(block.getLocation());
             LivingEntity best = null;
             var search = new AABB(start, end).inflate(1.0);
@@ -167,19 +176,27 @@ public final class DarkmatterDisassemble extends Skill {
         public static boolean tryAutomatedAttack(ServerPlayer player, LivingEntity target) {
             if (!(player.level() instanceof ServerLevel level)
                     || target == null || target.level() != level || !target.isAlive()
-                    || player.distanceToSqr(target) > RANGE * RANGE
+                    || player.distanceToSqr(target) > maximumRange(player) * maximumRange(player)
                     || !player.hasLineOfSight(target)) return false;
             var skill = Skills.DARKMATTER_DISASSEMBLE.get();
+            var radius = 3.0;
+            if (skill.hasProficiencyMilestone(player, 2)) radius += 1.0;
+            if (DarkmatterSixWings.Server.isActive(player)
+                    && Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(player, 2)) radius *= 1.1;
+            var finalRadius = radius;
             var targets = DarkmatterSixWings.Server.isActive(player)
                     ? level.getEntitiesOfClass(LivingEntity.class,
-                    target.getBoundingBox().inflate(3), candidate -> validTarget(player, candidate))
+                    target.getBoundingBox().inflate(finalRadius), candidate -> validTarget(player, candidate))
                     : List.of(target);
             return skill.executeActive(player, (context, actualCost) -> {
                 var multiplier = AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, skill);
                 for (var current : targets) {
-                    if (!current.hurtServer(level, source, BASE_DAMAGE * multiplier)) continue;
+                    var hurt = current == target && context.milestone() >= 3
+                            ? hurtWithArmorPenetration(current, level, source, BASE_DAMAGE * multiplier)
+                            : current.hurtServer(level, source, BASE_DAMAGE * multiplier);
+                    if (!hurt) continue;
                     level.sendParticles(ParticleTypes.CLOUD,
                             current.getX(), current.getY() + current.getBbHeight() * 0.5, current.getZ(),
                             16, 0.45, 0.45, 0.45, 0.03);
@@ -187,6 +204,29 @@ public final class DarkmatterDisassemble extends Skill {
                 level.playSound(null, player.blockPosition(), SoundEvents.GRAVEL_BREAK,
                         SoundSource.PLAYERS, 1.0f, 0.95f);
             });
+        }
+
+        private static double maximumRange(ServerPlayer player) {
+            return Skills.DARKMATTER_DISASSEMBLE.get().hasProficiencyMilestone(player, 2) ? 40.0 : RANGE;
+        }
+
+        private static boolean hurtWithArmorPenetration(LivingEntity target, ServerLevel level,
+                                                        net.minecraft.world.damagesource.DamageSource source,
+                                                        float damage) {
+            var armor = target.getAttribute(Attributes.ARMOR);
+            if (armor == null) return target.hurtServer(level, source, damage);
+            var existing = armor.getModifier(ARMOR_PENETRATION_ID);
+            if (existing != null) armor.removeModifier(ARMOR_PENETRATION_ID);
+            armor.addTransientModifier(new AttributeModifier(
+                    ARMOR_PENETRATION_ID,
+                    target instanceof Player ? -0.10 : -0.20,
+                    AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+            try {
+                return target.hurtServer(level, source, damage);
+            } finally {
+                armor.removeModifier(ARMOR_PENETRATION_ID);
+                if (existing != null) armor.addTransientModifier(existing);
+            }
         }
 
         private static boolean canDestroy(ServerLevel level, ServerPlayer player, BlockPos pos) {
@@ -207,9 +247,12 @@ public final class DarkmatterDisassemble extends Skill {
             Skills.DARKMATTER_DISASSEMBLE.get().executeActive(player, (context, actualCost) -> {
                 var destroyed = false;
                 if (DarkmatterSixWings.Server.isActive(player)) {
-                    for (var candidate : BlockPos.betweenClosed(pos.offset(-3, -3, -3),
-                            pos.offset(3, 3, 3))) {
-                        if (candidate.distSqr(pos) > 9 || !canDestroy(level, player, candidate)) continue;
+                    var radius = Skills.DARKMATTER_DISASSEMBLE.get().hasProficiencyMilestone(player, 2) ? 4.0 : 3.0;
+                    if (Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(player, 2)) radius *= 1.1;
+                    var intRadius = (int) Math.ceil(radius);
+                    for (var candidate : BlockPos.betweenClosed(pos.offset(-intRadius, -intRadius, -intRadius),
+                            pos.offset(intRadius, intRadius, intRadius))) {
+                        if (candidate.distSqr(pos) > radius * radius || !canDestroy(level, player, candidate)) continue;
                         destroyed |= level.destroyBlock(candidate.immutable(), true, player);
                     }
                 } else if (canDestroy(level, player, pos)) {

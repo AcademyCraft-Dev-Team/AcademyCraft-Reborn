@@ -26,6 +26,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.skills.DarkmatterCreation;
+import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
@@ -93,7 +94,8 @@ public final class DarkmatterBeetle extends Monster {
         if (distanceToSqr(owner) > 48 * 48) {
             teleportTo(owner.getX(), owner.getY(), owner.getZ());
         } else if (getTarget() == null && distanceToSqr(owner) > 5 * 5) {
-            getNavigation().moveTo(owner, 1.1);
+            getNavigation().moveTo(owner,
+                    Skills.DARKMATTER_CREATION.get().hasProficiencyMilestone(owner, 2) ? 1.32 : 1.1);
         }
 
         if (tickCount % 20 == 0 && getHealth() < getMaxHealth()) heal(1.0f);
@@ -102,12 +104,22 @@ public final class DarkmatterBeetle extends Monster {
             setTarget(null);
         }
         if (tickCount % 10 == 0 && (getTarget() == null || !getTarget().isAlive())) {
+            var targetingRange = Skills.DARKMATTER_CREATION.get().hasProficiencyMilestone(owner, 2)
+                    ? 19.2 : 16.0;
             var target = serverLevel.getEntitiesOfClass(LivingEntity.class,
-                            getBoundingBox().inflate(16), candidate -> isCommandedTarget(owner, candidate))
+                            getBoundingBox().inflate(targetingRange), candidate -> isCommandedTarget(owner, candidate))
                     .stream()
                     .min(Comparator.comparingDouble(this::distanceToSqr))
                     .orElse(null);
             setTarget(target);
+        }
+        var flyingPursuit = DarkmatterSixWings.Server.isActive(owner)
+                && Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(owner, 3)
+                && getTarget() != null;
+        setNoGravity(flyingPursuit);
+        if (flyingPursuit) {
+            var vertical = Math.clamp((getTarget().getY() - getY()) * 0.08, -0.35, 0.35);
+            setDeltaMovement(getDeltaMovement().x, vertical, getDeltaMovement().z);
         }
     }
 
@@ -128,6 +140,12 @@ public final class DarkmatterBeetle extends Monster {
         if (owner == null || !isCommandedTarget(owner, target)) return false;
         var multiplier = AbilitySystemServer.getSystem(owner)
                 .getPlayerDamageMultiplier(owner.getUUID());
+        if (Skills.DARKMATTER_CREATION.get().hasProficiencyMilestone(owner, 3)) {
+            var surrounding = serverLevel.getEntitiesOfClass(DarkmatterBeetle.class,
+                    target.getBoundingBox().inflate(8.0), beetle -> beetle.isAlive()
+                            && beetle.isOwnedBy(owner) && beetle.getTarget() == target).size();
+            if (surrounding >= 3) multiplier *= 1.25f;
+        }
         var hurt = target.hurtServer(serverLevel,
                 SkillDamageSource.of(owner, Skills.DARKMATTER_DISASSEMBLE.get()),
                 12.0f * multiplier);

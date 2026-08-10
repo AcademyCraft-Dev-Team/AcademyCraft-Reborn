@@ -6,6 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -203,7 +204,7 @@ public final class ArcGenerate extends Skill {
 
         public static boolean tryAutomatedAttack(net.minecraft.server.level.ServerPlayer player) {
             var level = player.level();
-            return Skills.ARC_GENERATE.get().executeActive(player, (_, _) -> {
+            return Skills.ARC_GENERATE.get().executeActive(player, (context, _) -> {
                 var yawRad = (float) Math.toRadians(-player.getVisualRotationYInDegrees());
                 var eyePos = player.getEyePosition();
 
@@ -218,11 +219,11 @@ public final class ArcGenerate extends Skill {
                         .add(new Vec3(up).scale(-0.8))
                         .add(new Vec3(look).scale(0.35));
 
-                var length = LevelUtil.getValidViewDistance(player, 10);
+                var length = LevelUtil.getValidViewDistance(player, context.milestone() >= 2 ? 12 : 10);
                 var targetPos = eyePos.add(player.getLookAngle().scale(length));
                 var trunkLength = (float) handPos.distanceTo(targetPos);
 
-                var radius = 0.125f;
+                var radius = context.milestone() >= 2 ? 0.15f : 0.125f;
                 var system = AbilitySystemServer.getSystem(player);
                 var src = SkillDamageSource.of(player, Skills.ARC_GENERATE.get());
                 var damage = getDamage(
@@ -281,8 +282,40 @@ public final class ArcGenerate extends Skill {
                 level.addFreshEntity(arc);
                 arc.playSound(SoundEvents.ARC_WEAK.get());
 
-                LinearAttackExecutor.execute(level, resolved, payload);
+                var result = LinearAttackExecutor.execute(level, resolved, payload);
+                if (context.milestone() >= 3) {
+                    chainArc(player, level, result, src, damage);
+                }
             });
+        }
+
+        private static void chainArc(net.minecraft.server.level.ServerPlayer player,
+                                     net.minecraft.server.level.ServerLevel level,
+                                     LinearAttackExecutor.ExecutionResult result,
+                                     SkillDamageSource source,
+                                     float damage) {
+            var hit = new java.util.LinkedHashSet<net.minecraft.world.entity.Entity>();
+            hit.addAll(result.outboundHits());
+            hit.addAll(result.returnHits());
+            var origin = hit.stream().filter(LivingEntity.class::isInstance)
+                    .map(LivingEntity.class::cast).findFirst().orElse(null);
+            if (origin == null) return;
+            var candidates = level.getEntitiesOfClass(LivingEntity.class,
+                    origin.getBoundingBox().inflate(4.0),
+                    target -> target != player && target.isAlive() && !hit.contains(target)
+                            && !player.isAlliedTo(target));
+            candidates.sort(java.util.Comparator.comparingDouble(origin::distanceToSqr));
+            var factors = new float[]{0.5f, 0.3f};
+            for (var index = 0; index < Math.min(2, candidates.size()); index++) {
+                var target = candidates.get(index);
+                target.hurtServer(level, source, damage * factors[index]);
+                var effect = new ArcEffect(level, 8);
+                effect.setPos(origin.getBoundingBox().getCenter());
+                effect.setArcPaths(List.of(createRootPath(origin.getBoundingBox().getCenter(),
+                        target.getBoundingBox().getCenter(), MathUtil.RANDOM.nextLong(), List.of())));
+                level.addFreshEntity(effect);
+                origin = target;
+            }
         }
     }
 

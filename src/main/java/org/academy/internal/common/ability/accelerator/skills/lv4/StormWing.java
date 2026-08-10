@@ -7,6 +7,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -25,6 +28,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -32,6 +36,7 @@ import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
@@ -50,6 +55,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -180,6 +186,7 @@ public final class StormWing extends Skill {
 
     public static final class Server {
         private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
+        private static final Map<UUID, ArrayDeque<TrailPoint>> TRAILS = new HashMap<>();
         private static final long BOOST_GRACE_TICKS = 5;
 
         private Server() {
@@ -219,23 +226,26 @@ public final class StormWing extends Skill {
                     LAST_BOOST_TICK.put(player.getUUID(), player.level().getGameTime());
                 }
                 EntityMotionGuard.runWithMotionSource(player, () -> {
+                    var movementScale = Skills.STORM_WING.get().hasProficiencyMilestone(player, 2)
+                            ? 1.15
+                            : 1.0;
                     switch (state) {
                         case FRONT -> {
-                            var vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
+                            var vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2 * movementScale);
                             player.push(vec3.x, vec3.y * 1.5, vec3.z);
                         }
                         case BACK -> {
-                            var vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
+                            var vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2 * movementScale);
                             player.push(vec3.x, vec3.y, vec3.z);
                         }
                         case LEFT -> {
                             var look = player.getLookAngle();
-                            var left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2);
+                            var left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2 * movementScale);
                             player.push(left.x, left.y, left.z);
                         }
                         case RIGHT -> {
                             var look = player.getLookAngle();
-                            var right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2);
+                            var right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2 * movementScale);
                             player.push(right.x, right.y, right.z);
                         }
                         case KEEP -> {
@@ -247,7 +257,7 @@ public final class StormWing extends Skill {
                             player.resetFallDistance();
                         }
                         case BOOST -> {
-                            var vec3 = player.getLookAngle().scale(2.0);
+                            var vec3 = player.getLookAngle().scale(2.0 * movementScale);
                             player.push(vec3.x, vec3.y, vec3.z);
                             player.resetFallDistance();
                         }
@@ -286,7 +296,8 @@ public final class StormWing extends Skill {
             if (active) {
                 var system = AbilitySystemServer.getSystem(player);
                 active = system.ensurePermanentOccupation(
-                        player.getUUID(), RESERVED_CP, skill);
+                        player.getUUID(), skill.adjustProficiencyCost(
+                                player, SkillProficiencyProfile.CostKind.MAINTENANCE, RESERVED_CP), skill);
                 if (!active && skill.isEnabled(player)) skill.toggle(player);
                 if (active && player.tickCount % UPKEEP_INTERVAL_TICKS == 0
                         && !system.tryTimedOccupation(player.getUUID(), UPKEEP_CP, skill, 1)) {
@@ -297,10 +308,58 @@ public final class StormWing extends Skill {
             sync(player);
             if (!isActive(player)) return;
             var boostTick = LAST_BOOST_TICK.get(player.getUUID());
-            ((EntitySharedFlagInvoker) player).academy$setSharedFlag(
-                    7,
-                    boostTick != null && player.level().getGameTime() - boostTick <= BOOST_GRACE_TICKS
-            );
+            var now = player.level().getGameTime();
+            var boosting = boostTick != null && now - boostTick <= BOOST_GRACE_TICKS;
+            ((EntitySharedFlagInvoker) player).academy$setSharedFlag(7, boosting);
+            tickTurbulence(player, now, boosting);
+        }
+
+        private static void tickTurbulence(ServerPlayer player, long now, boolean boosting) {
+            var skill = Skills.STORM_WING.get();
+            var trails = TRAILS.computeIfAbsent(player.getUUID(), _ -> new ArrayDeque<>());
+            trails.removeIf(point -> point.expiresAt() <= now);
+            if (boosting && skill.hasProficiencyMilestone(player, 3) && player.tickCount % 2 == 0) {
+                trails.addLast(new TrailPoint(player.position(), player.getLookAngle(), now + 40));
+                while (trails.size() > 20) trails.removeFirst();
+            }
+            if (!skill.hasProficiencyMilestone(player, 3)) {
+                trails.clear();
+                return;
+            }
+            for (var point : trails) {
+                var area = new AABB(point.position(), point.position()).inflate(1.5);
+                for (var ally : player.level().getEntitiesOfClass(
+                        LivingEntity.class,
+                        area,
+                        entity -> entity != player && entity.isAlive() && player.isAlliedTo(entity))) {
+                    if (TimedSkillEffectRuntime.get(
+                            player.getUUID(), ally.getUUID(), skill,
+                            "turbulence_ally", now).isPresent()) continue;
+                    if (TimedSkillEffectRuntime.put(
+                            player, ally.getUUID(), skill, "turbulence_ally", 20, 0.0f)) {
+                        ally.setDeltaMovement(ally.getDeltaMovement().add(point.direction().scale(0.2)));
+                        ally.hurtMarked = true;
+                    }
+                }
+                for (var projectile : player.level().getEntitiesOfClass(
+                        Projectile.class,
+                        area,
+                        entity -> entity.isAlive() && entity.getOwner() != player)) {
+                    if (TimedSkillEffectRuntime.get(
+                            player.getUUID(), projectile.getUUID(), skill,
+                            "turbulence_projectile", now).isPresent()) continue;
+                    if (TimedSkillEffectRuntime.put(
+                            player, projectile.getUUID(), skill,
+                            "turbulence_projectile", 20, 0.0f)) {
+                        projectile.setDeltaMovement(projectile.getDeltaMovement().scale(0.6));
+                        projectile.hurtMarked = true;
+                    }
+                }
+            }
+            if (trails.isEmpty()) TRAILS.remove(player.getUUID());
+        }
+
+        private record TrailPoint(Vec3 position, Vec3 direction, long expiresAt) {
         }
     }
 

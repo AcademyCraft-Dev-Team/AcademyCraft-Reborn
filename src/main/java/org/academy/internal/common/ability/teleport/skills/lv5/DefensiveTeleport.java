@@ -11,6 +11,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -143,7 +145,9 @@ public final class DefensiveTeleport extends Skill {
                 var partialTick = event.getPartialTick();
                 center = player.getEyePosition(partialTick)
                         .add(player.getViewVector(partialTick).scale(distance));
-                var half = SELECTION_SIZE / 2.0;
+                var size = AbilitySystemClient.getSkillProficiencyMilestone(Skills.DEFENSIVE_TELEPORT.get()) >= 2
+                        ? 7.0 : SELECTION_SIZE;
+                var half = size / 2.0;
                 var box = new AABB(center.x - half, center.y - half, center.z - half,
                         center.x + half, center.y + half, center.z + half);
                 var camera = minecraft.gameRenderer.mainCamera().position();
@@ -202,14 +206,17 @@ public final class DefensiveTeleport extends Skill {
                     "defensive_teleport_" + player.getStringUUID());
             destinationLevel.getChunk(mark.x() >> 4, mark.z() >> 4);
             var destination = new Vec3(mark.x() + 0.5, mark.y() + 0.5, mark.z() + 0.5);
-            var half = SELECTION_SIZE / 2.0;
+            var skill = Skills.DEFENSIVE_TELEPORT.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var size = milestone >= 2 ? 7.0 : SELECTION_SIZE;
+            var half = size / 2.0;
             var selection = new AABB(center.x - half, center.y - half, center.z - half,
                     center.x + half, center.y + half, center.z + half);
             var selected = player.level().getEntities(player, selection,
                     entity -> isSelectedThreat(player, entity));
             if (selected.isEmpty()) return;
 
-            Skills.DEFENSIVE_TELEPORT.get().executeActive(player, (_, _) -> {
+            skill.executeActive(player, (ctx, _) -> {
                 var index = 0;
                 for (var entity : selected) {
                     if (!EntityMotionGuard.canApplyMotionFrom(player, entity)) continue;
@@ -225,6 +232,14 @@ public final class DefensiveTeleport extends Skill {
                                 Set.of(), entity.getYRot(), entity.getXRot(), false);
                     }
                     entity.resetFallDistance();
+                    if (ctx.milestone() >= 3) {
+                        if (entity instanceof Projectile projectile) {
+                            projectile.setOwner(null);
+                            projectile.setDeltaMovement(projectile.getDeltaMovement().scale(0.5));
+                        } else if (entity instanceof LivingEntity living) {
+                            living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 0));
+                        }
+                    }
                     index++;
                 }
             });

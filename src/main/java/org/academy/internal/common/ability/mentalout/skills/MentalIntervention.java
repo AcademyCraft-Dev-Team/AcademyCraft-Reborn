@@ -7,6 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -131,7 +132,25 @@ public final class MentalIntervention extends Skill {
                 feedback(player, "message.academy.mentalout.skill_unavailable");
                 return;
             }
-            var result = MentaloutControlContext.toggleTarget(player, MentaloutTargeting.findLookedAtLiving(player));
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var range = milestone >= 2 ? 24.0 : milestone >= 1 ? 20.0 : 16.0;
+            var selected = MentaloutTargeting.findLookedAtLivingExtended(player, range);
+            var result = MentaloutControlContext.toggleTarget(player, selected);
+            if (result == MentaloutControlContext.ToggleResult.ADDED
+                    && milestone >= 3 && selected != null && !(selected instanceof ServerPlayer)) {
+                var roster = MentaloutControlContext.subjects(player).stream()
+                        .map(LivingEntity::getUUID).collect(java.util.stream.Collectors.toSet());
+                var added = 0;
+                for (var nearby : player.level().getEntitiesOfClass(LivingEntity.class,
+                        selected.getBoundingBox().inflate(4.0), candidate ->
+                                candidate != selected && !(candidate instanceof ServerPlayer)
+                                        && candidate.getType() == selected.getType()
+                                        && candidate.isAlive() && !roster.contains(candidate.getUUID()))) {
+                    if (added >= 2) break;
+                    if (MentaloutControlContext.toggleTarget(player, nearby)
+                            == MentaloutControlContext.ToggleResult.ADDED) added++;
+                }
+            }
             switch (result) {
                 case ADDED -> feedback(player, "message.academy.mentalout.mental_intervention.added");
                 case REMOVED -> feedback(player, "message.academy.mentalout.mental_intervention.removed");

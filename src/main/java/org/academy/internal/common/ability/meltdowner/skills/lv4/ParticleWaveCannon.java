@@ -18,6 +18,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -25,6 +26,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
@@ -32,6 +34,7 @@ import org.academy.internal.common.ability.meltdowner.ContinuousBeamReflection;
 import org.academy.internal.common.ability.meltdowner.ContinuousReflectionSession;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
 import org.academy.internal.common.ability.meltdowner.skills.ContinuousBeam;
+import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
@@ -166,11 +169,20 @@ public final class ParticleWaveCannon extends Skill {
         private boolean beaming;
         private boolean ended;
         private HighSpeedElectronBeam visual;
+        private final int proficiencyMilestone;
+        private final float maximumLength;
+        private final float damageRadius;
+        private final float breakRadius;
+        private final java.util.Map<java.util.UUID, net.minecraft.world.entity.LivingEntity> beamTargets = new java.util.HashMap<>();
         private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
 
         private Context(ServerPlayer player) {
             super(player);
             initialLevel = player.level();
+            proficiencyMilestone = Skills.PARTICLE_WAVE_CANNON.get().getEffectiveProficiencyMilestone(player);
+            maximumLength = proficiencyMilestone >= 2 ? 96.0f : MAX_LENGTH;
+            damageRadius = proficiencyMilestone >= 2 ? DAMAGE_RADIUS * 1.15f : DAMAGE_RADIUS;
+            breakRadius = proficiencyMilestone >= 2 ? BREAK_RADIUS * 1.15f : BREAK_RADIUS;
         }
 
         @SubscribeEvent
@@ -195,7 +207,7 @@ public final class ParticleWaveCannon extends Skill {
             }
             if (!beaming) return;
 
-            if (!ContinuousBeam.followFromMainHand(player, visual, MAX_LENGTH, 0.2f)) {
+            if (!ContinuousBeam.followFromMainHand(player, visual, maximumLength, 0.2f)) {
                 end();
                 return;
             }
@@ -210,14 +222,14 @@ public final class ParticleWaveCannon extends Skill {
             }
 
             var start = visual.position();
-            var end = start.add(player.getLookAngle().scale(MAX_LENGTH));
+            var end = start.add(player.getLookAngle().scale(maximumLength));
             var damageTick = ticks % DAMAGE_INTERVAL_TICKS == 0;
             var system = AbilitySystemServer.getSystem(player);
             var payload = MeltdownerBeamActions.createPayload(
                     initialLevel,
                     player,
                     skill,
-                    DAMAGE_RADIUS,
+                    damageRadius,
                     BASE_DAMAGE,
                     MAX_HEALTH_DAMAGE_RATIO,
                     system.getPlayerDamageMultiplier(player.getUUID()),
@@ -239,7 +251,7 @@ public final class ParticleWaveCannon extends Skill {
                 MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
                         attack.outbound(),
-                        BREAK_RADIUS,
+                        breakRadius,
                         MINING_TIER,
                         false,
                         true,
@@ -255,7 +267,7 @@ public final class ParticleWaveCannon extends Skill {
                 attack.returnSegment().ifPresent(segment -> MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
                         segment,
-                        BREAK_RADIUS,
+                        breakRadius,
                         MINING_TIER,
                         false,
                         true,
@@ -264,7 +276,44 @@ public final class ParticleWaveCannon extends Skill {
                 ));
             }
             if (damageTick) {
-                LinearAttackExecutor.executeReturn(initialLevel, attack, payload, outboundResult);
+                var returnResult = LinearAttackExecutor.executeReturn(initialLevel, attack, payload, outboundResult);
+                if (proficiencyMilestone >= 3) updateResidualTargets(outboundResult, returnResult, system);
+            }
+        }
+
+        private void updateResidualTargets(LinearAttackExecutor.SegmentExecutionResult outbound,
+                                           LinearAttackExecutor.SegmentExecutionResult returned,
+                                           AbilitySystemServer system) {
+            var current = new java.util.HashSet<java.util.UUID>();
+            for (var entity : outbound.hits()) {
+                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                    current.add(living.getUUID());
+                    beamTargets.put(living.getUUID(), living);
+                }
+            }
+            for (var entity : returned.hits()) {
+                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                    current.add(living.getUUID());
+                    beamTargets.put(living.getUUID(), living);
+                }
+            }
+            var iterator = beamTargets.entrySet().iterator();
+            while (iterator.hasNext()) {
+                var entry = iterator.next();
+                if (current.contains(entry.getKey())) continue;
+                var target = entry.getValue();
+                iterator.remove();
+                if (!target.isAlive() || !RadiationIntensify.isMarked(target, initialLevel.getGameTime())) continue;
+                var damage = BASE_DAMAGE * 0.2f
+                        * system.getPlayerDamageMultiplier(player.getUUID());
+                for (var delay = 20; delay <= 60; delay += 20) {
+                    TimedSkillEffectRuntime.schedule(player, delay, () -> {
+                        if (target.isAlive() && target.level() == initialLevel) {
+                            target.hurtServer(initialLevel,
+                                    SkillDamageSource.of(player, Skills.PARTICLE_WAVE_CANNON.get()), damage);
+                        }
+                    });
+                }
             }
         }
 
@@ -281,8 +330,8 @@ public final class ParticleWaveCannon extends Skill {
 
         private void beginBeam() {
             beaming = true;
-            visual = ContinuousBeam.spawnFromMainHand(initialLevel, player, 3.0f, MAX_LENGTH);
-            ContinuousBeam.followFromMainHand(player, visual, MAX_LENGTH, 0.2f);
+            visual = ContinuousBeam.spawnFromMainHand(initialLevel, player, 3.0f, maximumLength);
+            ContinuousBeam.followFromMainHand(player, visual, maximumLength, 0.2f);
         }
 
         private void end() {

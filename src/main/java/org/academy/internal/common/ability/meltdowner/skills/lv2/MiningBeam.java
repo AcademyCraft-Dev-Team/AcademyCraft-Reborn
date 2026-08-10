@@ -27,6 +27,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
@@ -178,14 +180,21 @@ public final class MiningBeam extends Skill {
         private final ServerLevel initialLevel;
         private boolean ended;
         private int ticks;
-        private float currentLength = MAX_LENGTH;
+        private final int proficiencyMilestone;
+        private final float maximumLength;
+        private final float breakRadius;
+        private float currentLength;
         private final HighSpeedElectronBeam visual;
         private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
 
         private Context(ServerPlayer player) {
             super(player);
             initialLevel = player.level();
-            visual = ContinuousBeam.spawnFromMainHand(initialLevel, player, 1.0f, MAX_LENGTH);
+            proficiencyMilestone = Skills.MINING_BEAM.get().getEffectiveProficiencyMilestone(player);
+            maximumLength = proficiencyMilestone >= 2 ? 56.0f : MAX_LENGTH;
+            breakRadius = proficiencyMilestone >= 2 ? BREAK_RADIUS * 1.2f : BREAK_RADIUS;
+            currentLength = maximumLength;
+            visual = ContinuousBeam.spawnFromMainHand(initialLevel, player, 1.0f, maximumLength);
         }
 
         @SubscribeEvent
@@ -224,8 +233,8 @@ public final class MiningBeam extends Skill {
                 var result = LevelUtil.destroyBlocksAlongPath(
                         initialLevel,
                         start,
-                        start.add(player.getLookAngle().scale(MAX_LENGTH)),
-                        BREAK_RADIUS,
+                        start.add(player.getLookAngle().scale(maximumLength)),
+                        breakRadius,
                         MINING_TIER,
                         true,
                         true,
@@ -247,7 +256,7 @@ public final class MiningBeam extends Skill {
                             player,
                             skill,
                             SkillDamageSource.of(player, skill),
-                            DAMAGE_RADIUS
+                            proficiencyMilestone >= 2 ? DAMAGE_RADIUS * 1.2f : DAMAGE_RADIUS
                     )
                     .damage(_ -> damage)
                     .build();
@@ -266,7 +275,7 @@ public final class MiningBeam extends Skill {
                 MeltdownerBeamActions.destroyBlocksAlongSegment(
                         initialLevel,
                         attack.outbound(),
-                        BREAK_RADIUS,
+                        breakRadius,
                         MINING_TIER,
                         true,
                         true,
@@ -283,7 +292,7 @@ public final class MiningBeam extends Skill {
                 var returnLength = MeltdownerBeamActions.executeBlocksAlongSegment(
                         initialLevel,
                         returnSegment,
-                        BREAK_RADIUS,
+                        breakRadius,
                         MINING_TIER,
                         true,
                         true,
@@ -331,6 +340,46 @@ public final class MiningBeam extends Skill {
                 playerMultiplier,
                 false
         );
+    }
+
+    public static boolean dropRefinedResources(
+            ServerLevel level,
+            net.minecraft.core.BlockPos pos,
+            net.minecraft.world.level.block.state.BlockState state,
+            net.minecraft.world.level.block.entity.BlockEntity blockEntity,
+            ServerPlayer player
+    ) {
+        var skill = Skills.MINING_BEAM.get();
+        if (!skill.hasProficiencyMilestone(player, 3)
+                || !ProficiencyPolicy.server(player).allowMiningBeamSmelting()
+                || !ProficiencySkillSettings.isEnabled(player, ProficiencySkillSettings.MINING_BEAM_SMELTING)) {
+            return false;
+        }
+        var drops = net.minecraft.world.level.block.Block.getDrops(
+                state, level, pos, blockEntity, player, net.minecraft.world.item.ItemStack.EMPTY);
+        if (drops.isEmpty()) return false;
+        var refinedAny = false;
+        for (var drop : drops) {
+            var input = new net.minecraft.world.item.crafting.SingleRecipeInput(drop.copyWithCount(1));
+            var recipe = level.getServer().getRecipeManager().getRecipeFor(
+                    net.minecraft.world.item.crafting.RecipeType.SMELTING, input, level).orElse(null);
+            if (recipe == null) {
+                net.minecraft.world.level.block.Block.popResource(level, pos, drop);
+                continue;
+            }
+            var output = recipe.value().assemble(input);
+            if (output.isEmpty()) {
+                net.minecraft.world.level.block.Block.popResource(level, pos, drop);
+                continue;
+            }
+            output.setCount(output.getCount() * drop.getCount());
+            net.minecraft.world.level.block.Block.popResource(level, pos, output);
+            var experience = Math.round(recipe.value().experience() * drop.getCount());
+            if (experience > 0) net.minecraft.world.entity.ExperienceOrb.award(level,
+                    net.minecraft.world.phys.Vec3.atCenterOf(pos), experience);
+            refinedAny = true;
+        }
+        return true;
     }
 
     @PacketTarget(ThreadType.SERVER)

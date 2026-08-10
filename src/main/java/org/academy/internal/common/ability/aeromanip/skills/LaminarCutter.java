@@ -5,15 +5,20 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -28,6 +33,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
@@ -46,6 +52,7 @@ public final class LaminarCutter extends Skill {
     private static final double BLADE_LENGTH = 5.0;
     private static final double BLADE_HALF_WIDTH = BLADE_LENGTH * 0.5;
     private static final double BLADE_HALF_THICKNESS = 0.55;
+    private static final Identifier LAMINAR_FRACTURE_ID = AcademyCraft.academy("laminar_fracture");
 
     public LaminarCutter() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL3).energyCost(30_000)
@@ -75,6 +82,8 @@ public final class LaminarCutter extends Skill {
                 var cutterLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
                 var length = (24.0 + cutterLevel * 4.0) * AeromanipFieldManager.rangeMultiplier(player)
                         * AeromanipConfig.rangeMultiplier(player, SkillNames.LAMINAR_CUTTER);
+                if (context.milestone() >= 2) length *= 1.2;
+                var resolvedLength = length;
                 var end = eye.add(direction.scale(length));
                 var bladeRight = new Vec3(-direction.z, 0.0, direction.x);
                 if (bladeRight.lengthSqr() < 1.0E-8) bladeRight = new Vec3(1.0, 0.0, 0.0);
@@ -100,11 +109,14 @@ public final class LaminarCutter extends Skill {
                                 direction,
                                 finalBladeRight,
                                 finalBladeNormal,
-                                length
+                                resolvedLength
                         ))) {
-                    if (target.hurtServer(level, source, damage)) Skills.LAMINAR_CUTTER.get().onHurt(player, target, damage);
+                    if (target.hurtServer(level, source, damage)) {
+                        Skills.LAMINAR_CUTTER.get().onHurt(player, target, damage);
+                        if (context.milestone() >= 3) applyFracture(player, target);
+                    }
                 }
-                clearSoftBlocks(player, level, eye, end, direction, bladeRight, bladeNormal);
+                clearSoftBlocks(player, level, eye, end, direction, bladeRight, bladeNormal, context.milestone());
                 spawnBladeVisual(level, eye, direction, bladeRight, length);
             });
         }
@@ -140,7 +152,7 @@ public final class LaminarCutter extends Skill {
 
         private static void clearSoftBlocks(net.minecraft.server.level.ServerPlayer player, ServerLevel level,
                                              Vec3 start, Vec3 end, Vec3 direction,
-                                             Vec3 bladeRight, Vec3 bladeNormal) {
+                                             Vec3 bladeRight, Vec3 bladeNormal, int milestone) {
             var settings = AeromanipConfig.settings(player);
             if (!settings.allowSoftBlockInteraction
                     || !DestroyBlocksSetting.canDestroyBlocks(player, Skills.LAMINAR_CUTTER.get())) return;
@@ -161,7 +173,7 @@ public final class LaminarCutter extends Skill {
                     level.removeBlock(pos, false);
                     continue;
                 }
-                if (!(state.is(Blocks.COBWEB)
+                var predefinedSoft = state.is(Blocks.COBWEB)
                         || state.is(Blocks.VINE)
                         || state.is(Blocks.WEEPING_VINES)
                         || state.is(Blocks.TWISTING_VINES)
@@ -173,9 +185,30 @@ public final class LaminarCutter extends Skill {
                         || state.is(Blocks.SEAGRASS)
                         || state.is(Blocks.TALL_SEAGRASS)
                         || state.is(Blocks.NETHER_SPROUTS)
-                        || state.is(BlockTags.LEAVES))) continue;
+                        || state.is(BlockTags.LEAVES);
+                if (!predefinedSoft && (milestone < 2 || state.getDestroySpeed(level, pos) < 0.0f
+                        || state.getDestroySpeed(level, pos) > 1.5f)) continue;
                 level.destroyBlock(pos.immutable(), true, player);
             }
+        }
+
+        private static void applyFracture(net.minecraft.server.level.ServerPlayer owner, LivingEntity target) {
+            var armor = target.getAttribute(Attributes.ARMOR);
+            if (armor == null) return;
+            var amount = target instanceof Player ? -0.1 : -0.2;
+            var current = armor.getModifier(LAMINAR_FRACTURE_ID);
+            if (current != null) armor.removeModifier(LAMINAR_FRACTURE_ID);
+            armor.addTransientModifier(new AttributeModifier(
+                    LAMINAR_FRACTURE_ID, amount, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+            var skill = Skills.LAMINAR_CUTTER.get();
+            TimedSkillEffectRuntime.put(owner, target.getUUID(), skill, "fracture", 100, (float) -amount);
+            TimedSkillEffectRuntime.schedule(owner, 100, () -> {
+                if (TimedSkillEffectRuntime.get(owner.getUUID(), target.getUUID(), skill,
+                        "fracture", owner.level().getGameTime()).isEmpty()) {
+                    var targetArmor = target.getAttribute(Attributes.ARMOR);
+                    if (targetArmor != null) targetArmor.removeModifier(LAMINAR_FRACTURE_ID);
+                }
+            });
         }
     }
     @PacketTarget(ThreadType.SERVER) public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> { public static final CastPacket INSTANCE = new CastPacket(); public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE); private CastPacket() { } @Override public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() { return PacketTypes.LAMINAR_CUTTER_CAST.get(); } }

@@ -10,6 +10,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -109,29 +112,58 @@ public class LightningNova extends Skill {
         @SubscribePacket
         public static void handle(ActivatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.LIGHTNING_NOVA.get().executeActive(player, (ctx, actualCost) -> AbilitySystemServer.registerContext(new Context(player)));
+            Skills.LIGHTNING_NOVA.get().executeActive(player,
+                    (ctx, actualCost) -> AbilitySystemServer.registerContext(new Context(player, ctx.milestone())));
         }
     }
 
     public static final class Context extends ServerContext {
         private int ticks;
+        private int phaseTicks;
+        private final int milestone;
+        private final int maximumRadius;
+        private final int outwardDuration;
+        private boolean echo;
+        private final Set<UUID> outwardHits = new HashSet<>();
+        private final Set<UUID> echoHits = new HashSet<>();
         private boolean ended;
 
-        private Context(ServerPlayer player) {
+        private Context(ServerPlayer player, int milestone) {
             super(player);
+            this.milestone = milestone;
+            maximumRadius = milestone >= 2 ? Math.round(MAX_RADIUS * 1.25f) : MAX_RADIUS;
+            outwardDuration = milestone >= 2
+                    ? Math.max(1, Math.round(PULSE_DURATION * 1.25f / 1.15f))
+                    : PULSE_DURATION;
         }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             ticks++;
-            if (player.hasDisconnected() || !player.isAlive() || ticks >= PULSE_DURATION) {
+            if (player.hasDisconnected() || !player.isAlive()) {
                 end();
                 return;
             }
             Skills.LIGHTNING_NOVA.get().reportActivity(player, false);
 
-            var currentRadius = 1.0f + (float) ticks / PULSE_DURATION * MAX_RADIUS;
+            phaseTicks++;
+            if (!echo && phaseTicks >= outwardDuration) {
+                if (milestone < 3) {
+                    end();
+                    return;
+                }
+                echo = true;
+                phaseTicks = 0;
+            } else if (echo && phaseTicks >= outwardDuration) {
+                end();
+                return;
+            }
+            var progress = Math.clamp((float) phaseTicks / outwardDuration, 0.0f, 1.0f);
+            var currentRadius = echo
+                    ? Math.max(0.0f, maximumRadius * (1.0f - progress))
+                    : 1.0f + progress * maximumRadius;
             var innerRadius = Math.max(0, currentRadius - 1.5f);
+            var outerRadius = echo ? currentRadius + 1.5f : currentRadius;
 
             if (level() instanceof ServerLevel serverLevel) {
                 if ((ticks & 1) == 0) {
@@ -150,8 +182,9 @@ public class LightningNova extends Skill {
                         org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE);
                 for (var target : targets) {
                     var dist = target.distanceTo(player);
-                    if (dist <= currentRadius && dist >= innerRadius) {
-                        target.hurtServer(serverLevel, source, damage);
+                    var phaseHits = echo ? echoHits : outwardHits;
+                    if (dist <= outerRadius && dist >= innerRadius && phaseHits.add(target.getUUID())) {
+                        target.hurtServer(serverLevel, source, damage * (echo ? 0.5f : 1.0f));
                     }
                 }
             }

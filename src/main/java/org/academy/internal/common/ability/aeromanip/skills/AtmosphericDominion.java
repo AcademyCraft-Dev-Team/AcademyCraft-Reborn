@@ -26,6 +26,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
@@ -72,18 +73,23 @@ public final class AtmosphericDominion extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.ATMOSPHERIC_DOMINION.get();
             skill.executeActive(player, context -> skill.getCpCost(context.level())
-                    * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION), (_, _) -> {
+                    * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION), (context, _) -> {
                 if (!(player.level() instanceof ServerLevel level)) return;
                 var range = AeromanipConfig.rangeMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION);
-                var duration = Math.max(1, Math.round(200 * AeromanipConfig.durationMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION)));
+                var durationTicks = context.milestone() >= 2 ? 240 : 200;
+                var duration = Math.max(1, Math.round(durationTicks * AeromanipConfig.durationMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION)));
+                var radius = context.milestone() >= 2 ? 26.0 : 22.0;
                 var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.ATMOSPHERIC_DOMINION,
-                        AirflowField.Shape.SPHERE, player.position(), player.getLookAngle(), 22.0 * range, 0, 1.0f, duration);
+                        AirflowField.Shape.SPHERE, player.position(), player.getLookAngle(), radius * range, 0, 1.0f, duration, context.milestone());
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });
         }
         private static void tick(net.minecraft.server.level.ServerPlayer owner, AirflowField field, int age) {
             var box = field.bounds();
+            var handled = 0;
+            var cap = ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick();
             for (var target : owner.level().getEntities(owner, box, Entity::isAlive)) {
+                if (handled++ >= cap) break;
                 if (!field.contains(target.getBoundingBox().getCenter(), target.getBbWidth() * 0.5)) continue;
                 if (AeromanipTargeting.isBoss(target)) continue;
                 var allied = target == owner

@@ -7,6 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -32,8 +33,10 @@ import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.common.entitycontrol.PlayerControlFrame;
 import org.academy.api.common.entitycontrol.PlayerMovementMode;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
@@ -72,6 +75,7 @@ public final class PlayerControlSessionManager {
     private static final Map<UUID, Long> RESISTANCE_UNTIL = new HashMap<>();
     private static final Map<UUID, Long> REVISIONS = new HashMap<>();
     private static final Map<UUID, Anchor> FREEZE_ANCHORS = new HashMap<>();
+    private static final Map<UUID, EndReason> CLOSED_PATH_REASONS = new HashMap<>();
     private static boolean clientInitialized;
     private static boolean serverInitialized;
 
@@ -136,7 +140,9 @@ public final class PlayerControlSessionManager {
         if (subjectSession != null) stop(subjectSession, EndReason.LIFECYCLE, true, false);
         var system = AbilitySystemServer.getSystem(controller);
         if (!system.replacePermanentOccupation(
-                controller.getUUID(), MentaloutConfig.mentalTakeoverOccupation(controller), skill)) {
+                controller.getUUID(), skill.adjustProficiencyCost(
+                        controller, SkillProficiencyProfile.CostKind.MAINTENANCE,
+                        MentaloutConfig.mentalTakeoverOccupation(controller)), skill)) {
             return StartResult.INSUFFICIENT_CP;
         }
 
@@ -190,7 +196,9 @@ public final class PlayerControlSessionManager {
         var skill = Skills.MENTAL_TAKEOVER.get();
         var system = AbilitySystemServer.getSystem(controller);
         if (!system.replacePermanentOccupation(
-                controller.getUUID(), MentaloutConfig.mentalTakeoverOccupation(controller), skill)) {
+                controller.getUUID(), skill.adjustProficiencyCost(
+                        controller, SkillProficiencyProfile.CostKind.MAINTENANCE,
+                        MentaloutConfig.mentalTakeoverOccupation(controller)), skill)) {
             return StartResult.INSUFFICIENT_CP;
         }
         ControlHandle handle;
@@ -242,7 +250,7 @@ public final class PlayerControlSessionManager {
                 now + READY_TIMEOUT_TICKS, now, null, subject.position()
         );
         BY_SUBJECT.put(subject.getUUID(), session);
-        sendBegin(session, subject, Role.SUBJECT);
+        sendBegin(session, subject, context.controller() == subject ? Role.SELF : Role.SUBJECT);
         return new PathSessionToken(session.id, session.revision, subject.getUUID());
     }
 
@@ -271,6 +279,12 @@ public final class PlayerControlSessionManager {
     public static void closePath(PathSessionToken token, boolean applyResistance) {
         var session = pathSession(token);
         if (session != null) stop(session, EndReason.LIFECYCLE, true, applyResistance);
+        if (token != null) CLOSED_PATH_REASONS.remove(token.sessionId);
+    }
+
+    public static Optional<EndReason> consumePathEndReason(PathSessionToken token) {
+        return token == null ? Optional.empty()
+                : Optional.ofNullable(CLOSED_PATH_REASONS.remove(token.sessionId));
     }
 
     public static void tick(MinecraftServer server) {
@@ -394,6 +408,7 @@ public final class PlayerControlSessionManager {
         RESISTANCE_UNTIL.clear();
         REVISIONS.clear();
         FREEZE_ANCHORS.clear();
+        CLOSED_PATH_REASONS.clear();
     }
 
     /** Returns true when the packet was corrected and vanilla handling must be cancelled. */
@@ -497,13 +512,15 @@ public final class PlayerControlSessionManager {
     private static boolean isRetained(Session session) {
         var controller = session.controller;
         var subject = session.subject;
-        var maxDistance = MentaloutConfig.intrusionMaximumDistance(controller);
+        var maxDistance = Skills.MENTAL_INTRUSION.get().hasProficiencyMilestone(controller, 2)
+                ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(controller))
+                : MentaloutConfig.intrusionMaximumDistance(controller);
         return controller.isAlive() && !controller.hasDisconnected()
                 && subject.isAlive() && !subject.hasDisconnected() && !subject.isSpectator()
                 && controller.level() == subject.level()
                 && (session.kind == Kind.PATH || Skills.MENTAL_TAKEOVER.get().isEnabled(controller))
                 && (session.handle == null || !session.handle.isClosed())
-                && !MentalControlRuntime.isProtectedTarget(subject)
+                && (controller == subject || !MentalControlRuntime.isProtectedTarget(subject))
                 && (session.kind == Kind.PATH
                 || controller.distanceToSqr(subject) <= maxDistance * maxDistance);
     }
@@ -511,7 +528,9 @@ public final class PlayerControlSessionManager {
     private static boolean isRetained(MobSession session) {
         var controller = session.controller;
         var subject = session.subject;
-        var maxDistance = MentaloutConfig.intrusionMaximumDistance(controller);
+        var maxDistance = Skills.MENTAL_INTRUSION.get().hasProficiencyMilestone(controller, 2)
+                ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(controller))
+                : MentaloutConfig.intrusionMaximumDistance(controller);
         return controller.isAlive() && !controller.hasDisconnected()
                 && subject.isAlive() && !subject.isRemoved()
                 && controller.level() == subject.level()
@@ -589,6 +608,39 @@ public final class PlayerControlSessionManager {
         session.frame = normalizeMobFrame(packet.frame);
     }
 
+    private static void inventoryAction(ServerPlayer sender, InventoryActionPacket packet) {
+        var session = BY_CONTROLLER.get(sender.getUUID());
+        if (!matches(session, packet.sessionId, packet.revision)
+                || session.state != State.ACTIVE || session.kind != Kind.DIRECT
+                || packet.sequence <= session.lastInventoryActionSequence
+                || !Skills.MENTAL_TAKEOVER.get().hasProficiencyMilestone(sender, 3)
+                || !ProficiencyPolicy.server(sender).allowMentalTakeoverExtendedControls()) {
+            return;
+        }
+        session.lastInventoryActionSequence = packet.sequence;
+        var now = sender.level().getGameTime();
+        switch (packet.action) {
+            case SELECT_HOTBAR -> {
+                if (packet.value < 0 || packet.value > 8
+                        || session.lastHotbarSwitchTick != Long.MIN_VALUE
+                        && now - session.lastHotbarSwitchTick < 20L) {
+                    return;
+                }
+                session.lastHotbarSwitchTick = now;
+                var inventory = session.subject.getInventory();
+                inventory.setSelectedSlot(packet.value);
+                session.subject.connection.send(new ClientboundSetHeldSlotPacket(packet.value));
+                session.subject.inventoryMenu.broadcastChanges();
+                sendTargetViewState(session, now);
+            }
+            case USE_OFFHAND -> {
+                if (session.lastOffhandUseTick == now) return;
+                session.lastOffhandUseTick = now;
+                useCurrentItem(session.subject, session.authorizedFrame, InteractionHand.OFF_HAND);
+            }
+        }
+    }
+
     private static PlayerControlFrame normalizeMobFrame(PlayerControlFrame frame) {
         return new PlayerControlFrame(
                 frame.forward(), frame.strafe(), Mth.wrapDegrees(frame.yaw()), frame.pitch(),
@@ -631,9 +683,18 @@ public final class PlayerControlSessionManager {
         session.lastSubjectSequence = packet.sequence;
         session.lastStruggleAcceptedTick = now;
         var direction = packet.directionMask & 0xF;
+        if (session.controller == session.subject && hasSelfOverrideInput(direction, packet.edgeMask)) {
+            stop(session, EndReason.CONTROLLER_STOPPED, true, false);
+            return;
+        }
         var points = strugglePoints(session.lastDirectionMask, direction, packet.edgeMask);
         session.lastDirectionMask = direction;
         if (points > 0) {
+            if (Skills.MENTAL_TAKEOVER.get().hasProficiencyMilestone(session.controller, 2)) {
+                var scaled = points * 0.75f + session.struggleRemainder;
+                points = (int) Math.floor(scaled);
+                session.struggleRemainder = scaled - points;
+            }
             session.struggle = Math.min(STRUGGLE_MAX, session.struggle + Math.min(2, points));
             session.lastStruggleTick = now;
             sendStatus(session);
@@ -646,6 +707,10 @@ public final class PlayerControlSessionManager {
         if (direction != 0 && direction != (previousDirectionMask & 0xF)) points++;
         if ((edgeMask & 0x3) != 0) points++;
         return Math.min(2, points);
+    }
+
+    static boolean hasSelfOverrideInput(int directionMask, int edgeMask) {
+        return (directionMask & 0xF) != 0 || (edgeMask & 0xF) != 0;
     }
 
     private static PlayerControlFrame normalizeDirectFrame(ServerPlayer subject, PlayerControlFrame frame) {
@@ -691,14 +756,23 @@ public final class PlayerControlSessionManager {
     }
 
     private static void useCurrentItem(ServerPlayer subject, PlayerControlFrame frame) {
+        useCurrentItem(subject, frame, InteractionHand.MAIN_HAND);
+    }
+
+    private static void useCurrentItem(
+            ServerPlayer subject,
+            PlayerControlFrame frame,
+            InteractionHand hand
+    ) {
         var range = subject.isCreative() ? 5.0 : 4.5;
         var entity = raycastEntity(subject, range, frame.yaw(), frame.pitch());
         if (entity != null) {
             subject.interactOn(
                     entity,
-                    InteractionHand.MAIN_HAND,
+                    hand,
                     entity.getBoundingBox().getCenter().subtract(entity.position())
             );
+            closeUnauthorizedContainer(subject);
             return;
         }
         var eye = subject.getEyePosition();
@@ -710,12 +784,17 @@ public final class PlayerControlSessionManager {
                 subject
         ));
         var level = (ServerLevel) subject.level();
-        var stack = subject.getItemInHand(InteractionHand.MAIN_HAND);
+        var stack = subject.getItemInHand(hand);
         if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
-            subject.gameMode.useItemOn(subject, level, stack, InteractionHand.MAIN_HAND, blockHit);
+            subject.gameMode.useItemOn(subject, level, stack, hand, blockHit);
         } else {
-            subject.gameMode.useItem(subject, level, stack, InteractionHand.MAIN_HAND);
+            subject.gameMode.useItem(subject, level, stack, hand);
         }
+        closeUnauthorizedContainer(subject);
+    }
+
+    private static void closeUnauthorizedContainer(ServerPlayer subject) {
+        if (subject.containerMenu != subject.inventoryMenu) subject.closeContainer();
     }
 
     private static LivingEntity raycastEntity(
@@ -746,6 +825,7 @@ public final class PlayerControlSessionManager {
         if (session == null || session.state == State.CLOSED) return;
         var wasActive = session.state == State.ACTIVE;
         session.state = State.CLOSED;
+        if (session.kind == Kind.PATH) CLOSED_PATH_REASONS.put(session.id, reason);
         if (session.kind == Kind.DIRECT) BY_CONTROLLER.remove(session.controller.getUUID(), session);
         BY_SUBJECT.remove(session.subject.getUUID(), session);
         if (session.handle != null) session.handle.close();
@@ -882,7 +962,8 @@ public final class PlayerControlSessionManager {
 
     public enum Role {
         CONTROLLER,
-        SUBJECT
+        SUBJECT,
+        SELF
     }
 
     public enum StartResult {
@@ -960,6 +1041,12 @@ public final class PlayerControlSessionManager {
         }
 
         @SubscribePacket
+        public static void inventoryAction(InventoryActionPacket packet) {
+            PlayerControlSessionManager.inventoryAction(
+                    packet.getPacketListener().getPlayer(), packet);
+        }
+
+        @SubscribePacket
         public static void struggle(StrugglePacket packet) {
             PlayerControlSessionManager.struggle(packet.getPacketListener().getPlayer(), packet);
         }
@@ -973,7 +1060,12 @@ public final class PlayerControlSessionManager {
         public static void stop(StopRequestPacket packet) {
             var session = findSession(packet.getPacketListener().getPlayer());
             if (matches(session, packet.sessionId, packet.revision)) {
-                PlayerControlSessionManager.stop(session, EndReason.CONTROLLER_STOPPED, true);
+                PlayerControlSessionManager.stop(
+                        session,
+                        EndReason.CONTROLLER_STOPPED,
+                        true,
+                        session.kind != Kind.PATH || session.controller != session.subject
+                );
                 return;
             }
             var mobSession = MOB_BY_CONTROLLER.get(
@@ -1104,6 +1196,75 @@ public final class PlayerControlSessionManager {
         }
     }
 
+    public enum InventoryAction {
+        SELECT_HOTBAR,
+        USE_OFFHAND
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class InventoryActionPacket extends Packet<ServerGamePacketListenerImpl, InventoryActionPacket> {
+        public static final StreamCodec<ByteBuf, InventoryActionPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    writeUuid(buf, packet.sessionId);
+                    buf.writeLong(packet.revision);
+                    buf.writeLong(packet.sequence);
+                    buf.writeByte(packet.action.ordinal());
+                    buf.writeByte(packet.value);
+                },
+                buf -> new InventoryActionPacket(
+                        readUuid(buf),
+                        buf.readLong(),
+                        buf.readLong(),
+                        InventoryAction.values()[Math.clamp(
+                                buf.readUnsignedByte(), 0, InventoryAction.values().length - 1)],
+                        buf.readByte()
+                ));
+        private final UUID sessionId;
+        private final long revision;
+        private final long sequence;
+        private final InventoryAction action;
+        private final int value;
+
+        public InventoryActionPacket(
+                UUID sessionId,
+                long revision,
+                long sequence,
+                InventoryAction action,
+                int value
+        ) {
+            this.sessionId = sessionId;
+            this.revision = revision;
+            this.sequence = sequence;
+            this.action = action;
+            this.value = value;
+        }
+
+        public UUID sessionId() {
+            return sessionId;
+        }
+
+        public long revision() {
+            return revision;
+        }
+
+        public long sequence() {
+            return sequence;
+        }
+
+        public InventoryAction action() {
+            return action;
+        }
+
+        public int value() {
+            return value;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, InventoryActionPacket> getPacketType() {
+            return PacketTypes.MENTAL_TAKEOVER_INVENTORY_ACTION.get();
+        }
+    }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class StrugglePacket extends Packet<ServerGamePacketListenerImpl, StrugglePacket> {
         public static final StreamCodec<ByteBuf, StrugglePacket> CODEC = StreamCodec.of(
@@ -1228,6 +1389,10 @@ public final class PlayerControlSessionManager {
             this.role = role;
             this.subjectEntityId = subjectEntityId;
             this.subjectUuid = subjectUuid;
+        }
+
+        public Role role() {
+            return role;
         }
 
         @Override
@@ -1529,6 +1694,9 @@ public final class PlayerControlSessionManager {
         private long lastIntentAcceptedTick = Long.MIN_VALUE;
         private long lastNeutralTick = Long.MIN_VALUE;
         private long lastControllerSequence = -1L;
+        private long lastInventoryActionSequence = -1L;
+        private long lastHotbarSwitchTick = Long.MIN_VALUE;
+        private long lastOffhandUseTick = Long.MIN_VALUE;
         private long lastSubjectSequence = -1L;
         private long lastStruggleAcceptedTick = Long.MIN_VALUE;
         private long lastStruggleTick;
@@ -1539,6 +1707,7 @@ public final class PlayerControlSessionManager {
         private long viewSnapshotSequence;
         private int lastDirectionMask;
         private int struggle;
+        private float struggleRemainder;
         private int invalidMoves;
         private Vec3 lastGoodPosition;
         private PlayerControlFrame authorizedFrame = PlayerControlFrame.NEUTRAL;
