@@ -52,6 +52,30 @@ public record VectorCompatProfile(
         radius = Math.min(radius, 8.0);
     }
 
+    public static String damageTypeId(DamageSource source) {
+        return source.typeHolder().unwrapKey()
+                .map(key -> key.identifier().toString().toLowerCase(Locale.ROOT))
+                .orElseGet(() -> source.getMsgId().toLowerCase(Locale.ROOT));
+    }
+
+    private static List<String> normalize(List<String> values) {
+        if (values == null || values.isEmpty()) return List.of();
+        return values.stream()
+                .filter(value -> value != null)
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .distinct()
+                .toList();
+    }
+
+    private static <E extends Enum<E>> Codec<E> enumCodec(Class<E> type) {
+        return Codec.STRING.xmap(
+                value -> Enum.valueOf(type, value.toUpperCase(Locale.ROOT)),
+                value -> value.name().toLowerCase(Locale.ROOT)
+        );
+    }
+
     public boolean matches(DamageSource source) {
         if (damageTypes.isEmpty() && directEntityTypes.isEmpty()) return false;
         var damageTypeId = damageTypeId(source);
@@ -75,30 +99,6 @@ public record VectorCompatProfile(
                 visual,
                 piercing ? VectorExecutionPolicy.HARD_MAXIMUM_TARGETS : 1,
                 range
-        );
-    }
-
-    public static String damageTypeId(DamageSource source) {
-        return source.typeHolder().unwrapKey()
-                .map(key -> key.identifier().toString().toLowerCase(Locale.ROOT))
-                .orElseGet(() -> source.getMsgId().toLowerCase(Locale.ROOT));
-    }
-
-    private static List<String> normalize(List<String> values) {
-        if (values == null || values.isEmpty()) return List.of();
-        return values.stream()
-                .filter(value -> value != null)
-                .map(String::trim)
-                .filter(value -> !value.isEmpty())
-                .map(value -> value.toLowerCase(Locale.ROOT))
-                .distinct()
-                .toList();
-    }
-
-    private static <E extends Enum<E>> Codec<E> enumCodec(Class<E> type) {
-        return Codec.STRING.xmap(
-                value -> Enum.valueOf(type, value.toUpperCase(Locale.ROOT)),
-                value -> value.name().toLowerCase(Locale.ROOT)
         );
     }
 

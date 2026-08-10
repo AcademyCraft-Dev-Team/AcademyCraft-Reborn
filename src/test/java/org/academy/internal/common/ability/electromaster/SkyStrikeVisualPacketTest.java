@@ -12,7 +12,7 @@ class SkyStrikeVisualPacketTest {
     void codecRoundTripsImpactSeedAndProfile() {
         var expected = new SkyStrikeVisualPacket(
                 new Vec3(12.25, 80.0, -41.75),
-                0x1234_5678_9abcl,
+                0x1234_5678_9abcL,
                 SkyStrikeProfile.THUNDERCLAP
         );
         var buffer = Unpooled.buffer();

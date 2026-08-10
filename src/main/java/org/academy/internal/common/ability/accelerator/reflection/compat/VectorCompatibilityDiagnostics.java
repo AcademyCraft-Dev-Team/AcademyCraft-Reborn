@@ -22,8 +22,8 @@ public final class VectorCompatibilityDiagnostics {
                 attack.attribution().directEntity() == null
                         ? "none"
                         : BuiltInRegistries.ENTITY_TYPE.getKey(
-                                attack.attribution().directEntity().getType()
-                        ).toString(),
+                        attack.attribution().directEntity().getType()
+                ).toString(),
                 attack.direction(),
                 attack.confidence(),
                 attack.tier(),
@@ -65,7 +65,7 @@ public final class VectorCompatibilityDiagnostics {
     public record Entry(
             String damageType,
             String directEntityType,
-            net.minecraft.world.phys.Vec3 direction,
+            Vec3 direction,
             VectorAttackConfidence confidence,
             VectorCompatibilityTier tier,
             String outcome,

@@ -1,6 +1,7 @@
 package org.academy.internal.client.hud;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 
 public final class HudLayout {
     public static final float MIN_SCALE = 0.5f;
@@ -18,10 +19,12 @@ public final class HudLayout {
     private HudLayout() {
     }
 
-    public record Rect(float x, float y, float width, float height) {
-        public boolean contains(double px, double py) {
-            return px >= x && px <= x + width && py >= y && py <= y + height;
-        }
+    public static void resetAll() {
+        for (var region : Region.values()) region.reset();
+    }
+
+    private static float validScale(float scale) {
+        return Float.isFinite(scale) ? Mth.clamp(scale, MIN_SCALE, MAX_SCALE) : 1.0f;
     }
 
     public enum Region {
@@ -54,12 +57,12 @@ public final class HudLayout {
                 case CP -> validScale(config.cpHudScale);
                 case SKILL_WHEEL -> validScale(config.skillWheelHudScale);
             };
-            return validScale(HudLayoutDefaults.region(configKey).getScale() * userScale);
+            return validScale(HudLayoutDefaults.INSTANCE.region(configKey).getScale() * userScale);
         }
 
         public void setScale(float scale) {
-            var baseScale = HudLayoutDefaults.region(configKey).getScale();
-            var value = Math.clamp(scale / Math.max(MIN_SCALE, baseScale), MIN_SCALE, MAX_SCALE);
+            var baseScale = HudLayoutDefaults.INSTANCE.region(configKey).getScale();
+            var value = Mth.clamp(scale / Math.max(MIN_SCALE, baseScale), MIN_SCALE, MAX_SCALE);
             var config = HudLayoutConfig.get();
             switch (this) {
                 case TOGGLE_STATUS -> config.toggleStatusHudScale = value;
@@ -70,14 +73,14 @@ public final class HudLayout {
         }
 
         public Rect rect(Minecraft minecraft) {
-            return rect(minecraft, HudLayoutDefaults.get(), true);
+            return rect(minecraft, HudLayoutDefaults.INSTANCE.get(), true);
         }
 
         public Rect rect(Minecraft minecraft, HudLayoutDefaults.Config defaults, boolean includePlayerConfig) {
             var screenWidth = minecraft.getWindow().getGuiScaledWidth();
             var screenHeight = minecraft.getWindow().getGuiScaledHeight();
             var defaultsValue = defaults.getRegions().get(configKey);
-            if (defaultsValue == null) defaultsValue = HudLayoutDefaults.defaults().getRegions().get(configKey);
+            if (defaultsValue == null) defaultsValue = HudLayoutDefaults.INSTANCE.defaults().getRegions().get(configKey);
             var userScale = includePlayerConfig ? userScale() : 1.0f;
             var scale = validScale(defaultsValue.getScale() * userScale);
             var width = nominalWidth() * scale;
@@ -101,9 +104,9 @@ public final class HudLayout {
             var current = rect(minecraft);
             var screenWidth = minecraft.getWindow().getGuiScaledWidth();
             var screenHeight = minecraft.getWindow().getGuiScaledHeight();
-            var clampedLeft = Math.clamp(left, 0.0, Math.max(0.0, screenWidth - current.width));
-            var clampedTop = Math.clamp(top, 0.0, Math.max(0.0, screenHeight - current.height));
-            var defaultsValue = HudLayoutDefaults.region(configKey);
+            var clampedLeft = Mth.clamp(left, 0.0, Math.max(0.0, screenWidth - current.width));
+            var clampedTop = Mth.clamp(top, 0.0, Math.max(0.0, screenHeight - current.height));
+            var defaultsValue = HudLayoutDefaults.INSTANCE.region(configKey);
             var baseX = switch (defaultsValue.getAnchor()) {
                 case TOP_LEFT, CENTER_LEFT -> defaultsValue.getOffsetX();
                 case TOP_RIGHT, CENTER_RIGHT -> screenWidth - current.width + defaultsValue.getOffsetX();
@@ -216,11 +219,9 @@ public final class HudLayout {
         }
     }
 
-    public static void resetAll() {
-        for (var region : Region.values()) region.reset();
-    }
-
-    private static float validScale(float scale) {
-        return Float.isFinite(scale) ? Math.clamp(scale, MIN_SCALE, MAX_SCALE) : 1.0f;
+    public record Rect(float x, float y, float width, float height) {
+        public boolean contains(double px, double py) {
+            return px >= x && px <= x + width && py >= y && py <= y + height;
+        }
     }
 }

@@ -5,6 +5,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
@@ -18,6 +19,7 @@ import org.academy.api.common.util.LevelUtil;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import org.jspecify.annotations.Nullable;
 
@@ -45,6 +47,38 @@ public class Plasma extends RenderOnlyEntity {
         super(entityType, level);
         noPhysics = true;
         setNoGravity(true);
+    }
+
+    private static void destroyExplosionBlocks(
+            ServerLevel level,
+            ServerPlayer owner,
+            Vec3 center,
+            float radius
+    ) {
+        final var rayCount = 24;
+        final var goldenAngle = Mth.PI * (3.0 - Mth.sqrt((float) (5.0)));
+        for (var index = 0; index < rayCount; index++) {
+            var y = 1.0 - 2.0 * (index + 0.5) / rayCount;
+            var horizontal = Mth.sqrt((float) (Math.max(0.0, 1.0 - y * y)));
+            var angle = index * goldenAngle;
+            var direction = new Vec3(
+                    Mth.cos(angle) * horizontal,
+                    y,
+                    Mth.sin(angle) * horizontal
+            );
+            LevelUtil.destroyBlocksAlongPath(
+                    level,
+                    center,
+                    center.add(direction.scale(radius)),
+                    0.7f,
+                    3,
+                    false,
+                    true,
+                    true,
+                    false,
+                    owner
+            );
+        }
     }
 
     @Override
@@ -112,7 +146,7 @@ public class Plasma extends RenderOnlyEntity {
             var source = SkillDamageSource.of(
                     owner,
                     Skills.PLASMA_GENERATION.get(),
-                    org.academy.internal.common.world.damagesource.DamageTypes.VEC
+                    DamageTypes.VEC
             );
             var radiusSquared = damageRadius * damageRadius;
             var area = new AABB(impact, impact).inflate(damageRadius);
@@ -143,38 +177,6 @@ public class Plasma extends RenderOnlyEntity {
 
         if (destroyBlocks && owner != null && explosionPower > 0.0f) {
             destroyExplosionBlocks(level, owner, impact, explosionPower);
-        }
-    }
-
-    private static void destroyExplosionBlocks(
-            ServerLevel level,
-            net.minecraft.server.level.ServerPlayer owner,
-            Vec3 center,
-            float radius
-    ) {
-        final var rayCount = 24;
-        final var goldenAngle = Math.PI * (3.0 - Math.sqrt(5.0));
-        for (var index = 0; index < rayCount; index++) {
-            var y = 1.0 - 2.0 * (index + 0.5) / rayCount;
-            var horizontal = Math.sqrt(Math.max(0.0, 1.0 - y * y));
-            var angle = index * goldenAngle;
-            var direction = new Vec3(
-                    Math.cos(angle) * horizontal,
-                    y,
-                    Math.sin(angle) * horizontal
-            );
-            LevelUtil.destroyBlocksAlongPath(
-                    level,
-                    center,
-                    center.add(direction.scale(radius)),
-                    0.7f,
-                    3,
-                    false,
-                    true,
-                    true,
-                    false,
-                    owner
-            );
         }
     }
 

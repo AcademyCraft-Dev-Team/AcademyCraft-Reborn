@@ -37,8 +37,7 @@ import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBloc
 import org.apache.commons.lang3.RandomStringUtils
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.atan2
-import kotlin.math.sqrt
+import net.minecraft.util.Mth
 
 class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()) {
     private val blockEntity: AbilityDeveloperBlockEntity
@@ -221,7 +220,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             logoAbility.addChild("icon", icon)
         }
 
-        val categoryKey = category.getKey()
+        val categoryKey = category.key
         val translationKey = "ability_category.${categoryKey.namespace}.${categoryKey.path}"
         val translatedName = Language.getInstance().getOrDefault(translationKey)
             .takeUnless { it == translationKey }
@@ -653,7 +652,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val debugLabel = object : LabelWidget("") {
             override fun render(context: RenderContext) {
                 text = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "LAYOUT: ${layoutCategory.getKey()} / ${coursePage.name.lowercase()}  (drag icons; snap 0.5px)"
+                    "LAYOUT: ${layoutCategory.key} / ${coursePage.name.lowercase()}  (drag icons; snap 0.5px)"
                 } else {
                     ""
                 }
@@ -783,7 +782,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val depCy = depPos.y() + 8f
         val dx = depCx - childCx
         val dy = depCy - childCy
-        val dist = sqrt(dx * dx + dy * dy)
+        val dist = Mth.sqrt(dx * dx + dy * dy)
         val shortDist = (dist - 24.4f).coerceAtLeast(0f)
         val ux = if (dist > 0f) dx / dist * 12.2f else 0f
         val uy = if (dist > 0f) dy / dist * 12.2f else 0f
@@ -791,7 +790,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         lp.marginLeft = childCx + ux
         lp.marginTop = childCy + uy - 2.25f
         line.width = shortDist
-        line.rotation = if (dist > 0f) Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() else 0f
+        line.rotation = if (dist > 0f) (Mth.atan2(dy.toDouble(), dx.toDouble()) * Mth.RAD_TO_DEG).toFloat() else 0f
     }
 
     private fun updateSkillLines() {
@@ -829,11 +828,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     area.requestLayout()
                 }
                 tooltipText = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "${category.getKey()}\n${info.skill.getKeyString()}  (${position.x()}, ${position.y()})"
+                    "${category.key}\n${info.skill.getKeyString()}  (${position.x()}, ${position.y()})"
                 } else if (isLearned) {
                     val proficiency = AbilitySystemClient.getSkillProficiency(info.skill)
                     "${info.skill.translatedName}\n${L10n["academy.ability_developer.skill_exp"]}" +
-                        String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
+                            String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
                 } else {
                     info.skill.translatedName
                 }
@@ -1331,7 +1330,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     val expLabel =
                         LabelWidget(
                             L10n["academy.ability_developer.skill_exp"] +
-                                String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
+                                    String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
                         )
                     expLabel.baseFontSize = 8f
                     expLabel.setRed(0.63f)

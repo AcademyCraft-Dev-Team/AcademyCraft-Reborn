@@ -11,7 +11,9 @@ import org.academy.internal.common.ability.darkmatter.skills.DarkmatterDisassemb
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
 
-/** Server-owned ability selection for a player acting on an explicit forced target. */
+/**
+ * Server-owned ability selection for a player acting on an explicit forced target.
+ */
 final class ControlledPlayerCombat {
     private ControlledPlayerCombat() {
     }

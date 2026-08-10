@@ -5,12 +5,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.internal.common.sounds.SoundEvents;
 
 import java.util.Map;
 import java.util.Optional;
@@ -48,13 +49,15 @@ public final class AeromanipFieldManager {
         AeromanipFieldSyncPacket.sendToTracking(player, field, true);
         var sound = field.type() == AirflowField.Type.VACUUM
                 || field.type() == AirflowField.Type.ATMOSPHERIC_DOMINION
-                ? org.academy.internal.common.sounds.SoundEvents.AIRFLOW_DOMAIN.get()
-                : org.academy.internal.common.sounds.SoundEvents.AIRFLOW_FIELD.get();
+                ? SoundEvents.AIRFLOW_DOMAIN.get()
+                : SoundEvents.AIRFLOW_FIELD.get();
         player.level().playSound(null, player.blockPosition(), sound,
                 SoundSource.PLAYERS, 0.55f, 0.9f + player.getRandom().nextFloat() * 0.2f);
     }
 
-    /** Activates a personal flow state without replacing the player's placed domain. */
+    /**
+     * Activates a personal flow state without replacing the player's placed domain.
+     */
     public static void activatePersonal(
             ServerPlayer player,
             Skill skill,
@@ -116,7 +119,8 @@ public final class AeromanipFieldManager {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        private Events() { }
+        private Events() {
+        }
 
         @SubscribeEvent
         public static void onServerStopping(ServerStoppingEvent event) {

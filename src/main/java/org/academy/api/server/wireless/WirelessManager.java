@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.util.Mth;
 
 public class WirelessManager {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -275,7 +276,7 @@ public class WirelessManager {
 
         var transferRate = Math.max(0, node.getEnergyTransferRate());
         var maxEnergy = Math.max(0, node.getMaxEnergyStorage());
-        var energyStored = Math.clamp(node.getEnergyStored(), 0, maxEnergy);
+        var energyStored = Mth.clamp(node.getEnergyStored(), 0, maxEnergy);
         if (transferRate == 0 || maxEnergy == 0) return;
 
         var extractSources = new ArrayList<TransferCandidate>();
@@ -301,8 +302,8 @@ public class WirelessManager {
                     ? node.insertIntoUser(user, transferRate, true)
                     : 0;
 
-            canExtract = Math.clamp(canExtract, 0, transferRate);
-            canInsert = Math.clamp(canInsert, 0, transferRate);
+            canExtract = Mth.clamp(canExtract, 0, transferRate);
+            canInsert = Mth.clamp(canInsert, 0, transferRate);
 
             if (canExtract > 0) {
                 extractSources.add(new TransferCandidate(user, canExtract, receiveWeight));
@@ -342,7 +343,7 @@ public class WirelessManager {
             var allocatedThisRound = 0;
             for (var candidate : candidates) {
                 if (!candidate.hasCapacity() || !candidate.hasWeight()) continue;
-                var share = (int) Math.floor(roundBudget * (candidate.weight / totalWeight));
+                var share = Mth.floor(roundBudget * (candidate.weight / totalWeight));
                 var allocated = Math.min(share, candidate.remainingCapacity());
                 if (allocated <= 0) continue;
                 candidate.allocated += allocated;
@@ -365,7 +366,7 @@ public class WirelessManager {
         var movedTotal = 0;
         for (var candidate : candidates) {
             if (candidate.allocated == 0) continue;
-            var moved = Math.clamp(mover.move(candidate.user, candidate.allocated, false), 0, candidate.allocated);
+            var moved = Mth.clamp(mover.move(candidate.user, candidate.allocated, false), 0, candidate.allocated);
             movedTotal += moved;
         }
         return movedTotal;

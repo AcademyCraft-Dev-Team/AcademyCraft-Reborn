@@ -44,8 +44,6 @@ object DecoderFactory {
         if (data.remaining() < 3) return false
         val pos = data.position()
 
-        if (data.get(pos) == 'I'.code.toByte() && data.get(pos + 1) == 'D'.code.toByte() && data.get(pos + 2) == '3'.code.toByte()) return true
-
-        return (data.get(pos).toInt() and 0xFF) == 0xFF && (data.get(pos + 1).toInt() and 0xE0) == 0xE0
+        return data.get(pos) == 'I'.code.toByte() && data.get(pos + 1) == 'D'.code.toByte() && data.get(pos + 2) == '3'.code.toByte() || (data.get(pos).toInt() and 0xFF) == 0xFF && (data.get(pos + 1).toInt() and 0xE0) == 0xE0
     }
 }

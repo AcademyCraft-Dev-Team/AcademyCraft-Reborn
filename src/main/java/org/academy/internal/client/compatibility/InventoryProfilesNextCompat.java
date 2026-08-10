@@ -3,7 +3,9 @@ package org.academy.internal.client.compatibility;
 import net.neoforged.fml.ModList;
 import org.academy.AcademyCraft;
 
-/** Compatibility bootstrap for Inventory Profiles Next 2.3.5 on Minecraft 26.2. */
+/**
+ * Compatibility bootstrap for Inventory Profiles Next 2.3.5 on Minecraft 26.2.
+ */
 public final class InventoryProfilesNextCompat {
     private static final String MOD_ID = "inventoryprofilesnext";
     private static final String CONFIG_ROOT = "org.anti_ad.mc.ipnext.config.ConfigScreenSettings";

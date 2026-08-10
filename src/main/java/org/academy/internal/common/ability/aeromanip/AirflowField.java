@@ -52,6 +52,29 @@ public record AirflowField(
         proficiencyMilestone = Math.max(0, Math.min(3, proficiencyMilestone));
     }
 
+    static double distanceToSegmentSqr(Vec3 point, Vec3 start, Vec3 end) {
+        var segment = end.subtract(start);
+        var lengthSqr = segment.lengthSqr();
+        if (lengthSqr <= 1.0e-8) return point.distanceToSqr(start);
+        var t = Math.max(0.0, Math.min(1.0, point.subtract(start).dot(segment) / lengthSqr));
+        return point.distanceToSqr(start.add(segment.scale(t)));
+    }
+
+    private static boolean finite(Vec3 value) {
+        return value != null
+                && Double.isFinite(value.x)
+                && Double.isFinite(value.y)
+                && Double.isFinite(value.z);
+    }
+
+    private static double finitePositive(double value) {
+        return Double.isFinite(value) ? Math.max(0.0, value) : 0.0;
+    }
+
+    private static double square(double value) {
+        return value * value;
+    }
+
     public boolean contains(Vec3 point, double padding) {
         if (!finite(point)) return false;
         var expanded = Math.max(0.0, padding);
@@ -76,29 +99,6 @@ public record AirflowField(
         if (forward < 0.0 || forward > length + padding) return false;
         var allowedRadius = radius * (forward / Math.max(1.0e-6, length)) + padding;
         return delta.subtract(direction.scale(forward)).lengthSqr() <= square(allowedRadius);
-    }
-
-    static double distanceToSegmentSqr(Vec3 point, Vec3 start, Vec3 end) {
-        var segment = end.subtract(start);
-        var lengthSqr = segment.lengthSqr();
-        if (lengthSqr <= 1.0e-8) return point.distanceToSqr(start);
-        var t = Math.max(0.0, Math.min(1.0, point.subtract(start).dot(segment) / lengthSqr));
-        return point.distanceToSqr(start.add(segment.scale(t)));
-    }
-
-    private static boolean finite(Vec3 value) {
-        return value != null
-                && Double.isFinite(value.x)
-                && Double.isFinite(value.y)
-                && Double.isFinite(value.z);
-    }
-
-    private static double finitePositive(double value) {
-        return Double.isFinite(value) ? Math.max(0.0, value) : 0.0;
-    }
-
-    private static double square(double value) {
-        return value * value;
     }
 
     public enum Type {

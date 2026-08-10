@@ -15,7 +15,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import org.academy.AcademyCraft;
@@ -53,11 +52,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+import net.minecraft.util.Mth;
 
 public final class ReflectionFilter extends Skill {
     static final int MAX_EFFECT_LIST_SIZE = 256;
@@ -69,35 +65,13 @@ public final class ReflectionFilter extends Skill {
                 .energyCost(60_000)
                 .maxStacks(1)
                 .dependsOn(Skills.VECTOR_REFLECTION)
-                .withCustomData(Data.ID, Data.class, _ -> new Data())
+                .withCustomData(Data.ID, Data.class, Data::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition(
                         "Vector Reflection",
                         "academy:vector_reflection"
                 ))
         );
-    }
-
-    @Override
-    public void initClient() {
-        var key = getKey();
-        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_OPEN,
-                InputSystem.combo(
-                        InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_BACKSLASH,
-                        InputConstants.PRESS,
-                        0
-                )
-        ), _ -> Client.open());
-        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
-    }
-
-    @Override
-    public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public static boolean shouldAcceptEffect(Data data, MobEffectInstance effect) {
@@ -177,6 +151,67 @@ public final class ReflectionFilter extends Skill {
         var id = Identifier.tryParse(raw.strip());
         if (id == null || !BuiltInRegistries.MOB_EFFECT.keySet().contains(id)) return null;
         return id.toString();
+    }
+
+    private static void writeFilterPayload(
+            ByteBuf buf,
+            String mode,
+            List<String> whitelist,
+            List<String> blacklist,
+            boolean forcedMovementProtection
+    ) {
+        ByteBufCodecs.STRING_UTF8.encode(buf, Mode.byName(mode).name());
+        writeStringList(buf, whitelist);
+        writeStringList(buf, blacklist);
+        ByteBufCodecs.BOOL.encode(buf, forcedMovementProtection);
+    }
+
+    private static FilterPayload readFilterPayload(ByteBuf buf) {
+        return new FilterPayload(
+                ByteBufCodecs.STRING_UTF8.decode(buf),
+                readStringList(buf),
+                readStringList(buf),
+                ByteBufCodecs.BOOL.decode(buf)
+        );
+    }
+
+    private static void writeStringList(ByteBuf buf, List<String> values) {
+        var safe = values == null ? List.<String>of() : values;
+        var size = Math.min(safe.size(), MAX_EFFECT_LIST_SIZE);
+        ByteBufCodecs.VAR_INT.encode(buf, size);
+        for (var i = 0; i < size; i++) ByteBufCodecs.STRING_UTF8.encode(buf, safe.get(i));
+    }
+
+    private static List<String> readStringList(ByteBuf buf) {
+        var size = ByteBufCodecs.VAR_INT.decode(buf);
+        if (size < 0 || size > MAX_EFFECT_LIST_SIZE) {
+            throw new DecoderException("Reflection filter list size out of range: " + size);
+        }
+        var result = new ArrayList<String>(size);
+        for (var i = 0; i < size; i++) result.add(ByteBufCodecs.STRING_UTF8.decode(buf));
+        return result;
+    }
+
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_OPEN,
+                InputSystem.combo(
+                        InputSystem.InputType.KEYBOARD,
+                        InputConstants.KEY_BACKSLASH,
+                        InputConstants.PRESS,
+                        0
+                )
+        ), _ -> Client.open());
+        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
     public enum Mode {
@@ -276,7 +311,7 @@ public final class ReflectionFilter extends Skill {
             var raw = map.get(skill.getKeyString());
             if (raw instanceof Data data) return normalizeData(data);
 
-            var data = (Data) skill.createData(player);
+            var data = (Data) skill.createData();
             if (raw != null) mergeProgress(data, raw);
             map.put(skill.getKeyString(), data);
             playerData.markDirty();
@@ -423,21 +458,70 @@ public final class ReflectionFilter extends Skill {
             rebuildAllEffects();
         }
 
+        private static void addLayoutSlot(
+                FrameLayoutWidget panel,
+                String name,
+                int x,
+                int y,
+                int width,
+                int height
+        ) {
+            var slot = new EmptyWidget();
+            slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
+            panel.addChild(name, slot);
+        }
+
+        private static Component modeDescription(Mode mode) {
+            return switch (mode) {
+                case REFLECT_ALL -> Component.translatable("screen.academy.reflection_filter.mode.all.desc");
+                case POSITIVE_FILTER -> Component.translatable("screen.academy.reflection_filter.mode.positive.desc");
+                case NEUTRAL_FILTER -> Component.translatable("screen.academy.reflection_filter.mode.neutral.desc");
+            };
+        }
+
+        private static int categoryColor(MobEffectCategory category) {
+            if (category == MobEffectCategory.BENEFICIAL) return GOOD;
+            if (category == MobEffectCategory.HARMFUL) return BAD;
+            return NEUTRAL;
+        }
+
+        private static void drawScrollBar(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
+                                          int scroll, int maxScroll) {
+            DataTerminalTheme.scrollBar(graphics, x, y, width, height, scroll, maxScroll, ACCENT);
+        }
+
+        private static int maxScroll(int size, int visible) {
+            return Math.max(0, size - visible);
+        }
+
+        private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
+            return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
+        }
+
+        private static Rect rect(Widget widget) {
+            return new Rect(
+                    Math.round(widget.getAbsoluteX()),
+                    Math.round(widget.getAbsoluteY()),
+                    Math.round(widget.getWidth()),
+                    Math.round(widget.getHeight())
+            );
+        }
+
         @Override
         protected void onInit() {
             var compact = width < PREFERRED_W + 24 || height < PREFERRED_H + 24;
             serializedLayoutId = "reflection_filter_" + (compact ? "compact" : "wide");
-            var layout = SerializedUiLayout.loadBundled(
+            var layout = SerializedUiLayout.INSTANCE.loadBundled(
                     AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
                     List.of("panel", "left_column", "middle_column", "right_column", "title_accent"),
                     () -> fallbackLayout(compact)
             );
             serializedLayout = layout;
             getRoot().addChild("serialized_layout", layout);
-            panelLayout = SerializedUiLayout.require(layout, "panel");
-            leftColumnLayout = SerializedUiLayout.require(layout, "left_column");
-            middleColumnLayout = SerializedUiLayout.require(layout, "middle_column");
-            rightColumnLayout = SerializedUiLayout.require(layout, "right_column");
+            panelLayout = SerializedUiLayout.INSTANCE.require(layout, "panel");
+            leftColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "left_column");
+            middleColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "middle_column");
+            rightColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "right_column");
 
             panelW = Math.min(PREFERRED_W, Math.max(MIN_W, width - 24));
             panelW = Math.min(panelW, width - 12);
@@ -490,19 +574,6 @@ public final class ReflectionFilter extends Skill {
                     30, rightWidth, fallbackHeight - 30);
             layout.addChild("panel", panel);
             return layout;
-        }
-
-        private static void addLayoutSlot(
-                FrameLayoutWidget panel,
-                String name,
-                int x,
-                int y,
-                int width,
-                int height
-        ) {
-            var slot = new EmptyWidget();
-            slot.setLayoutParams(new FrameLayoutWidget.LayoutParams().size(width, height).margin(x, y, 0, 0));
-            panel.addChild(name, slot);
         }
 
         private void syncSerializedLayout() {
@@ -559,7 +630,7 @@ public final class ReflectionFilter extends Skill {
                     filteredEffects.add(entry);
                 }
             }
-            effectScroll = Math.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), effectVisibleRows()));
+            effectScroll = Mth.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), effectVisibleRows()));
         }
 
         @Override
@@ -591,7 +662,7 @@ public final class ReflectionFilter extends Skill {
 
         private void renderEffects(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
             var visible = effectVisibleRows();
-            effectScroll = Math.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), visible));
+            effectScroll = Mth.clamp(effectScroll, 0, maxScroll(filteredEffects.size(), visible));
             graphics.enableScissor(leftX + 4, listY, leftX + leftW - 4, listBottom);
             for (var row = 0; row < visible && effectScroll + row < filteredEffects.size(); row++) {
                 var entry = filteredEffects.get(effectScroll + row);
@@ -674,7 +745,7 @@ public final class ReflectionFilter extends Skill {
         private void renderIdList(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                   List<String> ids, int x, int width, boolean white) {
             var visible = sideVisibleRows();
-            var scroll = Math.clamp(white ? whiteScroll : blackScroll, 0, maxScroll(ids.size(), visible));
+            var scroll = Mth.clamp(white ? whiteScroll : blackScroll, 0, maxScroll(ids.size(), visible));
             if (white) whiteScroll = scroll;
             else blackScroll = scroll;
             graphics.enableScissor(x, sideListY, x + width, sideListBottom);
@@ -793,20 +864,20 @@ public final class ReflectionFilter extends Skill {
 
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-            var step = (int) Math.signum(scrollY);
+            var step = Mth.sign(scrollY);
             if (inside(mouseX, mouseY, leftX, listY, leftW, listBottom - listY)) {
-                effectScroll = Math.clamp(effectScroll - step, 0,
+                effectScroll = Mth.clamp(effectScroll - step, 0,
                         maxScroll(filteredEffects.size(), effectVisibleRows()));
                 return true;
             }
             var listW = (rightW - 8) / 2;
             if (inside(mouseX, mouseY, whiteX, sideListY, listW, sideListBottom - sideListY)) {
-                whiteScroll = Math.clamp(whiteScroll - step, 0,
+                whiteScroll = Mth.clamp(whiteScroll - step, 0,
                         maxScroll(data.whitelist.size(), sideVisibleRows()));
                 return true;
             }
             if (inside(mouseX, mouseY, blackX, sideListY, listW, sideListBottom - sideListY)) {
-                blackScroll = Math.clamp(blackScroll - step, 0,
+                blackScroll = Mth.clamp(blackScroll - step, 0,
                         maxScroll(data.blacklist.size(), sideVisibleRows()));
                 return true;
             }
@@ -852,20 +923,6 @@ public final class ReflectionFilter extends Skill {
             return id;
         }
 
-        private static Component modeDescription(Mode mode) {
-            return switch (mode) {
-                case REFLECT_ALL -> Component.translatable("screen.academy.reflection_filter.mode.all.desc");
-                case POSITIVE_FILTER -> Component.translatable("screen.academy.reflection_filter.mode.positive.desc");
-                case NEUTRAL_FILTER -> Component.translatable("screen.academy.reflection_filter.mode.neutral.desc");
-            };
-        }
-
-        private static int categoryColor(MobEffectCategory category) {
-            if (category == MobEffectCategory.BENEFICIAL) return GOOD;
-            if (category == MobEffectCategory.HARMFUL) return BAD;
-            return NEUTRAL;
-        }
-
         private void fillSection(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
             DataTerminalTheme.section(graphics, x, y, width, height);
         }
@@ -880,19 +937,6 @@ public final class ReflectionFilter extends Skill {
                     x + width / 2, y + (height - 8) / 2, color);
         }
 
-        private static void drawScrollBar(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
-                                          int scroll, int maxScroll) {
-            DataTerminalTheme.scrollBar(graphics, x, y, width, height, scroll, maxScroll, ACCENT);
-        }
-
-        private static int maxScroll(int size, int visible) {
-            return Math.max(0, size - visible);
-        }
-
-        private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
-            return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
-        }
-
         @Override
         public String debugLayoutId() {
             return serializedLayoutId;
@@ -901,15 +945,6 @@ public final class ReflectionFilter extends Skill {
         @Override
         public FrameLayoutWidget debugLayoutRoot() {
             return serializedLayout;
-        }
-
-        private static Rect rect(Widget widget) {
-            return new Rect(
-                    Math.round(widget.getAbsoluteX()),
-                    Math.round(widget.getAbsoluteY()),
-                    Math.round(widget.getWidth()),
-                    Math.round(widget.getHeight())
-            );
         }
 
         private record EffectEntry(String id, String name, MobEffectCategory category) {
@@ -1011,45 +1046,6 @@ public final class ReflectionFilter extends Skill {
         public PacketType<ClientPacketListener, SyncPacket> getPacketType() {
             return PacketTypes.REFLECTION_FILTER_SYNC.get();
         }
-    }
-
-    private static void writeFilterPayload(
-            ByteBuf buf,
-            String mode,
-            List<String> whitelist,
-            List<String> blacklist,
-            boolean forcedMovementProtection
-    ) {
-        ByteBufCodecs.STRING_UTF8.encode(buf, Mode.byName(mode).name());
-        writeStringList(buf, whitelist);
-        writeStringList(buf, blacklist);
-        ByteBufCodecs.BOOL.encode(buf, forcedMovementProtection);
-    }
-
-    private static FilterPayload readFilterPayload(ByteBuf buf) {
-        return new FilterPayload(
-                ByteBufCodecs.STRING_UTF8.decode(buf),
-                readStringList(buf),
-                readStringList(buf),
-                ByteBufCodecs.BOOL.decode(buf)
-        );
-    }
-
-    private static void writeStringList(ByteBuf buf, List<String> values) {
-        var safe = values == null ? List.<String>of() : values;
-        var size = Math.min(safe.size(), MAX_EFFECT_LIST_SIZE);
-        ByteBufCodecs.VAR_INT.encode(buf, size);
-        for (var i = 0; i < size; i++) ByteBufCodecs.STRING_UTF8.encode(buf, safe.get(i));
-    }
-
-    private static List<String> readStringList(ByteBuf buf) {
-        var size = ByteBufCodecs.VAR_INT.decode(buf);
-        if (size < 0 || size > MAX_EFFECT_LIST_SIZE) {
-            throw new DecoderException("Reflection filter list size out of range: " + size);
-        }
-        var result = new ArrayList<String>(size);
-        for (var i = 0; i < size; i++) result.add(ByteBufCodecs.STRING_UTF8.decode(buf));
-        return result;
     }
 
     private record FilterPayload(

@@ -13,10 +13,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Server-side class-pointer integrity, removal recovery, and observer reconstruction. */
+/**
+ * Server-side class-pointer integrity, removal recovery, and observer reconstruction.
+ */
 public final class VectorReflectionRuntime {
     private static final Map<UUID, Anchor> ANCHORS = new ConcurrentHashMap<>();
     private static final long OBSERVER_REBUILD_COOLDOWN = 20L;
+
+    private VectorReflectionRuntime() {
+    }
 
     public static void maintain(ServerPlayer player) {
         if (player == null) return;
@@ -188,8 +193,5 @@ public final class VectorReflectionRuntime {
             this.player = new WeakReference<>(player);
             lastSafePosition = finite(player.position()) ? player.position() : Vec3.ZERO;
         }
-    }
-
-    private VectorReflectionRuntime() {
     }
 }

@@ -2,15 +2,13 @@ package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.academy.api.client.input.InputSystem;
@@ -28,6 +26,7 @@ import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.mixin.common.EntitySharedFlagInvoker;
 import org.misaka.MisakaNetworkServer;
 
@@ -35,11 +34,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_W;
+import static org.lwjgl.glfw.GLFW.*;
 
 final class WingFlightSupport {
     static final double ATTACK_RANGE = 32.0;
@@ -177,7 +172,7 @@ final class WingFlightSupport {
     }
 
     static int fanAttack(ServerPlayer player, Skill skill) {
-        var level = (ServerLevel) player.level();
+        var level = player.level();
         var origin = player.getEyePosition();
         var forward = player.getLookAngle().normalize();
         var advancedBlackSweep = skill == Skills.BLACK_WING.get()
@@ -194,7 +189,7 @@ final class WingFlightSupport {
         var source = SkillDamageSource.of(
                 player,
                 skill,
-                org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                DamageTypes.CTA
         );
         var hitCount = new int[1];
 
@@ -291,7 +286,7 @@ final class WingFlightSupport {
                 -24.0f + random.nextFloat() * 48.0f,
                 -8.0f + random.nextFloat() * 16.0f
         );
-        for (var other : ((ServerLevel) player.level()).players()) {
+        for (var other : player.level().players()) {
             if (other.distanceToSqr(player) <= 128.0 * 128.0) {
                 MisakaNetworkServer.send(other, packet);
             }

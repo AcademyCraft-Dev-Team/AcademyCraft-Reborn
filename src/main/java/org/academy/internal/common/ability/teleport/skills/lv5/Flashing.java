@@ -52,10 +52,7 @@ import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.ArrayDeque;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_W;
+import static org.lwjgl.glfw.GLFW.*;
 
 public final class Flashing extends Skill {
     static final double DASH_DISTANCE = 8.0;
@@ -116,8 +113,8 @@ public final class Flashing extends Skill {
                 )
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.FLASHING + "_toggle";
-        public static Config CONFIG = new Config();
         private static final int[] HOLD_TICKS = new int[Direction.values().length];
+        public static Config CONFIG = new Config();
 
         private Client() {
         }

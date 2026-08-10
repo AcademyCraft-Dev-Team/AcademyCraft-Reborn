@@ -22,7 +22,6 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.lang.reflect.Method;
 import java.util.UUID;
 
 public final class FriendlyFireSetting {
@@ -57,7 +56,7 @@ public final class FriendlyFireSetting {
         if (attacker == null || target == null || isFriendlyFireEnabled(attacker)) return false;
         if (target instanceof Player victim && victim != attacker && attacker.isAlliedTo(victim)) return true;
         var owner = getOwnerEntity(target);
-        if (owner == attacker || owner != null && attacker.isAlliedTo(owner)) return true;
+        if (owner == attacker || attacker.isAlliedTo(owner)) return true;
         if (isConfluenceFriendly(target)) return true;
         var ownerId = getOwnerUuid(target);
         return ownerId != null && ownerId.equals(attacker.getUUID());

@@ -1,16 +1,16 @@
 package org.academy.mixin.common;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
+import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -71,9 +71,9 @@ public abstract class MixinProjectile {
         if (projectile.level().isClientSide()) return;
         pow = KineticEnergyApplied.Server.onProjectileShoot(projectile, source, pow);
 
-        var f = -Mth.sin(yRot * ((float) Math.PI / 180F)) * Mth.cos(xRot * ((float) Math.PI / 180F));
-        var f1 = -Mth.sin((xRot + yOffset) * ((float) Math.PI / 180F));
-        var f2 = Mth.cos(yRot * ((float) Math.PI / 180F)) * Mth.cos(xRot * ((float) Math.PI / 180F));
+        var f = -Mth.sin(yRot * (Mth.PI / 180F)) * Mth.cos(xRot * (Mth.PI / 180F));
+        var f1 = -Mth.sin((xRot + yOffset) * (Mth.PI / 180F));
+        var f2 = Mth.cos(yRot * (Mth.PI / 180F)) * Mth.cos(xRot * (Mth.PI / 180F));
 
         projectile.shoot(f, f1, f2, pow, uncertainty);
 

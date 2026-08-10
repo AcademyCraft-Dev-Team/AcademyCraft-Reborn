@@ -85,6 +85,10 @@ public interface DevCondition {
             this(depName, "");
         }
 
+        static boolean isSatisfied(String dependencyId, Predicate<String> isLearned) {
+            return dependencyId == null || dependencyId.isEmpty() || isLearned.test(dependencyId);
+        }
+
         @Override
         public boolean accepts() {
             return isSatisfied(depId, dependencyId -> AbilitySystemClient.LEARNED_SKILLS.stream()
@@ -112,14 +116,7 @@ public interface DevCondition {
 
         @Override
         public boolean shouldDisplay() {
-            // Explicit Skill.dependencies are rendered as skill-tree links and checked
-            // separately. Do not render a second, generic condition icon for the legacy
-            // compatibility condition.
             return false;
-        }
-
-        static boolean isSatisfied(String dependencyId, Predicate<String> isLearned) {
-            return dependencyId == null || dependencyId.isEmpty() || isLearned.test(dependencyId);
         }
     }
 

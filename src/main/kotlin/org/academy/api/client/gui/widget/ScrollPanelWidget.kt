@@ -10,7 +10,6 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.ScissorRect
 import org.academy.api.client.util.ClientUtil
-import kotlin.math.abs
 import kotlin.math.max
 
 open class ScrollPanelWidget(protected val orientation: Orientation? = Orientation.VERTICAL) :
@@ -186,7 +185,7 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
 
         val currentScrollY = scrollY
         val newScrollY = Mth.lerp(ClientUtil.animationFactor(Mth.PI / 1.5f), currentScrollY, scrollTarget)
-        if (abs(newScrollY - scrollTarget) < SNAP_EPSILON) {
+        if (Math.abs(newScrollY - scrollTarget) < SNAP_EPSILON) {
             scrollTo(scrollX, scrollTarget)
         } else {
             scrollTo(scrollX, newScrollY)
@@ -253,8 +252,8 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         val maxScrollX = max(0f, content!!.width - width)
         val maxScrollY = max(0f, content!!.height - height)
 
-        val finalX = Math.clamp(x, 0f, maxScrollX)
-        val finalY = Math.clamp(y, 0f, maxScrollY)
+        val finalX = Mth.clamp(x, 0f, maxScrollX)
+        val finalY = Mth.clamp(y, 0f, maxScrollY)
 
         val changed = scrollX != finalX || scrollY != finalY
         super.scrollTo(finalX, finalY)

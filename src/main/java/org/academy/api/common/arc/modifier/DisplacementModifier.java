@@ -15,6 +15,7 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import net.minecraft.util.Mth;
 
 public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequency,
                                    long seed) implements PathModifier {
@@ -55,9 +56,9 @@ public record DisplacementModifier(AttributeCurve strength, AttributeCurve frequ
             var noiseFactor = 1.0f - (random.nextFloat() * (1.0f - currentFrequency));
             var magnitude = currentStrength * noiseFactor;
 
-            var angle = random.nextFloat() * 2.0f * (float) Math.PI;
-            var cosAngle = (float) Math.cos(angle);
-            var sinAngle = (float) Math.sin(angle);
+            var angle = random.nextFloat() * Mth.TWO_PI;
+            var cosAngle = Mth.cos(angle);
+            var sinAngle = Mth.sin(angle);
 
             var offset = new Vector3f(currentFrame.normal()).mul(cosAngle)
                     .add(binormal.mul(sinAngle))

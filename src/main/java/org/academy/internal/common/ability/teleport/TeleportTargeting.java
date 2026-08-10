@@ -5,10 +5,15 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 
-/** Shared crosshair targeting for Teleport skills. */
+/**
+ * Shared crosshair targeting for Teleport skills.
+ */
 public final class TeleportTargeting {
     private static final double HALF_SCAN_WIDTH = 0.5;
     private static final double MIN_DIRECTION_LENGTH_SQUARED = 1.0e-8;
+
+    private TeleportTargeting() {
+    }
 
     public static LivingEntity findFirstLivingEntity(LivingEntity source, double maxRange) {
         if (source == null || maxRange <= 0.0) return null;
@@ -51,8 +56,5 @@ public final class TeleportTargeting {
             }
         }
         return firstTarget;
-    }
-
-    private TeleportTargeting() {
     }
 }

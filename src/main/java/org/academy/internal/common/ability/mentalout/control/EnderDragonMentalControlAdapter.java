@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
@@ -11,16 +13,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.ControlSupport;
-import org.academy.api.common.entitycontrol.MentalControlAdapter;
-import org.academy.api.common.entitycontrol.PlayerControlFrame;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
@@ -29,6 +22,62 @@ import java.util.Optional;
 import java.util.UUID;
 
 public final class EnderDragonMentalControlAdapter implements MentalControlAdapter {
+    private static void strafeTarget(EnderDragon dragon, LivingEntity target) {
+        var manager = dragon.getPhaseManager();
+        if (manager.getCurrentPhase().getPhase() != EnderDragonPhase.STRAFE_PLAYER) {
+            manager.setPhase(EnderDragonPhase.STRAFE_PLAYER);
+        }
+        manager.getPhase(EnderDragonPhase.STRAFE_PLAYER).setTarget(target);
+    }
+
+    private static void setFlightTarget(EnderDragon dragon, Vec3 target) {
+        var manager = dragon.getPhaseManager();
+        if (manager.getCurrentPhase().getPhase() != EnderDragonPhase.HOVERING) {
+            manager.setPhase(EnderDragonPhase.HOVERING);
+        }
+        ((DragonHoverPhaseAccess) manager.getPhase(EnderDragonPhase.HOVERING))
+                .academy$setMentalControlFlightTarget(target);
+    }
+
+    private static void lookAt(EnderDragon dragon, Vec3 target) {
+        var delta = target.subtract(dragon.getEyePosition());
+        var horizontal = Mth.sqrt((float) (delta.x * delta.x + delta.z * delta.z));
+        dragon.setYRot((float) (Mth.atan2(delta.z, delta.x) * 180.0 / Mth.PI) - 90.0F);
+        dragon.yHeadRot = dragon.getYRot();
+        dragon.setXRot((float) -(Mth.atan2(delta.y, horizontal) * 180.0 / Mth.PI));
+    }
+
+    private static void steerFlight(EnderDragon dragon, Vec3 target) {
+        var delta = target.subtract(dragon.position());
+        if (delta.x * delta.x + delta.z * delta.z <= 1.0E-6) return;
+        dragon.setYRot(Mth.wrapDegrees(
+                180.0F - (float) (Mth.atan2(delta.x, delta.z)) * Mth.RAD_TO_DEG));
+        dragon.yBodyRot = dragon.getYRot();
+    }
+
+    private static void advanceFlight(EnderDragon dragon, Vec3 target, double maximumStep) {
+        var delta = target.subtract(dragon.position());
+        var distance = delta.length();
+        if (distance <= 1.0E-6) return;
+        dragon.move(MoverType.SELF, delta.scale(Math.min(distance, maximumStep) / distance));
+    }
+
+    private static ResolvedDestination resolve(EnderDragon dragon, ControlDestination destination) {
+        return switch (destination) {
+            case ControlDestination.Entity entity -> {
+                var target = MentalControlRuntime.findLivingEntity(dragon.level().getServer(), entity.uuid());
+                yield target == null || target.level() != dragon.level()
+                        || !target.isAlive() || target.isRemoved()
+                        ? null
+                        : new ResolvedDestination(target.position(), target);
+            }
+            case ControlDestination.Position position ->
+                    dragon.level().dimension().identifier().equals(position.dimension())
+                            ? new ResolvedDestination(position.value(), null)
+                            : null;
+        };
+    }
+
     @Override
     public boolean matches(LivingEntity subject) {
         return subject instanceof EnderDragon;
@@ -134,57 +183,45 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
         }
     }
 
-    private static final class ForceTargetBinding implements ControlBinding {
-        private final EnderDragon dragon;
-        private final UUID targetId;
-
-        private ForceTargetBinding(EnderDragon dragon, UUID targetId) {
-            this.dragon = dragon;
-            this.targetId = targetId;
-        }
+    private record ForceTargetBinding(EnderDragon dragon, UUID targetId) implements ControlBinding {
 
         @Override
-        public void tick() {
-            if (MentalControlRuntime.isFrozen(dragon)
-                    || !(dragon.level() instanceof ServerLevel level)
-                    || !(level.getEntity(targetId) instanceof LivingEntity target)
-                    || !target.isAlive() || target.isRemoved()) return;
-            strafeTarget(dragon, target);
-        }
+            public void tick() {
+                if (MentalControlRuntime.isFrozen(dragon)
+                        || !(dragon.level() instanceof ServerLevel level)
+                        || !(level.getEntity(targetId) instanceof LivingEntity target)
+                        || !target.isAlive() || target.isRemoved()) return;
+                strafeTarget(dragon, target);
+            }
 
-        @Override
-        public void close() {
-            if (MentalControlRuntime.getForcedTarget(dragon) == null
-                    && dragon.getPhaseManager().getCurrentPhase().getPhase()
-                    == EnderDragonPhase.STRAFE_PLAYER) {
-                dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
+            @Override
+            public void close() {
+                if (MentalControlRuntime.getForcedTarget(dragon) == null
+                        && dragon.getPhaseManager().getCurrentPhase().getPhase()
+                        == EnderDragonPhase.STRAFE_PLAYER) {
+                    dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
+                }
             }
         }
-    }
 
-    private static final class FreezeBinding implements ControlBinding {
-        private final EnderDragon dragon;
-
-        private FreezeBinding(EnderDragon dragon) {
-            this.dragon = dragon;
-        }
+    private record FreezeBinding(EnderDragon dragon) implements ControlBinding {
 
         @Override
-        public void tick() {
-            if (dragon.isDeadOrDying() || dragon.getHealth() <= 0.0F
-                    || dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.DYING) return;
-            dragon.setDeltaMovement(Vec3.ZERO);
-            setFlightTarget(dragon, dragon.position());
-        }
+            public void tick() {
+                if (dragon.isDeadOrDying() || dragon.getHealth() <= 0.0F
+                        || dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.DYING) return;
+                dragon.setDeltaMovement(Vec3.ZERO);
+                setFlightTarget(dragon, dragon.position());
+            }
 
-        @Override
-        public void close() {
-            if (!MentalControlRuntime.isFrozen(dragon)
-                    && dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.HOVERING) {
-                dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
+            @Override
+            public void close() {
+                if (!MentalControlRuntime.isFrozen(dragon)
+                        && dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.HOVERING) {
+                    dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
+                }
             }
         }
-    }
 
     private static final class MoveBinding implements ControlBinding {
         private final EnderDragon dragon;
@@ -290,7 +327,7 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
         private static final int RECENT_HOSTILITY_TICKS = 100;
 
         private final EnderDragon dragon;
-        private final net.minecraft.server.level.ServerPlayer controller;
+        private final ServerPlayer controller;
         private final ControlDestination destination;
         private final double detectionRadius;
         private final double detectionRadiusSqr;
@@ -302,7 +339,7 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
 
         private GuardBinding(
                 EnderDragon dragon,
-                net.minecraft.server.level.ServerPlayer controller,
+                ServerPlayer controller,
                 ControlDestination destination,
                 double detectionRadius,
                 double arrivalRadius
@@ -368,13 +405,12 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
                     || FriendlyFireSetting.shouldPrevent(controller, candidate)
                     || dragon.isAlliedTo(candidate)
                     || MentalPerceptionRuntime.decision(dragon, candidate)
-                    == org.academy.api.common.entitycontrol.PerceptionDecision.HIDDEN) return false;
+                    == PerceptionDecision.HIDDEN) return false;
 
             var currentTarget = candidate instanceof Mob candidateMob ? candidateMob.getTarget() : null;
             var hostile = isProtected(currentTarget, anchor.entity());
             var lastVictim = candidate.getLastHurtMob();
-            hostile |= lastVictim != null
-                    && candidate.tickCount - candidate.getLastHurtMobTimestamp() <= RECENT_HOSTILITY_TICKS
+            hostile |= candidate.tickCount - candidate.getLastHurtMobTimestamp() <= RECENT_HOSTILITY_TICKS
                     && isProtected(lastVictim, anchor.entity());
             return hostile;
         }
@@ -408,62 +444,6 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
                 dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
             }
         }
-    }
-
-    private static void strafeTarget(EnderDragon dragon, LivingEntity target) {
-        var manager = dragon.getPhaseManager();
-        if (manager.getCurrentPhase().getPhase() != EnderDragonPhase.STRAFE_PLAYER) {
-            manager.setPhase(EnderDragonPhase.STRAFE_PLAYER);
-        }
-        manager.getPhase(EnderDragonPhase.STRAFE_PLAYER).setTarget(target);
-    }
-
-    private static void setFlightTarget(EnderDragon dragon, Vec3 target) {
-        var manager = dragon.getPhaseManager();
-        if (manager.getCurrentPhase().getPhase() != EnderDragonPhase.HOVERING) {
-            manager.setPhase(EnderDragonPhase.HOVERING);
-        }
-        ((DragonHoverPhaseAccess) manager.getPhase(EnderDragonPhase.HOVERING))
-                .academy$setMentalControlFlightTarget(target);
-    }
-
-    private static void lookAt(EnderDragon dragon, Vec3 target) {
-        var delta = target.subtract(dragon.getEyePosition());
-        var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-        dragon.setYRot((float) (Math.atan2(delta.z, delta.x) * 180.0 / Math.PI) - 90.0F);
-        dragon.yHeadRot = dragon.getYRot();
-        dragon.setXRot((float) -(Math.atan2(delta.y, horizontal) * 180.0 / Math.PI));
-    }
-
-    private static void steerFlight(EnderDragon dragon, Vec3 target) {
-        var delta = target.subtract(dragon.position());
-        if (delta.x * delta.x + delta.z * delta.z <= 1.0E-6) return;
-        dragon.setYRot(net.minecraft.util.Mth.wrapDegrees(
-                180.0F - (float) Math.toDegrees(Math.atan2(delta.x, delta.z))));
-        dragon.yBodyRot = dragon.getYRot();
-    }
-
-    private static void advanceFlight(EnderDragon dragon, Vec3 target, double maximumStep) {
-        var delta = target.subtract(dragon.position());
-        var distance = delta.length();
-        if (distance <= 1.0E-6) return;
-        dragon.move(MoverType.SELF, delta.scale(Math.min(distance, maximumStep) / distance));
-    }
-
-    private static ResolvedDestination resolve(EnderDragon dragon, ControlDestination destination) {
-        return switch (destination) {
-            case ControlDestination.Entity entity -> {
-                var target = MentalControlRuntime.findLivingEntity(dragon.level().getServer(), entity.uuid());
-                yield target == null || target.level() != dragon.level()
-                        || !target.isAlive() || target.isRemoved()
-                        ? null
-                        : new ResolvedDestination(target.position(), target);
-            }
-            case ControlDestination.Position position ->
-                    dragon.level().dimension().identifier().equals(position.dimension())
-                            ? new ResolvedDestination(position.value(), null)
-                            : null;
-        };
     }
 
     private record ResolvedDestination(Vec3 position, LivingEntity entity) {

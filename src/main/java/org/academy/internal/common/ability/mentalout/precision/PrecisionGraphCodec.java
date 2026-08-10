@@ -1,10 +1,8 @@
 package org.academy.internal.common.ability.mentalout.precision;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public final class PrecisionGraphCodec {
     private static final int VERSION = 4;
@@ -67,7 +65,7 @@ public final class PrecisionGraphCodec {
             if (nodeCount > PrecisionGraph.MAX_NODES) {
                 return new DecodeResult(PrecisionGraph.EMPTY, PrecisionGraph.Diagnostic.TOO_MANY_NODES);
             }
-            var nodes = new java.util.ArrayList<PrecisionGraph.Node>(nodeCount);
+            var nodes = new ArrayList<PrecisionGraph.Node>(nodeCount);
             for (var i = 0; i < nodeCount; i++) {
                 var id = data.readInt();
                 var encodedKind = data.readUnsignedByte();
@@ -87,7 +85,7 @@ public final class PrecisionGraphCodec {
             if (edgeCount > PrecisionGraph.MAX_EDGES) {
                 return new DecodeResult(PrecisionGraph.EMPTY, PrecisionGraph.Diagnostic.TOO_MANY_EDGES);
             }
-            var edges = new java.util.ArrayList<PrecisionGraph.Edge>(edgeCount);
+            var edges = new ArrayList<PrecisionGraph.Edge>(edgeCount);
             for (var i = 0; i < edgeCount; i++) {
                 edges.add(new PrecisionGraph.Edge(
                         data.readInt(),

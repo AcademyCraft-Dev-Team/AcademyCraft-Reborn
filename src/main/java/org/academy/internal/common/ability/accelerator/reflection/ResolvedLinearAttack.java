@@ -40,6 +40,14 @@ public final class ResolvedLinearAttack {
         return new ResolvedLinearAttack(original, outbound, returnSegment, candidate);
     }
 
+    static LinearSegment limitReturnSegment(LinearSegment returnSegment, double maximumLength) {
+        return returnSegment.limitedTo(maximumLength);
+    }
+
+    static double calculateReturnVisualLength(Vec3 mirrorPoint, @Nullable LinearSegment returnSegment) {
+        return returnSegment == null ? 0.0 : mirrorPoint.distanceTo(returnSegment.end());
+    }
+
     public LinearSegment original() {
         return original;
     }
@@ -100,14 +108,6 @@ public final class ResolvedLinearAttack {
         var limited = limitReturnSegment(returnSegment, maximumLength);
         if (limited == returnSegment) return this;
         return new ResolvedLinearAttack(original, outbound, limited, reflectionCandidate);
-    }
-
-    static LinearSegment limitReturnSegment(LinearSegment returnSegment, double maximumLength) {
-        return returnSegment.limitedTo(maximumLength);
-    }
-
-    static double calculateReturnVisualLength(Vec3 mirrorPoint, @Nullable LinearSegment returnSegment) {
-        return returnSegment == null ? 0.0 : mirrorPoint.distanceTo(returnSegment.end());
     }
 
     public List<LinearSegment> segments() {

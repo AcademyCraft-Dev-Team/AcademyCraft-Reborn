@@ -34,6 +34,7 @@ import java.util.function.Consumer
 import kotlin.Int
 import kotlin.String
 import kotlin.run
+import net.minecraft.util.Mth
 
 class WirelessNodeScreen(
     menu: WirelessNodeMenu,
@@ -91,7 +92,7 @@ class WirelessNodeScreen(
                 val index: Int = if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
                     if ((ticks / 20) % 2 == 0) 8 else 9
                 } else {
-                    Math.clamp((progressCapacity * 8 - 1).toInt().toLong(), 0, 7)
+                    Mth.clamp((progressCapacity * 8 - 1).toInt(), 0, 7)
                 }
 
                 frameIndex = index

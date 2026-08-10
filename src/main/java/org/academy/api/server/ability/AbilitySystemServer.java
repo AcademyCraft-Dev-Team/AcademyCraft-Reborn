@@ -165,31 +165,26 @@ public final class AbilitySystemServer {
             return new StartSkillDevPacket.Response(false, "Skill is not available for the current category");
         }
 
-        // Dependency check
         for (var dep : skill.getDependencies()) {
             if (!playerData.isSkillLearned(dep.getKeyString())) {
                 return new StartSkillDevPacket.Response(false, "Dependencies not met");
             }
         }
 
-        // Already learned
         if (playerData.isSkillLearned(skillKey)) {
             return new StartSkillDevPacket.Response(false, "Already learned");
         }
 
-        // Level check
         var playerLevel = instance.getPlayerLevel(player.getUUID());
         var recommendedLevel = skill.getRecommendedLevel().getLevelCode();
         if (playerLevel < recommendedLevel) {
             return new StartSkillDevPacket.Response(false, "Level too low");
         }
 
-        // Energy check
         if (developer.extractEnergy(skill.getEnergyCostToLearn(), true) < skill.getEnergyCostToLearn()) {
             return new StartSkillDevPacket.Response(false, "Insufficient energy");
         }
 
-        // DevCondition check
         for (var cond : skill.getDevConditions()) {
             if (!cond.accepts(player, developer)) {
                 return new StartSkillDevPacket.Response(false, cond.getHintText());
@@ -291,13 +286,13 @@ public final class AbilitySystemServer {
             public boolean validate(ServerPlayer sp, WirelessUser dev) {
                 return dev instanceof AbilityDeveloperBlockEntity currentDeveloper
                         && canDevelopLevel(
-                                sp,
-                                currentDeveloper,
-                                currentCategory,
-                                currentLevel,
-                                initialDevelopment,
-                                cost
-                        );
+                        sp,
+                        currentDeveloper,
+                        currentCategory,
+                        currentLevel,
+                        initialDevelopment,
+                        cost
+                );
             }
 
             @Override
@@ -409,18 +404,6 @@ public final class AbilitySystemServer {
         getSystem(player).removeContext(serverContext);
     }
 
-    private void removeContext(ServerContext serverContext) {
-        var player = serverContext.player;
-        var contexts = activeContexts.get(player.getUUID());
-        if (contexts == null || !contexts.remove(serverContext)) return;
-
-        if (contexts.isEmpty()) activeContexts.remove(player.getUUID(), contexts);
-
-        NeoForge.EVENT_BUS.unregister(serverContext);
-        MisakaNetworkServer.NETWORK_MANAGER.unregister(serverContext);
-        serverContext.onUnregistered();
-    }
-
     public static AbilitySystemServer getSystem(Entity entity) {
         if (entity.level() instanceof ServerLevel serverLevel) {
             return serverLevel.getServer()
@@ -453,6 +436,23 @@ public final class AbilitySystemServer {
         if (Float.compare(entity.getData(AttachmentTypes.SP_REDUCTION_RATE), clamped) != 0) {
             entity.setData(AttachmentTypes.SP_REDUCTION_RATE, clamped);
         }
+    }
+
+    private static int resolveIterationPoints(int configuredPoints, float baseCost) {
+        if (configuredPoints > 0) return configuredPoints;
+        return Math.max(1, Mth.ceil(baseCost * 0.5f));
+    }
+
+    private void removeContext(ServerContext serverContext) {
+        var player = serverContext.player;
+        var contexts = activeContexts.get(player.getUUID());
+        if (contexts == null || !contexts.remove(serverContext)) return;
+
+        if (contexts.isEmpty()) activeContexts.remove(player.getUUID(), contexts);
+
+        NeoForge.EVENT_BUS.unregister(serverContext);
+        MisakaNetworkServer.NETWORK_MANAGER.unregister(serverContext);
+        serverContext.onUnregistered();
     }
 
     public void schedulePlayerSync(UUID uuid, Identifier syncType) {
@@ -613,15 +613,13 @@ public final class AbilitySystemServer {
         );
     }
 
-
-    /**
-     * 技能数据相关方法
-     */
     public float getPlayerSkillExp(UUID uuid, String skillKey) {
         return getPlayerSkillProficiency(uuid, skillKey);
     }
 
-    /** @deprecated Use {@link #addPlayerSkillProficiency(UUID, Skill, ProficiencyEvent)}. */
+    /**
+     * @deprecated Use {@link #addPlayerSkillProficiency(UUID, Skill, ProficiencyEvent)}.
+     */
     @Deprecated
     public void addPlayerSkillExp(UUID uuid, Skill skill, SkillDataManager.ExpEvent expEvent) {
         skillDataManager.addSkillExp(uuid, skill, expEvent);
@@ -681,10 +679,6 @@ public final class AbilitySystemServer {
         return skillDataManager.getSkillLevel(uuid, skillKey);
     }
 
-
-    /**
-     * CP相关方法
-     */
     public float getPlayerOccupiedCP(UUID uuid) {
         return playerCPManager.getOccupiedCP(uuid);
     }
@@ -815,11 +809,6 @@ public final class AbilitySystemServer {
                 resolveIterationPoints(iterationPoints, amount),
                 false
         );
-    }
-
-    private static int resolveIterationPoints(int configuredPoints, float baseCost) {
-        if (configuredPoints > 0) return configuredPoints;
-        return Math.max(1, (int) Math.ceil(baseCost * 0.5f));
     }
 
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {

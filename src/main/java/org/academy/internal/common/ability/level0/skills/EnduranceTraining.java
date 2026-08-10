@@ -22,6 +22,15 @@ public final class EnduranceTraining extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1)));
     }
 
+    @Override
+    public void initClient() {
+        Client.initialize();
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+    }
+
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addCommonSkillInfo(
                 new AbilitySystemClient.SkillInfo(
@@ -35,14 +44,5 @@ public final class EnduranceTraining extends Skill {
 
         private static void initialize() {
         }
-    }
-
-    @Override
-    public void initClient() {
-        Client.initialize();
-    }
-
-    @Override
-    public void initServer(MinecraftServerContext context) {
     }
 }

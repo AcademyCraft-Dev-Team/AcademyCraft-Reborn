@@ -24,9 +24,6 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SyncTypes;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -35,10 +32,10 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.BioelectricSurgeData;
 import org.academy.internal.common.skilldata.SkillData;
-import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -75,6 +72,10 @@ public final class BioelectricOperation extends Skill {
         );
     }
 
+    static double getAttackDamageBonus(float abilityPower) {
+        return 4.0 * Math.max(0, abilityPower);
+    }
+
     @Override
     public void initClient() {
         var key = getKey();
@@ -98,10 +99,6 @@ public final class BioelectricOperation extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    static double getAttackDamageBonus(float abilityPower) {
-        return 4.0 * Math.max(0, abilityPower);
     }
 
     public static final class Client {
@@ -240,15 +237,8 @@ public final class BioelectricOperation extends Skill {
         }
 
         private static void spawnArc(ServerPlayer player, Vec3 start, Vec3 end) {
-            var arc = new ArcEffect(player.level(), 8);
-            arc.setPos(start);
-            arc.setArcPath(new ArcPath(
-                    new LinePath(start.toVector3f(), end.toVector3f()),
-                    List.of(new JaggedModifier(2, 3, MathUtil.RANDOM.nextLong())),
-                    1.0f,
-                    List.of()
-            ));
-            player.level().addFreshEntity(arc);
+            var paths = List.of(ElectromasterArcEffects.arc(start, end, MathUtil.RANDOM.nextLong()));
+            ElectromasterArcEffects.spawnArc(player.level(), paths, 8, start);
         }
 
         private static void migrateLegacySkill(ServerPlayer player) {
@@ -262,7 +252,7 @@ public final class BioelectricOperation extends Skill {
                 var skill = Skills.BIOELECTRIC_OPERATION.get();
                 var target = map.get(skill.getKeyString());
                 if (target == null) {
-                    target = skill.createData(player);
+                    target = skill.createData();
                     map.put(skill.getKeyString(), target);
                 }
                 mergeProgress(target, legacy);

@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
@@ -14,8 +15,13 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.util.QuantumUtil;
-import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.entitycontrol.AttackDecision;
+import org.academy.api.common.entitycontrol.MentalPerceptionApi;
+import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
+import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAbyss;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
@@ -35,8 +41,9 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
-import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
+import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -159,7 +166,7 @@ public abstract class MixinLivingEntity {
                 if (remaining > 0.0f && Float.isFinite(remaining)) {
                     VectorReflection.Server.beginLegitimateHealthMutation(player);
                     try {
-                        ((LivingEntityDamageInvoker) (Object) this)
+                        ((LivingEntityDamageInvoker) this)
                                 .academy$actuallyHurt(level, source, remaining);
                     } finally {
                         VectorReflection.Server.endLegitimateHealthMutation(player);

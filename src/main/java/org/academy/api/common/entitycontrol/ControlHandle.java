@@ -1,7 +1,7 @@
 package org.academy.api.common.entitycontrol;
 
-import java.util.UUID;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface ControlHandle extends AutoCloseable {
     UUID id();

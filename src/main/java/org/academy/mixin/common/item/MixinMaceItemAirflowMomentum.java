@@ -15,28 +15,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MaceItem.class)
 public abstract class MixinMaceItemAirflowMomentum {
     @Redirect(
-            method = "hurtEnemy",
-            at = @At(
-                    value = "FIELD",
-                    target = "Lnet/minecraft/world/entity/LivingEntity;fallDistance:D"
-            )
-    )
-    private double academy$useAirflowMomentumForSmashSound(LivingEntity attacker) {
-        return AirflowJet.Server.getEffectiveMaceFallDistance(attacker);
-    }
-
-    @Redirect(
-            method = "getAttackDamageBonus",
-            at = @At(
-                    value = "FIELD",
-                    target = "Lnet/minecraft/world/entity/LivingEntity;fallDistance:D"
-            )
-    )
-    private double academy$useAirflowMomentumForDamage(LivingEntity entity) {
-        return AirflowJet.Server.getEffectiveMaceFallDistance(entity);
-    }
-
-    @Redirect(
             method = "getKnockbackPower",
             at = @At(
                     value = "FIELD",
@@ -55,6 +33,28 @@ public abstract class MixinMaceItemAirflowMomentum {
             )
     )
     private static double academy$useAirflowMomentumForSmashCheck(LivingEntity entity) {
+        return AirflowJet.Server.getEffectiveMaceFallDistance(entity);
+    }
+
+    @Redirect(
+            method = "hurtEnemy",
+            at = @At(
+                    value = "FIELD",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;fallDistance:D"
+            )
+    )
+    private double academy$useAirflowMomentumForSmashSound(LivingEntity attacker) {
+        return AirflowJet.Server.getEffectiveMaceFallDistance(attacker);
+    }
+
+    @Redirect(
+            method = "getAttackDamageBonus",
+            at = @At(
+                    value = "FIELD",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;fallDistance:D"
+            )
+    )
+    private double academy$useAirflowMomentumForDamage(LivingEntity entity) {
         return AirflowJet.Server.getEffectiveMaceFallDistance(entity);
     }
 

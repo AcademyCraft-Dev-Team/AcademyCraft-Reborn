@@ -5,18 +5,20 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
-import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
+import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -42,6 +44,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.UUID;
 
 public final class AtmosphericDominion extends Skill {
     public AtmosphericDominion() {
@@ -50,26 +53,60 @@ public final class AtmosphericDominion extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5)));
     }
 
-    @Override public void initClient() {
-        var key = getKey(); AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE); Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.RELEASE, InputConstants.MOD_ALT)), _ -> Client.cast());
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(), new AbilitySystemClient.SkillInfo(Skills.ATMOSPHERIC_DOMINION.get(), List.of(AtmosphereBlastGun.Client.SKILL_INFO, VortexPull.Client.SKILL_INFO), R.textures.atmospheric_dominion_icon, 150, 168));
-        ToggleStatusHud.registerStateProvider(Skills.ATMOSPHERIC_DOMINION.get(), () -> {
+        ToggleStatusHud.Companion.registerStateProvider(Skills.ATMOSPHERIC_DOMINION.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && AeromanipFieldSyncPacket.Client.snapshot().values().stream()
                     .anyMatch(field -> field.ownerId().equals(player.getUUID())
                             && field.type() == AirflowField.Type.ATMOSPHERIC_DOMINION);
         });
     }
-    @Override public void initServer(MinecraftServerContext context) { MisakaNetworkServer.NETWORK_MANAGER.register(Server.class); }
-    public static final class Client {
-        public static AbilitySystemClient.SkillInfo SKILL_INFO; public static final String KEY_NAME_CAST = SkillNames.ATMOSPHERIC_DOMINION + "_cast"; public static Config CONFIG = new Config();
-        private static void cast() { if (AbilitySystemClient.canUseSkill(Skills.ATMOSPHERIC_DOMINION.get())) MisakaNetworkClient.send(CastPacket.INSTANCE); }
-        public static final class Config extends KeyBindingConfig { public static final class Action implements TypeHandler<Config> { public static final TypeHandler<Config> INSTANCE = new Action(); private Action() { } @Override public Config getDefault() { return new Config(); } @Override public Class<Config> getTypeClass() { return Config.class; } } }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
+
+    public static final class Client {
+        public static final String KEY_NAME_CAST = SkillNames.ATMOSPHERIC_DOMINION + "_cast";
+        public static AbilitySystemClient.SkillInfo SKILL_INFO;
+        public static Config CONFIG = new Config();
+
+        private static void cast() {
+            if (AbilitySystemClient.canUseSkill(Skills.ATMOSPHERIC_DOMINION.get()))
+                MisakaNetworkClient.send(CastPacket.INSTANCE);
+        }
+
+        public static final class Config extends KeyBindingConfig {
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
+        }
+    }
+
     public static final class Server {
-        @SubscribePacket public static void handle(CastPacket packet) {
+        @SubscribePacket
+        public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.ATMOSPHERIC_DOMINION.get();
             skill.executeActive(player, context -> skill.getCpCost(context.level())
@@ -84,7 +121,8 @@ public final class AtmosphericDominion extends Skill {
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });
         }
-        private static void tick(net.minecraft.server.level.ServerPlayer owner, AirflowField field, int age) {
+
+        private static void tick(ServerPlayer owner, AirflowField field, int age) {
             var box = field.bounds();
             var handled = 0;
             var cap = ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick();
@@ -98,10 +136,11 @@ public final class AtmosphericDominion extends Skill {
                 if (!allied && !AeromanipTargeting.canAffectNegatively(owner, target)) continue;
                 var friendly = allied;
                 if (friendly) {
-                    if (target instanceof net.minecraft.world.entity.LivingEntity living) {
+                    if (target instanceof LivingEntity living) {
                         living.addEffect(new MobEffectInstance(MobEffects.SPEED, 12, 0, false, false, true));
                         living.resetFallDistance();
-                        if (living.getAirSupply() < living.getMaxAirSupply()) living.setAirSupply(living.getMaxAirSupply());
+                        if (living.getAirSupply() < living.getMaxAirSupply())
+                            living.setAirSupply(living.getMaxAirSupply());
                     }
                     if (target instanceof Projectile) continue;
                     AeromanipTargeting.addClampedVelocity(target, field.direction().scale(0.025));
@@ -110,12 +149,25 @@ public final class AtmosphericDominion extends Skill {
                 } else {
                     var current = target.getDeltaMovement();
                     AeromanipTargeting.addClampedVelocity(target, current.scale(-0.15));
-                    if (target instanceof net.minecraft.world.entity.LivingEntity living) {
+                    if (target instanceof LivingEntity living) {
                         living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 12, 0, false, false, true));
                     }
                 }
             }
         }
     }
-    @PacketTarget(ThreadType.SERVER) public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> { public static final CastPacket INSTANCE = new CastPacket(); public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE); private CastPacket() { } @Override public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() { return PacketTypes.ATMOSPHERIC_DOMINION_CAST.get(); } }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
+        public static final CastPacket INSTANCE = new CastPacket();
+        public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private CastPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
+            return PacketTypes.ATMOSPHERIC_DOMINION_CAST.get();
+        }
+    }
 }

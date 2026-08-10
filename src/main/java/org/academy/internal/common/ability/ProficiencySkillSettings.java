@@ -80,7 +80,7 @@ public final class ProficiencySkillSettings {
             String labelKey,
             String option
     ) {
-        SkillSettingsRegistry.register(
+        SkillSettingsRegistry.INSTANCE.register(
                 skill,
                 new SkillSettingsRegistry.Module(
                         "proficiency",

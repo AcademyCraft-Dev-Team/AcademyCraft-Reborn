@@ -3,7 +3,7 @@ package org.academy.mixin.client;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
-import org.academy.internal.client.renderer.vfx.CameraShakeManager;
+import org.academy.internal.client.render.vfx.CameraShakeManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;

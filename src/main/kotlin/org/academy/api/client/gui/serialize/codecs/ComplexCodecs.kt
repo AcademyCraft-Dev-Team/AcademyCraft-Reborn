@@ -5,13 +5,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.serialize.PropSpec
 import org.academy.api.client.gui.serialize.PropType
 import org.academy.api.client.gui.serialize.WidgetCodec
-import org.academy.api.client.gui.widget.BlendQuadWidget
-import org.academy.api.client.gui.widget.ProgressBarWidget
-import org.academy.api.client.gui.widget.RadioButtonWidget
-import org.academy.api.client.gui.widget.ScrollBarWidget
-import org.academy.api.client.gui.widget.SeekBarWidget
-import org.academy.api.client.gui.widget.SpriteSheetWidget
-import org.academy.api.client.gui.widget.ToggleButtonWidget
+import org.academy.api.client.gui.widget.*
 
 class ProgressBarCodec : WidgetCodec<ProgressBarWidget> {
     override val typeName = "progress_bar"

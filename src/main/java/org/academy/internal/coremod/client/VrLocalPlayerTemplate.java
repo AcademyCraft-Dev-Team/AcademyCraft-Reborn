@@ -61,7 +61,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
     @Override
     public boolean isDeadOrDying() {
-        return academy$protected() ? false : super.isDeadOrDying();
+        return !academy$protected() && super.isDeadOrDying();
     }
 
     @Override
@@ -163,7 +163,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
     @Override
     public boolean isInvisible() {
-        return academy$protected() ? false : super.isInvisible();
+        return !academy$protected() && super.isInvisible();
     }
 
     @Override

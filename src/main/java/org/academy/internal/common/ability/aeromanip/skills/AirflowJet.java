@@ -38,6 +38,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -48,6 +49,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 public final class AirflowJet extends Skill {
@@ -68,6 +70,22 @@ public final class AirflowJet extends Skill {
         );
     }
 
+    static double propulsionSpeed(int skillLevel, boolean fullySubmerged) {
+        var clampedLevel = Math.max(0, Math.min(2, skillLevel));
+        var speed = (LAUNCH_SPEED + clampedLevel * 0.1) * SPEED_MULTIPLIER;
+        return fullySubmerged ? speed * SUBMERGED_SPEED_MULTIPLIER : speed;
+    }
+
+    private static boolean isFullySubmerged(ServerPlayer player) {
+        var eyePos = BlockPos.containing(player.getX(), player.getEyeY(), player.getZ());
+        var eyeFluid = player.level().getFluidState(eyePos);
+        if (eyeFluid.isEmpty()
+                || player.getEyeY() >= eyePos.getY() + eyeFluid.getHeight(player.level(), eyePos)) {
+            return false;
+        }
+        return !player.level().getFluidState(player.blockPosition()).isEmpty();
+    }
+
     @Override
     public void initClient() {
         AeromanipFieldSyncPacket.initClient();
@@ -83,14 +101,14 @@ public final class AirflowJet extends Skill {
         var configuredBinding = Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST, defaultBinding);
         if (configuredBinding.action() != InputSystem.ANY_ACTION
                 || configuredBinding.type() == InputSystem.InputType.KEYBOARD
-                && configuredBinding.keys().equals(java.util.Set.of(InputConstants.KEY_R))
+                && configuredBinding.keys().equals(Set.of(InputConstants.KEY_R))
                 && configuredBinding.modifiers() == InputSystem.ANY_MODIFIER) {
             configuredBinding = new InputSystem.KeyCombination(
                     configuredBinding.type(),
                     configuredBinding.keys(),
                     InputSystem.ANY_ACTION,
                     configuredBinding.type() == InputSystem.InputType.KEYBOARD
-                            && configuredBinding.keys().equals(java.util.Set.of(InputConstants.KEY_R))
+                            && configuredBinding.keys().equals(Set.of(InputConstants.KEY_R))
                             && configuredBinding.modifiers() == InputSystem.ANY_MODIFIER
                             ? 0
                             : configuredBinding.modifiers(),
@@ -110,22 +128,6 @@ public final class AirflowJet extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    static double propulsionSpeed(int skillLevel, boolean fullySubmerged) {
-        var clampedLevel = Math.max(0, Math.min(2, skillLevel));
-        var speed = (LAUNCH_SPEED + clampedLevel * 0.1) * SPEED_MULTIPLIER;
-        return fullySubmerged ? speed * SUBMERGED_SPEED_MULTIPLIER : speed;
-    }
-
-    private static boolean isFullySubmerged(ServerPlayer player) {
-        var eyePos = BlockPos.containing(player.getX(), player.getEyeY(), player.getZ());
-        var eyeFluid = player.level().getFluidState(eyePos);
-        if (eyeFluid.isEmpty()
-                || player.getEyeY() >= eyePos.getY() + eyeFluid.getHeight(player.level(), eyePos)) {
-            return false;
-        }
-        return !player.level().getFluidState(player.blockPosition()).isEmpty();
     }
 
     public static final class Client {
@@ -314,7 +316,7 @@ public final class AirflowJet extends Skill {
                 }
                 if (ticks % 20 == 0) {
                     initialLevel.playSound(null, player.blockPosition(),
-                            org.academy.internal.common.sounds.SoundEvents.AIRFLOW_JET.get(),
+                            SoundEvents.AIRFLOW_JET.get(),
                             SoundSource.PLAYERS, 0.55f, 1.0f);
                 }
             }

@@ -3,12 +3,10 @@ package org.academy.internal.common.ability.electromaster.skills.lv2;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,10 +26,11 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -179,7 +178,7 @@ public class LightningNova extends Skill {
                         system.getPlayerDamageMultiplier(player.getUUID())
                 );
                 var source = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
-                        org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE);
+                        DamageTypes.ELECTRO_DAMAGE);
                 for (var target : targets) {
                     var dist = target.distanceTo(player);
                     var phaseHits = echo ? echoHits : outwardHits;

@@ -3,7 +3,7 @@ academy = "0.0.3-alpha"
 
 java = "25"
 minecraft = "26.2.0"
-neoforge = "26.2.0.45-beta"
+neoforge = "26.2.0.58"
 loader = "[6.3.0,)"
 
 renderdoc = "1.44"

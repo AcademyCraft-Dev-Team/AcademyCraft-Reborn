@@ -27,15 +27,6 @@ public class Level0PassiveLv5 extends Skill {
         );
     }
 
-    public static final class Client {
-        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addCommonSkillInfo(
-                new AbilitySystemClient.SkillInfo(Skills.LEVEL0_PASSIVE_LV5.get(), List.of(Level0PassiveLv4.Client.SKILL_INFO), R.textures.ability.level0.skill.level0_passive_lv5.icon, 210, 62)
-        );
-
-        private static void initialize() {
-        }
-    }
-
     @Override
     public void initClient() {
         Client.initialize();
@@ -43,5 +34,14 @@ public class Level0PassiveLv5 extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext c) {
+    }
+
+    public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addCommonSkillInfo(
+                new AbilitySystemClient.SkillInfo(Skills.LEVEL0_PASSIVE_LV5.get(), List.of(Level0PassiveLv4.Client.SKILL_INFO), R.textures.ability.level0.skill.level0_passive_lv5.icon, 210, 62)
+        );
+
+        private static void initialize() {
+        }
     }
 }

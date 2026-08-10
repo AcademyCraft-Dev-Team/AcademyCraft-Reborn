@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import net.minecraft.util.Mth;
 
 public final class AeromanipTargeting {
     private static final double MAX_SPEED = 3.0;
@@ -70,7 +71,7 @@ public final class AeromanipTargeting {
         var maximum = Math.max(minimum, maxDistance);
         var value = Double.isFinite(current) ? current : minimum;
         var adjustment = Integer.signum(steps) * Math.max(0.0, stepSize);
-        return Math.clamp(value + adjustment, minimum, maximum);
+        return Mth.clamp(value + adjustment, minimum, maximum);
     }
 
     static Vec3 acceleratedVelocity(Vec3 velocity, Vec3 direction, double acceleration, double maxForwardSpeed) {

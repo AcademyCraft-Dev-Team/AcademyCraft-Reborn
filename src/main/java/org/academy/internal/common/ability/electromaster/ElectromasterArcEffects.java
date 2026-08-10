@@ -6,7 +6,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.PathModifier;
 import org.academy.api.common.arc.modifier.HelixModifier;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.modifier.TaperModifier;
@@ -19,8 +18,8 @@ import org.academy.internal.common.world.entity.skill.ArcEffect;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.util.Mth;
 
-/** Lightweight builders for the shared VFX-backed electric arc renderer. */
 public final class ElectromasterArcEffects {
     private static final AttributeCurve FULL_THICKNESS = new AttributeCurve(List.of(
             new Knot(0.0f, 1.0f),
@@ -31,12 +30,24 @@ public final class ElectromasterArcEffects {
     private ElectromasterArcEffects() {
     }
 
+    /**
+     * 一条锯齿电弧路径：LinePath + JaggedModifier，视觉等价于闪电。
+     */
+    public static ArcPath arc(Vec3 start, Vec3 end, long seed) {
+        return new ArcPath(
+                new LinePath(start.toVector3f(), end.toVector3f()),
+                List.of(new JaggedModifier(0.18f, 4, seed)),
+                2.0f,
+                List.of()
+        );
+    }
+
     public static List<ArcPath> intertwinedBundle(Vec3 start, Vec3 end, int strands, float radius) {
         var paths = new ArrayList<ArcPath>(Math.max(1, strands));
         var length = Math.max(1.0, start.distanceTo(end));
-        var turns = (float) Math.clamp(length / 3.5, 2.0, 8.0);
+        var turns = (float) Mth.clamp(length / 3.5, 2.0, 8.0);
         for (var i = 0; i < Math.max(1, strands); i++) {
-            var phase = (float) (Math.PI * 2.0 * i / Math.max(1, strands));
+            var phase = (float) (Mth.TWO_PI * i / Math.max(1, strands));
             paths.add(new ArcPath(
                     new LinePath(start.toVector3f(), end.toVector3f()),
                     List.of(
@@ -68,24 +79,26 @@ public final class ElectromasterArcEffects {
                     List.of()
             ));
         }
-        spawn(level, paths, 8, segment.start());
+        spawnArc(level, paths, 8, segment.start());
     }
 
     public static void spawnShieldArcs(ServerLevel level, Vec3 center, long age) {
         var paths = new ArrayList<ArcPath>();
         for (var i = 0; i < 6; i++) {
-            var angle0 = age * 0.17 + i * Math.PI / 3.0;
+            var angle0 = age * 0.17 + i * Mth.PI / 3.0;
             var angle1 = angle0 + 0.82;
             var y0 = 0.25 + (i % 3) * 0.62;
             var y1 = 0.25 + ((i + 1) % 3) * 0.62;
-            var start = center.add(Math.cos(angle0) * 0.78, y0, Math.sin(angle0) * 0.78);
-            var end = center.add(Math.cos(angle1) * 0.78, y1, Math.sin(angle1) * 0.78);
-            paths.add(thickArc(start, end, 0.30f, 1.0f));
+            var start = center.add(Mth.cos(angle0) * 0.78, y0, Mth.sin(angle0) * 0.78);
+            var end = center.add(Mth.cos(angle1) * 0.78, y1, Mth.sin(angle1) * 0.78);
+            paths.add(arc(start, end, randomSeed()));
         }
-        spawn(level, paths, 5, center);
+        spawnArc(level, paths, 5, center);
     }
 
-    /** Emits a short-lived electric ring on the shield face struck by a remote effect. */
+    /**
+     * Emits a short-lived electric ring on the shield face struck by a remote effect.
+     */
     public static void spawnShieldInterceptRing(ServerLevel level, Vec3 center, Vec3 direction) {
         if (level == null || center == null || direction == null
                 || !Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1.0E-8) {
@@ -111,22 +124,22 @@ public final class ElectromasterArcEffects {
                 4.0f,
                 List.of()
         ));
-        spawn(level, paths, 6, center);
+        spawnArc(level, paths, 6, center);
     }
 
     public static void spawnNovaRing(ServerLevel level, Vec3 center, double radius, long age) {
         var paths = new ArrayList<ArcPath>();
         var segments = 16;
         for (var i = 0; i < segments; i++) {
-            var angle0 = i * Math.PI * 2.0 / segments + age * 0.08;
-            var angle1 = (i + 1) * Math.PI * 2.0 / segments + age * 0.08;
-            var start = center.add(Math.cos(angle0) * radius, Math.sin(angle0 * 3.0) * 0.16,
-                    Math.sin(angle0) * radius);
-            var end = center.add(Math.cos(angle1) * radius, Math.sin(angle1 * 3.0) * 0.16,
-                    Math.sin(angle1) * radius);
-            paths.add(thickArc(start, end, 0.24f, 0.75f));
+            var angle0 = i * Mth.TWO_PI / segments + age * 0.08;
+            var angle1 = (i + 1) * Mth.TWO_PI / segments + age * 0.08;
+            var start = center.add(Mth.cos(angle0) * radius, Mth.sin(angle0 * 3.0) * 0.16,
+                    Mth.sin(angle0) * radius);
+            var end = center.add(Mth.cos(angle1) * radius, Mth.sin(angle1 * 3.0) * 0.16,
+                    Mth.sin(angle1) * radius);
+            paths.add(arc(start, end, randomSeed()));
         }
-        spawn(level, paths, 4, center);
+        spawnArc(level, paths, 4, center);
     }
 
     public static void spawnSkyStrike(ServerLevel level, Vec3 impact) {
@@ -159,19 +172,7 @@ public final class ElectromasterArcEffects {
         );
     }
 
-    public static ArcPath thickArc(Vec3 start, Vec3 end, float jaggedness, float thickness) {
-        return new ArcPath(
-                new LinePath(start.toVector3f(), end.toVector3f()),
-                List.<PathModifier>of(
-                        new JaggedModifier(jaggedness, 4, randomSeed()),
-                        new TaperModifier(FULL_THICKNESS, thickness)
-                ),
-                2.5f,
-                List.of()
-        );
-    }
-
-    private static void spawn(ServerLevel level, List<ArcPath> paths, int lifetime, Vec3 origin) {
+    public static void spawnArc(ServerLevel level, List<ArcPath> paths, int lifetime, Vec3 origin) {
         if (paths.isEmpty()) return;
         var effect = new ArcEffect(level, lifetime);
         effect.setPos(origin);

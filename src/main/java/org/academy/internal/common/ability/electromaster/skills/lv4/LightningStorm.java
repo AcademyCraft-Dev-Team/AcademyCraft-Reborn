@@ -8,13 +8,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -31,11 +29,12 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
-import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -91,7 +90,7 @@ public class LightningStorm extends Skill {
         private static void registerSettings() {
             if (settingsRegistered) return;
             settingsRegistered = true;
-            SkillSettingsRegistry.register(
+            SkillSettingsRegistry.INSTANCE.register(
                     Skills.LIGHTNING_STORM.get(),
                     new SkillSettingsRegistry.Module(
                             "sky_strike_feedback",
@@ -138,6 +137,10 @@ public class LightningStorm extends Skill {
             private float flashIntensity = 1.0f;
             private float shakeIntensity = 1.0f;
 
+            private static float sanitizeIntensity(float value) {
+                return Float.isFinite(value) ? Mth.clamp(value, 0.0f, 1.0f) : 1.0f;
+            }
+
             public float getFlashIntensity() {
                 return sanitizeIntensity(flashIntensity);
             }
@@ -152,10 +155,6 @@ public class LightningStorm extends Skill {
 
             public void setShakeIntensity(float shakeIntensity) {
                 this.shakeIntensity = sanitizeIntensity(shakeIntensity);
-            }
-
-            private static float sanitizeIntensity(float value) {
-                return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 1.0f;
             }
 
             public static final class Action implements TypeHandler<Config> {
@@ -258,7 +257,7 @@ public class LightningStorm extends Skill {
                 var source = SkillDamageSource.of(
                         player,
                         skill,
-                        org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE
+                        DamageTypes.ELECTRO_DAMAGE
                 );
                 for (var target : targets) {
                     if (target.hurtServer(serverLevel, source, damage)) struckTargets.add(target.getUUID());

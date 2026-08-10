@@ -39,28 +39,28 @@ public final class CatEngineBlockEntity extends BlockEntity implements WirelessU
         } else {
             e.tRot += 0.02F;
         }
-        while (e.rot >= (float) Math.PI) {
-            e.rot -= ((float) Math.PI * 2F);
+        while (e.rot >= Mth.PI) {
+            e.rot -= (Mth.TWO_PI);
         }
 
-        while (e.rot < -(float) Math.PI) {
-            e.rot += ((float) Math.PI * 2F);
+        while (e.rot < -Mth.PI) {
+            e.rot += (Mth.TWO_PI);
         }
 
-        while (e.tRot >= (float) Math.PI) {
-            e.tRot -= ((float) Math.PI * 2F);
+        while (e.tRot >= Mth.PI) {
+            e.tRot -= (Mth.TWO_PI);
         }
 
-        while (e.tRot < -(float) Math.PI) {
-            e.tRot += ((float) Math.PI * 2F);
+        while (e.tRot < -Mth.PI) {
+            e.tRot += (Mth.TWO_PI);
         }
 
         float f2;
-        for (f2 = e.tRot - e.rot; f2 >= (float) Math.PI; f2 -= ((float) Math.PI * 2F)) {
+        for (f2 = e.tRot - e.rot; f2 >= Mth.PI; f2 -= (Mth.TWO_PI)) {
         }
 
-        while (f2 < -(float) Math.PI) {
-            f2 += ((float) Math.PI * 2F);
+        while (f2 < -Mth.PI) {
+            f2 += (Mth.TWO_PI);
         }
 
         e.rot += f2 * 0.4F;

@@ -5,11 +5,15 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.skill.MagneticWeaponBladeMotion;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class MagneticWeaponTest {
+    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
+        assertEquals(expected.x, actual.x, 1.0E-9);
+        assertEquals(expected.y, actual.y, 1.0E-9);
+        assertEquals(expected.z, actual.z, 1.0E-9);
+    }
+
     @Test
     void damageUsesAttackAndAbilityScaling() {
         assertEquals(6.0f, MagneticWeapon.Server.calculateDamage(10.0f, 1.0f), 0.0001f);
@@ -79,11 +83,5 @@ class MagneticWeaponTest {
             assertTrue(Double.isFinite(motion.position().z));
             assertTrue(Double.isFinite(motion.tangent().lengthSqr()));
         }
-    }
-
-    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
-        assertEquals(expected.x, actual.x, 1.0E-9);
-        assertEquals(expected.y, actual.y, 1.0E-9);
-        assertEquals(expected.z, actual.z, 1.0E-9);
     }
 }

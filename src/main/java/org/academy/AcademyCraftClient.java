@@ -2,6 +2,7 @@ package org.academy;
 
 import com.google.common.reflect.TypeToken;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.math.Axis;
 import net.irisshaders.iris.pipeline.IrisPipelines;
 import net.irisshaders.iris.pipeline.programs.ShaderKey;
@@ -12,27 +13,24 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
-import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
+import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.SharedSuggestionProvider;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.gui.editor.UiLayoutEditor;
+import org.academy.api.client.gui.editor.UiLayoutEditorScreen;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
@@ -40,7 +38,7 @@ import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.hud.terminal.TerminalHud;
 import org.academy.api.client.render.Render;
-import org.academy.api.client.render.post.BloomEffect;
+import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.renderer.CylinderRenderer;
@@ -48,37 +46,33 @@ import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
+import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
-import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
-import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.app.props.PropsApp;
 import org.academy.internal.client.app.props.PropsClientState;
 import org.academy.internal.client.app.props.PropsIcon;
-import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
+import org.academy.internal.client.app.settings.ui.SettingsApp;
+import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
+import org.academy.internal.client.commands.ClientProfileCommand;
 import org.academy.internal.client.compatibility.InventoryProfilesNextCompat;
-import org.academy.internal.client.gui.screen.Screens;
-import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
-import org.academy.internal.client.hud.HudLayoutConfig;
-import org.academy.internal.client.hud.HudDebugScreen;
 import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
+import org.academy.internal.client.gui.debug.UiDebugLayoutDefinition;
 import org.academy.internal.client.gui.debug.UiDebugLayoutRegistry;
 import org.academy.internal.client.gui.debug.UiDebugSession;
-import org.academy.internal.client.profiler.ProfilerClientHooks;
-import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
-import org.academy.internal.client.particle.VectorBlastParticle;
+import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
+import org.academy.internal.client.gui.screen.Screens;
+import org.academy.internal.client.hud.HudDebugScreen;
+import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.particle.BloodSplashParticle;
 import org.academy.internal.client.particle.BloodSprayParticle;
-import org.academy.internal.client.renderer.effect.*;
+import org.academy.internal.client.particle.VectorBlastParticle;
+import org.academy.internal.client.profiler.ProfilerClientHooks;
+import org.academy.internal.client.render.vfx.*;
+import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
-import org.academy.internal.client.renderer.vfx.ArcVfxClient;
-import org.academy.internal.client.renderer.vfx.BeamVfxClient;
-import org.academy.internal.client.renderer.vfx.SmokeVfxClient;
-import org.academy.internal.client.renderer.vfx.StormWingVfxClient;
-import org.academy.internal.client.renderer.vfx.PlasmaVfxClient;
-import org.academy.internal.client.renderer.vfx.SkyStrikeVfxClient;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
@@ -120,7 +114,7 @@ public final class AcademyCraftClient {
         BeamVfxClient.register();
         SmokeVfxClient.register();
         ArcVfxClient.register();
-        StormWingVfxClient.register();
+        WingVfxClient.register();
         PlasmaVfxClient.register();
         SkyStrikeVfxClient.register();
     }
@@ -128,21 +122,11 @@ public final class AcademyCraftClient {
     public static void initRender() {
         Render.init();
         VfxManager.INSTANCE.init();
-        BloomEffect.init();
+        GlowEffect.init();
         ScreenDispatcher.Companion.init();
         HudManager.INSTANCE.initRender();
 
         MsdfFontService.genDefaultGlyph();
-
-        if (IrisCompat.hasIris()) {
-            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_QUADS, ShaderKey.BASIC_COLOR);
-            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE, ShaderKey.BASIC_COLOR);
-            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_COLOR_TRANGLES, ShaderKey.BASIC_COLOR);
-            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR, ShaderKey.TEXTURED_COLOR);
-            IrisPipelines.assignPipeline(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE, ShaderKey.TEXTURED_COLOR);
-            IrisPipelines.assignPipeline(Render.RenderPipelines.PLATINUM_COSMIC_WING, ShaderKey.TEXTURED_COLOR);
-            IrisPipelines.assignPipeline(Render.RenderPipelines.PLATINUM_COSMIC_WING_NO_DEPTH_WRITE, ShaderKey.TEXTURED_COLOR);
-        }
         renderInitialized = true;
     }
 
@@ -164,21 +148,21 @@ public final class AcademyCraftClient {
                 Commands.literal("academy")
                         .then(Commands.literal("debug")
                                 .then(Commands.literal("skillgui")
-                                        .executes(ctx -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode()))
+                                        .executes(_ -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode()))
                                         .then(Commands.literal("on")
-                                                .executes(ctx -> setSkillGuiDebug(true)))
+                                                .executes(_ -> setSkillGuiDebug(true)))
                                         .then(Commands.literal("off")
-                                                .executes(ctx -> setSkillGuiDebug(false)))
+                                                .executes(_ -> setSkillGuiDebug(false)))
                                         .then(Commands.literal("toggle")
-                                                .executes(ctx -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode())))
+                                                .executes(_ -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode())))
                                         .then(Commands.literal("reset")
-                                                .executes(ctx -> {
+                                                .executes(_ -> {
                                                     AbilityDeveloperLayoutEditor.resetSession();
                                                     notifyClient("Skill GUI layout reset to built-in defaults.");
                                                     return 1;
                                                 }))
                                         .then(Commands.literal("export")
-                                                .executes(ctx -> {
+                                                .executes(_ -> {
                                                     try {
                                                         var path = AbilityDeveloperLayoutEditor.exportAll();
                                                         notifyClient("Skill GUI layout exported to " + path.toAbsolutePath());
@@ -191,6 +175,7 @@ public final class AcademyCraftClient {
                                                 }))
                                 ))
         );
+        ClientProfileCommand.register(event.getDispatcher());
         if (!isUiDebugEnvironment()) return;
         event.getDispatcher().register(
                 Commands.literal("academy")
@@ -198,29 +183,29 @@ public final class AcademyCraftClient {
                                 Commands.literal("debug")
                                         .then(
                                                 Commands.literal("ui")
-                                                        .executes(ctx -> {
-                                                            UiDebugBrowserScreen.open();
+                                                        .executes(_ -> {
+                                                            UiDebugBrowserScreen.Companion.open();
                                                             return 1;
                                                         })
                                                         .then(
                                                                 Commands.argument(
                                                                                 "layout",
-                                                                                com.mojang.brigadier.arguments.StringArgumentType.word()
+                                                                                StringArgumentType.word()
                                                                         )
-                                                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
-                                                                                UiDebugLayoutRegistry.gui().stream()
-                                                                                        .map(definition -> definition.getId())
+                                                                        .suggests((_, builder) -> SharedSuggestionProvider.suggest(
+                                                                                UiDebugLayoutRegistry.INSTANCE.gui().stream()
+                                                                                        .map(UiDebugLayoutDefinition::getId)
                                                                                         .toList(),
                                                                                 builder
                                                                         ))
                                                                         .executes(ctx -> {
-                                                                            var layout = com.mojang.brigadier.arguments.StringArgumentType
+                                                                            var layout = StringArgumentType
                                                                                     .getString(ctx, "layout");
-                                                                            if (UiDebugLayoutRegistry.gui().stream()
+                                                                            if (UiDebugLayoutRegistry.INSTANCE.gui().stream()
                                                                                     .noneMatch(definition -> definition.getId().equals(layout))) {
                                                                                 return 0;
                                                                             }
-                                                                            org.academy.api.client.gui.editor.UiLayoutEditorScreen
+                                                                            UiLayoutEditorScreen.Companion
                                                                                     .openDebug(layout);
                                                                             return 1;
                                                                         })
@@ -228,35 +213,35 @@ public final class AcademyCraftClient {
                                         )
                                         .then(
                                                 Commands.literal("hud")
-                                                        .executes(ctx -> {
-                                                            HudDebugScreen.open();
+                                                        .executes(_ -> {
+                                                            HudDebugScreen.Companion.open();
                                                             return 1;
                                                         })
                                         )
                                         .then(
                                                 Commands.literal("save")
-                                                        .executes(ctx -> {
-                                                            UiDebugBrowserScreen.notifyPublish(UiDebugSession.publish());
+                                                        .executes(_ -> {
+                                                            UiDebugBrowserScreen.Companion.notifyPublish(UiDebugSession.INSTANCE.publish());
                                                             return 1;
                                                         })
                                         )
                         )
                         .then(
                                 Commands.literal("uieditor")
-                                        .executes(ctx -> {
-                                            UiDebugBrowserScreen.open();
+                                        .executes(_ -> {
+                                            UiDebugBrowserScreen.Companion.open();
                                             return 1;
                                         })
                                         .then(
-                                                Commands.argument("file", com.mojang.brigadier.arguments.StringArgumentType.word())
-                                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
-                                                                UiDebugLayoutRegistry.all().stream()
-                                                                        .map(definition -> definition.getId())
+                                                Commands.argument("file", StringArgumentType.word())
+                                                        .suggests((_, builder) -> SharedSuggestionProvider.suggest(
+                                                                UiDebugLayoutRegistry.INSTANCE.all().stream()
+                                                                        .map(UiDebugLayoutDefinition::getId)
                                                                         .toList(),
                                                                 builder
                                                         ))
                                                         .executes(ctx -> {
-                                                            String file = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "file");
+                                                            String file = StringArgumentType.getString(ctx, "file");
                                                             UiLayoutEditor.INSTANCE.open(file);
                                                             return 1;
                                                         })
@@ -273,7 +258,7 @@ public final class AcademyCraftClient {
 
     private static void notifyClient(String message) {
         var player = Minecraft.getInstance().player;
-        if (player != null) player.sendSystemMessage(net.minecraft.network.chat.Component.literal(message));
+        if (player != null) player.sendSystemMessage(Component.literal(message));
     }
 
     @SubscribeEvent
@@ -295,12 +280,12 @@ public final class AcademyCraftClient {
     @SubscribeEvent
     public static void onClientStopped(ClientStoppedEvent event) {
         MentaloutRosterClientState.clearLocal();
-        if (isUiDebugEnvironment()) UiDebugSession.close();
+        if (isUiDebugEnvironment()) UiDebugSession.INSTANCE.close();
         ImGuiUtilApi.INSTANCE.close();
         MsdfFontService.INSTANCE.close();
         MsdfAtlasManager.closeAll();
         PostEffect.close();
-        BloomEffect.getInstance().close();
+        GlowEffect.getInstance().close();
         VfxManager.INSTANCE.close();
         Render.close();
     }
@@ -380,41 +365,13 @@ public final class AcademyCraftClient {
         event.registerAvatarEntityModifier(new AvatarRenderStateModifier() {
             @Override
             public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState) {
-                renderState.setRenderData(WingEffectRenderer.ENTITY_ID_CONTEXT, avatar.getId());
+                renderState.setRenderData(ElectromasterWeaponVfx.ENTITY_ID_CONTEXT, avatar.getId());
                 renderState.setRenderData(
-                        StormWingEffectRenderer.CONTEXT_KEY,
-                        avatar.getData(AttachmentTypes.ACTIVATED_STORM_WING)
-                );
-                renderState.setRenderData(
-                        WingEffectRenderer.BLACK_CONTEXT,
-                        avatar.getData(AttachmentTypes.ACTIVATED_BLACK_WING)
-                );
-                renderState.setRenderData(
-                        WingEffectRenderer.WHITE_CONTEXT,
-                        avatar.getData(AttachmentTypes.ACTIVATED_WHITE_WING)
-                );
-                renderState.setRenderData(
-                        WingEffectRenderer.PLATINUM_CONTEXT,
-                        avatar.getData(AttachmentTypes.ACTIVATED_PLATINUM_WING)
-                );
-                renderState.setRenderData(
-                        DarkmatterSixWingsEffectRenderer.CONTEXT_KEY,
-                        avatar.getData(AttachmentTypes.DARKMATTER_SIX_WINGS)
-                );
-                renderState.setRenderData(
-                        RailgunEffectRenderer.CONTEXT_KEY,
-                        avatar.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA)
-                );
-                renderState.setRenderData(
-                        LightShieldEffectRenderer.CONTEXT_KEY,
-                        avatar.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE)
-                );
-                renderState.setRenderData(
-                        ElectromasterWeaponEffectRenderer.MAGNETIC_CONTEXT,
+                        ElectromasterWeaponVfx.MAGNETIC_CONTEXT,
                         avatar.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA)
                 );
                 renderState.setRenderData(
-                        ElectromasterWeaponEffectRenderer.IRON_SAND_CONTEXT,
+                        ElectromasterWeaponVfx.IRON_SAND_CONTEXT,
                         avatar.getData(AttachmentTypes.IRON_SAND_DATA)
                 );
             }

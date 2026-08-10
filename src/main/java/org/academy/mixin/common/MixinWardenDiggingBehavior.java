@@ -10,7 +10,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Prevents the Warden digging behavior from discarding a currently controlled subject. */
+/**
+ * Prevents the Warden digging behavior from discarding a currently controlled subject.
+ */
 @Mixin(Digging.class)
 public abstract class MixinWardenDiggingBehavior {
     @Inject(

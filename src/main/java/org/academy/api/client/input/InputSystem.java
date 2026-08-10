@@ -33,12 +33,12 @@ public final class InputSystem {
     private static final Map<Integer, Integer> MOUSE_STATE = new HashMap<>();
     private static final Map<InputKey, Integer> PRESS_MODIFIER_SNAPSHOTS = new HashMap<>();
     private static final Set<InputKey> SUPPRESSED_RELEASES = new HashSet<>();
-    private static Config config;
-    private static RebindSession rebindSession;
-    private static long bindingRevision;
     public static int currentMouseButton = -1;
     public static int currentMouseAction = -1;
     public static int currentMouseModifier = -1;
+    private static @Nullable Config config;
+    private static @Nullable RebindSession rebindSession;
+    private static long bindingRevision;
 
     private InputSystem() {
     }
@@ -117,8 +117,7 @@ public final class InputSystem {
 
     public static void beginRebind(String keyName, Runnable onFinished) {
         if (!KEY_BINDINGS.containsKey(keyName)) return;
-        rebindSession = new RebindSession(keyName, onFinished == null ? () -> {
-        } : onFinished);
+        rebindSession = new RebindSession(keyName, onFinished);
         bindingRevision++;
     }
 
@@ -252,9 +251,6 @@ public final class InputSystem {
         setKeyBinding(keyName, combo);
     }
 
-    /**
-     * Enables or disables an existing binding without discarding its handler.
-     */
     public static void setKeyBindingEnabled(String keyName, boolean enabled) {
         var existing = KEY_BINDINGS.get(keyName);
         if (existing == null) {
@@ -275,9 +271,7 @@ public final class InputSystem {
         return stateOf(type).getOrDefault(key, InputConstants.RELEASE) != InputConstants.RELEASE;
     }
 
-    /** Returns the hardware state behind a vanilla key mapping, unaffected by injected key state. */
     public static boolean isPhysicalDown(KeyMapping mapping) {
-        if (mapping == null) return false;
         var key = mapping.getKey();
         var type = key.getType() == InputConstants.Type.MOUSE
                 ? InputType.MOUSE

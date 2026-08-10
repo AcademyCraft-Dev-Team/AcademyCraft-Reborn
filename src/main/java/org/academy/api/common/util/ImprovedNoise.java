@@ -14,12 +14,12 @@ public final class ImprovedNoise {
     }
 
     public static double noise(double x, double y, double z) {
-        var X = (int) Math.floor(x) & 255;
-        var Y = (int) Math.floor(y) & 255;
-        var Z = (int) Math.floor(z) & 255;
-        x -= Math.floor(x);
-        y -= Math.floor(y);
-        z -= Math.floor(z);
+        var X = Mth.floor(x) & 255;
+        var Y = Mth.floor(y) & 255;
+        var Z = Mth.floor(z) & 255;
+        x -= Mth.floor(x);
+        y -= Mth.floor(y);
+        z -= Mth.floor(z);
         var u = fade(x);
         var v = fade(y);
         var w = fade(z);

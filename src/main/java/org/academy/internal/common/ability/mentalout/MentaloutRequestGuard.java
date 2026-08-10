@@ -2,13 +2,11 @@ package org.academy.internal.common.ability.mentalout;
 
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
-/** Connection-scoped replay protection for Mentalout client requests. */
+/**
+ * Connection-scoped replay protection for Mentalout client requests.
+ */
 public final class MentaloutRequestGuard {
     static final long ROSTER_RESYNC_COOLDOWN_TICKS = 20L;
 
@@ -92,6 +90,11 @@ public final class MentaloutRequestGuard {
         private static final long HALF_RANGE = 1L << 62;
         private final EnumMap<SkillUse, Long> latest = new EnumMap<>(SkillUse.class);
 
+        private static boolean isNewer(long candidate, long previous) {
+            var forwardDistance = (candidate - previous) & Long.MAX_VALUE;
+            return forwardDistance != 0L && forwardDistance < HALF_RANGE;
+        }
+
         boolean accept(SkillUse skill, long requestSequence) {
             if (requestSequence < 0L) return false;
             var previous = latest.get(skill);
@@ -100,11 +103,6 @@ public final class MentaloutRequestGuard {
                 return true;
             }
             return false;
-        }
-
-        private static boolean isNewer(long candidate, long previous) {
-            var forwardDistance = (candidate - previous) & Long.MAX_VALUE;
-            return forwardDistance != 0L && forwardDistance < HALF_RANGE;
         }
     }
 

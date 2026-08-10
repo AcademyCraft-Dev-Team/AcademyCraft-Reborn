@@ -15,12 +15,12 @@ public final class StatusEffects {
     public static final DeferredHolder<MobEffect, MobEffect> IMPRISONED =
             MOB_EFFECTS.register("imprisoned", ImprisonedEffect::new);
 
+    private StatusEffects() {
+    }
+
     private static final class ImprisonedEffect extends MobEffect {
         private ImprisonedEffect() {
             super(MobEffectCategory.HARMFUL, 0x76678F);
         }
-    }
-
-    private StatusEffects() {
     }
 }

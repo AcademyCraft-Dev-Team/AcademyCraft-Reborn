@@ -13,6 +13,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WirelessManagerTest {
+    private static Map<WirelessUser, WirelessNetworkData.UserConfig> users(TestUser... users) {
+        Map<WirelessUser, WirelessNetworkData.UserConfig> result = new LinkedHashMap<>();
+        for (var user : users) {
+            result.put(user, new WirelessNetworkData.UserConfig());
+        }
+        return result;
+    }
+
     @Test
     void routesNewlyReceivedEnergyToConsumersInTheSameTick() {
         var node = new TestNode(0, 1_000, 100);
@@ -68,14 +76,6 @@ class WirelessManagerTest {
         assertTrue(data.getNodeConfig(secondNode).connectedUsers.containsKey(user));
         assertTrue(data.disconnectUserFromAllNodes(user));
         assertTrue(data.getNodeConfig(secondNode).connectedUsers.isEmpty());
-    }
-
-    private static Map<WirelessUser, WirelessNetworkData.UserConfig> users(TestUser... users) {
-        Map<WirelessUser, WirelessNetworkData.UserConfig> result = new LinkedHashMap<>();
-        for (var user : users) {
-            result.put(user, new WirelessNetworkData.UserConfig());
-        }
-        return result;
     }
 
     private static final class TestNode implements WirelessNode {

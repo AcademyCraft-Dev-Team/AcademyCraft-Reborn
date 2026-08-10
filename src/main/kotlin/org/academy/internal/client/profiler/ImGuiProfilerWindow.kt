@@ -1,7 +1,6 @@
 package org.academy.internal.client.profiler
 
 import com.mojang.blaze3d.GpuFormat
-import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.resource.RenderTargetDescriptor
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
@@ -18,8 +17,8 @@ import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.common.profiler.AcademyProfiler
-import org.academy.api.common.profiler.SamplerSnapshot
 import org.academy.api.common.profiler.SampledNode
+import org.academy.api.common.profiler.SamplerSnapshot
 import org.academy.api.common.profiler.ZoneProfiler
 import org.joml.Vector4f
 
@@ -55,7 +54,7 @@ object ImGuiProfilerWindow {
     fun renderToMainScreen() {
         if (!visible || !Dev.HAS_IM_GUI) return
         val mc = Minecraft.getInstance()
-        val main = mc.gameRenderer.mainRenderTarget() ?: return
+        val main = mc.gameRenderer.mainRenderTarget()
         val pool = Render.Buffers.getResourcePool()
         val desc = RenderTargetDescriptor(
             main.width, main.height, true, Vector4f(0f), GpuFormat.RGBA8_UNORM

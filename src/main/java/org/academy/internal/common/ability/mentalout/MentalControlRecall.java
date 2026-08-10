@@ -7,12 +7,7 @@ import net.minecraft.world.phys.AABB;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public final class MentalControlRecall {
     public static final double RECALL_RADIUS = 64.0;

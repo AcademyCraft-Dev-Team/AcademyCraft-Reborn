@@ -3,19 +3,11 @@ package org.academy.internal.common.ability.accelerator.skills.lv5;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.world.entity.Entity;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.ref.WeakReference;
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -205,7 +197,7 @@ final class PlatinumExecutionCleanup {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void purgeCollection(Collection<?> collection, PendingCleanup pending) {
         try {
-            ((Collection) collection).removeIf(value -> matchesExecution(value, pending));
+            collection.removeIf(value -> matchesExecution(value, pending));
         } catch (Throwable throwable) {
             rethrowVirtualMachineError(throwable);
         }

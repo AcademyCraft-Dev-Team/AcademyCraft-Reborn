@@ -8,26 +8,21 @@ import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.serialize.WidgetNode
 import org.academy.api.client.gui.serialize.WidgetSerializer
-import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.internal.client.gui.debug.UiDebugSession
 
-/**
- * UI 布局编辑器 - 预览屏. 只负责把 [WidgetNode] 文档实时渲染为真实控件树 (可视化),
- * 增删改查等编辑操作全部由 ImGui 窗口 ([UiLayoutImGuiEditor]) 完成.
- * 文档状态在 ImGui (渲染线程) 与预览 (主线程) 之间通过 [lock] 同步.
- */
 class UiLayoutEditorScreen(
     initialDoc: JsonObject? = null,
     val debugLayoutId: String? = null,
     val structureLocked: Boolean = false
 ) : UiScreen(Component.literal("UI Layout Editor")) {
-    private val lock = Object()
+    private val lock = Any()
 
     private var docNode: WidgetNode = initialDoc?.let { WidgetNode.fromJson(it.getAsJsonObject("root") ?: it) }
         ?: WidgetNode("frame_layout", "root")
@@ -163,7 +158,7 @@ class UiLayoutEditorScreen(
                     val target = findWidgetByPath(decoded, path)
                     previewHost.addChild("selection", SelectionBorderWidget { target })
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 previewRoot = null
             }
         }
@@ -182,9 +177,7 @@ class UiLayoutEditorScreen(
         return findNodeByPath(child, path.drop(1))
     }
 
-    // ============ 预览选中框 ============
-
-    private inner class SelectionBorderWidget(private val target: () -> Widget?) : AbstractWidget() {
+    private class SelectionBorderWidget(private val target: () -> Widget?) : AbstractWidget() {
         override fun renderInternal(context: RenderContext) {
             val t = target() ?: return
             val host = parent ?: return
@@ -210,8 +203,6 @@ class UiLayoutEditorScreen(
             context.pose().popPose()
         }
     }
-
-    // ============ 鼠标选择 ============
 
     override fun mouseClicked(e: MouseButtonEvent, isDoubleClick: Boolean): Boolean {
         if (e.button() == 0) {
@@ -251,13 +242,10 @@ class UiLayoutEditorScreen(
     }
 
     companion object {
-        /** 供命令/入口打开编辑器 (确保在主线程 setScreen). */
-        @JvmStatic
         fun open(json: JsonObject? = null) {
             Minecraft.getInstance().execute { Minecraft.getInstance().gui.setScreen(UiLayoutEditorScreen(json)) }
         }
 
-        @JvmStatic
         fun openDebug(layoutId: String) {
             val json = UiDebugSession.documentJson(layoutId)
             Minecraft.getInstance().execute {

@@ -8,8 +8,8 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
-import org.academy.internal.client.renderer.effect.DirStrikeGroundEffect;
+import org.academy.internal.client.render.vfx.DirStrikeGroundEffect;
+import org.academy.internal.client.render.vfx.DirStrikeGroundVfxClient;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -21,8 +21,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 @PacketTarget(ThreadType.CLIENT)
 public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, DirStrikeVisualPacket> {
-    private static final double BROADCAST_RANGE = 96.0;
-    private static final int MAX_RADIUS = 32;
     public static final StreamCodec<ByteBuf, DirStrikeVisualPacket> CODEC = StreamCodec.of(
             (buffer, packet) -> {
                 Vec3.STREAM_CODEC.encode(buffer, packet.center);
@@ -43,6 +41,8 @@ public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, Di
                     ByteBufCodecs.LONG.decode(buffer)
             )
     );
+    private static final double BROADCAST_RANGE = 96.0;
+    private static final int MAX_RADIUS = 32;
     private static boolean clientInitialized;
 
     private final Vec3 center;
@@ -68,7 +68,7 @@ public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, Di
         if (clientInitialized) return;
         clientInitialized = true;
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
-        NeoForge.EVENT_BUS.register(DirStrikeGroundEffect.class);
+        DirStrikeGroundVfxClient.register();
     }
 
     public static void broadcast(ServerLevel level, Vec3 center, BlockPos origin, int radius,

@@ -57,6 +57,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+
 public class BallLightning extends Skill {
     public static final String KEY_NAME_ACTIVATE = SkillNames.BALL_LIGHTNING + "_activate";
     public static final float MAX_RADIUS = 64.0F;
@@ -347,7 +348,7 @@ public class BallLightning extends Skill {
                         }
                         case STAY -> {
                             var t = existedTicks * 0.15 + timeSeed;
-                            var noise = new Vec3(Math.sin(t), Math.cos(t * 0.8), Math.sin(t * 1.2)).scale(0.04);
+                            var noise = new Vec3(Mth.sin(t), Mth.cos(t * 0.8), Mth.sin(t * 1.2)).scale(0.04);
                             force = noise.add(toTarget.normalize().scale(0.015));
                             drag = 0.85f;
                             maxSpeed = 0.1;
@@ -473,7 +474,7 @@ public class BallLightning extends Skill {
                 var time = existedTicks * 0.1f;
 
                 for (var i = 0; i < RING_COUNT; i++) {
-                    var breath = (float) Math.sin(time * 0.5f + i * 0.785f);
+                    var breath = Mth.sin(time * 0.5f + i * 0.785f);
                     var currentRadius = BASE_SCALE * (1.0f + 0.8f * breath);
                     var rotSpeed = 1f + 0.6f * ((i * 12345L) % 100 / 100f);
                     var seed = 1000L + i * 123L;
@@ -504,7 +505,7 @@ public class BallLightning extends Skill {
                         var r = 2.0 + Math.abs(MathUtil.RANDOM.nextGaussian() * 4.0);
                         if (r <= 6f) {
                             var ang = Math.random() * 6.28;
-                            var target = position.add(r * Math.cos(ang), MathUtil.RANDOM.nextDouble(-2, 2), r * Math.sin(ang));
+                            var target = position.add(r * Mth.cos(ang), MathUtil.RANDOM.nextDouble(-2, 2), r * Mth.sin(ang));
                             paths.add(new ArcPath(
                                     new LinePath(position.toVector3f(), target.toVector3f()),
                                     List.of(
@@ -527,9 +528,9 @@ public class BallLightning extends Skill {
                     var a1 = (float) (i * 6.28 / RING_SEGMENTS);
                     var a2 = (float) ((i + 1) * 6.28 / RING_SEGMENTS);
 
-                    var p1 = new Vector3f((float) Math.cos(a1) * radius, 0, (float) Math.sin(a1) * radius)
+                    var p1 = new Vector3f(Mth.cos(a1) * radius, 0, Mth.sin(a1) * radius)
                             .rotate(q).add(position.toVector3f());
-                    var p2 = new Vector3f((float) Math.cos(a2) * radius, 0, (float) Math.sin(a2) * radius)
+                    var p2 = new Vector3f(Mth.cos(a2) * radius, 0, Mth.sin(a2) * radius)
                             .rotate(q).add(position.toVector3f());
 
                     var tangent = new Vector3f(p2).sub(p1).normalize();
@@ -618,9 +619,9 @@ public class BallLightning extends Skill {
                 var theta = (float) (MathUtil.RANDOM.nextDouble() * 6.28);
                 var phi = (float) Math.acos(2 * MathUtil.RANDOM.nextDouble() - 1);
                 return position.toVector3f().add(
-                        (float) (r * Math.sin(phi) * Math.cos(theta)),
-                        (float) (r * Math.sin(phi) * Math.sin(theta)),
-                        (float) (r * Math.cos(phi))
+                        (float) (r * Mth.sin(phi) * Mth.cos(theta)),
+                        (float) (r * Mth.sin(phi) * Mth.sin(theta)),
+                        (float) (r * Mth.cos(phi))
                 );
             }
 

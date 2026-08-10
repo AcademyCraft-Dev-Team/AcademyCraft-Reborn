@@ -58,7 +58,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
 
     @Override
     public boolean isDeadOrDying() {
-        return academy$protected() ? false : super.isDeadOrDying();
+        return !academy$protected() && super.isDeadOrDying();
     }
 
     @Override
@@ -173,7 +173,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
 
     @Override
     public boolean isInvisible() {
-        return academy$protected() ? false : super.isInvisible();
+        return !academy$protected() && super.isInvisible();
     }
 
     @Override

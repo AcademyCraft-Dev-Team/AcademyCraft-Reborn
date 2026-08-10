@@ -1,7 +1,8 @@
 package org.academy.internal.common.ability.mentalout.control;
 
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -9,16 +10,12 @@ import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.util.Mth;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,77 +42,81 @@ final class StandardMobControlBindings {
         };
     }
 
-    private static final class ForceTargetBinding implements ControlBinding {
-        private final Mob mob;
-        private final UUID targetId;
-
-        private ForceTargetBinding(Mob mob, UUID targetId) {
-            this.mob = mob;
-            this.targetId = targetId;
-        }
-
-        @Override
-        public void tick() {
-            if (!mob.isAlive() || mob.isRemoved()) return;
-            MentalControlRuntime.maintainTarget(mob);
-        }
-
-        @Override
-        public void close() {
-            if (!(mob instanceof MentalControlMobAccess access)) return;
-            var current = access.academy$getRawMentalControlTarget();
-            if (current != null && current.getUUID().equals(targetId)
-                    && MentalControlRuntime.getForcedTarget(mob) == null) {
-                mob.setTarget(null);
+    private static ResolvedDestination resolve(Mob mob, ControlDestination destination) {
+        return switch (destination) {
+            case ControlDestination.Entity entity -> {
+                var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), entity.uuid());
+                yield target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()
+                        ? null
+                        : new ResolvedDestination(target.position(), target);
             }
-            var memory = mob.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
-            if (memory != null && memory.isPresent() && memory.get().getUUID().equals(targetId)
-                    && MentalControlRuntime.getForcedTarget(mob) == null) {
-                mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-            }
-        }
+            case ControlDestination.Position position ->
+                    mob.level().dimension().identifier().equals(position.dimension())
+                            ? new ResolvedDestination(position.value(), null)
+                            : null;
+        };
     }
 
-    private static final class FreezeBinding implements ControlBinding {
-        private final Mob mob;
-
-        private FreezeBinding(Mob mob) {
-            this.mob = mob;
-        }
-
-        @Override
-        public void tick() {
-            if (!mob.isAlive() || mob.isRemoved()) return;
-            var verticalVelocity = Math.min(0.0, mob.getDeltaMovement().y);
-            mob.stopInPlace();
-            mob.getNavigation().stop();
-            mob.setJumping(false);
-            mob.setDeltaMovement(0.0, verticalVelocity, 0.0);
-        }
-
-        @Override
-        public void close() {
-        }
+    private enum NavigationResult {
+        MOVING,
+        ARRIVED,
+        FAILED
     }
 
-    private static final class RelationBinding implements ControlBinding {
-        private final Mob mob;
-
-        private RelationBinding(Mob mob) {
-            this.mob = mob;
-        }
+    private record ForceTargetBinding(Mob mob, UUID targetId) implements ControlBinding {
 
         @Override
-        public void tick() {
-            if (mob.isAlive() && !mob.isRemoved()) {
-                MentalControlRuntime.enforceTargetWhitelist(mob);
+            public void tick() {
+                if (!mob.isAlive() || mob.isRemoved()) return;
+                MentalControlRuntime.maintainTarget(mob);
+            }
+
+            @Override
+            public void close() {
+                if (!(mob instanceof MentalControlMobAccess access)) return;
+                var current = access.academy$getRawMentalControlTarget();
+                if (current != null && current.getUUID().equals(targetId)
+                        && MentalControlRuntime.getForcedTarget(mob) == null) {
+                    mob.setTarget(null);
+                }
+                var memory = mob.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
+                if (memory != null && memory.isPresent() && memory.get().getUUID().equals(targetId)
+                        && MentalControlRuntime.getForcedTarget(mob) == null) {
+                    mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                }
             }
         }
 
+    private record FreezeBinding(Mob mob) implements ControlBinding {
+
         @Override
-        public void close() {
+            public void tick() {
+                if (!mob.isAlive() || mob.isRemoved()) return;
+                var verticalVelocity = Math.min(0.0, mob.getDeltaMovement().y);
+                mob.stopInPlace();
+                mob.getNavigation().stop();
+                mob.setJumping(false);
+                mob.setDeltaMovement(0.0, verticalVelocity, 0.0);
+            }
+
+            @Override
+            public void close() {
+            }
         }
-    }
+
+    private record RelationBinding(Mob mob) implements ControlBinding {
+
+        @Override
+            public void tick() {
+                if (mob.isAlive() && !mob.isRemoved()) {
+                    MentalControlRuntime.enforceTargetWhitelist(mob);
+                }
+            }
+
+            @Override
+            public void close() {
+            }
+        }
 
     private static final class PathBinding implements ControlBinding {
         private final Mob mob;
@@ -297,7 +298,7 @@ final class StandardMobControlBindings {
                     || isControllerAlly(candidate)
                     || mob.isAlliedTo(candidate)
                     || MentalPerceptionRuntime.decision(mob, candidate)
-                    == org.academy.api.common.entitycontrol.PerceptionDecision.HIDDEN) {
+                    == PerceptionDecision.HIDDEN) {
                 return false;
             }
             var currentTarget = candidate instanceof Mob candidateMob
@@ -307,8 +308,7 @@ final class StandardMobControlBindings {
                     : null;
             var hostile = isProtected(currentTarget, anchor.entity());
             var lastVictim = candidate.getLastHurtMob();
-            hostile |= lastVictim != null
-                    && candidate.tickCount - candidate.getLastHurtMobTimestamp() <= RECENT_HOSTILITY_TICKS
+            hostile |= candidate.tickCount - candidate.getLastHurtMobTimestamp() <= RECENT_HOSTILITY_TICKS
                     && isProtected(lastVictim, anchor.entity());
             return hostile;
         }
@@ -355,62 +355,34 @@ final class StandardMobControlBindings {
         }
     }
 
-    private static final class LookBinding implements ControlBinding {
-        private final Mob mob;
-        private final UUID targetId;
-
-        private LookBinding(Mob mob, UUID targetId) {
-            this.mob = mob;
-            this.targetId = targetId;
-        }
+    private record LookBinding(Mob mob, UUID targetId) implements ControlBinding {
 
         @Override
-        public void tick() {
-            applyLook();
-        }
-
-        @Override
-        public void beforeLookControlTick() {
-            applyLook();
-        }
-
-        private void applyLook() {
-            if (!mob.isAlive() || mob.isRemoved()) return;
-            var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), targetId);
-            if (target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()) return;
-            mob.getLookControl().setLookAt(target, 30.0f, 30.0f);
-        }
-
-        @Override
-        public void close() {
-        }
-    }
-
-    private static ResolvedDestination resolve(Mob mob, ControlDestination destination) {
-        return switch (destination) {
-            case ControlDestination.Entity entity -> {
-                var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), entity.uuid());
-                yield target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()
-                        ? null
-                        : new ResolvedDestination(target.position(), target);
+            public void tick() {
+                applyLook();
             }
-            case ControlDestination.Position position ->
-                    mob.level().dimension().identifier().equals(position.dimension())
-                            ? new ResolvedDestination(position.value(), null)
-                            : null;
-        };
-    }
 
-    private record ResolvedDestination(net.minecraft.world.phys.Vec3 position, LivingEntity entity) {
+            @Override
+            public void beforeLookControlTick() {
+                applyLook();
+            }
+
+            private void applyLook() {
+                if (!mob.isAlive() || mob.isRemoved()) return;
+                var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), targetId);
+                if (target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()) return;
+                mob.getLookControl().setLookAt(target, 30.0f, 30.0f);
+            }
+
+            @Override
+            public void close() {
+            }
+        }
+
+    private record ResolvedDestination(Vec3 position, LivingEntity entity) {
         private BlockPos blockPosition() {
             return BlockPos.containing(position);
         }
-    }
-
-    private enum NavigationResult {
-        MOVING,
-        ARRIVED,
-        FAILED
     }
 
     private static final class DestinationNavigator {
@@ -432,7 +404,7 @@ final class StandardMobControlBindings {
         private long lastAdvanceTime = Long.MIN_VALUE;
         private int consecutiveFailures;
         private double lastDirectDistanceSqr = Double.NaN;
-        private net.minecraft.world.phys.Vec3 lastDirectPosition;
+        private Vec3 lastDirectPosition;
         private boolean directApproach;
 
         private DestinationNavigator(Mob mob, double arrivalRadius) {
@@ -440,7 +412,7 @@ final class StandardMobControlBindings {
             // PathFinder uses Manhattan block distance, which may stop more than one Euclidean
             // block away when given a reach range of one. Request the next tighter path and let
             // the precise radius check above decide when the destination has been reached.
-            reachRange = Math.max(0, (int) Math.ceil(arrivalRadius) - 1);
+            reachRange = Math.max(0, Mth.ceil(arrivalRadius) - 1);
             arrivalRadiusSqr = arrivalRadius * arrivalRadius;
         }
 
@@ -459,7 +431,7 @@ final class StandardMobControlBindings {
 
             var targetBlock = target.blockPosition();
             var targetEntity = target.entity() == null ? null : target.entity().getUUID();
-            var entityChanged = !java.util.Objects.equals(targetEntity, requestedEntity);
+            var entityChanged = !Objects.equals(targetEntity, requestedEntity);
             var positionChanged = !targetBlock.equals(requestedTarget);
             var changed = requestedTarget == null
                     || entityChanged
@@ -636,16 +608,16 @@ final class StandardMobControlBindings {
             return mob.getMoveControl() instanceof CubeMobMoveControlAccess;
         }
 
-        private boolean canOccupy(net.minecraft.world.phys.Vec3 position) {
+        private boolean canOccupy(Vec3 position) {
             var offset = position.subtract(mob.position());
             return mob.level().noCollision(mob, mob.getBoundingBox().move(offset));
         }
 
-        private boolean hasClearDirectApproach(net.minecraft.world.phys.Vec3 position) {
+        private boolean hasClearDirectApproach(Vec3 position) {
             var delta = position.subtract(mob.position());
             var distance = delta.length();
             if (distance > MAX_DIRECT_APPROACH_DISTANCE || !canOccupy(position)) return false;
-            var samples = Math.max(1, (int) Math.ceil(distance / DIRECT_COLLISION_SAMPLE_STEP));
+            var samples = Math.max(1, Mth.ceil(distance / DIRECT_COLLISION_SAMPLE_STEP));
             var bounds = mob.getBoundingBox();
             for (var sample = 1; sample <= samples; sample++) {
                 var offset = delta.scale((double) sample / samples);
@@ -672,7 +644,7 @@ final class StandardMobControlBindings {
                 return;
             }
             if (dx * dx + dz * dz > 1.0E-6) {
-                var yRot = (float) (Mth.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
+                var yRot = (float) (Mth.atan2(dz, dx) * 180.0 / Mth.PI) - 90.0F;
                 // Cube mobs only jump when their controller's aggressive cadence expires. Use
                 // that shorter cadence for mental navigation as well; it changes no target or
                 // damage decision, but prevents a valid route from spending most of its lease idle.
@@ -680,7 +652,7 @@ final class StandardMobControlBindings {
             }
             cubeMove.academy$setMentalControlMovement(speed);
             if (dx * dx + dz * dz > 1.0E-6) {
-                var horizontalLength = Math.sqrt(dx * dx + dz * dz);
+                var horizontalLength = Mth.sqrt((float) (dx * dx + dz * dz));
                 var movement = mob.getDeltaMovement();
                 var desiredSpeed = 0.16 * speed;
                 mob.setDeltaMovement(

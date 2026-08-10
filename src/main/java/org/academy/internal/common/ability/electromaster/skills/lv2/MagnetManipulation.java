@@ -43,7 +43,6 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.sound.LoopingPlayerSoundInstance;
 import org.academy.api.common.ability.AbilityLevel;
@@ -54,7 +53,6 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.EMFieldEffectWrapper;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -62,6 +60,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -69,7 +68,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Locale;
@@ -105,14 +103,20 @@ public class MagnetManipulation extends Skill {
             EquipmentSlot.FEET,
             EquipmentSlot.BODY
     };
-
     private static final List<String> MAGNETIC_KEYWORDS = List.of(
             "iron", "steel", "ferrous", "ferric", "magnetic", "magnetite", "hematite"
     );
 
-    enum PullMode {
-        PLAYER_TO_TARGET,
-        TARGET_TO_PLAYER
+    public MagnetManipulation() {
+        super(Builder
+                .of(AbilityCategories.ELECTROMASTER.get())
+                .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.ARC_GENERATE)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+        );
     }
 
     static Vec3 calculateMoveVelocity(Vec3 origin, Vec3 target, Vec3 fallbackDirection) {
@@ -123,7 +127,7 @@ public class MagnetManipulation extends Skill {
     }
 
     static Vec3 calculatePullVelocity(Vec3 currentVelocity, Vec3 origin, Vec3 target,
-                                       Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
+                                      Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
         if (!isFinite(currentVelocity) || !isFinite(origin) || !isFinite(target) || !isFinite(fallbackDirection)) {
             return Vec3.ZERO;
         }
@@ -133,7 +137,7 @@ public class MagnetManipulation extends Skill {
         if (distance <= stopDistance) return currentVelocity.scale(0.25);
         if (distance <= 1.0e-6) direction = fallbackDirection;
         if (direction.lengthSqr() <= 1.0e-6) return Vec3.ZERO;
-        var speed = Math.min(maxSpeed, Math.max(0.12, (distance - stopDistance) * 0.22));
+        var speed = Math.clamp((distance - stopDistance) * 0.22, 0.12, maxSpeed);
         var desired = direction.normalize().scale(speed);
         var velocity = currentVelocity.scale(0.2).add(desired.scale(0.8));
         var length = velocity.length();
@@ -211,21 +215,8 @@ public class MagnetManipulation extends Skill {
         return false;
     }
 
-    public MagnetManipulation() {
-        super(Builder
-                .of(AbilityCategories.ELECTROMASTER.get())
-                .level(AbilityLevel.LEVEL3)
-                .energyCost(30_000)
-                .iterationTicks(10)
-                .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.ARC_GENERATE)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
-        );
-    }
-
     @Override
     public void initClient() {
-        RendererManager.registerEffectRenderer(EMFieldEffectWrapper.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -256,6 +247,11 @@ public class MagnetManipulation extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    enum PullMode {
+        PLAYER_TO_TARGET,
+        TARGET_TO_PLAYER
     }
 
     public static final class Client {
@@ -308,22 +304,6 @@ public class MagnetManipulation extends Skill {
             if (loopSound == null) return;
             Minecraft.getInstance().getSoundManager().stop(loopSound);
             loopSound = null;
-        }
-
-        private static void tickVisual() {
-            var player = Minecraft.getInstance().player;
-            if (activeMode == null || player == null) return;
-            if ((player.tickCount & 1) != 0) return;
-            var center = player.position().add(0, player.getBbHeight() * 0.5, 0);
-            var time = player.tickCount * 0.18;
-            EMFieldEffectWrapper.INSTANCE.createField(3.0f);
-            for (var i = 0; i < 6; i++) {
-                var angle = time + i * Math.PI / 3.0;
-                var start = center.add(Math.cos(angle) * 0.8, -0.55, Math.sin(angle) * 0.8);
-                var end = center.add(Math.cos(angle + 1.1) * 0.65, 0.75, Math.sin(angle + 1.1) * 0.65);
-                EMFieldEffectWrapper.INSTANCE.addFieldLine(
-                        start, end, 0.25f, 0.65f, 1.0f, 0.035f, 0.8f, 0.18f, 8);
-            }
         }
 
         public static class Config extends KeyBindingConfig {
@@ -558,7 +538,6 @@ public class MagnetManipulation extends Skill {
 
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
-            Client.tickVisual();
         }
     }
 

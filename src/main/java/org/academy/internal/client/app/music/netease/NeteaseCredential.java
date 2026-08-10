@@ -1,13 +1,10 @@
 package org.academy.internal.client.app.music.netease;
 
 public final class NeteaseCredential {
-    private String uid;
-    private String nickname;
-    private String avatarUrl;
-    private long loginTime;
-
-    public NeteaseCredential() {
-    }
+    private final String uid;
+    private final String nickname;
+    private final String avatarUrl;
+    private final long loginTime;
 
     public NeteaseCredential(String uid, String nickname, String avatarUrl) {
         this.uid = uid;

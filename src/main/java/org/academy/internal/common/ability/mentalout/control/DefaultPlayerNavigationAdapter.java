@@ -15,69 +15,21 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.MentalControlApi;
-import org.academy.api.common.entitycontrol.PlayerControlFrame;
-import org.academy.api.common.entitycontrol.PlayerMovementMode;
-import org.academy.api.common.entitycontrol.PlayerNavigationAdapter;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.skills.Flight;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.PriorityQueue;
-import java.util.Set;
+import java.util.*;
 
-/** Built-in bounded navigation for vanilla player movement, water, flight, and ridden vehicles. */
+/**
+ * Built-in bounded navigation for vanilla player movement, water, flight, and ridden vehicles.
+ */
 public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAdapter {
-    @Override
-    public boolean matches(ServerPlayer subject) {
-        return subject != null;
-    }
-
-    @Override
-    public Set<PlayerMovementMode> modes(ServerPlayer subject) {
-        if (subject.isPassenger()) {
-            var vehicle = subject.getVehicle();
-            var mode = vehicleMode(vehicle, subject);
-            return mode == null ? Set.of() : Set.of(mode);
-        }
-        var modes = EnumSet.of(
-                PlayerMovementMode.WALK,
-                PlayerMovementMode.JUMP,
-                PlayerMovementMode.DROP,
-                PlayerMovementMode.CLIMB,
-                PlayerMovementMode.SWIM
-        );
-        if (subject.isFallFlying()) modes.add(PlayerMovementMode.GLIDE);
-        if (canUseFlight(subject)) modes.add(PlayerMovementMode.FLY);
-        return Set.copyOf(modes);
-    }
-
-    @Override
-    public ControlBinding activate(
-            ControlContext context,
-            ServerPlayer subject,
-            ControlDirective.MoveTo directive
-    ) {
-        var supportedModes = modes(subject);
-        if (supportedModes.isEmpty()) {
-            return new FailedBinding(ControlFailureReason.UNSUPPORTED_MOVEMENT_MODE);
-        }
-        return new PlayerPathBinding(context, subject, directive, supportedModes);
-    }
+    private static final int[][] DIAGONAL_OFFSETS = {
+            {-1, -1}, {-1, 1}, {1, -1}, {1, 1}
+    };
 
     private static PlayerMovementMode vehicleMode(Entity vehicle, ServerPlayer subject) {
         if (vehicle == null || vehicle.getControllingPassenger() != subject) return null;
@@ -131,6 +83,49 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
         );
     }
 
+    @Override
+    public boolean matches(ServerPlayer subject) {
+        return subject != null;
+    }
+
+    @Override
+    public Set<PlayerMovementMode> modes(ServerPlayer subject) {
+        if (subject.isPassenger()) {
+            var vehicle = subject.getVehicle();
+            var mode = vehicleMode(vehicle, subject);
+            return mode == null ? Set.of() : Set.of(mode);
+        }
+        var modes = EnumSet.of(
+                PlayerMovementMode.WALK,
+                PlayerMovementMode.JUMP,
+                PlayerMovementMode.DROP,
+                PlayerMovementMode.CLIMB,
+                PlayerMovementMode.SWIM
+        );
+        if (subject.isFallFlying()) modes.add(PlayerMovementMode.GLIDE);
+        if (canUseFlight(subject)) modes.add(PlayerMovementMode.FLY);
+        return Set.copyOf(modes);
+    }
+
+    @Override
+    public ControlBinding activate(
+            ControlContext context,
+            ServerPlayer subject,
+            ControlDirective.MoveTo directive
+    ) {
+        var supportedModes = modes(subject);
+        if (supportedModes.isEmpty()) {
+            return new FailedBinding(ControlFailureReason.UNSUPPORTED_MOVEMENT_MODE);
+        }
+        return new PlayerPathBinding(context, subject, directive, supportedModes);
+    }
+
+    private enum SearchResult {
+        RUNNING,
+        FOUND,
+        FAILED
+    }
+
     private static final class PlayerPathBinding implements ControlBinding {
         private static final int MAX_NODES = 4096;
         private static final int MAX_EXPANSIONS_PER_TICK = 256;
@@ -178,6 +173,50 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             this.supportedModes = supportedModes;
             selfControlled = context.controller() == subject;
             session = PlayerControlSessionManager.beginPath(context, subject);
+        }
+
+        private static boolean waypointReached(
+                PlayerMovementMode mode,
+                double horizontalDistanceSqr,
+                double verticalDistance
+        ) {
+            var verticalTolerance = mode == PlayerMovementMode.FLY
+                    ? 0.18
+                    : mode == PlayerMovementMode.SWIM
+                    || mode == PlayerMovementMode.GLIDE
+                    || mode == PlayerMovementMode.JUMP
+                    ? 0.35
+                    : 0.8;
+            return horizontalDistanceSqr <= 0.20 && Math.abs(verticalDistance) <= verticalTolerance;
+        }
+
+        private static PlayerMovementMode initialMode(ServerPlayer subject) {
+            if (subject.isPassenger()) {
+                var mode = vehicleMode(subject.getVehicle(), subject);
+                return mode == null ? PlayerMovementMode.MOUNT : mode;
+            }
+            if (subject.isFallFlying()) return PlayerMovementMode.GLIDE;
+            if (subject.getAbilities().flying) return PlayerMovementMode.FLY;
+            if (subject.isInWater()) return PlayerMovementMode.SWIM;
+            if (subject.onClimbable()) return PlayerMovementMode.CLIMB;
+            return PlayerMovementMode.WALK;
+        }
+
+        private static double heuristic(BlockPos left, BlockPos right) {
+            return Mth.sqrt((float) (left.distSqr(right)));
+        }
+
+        private static double moveCost(NodeKey from, NodeKey to) {
+            var dx = to.pos.getX() - from.pos.getX();
+            var dy = to.pos.getY() - from.pos.getY();
+            var dz = to.pos.getZ() - from.pos.getZ();
+            return Mth.sqrt((float) (dx * dx + dy * dy + dz * dz)) + switch (to.mode) {
+                case JUMP -> 0.4;
+                case DROP -> 0.25;
+                case FLY -> 0.55;
+                case GLIDE -> 0.3;
+                default -> 0.0;
+            };
         }
 
         @Override
@@ -325,14 +364,14 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             var yaw = horizontalSqr <= 1.0e-6
                     ? subject.getYRot()
                     : (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0f;
-            var horizontal = Math.sqrt(horizontalSqr);
+            var horizontal = Mth.sqrt((float) (horizontalSqr));
             var waterExit = step.mode == PlayerMovementMode.JUMP && subject.isInWater();
             var verticalMode = step.mode == PlayerMovementMode.FLY
                     || step.mode == PlayerMovementMode.SWIM
                     || step.mode == PlayerMovementMode.GLIDE
                     || waterExit;
             var pitch = verticalMode && delta.lengthSqr() > 1.0e-6
-                    ? (float) -Math.toDegrees(Math.atan2(delta.y, Math.max(horizontal, 1.0e-6)))
+                    ? (float) -(Mth.atan2(delta.y, Math.max(horizontal, 1.0e-6))) * Mth.RAD_TO_DEG
                     : subject.getXRot();
             var jump = false;
             var sneak = false;
@@ -377,23 +416,8 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
                     : Vec3.atBottomCenterOf(step.pos);
         }
 
-        private static boolean waypointReached(
-                PlayerMovementMode mode,
-                double horizontalDistanceSqr,
-                double verticalDistance
-        ) {
-            var verticalTolerance = mode == PlayerMovementMode.FLY
-                    ? 0.18
-                    : mode == PlayerMovementMode.SWIM
-                    || mode == PlayerMovementMode.GLIDE
-                    || mode == PlayerMovementMode.JUMP
-                    ? 0.35
-                    : 0.8;
-            return horizontalDistanceSqr <= 0.20 && Math.abs(verticalDistance) <= verticalTolerance;
-        }
-
         private boolean openDoorIfNeeded(BlockPos pos) {
-            var level = (ServerLevel) subject.level();
+            var level = subject.level();
             var state = level.getBlockState(pos);
             if (!state.hasProperty(BlockStateProperties.OPEN)
                     || state.getValue(BlockStateProperties.OPEN)) return true;
@@ -489,7 +513,7 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             closed = true;
             PlayerControlSessionManager.submitPathFrame(session, PlayerControlFrame.NEUTRAL);
             var directOverride = MentalControlApi.inspect(
-                    subject, org.academy.api.common.entitycontrol.ControlCapability.DIRECT_CONTROL
+                    subject, ControlCapability.DIRECT_CONTROL
             ).isPresent();
             PlayerControlSessionManager.closePath(
                     session, !selfControlled && clientBecameActive && !directOverride);
@@ -517,72 +541,8 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
         }
 
         private boolean hasImmediateLandingSupport() {
-            var level = (ServerLevel) subject.level();
+            var level = subject.level();
             return !level.noCollision(subject, subject.getBoundingBox().move(0.0, -0.5, 0.0));
-        }
-
-        private final class Search {
-            private final BlockPos goal;
-            private final PriorityQueue<SearchNode> open = new PriorityQueue<>(Comparator
-                    .comparingDouble(SearchNode::score)
-                    .thenComparingDouble(SearchNode::heuristic));
-            private final Map<NodeKey, SearchNode> best = new HashMap<>();
-            private final Set<NodeKey> closed = new HashSet<>();
-            private SearchNode found;
-            private boolean budgetExhausted;
-
-            private Search(BlockPos start, BlockPos goal) {
-                this.goal = goal;
-                var mode = initialMode(subject);
-                var node = new SearchNode(new NodeKey(start.immutable(), mode), 0.0,
-                        heuristic(start, goal), null);
-                open.add(node);
-                best.put(node.key, node);
-            }
-
-            private SearchResult expand(int budget) {
-                for (var count = 0; count < budget; count++) {
-                    var current = pollOpen();
-                    if (current == null) return SearchResult.FAILED;
-                    if (searchNodeReaches(current.key.pos, goal, arrivalRadius)) {
-                        found = current;
-                        return SearchResult.FOUND;
-                    }
-                    closed.add(current.key);
-                    for (var neighbor : neighbors(current.key)) {
-                        if (closed.contains(neighbor)) continue;
-                        var cost = current.cost + moveCost(current.key, neighbor);
-                        var existing = best.get(neighbor);
-                        if (existing != null && existing.cost <= cost) continue;
-                        if (best.size() >= MAX_NODES) {
-                            budgetExhausted = true;
-                            return SearchResult.FAILED;
-                        }
-                        var node = new SearchNode(neighbor, cost,
-                                heuristic(neighbor.pos, goal), current);
-                        best.put(neighbor, node);
-                        open.add(node);
-                    }
-                }
-                return SearchResult.RUNNING;
-            }
-
-            private SearchNode pollOpen() {
-                while (!open.isEmpty()) {
-                    var result = open.remove();
-                    if (best.get(result.key) == result && !closed.contains(result.key)) return result;
-                }
-                return null;
-            }
-
-            private List<NodeStep> buildPath() {
-                var reversed = new ArrayList<NodeStep>();
-                for (var node = found; node != null && node.parent != null; node = node.parent) {
-                    reversed.add(new NodeStep(node.key.pos, node.key.mode));
-                }
-                java.util.Collections.reverse(reversed);
-                return List.copyOf(reversed);
-            }
         }
 
         private List<NodeKey> neighbors(NodeKey current) {
@@ -736,7 +696,7 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
         }
 
         private boolean canOccupy(BlockPos pos) {
-            var level = (ServerLevel) subject.level();
+            var level = subject.level();
             var body = subject.isPassenger() ? subject.getVehicle() : subject;
             var box = body.getBoundingBox().move(
                     pos.getX() + 0.5 - body.getX(),
@@ -752,7 +712,7 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
 
         private boolean vehicleCanOccupy(BlockPos pos, PlayerMovementMode mode) {
             if (!canOccupy(pos)) return false;
-            var level = (ServerLevel) subject.level();
+            var level = subject.level();
             if (mode == PlayerMovementMode.BOAT) return isWater(pos) || isWater(pos.below());
             if (mode == PlayerMovementMode.RAIL) {
                 return level.getBlockState(pos).is(BlockTags.RAILS)
@@ -762,7 +722,7 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
         }
 
         private boolean hasGround(BlockPos pos) {
-            var level = (ServerLevel) subject.level();
+            var level = subject.level();
             return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
         }
 
@@ -774,71 +734,91 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
             return subject.level().getBlockState(pos).is(BlockTags.CLIMBABLE);
         }
 
-        private static PlayerMovementMode initialMode(ServerPlayer subject) {
-            if (subject.isPassenger()) {
-                var mode = vehicleMode(subject.getVehicle(), subject);
-                return mode == null ? PlayerMovementMode.MOUNT : mode;
+        private final class Search {
+            private final BlockPos goal;
+            private final PriorityQueue<SearchNode> open = new PriorityQueue<>(Comparator
+                    .comparingDouble(SearchNode::score)
+                    .thenComparingDouble(SearchNode::heuristic));
+            private final Map<NodeKey, SearchNode> best = new HashMap<>();
+            private final Set<NodeKey> closed = new HashSet<>();
+            private SearchNode found;
+            private boolean budgetExhausted;
+
+            private Search(BlockPos start, BlockPos goal) {
+                this.goal = goal;
+                var mode = initialMode(subject);
+                var node = new SearchNode(new NodeKey(start.immutable(), mode), 0.0,
+                        heuristic(start, goal), null);
+                open.add(node);
+                best.put(node.key, node);
             }
-            if (subject.isFallFlying()) return PlayerMovementMode.GLIDE;
-            if (subject.getAbilities().flying) return PlayerMovementMode.FLY;
-            if (subject.isInWater()) return PlayerMovementMode.SWIM;
-            if (subject.onClimbable()) return PlayerMovementMode.CLIMB;
-            return PlayerMovementMode.WALK;
-        }
 
-        private static double heuristic(BlockPos left, BlockPos right) {
-            return Math.sqrt(left.distSqr(right));
-        }
+            private SearchResult expand(int budget) {
+                for (var count = 0; count < budget; count++) {
+                    var current = pollOpen();
+                    if (current == null) return SearchResult.FAILED;
+                    if (searchNodeReaches(current.key.pos, goal, arrivalRadius)) {
+                        found = current;
+                        return SearchResult.FOUND;
+                    }
+                    closed.add(current.key);
+                    for (var neighbor : neighbors(current.key)) {
+                        if (closed.contains(neighbor)) continue;
+                        var cost = current.cost + moveCost(current.key, neighbor);
+                        var existing = best.get(neighbor);
+                        if (existing != null && existing.cost <= cost) continue;
+                        if (best.size() >= MAX_NODES) {
+                            budgetExhausted = true;
+                            return SearchResult.FAILED;
+                        }
+                        var node = new SearchNode(neighbor, cost,
+                                heuristic(neighbor.pos, goal), current);
+                        best.put(neighbor, node);
+                        open.add(node);
+                    }
+                }
+                return SearchResult.RUNNING;
+            }
 
-        private static double moveCost(NodeKey from, NodeKey to) {
-            var dx = to.pos.getX() - from.pos.getX();
-            var dy = to.pos.getY() - from.pos.getY();
-            var dz = to.pos.getZ() - from.pos.getZ();
-            return Math.sqrt(dx * dx + dy * dy + dz * dz) + switch (to.mode) {
-                case JUMP -> 0.4;
-                case DROP -> 0.25;
-                case FLY -> 0.55;
-                case GLIDE -> 0.3;
-                default -> 0.0;
-            };
-        }
-    }
+            private SearchNode pollOpen() {
+                while (!open.isEmpty()) {
+                    var result = open.remove();
+                    if (best.get(result.key) == result && !closed.contains(result.key)) return result;
+                }
+                return null;
+            }
 
-    private static final class FailedBinding implements ControlBinding {
-        private final ControlFailureReason reason;
-
-        private FailedBinding(ControlFailureReason reason) {
-            this.reason = reason;
-        }
-
-        @Override
-        public void tick() {
-        }
-
-        @Override
-        public boolean isComplete() {
-            return true;
-        }
-
-        @Override
-        public Optional<ControlFailureReason> failureReason() {
-            return Optional.of(reason);
-        }
-
-        @Override
-        public void close() {
+            private List<NodeStep> buildPath() {
+                var reversed = new ArrayList<NodeStep>();
+                for (var node = found; node != null && node.parent != null; node = node.parent) {
+                    reversed.add(new NodeStep(node.key.pos, node.key.mode));
+                }
+                Collections.reverse(reversed);
+                return List.copyOf(reversed);
+            }
         }
     }
 
-    private enum SearchResult {
-        RUNNING,
-        FOUND,
-        FAILED
-    }
+    private record FailedBinding(ControlFailureReason reason) implements ControlBinding {
 
-    private static final int[][] DIAGONAL_OFFSETS = {
-            {-1, -1}, {-1, 1}, {1, -1}, {1, 1}
-    };
+        @Override
+            public void tick() {
+            }
+
+            @Override
+            public boolean isComplete() {
+                return true;
+            }
+
+            @Override
+            public Optional<ControlFailureReason> failureReason() {
+                return Optional.of(reason);
+            }
+
+            @Override
+            public void close() {
+            }
+        }
 
     private record NodeKey(BlockPos pos, PlayerMovementMode mode) {
     }

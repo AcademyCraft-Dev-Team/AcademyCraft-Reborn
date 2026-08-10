@@ -16,12 +16,10 @@ import java.util.function.Supplier
 object SerializedUiLayout {
     private val rejectedOverrideTimestamps = mutableMapOf<Path, Long>()
 
-    @JvmStatic
     fun load(identifier: Identifier, fallback: Supplier<FrameLayoutWidget>): FrameLayoutWidget {
         return load(identifier, emptyList(), fallback)
     }
 
-    @JvmStatic
     fun load(
         identifier: Identifier,
         requiredNames: List<String>,
@@ -73,7 +71,6 @@ object SerializedUiLayout {
     }
 
     /** Loads only the packaged layout, bypassing editable runtime and disk overrides. */
-    @JvmStatic
     fun loadBundled(
         identifier: Identifier,
         requiredNames: List<String>,
@@ -118,7 +115,6 @@ object SerializedUiLayout {
         return loaded
     }
 
-    @JvmStatic
     fun find(root: Widget, name: String): Widget? {
         if (root.name == name) return root
         if (root !is WidgetContainer) return null
@@ -128,7 +124,6 @@ object SerializedUiLayout {
         return null
     }
 
-    @JvmStatic
     fun require(root: Widget, name: String): Widget {
         return find(root, name)
             ?: throw IllegalArgumentException("Serialized UI is missing widget '$name'")

@@ -22,15 +22,15 @@ public abstract class MixinKeyboardHandler {
     }
 
     @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
-    private void academy$charTyped(long handle, CharacterEvent event, CallbackInfo ci) {
-        if (TerminalHud.handleCharacterInput(event)) {
+    private void charTyped(long handle, CharacterEvent event, CallbackInfo ci) {
+        if (TerminalHud.Companion.handleCharacterInput(event)) {
             ci.cancel();
         }
     }
 
     @Inject(method = "preeditCallback", at = @At("HEAD"), cancellable = true)
-    private void academy$preeditCallback(long handle, PreeditEvent event, CallbackInfo ci) {
-        if (TerminalHud.handlePreeditInput(event)) {
+    private void preeditCallback(long handle, PreeditEvent event, CallbackInfo ci) {
+        if (TerminalHud.Companion.handlePreeditInput(event)) {
             ci.cancel();
         }
     }

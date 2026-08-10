@@ -9,13 +9,16 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AirflowFieldTest {
     private static final ResourceKey<Level> DIMENSION = ResourceKey.create(
             Registries.DIMENSION, Identifier.fromNamespaceAndPath("test", "airflow_field"));
+
+    private static AirflowField field(AirflowField.Shape shape, Vec3 center, Vec3 direction, double radius, double length) {
+        return new AirflowField(UUID.randomUUID(), UUID.randomUUID(), DIMENSION,
+                AirflowField.Type.VORTEX, shape, center, direction, radius, length, 1, 80);
+    }
 
     @Test
     void normalizesDirectionAndRejectsNonFinitePoints() {
@@ -47,10 +50,5 @@ class AirflowFieldTest {
         assertTrue(field.contains(new Vec3(1.9, 0, 4), 0));
         assertFalse(field.contains(new Vec3(3, 0, 4), 0));
         assertFalse(field.contains(new Vec3(0, 0, -0.1), 0));
-    }
-
-    private static AirflowField field(AirflowField.Shape shape, Vec3 center, Vec3 direction, double radius, double length) {
-        return new AirflowField(UUID.randomUUID(), UUID.randomUUID(), DIMENSION,
-                AirflowField.Type.VORTEX, shape, center, direction, radius, length, 1, 80);
     }
 }

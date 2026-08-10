@@ -12,6 +12,31 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ThunderLanceTest {
+    private static List<Vec3> strandOffsets() {
+        return List.of(
+                new Vec3(0.5, 0.5, 0),
+                new Vec3(0.5, -0.5, 0),
+                new Vec3(-0.5, 0.5, 0),
+                new Vec3(-0.5, -0.5, 0)
+        );
+    }
+
+    private static void assertLine(ArcPath path, Vec3 expectedStart, Vec3 expectedEnd) {
+        var line = assertInstanceOf(LinePath.class, path.path());
+        assertVector(expectedStart, line.start());
+        assertVector(expectedEnd, line.end());
+    }
+
+    private static void assertVector(Vec3 expected, Vector3fc actual) {
+        assertEquals(expected.x, actual.x(), 1.0e-6);
+        assertEquals(expected.y, actual.y(), 1.0e-6);
+        assertEquals(expected.z, actual.z(), 1.0e-6);
+    }
+
+    private static long jaggedSeed(ArcPath path) {
+        return assertInstanceOf(JaggedModifier.class, path.modifiers().getFirst()).seed();
+    }
+
     @Test
     void quickModeUsesReferenceDamageAndCurrentMultipliers() {
         assertEquals(16.0f, ThunderLance.calculateQuickDamage(1.0f, 1.0f));
@@ -77,30 +102,5 @@ class ThunderLanceTest {
             assertEquals(ThunderLance.deriveReturnSeed(seeds.get(i)), jaggedSeed(paths.get(i + offsets.size())));
             assertNotEquals(seeds.get(i).longValue(), ThunderLance.deriveReturnSeed(seeds.get(i)));
         }
-    }
-
-    private static List<Vec3> strandOffsets() {
-        return List.of(
-                new Vec3(0.5, 0.5, 0),
-                new Vec3(0.5, -0.5, 0),
-                new Vec3(-0.5, 0.5, 0),
-                new Vec3(-0.5, -0.5, 0)
-        );
-    }
-
-    private static void assertLine(ArcPath path, Vec3 expectedStart, Vec3 expectedEnd) {
-        var line = assertInstanceOf(LinePath.class, path.path());
-        assertVector(expectedStart, line.start());
-        assertVector(expectedEnd, line.end());
-    }
-
-    private static void assertVector(Vec3 expected, Vector3fc actual) {
-        assertEquals(expected.x, actual.x(), 1.0e-6);
-        assertEquals(expected.y, actual.y(), 1.0e-6);
-        assertEquals(expected.z, actual.z(), 1.0e-6);
-    }
-
-    private static long jaggedSeed(ArcPath path) {
-        return assertInstanceOf(JaggedModifier.class, path.modifiers().getFirst()).seed();
     }
 }

@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
@@ -14,7 +15,9 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
 
-/** Central entry point for AcademyCraft category damage. */
+/**
+ * Central entry point for AcademyCraft category damage.
+ */
 public final class SkillDamageUtil {
     private static final float EPSILON = 0.0001f;
 
@@ -25,7 +28,7 @@ public final class SkillDamageUtil {
                                 ResourceKey<DamageType> type, float amount) {
         if (attacker == null || target == null || skill == null || type == null) return false;
         if (!(amount > 0.0f) || !Float.isFinite(amount) || !target.isAlive()) return false;
-        if (target == attacker || DamageTypes.isImmunePlayer(target instanceof net.minecraft.world.entity.player.Player p ? p : null)) {
+        if (target == attacker || DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)) {
             return false;
         }
         if (!(target.level() instanceof ServerLevel level)) return false;
@@ -40,7 +43,7 @@ public final class SkillDamageUtil {
     public static boolean applyDirect(ServerLevel level, LivingEntity target,
                                       SkillDamageSource source, float amount) {
         if (!(source.getEntity() instanceof ServerPlayer attacker)) return false;
-        if (DamageTypes.isImmunePlayer(target instanceof net.minecraft.world.entity.player.Player p ? p : null)) {
+        if (DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)) {
             return false;
         }
         return applyDirectWithFallback(level, attacker, target, source.getSkill(), source, amount);

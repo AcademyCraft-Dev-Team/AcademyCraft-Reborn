@@ -1,5 +1,6 @@
 package org.academy.internal.common.attribute;
 
+import net.minecraft.util.Mth;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,7 +28,7 @@ class PropsMathTest {
         assertEquals(100.0, PropsMath.muscleDamageBonus(2_000.0));
         assertEquals(200.0, PropsMath.enduranceHealthBonus(2_000.0));
         assertEquals(4.0, PropsMath.dexteritySpeedBonus(2_000.0));
-        assertEquals(Math.sqrt(11.0) - 1.0, PropsMath.dexterityJumpStrengthBonus(2_000.0));
+        assertEquals(Mth.sqrt(11.0f) - 1.0, PropsMath.dexterityJumpStrengthBonus(2_000.0));
         assertEquals(10, PropsMath.perceptionEnchantmentBonus(2_000.0));
         assertEquals(1.1, PropsMath.perceptionExperienceMultiplier(2_000.0));
         assertEquals(1.2, PropsMath.neuralIterationMultiplier(2_000.0));

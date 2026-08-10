@@ -5,9 +5,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.input.InputSystem;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class VacuumDomainTest {
     @Test

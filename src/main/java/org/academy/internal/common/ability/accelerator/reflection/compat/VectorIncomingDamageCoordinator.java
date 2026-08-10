@@ -1,10 +1,10 @@
 package org.academy.internal.common.ability.accelerator.reflection.compat;
 
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
-import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 
 public final class VectorIncomingDamageCoordinator {
@@ -46,12 +46,12 @@ public final class VectorIncomingDamageCoordinator {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         var classified = VectorExternalAttackClassifier.classify(defender, source, damage).orElse(null);
-        if (classified != null && VectorExternalInterceptionService.tryFullReflection(classified)) {
+        if (VectorExternalInterceptionService.tryFullReflection(classified)) {
             return VectorIncomingDamageResult.fullRedirect();
         }
         return VectorReflection.Server.applyPartialReflection(
                 defender,
-                (ServerLevel) defender.level(),
+                defender.level(),
                 source,
                 damage
         );
@@ -78,7 +78,7 @@ public final class VectorIncomingDamageCoordinator {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         var classified = VectorExternalAttackClassifier.classify(defender, source, damage).orElse(null);
-        if (classified != null && VectorExternalInterceptionService.tryFullRefraction(classified)) {
+        if (VectorExternalInterceptionService.tryFullRefraction(classified)) {
             return VectorIncomingDamageResult.fullRedirect();
         }
         return VectorReduction.Server.applyPartialReduction(defender, source, damage);

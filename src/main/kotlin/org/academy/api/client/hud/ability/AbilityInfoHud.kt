@@ -33,8 +33,8 @@ import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.resources.R
 import org.academy.api.client.vanilla.ResizeDisplayEvent
-import org.academy.internal.client.hud.HudLayout
 import org.academy.internal.client.gui.SerializedUiLayout
+import org.academy.internal.client.hud.HudLayout
 import org.joml.Vector3f
 import kotlin.math.abs
 import kotlin.math.max
@@ -699,11 +699,11 @@ class AbilityInfoHud private constructor() {
                 )
                 val configured = config.getKeyBinding(name, defaultBinding)
                 val isLegacyDefault = configured.type == InputSystem.InputType.KEYBOARD
-                    && configured.keys == setOf(key)
-                    && configured.action == action
-                    && configured.modifiers == InputSystem.ANY_MODIFIER
-                    && !configured.availableWhenScreen
-                    && !configured.unbound
+                        && configured.keys == setOf(key)
+                        && configured.action == action
+                        && configured.modifiers == InputSystem.ANY_MODIFIER
+                        && !configured.availableWhenScreen
+                        && !configured.unbound
                 if (!isLegacyDefault) return configured
                 config.setKeyBinding(name, defaultBinding)
                 migratedLegacyBindings = true

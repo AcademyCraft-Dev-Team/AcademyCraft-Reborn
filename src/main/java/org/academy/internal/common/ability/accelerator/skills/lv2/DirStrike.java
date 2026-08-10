@@ -2,9 +2,8 @@ package org.academy.internal.common.ability.accelerator.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -33,9 +32,10 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.util.Mth;
 
 public class DirStrike extends Skill {
     public static final int EFFECT_RADIUS = 12;
@@ -57,7 +58,7 @@ public class DirStrike extends Skill {
     private static final int EFFECT_MAX_Y_OFFSET = 5;
     private static final float BASE_DAMAGE = 12.0f;
     private static final double DIVE_SPEED = 2.5;
-    private static final double GROUND_SECTOR_COS = Math.cos(Math.toRadians(45.0));
+    private static final double GROUND_SECTOR_COS = Mth.cos((45.0) * Mth.DEG_TO_RAD);
 
     public DirStrike() {
         super(Builder
@@ -233,7 +234,7 @@ public class DirStrike extends Skill {
                 var source = SkillDamageSource.of(
                         player,
                         skill,
-                        org.academy.internal.common.world.damagesource.DamageTypes.VEC
+                        DamageTypes.VEC
                 );
                 var targets = level.getEntitiesOfClass(LivingEntity.class, area,
                         target -> target != player
@@ -271,7 +272,7 @@ public class DirStrike extends Skill {
             var distanceSquared = xOffset * xOffset + zOffset * zOffset;
             if (distanceSquared > radius * radius) return false;
             if (airborne || distanceSquared <= 1.0e-8) return true;
-            var inverseDistance = 1.0 / Math.sqrt(distanceSquared);
+            var inverseDistance = 1.0 / Mth.sqrt((float) (distanceSquared));
             return (xOffset * look.x + zOffset * look.z) * inverseDistance >= GROUND_SECTOR_COS;
         }
 

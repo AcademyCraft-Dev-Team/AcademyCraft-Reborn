@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.aeromanip.skills;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
@@ -15,8 +16,8 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.ProficiencyPolicy;
@@ -75,7 +76,7 @@ public final class AirCushion extends Skill {
         private static ServerPlayer findOwner(ServerPlayer landing) {
             var skill = Skills.AIR_CUSHION.get();
             if (skill.isEnabled(landing)) return landing;
-            if (landing.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            if (landing.level() instanceof ServerLevel level) {
                 for (var player : level.players()) {
                     var radius = skill.hasProficiencyMilestone(player, 2) ? 5.0 : 3.0;
                     if (player.distanceToSqr(landing) <= radius * radius

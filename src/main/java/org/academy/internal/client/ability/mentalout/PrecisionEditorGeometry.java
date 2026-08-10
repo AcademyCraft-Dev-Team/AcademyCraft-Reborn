@@ -1,5 +1,7 @@
 package org.academy.internal.client.ability.mentalout;
 
+import net.minecraft.util.Mth;
+
 final class PrecisionEditorGeometry {
     private PrecisionEditorGeometry() {
     }
@@ -47,7 +49,7 @@ final class PrecisionEditorGeometry {
     ) {
         var graphX = screenToGraph(mouseX, canvasX, panX, currentZoom);
         var graphY = screenToGraph(mouseY, canvasY, panY, currentZoom);
-        var zoom = Math.clamp(requestedZoom, PrecisionOperationScreen.MIN_ZOOM, PrecisionOperationScreen.MAX_ZOOM);
+        var zoom = Mth.clamp(requestedZoom, PrecisionOperationScreen.MIN_ZOOM, PrecisionOperationScreen.MAX_ZOOM);
         return new View(
                 mouseX - canvasX - graphX * zoom,
                 mouseY - canvasY - graphY * zoom,

@@ -38,11 +38,6 @@ public record VectorAttackDescriptor(
         if (!Float.isFinite(damage) || damage < 0.0f) damage = 0.0f;
     }
 
-    public boolean hasConfirmedDirection() {
-        return direction.lengthSqr() > 1.0E-8
-                && confidence.atLeast(VectorAttackConfidence.MEDIUM);
-    }
-
     private static Vec3 normalizeFinite(Vec3 value) {
         var lengthSqr = value.lengthSqr();
         if (!Double.isFinite(value.x)
@@ -53,5 +48,10 @@ public record VectorAttackDescriptor(
             return Vec3.ZERO;
         }
         return value.normalize();
+    }
+
+    public boolean hasConfirmedDirection() {
+        return direction.lengthSqr() > 1.0E-8
+                && confidence.atLeast(VectorAttackConfidence.MEDIUM);
     }
 }

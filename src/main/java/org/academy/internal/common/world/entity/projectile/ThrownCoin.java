@@ -12,6 +12,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.Items;
+import net.minecraft.util.Mth;
 
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     public int angle;
@@ -31,8 +32,8 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
             var initialDirection = new Vec3(x, y, z).normalize();
             var finalVelocity = initialDirection.scale(velocity);
             setDeltaMovement(finalVelocity);
-            setRot((float) (Math.toDegrees(Math.atan2(initialDirection.x, initialDirection.z))),
-                    (float) (Math.toDegrees(Math.atan2(initialDirection.y, initialDirection.horizontalDistance()))));
+            setRot((float) ((Mth.atan2(initialDirection.x, initialDirection.z)) * Mth.RAD_TO_DEG),
+                    (float) ((Mth.atan2(initialDirection.y, initialDirection.horizontalDistance())) * Mth.RAD_TO_DEG));
             yRotO = getYRot();
             xRotO = getXRot();
         }

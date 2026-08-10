@@ -12,11 +12,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.goal.FloatGoal;
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -60,12 +56,12 @@ public final class DarkmatterBeetle extends Monster {
         goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
-    public void setOwnerUUID(UUID uuid) {
-        ownerUUID = uuid;
-    }
-
     public Optional<UUID> getOwnerUUID() {
         return Optional.ofNullable(ownerUUID);
+    }
+
+    public void setOwnerUUID(UUID uuid) {
+        ownerUUID = uuid;
     }
 
     public boolean isOwnedBy(ServerPlayer player) {

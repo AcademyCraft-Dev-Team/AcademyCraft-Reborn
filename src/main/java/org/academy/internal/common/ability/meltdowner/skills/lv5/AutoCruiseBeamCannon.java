@@ -12,7 +12,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -49,11 +48,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.WeakHashMap;
+import java.util.*;
+import net.minecraft.util.Mth;
 
 public final class AutoCruiseBeamCannon extends Skill {
     static final int DETECT_INTERVAL_TICKS = 10;
@@ -61,14 +57,6 @@ public final class AutoCruiseBeamCannon extends Skill {
     static final double SCAN_RADIUS = 16.0;
     static final float BASE_DAMAGE = 10.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
-
-    static int normalizeAttackDelay(int configuredDelay) {
-        return Math.max(1, configuredDelay);
-    }
-
-    static int soundDelayTicks(int attackDelay) {
-        return Math.max(0, attackDelay - 1);
-    }
 
     public AutoCruiseBeamCannon() {
         super(Builder
@@ -87,6 +75,14 @@ public final class AutoCruiseBeamCannon extends Skill {
                         "academy:scatter_bomb"
                 ))
         );
+    }
+
+    static int normalizeAttackDelay(int configuredDelay) {
+        return Math.max(1, configuredDelay);
+    }
+
+    static int soundDelayTicks(int attackDelay) {
+        return Math.max(0, attackDelay - 1);
     }
 
     @Override
@@ -292,8 +288,8 @@ public final class AutoCruiseBeamCannon extends Skill {
             var fromSpawn = center.subtract(spawn);
             var distance = fromSpawn.length();
             if (distance <= 1.0e-3) return;
-            var yaw = Math.toDegrees(Math.atan2(-fromSpawn.x, fromSpawn.z));
-            var pitch = Math.toDegrees(-Math.asin(Math.clamp(fromSpawn.y / distance, -1.0, 1.0)));
+            var yaw = (Mth.atan2(-fromSpawn.x, fromSpawn.z)) * Mth.RAD_TO_DEG;
+            var pitch = (-Math.asin(Mth.clamp(fromSpawn.y / distance, -1.0, 1.0))) * Mth.RAD_TO_DEG;
             var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
             beam.configure(
                     owner,

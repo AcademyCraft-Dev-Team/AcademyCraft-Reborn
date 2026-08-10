@@ -7,14 +7,13 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -25,9 +24,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -35,7 +34,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -44,17 +42,18 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.renderer.effect.WingEffectRenderer;
-import org.academy.internal.client.renderer.effect.PlatinumExecutionEffect;
+import org.academy.internal.client.render.vfx.PlatinumExecutionVfx;
+import org.academy.internal.client.render.vfx.PlatinumExecutionVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -69,9 +68,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_U;
-import static org.lwjgl.glfw.GLFW.GLFW_MOD_ALT;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.lwjgl.glfw.GLFW.*;
 
 public final class PlatinumWing extends Skill {
     private static final double EXECUTION_REACH = 128.0;
@@ -93,7 +90,7 @@ public final class PlatinumWing extends Skill {
     @Override
     public void initClient() {
         AdvancedWingSweepPacket.initClient();
-        RendererManager.registerEffectRenderer(WingEffectRenderer.PLATINUM);
+        PlatinumExecutionVfxClient.register();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -101,7 +98,7 @@ public final class PlatinumWing extends Skill {
                 Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, GLFW_KEY_U, GLFW_RELEASE, GLFW_MOD_ALT)
         ), _ -> Client.toggle());
-        ToggleStatusHud.registerStateProvider(Skills.PLATINUM_WING.get(), () -> {
+        ToggleStatusHud.Companion.registerStateProvider(Skills.PLATINUM_WING.get(), () -> {
             var player = Minecraft.getInstance().player;
             return player != null && player.getData(AttachmentTypes.ACTIVATED_PLATINUM_WING.get());
         });
@@ -141,7 +138,7 @@ public final class PlatinumWing extends Skill {
 
         @SubscribePacket
         public static void handleExecutionVisual(ExecutionVisualPacket packet) {
-            PlatinumExecutionEffect.enqueue(
+            PlatinumExecutionVfx.enqueue(
                     packet.executionId,
                     packet.entityId,
                     packet.x,
@@ -294,7 +291,7 @@ public final class PlatinumWing extends Skill {
             var source = SkillDamageSource.of(
                     player,
                     Skills.PLATINUM_WING.get(),
-                    org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                    DamageTypes.CTA
             );
             new CTAEntityActuallyHurt(living).actuallyHurt(source, damage, true);
             if (living.isAlive()) EntityControlApi.forceSetTrueHealth(living, 0.0f);
@@ -313,9 +310,9 @@ public final class PlatinumWing extends Skill {
                     target.getYRot(),
                     target.getBbWidth(),
                     target.getBbHeight(),
-                    PlatinumExecutionEffect.DURATION_TICKS
+                    PlatinumExecutionVfx.DURATION_TICKS
             );
-            for (var other : ((ServerLevel) player.level()).players()) {
+            for (var other : player.level().players()) {
                 if (other.distanceToSqr(player) <= 256.0 * 256.0) {
                     MisakaNetworkServer.send(other, packet);
                 }

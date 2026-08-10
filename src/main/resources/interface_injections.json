@@ -1,8 +1,5 @@
 {
   "net/minecraft/server/MinecraftServer": [
     "org/academy/api/server/vanilla/MinecraftServerContext"
-  ],
-  "net/minecraft/client/renderer/entity/player/AvatarRenderer": [
-    "org/academy/api/client/vanilla/AvatarRendererContext"
   ]
 }

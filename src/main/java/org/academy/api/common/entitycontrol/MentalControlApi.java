@@ -1,6 +1,7 @@
 package org.academy.api.common.entitycontrol;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -79,7 +80,7 @@ public final class MentalControlApi {
     }
 
     public static void releaseByControllerSourceAndSubject(
-            net.minecraft.server.MinecraftServer server,
+            MinecraftServer server,
             UUID controllerId,
             Identifier source,
             UUID subjectId

@@ -9,9 +9,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 
-/** Draws the controlled player's combat HUD without mutating the controller's inventory. */
+/**
+ * Draws the controlled player's combat HUD without mutating the controller's inventory.
+ */
 public final class ControlledPlayerHudRenderer {
     private static final Identifier HOTBAR = vanilla("hud/hotbar");
     private static final Identifier HOTBAR_SELECTION = vanilla("hud/hotbar_selection");
@@ -85,7 +88,7 @@ public final class ControlledPlayerHudRenderer {
         if (state.attackStrength() < 1.0f) {
             var x = offhandArm == HumanoidArm.RIGHT ? center - 113 : center + 97;
             var y = bottom - 20;
-            var progress = Math.clamp((int) (state.attackStrength() * 19.0f), 0, 18);
+            var progress = Mth.clamp((int) (state.attackStrength() * 19.0f), 0, 18);
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ATTACK_BACKGROUND, x, y, 18, 18);
             if (progress > 0) {
                 graphics.blitSprite(
@@ -107,7 +110,7 @@ public final class ControlledPlayerHudRenderer {
     private static void renderItem(
             GuiGraphicsExtractor graphics,
             LivingEntity entity,
-            net.minecraft.world.item.ItemStack stack,
+            ItemStack stack,
             int x,
             int y,
             int seed

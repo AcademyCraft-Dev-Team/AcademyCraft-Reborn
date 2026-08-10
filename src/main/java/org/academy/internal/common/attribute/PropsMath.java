@@ -1,6 +1,10 @@
 package org.academy.internal.common.attribute;
 
-/** Pure calculations shared by the P.R.O.P.S server and client. */
+import net.minecraft.util.Mth;
+
+/**
+ * Pure calculations shared by the P.R.O.P.S server and client.
+ */
 public final class PropsMath {
     public static final double MAX_TOTAL = 2_000.0;
     public static final double ACQUISITION_LOG_FACTOR = 0.1075;
@@ -38,11 +42,11 @@ public final class PropsMath {
     }
 
     public static double dexterityJumpStrengthBonus(double value) {
-        return Math.sqrt(1.0 + finiteNonNegative(value) * 0.005) - 1.0;
+        return Mth.sqrt((float) (1.0 + finiteNonNegative(value) * 0.005)) - 1.0;
     }
 
     public static int perceptionEnchantmentBonus(double value) {
-        return (int) Math.floor(finiteNonNegative(value) * 0.005);
+        return Mth.floor(finiteNonNegative(value) * 0.005);
     }
 
     public static double perceptionExperienceMultiplier(double value) {

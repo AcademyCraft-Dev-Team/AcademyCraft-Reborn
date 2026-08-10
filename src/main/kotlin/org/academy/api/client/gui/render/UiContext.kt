@@ -76,8 +76,7 @@ open class UiContext {
     }
 
     open fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean {
-        if (AcademyCraft.DEBUG_UI) return false
-        return !rootWidget.hasPendingRender() && cachedCommands != null
+        return !AcademyCraft.DEBUG_UI && !rootWidget.hasPendingRender() && cachedCommands != null
     }
 
     @RenderThread

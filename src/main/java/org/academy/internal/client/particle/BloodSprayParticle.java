@@ -8,8 +8,8 @@ import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.util.RandomSource;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import org.joml.Quaternionf;
 
 public final class BloodSprayParticle extends SingleQuadParticle {
@@ -21,8 +21,8 @@ public final class BloodSprayParticle extends SingleQuadParticle {
     private final Quaternionf surfaceRotation;
 
     private BloodSprayParticle(ClientLevel level, double x, double y, double z,
-                              double normalX, double normalY, double normalZ,
-                              SpriteSet sprites, RandomSource random) {
+                               double normalX, double normalY, double normalZ,
+                               SpriteSet sprites, RandomSource random) {
         super(level, x, y, z, 0.0, 0.0, 0.0, sprites.get(random));
         surfaceRotation = surfaceRotation(normalX, normalY, normalZ);
         lifetime = MIN_LIFETIME + random.nextInt(RANDOM_LIFETIME);
@@ -32,7 +32,7 @@ public final class BloodSprayParticle extends SingleQuadParticle {
         gCol = 0.03f;
         bCol = 0.03f;
         alpha = INITIAL_ALPHA;
-        roll = random.nextFloat() * (float) (Math.PI * 2.0);
+        roll = random.nextFloat() * Mth.TWO_PI;
         oRoll = roll;
     }
 

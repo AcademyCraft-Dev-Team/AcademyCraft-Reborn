@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.mentalout.precision;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ public record CompiledPrecisionProgram(
                 .filter(node -> !node.kind().isAction())
                 .toList();
         var actionOrder = validation.actionOrder().stream().map(byId::get).toList();
-        var order = new java.util.ArrayList<PrecisionGraph.Node>(dataOrder.size() + actionOrder.size());
+        var order = new ArrayList<PrecisionGraph.Node>(dataOrder.size() + actionOrder.size());
         order.addAll(dataOrder);
         order.addAll(actionOrder);
         var inputs = new HashMap<InputKey, PrecisionGraph.Edge>();
