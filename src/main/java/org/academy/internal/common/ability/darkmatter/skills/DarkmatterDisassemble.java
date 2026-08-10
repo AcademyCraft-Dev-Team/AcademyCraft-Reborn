@@ -66,7 +66,7 @@ public final class DarkmatterDisassemble extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(30)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.DARKMATTER_SHAPING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))

@@ -111,9 +111,11 @@ public class KineticEnergyApplied extends Skill {
     private static final int MAX_BLOCKS_PER_TASK_TICK = 1024;
     private static final int MAX_SCANS_PER_TASK_TICK = 32768;
     private static final int MAX_TASKS_PER_PLAYER = 2;
+    private static final int MIN_IMPACT_TRIGGER_INTERVAL_TICKS = 2;
     private static final String LEGACY_KINETIC_SUPERPOSITION = "academy:kinetic_superposition";
     private static final String LEGACY_DIRECTED_SHOCK = "academy:directed_shock";
     private static final Map<UUID, ArrayDeque<BreakTask>> BREAK_TASKS = new HashMap<>();
+    private static final Map<UUID, Long> LAST_IMPACT_TRIGGER_TICKS = new HashMap<>();
     private static final Map<Integer, List<BlockOffset>> SPHERE_OFFSET_CACHE = new HashMap<>();
 
     public KineticEnergyApplied() {
@@ -150,6 +152,11 @@ public class KineticEnergyApplied extends Skill {
         return level * level * DAMAGE_PER_IMPACT_LEVEL_SQUARED
                 * Math.max(0.0f, abilityPower)
                 * Math.max(0.0f, damageMultiplier);
+    }
+
+    static boolean isDistinctImpactTrigger(long previousTick, long currentTick) {
+        return currentTick < previousTick
+                || currentTick - previousTick >= MIN_IMPACT_TRIGGER_INTERVAL_TICKS;
     }
 
     @Override
@@ -375,11 +382,20 @@ public class KineticEnergyApplied extends Skill {
         private static void attackAir(ServerPlayer player) {
             if (!(player.level() instanceof ServerLevel level)) return;
             if (!serverSeesAir(player, level)) return;
+            if (!claimImpactTrigger(player, level.getGameTime())) return;
 
             var impactLevel = clampImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get()));
             var look = normalizeOrDefault(player.getViewVector(1.0f));
             var center = player.getEyePosition().add(look.scale(impactLevel * impactLevel));
             executeImpact(level, player, center, look, impactLevel, null);
+        }
+
+        private static boolean claimImpactTrigger(ServerPlayer player, long currentTick) {
+            var playerId = player.getUUID();
+            var previousTick = LAST_IMPACT_TRIGGER_TICKS.get(playerId);
+            if (previousTick != null && !isDistinctImpactTrigger(previousTick, currentTick)) return false;
+            LAST_IMPACT_TRIGGER_TICKS.put(playerId, currentTick);
+            return true;
         }
 
         private static void executeImpact(ServerLevel level, ServerPlayer player, Vec3 center,
@@ -814,6 +830,7 @@ public class KineticEnergyApplied extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             if (!(event.getTarget() instanceof LivingEntity target) || !target.isAlive()) return;
             if (!Server.canCreateShockwave(player)) return;
+            if (!Server.claimImpactTrigger(player, player.level().getGameTime())) return;
 
             var center = target.getBoundingBox().getCenter();
             var impactLevel = clampImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get()));
@@ -826,6 +843,7 @@ public class KineticEnergyApplied extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             if (event.getAction() != PlayerInteractEvent.LeftClickBlock.Action.START) return;
             if (!Server.canCreateShockwave(player)) return;
+            if (!Server.claimImpactTrigger(player, player.level().getGameTime())) return;
 
             var center = Vec3.atCenterOf(event.getPos());
             var impactLevel = clampImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get()));
@@ -835,17 +853,22 @@ public class KineticEnergyApplied extends Skill {
 
         @SubscribeEvent
         public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
-            if (event.getEntity() instanceof ServerPlayer player) BREAK_TASKS.remove(player.getUUID());
+            if (event.getEntity() instanceof ServerPlayer player) clearTransientState(player);
         }
 
         @SubscribeEvent
         public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-            if (event.getEntity() instanceof ServerPlayer player) BREAK_TASKS.remove(player.getUUID());
+            if (event.getEntity() instanceof ServerPlayer player) clearTransientState(player);
         }
 
         @SubscribeEvent
         public static void onLivingDeath(LivingDeathEvent event) {
-            if (event.getEntity() instanceof ServerPlayer player) BREAK_TASKS.remove(player.getUUID());
+            if (event.getEntity() instanceof ServerPlayer player) clearTransientState(player);
+        }
+
+        private static void clearTransientState(ServerPlayer player) {
+            BREAK_TASKS.remove(player.getUUID());
+            LAST_IMPACT_TRIGGER_TICKS.remove(player.getUUID());
         }
 
         @SubscribeEvent

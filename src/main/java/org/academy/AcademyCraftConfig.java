@@ -56,11 +56,7 @@ public final class AcademyCraftConfig {
     }
 
     public synchronized void save() {
-        if (!dirty) {
-            return;
-        }
-
-        var newRootJson = new JsonObject();
+        var newRootJson = rootJsonConfig.deepCopy();
         for (var cacheEntry : runtimeConfigCache.entrySet()) {
             var configKey = cacheEntry.getKey();
             var configInstance = cacheEntry.getValue();
@@ -68,6 +64,9 @@ public final class AcademyCraftConfig {
             if (handler != null) {
                 newRootJson.add(configKey, serializeWithHandler(handler, UncheckedUtil.uncheckedCast(configInstance)));
             }
+        }
+        if (!dirty && newRootJson.equals(rootJsonConfig)) {
+            return;
         }
         rootJsonConfig = newRootJson;
 

@@ -51,7 +51,7 @@ public class LightningNova extends Skill {
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(60)
-                .iterationTicks(30)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.THUNDER_LANCE)
         );

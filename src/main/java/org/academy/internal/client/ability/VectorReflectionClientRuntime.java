@@ -2,10 +2,12 @@ package org.academy.internal.client.ability;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.ReflectionHealthRecordCodec;
+import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
@@ -70,6 +72,15 @@ public final class VectorReflectionClientRuntime {
             return false;
         }
         return !FORCED_DEACTIVATIONS.contains(player.getUUID());
+    }
+
+    public static boolean shouldReflectEffect(LocalPlayer player, MobEffectInstance effect) {
+        if (!isProtected(player) || effect == null) return false;
+        var data = AbilitySystemClient
+                .getSkillData(Skills.REFLECTION_FILTER.get(), ReflectionFilter.Data.class)
+                .filter(ReflectionFilter.Data::isEnabled)
+                .orElseGet(ReflectionFilter.Data::new);
+        return !ReflectionFilter.shouldAcceptEffect(data, effect);
     }
 
     private static boolean isVectorReductionActive(LocalPlayer player) {
@@ -137,6 +148,11 @@ public final class VectorReflectionClientRuntime {
         player.clearFire();
         if (player.getAirSupply() < player.getMaxAirSupply()) {
             player.setAirSupply(player.getMaxAirSupply());
+        }
+        for (var effect : Set.copyOf(player.getActiveEffects())) {
+            if (shouldReflectEffect(player, effect)) {
+                player.removeEffectNoUpdate(effect.getEffect());
+            }
         }
     }
 

@@ -89,7 +89,7 @@ public final class Railgun extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(100)
-                .iterationTicks(80)
+                .iterationTicks(20)
                 .maxStacks(Skill.NO_STACK_LIMIT)
                 .dependsOn(Skills.THUNDER_LANCE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))

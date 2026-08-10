@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 /** Guards vanilla entity motion entry points for imprisonment and vector-reflection protection. */
 public final class EntityMotionGuard {
     private static final double POSITION_EPSILON_SQUARED = 1.0e-8;
+    private static final int MIN_VISIBLE_EFFECT_DURATION_TICKS = 10;
     private static final StackWalker STACK_WALKER = StackWalker.getInstance(
             Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE)
     );
@@ -141,23 +142,34 @@ public final class EntityMotionGuard {
     }
 
     private static void applyImprisonmentEffects(LivingEntity entity, long durationTicks) {
-        var effectDuration = (int) Math.min(Integer.MAX_VALUE, durationTicks);
-        entity.addEffect(new MobEffectInstance(
-                StatusEffects.IMPRISONED,
-                effectDuration,
-                0,
-                false,
-                false,
-                true
-        ));
+        var effectDuration = visibleEffectDuration(durationTicks);
+        entity.addEffect(visibleImprisonedEffect(effectDuration));
         entity.addEffect(new MobEffectInstance(
                 MobEffects.MINING_FATIGUE,
                 effectDuration,
                 0,
                 false,
-                false,
+                true,
                 true
         ));
+    }
+
+    static MobEffectInstance visibleImprisonedEffect(long durationTicks) {
+        return new MobEffectInstance(
+                StatusEffects.IMPRISONED,
+                visibleEffectDuration(durationTicks),
+                0,
+                false,
+                true,
+                true
+        );
+    }
+
+    static int visibleEffectDuration(long durationTicks) {
+        return (int) Math.min(
+                Integer.MAX_VALUE,
+                Math.max(MIN_VISIBLE_EFFECT_DURATION_TICKS, durationTicks)
+        );
     }
 
     public static void release(LivingEntity entity, String sourceId) {

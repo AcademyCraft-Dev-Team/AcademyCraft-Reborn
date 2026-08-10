@@ -80,7 +80,7 @@ public final class VectorAccel extends Skill {
                 .energyCost(5_000)
                 .cpCost(10)
                 .maxStacks(4)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }

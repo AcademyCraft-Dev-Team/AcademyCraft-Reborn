@@ -61,7 +61,7 @@ public final class Flight extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(60)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.WIND_CORRIDOR)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))

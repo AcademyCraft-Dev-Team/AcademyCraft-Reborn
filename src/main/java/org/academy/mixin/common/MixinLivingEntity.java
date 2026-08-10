@@ -403,6 +403,18 @@ public abstract class MixinLivingEntity {
         }
     }
 
+    @Inject(method = "canBeAffected", at = @At("HEAD"), cancellable = true)
+    private void academy$protectVectorReflectionEffectApplicability(
+            MobEffectInstance effect,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if ((Object) this instanceof ServerPlayer player
+                && VectorReflection.Server.isActive(player)
+                && effect != null && ReflectionFilter.shouldReflectEffect(player, effect)) {
+            cir.setReturnValue(false);
+        }
+    }
+
     @ModifyVariable(method = "heal", at = @At("HEAD"), argsOnly = true)
     private float academy$applyProficiencyHealingReduction(float amount) {
         var target = (LivingEntity) (Object) this;

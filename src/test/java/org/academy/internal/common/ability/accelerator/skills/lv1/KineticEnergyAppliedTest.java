@@ -20,4 +20,11 @@ class KineticEnergyAppliedTest {
         assertEquals(4.0f, KineticEnergyApplied.getImpactDamage(1, 1.0f, 1.0f));
         assertEquals(288.0f, KineticEnergyApplied.getImpactDamage(6, 2.0f, 1.0f));
     }
+
+    @Test
+    void coalescesClientMissAndServerHitFromOneSwing() {
+        assertEquals(false, KineticEnergyApplied.isDistinctImpactTrigger(100, 100));
+        assertEquals(false, KineticEnergyApplied.isDistinctImpactTrigger(100, 101));
+        assertEquals(true, KineticEnergyApplied.isDistinctImpactTrigger(100, 102));
+    }
 }
