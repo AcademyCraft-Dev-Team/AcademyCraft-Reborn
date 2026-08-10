@@ -63,7 +63,7 @@ public final class DarkmatterRadiation extends Skill {
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .cpCost(10)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.DARKMATTER_CUT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))

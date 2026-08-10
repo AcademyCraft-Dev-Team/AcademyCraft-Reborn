@@ -221,6 +221,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PressureLock.StopPacket>>
             PRESSURE_LOCK_STOP = PACKET_TYPES.register("pressure_lock_stop",
             () -> new PacketType<>(PressureLock.StopPacket.class, PressureLock.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PressureLock.TargetPacket>>
+            PRESSURE_LOCK_TARGET = PACKET_TYPES.register("pressure_lock_target",
+            () -> new PacketType<>(PressureLock.TargetPacket.class, PressureLock.TargetPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TailwindField.TogglePacket>>
             TAILWIND_FIELD_TOGGLE = PACKET_TYPES.register("tailwind_field_toggle",
             () -> new PacketType<>(TailwindField.TogglePacket.class, TailwindField.TogglePacket.CODEC));

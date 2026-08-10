@@ -123,16 +123,16 @@ public final class VectorBlast extends Skill {
         );
         InputSystem.addKeyBinding(Client.KEY_NAME_PULL_START,
                 Client.CONFIG.getKeyBinding(Client.KEY_NAME_PULL_START, pullStartBinding),
-                ignored -> Client.sendControl(UsePacket.Action.PULL_START));
+                binding -> Client.sendBranchControl(binding, UsePacket.Action.PULL_START));
         InputSystem.addKeyBinding(Client.KEY_NAME_PULL_STOP,
                 Client.CONFIG.getKeyBinding(Client.KEY_NAME_PULL_STOP, pullStopBinding),
-                ignored -> Client.sendControl(UsePacket.Action.PULL_STOP));
+                binding -> Client.sendBranchControl(binding, UsePacket.Action.PULL_STOP));
         InputSystem.addKeyBinding(Client.KEY_NAME_PUSH_START,
                 Client.CONFIG.getKeyBinding(Client.KEY_NAME_PUSH_START, pushStartBinding),
-                ignored -> Client.sendControl(UsePacket.Action.PUSH_START));
+                binding -> Client.sendBranchControl(binding, UsePacket.Action.PUSH_START));
         InputSystem.addKeyBinding(Client.KEY_NAME_PUSH_STOP,
                 Client.CONFIG.getKeyBinding(Client.KEY_NAME_PUSH_STOP, pushStopBinding),
-                ignored -> Client.sendControl(UsePacket.Action.PUSH_STOP));
+                binding -> Client.sendBranchControl(binding, UsePacket.Action.PUSH_STOP));
 
         // InputSystem also persists a global copy used by the terminal settings app. Migrate that
         // copy after registration so an old Alt-attack binding cannot override the skill config.
@@ -181,9 +181,19 @@ public final class VectorBlast extends Skill {
         private Client() {
         }
 
-        private static void use(InputSystem.BindingContext binding) {
-            if ((binding.modifiers() & (InputConstants.MOD_ALT | InputConstants.MOD_CONTROL)) != 0) return;
+        private static void use(InputSystem.BindingContext ignored) {
             sendControl(UsePacket.Action.BLAST);
+        }
+
+        private static void sendBranchControl(
+                InputSystem.BindingContext binding,
+                UsePacket.Action action
+        ) {
+            // A user may legitimately rebind the primary blast to Alt/Ctrl + attack. If its
+            // gesture now overlaps a maintained branch, the primary action owns the whole click;
+            // otherwise the branch would start on press and consume CP alongside the blast.
+            if (InputSystem.matchesKeyBindingGesture(KEY_NAME_USE, binding)) return;
+            sendControl(action);
         }
 
         private static void sendControl(UsePacket.Action action) {

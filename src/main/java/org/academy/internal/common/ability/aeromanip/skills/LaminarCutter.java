@@ -56,7 +56,7 @@ public final class LaminarCutter extends Skill {
 
     public LaminarCutter() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL3).energyCost(30_000)
-                .cpCost(30).iterationTicks(25).maxStacks(1).dependsOn(Skills.PNEUMATIC_GRASP)
+                .cpCost(30).iterationTicks(20).maxStacks(1).dependsOn(Skills.PNEUMATIC_GRASP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
     @Override public void initClient() {

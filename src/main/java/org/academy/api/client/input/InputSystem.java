@@ -44,8 +44,10 @@ public final class InputSystem {
     }
 
     public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
-        rememberDefaultKeyBinding(keyName, combo);
-        KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler, true));
+        if (isValidKeyCombination(combo)) {
+            rememberDefaultKeyBinding(keyName, combo);
+        }
+        KEY_BINDINGS.put(keyName, new KeyBinding(safeKeyCombination(keyName, combo), handler, true));
         bindingRevision++;
     }
 
@@ -55,7 +57,16 @@ public final class InputSystem {
     }
 
     public static void rememberDefaultKeyBinding(String keyName, KeyCombination combo) {
-        DEFAULT_BINDINGS.putIfAbsent(keyName, combo);
+        if (isValidKeyCombination(combo)) {
+            DEFAULT_BINDINGS.putIfAbsent(keyName, combo);
+        }
+    }
+
+    public static boolean isValidKeyCombination(@Nullable KeyCombination combo) {
+        return combo != null
+                && combo.type != null
+                && combo.keys != null
+                && combo.keys.stream().noneMatch(Objects::isNull);
     }
 
     public static List<BindingInfo> getKeyBindings() {
@@ -85,7 +96,9 @@ public final class InputSystem {
     public static void setKeyBinding(String keyName, KeyCombination combo) {
         var binding = KEY_BINDINGS.get(keyName);
         if (binding == null) return;
-        KEY_BINDINGS.put(keyName, new KeyBinding(combo, binding.handler, binding.enabled));
+        KEY_BINDINGS.put(keyName, new KeyBinding(
+                safeKeyCombination(keyName, combo), binding.handler, binding.enabled
+        ));
         bindingRevision++;
     }
 
@@ -123,6 +136,7 @@ public final class InputSystem {
     }
 
     public static String formatKeyCombination(KeyCombination combo) {
+        if (!isValidKeyCombination(combo)) return "None";
         if (combo.unbound) return "None";
         var parts = new ArrayList<String>();
         if (combo.modifiers != ANY_MODIFIER) {
@@ -168,20 +182,67 @@ public final class InputSystem {
     }
 
     /**
-     * Invokes the first enabled handler for a skill that matches the supplied press/release phase.
-     * The binding's physical key is deliberately ignored so an unbound skill remains usable from
-     * the selected-skill HUD binding.
+     * Invokes the primary enabled handler for a skill that matches the supplied press/release
+     * phase. Base actions such as {@code _use}, {@code _cast}, and {@code _toggle} take precedence
+     * over optional branch bindings. This prevents the selected-skill HUD key from starting a
+     * branch action merely because that branch happened to be registered first for the phase.
+     *
+     * <p>The binding's physical key is deliberately ignored unless it already matches the HUD
+     * input. In that case the normal dispatcher will invoke the same handler, so this method treats
+     * it as handled without invoking it a second time.</p>
      */
     public static boolean triggerPrimaryBindingForSkill(Skill skill, BindingContext context) {
+        var skillName = skill.getKey().getPath();
+        var primaryPriority = KEY_BINDINGS.entrySet().stream()
+                .filter(entry -> entry.getValue().enabled && isBindingForSkill(entry.getKey(), skill))
+                .mapToInt(entry -> primaryBindingPriority(entry.getKey(), skillName))
+                .min()
+                .orElse(Integer.MAX_VALUE);
         for (var entry : KEY_BINDINGS.entrySet()) {
             var binding = entry.getValue();
             if (!binding.enabled || !isBindingForSkill(entry.getKey(), skill)) continue;
+            if (primaryBindingPriority(entry.getKey(), skillName) != primaryPriority) continue;
             var configuredAction = binding.combo.action;
             if (configuredAction != ANY_ACTION && configuredAction != context.action) continue;
+            if (matches(binding.combo, context.type, context.input, context.action, context.modifiers)) {
+                return true;
+            }
             binding.handler.accept(context);
             return true;
         }
         return false;
+    }
+
+    static int primaryBindingPriority(String keyName, String skillName) {
+        if (keyName.equals(skillName)) return 0;
+        if (keyName.equals(skillName + "_use") || keyName.equals(skillName + ".use")
+                || keyName.equals(skillName + "_cast") || keyName.equals(skillName + ".cast")
+                || keyName.equals(skillName + "_toggle") || keyName.equals(skillName + ".toggle")
+                || keyName.equals(skillName + "_run") || keyName.equals(skillName + ".run")) {
+            return 0;
+        }
+        if (keyName.equals(skillName + "_start") || keyName.equals(skillName + ".start")
+                || keyName.equals(skillName + "_end") || keyName.equals(skillName + ".end")
+                || keyName.equals(skillName + "_stop") || keyName.equals(skillName + ".stop")
+                || keyName.equals(skillName + "_release") || keyName.equals(skillName + ".release")) {
+            return 1;
+        }
+        return 2;
+    }
+
+    /**
+     * Tests whether an input belongs to the physical gesture of a binding while ignoring its
+     * press/release phase. Maintained branch actions use this to yield to a rebound primary action
+     * that occupies the same gesture.
+     */
+    public static boolean matchesKeyBindingGesture(String keyName, BindingContext context) {
+        var binding = KEY_BINDINGS.get(keyName);
+        if (binding == null || !binding.enabled) return false;
+        var combo = binding.combo;
+        if (!isValidKeyCombination(combo) || combo.unbound || combo.type != context.type) return false;
+        if (combo.modifiers != ANY_MODIFIER
+                && normalizeModifiers(combo.modifiers) != normalizeModifiers(context.modifiers)) return false;
+        return combo.keys.isEmpty() || combo.keys.contains(context.input);
     }
 
     /**
@@ -269,6 +330,7 @@ public final class InputSystem {
     }
 
     public static KeyCombination unbound(KeyCombination template) {
+        if (!isValidKeyCombination(template)) return disabledKeyCombination();
         return new KeyCombination(
                 template.type, Set.of(), template.action, template.modifiers, template.availableWhenScreen, true
         );
@@ -460,6 +522,7 @@ public final class InputSystem {
     }
 
     private static boolean matches(KeyCombination combo, InputType eventType, int input, int action, int modifiers) {
+        if (!isValidKeyCombination(combo)) return false;
         if (combo.unbound) return false;
         if (combo.type != eventType) return false;
         if (!combo.availableWhenScreen && ClientUtil.hasScreen()) return false;
@@ -502,6 +565,9 @@ public final class InputSystem {
         }
 
         public String displayName() {
+            if (!isValidKeyCombination(this)) {
+                return "None";
+            }
             if (unbound) {
                 return "None";
             }
@@ -519,6 +585,18 @@ public final class InputSystem {
             }
             return builder.toString();
         }
+    }
+
+    private static KeyCombination safeKeyCombination(String keyName, KeyCombination combo) {
+        if (isValidKeyCombination(combo)) return combo;
+        var defaultCombo = DEFAULT_BINDINGS.get(keyName);
+        return isValidKeyCombination(defaultCombo) ? defaultCombo : disabledKeyCombination();
+    }
+
+    private static KeyCombination disabledKeyCombination() {
+        return new KeyCombination(
+                InputType.KEYBOARD, Set.of(), ANY_ACTION, ANY_MODIFIER, false, true
+        );
     }
 
     public record BindingContext(InputType type, int input, int action, int modifiers) {

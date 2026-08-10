@@ -25,6 +25,7 @@ public class DevelopData {
     private int elapsedTicks;
     private int paidEnergy;
     private String message = "";
+    private String targetId = "";
 
     public DevelopData(UUID playerId) {
         this.playerId = playerId;
@@ -44,6 +45,10 @@ public class DevelopData {
 
     public String getMessage() {
         return message;
+    }
+
+    public String getTargetId() {
+        return targetId;
     }
 
     public @Nullable BlockPos getDeveloperPos() {
@@ -68,6 +73,7 @@ public class DevelopData {
         elapsedTicks = 0;
         paidEnergy = 0;
         message = "Developing...";
+        targetId = targetIdOf(action);
         return true;
     }
 
@@ -133,6 +139,12 @@ public class DevelopData {
         return (int) ((long) totalCost * Math.min(elapsedTicks, totalTicks) / totalTicks);
     }
 
+    static String targetIdOf(DevelopAction action) {
+        if (action == null) return "";
+        var targetId = action.getTargetId();
+        return targetId == null ? "" : targetId;
+    }
+
     private @Nullable AbilityDeveloperBlockEntity resolveDeveloper(ServerPlayer player) {
         if (developerPos == null || !player.level().hasChunkAt(developerPos)) return null;
         var be = player.level().getBlockEntity(developerPos);
@@ -149,6 +161,7 @@ public class DevelopData {
         elapsedTicks = 0;
         paidEnergy = 0;
         message = "";
+        targetId = "";
     }
 
     public void abort() {

@@ -60,7 +60,7 @@ public class LightningStorm extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(60_000)
                 .cpCost(80)
-                .iterationTicks(30)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.BALL_LIGHTNING)
         );

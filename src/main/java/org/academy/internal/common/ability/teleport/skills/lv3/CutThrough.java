@@ -61,7 +61,7 @@ public final class CutThrough extends Skill {
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(20)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(20)
                 .dependsOn(Skills.SELF_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
@@ -169,8 +169,8 @@ public final class CutThrough extends Skill {
                         center.x - halfWidth, center.y - halfHeight, center.z - halfWidth,
                         center.x + halfWidth, center.y + halfHeight, center.z + halfWidth
                 );
-                validDestination = player.level().hasChunkAt(BlockPos.containing(center))
-                        && player.level().noCollision(player, preview);
+                validDestination = player.level().hasChunkAt(BlockPos.containing(center));
+                var safeDestination = validDestination && player.level().noCollision(player, preview);
 
                 var minecraft = Minecraft.getInstance();
                 var renderType = Render.RenderTypes.MINE_DETECT_LINES;
@@ -181,8 +181,8 @@ public final class CutThrough extends Skill {
                 event.submitCustomGeometry(renderType, (snapshot, consumer) ->
                         LineBoxRenderer.renderWireframeBox(snapshot, consumer, preview,
                                 1.0f,
-                                validDestination ? 1.0f : 0.0f,
-                                validDestination ? 1.0f : 0.0f,
+                                safeDestination ? 1.0f : 0.0f,
+                                safeDestination ? 1.0f : 0.0f,
                                 1.0f));
                 matrices.popPose();
             }
@@ -225,14 +225,6 @@ public final class CutThrough extends Skill {
             var center = player.getEyePosition().add(player.getLookAngle().normalize().scale(distance));
             if (!player.level().hasChunkAt(BlockPos.containing(center))) return;
             var dimensions = player.getDimensions(Pose.STANDING);
-            var halfWidth = dimensions.width() / 2.0;
-            var halfHeight = dimensions.height() / 2.0;
-            var targetBox = new AABB(
-                    center.x - halfWidth, center.y - halfHeight, center.z - halfWidth,
-                    center.x + halfWidth, center.y + halfHeight, center.z + halfWidth
-            );
-            if (!player.level().noCollision(player, targetBox)) return;
-
             skill.executeActive(player, (ctx, actualCost) -> {
                 var previousMovement = player.getDeltaMovement();
                 var direction = player.getLookAngle().normalize();

@@ -11,12 +11,9 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.golem.AbstractGolem;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.tags.EntityTypeTags;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.ClipContext;
@@ -59,6 +56,10 @@ public final class VacuumDomain extends Skill {
     static final double RADIUS = 12.0;
     private static final double MAX_TARGET_DISTANCE = 16.0;
     private static final int DAMAGE_INTERVAL_TICKS = 10;
+    private static final int PROJECTILE_STABILIZATION_TICKS = 40;
+    private static final int VISUAL_INTERVAL_TICKS = 4;
+    private static final int VISUAL_SEGMENTS = 16;
+    private static final int VISUAL_RINGS = 3;
     private static final float DAMAGE_FRACTION = 0.05f;
     private static final float PERCENT_IMMUNE_DAMAGE = 1.0f;
 
@@ -68,7 +69,7 @@ public final class VacuumDomain extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(120)
-                .iterationTicks(120)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.ATMOSPHERIC_DOMINION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
@@ -80,17 +81,21 @@ public final class VacuumDomain extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        var defaultBinding = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_Y,
+                InputSystem.ANY_ACTION,
+                0
+        );
+        var configuredBinding = Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST, defaultBinding);
+        var maintainedBinding = maintainedBinding(configuredBinding);
+        if (!maintainedBinding.equals(configuredBinding)) {
+            Client.CONFIG.setKeyBinding(Client.KEY_NAME_CAST, maintainedBinding);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
         InputSystem.addKeyBinding(
                 Client.KEY_NAME_CAST,
-                Client.CONFIG.getKeyBinding(
-                        Client.KEY_NAME_CAST,
-                        InputSystem.combo(
-                                InputSystem.InputType.KEYBOARD,
-                                InputConstants.KEY_Y,
-                                InputSystem.ANY_ACTION,
-                                0
-                        )
-                ),
+                maintainedBinding,
                 Client::handleInput
         );
     }
@@ -188,6 +193,7 @@ public final class VacuumDomain extends Skill {
                         AirflowField.Type.VACUUM, AirflowField.Shape.SPHERE, center, player.getLookAngle(),
                         range, 0.0, 1.0f, Integer.MAX_VALUE, context.milestone());
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
+                spawnVisual(level, center, range, 0);
             });
         }
 
@@ -231,7 +237,7 @@ public final class VacuumDomain extends Skill {
             var radius = field.radius();
             spawnVisual(level, center, radius, ticks);
             var entityCap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
-            if (ticks <= 40) {
+            if (ticks <= PROJECTILE_STABILIZATION_TICKS) {
                 var handled = 0;
                 for (var entity : level.getEntities(player, field.bounds(), Entity::isAlive)) {
                     if (handled++ >= entityCap) break;
@@ -241,7 +247,6 @@ public final class VacuumDomain extends Skill {
                     AeromanipTargeting.addClampedVelocity(entity, velocity.scale(-0.8));
                 }
             }
-            if (ticks <= 40) return;
             var box = new AABB(
                     center.subtract(radius, radius, radius),
                     center.add(radius, radius, radius)
@@ -249,10 +254,10 @@ public final class VacuumDomain extends Skill {
             var targets = level.getEntitiesOfClass(
                     LivingEntity.class,
                     box,
-                    target -> isHostileTarget(player, target)
+                    target -> canAffectTarget(player, target)
                             && isInsideDomain(center, target.getBoundingBox().getCenter(), radius)
             );
-            var damageTick = ticks % DAMAGE_INTERVAL_TICKS == 0;
+            var damageTick = shouldDealDamage(ticks);
             var source = damageTick ? SkillDamageSource.of(player, Skills.VACUUM_DOMAIN.get()) : null;
             var power = 0.0f;
             if (damageTick) {
@@ -265,10 +270,7 @@ public final class VacuumDomain extends Skill {
                 if (handled++ >= entityCap) break;
                 var protectedByBreathingFilm = target instanceof ServerPlayer targetPlayer
                         && Skills.BREATHING_FILM.get().isEnabled(targetPlayer);
-                target.setAirSupply(airSupplyInVacuum(
-                        protectedByBreathingFilm,
-                        target.getMaxAirSupply()
-                ));
+                reduceAirSupply(target, protectedByBreathingFilm);
                 if (field.proficiencyMilestone() >= 3) {
                     target.clearFire();
                     var pull = center.subtract(target.getBoundingBox().getCenter());
@@ -294,16 +296,19 @@ public final class VacuumDomain extends Skill {
         }
 
         private static void spawnVisual(ServerLevel level, Vec3 center, double radius, int ticks) {
-            if (ticks % 4 != 0) return;
-            for (var segment = 0; segment < 24; segment++) {
-                var angle = segment * Math.PI * 2.0 / 24.0 + ticks * 0.025;
-                var point = center.add(Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
-                level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                        point.x, point.y, point.z, 1, 0.08, 0.25, 0.08, 0.02);
+            if (ticks % VISUAL_INTERVAL_TICKS != 0) return;
+            var phase = ticks * 0.025;
+            for (var ring = 0; ring < VISUAL_RINGS; ring++) {
+                for (var segment = 0; segment < VISUAL_SEGMENTS; segment++) {
+                    var angle = segment * Math.PI * 2.0 / VISUAL_SEGMENTS + phase;
+                    var point = boundaryPoint(center, radius, ring, angle);
+                    level.sendParticles(ParticleTypes.REVERSE_PORTAL, true, true,
+                            point.x, point.y, point.z, 1, 0.04, 0.04, 0.04, 0.01);
+                }
             }
-            level.sendParticles(ParticleTypes.CLOUD,
-                    center.x, center.y, center.z, 6,
-                    radius * 0.28, radius * 0.18, radius * 0.28, 0.0);
+            level.sendParticles(ParticleTypes.GUST, true, true,
+                    center.x, center.y, center.z, 2,
+                    radius * 0.12, radius * 0.12, radius * 0.12, 0.0);
         }
 
         private static boolean isPercentDamageImmune(LivingEntity target) {
@@ -312,21 +317,51 @@ public final class VacuumDomain extends Skill {
                     || target instanceof AbstractGolem;
         }
 
-        private static boolean isHostileTarget(ServerPlayer player, LivingEntity target) {
+        private static boolean canAffectTarget(ServerPlayer player, LivingEntity target) {
             if (target == player
                     || !target.isAlive()
-                    || target.isRemoved()
-                    || target instanceof Player && !AeromanipTargeting.canAffectNegatively(player, target)) {
+                    || target.isRemoved()) {
                 return false;
             }
             if (target instanceof TamableAnimal animal && animal.isOwnedBy(player)) {
                 return false;
             }
-            if (player.isAlliedTo(target)) return false;
-            if (target instanceof Enemy) return true;
-            return target instanceof Mob mob && mob.getTarget() == player;
+            return AeromanipTargeting.canAffectNegatively(player, target);
         }
 
+        private static void reduceAirSupply(LivingEntity target, boolean protectedByBreathingFilm) {
+            var maxAirSupply = target.getMaxAirSupply();
+            if (maxAirSupply <= 0) return;
+            target.setAirSupply(airSupplyInVacuum(protectedByBreathingFilm, maxAirSupply));
+        }
+
+    }
+
+    static boolean shouldDealDamage(int ticks) {
+        return ticks > 0 && ticks % DAMAGE_INTERVAL_TICKS == 0;
+    }
+
+    static Vec3 boundaryPoint(Vec3 center, double radius, int ring, double angle) {
+        var safeRadius = Math.max(0.0, radius);
+        var cosine = Math.cos(angle) * safeRadius;
+        var sine = Math.sin(angle) * safeRadius;
+        return switch (Math.floorMod(ring, VISUAL_RINGS)) {
+            case 0 -> center.add(cosine, 0.0, sine);
+            case 1 -> center.add(cosine, sine, 0.0);
+            default -> center.add(0.0, cosine, sine);
+        };
+    }
+
+    static InputSystem.KeyCombination maintainedBinding(InputSystem.KeyCombination configured) {
+        if (configured.action() == InputSystem.ANY_ACTION) return configured;
+        return new InputSystem.KeyCombination(
+                configured.type(),
+                configured.keys(),
+                InputSystem.ANY_ACTION,
+                configured.modifiers(),
+                configured.availableWhenScreen(),
+                configured.unbound()
+        );
     }
 
     @PacketTarget(ThreadType.SERVER)

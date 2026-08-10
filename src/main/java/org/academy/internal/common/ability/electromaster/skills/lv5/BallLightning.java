@@ -67,7 +67,7 @@ public class BallLightning extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(80)
-                .iterationTicks(60)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.LIGHTNING_NOVA)
         );

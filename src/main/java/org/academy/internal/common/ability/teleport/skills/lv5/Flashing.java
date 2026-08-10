@@ -70,7 +70,7 @@ public final class Flashing extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(30)
                 .cpCost(10)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))

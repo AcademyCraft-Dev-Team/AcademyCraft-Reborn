@@ -32,6 +32,7 @@ import java.util.*;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
+    public static final int MAX_CP_ITERATION_TICKS = 20;
     /** Keep disabled until the skill stack system is redesigned and verified. */
     public static final boolean STACK_LIMITS_ENABLED = false;
     private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
@@ -79,7 +80,9 @@ public abstract class Skill {
         if (scope == SkillScope.CATEGORY) {
             category.addSkill(this);
         }
-        iterationTicks = builder.iterationTicks;
+        iterationTicks = builder.cpCost > 0.0f || builder.maintenanceCost > 0.0f
+                ? Math.min(builder.iterationTicks, MAX_CP_ITERATION_TICKS)
+                : builder.iterationTicks;
         maxStacks = builder.maxStacks;
         maintenanceCost = builder.maintenanceCost;
         isPassive = builder.isPassive;

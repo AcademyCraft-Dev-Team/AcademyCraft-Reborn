@@ -49,7 +49,7 @@ public final class QuickLocationTeleport extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(30)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))

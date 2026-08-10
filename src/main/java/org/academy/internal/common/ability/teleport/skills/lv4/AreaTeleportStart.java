@@ -68,7 +68,7 @@ public final class AreaTeleportStart extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(50)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.AREA_TELEPORT_SETUP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))

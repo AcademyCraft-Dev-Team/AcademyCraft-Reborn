@@ -25,6 +25,7 @@
     "common.MixinLivingEntity",
     "common.LivingEntityAttackStateAccessor",
     "common.MixinMentalControlCanAttackOverrides",
+    "common.MixinMisakaNetworkManager",
     "common.MixinMob",
     "common.MixinMinecraftServer",
     "common.MixinPlayerList",

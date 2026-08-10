@@ -15,6 +15,8 @@ import org.academy.internal.common.ability.accelerator.reflection.VectorReflecti
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
+import java.util.List;
+
 /** Field-free bytecode template for generated server-player dispatch subclasses. */
 public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreakerHealthAccess {
     public VrServerPlayerTemplate(MinecraftServer server, ServerLevel level, GameProfile profile,
@@ -24,6 +26,16 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
 
     private boolean academy$protected() {
         return VectorReflection.Server.isActive(this);
+    }
+
+    private boolean academy$reflects(MobEffectInstance effect) {
+        return academy$protected() && effect != null
+                && ReflectionFilter.shouldReflectEffect(this, effect);
+    }
+
+    private void academy$discardReflectedEffect(MobEffectInstance effect) {
+        var removed = super.removeEffectNoUpdate(effect.getEffect());
+        if (removed != null) super.onEffectsRemoved(List.of(removed));
     }
 
     @Override
@@ -81,14 +93,43 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
 
     @Override
     public boolean addEffect(MobEffectInstance effect, Entity source) {
-        if (academy$protected() && effect != null && ReflectionFilter.shouldReflectEffect(this, effect)) return false;
+        if (academy$reflects(effect)) return false;
         return super.addEffect(effect, source);
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public boolean canBeAffected(MobEffectInstance effect) {
+        return !academy$reflects(effect) && super.canBeAffected(effect);
     }
 
     @Override
     public void forceAddEffect(MobEffectInstance effect, Entity source) {
-        if (academy$protected() && effect != null && ReflectionFilter.shouldReflectEffect(this, effect)) return;
+        if (academy$reflects(effect)) return;
         super.forceAddEffect(effect, source);
+    }
+
+    @Override
+    protected void onEffectAdded(MobEffectInstance effect, Entity source) {
+        if (academy$reflects(effect)) {
+            academy$discardReflectedEffect(effect);
+            return;
+        }
+        super.onEffectAdded(effect, source);
+    }
+
+    @Override
+    protected void onEffectUpdated(MobEffectInstance effect, boolean refreshAttributes, Entity source) {
+        if (academy$reflects(effect)) {
+            academy$discardReflectedEffect(effect);
+            return;
+        }
+        super.onEffectUpdated(effect, refreshAttributes, source);
+    }
+
+    @Override
+    public void sendEffectToPassengers(MobEffectInstance effect) {
+        if (!academy$reflects(effect)) super.sendEffectToPassengers(effect);
     }
 
     @Override
@@ -105,6 +146,13 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
         return academy$protected() && instance != null && ReflectionFilter.shouldReflectEffect(this, instance)
                 ? null : instance;
     }
+
+    /*
+     * addEffect(MobEffectInstance) and removeEffectNoUpdate are final in 26.2. The former
+     * dispatches to the guarded two-argument overload above. Effect-removal APIs remain inherited:
+     * removing an existing effect is not an incoming effect and is also required by the reflection
+     * filter's own purge path.
+     */
 
     @Override
     public void knockback(double power, double x, double z, DamageSource source,

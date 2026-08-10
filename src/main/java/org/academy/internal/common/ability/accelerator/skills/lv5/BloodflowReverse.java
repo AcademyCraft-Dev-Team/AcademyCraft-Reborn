@@ -70,7 +70,7 @@ public class BloodflowReverse extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(100)
-                .iterationTicks(40)
+                .iterationTicks(20)
                 .maxStacks(16)
                 .dependsOn(Skills.VECTOR_REFLECTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))

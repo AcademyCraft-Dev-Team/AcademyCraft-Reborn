@@ -1,5 +1,6 @@
 package org.academy.internal.coremod.client;
 
+import net.minecraft.core.Holder;
 import net.minecraft.client.ClientRecipeBook;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -9,9 +10,14 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.stats.StatsCounter;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Input;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
+
+import java.util.List;
 
 /** Field-free bytecode template for generated local-player dispatch subclasses. */
 public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreakerHealthAccess {
@@ -23,6 +29,16 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
     private boolean academy$protected() {
         return VectorReflectionClientRuntime.isProtected(this);
+    }
+
+    private boolean academy$reflects(MobEffectInstance effect) {
+        return academy$protected()
+                && VectorReflectionClientRuntime.shouldReflectEffect(this, effect);
+    }
+
+    private void academy$discardReflectedEffect(MobEffectInstance effect) {
+        var removed = super.removeEffectNoUpdate(effect.getEffect());
+        if (removed != null) super.onEffectsRemoved(List.of(removed));
     }
 
     @Override
@@ -47,6 +63,68 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
     public boolean isDeadOrDying() {
         return academy$protected() ? false : super.isDeadOrDying();
     }
+
+    @Override
+    public boolean addEffect(MobEffectInstance effect, Entity source) {
+        if (academy$reflects(effect)) return false;
+        return super.addEffect(effect, source);
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public boolean canBeAffected(MobEffectInstance effect) {
+        return !academy$reflects(effect) && super.canBeAffected(effect);
+    }
+
+    @Override
+    public void forceAddEffect(MobEffectInstance effect, Entity source) {
+        if (academy$reflects(effect)) return;
+        super.forceAddEffect(effect, source);
+    }
+
+    @Override
+    protected void onEffectAdded(MobEffectInstance effect, Entity source) {
+        if (academy$reflects(effect)) {
+            academy$discardReflectedEffect(effect);
+            return;
+        }
+        super.onEffectAdded(effect, source);
+    }
+
+    @Override
+    protected void onEffectUpdated(MobEffectInstance effect, boolean refreshAttributes, Entity source) {
+        if (academy$reflects(effect)) {
+            academy$discardReflectedEffect(effect);
+            return;
+        }
+        super.onEffectUpdated(effect, refreshAttributes, source);
+    }
+
+    @Override
+    public void sendEffectToPassengers(MobEffectInstance effect) {
+        if (!academy$reflects(effect)) super.sendEffectToPassengers(effect);
+    }
+
+    @Override
+    public boolean hasEffect(Holder<MobEffect> effect) {
+        var instance = super.getEffect(effect);
+        return !academy$protected()
+                ? super.hasEffect(effect)
+                : instance != null && !VectorReflectionClientRuntime.shouldReflectEffect(this, instance);
+    }
+
+    @Override
+    public MobEffectInstance getEffect(Holder<MobEffect> effect) {
+        var instance = super.getEffect(effect);
+        return academy$protected()
+                && VectorReflectionClientRuntime.shouldReflectEffect(this, instance) ? null : instance;
+    }
+
+    /*
+     * addEffect(MobEffectInstance) and removeEffectNoUpdate are final in 26.2. The guarded
+     * two-argument overload receives the former's virtual dispatch. Removal APIs stay available so
+     * server synchronization and the local ghost-effect purge can clear stale effects.
+     */
 
     @Override
     public boolean hurtClient(DamageSource source) {
