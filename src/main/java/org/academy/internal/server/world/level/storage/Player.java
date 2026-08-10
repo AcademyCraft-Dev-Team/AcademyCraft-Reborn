@@ -34,13 +34,12 @@ public final class Player {
             "academy:hyper_accelerate",
             "academy:chain_fusion"
     );
-
-    @SerializedName("skills")
-    private Set<String> legacySkills;
     @SerializedName("skillData")
     private final Map<String, SkillData> skillDataMap = new HashMap<>();
     @SerializedName("retainedSkillProficiencies")
     private final Map<String, Float> retainedSkillProficiencies = new HashMap<>();
+    @SerializedName("skills")
+    private Set<String> legacySkills;
     @SerializedName("abilityCategory")
     private String abilityCategory;
     @SerializedName("propsData")
@@ -66,6 +65,32 @@ public final class Player {
     private Float legacyComputingPowerRecoverySpeed;
 
     private transient volatile boolean isDirty = false;
+
+    static String canonicalizeSkillId(String skillId) {
+        if (skillId == null || skillId.isBlank()) return skillId;
+
+        var separator = skillId.indexOf(':');
+        if (separator >= 0) {
+            var namespace = skillId.substring(0, separator);
+            if (!AcademyCraft.MOD_ID.equals(namespace)) return skillId;
+        }
+        var path = separator >= 0 ? skillId.substring(separator + 1) : skillId;
+        var targetPath = LEGACY_SKILL_ALIASES.getOrDefault(path, path);
+        return AcademyCraft.MOD_ID + ":" + targetPath;
+    }
+
+    private static void mergeSkillData(SkillData target, SkillData source) {
+        target.setProficiency(Math.max(target.getProficiency(), source.getProficiency()));
+        target.setEnabled(target.isEnabled() || source.isEnabled());
+    }
+
+    private static int resolveMaxSkillLevel(String skillId) {
+        var id = Identifier.tryParse(skillId);
+        if (id == null) return 3;
+        return Registries.SKILLS.get(id)
+                .map(reference -> reference.value().getMaxSkillLevel())
+                .orElse(3);
+    }
 
     public void markDirty() {
         isDirty = true;
@@ -268,24 +293,6 @@ public final class Player {
         return true;
     }
 
-    static String canonicalizeSkillId(String skillId) {
-        if (skillId == null || skillId.isBlank()) return skillId;
-
-        var separator = skillId.indexOf(':');
-        if (separator >= 0) {
-            var namespace = skillId.substring(0, separator);
-            if (!AcademyCraft.MOD_ID.equals(namespace)) return skillId;
-        }
-        var path = separator >= 0 ? skillId.substring(separator + 1) : skillId;
-        var targetPath = LEGACY_SKILL_ALIASES.getOrDefault(path, path);
-        return AcademyCraft.MOD_ID + ":" + targetPath;
-    }
-
-    private static void mergeSkillData(SkillData target, SkillData source) {
-        target.setProficiency(Math.max(target.getProficiency(), source.getProficiency()));
-        target.setEnabled(target.isEnabled() || source.isEnabled());
-    }
-
     private boolean migrateRetainedSkillProficiencies() {
         if (retainedSkillProficiencies.isEmpty()) return false;
         var migrated = new HashMap<String, Float>();
@@ -301,13 +308,5 @@ public final class Player {
         retainedSkillProficiencies.clear();
         retainedSkillProficiencies.putAll(migrated);
         return true;
-    }
-
-    private static int resolveMaxSkillLevel(String skillId) {
-        var id = Identifier.tryParse(skillId);
-        if (id == null) return 3;
-        return Registries.SKILLS.get(id)
-                .map(reference -> reference.value().getMaxSkillLevel())
-                .orElse(3);
     }
 }

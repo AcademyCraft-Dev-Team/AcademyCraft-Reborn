@@ -10,6 +10,9 @@ package org.academy.internal.client.renderer.effect;
 public final class WorldPostEffectSubmission {
     private static final ThreadLocal<Integer> DEPTH = ThreadLocal.withInitial(() -> 0);
 
+    private WorldPostEffectSubmission() {
+    }
+
     public static void begin() {
         DEPTH.set(DEPTH.get() + 1);
     }
@@ -22,8 +25,5 @@ public final class WorldPostEffectSubmission {
 
     public static boolean isActive() {
         return DEPTH.get() > 0;
-    }
-
-    private WorldPostEffectSubmission() {
     }
 }

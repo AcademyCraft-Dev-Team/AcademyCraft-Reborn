@@ -8,6 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ReflectedBeamVisualGeometryTest {
     private static final double EPSILON = 1.0e-9;
 
+    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
+        assertEquals(expected.x, actual.x, EPSILON);
+        assertEquals(expected.y, actual.y, EPSILON);
+        assertEquals(expected.z, actual.z, EPSILON);
+    }
+
     @Test
     void fullReturnExtendsPastOriginByUntraveledLength() {
         var reflectionPoint = new Vec3(0.0, 0.0, 4.0);
@@ -69,11 +75,5 @@ class ReflectedBeamVisualGeometryTest {
 
         assertVecEquals(direction, returnEnd.subtract(reflectionPoint).normalize());
         assertEquals(8.0, returnEnd.distanceTo(reflectionPoint), EPSILON);
-    }
-
-    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
-        assertEquals(expected.x, actual.x, EPSILON);
-        assertEquals(expected.y, actual.y, EPSILON);
-        assertEquals(expected.z, actual.z, EPSILON);
     }
 }

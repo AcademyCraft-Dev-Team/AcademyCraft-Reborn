@@ -12,7 +12,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -49,11 +48,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.WeakHashMap;
+import java.util.*;
 
 public final class AutoCruiseBeamCannon extends Skill {
     static final int DETECT_INTERVAL_TICKS = 10;
@@ -61,14 +56,6 @@ public final class AutoCruiseBeamCannon extends Skill {
     static final double SCAN_RADIUS = 16.0;
     static final float BASE_DAMAGE = 10.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
-
-    static int normalizeAttackDelay(int configuredDelay) {
-        return Math.max(1, configuredDelay);
-    }
-
-    static int soundDelayTicks(int attackDelay) {
-        return Math.max(0, attackDelay - 1);
-    }
 
     public AutoCruiseBeamCannon() {
         super(Builder
@@ -87,6 +74,14 @@ public final class AutoCruiseBeamCannon extends Skill {
                         "academy:scatter_bomb"
                 ))
         );
+    }
+
+    static int normalizeAttackDelay(int configuredDelay) {
+        return Math.max(1, configuredDelay);
+    }
+
+    static int soundDelayTicks(int attackDelay) {
+        return Math.max(0, attackDelay - 1);
     }
 
     @Override
@@ -305,37 +300,6 @@ public final class AutoCruiseBeamCannon extends Skill {
             level.addFreshEntity(beam);
         }
 
-        private static final class State {
-            private long lastDetect = Long.MIN_VALUE / 2;
-            private long lastFire = Long.MIN_VALUE / 2;
-            private final List<UUID> detected = new ArrayList<>();
-
-            private void tick(ServerPlayer player, AutoCruiseBeamCannon skill) {
-                skill.reportActivity(player, false);
-                var level = player.level();
-                var now = level.getGameTime();
-                if (now - lastDetect >= DETECT_INTERVAL_TICKS) {
-                    detected.clear();
-                    var targets = level.getEntitiesOfClass(
-                            LivingEntity.class,
-                            player.getBoundingBox().inflate(SCAN_RADIUS),
-                            target -> isDetectable(player, target)
-                                    && target.distanceToSqr(player) <= SCAN_RADIUS * SCAN_RADIUS
-                    );
-                    for (var target : targets) detected.add(target.getUUID());
-                    lastDetect = now;
-                }
-                if (now - lastFire < FIRE_INTERVAL_TICKS) return;
-                var target = pollRandomTarget(level, player, detected);
-                if (target == null) return;
-                var multiplier = AbilitySystemServer.getSystem(player)
-                        .getPlayerDamageMultiplier(player.getUUID());
-                if (skill.executeContinuous(player, (_, _) -> fire(player, target, multiplier), true)) {
-                    lastFire = now;
-                }
-            }
-        }
-
         static boolean isDetectable(ServerPlayer player, LivingEntity target) {
             if (target == player || !target.isAlive() || target.isRemoved() || target instanceof Player) {
                 return false;
@@ -362,6 +326,37 @@ public final class AutoCruiseBeamCannon extends Skill {
                 }
             }
             return null;
+        }
+
+        private static final class State {
+            private final List<UUID> detected = new ArrayList<>();
+            private long lastDetect = Long.MIN_VALUE / 2;
+            private long lastFire = Long.MIN_VALUE / 2;
+
+            private void tick(ServerPlayer player, AutoCruiseBeamCannon skill) {
+                skill.reportActivity(player, false);
+                var level = player.level();
+                var now = level.getGameTime();
+                if (now - lastDetect >= DETECT_INTERVAL_TICKS) {
+                    detected.clear();
+                    var targets = level.getEntitiesOfClass(
+                            LivingEntity.class,
+                            player.getBoundingBox().inflate(SCAN_RADIUS),
+                            target -> isDetectable(player, target)
+                                    && target.distanceToSqr(player) <= SCAN_RADIUS * SCAN_RADIUS
+                    );
+                    for (var target : targets) detected.add(target.getUUID());
+                    lastDetect = now;
+                }
+                if (now - lastFire < FIRE_INTERVAL_TICKS) return;
+                var target = pollRandomTarget(level, player, detected);
+                if (target == null) return;
+                var multiplier = AbilitySystemServer.getSystem(player)
+                        .getPlayerDamageMultiplier(player.getUUID());
+                if (skill.executeContinuous(player, (_, _) -> fire(player, target, multiplier), true)) {
+                    lastFire = now;
+                }
+            }
         }
 
         private static final class PendingShot {

@@ -23,18 +23,15 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BucketPickup;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -75,11 +72,13 @@ import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
-import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.academy.internal.common.world.entity.skill.KineticShockwave;
+import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -87,18 +86,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
+import java.util.*;
 
 public class KineticEnergyApplied extends Skill {
     public static final int MIN_IMPACT_LEVEL = 1;
@@ -149,6 +138,23 @@ public class KineticEnergyApplied extends Skill {
         return level * level * DAMAGE_PER_IMPACT_LEVEL_SQUARED
                 * Math.max(0.0f, abilityPower)
                 * Math.max(0.0f, damageMultiplier);
+    }
+
+    private static List<BlockOffset> sphereOffsetsFor(int blockRadius) {
+        return SPHERE_OFFSET_CACHE.computeIfAbsent(Math.max(0, blockRadius), KineticEnergyApplied::createSphereOffsets);
+    }
+
+    private static List<BlockOffset> createSphereOffsets(int blockRadius) {
+        var offsets = new ArrayList<BlockOffset>();
+        for (var dx = -blockRadius; dx <= blockRadius; dx++) {
+            for (var dy = -blockRadius; dy <= blockRadius; dy++) {
+                for (var dz = -blockRadius; dz <= blockRadius; dz++) {
+                    offsets.add(new BlockOffset(dx, dy, dz, dx * dx + dy * dy + dz * dz));
+                }
+            }
+        }
+        offsets.sort(Comparator.comparingInt(BlockOffset::distanceSquared));
+        return List.copyOf(offsets);
     }
 
     @Override
@@ -409,7 +415,7 @@ public class KineticEnergyApplied extends Skill {
             var source = SkillDamageSource.of(
                     player,
                     Skills.KINETIC_ENERGY_APPLIED.get(),
-                    org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                    DamageTypes.CTA
             );
             var targets = level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius),
                     target -> target != player
@@ -663,23 +669,6 @@ public class KineticEnergyApplied extends Skill {
         }
     }
 
-    private static List<BlockOffset> sphereOffsetsFor(int blockRadius) {
-        return SPHERE_OFFSET_CACHE.computeIfAbsent(Math.max(0, blockRadius), KineticEnergyApplied::createSphereOffsets);
-    }
-
-    private static List<BlockOffset> createSphereOffsets(int blockRadius) {
-        var offsets = new ArrayList<BlockOffset>();
-        for (var dx = -blockRadius; dx <= blockRadius; dx++) {
-            for (var dy = -blockRadius; dy <= blockRadius; dy++) {
-                for (var dz = -blockRadius; dz <= blockRadius; dz++) {
-                    offsets.add(new BlockOffset(dx, dy, dz, dx * dx + dy * dy + dz * dz));
-                }
-            }
-        }
-        offsets.sort(Comparator.comparingInt(BlockOffset::distanceSquared));
-        return List.copyOf(offsets);
-    }
-
     private static final class BreakTask {
         private final ResourceKey<Level> dimension;
         private final Vec3 center;
@@ -754,7 +743,7 @@ public class KineticEnergyApplied extends Skill {
                 return true;
             }
             if (state.hasProperty(BlockStateProperties.WATERLOGGED)
-                    && Boolean.TRUE.equals(state.getValue(BlockStateProperties.WATERLOGGED))) {
+                    && state.getValue(BlockStateProperties.WATERLOGGED)) {
                 var dried = state.setValue(BlockStateProperties.WATERLOGGED, false);
                 level.setBlock(pos, dried, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
                 level.updateNeighborsAt(pos, dried.getBlock());
@@ -801,7 +790,7 @@ public class KineticEnergyApplied extends Skill {
 
             var center = target.getBoundingBox().getCenter();
             var impactLevel = clampImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get()));
-            Server.executeImpact((ServerLevel) player.level(), player, center,
+            Server.executeImpact(player.level(), player, center,
                     center.subtract(player.getEyePosition()), impactLevel, null);
         }
 
@@ -813,7 +802,7 @@ public class KineticEnergyApplied extends Skill {
 
             var center = Vec3.atCenterOf(event.getPos());
             var impactLevel = clampImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get()));
-            Server.executeImpact((ServerLevel) player.level(), player, center,
+            Server.executeImpact(player.level(), player, center,
                     center.subtract(player.getEyePosition()), impactLevel, event.getPos());
         }
 
@@ -869,7 +858,7 @@ public class KineticEnergyApplied extends Skill {
                     SkillDamageSource.of(
                             player,
                             skill,
-                            org.academy.internal.common.world.damagesource.DamageTypes.CTA
+                            DamageTypes.CTA
                     ),
                     bonusDamage
             );

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -25,13 +26,13 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetManipulation;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.ElectromagneticShieldData;
-import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -71,6 +72,21 @@ public final class ElectromagneticShield extends Skill {
         );
     }
 
+    static AbsorptionResult absorbDamage(float storedDamage, float capacity, float incomingDamage) {
+        var safeCapacity = Float.isFinite(capacity) ? Math.max(0, capacity) : 0;
+        var safeStored = Float.isFinite(storedDamage)
+                ? Math.clamp(storedDamage, 0, safeCapacity)
+                : 0;
+        var safeIncoming = Float.isFinite(incomingDamage) ? Math.max(0, incomingDamage) : 0;
+        var absorbed = Math.min(safeIncoming, safeCapacity - safeStored);
+        return new AbsorptionResult(safeStored + absorbed, safeIncoming - absorbed);
+    }
+
+    static float coolStoredDamage(float storedDamage, float coolingAmount) {
+        if (!Float.isFinite(storedDamage) || !Float.isFinite(coolingAmount)) return 0;
+        return Math.max(0, storedDamage - Math.max(0, coolingAmount));
+    }
+
     @Override
     public void initClient() {
         var key = getKey();
@@ -96,21 +112,6 @@ public final class ElectromagneticShield extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    static AbsorptionResult absorbDamage(float storedDamage, float capacity, float incomingDamage) {
-        var safeCapacity = Float.isFinite(capacity) ? Math.max(0, capacity) : 0;
-        var safeStored = Float.isFinite(storedDamage)
-                ? Math.clamp(storedDamage, 0, safeCapacity)
-                : 0;
-        var safeIncoming = Float.isFinite(incomingDamage) ? Math.max(0, incomingDamage) : 0;
-        var absorbed = Math.min(safeIncoming, safeCapacity - safeStored);
-        return new AbsorptionResult(safeStored + absorbed, safeIncoming - absorbed);
-    }
-
-    static float coolStoredDamage(float storedDamage, float coolingAmount) {
-        if (!Float.isFinite(storedDamage) || !Float.isFinite(coolingAmount)) return 0;
-        return Math.max(0, storedDamage - Math.max(0, coolingAmount));
     }
 
     record AbsorptionResult(float storedDamage, float remainingDamage) {
@@ -260,7 +261,7 @@ public final class ElectromagneticShield extends Skill {
             );
             if (!active) return;
 
-            if (player.tickCount % 5 == 0 && player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            if (player.tickCount % 5 == 0 && player.level() instanceof ServerLevel level) {
                 ElectromasterArcEffects.spawnShieldArcs(level, player.position(), player.tickCount);
             }
 

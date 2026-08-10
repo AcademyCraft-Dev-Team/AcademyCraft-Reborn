@@ -18,7 +18,9 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Server-authoritative moving-entity observations used by the flow-sense overlay. */
+/**
+ * Server-authoritative moving-entity observations used by the flow-sense overlay.
+ */
 @PacketTarget(ThreadType.CLIENT)
 public final class FlowSensePacket extends Packet<ClientPacketListener, FlowSensePacket> {
     public static final StreamCodec<ByteBuf, FlowSensePacket> CODEC = StreamCodec.of(
@@ -48,15 +50,6 @@ public final class FlowSensePacket extends Packet<ClientPacketListener, FlowSens
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
     }
 
-    public void sendTo(ServerPlayer player) {
-        MisakaNetworkServer.send(player, this);
-    }
-
-    @Override
-    public PacketType<ClientPacketListener, FlowSensePacket> getPacketType() {
-        return PacketTypes.FLOW_SENSE_SYNC.get();
-    }
-
     private static void write(ByteBuf buf, FlowSensePacket packet) {
         ByteBufCodecs.VAR_INT.encode(buf, packet.entityId);
         buf.writeDouble(packet.dx);
@@ -72,10 +65,20 @@ public final class FlowSensePacket extends Packet<ClientPacketListener, FlowSens
         );
     }
 
+    public void sendTo(ServerPlayer player) {
+        MisakaNetworkServer.send(player, this);
+    }
+
+    @Override
+    public PacketType<ClientPacketListener, FlowSensePacket> getPacketType() {
+        return PacketTypes.FLOW_SENSE_SYNC.get();
+    }
+
     public static final class Client {
         private static final Map<Integer, Observation> OBSERVATIONS = new ConcurrentHashMap<>();
 
-        private Client() { }
+        private Client() {
+        }
 
         @SubscribePacket
         public static void receive(FlowSensePacket packet) {
@@ -92,5 +95,6 @@ public final class FlowSensePacket extends Packet<ClientPacketListener, FlowSens
         }
     }
 
-    public record Observation(Vec3 direction, double speed, long receivedAtMillis) { }
+    public record Observation(Vec3 direction, double speed, long receivedAtMillis) {
+    }
 }

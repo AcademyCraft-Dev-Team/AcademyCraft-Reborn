@@ -2,16 +2,12 @@ package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlSupport;
-import org.academy.api.common.entitycontrol.ControlRejectionReason;
-import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 
-/** Adapts lease arbitration to a player input session instead of a mob AI controller. */
+/**
+ * Adapts lease arbitration to a player input session instead of a mob AI controller.
+ */
 public final class ServerPlayerMentalControlAdapter implements MentalControlAdapter {
     @Override
     public boolean matches(LivingEntity subject) {
@@ -46,8 +42,8 @@ public final class ServerPlayerMentalControlAdapter implements MentalControlAdap
         if (directive instanceof ControlDirective.MoveTo moveTo) {
             return PlayerNavigationRuntime.activate(context, subject, moveTo);
         }
-        if (directive instanceof ControlDirective.ForceTarget forceTarget) {
-            return new PlayerForcedTargetBinding(context, subject, forceTarget.targetUuid());
+        if (directive instanceof ControlDirective.ForceTarget(java.util.UUID targetUuid)) {
+            return new PlayerForcedTargetBinding(context, subject, targetUuid);
         }
         return ControlBinding.noop();
     }

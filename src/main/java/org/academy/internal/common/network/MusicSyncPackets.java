@@ -14,6 +14,30 @@ import org.misaka.api.common.network.packet.PacketType;
 
 public final class MusicSyncPackets {
     private static final double SHARE_RANGE_SQR = 32.0 * 32.0;
+    private static final StreamCodec<ByteBuf, TrackSnapshot> SNAPSHOT_CODEC = StreamCodec.of(
+            (buf, snapshot) -> {
+                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.provider);
+                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.trackId);
+                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.title);
+                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.artist);
+                ByteBufCodecs.VAR_INT.encode(buf, snapshot.durationSeconds);
+                ByteBufCodecs.BOOL.encode(buf, snapshot.vip);
+                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.artworkUrl);
+                ByteBufCodecs.FLOAT.encode(buf, snapshot.positionSeconds);
+                ByteBufCodecs.BOOL.encode(buf, snapshot.playing);
+            },
+            buf -> new TrackSnapshot(
+                    ByteBufCodecs.STRING_UTF8.decode(buf),
+                    ByteBufCodecs.STRING_UTF8.decode(buf),
+                    ByteBufCodecs.STRING_UTF8.decode(buf),
+                    ByteBufCodecs.STRING_UTF8.decode(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf),
+                    ByteBufCodecs.STRING_UTF8.decode(buf),
+                    ByteBufCodecs.FLOAT.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf)
+            )
+    );
     private static boolean initialized;
 
     private MusicSyncPackets() {
@@ -50,31 +74,6 @@ public final class MusicSyncPackets {
             return value == null ? "" : value;
         }
     }
-
-    private static final StreamCodec<ByteBuf, TrackSnapshot> SNAPSHOT_CODEC = StreamCodec.of(
-            (buf, snapshot) -> {
-                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.provider);
-                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.trackId);
-                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.title);
-                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.artist);
-                ByteBufCodecs.VAR_INT.encode(buf, snapshot.durationSeconds);
-                ByteBufCodecs.BOOL.encode(buf, snapshot.vip);
-                ByteBufCodecs.STRING_UTF8.encode(buf, snapshot.artworkUrl);
-                ByteBufCodecs.FLOAT.encode(buf, snapshot.positionSeconds);
-                ByteBufCodecs.BOOL.encode(buf, snapshot.playing);
-            },
-            buf -> new TrackSnapshot(
-                    ByteBufCodecs.STRING_UTF8.decode(buf),
-                    ByteBufCodecs.STRING_UTF8.decode(buf),
-                    ByteBufCodecs.STRING_UTF8.decode(buf),
-                    ByteBufCodecs.STRING_UTF8.decode(buf),
-                    ByteBufCodecs.VAR_INT.decode(buf),
-                    ByteBufCodecs.BOOL.decode(buf),
-                    ByteBufCodecs.STRING_UTF8.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.BOOL.decode(buf)
-            )
-    );
 
     public static final class Server {
         private Server() {

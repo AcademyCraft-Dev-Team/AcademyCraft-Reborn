@@ -161,12 +161,12 @@ public final class ParticleWaveCannon extends Skill {
 
     public static final class Context extends ServerContext {
         private final ServerLevel initialLevel;
+        private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
         private int ticks;
         private int lastPaidTick;
         private boolean beaming;
         private boolean ended;
         private HighSpeedElectronBeam visual;
-        private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
 
         private Context(ServerPlayer player) {
             super(player);

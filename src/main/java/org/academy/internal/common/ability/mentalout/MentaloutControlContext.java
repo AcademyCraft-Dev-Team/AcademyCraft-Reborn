@@ -7,24 +7,14 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlHandle;
-import org.academy.api.common.entitycontrol.ControlRequest;
-import org.academy.api.common.entitycontrol.MentalControlApi;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public final class MentaloutControlContext extends ServerContext {
     public static final int CONTROL_PRIORITY = 100;
@@ -93,26 +83,6 @@ public final class MentaloutControlContext extends ServerContext {
         REVISIONS.clear();
     }
 
-    public boolean hasEntries() {
-        return !entries.isEmpty();
-    }
-
-    public boolean contains(UUID subjectId) {
-        return subjectId != null && entries.containsKey(subjectId);
-    }
-
-    public boolean isStuporEnabled() {
-        return stuporEnabled;
-    }
-
-    public boolean isImpressionEnabled() {
-        return impressionEnabled;
-    }
-
-    public boolean isTargetMisidentificationTarget(LivingEntity target) {
-        return target != null && target.getUUID().equals(misidentificationTargetUuid);
-    }
-
     public static ToggleResult toggleTarget(ServerPlayer player, LivingEntity target) {
         var existing = get(player);
         if (existing != null && target != null && existing.entries.containsKey(target.getUUID())) {
@@ -177,6 +147,86 @@ public final class MentaloutControlContext extends ServerContext {
         context.sendFull();
     }
 
+    private static byte supportLevel(LivingEntity subject) {
+        var supported = 0;
+        var allFull = true;
+        for (var capability : List.of(
+                ControlCapability.FORCE_TARGET,
+                ControlCapability.FREEZE_AI,
+                ControlCapability.RELATION_CONTROL
+        )) {
+            var evaluation = MentalControlApi.evaluate(subject, capability);
+            if (!evaluation.supported()) {
+                allFull = false;
+                continue;
+            }
+            supported++;
+            if (evaluation.support() != ControlSupport.FULL) allFull = false;
+        }
+        if (supported == 0) return SUPPORT_UNSUPPORTED;
+        return supported == 3 && allFull ? SUPPORT_FULL : SUPPORT_BEST_EFFORT;
+    }
+
+    private static float quantize(float value, float step) {
+        if (!Float.isFinite(value)) return value;
+        return Math.round(value / step) * step;
+    }
+
+    private static boolean supportsAnyControl(LivingEntity subject) {
+        return supportLevel(subject) != SUPPORT_UNSUPPORTED;
+    }
+
+    private static boolean isOverridden(Entry entry) {
+        return isOverridden(entry.subject, ControlCapability.FREEZE_AI, entry.stupor)
+                || isOverridden(entry.subject, ControlCapability.RELATION_CONTROL, entry.impression)
+                || isOverridden(entry.subject, ControlCapability.FORCE_TARGET, entry.misidentification);
+    }
+
+    private static boolean isOverridden(
+            LivingEntity subject,
+            ControlCapability capability,
+            ControlHandle handle
+    ) {
+        if (handle == null || handle.isClosed()) return false;
+        return MentalControlApi.inspect(subject, capability)
+                .map(inspection -> !inspection.leaseId().equals(handle.id()))
+                .orElse(true);
+    }
+
+    private static long nextRevision(UUID controllerUuid) {
+        var revision = currentRevision(controllerUuid) + 1L;
+        REVISIONS.put(controllerUuid, revision);
+        return revision;
+    }
+
+    private static long currentRevision(UUID controllerUuid) {
+        return REVISIONS.getOrDefault(controllerUuid, 0L);
+    }
+
+    private static void close(ControlHandle handle) {
+        if (handle != null) handle.close();
+    }
+
+    public boolean hasEntries() {
+        return !entries.isEmpty();
+    }
+
+    public boolean contains(UUID subjectId) {
+        return subjectId != null && entries.containsKey(subjectId);
+    }
+
+    public boolean isStuporEnabled() {
+        return stuporEnabled;
+    }
+
+    public boolean isImpressionEnabled() {
+        return impressionEnabled;
+    }
+
+    public boolean isTargetMisidentificationTarget(LivingEntity target) {
+        return target != null && target.getUUID().equals(misidentificationTargetUuid);
+    }
+
     public BatchResult applyTargetMisidentification(LivingEntity forcedTarget) {
         if (ended || forcedTarget == null || !MentaloutTargetValidation.isValidForcedTarget(player, forcedTarget)) {
             return BatchResult.NONE;
@@ -200,23 +250,23 @@ public final class MentaloutControlContext extends ServerContext {
                 skill,
                 MentaloutConfig.targetMisidentificationCost(player),
                 () -> {
-            attempted[0] = true;
-            for (var entry : candidates) {
-                try {
-                    var handle = MentalControlApi.apply(ControlRequest.permanent(
-                            player,
-                            entry.subject,
-                            skill.getKey(),
-                            CONTROL_PRIORITY,
-                            List.of(new ControlDirective.ForceTarget(forcedTarget.getUUID()))
-                    ));
-                    replacements.put(entry, handle);
-                    result[0]++;
-                } catch (RuntimeException exception) {
-                    result[1]++;
-                }
-            }
-            return result[0] > 0;
+                    attempted[0] = true;
+                    for (var entry : candidates) {
+                        try {
+                            var handle = MentalControlApi.apply(ControlRequest.permanent(
+                                    player,
+                                    entry.subject,
+                                    skill.getKey(),
+                                    CONTROL_PRIORITY,
+                                    List.of(new ControlDirective.ForceTarget(forcedTarget.getUUID()))
+                            ));
+                            replacements.put(entry, handle);
+                            result[0]++;
+                        } catch (RuntimeException exception) {
+                            result[1]++;
+                        }
+                    }
+                    return result[0] > 0;
                 }
         );
         if (!cast) {
@@ -702,7 +752,7 @@ public final class MentaloutControlContext extends ServerContext {
         if (entry.impression != null && !entry.impression.isClosed()) flags |= FLAG_IMPRESSION;
         if (entry.misidentification != null && !entry.misidentification.isClosed()) flags |= FLAG_MISIDENTIFICATION;
         if (isOverridden(entry)) flags |= FLAG_OVERRIDDEN;
-        if (org.academy.internal.common.ability.mentalout.control.MentalControlRuntime
+        if (MentalControlRuntime
                 .isProtectedTarget(subject)) flags |= FLAG_PROTECTED;
         if (subject instanceof ServerPlayer playerSubject
                 && PlayerControlSessionManager.isResistant(playerSubject)) flags |= FLAG_RESISTANT;
@@ -721,66 +771,6 @@ public final class MentaloutControlContext extends ServerContext {
                 flags,
                 remaining
         );
-    }
-
-    private static byte supportLevel(LivingEntity subject) {
-        var supported = 0;
-        var allFull = true;
-        for (var capability : List.of(
-                ControlCapability.FORCE_TARGET,
-                ControlCapability.FREEZE_AI,
-                ControlCapability.RELATION_CONTROL
-        )) {
-            var evaluation = MentalControlApi.evaluate(subject, capability);
-            if (!evaluation.supported()) {
-                allFull = false;
-                continue;
-            }
-            supported++;
-            if (evaluation.support() != org.academy.api.common.entitycontrol.ControlSupport.FULL) allFull = false;
-        }
-        if (supported == 0) return SUPPORT_UNSUPPORTED;
-        return supported == 3 && allFull ? SUPPORT_FULL : SUPPORT_BEST_EFFORT;
-    }
-
-    private static float quantize(float value, float step) {
-        if (!Float.isFinite(value)) return value;
-        return Math.round(value / step) * step;
-    }
-
-    private static boolean supportsAnyControl(LivingEntity subject) {
-        return supportLevel(subject) != SUPPORT_UNSUPPORTED;
-    }
-
-    private static boolean isOverridden(Entry entry) {
-        return isOverridden(entry.subject, ControlCapability.FREEZE_AI, entry.stupor)
-                || isOverridden(entry.subject, ControlCapability.RELATION_CONTROL, entry.impression)
-                || isOverridden(entry.subject, ControlCapability.FORCE_TARGET, entry.misidentification);
-    }
-
-    private static boolean isOverridden(
-            LivingEntity subject,
-            ControlCapability capability,
-            ControlHandle handle
-    ) {
-        if (handle == null || handle.isClosed()) return false;
-        return MentalControlApi.inspect(subject, capability)
-                .map(inspection -> !inspection.leaseId().equals(handle.id()))
-                .orElse(true);
-    }
-
-    private static long nextRevision(UUID controllerUuid) {
-        var revision = currentRevision(controllerUuid) + 1L;
-        REVISIONS.put(controllerUuid, revision);
-        return revision;
-    }
-
-    private static long currentRevision(UUID controllerUuid) {
-        return REVISIONS.getOrDefault(controllerUuid, 0L);
-    }
-
-    private static void close(ControlHandle handle) {
-        if (handle != null) handle.close();
     }
 
     @Override

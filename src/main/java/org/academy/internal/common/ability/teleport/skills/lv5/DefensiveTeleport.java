@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.teleport.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -195,7 +196,7 @@ public final class DefensiveTeleport extends Skill {
             var mark = LocationTeleport.Server.getDefensiveMark(player);
             if (mark == null) return;
             var destinationLevel = LocationTeleport.Server.resolveLevel(player, mark);
-            if (destinationLevel == null || !player.level().hasChunkAt(net.minecraft.core.BlockPos.containing(center))) {
+            if (destinationLevel == null || !player.level().hasChunkAt(BlockPos.containing(center))) {
                 return;
             }
             LocationTeleport.Server.forceDestinationChunk(destinationLevel, mark.x(), mark.z(),
@@ -235,7 +236,7 @@ public final class DefensiveTeleport extends Skill {
             if (!EntityMotionGuard.canApplyMotionFrom(player, entity)) return false;
             if (entity instanceof Projectile projectile) {
                 var owner = projectile.getOwner();
-                return owner != player && (owner == null || !player.isAlliedTo(owner));
+                return owner != player && (!player.isAlliedTo(owner));
             }
             if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
             if (living instanceof ServerPlayer target) {
@@ -250,7 +251,9 @@ public final class DefensiveTeleport extends Skill {
         }
     }
 
-    /** Compatibility helper retained for existing behavioral tests. */
+    /**
+     * Compatibility helper retained for existing behavioral tests.
+     */
     public static final class Events {
         private Events() {
         }

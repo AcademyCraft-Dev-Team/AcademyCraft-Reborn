@@ -3,6 +3,8 @@ package org.academy.internal.client.ability.mentalout;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
@@ -70,7 +72,7 @@ public final class MentalIntrusionClientState {
         } else {
             FILTERS.remove(hiddenUuid);
         }
-        if (minecraft.crosshairPickEntity != null && isHidden(minecraft.crosshairPickEntity)) {
+        if (isHidden(minecraft.crosshairPickEntity)) {
             clearInteractionTarget(minecraft);
         }
     }
@@ -99,7 +101,7 @@ public final class MentalIntrusionClientState {
             return;
         }
         if (sessionId == null) {
-            if (minecraft.crosshairPickEntity != null && isHidden(minecraft.crosshairPickEntity)) {
+            if (isHidden(minecraft.crosshairPickEntity)) {
                 clearInteractionTarget(minecraft);
             }
             return;
@@ -158,8 +160,8 @@ public final class MentalIntrusionClientState {
         minecraft.crosshairPickEntity = null;
         minecraft.hitResult = BlockHitResult.miss(
                 minecraft.gameRenderer.mainCamera().position(),
-                net.minecraft.core.Direction.UP,
-                net.minecraft.core.BlockPos.containing(minecraft.gameRenderer.mainCamera().position())
+                Direction.UP,
+                BlockPos.containing(minecraft.gameRenderer.mainCamera().position())
         );
     }
 

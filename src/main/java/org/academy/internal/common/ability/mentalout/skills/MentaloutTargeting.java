@@ -12,8 +12,8 @@ import org.academy.api.common.entitycontrol.ControlDestination;
 import org.jspecify.annotations.Nullable;
 
 public final class MentaloutTargeting {
-    static final double MAX_RANGE = 16.0;
     public static final double MAX_SIGHT_RANGE = 64.0;
+    static final double MAX_RANGE = 16.0;
 
     private MentaloutTargeting() {
     }

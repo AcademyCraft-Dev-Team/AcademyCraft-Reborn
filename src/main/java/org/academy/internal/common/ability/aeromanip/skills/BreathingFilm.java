@@ -23,10 +23,12 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -61,7 +63,7 @@ public final class BreathingFilm extends Skill {
     }
 
     @Override
-    public void initServer(org.academy.api.server.vanilla.MinecraftServerContext context) {
+    public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
@@ -94,15 +96,26 @@ public final class BreathingFilm extends Skill {
         }
 
         private static void cast() {
-            if (AbilitySystemClient.canUseSkill(Skills.BREATHING_FILM.get())) MisakaNetworkClient.send(CastPacket.INSTANCE);
+            if (AbilitySystemClient.canUseSkill(Skills.BREATHING_FILM.get()))
+                MisakaNetworkClient.send(CastPacket.INSTANCE);
         }
 
         public static final class Config extends KeyBindingConfig {
-            public static final class Action implements org.academy.api.common.gson.TypeHandler<Config> {
+            public static final class Action implements TypeHandler<Config> {
                 public static final Action INSTANCE = new Action();
-                private Action() { }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
@@ -183,8 +196,12 @@ public final class BreathingFilm extends Skill {
     public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
         public static final CastPacket INSTANCE = new CastPacket();
         public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private CastPacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
+
+        private CastPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
             return PacketTypes.BREATHING_FILM_CAST.get();
         }
     }

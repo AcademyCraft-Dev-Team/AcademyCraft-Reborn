@@ -4,19 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import javax.imageio.ImageIO;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SkyStrikeAssetTest {
-    @Test
-    void generatedRuntimeTexturesRetainExpectedDimensionsAndAlpha() throws Exception {
-        assertTexture("lightning_column.png", 512, 1024);
-        assertTexture("lightning_ribbon.png", 1024, 256);
-        assertTexture("impact_shockwave_ring.png", 512, 512);
-        assertTexture("impact_flash.png", 512, 512);
-    }
-
     private static void assertTexture(String name, int width, int height) throws Exception {
         var path = "/assets/academy/textures/ability/electromaster/skill/sky_strike/effect/" + name;
         try (var stream = SkyStrikeAssetTest.class.getResourceAsStream(path)) {
@@ -27,5 +17,13 @@ class SkyStrikeAssetTest {
             assertEquals(height, image.getHeight());
             assertTrue(image.getColorModel().hasAlpha(), path);
         }
+    }
+
+    @Test
+    void generatedRuntimeTexturesRetainExpectedDimensionsAndAlpha() throws Exception {
+        assertTexture("lightning_column.png", 512, 1024);
+        assertTexture("lightning_ribbon.png", 1024, 256);
+        assertTexture("impact_shockwave_ring.png", 512, 512);
+        assertTexture("impact_flash.png", 512, 512);
     }
 }

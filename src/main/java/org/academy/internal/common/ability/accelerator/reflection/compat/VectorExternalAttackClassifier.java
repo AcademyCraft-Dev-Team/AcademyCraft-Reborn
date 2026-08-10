@@ -190,12 +190,9 @@ public final class VectorExternalAttackClassifier {
         }
         var name = source.getMsgId().toLowerCase(Locale.ROOT);
         if (isExplicitlyDeniedDamageName(name)) return true;
-        if (direct == causing
+        return direct == causing
                 && causing instanceof LivingEntity
-                && causing.distanceToSqr(defender) <= MELEE_DISTANCE_SQR) {
-            return true;
-        }
-        return false;
+                && causing.distanceToSqr(defender) <= MELEE_DISTANCE_SQR;
     }
 
     static boolean isExplicitlyDeniedDamageName(String name) {

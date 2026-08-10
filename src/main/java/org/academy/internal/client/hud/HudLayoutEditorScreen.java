@@ -20,9 +20,6 @@ public final class HudLayoutEditorScreen extends Screen {
     private static final int BOX_ACTIVE = 0xFF66FFCC;
     private static final int HANDLE = 0xC0FFE34D;
     private static final int TEXT = 0xFFFFFFFF;
-
-    private enum Mode {NONE, MOVE, RESIZE}
-
     private final @Nullable Screen previousScreen;
     private @Nullable HudLayout.Region grabbed;
     private Mode mode = Mode.NONE;
@@ -33,10 +30,37 @@ public final class HudLayoutEditorScreen extends Screen {
     private double grabOffsetY;
     private float initialScale;
     private boolean activated;
-
     public HudLayoutEditorScreen(@Nullable Screen previousScreen) {
         super(Component.translatable("hud.academy.layout.title"));
         this.previousScreen = previousScreen;
+    }
+
+    private static boolean overHandle(
+            HudLayout.Region region, HudLayout.Rect rect, double mouseX, double mouseY
+    ) {
+        var left = rect.x();
+        var right = rect.x() + rect.width();
+        var bottom = rect.y() + rect.height();
+        var handleLeft = usesLeftHandle(region) ? left : right - HANDLE_SIZE;
+        return mouseX >= handleLeft && mouseX <= handleLeft + HANDLE_SIZE
+                && mouseY >= bottom - HANDLE_SIZE && mouseY <= bottom;
+    }
+
+    private static boolean usesLeftHandle(HudLayout.Region region) {
+        return region == HudLayout.Region.SKILL_WHEEL;
+    }
+
+    private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
+        return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
+    }
+
+    private static void border(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
+        var safeWidth = Math.max(1, width);
+        var safeHeight = Math.max(1, height);
+        graphics.fill(x, y, x + safeWidth, y + 1, color);
+        graphics.fill(x, y + safeHeight - 1, x + safeWidth, y + safeHeight, color);
+        graphics.fill(x, y, x + 1, y + safeHeight, color);
+        graphics.fill(x + safeWidth - 1, y, x + safeWidth, y + safeHeight, color);
     }
 
     @Override
@@ -182,31 +206,5 @@ public final class HudLayoutEditorScreen extends Screen {
         graphics.centeredText(font, label, x + BUTTON_WIDTH / 2, y + 6, TEXT);
     }
 
-    private static boolean overHandle(
-            HudLayout.Region region, HudLayout.Rect rect, double mouseX, double mouseY
-    ) {
-        var left = rect.x();
-        var right = rect.x() + rect.width();
-        var bottom = rect.y() + rect.height();
-        var handleLeft = usesLeftHandle(region) ? left : right - HANDLE_SIZE;
-        return mouseX >= handleLeft && mouseX <= handleLeft + HANDLE_SIZE
-                && mouseY >= bottom - HANDLE_SIZE && mouseY <= bottom;
-    }
-
-    private static boolean usesLeftHandle(HudLayout.Region region) {
-        return region == HudLayout.Region.SKILL_WHEEL;
-    }
-
-    private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
-        return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
-    }
-
-    private static void border(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
-        var safeWidth = Math.max(1, width);
-        var safeHeight = Math.max(1, height);
-        graphics.fill(x, y, x + safeWidth, y + 1, color);
-        graphics.fill(x, y + safeHeight - 1, x + safeWidth, y + safeHeight, color);
-        graphics.fill(x, y, x + 1, y + safeHeight, color);
-        graphics.fill(x + safeWidth - 1, y, x + safeWidth, y + safeHeight, color);
-    }
+    private enum Mode {NONE, MOVE, RESIZE}
 }

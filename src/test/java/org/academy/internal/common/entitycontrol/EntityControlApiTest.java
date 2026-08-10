@@ -55,11 +55,11 @@ class EntityControlApiTest {
     }
 
     private static final class FieldBackedHealth extends VanillaHealth {
-        private float trueHealth = 64.0f;
+        private final float trueHealth = 64.0f;
     }
 
     private static final class GetterAndFieldHealth extends VanillaHealth {
-        private float realHealth = 48.0f;
+        private final float realHealth = 48.0f;
 
         public float getRealHealth() {
             return realHealth;

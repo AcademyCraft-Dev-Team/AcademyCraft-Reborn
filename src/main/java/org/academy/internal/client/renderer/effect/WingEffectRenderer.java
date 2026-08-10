@@ -21,13 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.academy.AcademyCraft.academy;
-import static org.academy.api.client.render.Render.RenderTypes.BLACK_WING;
-import static org.academy.api.client.render.Render.RenderTypes.BLACK_WING_FIRST_PERSON;
-import static org.academy.api.client.render.Render.RenderTypes.PLATINUM_WING;
-import static org.academy.api.client.render.Render.RenderTypes.PLATINUM_WING_BYPASS;
-import static org.academy.api.client.render.Render.RenderTypes.PLATINUM_WING_FIRST_PERSON;
-import static org.academy.api.client.render.Render.RenderTypes.WHITE_WING;
-import static org.academy.api.client.render.Render.RenderTypes.WHITE_WING_FIRST_PERSON;
+import static org.academy.api.client.render.Render.RenderTypes.*;
 
 public final class WingEffectRenderer implements EffectRenderer {
     public static final ContextKey<Integer> ENTITY_ID_CONTEXT = new ContextKey<>(academy("wing_entity_id"));

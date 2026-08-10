@@ -18,10 +18,12 @@ public final class HudLayout {
     private HudLayout() {
     }
 
-    public record Rect(float x, float y, float width, float height) {
-        public boolean contains(double px, double py) {
-            return px >= x && px <= x + width && py >= y && py <= y + height;
-        }
+    public static void resetAll() {
+        for (var region : Region.values()) region.reset();
+    }
+
+    private static float validScale(float scale) {
+        return Float.isFinite(scale) ? Math.clamp(scale, MIN_SCALE, MAX_SCALE) : 1.0f;
     }
 
     public enum Region {
@@ -216,11 +218,9 @@ public final class HudLayout {
         }
     }
 
-    public static void resetAll() {
-        for (var region : Region.values()) region.reset();
-    }
-
-    private static float validScale(float scale) {
-        return Float.isFinite(scale) ? Math.clamp(scale, MIN_SCALE, MAX_SCALE) : 1.0f;
+    public record Rect(float x, float y, float width, float height) {
+        public boolean contains(double px, double py) {
+            return px >= x && px <= x + width && py >= y && py <= y + height;
+        }
     }
 }

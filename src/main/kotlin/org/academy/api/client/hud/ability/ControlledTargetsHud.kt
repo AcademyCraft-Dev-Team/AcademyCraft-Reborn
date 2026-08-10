@@ -13,14 +13,7 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.UiContext
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.ProgressBarWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
-import org.academy.api.client.gui.widget.WidgetContext
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState.Entry
@@ -28,7 +21,7 @@ import org.academy.internal.client.gui.DataTerminalTheme
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
 import org.academy.internal.common.ability.AbilityCategories
-import java.util.Locale
+import java.util.*
 
 /** Compact left-side overview of the active Mentalout control roster. */
 class ControlledTargetsHud private constructor() {

@@ -2,19 +2,58 @@ package org.academy.internal.common.ability.mentalout.precision;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
+import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PrecisionGraphTest {
+    private static void writeLegacyNode(
+            DataOutputStream data,
+            int id,
+            PrecisionGraph.NodeKind kind,
+            double parameter
+    ) throws Exception {
+        data.writeInt(id);
+        data.writeByte(kind.ordinal());
+        data.writeDouble(parameter);
+        data.writeFloat(0.0f);
+        data.writeFloat(0.0f);
+    }
+
+    private static void writeStableNode(
+            DataOutputStream data,
+            int id,
+            PrecisionGraph.NodeKind kind,
+            double parameter
+    ) throws Exception {
+        data.writeInt(id);
+        data.writeByte(kind.wireId());
+        data.writeDouble(parameter);
+        data.writeFloat(0.0f);
+        data.writeFloat(0.0f);
+    }
+
+    private static PrecisionGraph simpleGraph() {
+        var nodes = new ArrayList<PrecisionGraph.Node>();
+        nodes.add(node(3, PrecisionGraph.NodeKind.MENTAL_STUPOR));
+        nodes.add(node(7, PrecisionGraph.NodeKind.ROSTER));
+        return new PrecisionGraph(nodes, List.of(new PrecisionGraph.Edge(7, 0, 3, 0)));
+    }
+
+    private static PrecisionGraph.Node node(int id, PrecisionGraph.NodeKind kind) {
+        return node(id, kind, kind.defaultParameter());
+    }
+
+    private static PrecisionGraph.Node node(int id, PrecisionGraph.NodeKind kind, double parameter) {
+        return new PrecisionGraph.Node(id, kind, parameter, 0.0, 0.0);
+    }
+
     @Test
     void validatesAndCompilesTypedAcyclicGraph() {
         var graph = simpleGraph();
@@ -93,7 +132,7 @@ class PrecisionGraphTest {
                 List.of()
         );
         var tooManyNodes = new PrecisionGraph(
-                java.util.stream.IntStream.rangeClosed(0, PrecisionGraph.MAX_NODES)
+                IntStream.rangeClosed(0, PrecisionGraph.MAX_NODES)
                         .mapToObj(id -> node(id, PrecisionGraph.NodeKind.END_INTRUSION))
                         .toList(),
                 List.of()
@@ -290,8 +329,8 @@ class PrecisionGraphTest {
         assertTrue(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(0.0));
         assertTrue(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(1.0));
         assertTrue(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(3600.0));
-        assertEquals(false, PrecisionGraph.NodeKind.PATH_TO.isParameterValid(0.5));
-        assertEquals(false, PrecisionGraph.NodeKind.PATH_TO.isParameterValid(3601.0));
+        assertFalse(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(0.5));
+        assertFalse(PrecisionGraph.NodeKind.PATH_TO.isParameterValid(3601.0));
 
         var graph = new PrecisionGraph(
                 List.of(
@@ -335,46 +374,5 @@ class PrecisionGraphTest {
         assertTrue(decoded.valid());
         assertEquals(0.0, decoded.graph().nodes().get(1).parameter());
         assertEquals(3, PrecisionGraphCodec.encode(decoded.graph())[0]);
-    }
-
-    private static void writeLegacyNode(
-            DataOutputStream data,
-            int id,
-            PrecisionGraph.NodeKind kind,
-            double parameter
-    ) throws Exception {
-        data.writeInt(id);
-        data.writeByte(kind.ordinal());
-        data.writeDouble(parameter);
-        data.writeFloat(0.0f);
-        data.writeFloat(0.0f);
-    }
-
-    private static void writeStableNode(
-            DataOutputStream data,
-            int id,
-            PrecisionGraph.NodeKind kind,
-            double parameter
-    ) throws Exception {
-        data.writeInt(id);
-        data.writeByte(kind.wireId());
-        data.writeDouble(parameter);
-        data.writeFloat(0.0f);
-        data.writeFloat(0.0f);
-    }
-
-    private static PrecisionGraph simpleGraph() {
-        var nodes = new ArrayList<PrecisionGraph.Node>();
-        nodes.add(node(3, PrecisionGraph.NodeKind.MENTAL_STUPOR));
-        nodes.add(node(7, PrecisionGraph.NodeKind.ROSTER));
-        return new PrecisionGraph(nodes, List.of(new PrecisionGraph.Edge(7, 0, 3, 0)));
-    }
-
-    private static PrecisionGraph.Node node(int id, PrecisionGraph.NodeKind kind) {
-        return node(id, kind, kind.defaultParameter());
-    }
-
-    private static PrecisionGraph.Node node(int id, PrecisionGraph.NodeKind kind, double parameter) {
-        return new PrecisionGraph.Node(id, kind, parameter, 0.0, 0.0);
     }
 }

@@ -1,7 +1,6 @@
 package org.academy.internal.client.renderer.effect;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +10,11 @@ final class SweepAnimationTimeline<T> {
     static final int MAX_EVENTS_PER_ENTITY = 4;
 
     private final Map<Integer, ArrayDeque<Entry<T>>> entriesByEntity = new HashMap<>();
+
+    static float progress(Entry<?> entry, double currentTick, double durationTicks) {
+        if (durationTicks <= 0.0f) return 1.0f;
+        return (float) ((currentTick - entry.startTick()) / durationTicks);
+    }
 
     void enqueue(int entityId, double startTick, T payload) {
         var entries = entriesByEntity.computeIfAbsent(entityId, ignored -> new ArrayDeque<>());
@@ -38,11 +42,6 @@ final class SweepAnimationTimeline<T> {
     int size(int entityId) {
         var entries = entriesByEntity.get(entityId);
         return entries == null ? 0 : entries.size();
-    }
-
-    static float progress(Entry<?> entry, double currentTick, double durationTicks) {
-        if (durationTicks <= 0.0f) return 1.0f;
-        return (float) ((currentTick - entry.startTick()) / durationTicks);
     }
 
     record Entry<T>(double startTick, T payload) {

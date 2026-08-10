@@ -4,6 +4,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.internal.common.attachment.AttachmentTypes;
 
+import java.util.UUID;
+
 public final class VectorProjectileRedirects {
     private VectorProjectileRedirects() {
     }
@@ -39,7 +41,7 @@ public final class VectorProjectileRedirects {
         return data;
     }
 
-    static long fingerprint(Projectile projectile, java.util.UUID originalOwnerId, ServerPlayer redirector) {
+    static long fingerprint(Projectile projectile, UUID originalOwnerId, ServerPlayer redirector) {
         var value = projectile.level().getGameTime();
         value = 31L * value + projectile.getId();
         value = 31L * value + redirector.getUUID().hashCode();

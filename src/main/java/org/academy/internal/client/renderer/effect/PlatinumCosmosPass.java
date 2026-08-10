@@ -120,11 +120,11 @@ public final class PlatinumCosmosPass {
                     .getPackedLightCoords(player, partialTick);
             var submitted = mode == PlatinumCosmosRenderMode.EXACT
                     ? WingEffectRenderer.PLATINUM.submitFirstPersonCosmos(
-                            poseStack, HIDDEN_HUD_STORAGE, player, packedLight, partialTick
-                    )
+                    poseStack, HIDDEN_HUD_STORAGE, player, packedLight, partialTick
+            )
                     : WingEffectRenderer.PLATINUM.submitFirstPersonFallback(
-                            poseStack, HIDDEN_HUD_STORAGE, player, packedLight, partialTick
-                    );
+                    poseStack, HIDDEN_HUD_STORAGE, player, packedLight, partialTick
+            );
             if (submitted) {
                 if (mode == PlatinumCosmosRenderMode.EXACT) {
                     IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE));

@@ -17,17 +17,16 @@ public class AbilityConfig {
     public final Map<String, List<String>> metalBlocks = new HashMap<>();
     @SerializedName("skills")
     public final Map<String, SkillSettings> skills = new HashMap<>();
-
-    @SerializedName("damageMultiplier")
-    public float damageMultiplier = 1.0f;
-    @SerializedName("cpRatingOffset")
-    public float cpRatingOffset = 0.0f;
     @SerializedName("brainDevelopment")
     public final BrainDevelopmentSettings brainDevelopment = new BrainDevelopmentSettings();
     @SerializedName("aeromanip")
     public final AeromanipSettings aeromanip = new AeromanipSettings();
     @SerializedName("mentalout")
     public final MentaloutSettings mentalout = new MentaloutSettings();
+    @SerializedName("damageMultiplier")
+    public float damageMultiplier = 1.0f;
+    @SerializedName("cpRatingOffset")
+    public float cpRatingOffset = 0.0f;
 
     public static class AeromanipSettings {
         @SerializedName("pvpForceMultiplier")

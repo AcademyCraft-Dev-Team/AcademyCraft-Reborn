@@ -1,46 +1,44 @@
 package org.academy.internal.common.ability.mentalout.gametest;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.authlib.GameProfile;
 import io.netty.channel.embedded.EmbeddedChannel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestInstance;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
-import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityReference;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.ControlHandle;
-import org.academy.api.common.entitycontrol.ControlRequest;
-import org.academy.api.common.entitycontrol.MentalControlApi;
-import org.academy.api.common.entitycontrol.MentalPerceptionApi;
-import org.academy.api.common.entitycontrol.PerceptionDecision;
+import org.academy.api.common.entitycontrol.*;
+import org.academy.internal.common.ability.mentalout.control.CubeMobMoveControlAccess;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
@@ -154,7 +152,7 @@ public final class MentaloutGameTests {
     private static ControlHandle moveTo(
             ServerPlayer controller,
             LivingEntity subject,
-            net.minecraft.world.phys.Vec3 destination
+            Vec3 destination
     ) {
         return MentalControlApi.apply(ControlRequest.permanent(
                 controller,
@@ -201,8 +199,8 @@ public final class MentaloutGameTests {
                 return GameType.CREATIVE;
             }
         };
-        var position = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                new net.minecraft.core.BlockPos(1, 2, 1)
+        var position = helper.absoluteVec(Vec3.atBottomCenterOf(
+                new BlockPos(1, 2, 1)
         ));
         player.snapTo(position.x, position.y, position.z, 0.0F, 0.0F);
         var connection = new Connection(PacketFlow.SERVERBOUND);
@@ -256,8 +254,8 @@ public final class MentaloutGameTests {
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
                 var subject = createController(helper);
-                var subjectPosition = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(4, 2, 1)
+                var subjectPosition = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(4, 2, 1)
                 ));
                 subject.snapTo(subjectPosition.x, subjectPosition.y, subjectPosition.z, 0.0f, 0.0f);
                 var freeze = freeze(controller, subject, 8L);
@@ -287,12 +285,12 @@ public final class MentaloutGameTests {
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
                 var subject = createController(helper);
-                var subjectPosition = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(3, 2, 1)
+                var subjectPosition = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(3, 2, 1)
                 ));
                 subject.snapTo(subjectPosition.x, subjectPosition.y, subjectPosition.z, 0.0f, 0.0f);
-                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(8, 2, 1)
+                var destination = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(8, 2, 1)
                 ));
                 var handle = MentalControlApi.apply(ControlRequest.permanent(
                         controller,
@@ -360,13 +358,13 @@ public final class MentaloutGameTests {
                     var entityHit = MentaloutTargeting.findSightDestination(
                             controller, MentaloutTargeting.MAX_SIGHT_RANGE);
                     helper.assertTrue(
-                            entityHit instanceof ControlDestination.Entity entity
-                                    && entity.uuid().equals(target.getUUID()),
+                            entityHit instanceof ControlDestination.Entity(UUID uuid)
+                                    && uuid.equals(target.getUUID()),
                             "Sight destination did not select the looked-at entity"
                     );
 
-                    var moved = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                            new net.minecraft.core.BlockPos(12, 2, 3)
+                    var moved = helper.absoluteVec(Vec3.atBottomCenterOf(
+                            new BlockPos(12, 2, 3)
                     ));
                     target.snapTo(moved.x, moved.y, moved.z, 0.0f, 0.0f);
                     helper.setBlock(1, 3, 4, Blocks.STONE);
@@ -374,13 +372,13 @@ public final class MentaloutGameTests {
                 helper.runAtTickTime(4L, () -> {
                     var blockHit = MentaloutTargeting.findSightDestination(
                             controller, MentaloutTargeting.MAX_SIGHT_RANGE);
-                    var expected = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                            new net.minecraft.core.BlockPos(1, 3, 3)
+                    var expected = helper.absoluteVec(Vec3.atBottomCenterOf(
+                            new BlockPos(1, 3, 3)
                     ));
                     helper.assertTrue(
-                            blockHit instanceof ControlDestination.Position position
-                                    && position.dimension().equals(helper.getLevel().dimension().identifier())
-                                    && position.value().distanceToSqr(expected) < 1.0e-6,
+                            blockHit instanceof ControlDestination.Position(Identifier dimension, Vec3 value)
+                                    && dimension.equals(helper.getLevel().dimension().identifier())
+                                    && value.distanceToSqr(expected) < 1.0e-6,
                             "Sight destination did not return the outside face position"
                     );
                     helper.getLevel().getServer().getPlayerList().remove(controller);
@@ -394,8 +392,8 @@ public final class MentaloutGameTests {
                 var controller = createController(helper);
                 var zombie = helper.spawn(EntityTypes.ZOMBIE, 2, 2, 1);
                 zombie.setPersistenceRequired();
-                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(4, 2, 1)
+                var destination = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(4, 2, 1)
                 ));
                 var handle = MentalControlApi.apply(ControlRequest.permanent(
                         controller,
@@ -441,8 +439,8 @@ public final class MentaloutGameTests {
                 zombie.setTarget(villager);
                 zombie.getNavigation().moveTo(villager, 1.0);
 
-                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(10, 2, 1)
+                var destination = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(10, 2, 1)
                 ));
                 var handle = MentalControlApi.apply(ControlRequest.permanent(
                         controller,
@@ -480,7 +478,7 @@ public final class MentaloutGameTests {
                     helper.assertTrue(closestDistanceSqr[0] <= 1.0,
                             "Zombie never reached the mental destination before the lease completed");
                     helper.assertTrue(minimumXWhileControlled[0]
-                                    >= helper.absolutePos(new net.minecraft.core.BlockPos(3, 2, 1)).getX(),
+                                    >= helper.absolutePos(new BlockPos(3, 2, 1)).getX(),
                             "Zombie moved back toward its vanilla target during mental navigation");
                     finish(helper, controller, handle);
                 });
@@ -497,8 +495,8 @@ public final class MentaloutGameTests {
                 attacker.setPersistenceRequired();
                 victim.setPersistenceRequired();
                 victim.setNoAi(true);
-                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(6, 2, 1)
+                var destination = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(6, 2, 1)
                 ));
                 var pathHandle = MentalControlApi.apply(ControlRequest.permanent(
                         controller,
@@ -515,7 +513,7 @@ public final class MentaloutGameTests {
                         closestDistanceSqr[0], attacker.position().distanceToSqr(destination)));
 
                 helper.runAtTickTime(3L, () -> helper.assertTrue(
-                        attacker.getMoveControl() instanceof org.academy.internal.common.ability.mentalout.control.CubeMobMoveControlAccess,
+                        attacker.getMoveControl() instanceof CubeMobMoveControlAccess,
                         "Cube move control bridge was not applied"
                 ));
 
@@ -567,8 +565,8 @@ public final class MentaloutGameTests {
                 }
                 helper.setBlock(10, 2, 1, Blocks.STONE);
                 helper.setBlock(10, 5, 1, Blocks.STONE);
-                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(10, 2, 1)
+                var destination = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(10, 2, 1)
                 ));
                 var handle = MentalControlApi.apply(ControlRequest.permanent(
                         controller,
@@ -620,7 +618,7 @@ public final class MentaloutGameTests {
                 helper.runAtTickTime(10L, () -> {
                     helper.assertFalse(handle.isClosed(), "Guard lease closed before threat selection");
                     helper.assertTrue(
-                            MentalControlRuntime.effectiveDirective(guardian, org.academy.api.common.entitycontrol.ControlCapability.GUARD_CONTROL)
+                            MentalControlRuntime.effectiveDirective(guardian, ControlCapability.GUARD_CONTROL)
                                     .orElse(null) instanceof ControlDirective.Guard,
                             "Guard directive was not effective"
                     );
@@ -1070,14 +1068,14 @@ public final class MentaloutGameTests {
                 var phantom = helper.spawn(EntityTypes.PHANTOM, 2, 16, 1);
                 var blaze = helper.spawn(EntityTypes.BLAZE, 2, 5, 3);
                 var vex = helper.spawn(EntityTypes.VEX, 2, 21, 4);
-                var subjects = new net.minecraft.world.entity.Mob[]{ghast, phantom, blaze, vex};
+                var subjects = new Mob[]{ghast, phantom, blaze, vex};
                 for (var subject : subjects) subject.setPersistenceRequired();
 
-                var destinations = new net.minecraft.world.phys.Vec3[]{
-                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 10.0, 0.5)),
-                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 16.0, 1.5)),
-                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 8.0, 3.5)),
-                        helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 21.0, 4.5))
+                var destinations = new Vec3[]{
+                        helper.absoluteVec(new Vec3(8.5, 10.0, 0.5)),
+                        helper.absoluteVec(new Vec3(8.5, 16.0, 1.5)),
+                        helper.absoluteVec(new Vec3(8.5, 8.0, 3.5)),
+                        helper.absoluteVec(new Vec3(8.5, 21.0, 4.5))
                 };
                 var handles = new ControlHandle[subjects.length];
                 var closestDistanceSqr = new double[subjects.length];
@@ -1121,7 +1119,7 @@ public final class MentaloutGameTests {
                 var wither = helper.spawn(EntityTypes.WITHER, 2, 8, 1);
                 wither.setPersistenceRequired();
                 wither.setInvulnerableTicks(0);
-                var destination = helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 10.0, 1.5));
+                var destination = helper.absoluteVec(new Vec3(8.5, 10.0, 1.5));
                 var handle = moveTo(controller, wither, destination);
                 var closestDistanceSqr = new double[]{wither.position().distanceToSqr(destination)};
                 helper.onEachTick(() -> closestDistanceSqr[0] = Math.min(
@@ -1171,8 +1169,8 @@ public final class MentaloutGameTests {
                 var cow = helper.spawn(EntityTypes.COW, 2, 2, 4);
                 cow.setPersistenceRequired();
                 cow.setNoAi(true);
-                var destination = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(
-                        new net.minecraft.core.BlockPos(6, 2, 1)
+                var destination = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(6, 2, 1)
                 ));
                 var pathHandle = MentalControlApi.apply(ControlRequest.permanent(
                         controller,
@@ -1210,12 +1208,12 @@ public final class MentaloutGameTests {
                     helper.assertValueEqual(cow.getHealth(), oldHealth, "Unauthorized Warden damage changed health");
 
                     warden.getBrain().eraseMemory(MemoryModuleType.DIG_COOLDOWN);
-                    warden.setPose(net.minecraft.world.entity.Pose.DIGGING);
+                    warden.setPose(Pose.DIGGING);
                     var relationStart = warden.position();
                     helper.runAtTickTime(170L, () -> {
                         helper.assertTrue(warden.isAlive() && !warden.isRemoved(),
                                 "Controlled Warden disappeared through its digging activity");
-                        helper.assertFalse(warden.hasPose(net.minecraft.world.entity.Pose.DIGGING),
+                        helper.assertFalse(warden.hasPose(Pose.DIGGING),
                                 "Controlled Warden remained in the digging pose");
                         helper.assertTrue(warden.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).isEmpty(),
                                 "Impression-controlled Warden retained its special AI attack target");
@@ -1258,7 +1256,7 @@ public final class MentaloutGameTests {
                 var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
                 cow.setPersistenceRequired();
                 var handle = forceTarget(controller, dragon, cow, 35L);
-                var destination = helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.5, 20.0, 1.5));
+                var destination = helper.absoluteVec(new Vec3(8.5, 20.0, 1.5));
                 var moveHandle = new ControlHandle[1];
                 var closestDistanceSqr = new double[]{dragon.position().distanceToSqr(destination)};
                 helper.onEachTick(() -> closestDistanceSqr[0] = Math.min(
@@ -1298,7 +1296,7 @@ public final class MentaloutGameTests {
                     helper.runAtTickTime(370L, () -> {
                         var delta = cow.getEyePosition().subtract(dragon.getEyePosition());
                         var expectedYaw = (float) (Math.atan2(delta.z, delta.x) * 180.0 / Math.PI) - 90.0F;
-                        helper.assertTrue(net.minecraft.util.Mth.degreesDifferenceAbs(
+                        helper.assertTrue(Mth.degreesDifferenceAbs(
                                         dragon.getYRot(), expectedYaw) <= 5.0F,
                                 "Dragon view control was overwritten by its phase AI");
                         viewHandle.close();

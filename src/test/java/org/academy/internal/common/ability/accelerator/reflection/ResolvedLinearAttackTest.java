@@ -5,11 +5,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ResolvedLinearAttackTest {
+    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
+        assertEquals(expected.x, actual.x, 1.0E-9);
+        assertEquals(expected.y, actual.y, 1.0E-9);
+        assertEquals(expected.z, actual.z, 1.0E-9);
+    }
+
     @Test
     void unreflectedDegenerateAttackDoesNotInventGeometry() {
         var point = new LinearSegment(new Vec3(2, 3, 4), new Vec3(2, 3, 4));
@@ -47,11 +51,5 @@ class ResolvedLinearAttackTest {
                 1.0E-9
         );
         assertEquals(0.0, ResolvedLinearAttack.calculateReturnVisualLength(mirrorPoint, null), 1.0E-9);
-    }
-
-    private static void assertVecEquals(Vec3 expected, Vec3 actual) {
-        assertEquals(expected.x, actual.x, 1.0E-9);
-        assertEquals(expected.y, actual.y, 1.0E-9);
-        assertEquals(expected.z, actual.z, 1.0E-9);
     }
 }

@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.mentalout.control;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -16,13 +15,10 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
-import org.academy.internal.common.ability.mentalout.MentalControlRecall;
-import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.api.common.entitycontrol.AttackDecision;
+import org.academy.internal.common.ability.mentalout.*;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
-import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class MentalControlEvents {
@@ -45,7 +41,7 @@ public final class MentalControlEvents {
             var proposedTarget = event.getNewAboutToBeSetTarget();
             if (proposedTarget != null
                     && MentalControlRuntime.attackDecision(subject, proposedTarget)
-                    == org.academy.api.common.entitycontrol.AttackDecision.DENY) {
+                    == AttackDecision.DENY) {
                 event.setNewAboutToBeSetTarget(null);
             }
         }
@@ -61,7 +57,7 @@ public final class MentalControlEvents {
                 || !(event.getSource().getEntity() instanceof LivingEntity aggressor)
                 || aggressor == event.getEntity()) return;
         if (MentalControlRuntime.attackDecision(aggressor, event.getEntity())
-                == org.academy.api.common.entitycontrol.AttackDecision.DENY) {
+                == AttackDecision.DENY) {
             event.setCanceled(true);
         }
     }

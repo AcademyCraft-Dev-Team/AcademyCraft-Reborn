@@ -6,7 +6,9 @@ import net.minecraft.world.phys.Vec3;
 import java.util.Objects;
 import java.util.UUID;
 
-/** A dynamic entity or fixed, dimension-bound destination for movement control. */
+/**
+ * A dynamic entity or fixed, dimension-bound destination for movement control.
+ */
 public sealed interface ControlDestination permits ControlDestination.Entity, ControlDestination.Position {
     record Entity(UUID uuid) implements ControlDestination {
         public Entity {

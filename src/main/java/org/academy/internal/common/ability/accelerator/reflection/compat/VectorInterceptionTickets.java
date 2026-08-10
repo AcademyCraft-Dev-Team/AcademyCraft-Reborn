@@ -2,11 +2,7 @@ package org.academy.internal.common.ability.accelerator.reflection.compat;
 
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public final class VectorInterceptionTickets {
     private static final Map<UUID, Ticket> TICKETS = new HashMap<>();

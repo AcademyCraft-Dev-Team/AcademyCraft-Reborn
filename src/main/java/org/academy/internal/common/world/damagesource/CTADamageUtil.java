@@ -3,7 +3,6 @@ package org.academy.internal.common.world.damagesource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 
 public final class CTADamageUtil {
     public static final float CTA_DAMAGE_AMOUNT = 4.0f;

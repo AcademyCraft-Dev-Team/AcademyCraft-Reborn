@@ -2,6 +2,7 @@ package org.academy;
 
 import com.google.common.reflect.TypeToken;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.math.Axis;
 import net.irisshaders.iris.pipeline.IrisPipelines;
 import net.irisshaders.iris.pipeline.programs.ShaderKey;
@@ -12,27 +13,24 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.ClientPauseChangeEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
-import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
+import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.SharedSuggestionProvider;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.gui.editor.UiLayoutEditor;
+import org.academy.api.client.gui.editor.UiLayoutEditorScreen;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
 import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
@@ -48,37 +46,33 @@ import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
+import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
-import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
-import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.app.props.PropsApp;
 import org.academy.internal.client.app.props.PropsClientState;
 import org.academy.internal.client.app.props.PropsIcon;
-import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
+import org.academy.internal.client.app.settings.ui.SettingsApp;
+import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
+import org.academy.internal.client.commands.ClientProfileCommand;
 import org.academy.internal.client.compatibility.InventoryProfilesNextCompat;
-import org.academy.internal.client.gui.screen.Screens;
-import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
-import org.academy.internal.client.hud.HudLayoutConfig;
-import org.academy.internal.client.hud.HudDebugScreen;
 import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
 import org.academy.internal.client.gui.debug.UiDebugLayoutRegistry;
 import org.academy.internal.client.gui.debug.UiDebugSession;
-import org.academy.internal.client.profiler.ProfilerClientHooks;
-import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
-import org.academy.internal.client.particle.VectorBlastParticle;
+import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
+import org.academy.internal.client.gui.screen.Screens;
+import org.academy.internal.client.hud.HudDebugScreen;
+import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.particle.BloodSplashParticle;
 import org.academy.internal.client.particle.BloodSprayParticle;
+import org.academy.internal.client.particle.VectorBlastParticle;
+import org.academy.internal.client.profiler.ProfilerClientHooks;
+import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.effect.*;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
-import org.academy.internal.client.renderer.vfx.ArcVfxClient;
-import org.academy.internal.client.renderer.vfx.BeamVfxClient;
-import org.academy.internal.client.renderer.vfx.SmokeVfxClient;
-import org.academy.internal.client.renderer.vfx.StormWingVfxClient;
-import org.academy.internal.client.renderer.vfx.PlasmaVfxClient;
-import org.academy.internal.client.renderer.vfx.SkyStrikeVfxClient;
+import org.academy.internal.client.renderer.vfx.*;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -187,6 +181,7 @@ public final class AcademyCraftClient {
                                                 }))
                                 ))
         );
+        ClientProfileCommand.register(event.getDispatcher());
         if (!isUiDebugEnvironment()) return;
         event.getDispatcher().register(
                 Commands.literal("academy")
@@ -201,7 +196,7 @@ public final class AcademyCraftClient {
                                                         .then(
                                                                 Commands.argument(
                                                                                 "layout",
-                                                                                com.mojang.brigadier.arguments.StringArgumentType.word()
+                                                                                StringArgumentType.word()
                                                                         )
                                                                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                                                                 UiDebugLayoutRegistry.gui().stream()
@@ -210,13 +205,13 @@ public final class AcademyCraftClient {
                                                                                 builder
                                                                         ))
                                                                         .executes(ctx -> {
-                                                                            var layout = com.mojang.brigadier.arguments.StringArgumentType
+                                                                            var layout = StringArgumentType
                                                                                     .getString(ctx, "layout");
                                                                             if (UiDebugLayoutRegistry.gui().stream()
                                                                                     .noneMatch(definition -> definition.getId().equals(layout))) {
                                                                                 return 0;
                                                                             }
-                                                                            org.academy.api.client.gui.editor.UiLayoutEditorScreen
+                                                                            UiLayoutEditorScreen
                                                                                     .openDebug(layout);
                                                                             return 1;
                                                                         })
@@ -244,7 +239,7 @@ public final class AcademyCraftClient {
                                             return 1;
                                         })
                                         .then(
-                                                Commands.argument("file", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                                Commands.argument("file", StringArgumentType.word())
                                                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                                                 UiDebugLayoutRegistry.all().stream()
                                                                         .map(definition -> definition.getId())
@@ -252,8 +247,8 @@ public final class AcademyCraftClient {
                                                                 builder
                                                         ))
                                                         .executes(ctx -> {
-                                                            String file = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "file");
-                                                            UiLayoutEditor.INSTANCE.open(file);
+                                                            String file = StringArgumentType.getString(ctx, "file");
+                                                            UiLayoutEditor.open(file);
                                                             return 1;
                                                         })
                                         )
@@ -269,7 +264,7 @@ public final class AcademyCraftClient {
 
     private static void notifyClient(String message) {
         var player = Minecraft.getInstance().player;
-        if (player != null) player.sendSystemMessage(net.minecraft.network.chat.Component.literal(message));
+        if (player != null) player.sendSystemMessage(Component.literal(message));
     }
 
     @SubscribeEvent

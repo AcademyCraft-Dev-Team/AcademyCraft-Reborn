@@ -1,7 +1,7 @@
 package org.academy.api.common.profiler
 
 import org.slf4j.LoggerFactory
-import java.util.ArrayDeque
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.LongAdder

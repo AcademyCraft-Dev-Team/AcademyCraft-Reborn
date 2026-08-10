@@ -32,13 +32,12 @@ import org.academy.internal.client.renderer.effect.StormWingEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.network.PacketTypes;
 import org.academy.mixin.common.EntitySharedFlagInvoker;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -48,11 +47,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
 

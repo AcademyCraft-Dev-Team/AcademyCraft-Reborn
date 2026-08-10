@@ -19,17 +19,16 @@ import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -63,6 +62,82 @@ public class ThunderLance extends Skill {
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.ARC_GENERATE)
         );
+    }
+
+    static float calculateQuickDamage(float abilityPower, float damageMultiplier) {
+        if (!Float.isFinite(abilityPower) || !Float.isFinite(damageMultiplier)) return 0;
+        return QUICK_BASE_DAMAGE * Math.max(0, abilityPower) * Math.max(0, damageMultiplier);
+    }
+
+    static Vec3 calculateHandPosition(Vec3 playerPosition, Vec3 look) {
+        var right = look.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
+        else right = right.normalize();
+        return playerPosition.add(right.scale(0.4)).add(0, 1.2, 0).add(look.scale(0.5));
+    }
+
+    static long deriveReturnSeed(long seed) {
+        return seed ^ RETURN_SEED_MASK;
+    }
+
+    static List<ArcPath> createUnreflectedQuickArcPaths(
+            Vec3 handPos,
+            Vec3 targetPos,
+            List<Vec3> offsets,
+            List<Long> seeds
+    ) {
+        validateStrands(offsets, seeds);
+        var paths = new ArrayList<ArcPath>(offsets.size());
+        for (var i = 0; i < offsets.size(); i++) {
+            paths.add(createQuickArcPath(handPos, targetPos.add(offsets.get(i)), seeds.get(i)));
+        }
+        return List.copyOf(paths);
+    }
+
+    static List<ArcPath> createReflectedQuickArcPaths(
+            Vec3 handPos,
+            Vec3 mirrorPoint,
+            Vec3 returnEnd,
+            double reflectionProgress,
+            List<Vec3> offsets,
+            List<Long> seeds
+    ) {
+        validateStrands(offsets, seeds);
+        var t = Math.clamp(reflectionProgress, 0.0, 1.0);
+        var reflectionPoints = new ArrayList<Vec3>(offsets.size());
+        var returnEndpoints = new ArrayList<Vec3>(offsets.size());
+        var paths = new ArrayList<ArcPath>(offsets.size() * 2);
+
+        for (var i = 0; i < offsets.size(); i++) {
+            var offset = offsets.get(i);
+            var reflectionPoint = mirrorPoint.add(offset.scale(t));
+            reflectionPoints.add(reflectionPoint);
+            returnEndpoints.add(returnEnd.subtract(offset.scale(1.0 - t)));
+            paths.add(createQuickArcPath(handPos, reflectionPoint, seeds.get(i)));
+        }
+        for (var i = 0; i < reflectionPoints.size(); i++) {
+            paths.add(createQuickArcPath(
+                    reflectionPoints.get(i),
+                    returnEndpoints.get(i),
+                    deriveReturnSeed(seeds.get(i))
+            ));
+        }
+        return List.copyOf(paths);
+    }
+
+    private static ArcPath createQuickArcPath(Vec3 start, Vec3 end, long seed) {
+        return new ArcPath(
+                new LinePath(start.toVector3f(), end.toVector3f()),
+                List.of(new JaggedModifier(1, 4, seed)),
+                3.0f,
+                List.of()
+        );
+    }
+
+    private static void validateStrands(List<Vec3> offsets, List<Long> seeds) {
+        if (offsets.size() != seeds.size()) {
+            throw new IllegalArgumentException("Each Thunder Lance strand requires one seed");
+        }
     }
 
     @Override
@@ -182,82 +257,6 @@ public class ThunderLance extends Skill {
             arc.playSound(SoundEvents.ARC_WEAK.get());
 
             LinearAttackExecutor.execute(level, resolved, payload);
-        }
-    }
-
-    static float calculateQuickDamage(float abilityPower, float damageMultiplier) {
-        if (!Float.isFinite(abilityPower) || !Float.isFinite(damageMultiplier)) return 0;
-        return QUICK_BASE_DAMAGE * Math.max(0, abilityPower) * Math.max(0, damageMultiplier);
-    }
-
-    static Vec3 calculateHandPosition(Vec3 playerPosition, Vec3 look) {
-        var right = look.cross(new Vec3(0, 1, 0));
-        if (right.lengthSqr() <= 1.0e-8) right = new Vec3(1, 0, 0);
-        else right = right.normalize();
-        return playerPosition.add(right.scale(0.4)).add(0, 1.2, 0).add(look.scale(0.5));
-    }
-
-    static long deriveReturnSeed(long seed) {
-        return seed ^ RETURN_SEED_MASK;
-    }
-
-    static List<ArcPath> createUnreflectedQuickArcPaths(
-            Vec3 handPos,
-            Vec3 targetPos,
-            List<Vec3> offsets,
-            List<Long> seeds
-    ) {
-        validateStrands(offsets, seeds);
-        var paths = new ArrayList<ArcPath>(offsets.size());
-        for (var i = 0; i < offsets.size(); i++) {
-            paths.add(createQuickArcPath(handPos, targetPos.add(offsets.get(i)), seeds.get(i)));
-        }
-        return List.copyOf(paths);
-    }
-
-    static List<ArcPath> createReflectedQuickArcPaths(
-            Vec3 handPos,
-            Vec3 mirrorPoint,
-            Vec3 returnEnd,
-            double reflectionProgress,
-            List<Vec3> offsets,
-            List<Long> seeds
-    ) {
-        validateStrands(offsets, seeds);
-        var t = Math.clamp(reflectionProgress, 0.0, 1.0);
-        var reflectionPoints = new ArrayList<Vec3>(offsets.size());
-        var returnEndpoints = new ArrayList<Vec3>(offsets.size());
-        var paths = new ArrayList<ArcPath>(offsets.size() * 2);
-
-        for (var i = 0; i < offsets.size(); i++) {
-            var offset = offsets.get(i);
-            var reflectionPoint = mirrorPoint.add(offset.scale(t));
-            reflectionPoints.add(reflectionPoint);
-            returnEndpoints.add(returnEnd.subtract(offset.scale(1.0 - t)));
-            paths.add(createQuickArcPath(handPos, reflectionPoint, seeds.get(i)));
-        }
-        for (var i = 0; i < reflectionPoints.size(); i++) {
-            paths.add(createQuickArcPath(
-                    reflectionPoints.get(i),
-                    returnEndpoints.get(i),
-                    deriveReturnSeed(seeds.get(i))
-            ));
-        }
-        return List.copyOf(paths);
-    }
-
-    private static ArcPath createQuickArcPath(Vec3 start, Vec3 end, long seed) {
-        return new ArcPath(
-                new LinePath(start.toVector3f(), end.toVector3f()),
-                List.of(new JaggedModifier(1, 4, seed)),
-                3.0f,
-                List.of()
-        );
-    }
-
-    private static void validateStrands(List<Vec3> offsets, List<Long> seeds) {
-        if (offsets.size() != seeds.size()) {
-            throw new IllegalArgumentException("Each Thunder Lance strand requires one seed");
         }
     }
 

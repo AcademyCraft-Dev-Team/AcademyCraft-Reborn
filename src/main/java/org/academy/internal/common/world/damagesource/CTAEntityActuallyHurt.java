@@ -3,20 +3,47 @@ package org.academy.internal.common.world.damagesource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 
-/** Applies an exact subtraction to the resolved combat-health pool after normal damage hooks run. */
+/**
+ * Applies an exact subtraction to the resolved combat-health pool after normal damage hooks run.
+ */
 public final class CTAEntityActuallyHurt {
     private static final float EPSILON = 0.05f;
     private final LivingEntity entity;
 
     public CTAEntityActuallyHurt(LivingEntity entity) {
         this.entity = entity;
+    }
+
+    public static float readTrueHealth(LivingEntity entity) {
+        return EntityControlApi.getAuthoritativeHealth(entity);
+    }
+
+    public static void writeTrueHealth(LivingEntity entity, float value) {
+        PlayerAttributeRuntime.runWithoutResistance(() -> EntityControlApi.forceSetTrueHealth(entity, value));
+    }
+
+    public static void simulateMarkedDeath(LivingEntity entity, ServerPlayer killer, DamageSource source) {
+        if (entity == null || killer == null || source == null) return;
+        var health = Math.max(1.0f, readTrueHealth(entity));
+        new CTAEntityActuallyHurt(entity).actuallyHurt(source, health + 1.0f, true);
+    }
+
+    private static ServerPlayer resolveOwnerPlayer(DamageSource source) {
+        var attacker = source.getEntity();
+        if (attacker instanceof ServerPlayer player) return player;
+        var direct = source.getDirectEntity();
+        if (direct instanceof ServerPlayer player) return player;
+        if (direct instanceof Projectile projectile && projectile.getOwner() instanceof ServerPlayer player) {
+            return player;
+        }
+        var owner = FriendlyFireSetting.getOwnerEntity(direct);
+        return owner instanceof ServerPlayer player ? player : null;
     }
 
     public void actuallyHurt(DamageSource source, float amount, boolean special) {
@@ -59,34 +86,8 @@ public final class CTAEntityActuallyHurt {
         if (entity.isAlive()) EntityControlApi.forceSetTrueHealth(entity, 0.0f);
     }
 
-    public static float readTrueHealth(LivingEntity entity) {
-        return EntityControlApi.getAuthoritativeHealth(entity);
-    }
-
-    public static void writeTrueHealth(LivingEntity entity, float value) {
-        PlayerAttributeRuntime.runWithoutResistance(() -> EntityControlApi.forceSetTrueHealth(entity, value));
-    }
-
-    public static void simulateMarkedDeath(LivingEntity entity, ServerPlayer killer, DamageSource source) {
-        if (entity == null || killer == null || source == null) return;
-        var health = Math.max(1.0f, readTrueHealth(entity));
-        new CTAEntityActuallyHurt(entity).actuallyHurt(source, health + 1.0f, true);
-    }
-
     private boolean shouldPreventFriendlyFire(DamageSource source) {
         var owner = resolveOwnerPlayer(source);
         return owner != null && CtaFriendlyFireWhitelist.shouldProtect(owner, entity);
-    }
-
-    private static ServerPlayer resolveOwnerPlayer(DamageSource source) {
-        var attacker = source.getEntity();
-        if (attacker instanceof ServerPlayer player) return player;
-        var direct = source.getDirectEntity();
-        if (direct instanceof ServerPlayer player) return player;
-        if (direct instanceof Projectile projectile && projectile.getOwner() instanceof ServerPlayer player) {
-            return player;
-        }
-        var owner = FriendlyFireSetting.getOwnerEntity(direct);
-        return owner instanceof ServerPlayer player ? player : null;
     }
 }

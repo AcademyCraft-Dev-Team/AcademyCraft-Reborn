@@ -35,6 +35,7 @@ public abstract class KeyBindingConfig {
     public void setKeyBinding(String name, InputSystem.KeyCombination keyBinding) {
         keyBindings.put(name, keyBinding);
     }
+
     public boolean isKeyBindingEnabled(String name) {
         return enabledBindings.getOrDefault(name, true);
     }

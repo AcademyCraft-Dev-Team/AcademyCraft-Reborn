@@ -29,32 +29,6 @@ public final class DarkmatterCutSlashRenderer
         super(context);
     }
 
-    @Override
-    public void submit(DarkmatterCutSlashRenderState state, PoseStack poseStack,
-                       SubmitNodeCollector collector, CameraRenderState cameraState) {
-        var swingProgress = Mth.clamp(state.progress * 1.7f, 0.0f, 1.0f);
-        var life = Mth.sin(state.progress * Mth.PI);
-        var alpha = life * 0.92f;
-        if (alpha <= 0.001f) return;
-        var frame = Mth.clamp((int) (state.progress * FRAMES.length), 0, FRAMES.length - 1);
-        var scale = state.scale * (0.92f + 0.18f * life);
-        var width = 5.0f * scale * (0.82f + 0.18f * swingProgress);
-        var height = 1.05f * scale;
-        var mirrored = state.direction < 0;
-
-        poseStack.pushPose();
-        poseStack.mulPose(Axis.YP.rotationDegrees(270 - state.yRot));
-        poseStack.mulPose(Axis.XP.rotationDegrees(-state.xRot));
-        collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(FRAMES[frame]),
-                (pose, consumer) -> {
-                    renderSlash(consumer, pose.pose(), state.lightCoords, alpha,
-                            width, height, mirrored);
-                    renderSlash(consumer, pose.pose(), state.lightCoords, alpha * 0.52f,
-                            width * 0.76f, height * 0.76f, !mirrored);
-                });
-        poseStack.popPose();
-    }
-
     private static void renderSlash(VertexConsumer consumer, Matrix4f matrix, int light,
                                     float alpha, float width, float height, boolean mirrored) {
         var halfWidth = width * 0.5f;
@@ -79,6 +53,32 @@ public final class DarkmatterCutSlashRenderer
         consumer.addVertex(matrix, x, y, z).setColor(1, 1, 1, alpha)
                 .setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(light).setNormal(0, 1, 0);
+    }
+
+    @Override
+    public void submit(DarkmatterCutSlashRenderState state, PoseStack poseStack,
+                       SubmitNodeCollector collector, CameraRenderState cameraState) {
+        var swingProgress = Mth.clamp(state.progress * 1.7f, 0.0f, 1.0f);
+        var life = Mth.sin(state.progress * Mth.PI);
+        var alpha = life * 0.92f;
+        if (alpha <= 0.001f) return;
+        var frame = Mth.clamp((int) (state.progress * FRAMES.length), 0, FRAMES.length - 1);
+        var scale = state.scale * (0.92f + 0.18f * life);
+        var width = 5.0f * scale * (0.82f + 0.18f * swingProgress);
+        var height = 1.05f * scale;
+        var mirrored = state.direction < 0;
+
+        poseStack.pushPose();
+        poseStack.mulPose(Axis.YP.rotationDegrees(270 - state.yRot));
+        poseStack.mulPose(Axis.XP.rotationDegrees(-state.xRot));
+        collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(FRAMES[frame]),
+                (pose, consumer) -> {
+                    renderSlash(consumer, pose.pose(), state.lightCoords, alpha,
+                            width, height, mirrored);
+                    renderSlash(consumer, pose.pose(), state.lightCoords, alpha * 0.52f,
+                            width * 0.76f, height * 0.76f, !mirrored);
+                });
+        poseStack.popPose();
     }
 
     @Override

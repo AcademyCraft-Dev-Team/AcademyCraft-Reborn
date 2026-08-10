@@ -2,9 +2,11 @@ package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.RangedAttackMob;
+import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -15,7 +17,9 @@ import org.academy.api.common.entitycontrol.ControlBinding;
 import org.academy.api.common.entitycontrol.PlayerControlFrame;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 
-/** Applies controller input to a Mob without trusting a client-provided attack target. */
+/**
+ * Applies controller input to a Mob without trusting a client-provided attack target.
+ */
 final class MobDirectControlBinding implements ControlBinding {
     private final Mob mob;
     private long lastActionSequence = Long.MIN_VALUE;
@@ -23,6 +27,11 @@ final class MobDirectControlBinding implements ControlBinding {
 
     MobDirectControlBinding(Mob mob) {
         this.mob = mob;
+    }
+
+    static double aquaticVerticalInput(boolean inWater, boolean jump, boolean sneak) {
+        if (!inWater) return 0.0;
+        return (jump ? 0.12 : 0.0) - (sneak ? 0.12 : 0.0);
     }
 
     @Override
@@ -96,7 +105,7 @@ final class MobDirectControlBinding implements ControlBinding {
             mob.setAggressive(frame.attack());
             return;
         }
-        if (mob instanceof net.minecraft.world.entity.monster.Vex) {
+        if (mob instanceof Vex) {
             var destination = movementInput.lengthSqr() <= 1.0E-6
                     ? mob.position()
                     : mob.position().add(movementInput.scale(4.0));
@@ -116,11 +125,6 @@ final class MobDirectControlBinding implements ControlBinding {
             mob.hurtMarked = true;
         }
         mob.setAggressive(frame.attack());
-    }
-
-    static double aquaticVerticalInput(boolean inWater, boolean jump, boolean sneak) {
-        if (!inWater) return 0.0;
-        return (jump ? 0.12 : 0.0) - (sneak ? 0.12 : 0.0);
     }
 
     private Vec3 movementInput() {
@@ -145,7 +149,7 @@ final class MobDirectControlBinding implements ControlBinding {
         } else {
             mob.doHurtTarget(level, target);
         }
-        mob.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+        mob.swing(InteractionHand.MAIN_HAND, true);
     }
 
     private LivingEntity raycast(double range) {

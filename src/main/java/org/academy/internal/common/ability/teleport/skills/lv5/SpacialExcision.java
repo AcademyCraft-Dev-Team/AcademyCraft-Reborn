@@ -124,11 +124,11 @@ public class SpacialExcision extends Skill {
     }
 
     public static final class Context extends ServerContext {
+        public static final float DAMAGE = 20.0f;
         private static final int MAX_TICKS = 200;
         private static final int CHARGE_TICKS = 40;
         private static final float BASE_RADIUS = 2.0f;
         private static final float RADIUS_GROWTH = 0.05f;
-        public static final float DAMAGE = 20.0f;
         private static final int EFFECT_INTERVAL = 10;
 
         private int ticks;
@@ -137,6 +137,16 @@ public class SpacialExcision extends Skill {
 
         private Context(ServerPlayer p) {
             super(p);
+        }
+
+        private static boolean canBreak(ServerLevel level, ServerPlayer player,
+                                        BlockPos pos, BlockState state) {
+            var restricted = player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
+                    || state.getBlock() instanceof GameMasterBlock && !player.canUseGameMasterBlocks();
+            var event = new BreakBlockEvent(level, pos.immutable(), state, player);
+            event.setCanceled(restricted);
+            NeoForge.EVENT_BUS.post(event);
+            return !event.isCanceled();
         }
 
         @SubscribeEvent
@@ -209,16 +219,6 @@ public class SpacialExcision extends Skill {
             if (ticks < CHARGE_TICKS) {
                 chargeCancelled = true;
             }
-        }
-
-        private static boolean canBreak(ServerLevel level, ServerPlayer player,
-                                        BlockPos pos, BlockState state) {
-            var restricted = player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
-                    || state.getBlock() instanceof GameMasterBlock && !player.canUseGameMasterBlocks();
-            var event = new BreakBlockEvent(level, pos.immutable(), state, player);
-            event.setCanceled(restricted);
-            NeoForge.EVENT_BUS.post(event);
-            return !event.isCanceled();
         }
 
         private void end() {
