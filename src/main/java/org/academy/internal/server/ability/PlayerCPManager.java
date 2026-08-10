@@ -319,7 +319,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         while (it.hasNext()) {
             var occupation = it.next();
 
-            // 永久占用，跳过迭代
             if (occupation.isPermanent()) continue;
             if (!occupation.isFree()) continue;
             var recovered = occupation.getAmount();
@@ -466,11 +465,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return tryOccupation(uuid, amount, skill, 0, true);
     }
 
-    /**
-     * Atomically replaces the permanent occupations for the supplied skills and optionally adds one
-     * timed occupation. Existing permanent reservations remain untouched when the complete change
-     * cannot be afforded.
-     */
     public boolean replacePermanentOccupationsAndTryOccupation(
             UUID uuid,
             Map<Skill, Float> permanentAmounts,

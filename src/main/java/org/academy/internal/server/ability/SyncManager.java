@@ -4,6 +4,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class SyncManager {
         playerSyncQueueMap.get(uuid).add(syncType);
     }
 
-    ServerPlayer getOnlinePlayer(UUID uuid) {
+    @Nullable ServerPlayer getOnlinePlayer(UUID uuid) {
         return context.getMinecraftServer().getPlayerList().getPlayer(uuid);
     }
 

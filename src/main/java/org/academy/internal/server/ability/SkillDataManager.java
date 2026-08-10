@@ -235,7 +235,7 @@ public class SkillDataManager implements AbilitySubsystem {
         Registries.SKILLS.get(Identifier.parse(skillKey)).ifPresent(skillReference -> {
             var skillData = playerData.getSkillDataMap().putIfAbsent(
                     skillKey,
-                    skillReference.value().createData(serverPlayer)
+                    skillReference.value().createData()
             );
             if (skillData == null) {
                 playerData.restoreRetainedSkillProficiency(

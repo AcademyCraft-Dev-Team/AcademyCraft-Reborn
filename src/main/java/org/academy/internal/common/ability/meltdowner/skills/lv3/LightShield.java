@@ -243,7 +243,7 @@ public final class LightShield extends Skill {
                 var skill = Skills.LIGHT_SHIELD.get();
                 var target = map.get(skill.getKeyString());
                 if (target == null) {
-                    target = skill.createData(player);
+                    target = skill.createData();
                     map.put(skill.getKeyString(), target);
                 }
                 mergeProgress(target, legacyBarrier);

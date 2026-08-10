@@ -42,7 +42,7 @@ public final class PrecisionOperation extends Skill {
                         "Impression Manipulation", "academy:impression_manipulation"))
                 .devCondition(new DevCondition.DependencyCondition(
                         "Mental Stupor", "academy:mental_stupor"))
-                .withCustomData(Data.ID, Data.class, _ -> new Data())
+                .withCustomData(Data.ID, Data.class, Data::new)
         );
     }
 
