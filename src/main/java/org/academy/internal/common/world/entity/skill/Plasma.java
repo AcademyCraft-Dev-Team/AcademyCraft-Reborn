@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import org.jspecify.annotations.Nullable;
@@ -38,6 +39,7 @@ public class Plasma extends RenderOnlyEntity {
     private float damageRadius;
     private float explosionPower;
     private boolean destroyBlocks;
+    private int proficiencyMilestone;
 
     public Plasma(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -81,7 +83,7 @@ public class Plasma extends RenderOnlyEntity {
 
     public void launch(UUID ownerUUID, Vec3 targetPosition, double travelSpeed,
                        float damage, float damageRadius, float explosionPower,
-                       boolean destroyBlocks) {
+                       boolean destroyBlocks, int proficiencyMilestone) {
         this.ownerUUID = ownerUUID;
         this.targetPosition = targetPosition;
         this.travelSpeed = Math.max(0.05, travelSpeed);
@@ -89,6 +91,7 @@ public class Plasma extends RenderOnlyEntity {
         this.damageRadius = Math.max(0.0f, damageRadius);
         this.explosionPower = Math.max(0.0f, explosionPower);
         this.destroyBlocks = destroyBlocks;
+        this.proficiencyMilestone = Math.clamp(proficiencyMilestone, 0, 3);
         setGatherProgress(1.0f);
         entityData.set(LAUNCHED, true);
     }
@@ -121,6 +124,20 @@ public class Plasma extends RenderOnlyEntity {
                             && target.distanceToSqr(impact) <= radiusSquared
             )) {
                 target.hurtServer(level, source, damage);
+            }
+            if (proficiencyMilestone >= 3) {
+                for (var pulse = 1; pulse <= 5; pulse++) {
+                    TimedSkillEffectRuntime.schedule(owner, pulse * 20, () -> {
+                        if (owner.isRemoved() || !owner.isAlive()) return;
+                        for (var target : level.getEntitiesOfClass(
+                                LivingEntity.class,
+                                area,
+                                entity -> entity != owner && entity.isAlive()
+                                        && entity.distanceToSqr(impact) <= radiusSquared)) {
+                            target.hurtServer(level, source, damage * 0.08f);
+                        }
+                    });
+                }
             }
         }
 

@@ -9,7 +9,7 @@ class MeltdownerBeamDamageTest {
     void damageIncludesBaseTargetHealthAndPlayerScaling() {
         assertEquals(21.0f, MeltdownerBeamDamage.calculate(20.0f, 0.01f, 100.0f, 1.0f, false));
         assertEquals(42.0f, MeltdownerBeamDamage.calculate(20.0f, 0.01f, 100.0f, 2.0f, false));
-        assertEquals(31.5f, MeltdownerBeamDamage.calculate(20.0f, 0.01f, 100.0f, 1.0f, true));
+        assertEquals(31.0f, MeltdownerBeamDamage.calculate(20.0f, 0.01f, 100.0f, 1.0f, true));
     }
 
     @Test

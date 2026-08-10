@@ -18,6 +18,7 @@ import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.network.MusicSyncPackets;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.jetbrains.annotations.Nullable;
@@ -76,6 +77,7 @@ public final class AcademyCraftServer {
         WirelessManager.initServer();
         FriendlyFireSetting.initServer();
         DestroyBlocksSetting.initServer();
+        ProficiencySkillSettings.initServer();
         MusicSyncPackets.initServer();
 
         NeoForge.EVENT_BUS.addListener(this::onServerTick);

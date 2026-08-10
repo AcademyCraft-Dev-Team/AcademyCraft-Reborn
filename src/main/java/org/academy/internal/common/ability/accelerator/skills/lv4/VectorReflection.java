@@ -32,6 +32,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
@@ -43,6 +44,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.accelerator.reflection.VectorDefenseProficiency;
 import org.academy.internal.common.ability.accelerator.reflection.ReflectionHealthRecordCodec;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
@@ -90,6 +92,9 @@ public class VectorReflection extends Skill {
                 .energyCost(30_000)
                 .maintenanceCost(50)
                 .iterationTicks(10)
+                .proficiencyProfile(SkillProficiencyProfile.builder()
+                        .iterationTicks(10, 10, 10, 5)
+                        .build())
                 .passive()
                 .initiallyDisabled()
                 .maxStacks(NO_STACK_LIMIT)
@@ -222,9 +227,10 @@ public class VectorReflection extends Skill {
         }
 
         public static boolean isActive(ServerPlayer player) {
+            var system = AbilitySystemServer.getSystem(player);
             return canMaintainLinearReflectionLease(player)
-                    && !isComputingPowerDepleted(AbilitySystemServer.getSystem(player)
-                    .getPlayerAvailableCP(player.getUUID()));
+                    && (system.isPlayerSkillDebugMode(player.getUUID())
+                    || !isComputingPowerDepleted(system.getPlayerAvailableCP(player.getUUID())));
         }
 
         public static boolean canMaintainLinearReflectionLease(ServerPlayer player) {
@@ -320,6 +326,7 @@ public class VectorReflection extends Skill {
                     incomingDamage,
                     system.getPlayerAvailableCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
+                    VectorDefenseProficiency.effectiveMilestone(player, skill),
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (result.remainingDamage() > 0.0f
@@ -364,6 +371,7 @@ public class VectorReflection extends Skill {
                     originalDamage,
                     system.getPlayerAvailableCP(serverPlayer.getUUID()),
                     system.getPlayerCalculationIntensity(serverPlayer.getUUID()),
+                    VectorDefenseProficiency.effectiveMilestone(serverPlayer, skill),
                     false
             );
             var reflectedDamage = result.reflectedDamage();
@@ -390,29 +398,29 @@ public class VectorReflection extends Skill {
 
         static float calculateReflectedDamage(float damage, float availableCP,
                                               float calculationIntensity, boolean devMode) {
-            return calculateReflection(damage, availableCP, calculationIntensity, devMode).reflectedDamage();
+            return calculateReflection(damage, availableCP, calculationIntensity, 3, devMode).reflectedDamage();
         }
 
         static ReflectionResult calculateReflection(float damage, float availableCP,
                                                     float calculationIntensity, boolean devMode) {
-            if (!(damage > 0.0f) || !Float.isFinite(damage)) {
-                return new ReflectionResult(0.0f, 0.0f, 0.0f);
-            }
-            if (devMode) return new ReflectionResult(damage, 0.0f, 0.0f);
-            if (!(availableCP > 0.0f) || !Float.isFinite(availableCP)
-                    || !(calculationIntensity > 0.0f) || !Float.isFinite(calculationIntensity)) {
-                return new ReflectionResult(0.0f, damage, 0.0f);
-            }
+            return calculateReflection(damage, availableCP, calculationIntensity, 3, devMode);
+        }
 
-            var requiredPower = damage * calculationIntensity;
-            if (Float.isFinite(requiredPower) && availableCP >= requiredPower) {
-                return new ReflectionResult(damage, 0.0f, damage);
-            }
-
-            var reflectedDamage = Math.min(damage, availableCP / 10.0f);
-            var remainingDamage = Math.max(0.0f, damage - reflectedDamage);
-            var baseCpCost = availableCP / calculationIntensity;
-            return new ReflectionResult(reflectedDamage, remainingDamage, baseCpCost);
+        static ReflectionResult calculateReflection(float damage, float availableCP,
+                                                    float calculationIntensity, int milestone,
+                                                    boolean devMode) {
+            var result = VectorDefenseProficiency.calculate(
+                    damage,
+                    availableCP,
+                    calculationIntensity,
+                    milestone,
+                    devMode
+            );
+            return new ReflectionResult(
+                    result.processedDamage(),
+                    result.remainingDamage(),
+                    result.baseCpCost()
+            );
         }
 
         public static Vec3 reflectedVelocity(Vec3 incoming) {

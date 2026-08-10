@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 
 public final class DarkmatterRadiation extends Skill {
     static final double RANGE = 32.0;
@@ -143,7 +144,8 @@ public final class DarkmatterRadiation extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.DARKMATTER_RADIATION.get();
             if (!skill.isEnabled(player)) return;
-            if (ACTIVE.putIfAbsent(player.getUUID(), new RadiationState(player.level().getGameTime())) == null) {
+            if (ACTIVE.putIfAbsent(player.getUUID(), new RadiationState(
+                    player.level().getGameTime(), skill.getEffectiveProficiencyMilestone(player))) == null) {
                 skill.reportTrigger(player);
             }
         }
@@ -162,8 +164,12 @@ public final class DarkmatterRadiation extends Skill {
         }
 
         static boolean insideFrontHemisphere(Vec3 eye, Vec3 look, Vec3 target) {
+            return insideFrontHemisphere(eye, look, target, RANGE);
+        }
+
+        static boolean insideFrontHemisphere(Vec3 eye, Vec3 look, Vec3 target, double range) {
             var offset = target.subtract(eye);
-            return offset.lengthSqr() <= RANGE * RANGE
+            return offset.lengthSqr() <= range * range
                     && (offset.lengthSqr() <= 1.0e-6 || look.dot(offset.normalize()) >= 0);
         }
 
@@ -178,12 +184,13 @@ public final class DarkmatterRadiation extends Skill {
         private static void pulse(ServerLevel level, ServerPlayer player, RadiationState state) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle().normalize();
-            spawnRadiationVisual(level, player, eye, look);
+            var range = state.milestone >= 2 ? 36.0 : RANGE;
+            spawnRadiationVisual(level, player, eye, look, range);
             var targets = level.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(eye, eye).inflate(RANGE),
+                    new AABB(eye, eye).inflate(range),
                     target -> isHostileTarget(player, target)
                             && insideFrontHemisphere(eye, look,
-                            target.getBoundingBox().getCenter()));
+                            target.getBoundingBox().getCenter(), range));
             if (targets.isEmpty()) return;
 
             var skill = Skills.DARKMATTER_RADIATION.get();
@@ -202,20 +209,41 @@ public final class DarkmatterRadiation extends Skill {
                     );
                 }
                 if (!hit) continue;
+                if (state.milestone >= 3) {
+                    var exposure = state.exposure.merge(target.getUUID(), 1, Integer::sum);
+                    if (exposure >= 20) {
+                        state.exposure.put(target.getUUID(), 0);
+                        radiationPulse(level, player, target, skill, power);
+                    }
+                }
                 level.sendParticles(ParticleTypes.PORTAL,
                         target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
                         6, 0.2, 0.25, 0.2, 0.02);
             }
         }
 
+        private static void radiationPulse(ServerLevel level, ServerPlayer player, LivingEntity center,
+                                           Skill skill, float power) {
+            var source = SkillDamageSource.of(player, skill);
+            var processed = 0;
+            for (var target : level.getEntitiesOfClass(LivingEntity.class,
+                    center.getBoundingBox().inflate(3.0), target -> isHostileTarget(player, target))) {
+                if (processed++ >= 96) break;
+                target.invulnerableTime = 0;
+                target.hurtServer(level, source, damage(target.getMaxHealth(), power) * 4.0f);
+            }
+            level.sendParticles(ParticleTypes.WITCH, center.getX(), center.getY() + center.getBbHeight() * 0.5,
+                    center.getZ(), 24, 1.5, 1.5, 1.5, 0.08);
+        }
+
         private static void spawnRadiationVisual(ServerLevel level, ServerPlayer player,
-                                                 Vec3 eye, Vec3 look) {
+                                                 Vec3 eye, Vec3 look, double range) {
             var right = look.cross(new Vec3(0.0, 1.0, 0.0));
             if (right.lengthSqr() < 1.0E-8) right = new Vec3(1.0, 0.0, 0.0);
             right = right.normalize();
             var up = right.cross(look).normalize();
             for (var index = 0; index < 20; index++) {
-                var distance = 2.0 + player.getRandom().nextDouble() * (RANGE - 2.0);
+                var distance = 2.0 + player.getRandom().nextDouble() * (range - 2.0);
                 var spread = distance * 0.28;
                 var point = eye.add(look.scale(distance))
                         .add(right.scale((player.getRandom().nextDouble() - 0.5) * spread))
@@ -253,11 +281,14 @@ public final class DarkmatterRadiation extends Skill {
         }
 
         private static final class RadiationState {
+            private final int milestone;
+            private final Map<UUID, Integer> exposure = new HashMap<>();
             private long nextDamageTick;
             private long nextCostTick;
             private int cursor;
 
-            private RadiationState(long now) {
+            private RadiationState(long now, int milestone) {
+                this.milestone = milestone;
                 nextDamageTick = now;
                 nextCostTick = now;
             }

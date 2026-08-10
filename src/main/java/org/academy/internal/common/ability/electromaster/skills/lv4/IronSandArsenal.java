@@ -36,6 +36,7 @@ import org.academy.internal.client.renderer.effect.ElectromasterWeaponEffectRend
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
@@ -216,7 +217,7 @@ public class IronSandArsenal extends Skill {
             }
             var system = AbilitySystemServer.getSystem(player);
             if (!system.ensurePermanentOccupation(
-                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                    player.getUUID(), skill.getMaintenanceCost(player), skill)) {
                 end(true);
                 return;
             }
@@ -229,15 +230,26 @@ public class IronSandArsenal extends Skill {
 
             if (player.level() instanceof ServerLevel level) {
                 var multiplier = system.getPlayerDamageMultiplier(player.getUUID());
+                var milestone = skill.getEffectiveProficiencyMilestone(player);
+                var proximityRadius = milestone >= 2 ? PROXIMITY_RADIUS * 1.2 : PROXIMITY_RADIUS;
                 for (var target : level.getEntitiesOfClass(
                         LivingEntity.class,
-                        player.getBoundingBox().inflate(PROXIMITY_RADIUS),
+                        player.getBoundingBox().inflate(proximityRadius),
                         entity -> entity != player && entity.isAlive()
                                 && entity instanceof Enemy && !player.isAlliedTo(entity)
                 )) {
                     if (hitCooldowns.containsKey(target.getId())) continue;
                     if (target.hurtServer(level, SkillDamageSource.of(player, skill),
                             Server.calculateDamage(PROXIMITY_DAMAGE, multiplier))) {
+                        if (milestone >= 3 && TimedSkillEffectRuntime.consume(player.getUUID(),
+                                target.getUUID(), skill, "sweep_mark", level.getGameTime()).isPresent()) {
+                            target.hurtServer(level, SkillDamageSource.of(player, skill),
+                                    Server.calculateDamage(SWEEP_DAMAGE * 0.5f, multiplier));
+                            var destination = player.position().add(player.getLookAngle().normalize().scale(2.0));
+                            var pull = destination.subtract(target.position());
+                            if (pull.lengthSqr() > 1.0e-8) target.setDeltaMovement(pull.normalize().scale(0.8));
+                            target.hurtMarked = true;
+                        }
                         var direction = target.position().subtract(player.position());
                         direction = new Vec3(direction.x, 0, direction.z);
                         if (direction.lengthSqr() > 1.0e-8) {
@@ -260,17 +272,22 @@ public class IronSandArsenal extends Skill {
             var multiplier = AbilitySystemServer.getSystem(player)
                     .getPlayerDamageMultiplier(player.getUUID());
             var source = SkillDamageSource.of(player, Skills.IRON_SAND_ARSENAL.get());
-            var radiusSquared = SWEEP_RADIUS * SWEEP_RADIUS;
+            var skill = Skills.IRON_SAND_ARSENAL.get();
+            var sweepRadius = skill.hasProficiencyMilestone(player, 2) ? SWEEP_RADIUS * 1.2 : SWEEP_RADIUS;
+            var radiusSquared = sweepRadius * sweepRadius;
             for (var target : level.getEntitiesOfClass(
                     LivingEntity.class,
-                    player.getBoundingBox().inflate(SWEEP_RADIUS),
+                    player.getBoundingBox().inflate(sweepRadius),
                     entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity)
             )) {
                 var delta = target.position().subtract(player.position());
                 var horizontal = new Vec3(delta.x, 0, delta.z);
                 if (horizontal.lengthSqr() > radiusSquared || horizontal.lengthSqr() <= 1.0e-8) continue;
                 if (forward.dot(horizontal.normalize()) < SWEEP_HALF_ANGLE_COS) continue;
-                target.hurtServer(level, source, Server.calculateDamage(SWEEP_DAMAGE, multiplier));
+                if (target.hurtServer(level, source, Server.calculateDamage(SWEEP_DAMAGE, multiplier))
+                        && skill.hasProficiencyMilestone(player, 3)) {
+                    TimedSkillEffectRuntime.put(player, target.getUUID(), skill, "sweep_mark", 80, 1.0f);
+                }
             }
             sweepCooldown = HIT_COOLDOWN;
             swingTicks = 1;

@@ -8,8 +8,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundSource;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
@@ -84,7 +87,8 @@ public final class MentalIntrusionManager {
         }
         if (!AbilitySystemServer.getSystem(player).replacePermanentOccupation(
                 player.getUUID(),
-                MentaloutConfig.mentalIntrusionCost(player, level),
+                skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.MAINTENANCE,
+                        MentaloutConfig.mentalIntrusionCost(player, level)),
                 skill
         )) {
             return StartResult.INSUFFICIENT_CP;
@@ -92,7 +96,9 @@ public final class MentalIntrusionManager {
 
         var revision = nextRevision(SESSION_REVISIONS, player.getUUID());
         var sessionId = UUID.randomUUID();
-        var maximumEnd = Long.MAX_VALUE;
+        var maximumEnd = target instanceof ServerPlayer
+                ? now + playerIntrusionDuration(player, skill, level)
+                : Long.MAX_VALUE;
         var session = new Session(
                 sessionId,
                 revision,
@@ -134,10 +140,10 @@ public final class MentalIntrusionManager {
             return null;
         }
         var now = player.level().getGameTime();
-        // Player intrusion currently has no duration cap, including precision-operation
-        // sessions. The owning operation can still stop the session explicitly.
         var maximumEnd = target instanceof ServerPlayer
-                ? Long.MAX_VALUE
+                ? Math.min(
+                Math.max(now + 1L, expiresAt),
+                now + playerIntrusionDuration(player, intrusion, level))
                 : Math.max(now + 1L, expiresAt);
         if (target instanceof ServerPlayer) {
             var cooldownKey = new CooldownKey(player.getUUID(), target.getUUID());
@@ -162,6 +168,21 @@ public final class MentalIntrusionManager {
                 target.getUUID()
         ));
         return sessionId;
+    }
+
+    static int playerIntrusionDuration(
+            ServerPlayer player,
+            org.academy.api.common.ability.Skill skill,
+            int level
+    ) {
+        var base = MentaloutConfig.playerIntrusionDuration(player, level);
+        return scalePlayerIntrusionDuration(
+                base, skill.getEffectiveProficiencyMilestone(player));
+    }
+
+    static int scalePlayerIntrusionDuration(int baseTicks, int milestone) {
+        var base = Math.max(1, baseTicks);
+        return milestone >= 3 ? Math.max(base, Math.round(base * 1.5f)) : base;
     }
 
     public static void stopPrecision(ServerPlayer player, UUID sessionId) {
@@ -190,6 +211,8 @@ public final class MentalIntrusionManager {
         if (session.distortion != null && !session.distortion.isClosed()) {
             session.distortion.close();
             session.distortion = null;
+            session.afterimagePosition = null;
+            session.afterimageUntil = 0L;
             AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                     player.getUUID(),
                     skill.getKeyString()
@@ -201,7 +224,11 @@ public final class MentalIntrusionManager {
             return DistortionResult.PROTECTED_NOTIFIED;
         }
         var level = Math.clamp(skill.getLevel(player), 0, 2);
-        var cost = MentaloutConfig.sensoryDistortionCost(player, level);
+        var cost = skill.adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.MAINTENANCE,
+                MentaloutConfig.sensoryDistortionCost(player, level)
+        );
         if (MentalControlRuntime.isBossCost(session.target)) {
             cost *= MentaloutConfig.bossCostMultiplier(player);
         }
@@ -213,6 +240,7 @@ public final class MentalIntrusionManager {
             return DistortionResult.INSUFFICIENT_CP;
         }
         try {
+            var wasVisible = session.target.hasLineOfSight(player);
             session.distortion = MentalPerceptionRuntime.apply(
                     player,
                     session.target,
@@ -221,6 +249,11 @@ public final class MentalIntrusionManager {
                     PERCEPTION_PRIORITY,
                     session.maximumEnd
             );
+            if (wasVisible && skill.hasProficiencyMilestone(player, 3)
+                    && session.target instanceof Mob) {
+                session.afterimagePosition = player.position();
+                session.afterimageUntil = player.level().getGameTime() + 60L;
+            }
             player.level().playSound(null, player.blockPosition(),
                     org.academy.internal.common.sounds.SoundEvents.SENSORY_DISTORTION.get(),
                     SoundSource.PLAYERS, 0.65f, 1.0f);
@@ -249,7 +282,9 @@ public final class MentalIntrusionManager {
         for (var session : List.copyOf(SESSIONS.values())) {
             var player = session.player;
             var target = session.target;
-            var maxDistance = MentaloutConfig.intrusionMaximumDistance(player);
+            var maxDistance = Skills.MENTAL_INTRUSION.get().hasProficiencyMilestone(player, 2)
+                    ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(player))
+                    : MentaloutConfig.intrusionMaximumDistance(player);
             var protectedTarget = MentalControlRuntime.isProtectedTarget(target);
             if (!player.isAlive()
                     || !Skills.MENTAL_INTRUSION.get().isEnabled(player)
@@ -266,10 +301,27 @@ public final class MentalIntrusionManager {
                 Skills.MENTAL_INTRUSION.get().reportActivity(player, session.confirmed);
                 if (session.distortion != null && !session.distortion.isClosed()) {
                     Skills.SENSORY_DISTORTION.get().reportActivity(player, true);
+                    applyAfterimage(session, now);
                 }
             }
         }
         PLAYER_COOLDOWNS.entrySet().removeIf(entry -> entry.getValue() <= now);
+    }
+
+    private static void applyAfterimage(Session session, long now) {
+        if (session.afterimagePosition == null || now >= session.afterimageUntil) {
+            session.afterimagePosition = null;
+            session.afterimageUntil = 0L;
+            return;
+        }
+        if (!(session.target instanceof Mob mob)
+                || mob.getTarget() != null
+                || MentalControlRuntime.getForcedTarget(mob) != null
+                || mob.isNoAi()) {
+            return;
+        }
+        var position = session.afterimagePosition;
+        mob.getNavigation().moveTo(position.x, position.y, position.z, 1.0);
     }
 
     public static void releaseEntity(UUID entityId) {
@@ -295,12 +347,18 @@ public final class MentalIntrusionManager {
         MentalPerceptionRuntime.clear();
     }
 
-    public static void sendPerception(ServerPlayer observer, LivingEntity hidden, boolean active) {
+    public static void sendPerception(
+            ServerPlayer observer,
+            LivingEntity hidden,
+            boolean active,
+            boolean suppressAmbient
+    ) {
         var revision = nextRevision(FILTER_REVISIONS, observer.getUUID());
         MisakaNetworkServer.send(observer, new PerceptionPacket(
                 hidden.getUUID(),
                 hidden.getId(),
                 active,
+                suppressAmbient,
                 revision
         ));
     }
@@ -457,6 +515,7 @@ public final class MentalIntrusionManager {
                     packet.hiddenUuid,
                     packet.hiddenEntityId,
                     packet.active,
+                    packet.suppressAmbient,
                     packet.revision
             );
         }
@@ -611,11 +670,13 @@ public final class MentalIntrusionManager {
                     writeUuid(buf, packet.hiddenUuid);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.hiddenEntityId);
                     buf.writeBoolean(packet.active);
+                    buf.writeBoolean(packet.suppressAmbient);
                     buf.writeLong(packet.revision);
                 },
                 buf -> new PerceptionPacket(
                         readUuid(buf),
                         ByteBufCodecs.VAR_INT.decode(buf),
+                        buf.readBoolean(),
                         buf.readBoolean(),
                         buf.readLong()
                 )
@@ -623,12 +684,20 @@ public final class MentalIntrusionManager {
         private final UUID hiddenUuid;
         private final int hiddenEntityId;
         private final boolean active;
+        private final boolean suppressAmbient;
         private final long revision;
 
-        public PerceptionPacket(UUID hiddenUuid, int hiddenEntityId, boolean active, long revision) {
+        public PerceptionPacket(
+                UUID hiddenUuid,
+                int hiddenEntityId,
+                boolean active,
+                boolean suppressAmbient,
+                long revision
+        ) {
             this.hiddenUuid = hiddenUuid;
             this.hiddenEntityId = hiddenEntityId;
             this.active = active;
+            this.suppressAmbient = suppressAmbient;
             this.revision = revision;
         }
 
@@ -660,6 +729,8 @@ public final class MentalIntrusionManager {
         private final boolean ownsOccupation;
         private boolean confirmed;
         private MentalPerceptionRuntime.Handle distortion;
+        private Vec3 afterimagePosition;
+        private long afterimageUntil;
 
         private Session(
                 UUID id,

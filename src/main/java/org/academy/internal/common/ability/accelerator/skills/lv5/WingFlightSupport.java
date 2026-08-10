@@ -8,6 +8,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -17,6 +18,11 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
@@ -123,7 +129,7 @@ final class WingFlightSupport {
             var system = AbilitySystemServer.getSystem(player);
             active = system.ensurePermanentOccupation(
                     player.getUUID(),
-                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill.getMaintenanceCost(player),
                     skill
             );
             if (!active && skill.isEnabled(player)) skill.toggle(player);
@@ -174,7 +180,15 @@ final class WingFlightSupport {
         var level = (ServerLevel) player.level();
         var origin = player.getEyePosition();
         var forward = player.getLookAngle().normalize();
-        var searchBox = player.getBoundingBox().inflate(ATTACK_RANGE);
+        var advancedBlackSweep = skill == Skills.BLACK_WING.get()
+                && skill.hasProficiencyMilestone(player, 2);
+        var range = advancedBlackSweep
+                ? 36.0
+                : ATTACK_RANGE;
+        var cosThreshold = advancedBlackSweep
+                ? Math.cos(Math.acos(FAN_COS_THRESHOLD) + Math.toRadians(10.0))
+                : FAN_COS_THRESHOLD;
+        var searchBox = player.getBoundingBox().inflate(range);
         var baseDamage = (float) player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
         var multiplier = AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
         var source = SkillDamageSource.of(
@@ -191,7 +205,7 @@ final class WingFlightSupport {
                     entity -> entity != player && entity.isAlive())) {
                 if (CtaFriendlyFireWhitelist.shouldProtect(player, target)) continue;
                 var targetCenter = target.position().add(0, target.getBbHeight() * 0.5, 0);
-                if (!isInFan(origin, forward, targetCenter, ATTACK_RANGE, FAN_COS_THRESHOLD)) continue;
+                if (!isInFan(origin, forward, targetCenter, range, cosThreshold)) continue;
                 var trueMaxHealth = EntityControlApi.getTrueMaxHealth(target);
                 if (!Float.isFinite(trueMaxHealth) || trueMaxHealth <= 0.0f) {
                     trueMaxHealth = target.getMaxHealth();
@@ -200,10 +214,61 @@ final class WingFlightSupport {
                         * multiplier;
                 if (!Float.isFinite(damage) || damage <= 0) continue;
                 new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true);
+                if (skill == Skills.BLACK_WING.get() && skill.hasProficiencyMilestone(player, 3)) {
+                    var now = level.getGameTime();
+                    var marked = TimedSkillEffectRuntime.consume(
+                            player.getUUID(), target.getUUID(), skill, "vector_mark", now);
+                    if (marked.isPresent()) {
+                        target.hurtServer(
+                                level,
+                                SkillDamageSource.of(player, skill,
+                                        org.academy.internal.common.world.damagesource.DamageTypes.VEC),
+                                damage * 0.3f
+                        );
+                        var pull = origin.subtract(targetCenter);
+                        if (pull.lengthSqr() > 1.0E-6) {
+                            target.setDeltaMovement(target.getDeltaMovement().add(pull.normalize().scale(0.75)));
+                            target.hurtMarked = true;
+                        }
+                    } else {
+                        TimedSkillEffectRuntime.put(
+                                player, target.getUUID(), skill, "vector_mark", 100, damage);
+                    }
+                }
                 hitCount[0]++;
             }
         });
+        if (skill == Skills.WHITE_WING.get() && skill.hasProficiencyMilestone(player, 3)
+                && hitCount[0] > 0) {
+            var system = AbilitySystemServer.getSystem(player);
+            var uuid = player.getUUID();
+            var refund = Math.min(15.0f, hitCount[0] * 3.0f);
+            system.setPlayerAvailableCP(
+                    uuid,
+                    Math.min(system.getPlayerMaxCP(uuid), system.getPlayerAvailableCP(uuid) + refund)
+            );
+        }
         return hitCount[0];
+    }
+
+    static void deflectFrontalProjectile(ServerPlayer player, Skill skill) {
+        if (!skill.hasProficiencyMilestone(player, 2) || player.tickCount % 20 != 0) return;
+        var look = player.getLookAngle();
+        var center = player.getBoundingBox().getCenter();
+        var projectile = player.level().getEntitiesOfClass(
+                Projectile.class,
+                player.getBoundingBox().inflate(6.0),
+                candidate -> candidate.isAlive()
+                        && candidate.getOwner() != player
+                        && !VectorProjectileRedirects.isRedirected(candidate)
+                        && candidate.getBoundingBox().getCenter().subtract(center).dot(look) > 0.0
+        ).stream().findFirst().orElse(null);
+        if (projectile == null) return;
+        var speed = projectile.getDeltaMovement().length();
+        var away = projectile.getBoundingBox().getCenter().subtract(center);
+        if (!Double.isFinite(speed) || speed <= 1.0E-6 || away.lengthSqr() <= 1.0E-6) return;
+        VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFRACTION);
+        VectorProjectileStateAdapter.applyRedirect(projectile, away.normalize().scale(speed));
     }
 
     static boolean trySweepCost(ServerPlayer player, Skill skill) {

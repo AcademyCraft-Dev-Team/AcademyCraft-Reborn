@@ -18,8 +18,25 @@ public record AirflowField(
         double radius,
         double length,
         float strength,
-        int durationTicks
+        int durationTicks,
+        int proficiencyMilestone
 ) {
+    public AirflowField(
+            UUID id,
+            UUID ownerId,
+            ResourceKey<Level> dimension,
+            Type type,
+            Shape shape,
+            Vec3 center,
+            Vec3 direction,
+            double radius,
+            double length,
+            float strength,
+            int durationTicks
+    ) {
+        this(id, ownerId, dimension, type, shape, center, direction, radius, length, strength, durationTicks, 0);
+    }
+
     public AirflowField {
         if (id == null || ownerId == null || dimension == null || type == null || shape == null) {
             throw new IllegalArgumentException("Airflow field identity cannot be null");
@@ -32,6 +49,7 @@ public record AirflowField(
         length = finitePositive(length);
         strength = Float.isFinite(strength) ? strength : 0.0f;
         durationTicks = Math.max(1, durationTicks);
+        proficiencyMilestone = Math.max(0, Math.min(3, proficiencyMilestone));
     }
 
     public boolean contains(Vec3 point, double padding) {

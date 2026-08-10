@@ -1,15 +1,23 @@
 package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.ControlBinding;
 import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.api.common.entitycontrol.ControlContext;
 import org.academy.api.common.entitycontrol.ControlDirective;
+import org.academy.api.common.entitycontrol.ControlFailureReason;
+import org.academy.api.common.entitycontrol.PlayerControlFrame;
+import org.academy.api.common.entitycontrol.PlayerMovementMode;
 import org.academy.api.common.entitycontrol.ControlSupport;
 import org.academy.api.common.entitycontrol.ControlRejectionReason;
 import org.academy.api.common.entitycontrol.MentalControlAdapter;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+
+import java.util.Optional;
+import java.util.UUID;
 
 /** Adapts lease arbitration to a player input session instead of a mob AI controller. */
 public final class ServerPlayerMentalControlAdapter implements MentalControlAdapter {
@@ -49,6 +57,84 @@ public final class ServerPlayerMentalControlAdapter implements MentalControlAdap
         if (directive instanceof ControlDirective.ForceTarget forceTarget) {
             return new PlayerForcedTargetBinding(context, subject, forceTarget.targetUuid());
         }
+        if (directive instanceof ControlDirective.LookAt lookAt && context.controller() == subject) {
+            return new SelfViewBinding(context, subject, lookAt.targetUuid());
+        }
         return ControlBinding.noop();
+    }
+
+    private static final class SelfViewBinding implements ControlBinding {
+        private final ServerPlayer subject;
+        private final UUID targetId;
+        private final PlayerControlSessionManager.PathSessionToken session;
+        private boolean complete;
+        private boolean closed;
+        private ControlFailureReason failure;
+
+        private SelfViewBinding(ControlContext context, ServerPlayer subject, UUID targetId) {
+            this.subject = subject;
+            this.targetId = targetId;
+            session = PlayerControlSessionManager.beginPath(context, subject);
+        }
+
+        @Override
+        public void tick() {
+            if (closed || complete || failure != null) return;
+            if (PlayerControlSessionManager.isPathHandshakePending(session)) return;
+            if (!PlayerControlSessionManager.isPathActive(session)) {
+                var reason = PlayerControlSessionManager.consumePathEndReason(session).orElse(null);
+                if (reason == PlayerControlSessionManager.EndReason.CONTROLLER_STOPPED) {
+                    complete = true;
+                } else {
+                    failure = ControlFailureReason.CLIENT_TIMEOUT;
+                }
+                return;
+            }
+            var target = MentalControlRuntime.findLivingEntity(subject.level().getServer(), targetId);
+            if (target == null || target.isRemoved() || !target.isAlive()
+                    || target.level() != subject.level()) {
+                failure = ControlFailureReason.TARGET_UNAVAILABLE;
+                return;
+            }
+            var delta = target.getEyePosition().subtract(subject.getEyePosition());
+            if (delta.lengthSqr() <= 1.0e-8) {
+                complete = true;
+                return;
+            }
+            var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+            var yaw = (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0f;
+            var pitch = (float) -(Mth.atan2(delta.y, Math.max(horizontal, 1.0e-6)) * Mth.RAD_TO_DEG);
+            PlayerControlSessionManager.submitPathFrame(session, new PlayerControlFrame(
+                    0.0f, 0.0f, yaw, pitch, false, false, false, false, false,
+                    movementMode(subject)
+            ));
+        }
+
+        @Override
+        public boolean isComplete() {
+            return complete || failure != null;
+        }
+
+        @Override
+        public Optional<ControlFailureReason> failureReason() {
+            return Optional.ofNullable(failure);
+        }
+
+        @Override
+        public void close() {
+            if (closed) return;
+            closed = true;
+            PlayerControlSessionManager.submitPathFrame(session, PlayerControlFrame.NEUTRAL);
+            PlayerControlSessionManager.closePath(session, false);
+        }
+
+        private static PlayerMovementMode movementMode(ServerPlayer player) {
+            if (player.isPassenger()) return PlayerMovementMode.MOUNT;
+            if (player.isFallFlying()) return PlayerMovementMode.GLIDE;
+            if (player.getAbilities().flying) return PlayerMovementMode.FLY;
+            if (player.isInWater()) return PlayerMovementMode.SWIM;
+            if (player.onClimbable()) return PlayerMovementMode.CLIMB;
+            return PlayerMovementMode.WALK;
+        }
     }
 }

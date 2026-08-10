@@ -134,20 +134,21 @@ public class ThunderLance extends Skill {
         @SubscribePacket
         public static void handle(StartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.THUNDER_LANCE.get().executeActive(player, (_, _) -> fireQuick(player));
+            Skills.THUNDER_LANCE.get().executeActive(player, (context, _) -> fireQuick(player, context.milestone()));
         }
 
         @SubscribePacket
         public static void handle(QuickPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.THUNDER_LANCE.get().executeActive(player, _ -> QUICK_CP_COST, (_, _) -> fireQuick(player));
+            Skills.THUNDER_LANCE.get().executeActive(player, _ -> QUICK_CP_COST,
+                    (context, _) -> fireQuick(player, context.milestone()));
         }
 
-        private static void fireQuick(ServerPlayer player) {
+        private static void fireQuick(ServerPlayer player, int milestone) {
             var level = player.level();
             var look = player.getLookAngle();
             var handPos = calculateHandPosition(player.position(), look);
-            var targetPos = player.getEyePosition().add(look.scale(QUICK_RANGE));
+            var targetPos = player.getEyePosition().add(look.scale(milestone >= 2 ? 40.0 : QUICK_RANGE));
 
             var system = AbilitySystemServer.getSystem(player);
             var source = SkillDamageSource.of(player, Skills.THUNDER_LANCE.get());
@@ -159,7 +160,7 @@ public class ThunderLance extends Skill {
                             player,
                             Skills.THUNDER_LANCE.get(),
                             source,
-                            QUICK_RADIUS
+                            milestone >= 2 ? QUICK_RADIUS * 1.2f : QUICK_RADIUS
                     )
                     .damage(_ -> damage)
                     .targetFilter(entity -> entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get())
@@ -181,7 +182,24 @@ public class ThunderLance extends Skill {
             level.addFreshEntity(arc);
             arc.playSound(SoundEvents.ARC_WEAK.get());
 
-            LinearAttackExecutor.execute(level, resolved, payload);
+            var result = LinearAttackExecutor.execute(level, resolved, payload);
+            if (milestone >= 3) branchDoubleHit(player, level, result, source, damage);
+        }
+
+        private static void branchDoubleHit(ServerPlayer player, net.minecraft.server.level.ServerLevel level,
+                                            LinearAttackExecutor.ExecutionResult result,
+                                            SkillDamageSource source, float damage) {
+            var hits = new java.util.LinkedHashSet<net.minecraft.world.entity.Entity>();
+            hits.addAll(result.outboundHits());
+            hits.addAll(result.returnHits());
+            var origin = hits.stream().filter(net.minecraft.world.entity.LivingEntity.class::isInstance)
+                    .map(net.minecraft.world.entity.LivingEntity.class::cast).findFirst().orElse(null);
+            if (origin == null) return;
+            var target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                            origin.getBoundingBox().inflate(6.0), candidate -> candidate != player
+                                    && !hits.contains(candidate) && candidate.isAlive() && !player.isAlliedTo(candidate))
+                    .stream().min(java.util.Comparator.comparingDouble(origin::distanceToSqr)).orElse(null);
+            if (target != null) target.hurtServer(level, source, damage * 0.4f);
         }
     }
 

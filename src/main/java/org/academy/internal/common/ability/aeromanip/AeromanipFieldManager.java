@@ -13,6 +13,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.WeakHashMap;
 
 public final class AeromanipFieldManager {
@@ -28,10 +29,20 @@ public final class AeromanipFieldManager {
             AirflowField field,
             FieldTicker ticker
     ) {
+        activate(player, skill, field, ticker, (_, _, _) -> { });
+    }
+
+    public static void activate(
+            ServerPlayer player,
+            Skill skill,
+            AirflowField field,
+            FieldTicker ticker,
+            FieldEnder ender
+    ) {
         if (AeromanipConfig.settings(player).maxPlacedFieldsPerPlayer < 1) return;
         var previous = ACTIVE.get(player);
         if (previous != null) previous.end();
-        var context = new FieldContext(player, skill, field, ticker);
+        var context = new FieldContext(player, skill, field, ticker, ender);
         ACTIVE.put(player, context);
         AbilitySystemServer.registerContext(context);
         AeromanipFieldSyncPacket.sendToTracking(player, field, true);
@@ -52,7 +63,7 @@ public final class AeromanipFieldManager {
     ) {
         var previous = PERSONAL.get(player);
         if (previous != null) previous.end();
-        var context = new FieldContext(player, skill, field, ticker, PERSONAL);
+        var context = new FieldContext(player, skill, field, ticker, (_, _, _) -> { }, PERSONAL);
         PERSONAL.put(player, context);
         AbilitySystemServer.registerContext(context);
         AeromanipFieldSyncPacket.sendToTracking(player, field, true);
@@ -63,6 +74,13 @@ public final class AeromanipFieldManager {
         if (context != null && context.field.type() == type) return true;
         context = PERSONAL.get(player);
         return context != null && context.field.type() == type;
+    }
+
+    public static Optional<AirflowField> getPlacedField(ServerPlayer player, AirflowField.Type type) {
+        var context = ACTIVE.get(player);
+        return context != null && context.field.type() == type
+                ? Optional.of(context.field)
+                : Optional.empty();
     }
 
     public static void end(ServerPlayer player) {
@@ -91,6 +109,11 @@ public final class AeromanipFieldManager {
         void tick(ServerPlayer player, AirflowField field, int ageTicks);
     }
 
+    @FunctionalInterface
+    public interface FieldEnder {
+        void end(ServerPlayer player, AirflowField field, int ageTicks);
+    }
+
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
         private Events() { }
@@ -108,20 +131,24 @@ public final class AeromanipFieldManager {
         private final Skill skill;
         private final AirflowField field;
         private final FieldTicker ticker;
+        private final FieldEnder ender;
         private final Map<ServerPlayer, FieldContext> ownerMap;
         private int ageTicks;
         private boolean ended;
 
-        private FieldContext(ServerPlayer player, Skill skill, AirflowField field, FieldTicker ticker) {
-            this(player, skill, field, ticker, ACTIVE);
+        private FieldContext(ServerPlayer player, Skill skill, AirflowField field, FieldTicker ticker,
+                             FieldEnder ender) {
+            this(player, skill, field, ticker, ender, ACTIVE);
         }
 
         private FieldContext(ServerPlayer player, Skill skill, AirflowField field, FieldTicker ticker,
+                             FieldEnder ender,
                              Map<ServerPlayer, FieldContext> ownerMap) {
             super(player);
             this.skill = skill;
             this.field = field;
             this.ticker = ticker;
+            this.ender = ender;
             this.ownerMap = ownerMap;
         }
 
@@ -162,6 +189,7 @@ public final class AeromanipFieldManager {
         private void end() {
             if (ended) return;
             ended = true;
+            ender.end(player, field, ageTicks);
             if (!player.hasDisconnected()) AeromanipFieldSyncPacket.sendToTracking(player, field, false);
             unregister();
         }

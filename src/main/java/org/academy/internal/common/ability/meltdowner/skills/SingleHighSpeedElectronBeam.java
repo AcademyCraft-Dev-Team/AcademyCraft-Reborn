@@ -134,7 +134,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
         }
 
         public static boolean tryAutomatedAttack(ServerPlayer player) {
-            return Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get().executeActive(player, (_, _) -> {
+            return Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get().executeActive(player, (context, _) -> {
                 var level = player.level();
                 var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
                 var eyePos = player.getEyePosition().add(0, -0.5, 0);
@@ -161,9 +161,13 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                         MAX_HEALTH_DAMAGE_RATIO,
                         system.getPlayerDamageMultiplier(player.getUUID()),
                         Skills.RADIATION_INTENSIFY.get().isEnabled(player),
-                        DestroyBlocksSetting.canDestroyBlocks(player, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get())
+                        DestroyBlocksSetting.canDestroyBlocks(player, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()),
+                        context.milestone()
                 );
-                beam.setAttackDelayTicks(getConfiguredAttackDelayTicks(player));
+                var delay = getConfiguredAttackDelayTicks(player);
+                if (context.milestone() >= 2) delay = Math.max(0, Math.round(delay * 0.75f));
+                beam.setAttackDelayTicks(delay);
+                if (context.milestone() >= 2) beam.setBeamLength(60.0f);
                 beam.setPos(spawnPos);
                 beam.setYRot(yaw);
                 beam.setXRot(pitch);

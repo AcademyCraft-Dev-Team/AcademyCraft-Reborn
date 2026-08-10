@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
@@ -57,9 +58,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.UUID;
+import java.util.WeakHashMap;
 
 public final class LocationTeleport extends Skill {
     public static final int MAX_MARKS = 32;
+    public static final int MILESTONE_MAX_MARKS = 48;
     static final String DEATH_MARK_PREFIX = "死亡地点 ";
     private static final DateTimeFormatter DEATH_MARK_TIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -203,6 +208,8 @@ public final class LocationTeleport extends Skill {
     }
 
     public static final class Server {
+        private static final Map<UUID, ReturnAnchor> RETURN_ANCHORS = new WeakHashMap<>();
+
         @SubscribePacket
         public static void handleRequest(RequestMarksPacket packet) {
             var player = packet.getPacketListener().getPlayer();
@@ -214,8 +221,10 @@ public final class LocationTeleport extends Skill {
         public static void handleSave(SaveMarkPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var data = getData(player);
+            var maximumMarks = Skills.LOCATION_TELEPORT.get().hasProficiencyMilestone(player, 2)
+                    ? MILESTONE_MAX_MARKS : MAX_MARKS;
             if (data == null || !Skills.LOCATION_TELEPORT.get().isEnabled(player)
-                    || data.getMarks().size() >= MAX_MARKS) return;
+                    || data.getMarks().size() >= maximumMarks) return;
 
             var name = packet.getName().strip();
             if (name.isEmpty()) name = "Mark " + (data.getMarks().size() + 1);
@@ -255,19 +264,41 @@ public final class LocationTeleport extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var data = getData(player);
             if (data == null || packet.index < 0 || packet.index >= data.getMarks().size()) return;
+            var skill = Skills.LOCATION_TELEPORT.get();
+            var now = player.level().getGameTime();
+            var anchor = skill.hasProficiencyMilestone(player, 3) ? RETURN_ANCHORS.get(player.getUUID()) : null;
+            var returning = anchor != null && anchor.markIndex == packet.index && anchor.expiresAt >= now;
             var mark = data.getMarks().get(packet.index);
-            var level = resolveLevel(player, mark);
+            var level = returning
+                    ? player.level().getServer().getLevel(anchor.dimension)
+                    : resolveLevel(player, mark);
             if (level == null) return;
-            var destination = safeDestination(player, level, mark);
+            if (returning) {
+                forceDestinationChunk(level, (int) Math.floor(anchor.position.x),
+                        (int) Math.floor(anchor.position.z), "location_return_" + player.getStringUUID());
+            }
+            var destination = returning
+                    ? org.academy.internal.common.ability.teleport.TeleportSafety.findSafe(player, level, anchor.position)
+                    : safeDestination(player, level, mark);
             if (destination == null) return;
 
-            Skills.LOCATION_TELEPORT.get().executeActive(player, (ctx, actualCost) -> {
-                forceDestinationChunk(level, mark.x(), mark.z(), "location_" + player.getStringUUID());
-                level.getChunk(mark.x() >> 4, mark.z() >> 4);
+            var originDimension = player.level().dimension();
+            var originPosition = player.position();
+            skill.executeActive(player, ctx -> returning ? 15.0f : 30.0f, (ctx, actualCost) -> {
+                if (!returning) {
+                    forceDestinationChunk(level, mark.x(), mark.z(), "location_" + player.getStringUUID());
+                    level.getChunk(mark.x() >> 4, mark.z() >> 4);
+                }
                 SpatialSynergy.Server.teleportNearbyTeam(player, level, destination);
                 player.teleportTo(level, destination.x, destination.y, destination.z,
                         Set.of(), player.getYRot(), player.getXRot(), false);
                 player.resetFallDistance();
+                if (returning) {
+                    RETURN_ANCHORS.remove(player.getUUID());
+                } else if (ctx.milestone() >= 3) {
+                    RETURN_ANCHORS.put(player.getUUID(), new ReturnAnchor(
+                            originDimension, originPosition, player.level().getGameTime() + 100, packet.index));
+                }
                 dirtyAndSync(player, data);
             });
         }
@@ -435,7 +466,7 @@ public final class LocationTeleport extends Skill {
                     ByteBufCodecs.INT.encode(buf, packet.defensiveMarkIndex);
                 },
                 buf -> {
-                    var count = Math.min(MAX_MARKS, Math.max(0, ByteBufCodecs.VAR_INT.decode(buf)));
+                    var count = Math.min(MILESTONE_MAX_MARKS, Math.max(0, ByteBufCodecs.VAR_INT.decode(buf)));
                     var marks = new ArrayList<Mark>(count);
                     for (var i = 0; i < count; i++) {
                         marks.add(new Mark(ByteBufCodecs.STRING_UTF8.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),
@@ -460,5 +491,8 @@ public final class LocationTeleport extends Skill {
         public int getQuickMarkIndex() { return quickMarkIndex; }
         public int getDefensiveMarkIndex() { return defensiveMarkIndex; }
         @Override public PacketType<ClientPacketListener, MarksSyncPacket> getPacketType() { return PacketTypes.LOCATION_TELEPORT_SYNC.get(); }
+    }
+
+    private record ReturnAnchor(ResourceKey<Level> dimension, Vec3 position, long expiresAt, int markIndex) {
     }
 }

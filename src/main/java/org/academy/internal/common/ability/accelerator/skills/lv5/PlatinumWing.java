@@ -244,6 +244,26 @@ public final class PlatinumWing extends Skill {
                 return;
             }
             var level = (ServerLevel) player.level();
+            var skill = Skills.PLATINUM_WING.get();
+            if (skill.hasProficiencyMilestone(player, 3)
+                    && org.academy.internal.common.ability.aeromanip.AeromanipTargeting.isBoss(target)) {
+                var trueMaxHealth = EntityControlApi.getTrueMaxHealth(living);
+                if (!Float.isFinite(trueMaxHealth) || trueMaxHealth <= 0.0f) {
+                    trueMaxHealth = living.getMaxHealth();
+                }
+                var damage = trueMaxHealth * 0.15f
+                        * AbilitySystemServer.getSystem(player)
+                        .getPlayerDamageMultiplier(player.getUUID());
+                living.hurtServer(
+                        level,
+                        SkillDamageSource.of(player, skill,
+                                org.academy.internal.common.world.damagesource.DamageTypes.VEC),
+                        damage
+                );
+                level.playSound(null, target, SoundEvents.PLAYER_ATTACK_CRIT,
+                        SoundSource.PLAYERS, 1.0f, 0.7f);
+                return;
+            }
             var typeId = BuiltInRegistries.ENTITY_TYPE.getKey(target.getType());
             var executionId = UUID.randomUUID();
             var controllerBacked = PlatinumExecutionCleanup.register(

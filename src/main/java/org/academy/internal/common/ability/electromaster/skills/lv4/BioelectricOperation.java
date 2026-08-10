@@ -34,6 +34,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.BioelectricSurgeData;
 import org.academy.internal.common.skilldata.SkillData;
@@ -174,7 +175,7 @@ public final class BioelectricOperation extends Skill {
             if (enabled) {
                 enabled = system.ensurePermanentOccupation(
                         player.getUUID(),
-                        skill.getMaintenanceCost(skill.getLevel(player)),
+                        skill.getMaintenanceCost(player),
                         skill
                 );
                 if (!enabled) {
@@ -186,17 +187,33 @@ public final class BioelectricOperation extends Skill {
                 if (player.tickCount % 40 == 0) spawnBioelectricArcs(player);
             }
 
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var overload = false;
+            if (enabled && milestone >= 3 && player.getHealth() < player.getMaxHealth() * 0.3f) {
+                var now = player.level().getGameTime();
+                if (player.tickCount % 20 == 0 && system.tryTimedOccupation(
+                        player.getUUID(), 5.0f, skill, 20)) {
+                    TimedSkillEffectRuntime.put(player, player.getUUID(), skill,
+                            "bioelectric_overload", 20, 1.0f);
+                }
+                overload = TimedSkillEffectRuntime.get(player.getUUID(), player.getUUID(), skill,
+                        "bioelectric_overload", now).isPresent();
+            }
+
             var power = enabled
                     ? system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     : 0;
-            syncModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), 0.1, enabled);
-            syncModifier(player.getAttribute(Attributes.STEP_HEIGHT), 0.4, enabled);
-            syncModifier(player.getAttribute(Attributes.MOVEMENT_EFFICIENCY), 1.0, enabled);
-            syncModifier(player.getAttribute(Attributes.JUMP_STRENGTH), 0.58, enabled);
-            syncModifier(player.getAttribute(Attributes.ATTACK_SPEED), 2.4, enabled);
+            var nonDamageScale = milestone >= 2 ? 1.2 : 1.0;
+            syncModifier(player.getAttribute(Attributes.MOVEMENT_SPEED),
+                    0.1 * nonDamageScale + (overload ? 0.015 : 0.0), enabled);
+            syncModifier(player.getAttribute(Attributes.STEP_HEIGHT), 0.4 * nonDamageScale, enabled);
+            syncModifier(player.getAttribute(Attributes.MOVEMENT_EFFICIENCY), 1.0 * nonDamageScale, enabled);
+            syncModifier(player.getAttribute(Attributes.JUMP_STRENGTH), 0.58 * nonDamageScale, enabled);
+            syncModifier(player.getAttribute(Attributes.ATTACK_SPEED),
+                    2.4 * nonDamageScale + (overload ? 0.36 : 0.0), enabled);
             syncModifier(player.getAttribute(Attributes.ATTACK_DAMAGE), getAttackDamageBonus(power), enabled);
-            syncModifier(player.getAttribute(Attributes.BLOCK_BREAK_SPEED), 0.5, enabled);
-            syncModifier(player.getAttribute(Attributes.SAFE_FALL_DISTANCE), 10.0, enabled);
+            syncModifier(player.getAttribute(Attributes.BLOCK_BREAK_SPEED), 0.5 * nonDamageScale, enabled);
+            syncModifier(player.getAttribute(Attributes.SAFE_FALL_DISTANCE), 10.0 * nonDamageScale, enabled);
         }
 
         private static void spawnBioelectricArcs(ServerPlayer player) {

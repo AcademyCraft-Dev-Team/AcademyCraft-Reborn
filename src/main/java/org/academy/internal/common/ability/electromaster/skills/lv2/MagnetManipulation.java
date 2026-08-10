@@ -49,6 +49,7 @@ import org.academy.api.client.sound.LoopingPlayerSoundInstance;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -388,7 +389,8 @@ public class MagnetManipulation extends Skill {
             skill.reportActivity(player, true);
             movingTicks++;
             if (movingTicks % MOVE_CP_INTERVAL_TICKS == 0
-                    && !system.tryTimedOccupation(uuid, MOVE_CP_COST, skill, 10)) {
+                    && !system.tryTimedOccupation(uuid, skill.adjustProficiencyCost(player,
+                    SkillProficiencyProfile.CostKind.CONTINUOUS, MOVE_CP_COST), skill, 10)) {
                 end();
             }
         }
@@ -425,12 +427,13 @@ public class MagnetManipulation extends Skill {
             var look = player.getLookAngle();
             var destination = player.getEyePosition().add(look.scale(TARGET_FRONT_DISTANCE));
             var targetOrigin = controlledTarget.getBoundingBox().getCenter();
+            var speedScale = skillMilestone() >= 2 ? 1.15 : 1.0;
             var velocity = calculatePullVelocity(
                     controlledTarget.getDeltaMovement(),
                     targetOrigin,
                     destination,
                     look,
-                    TARGET_PULL_SPEED_PER_TICK,
+                    TARGET_PULL_SPEED_PER_TICK * speedScale,
                     TARGET_STOP_DISTANCE
             );
             controlledTarget.setDeltaMovement(velocity);
@@ -461,7 +464,8 @@ public class MagnetManipulation extends Skill {
             var look = player.getLookAngle();
             if (look.lengthSqr() <= 1.0e-6) return null;
             look = look.normalize();
-            var end = eye.add(look.scale(MOVE_RANGE));
+            var range = skillMilestone() >= 2 ? MOVE_RANGE * 1.25 : MOVE_RANGE;
+            var end = eye.add(look.scale(range));
             var blockHit = level().clip(new ClipContext(
                     eye,
                     end,
@@ -470,14 +474,14 @@ public class MagnetManipulation extends Skill {
                     player
             ));
             var blockDistance = blockHit.getType() == HitResult.Type.MISS
-                    ? MOVE_RANGE * MOVE_RANGE
+                    ? range * range
                     : eye.distanceToSqr(blockHit.getLocation());
             var entityHit = ProjectileUtil.getEntityHitResult(
                     level(),
                     player,
                     eye,
                     end,
-                    player.getBoundingBox().expandTowards(look.scale(MOVE_RANGE)).inflate(1.0),
+                    player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0),
                     entity -> entity != player && entity.isAlive() && !entity.isSpectator(),
                     0.3f
             );
@@ -500,6 +504,10 @@ public class MagnetManipulation extends Skill {
             }
             controlledTarget = null;
             controlsFallingBlock = false;
+        }
+
+        private int skillMilestone() {
+            return Skills.MAGNET_MANIPULATION.get().getEffectiveProficiencyMilestone(player);
         }
 
         private void end() {

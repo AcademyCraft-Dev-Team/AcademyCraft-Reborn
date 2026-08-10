@@ -24,6 +24,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -136,7 +137,11 @@ public final class DarkmatterCreation extends Skill {
             var ids = owned(player);
             if (ids.size() >= MAX_BEETLES) return;
             var system = AbilitySystemServer.getSystem(player);
-            var required = (skill.getCpCost(skill.getLevel(player)) + RESERVED_CP_PER_BEETLE)
+            var baseCast = skill.getCpCost(skill.getLevel(player));
+            var cast = DarkmatterSixWings.Server.adjustCategoryCost(
+                    player, skill, baseCast, skill.getCpCost(player));
+            var maintenance = adjustedMaintenance(player, 1);
+            var required = (cast + maintenance)
                     * system.getPlayerCalculationIntensity(player.getUUID());
             if (system.getPlayerAvailableCP(player.getUUID()) + 1.0e-5f < required) return;
 
@@ -194,8 +199,17 @@ public final class DarkmatterCreation extends Skill {
                         Skills.DARKMATTER_CREATION.get().getKeyString());
                 return true;
             }
+            var skill = Skills.DARKMATTER_CREATION.get();
             return system.ensurePermanentOccupation(player.getUUID(),
-                    RESERVED_CP_PER_BEETLE * count, Skills.DARKMATTER_CREATION.get());
+                    adjustedMaintenance(player, count), skill);
+        }
+
+        private static float adjustedMaintenance(ServerPlayer player, int count) {
+            var skill = Skills.DARKMATTER_CREATION.get();
+            var base = RESERVED_CP_PER_BEETLE * count;
+            var proficiency = skill.adjustProficiencyCost(
+                    player, SkillProficiencyProfile.CostKind.MAINTENANCE, base);
+            return DarkmatterSixWings.Server.adjustCategoryCost(player, skill, base, proficiency);
         }
 
         private static void discardAll(ServerPlayer player) {

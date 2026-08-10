@@ -28,6 +28,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -134,14 +135,17 @@ public class ElectricalContact extends Skill {
             var skill = Skills.ELECTRICAL_CONTACT.get();
             if (!skill.isEnabled(player)) return;
             if (!AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
-                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                    player.getUUID(), skill.getMaintenanceCost(player), skill)) {
                 if (skill.isEnabled(player)) skill.toggle(player);
                 return;
             }
-            if (player.level().getGameTime() % DAMAGE_INTERVAL != 0) return;
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var interval = milestone >= 2 ? 30 : DAMAGE_INTERVAL;
+            if (player.level().getGameTime() % interval != 0) return;
 
             var level = player.level();
-            var box = player.getBoundingBox().inflate(RADIUS);
+            var radius = milestone >= 2 ? 3.0f : RADIUS;
+            var box = player.getBoundingBox().inflate(radius);
             var targets = level.getEntitiesOfClass(LivingEntity.class, box,
                     e -> e != player && e.isAlive() && !e.isSpectator()
                             && !player.isAlliedTo(e));
@@ -182,7 +186,32 @@ public class ElectricalContact extends Skill {
                             SkillDamageSource.of(player, skill,
                                     org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE),
                             damage);
+                    if (skill.hasProficiencyMilestone(player, 3)) {
+                        TimedSkillEffectRuntime.put(player, livingAttacker.getUUID(), skill,
+                                "conductive", 80, 1.0f);
+                    }
                 }
+            }
+        }
+
+        @SubscribeEvent
+        public static void onConductiveDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof LivingEntity target)
+                    || !(event.getSource() instanceof SkillDamageSource skillSource)
+                    || !(event.getSource().getEntity() instanceof ServerPlayer attacker)
+                    || skillSource.getSkill().getCategory() != AbilityCategories.ELECTROMASTER.get()) return;
+            var markSkill = Skills.ELECTRICAL_CONTACT.get();
+            if (TimedSkillEffectRuntime.consume(attacker.getUUID(), target.getUUID(), markSkill,
+                    "conductive", attacker.level().getGameTime()).isEmpty()) return;
+            if (!(attacker.level() instanceof ServerLevel level)) return;
+            var chained = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(4.0),
+                            candidate -> candidate != target && candidate != attacker && candidate.isAlive()
+                                    && !attacker.isAlliedTo(candidate))
+                    .stream().min(java.util.Comparator.comparingDouble(target::distanceToSqr)).orElse(null);
+            if (chained != null) {
+                chained.hurtServer(level, SkillDamageSource.of(attacker, skillSource.getSkill(),
+                                org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE),
+                        event.getAmount() * 0.5f);
             }
         }
     }

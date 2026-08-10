@@ -56,6 +56,15 @@ public final class AttachmentTypes {
                     .sync(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.BOOL))
                     .build()
     );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Map<String, Boolean>>> SKILL_PROFICIENCY_OPTIONS = REGISTER.register(
+            "skill_proficiency_options",
+            () -> AttachmentType
+                    .<Map<String, Boolean>>builder(() -> new HashMap<>())
+                    .serialize(Codec.unboundedMap(Codec.STRING, Codec.BOOL).fieldOf("options"))
+                    .copyOnDeath()
+                    .sync(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.BOOL))
+                    .build()
+    );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> ACTIVATED_STORM_WING = REGISTER.register("activated_storm_wing",
             () -> AttachmentType
                     .builder(DEFAULT_FALSE)

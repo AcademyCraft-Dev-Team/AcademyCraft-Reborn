@@ -220,7 +220,8 @@ public final class ScatterBomb extends Skill {
 
         private static void start(ServerPlayer player) {
             if (!Skills.SCATTER_BOMB.get().isEnabled(player) || CHARGING.containsKey(player.getUUID())) return;
-            CHARGING.put(player.getUUID(), new ChargeState(player.level(), player.level().getGameTime()));
+            var milestone = Skills.SCATTER_BOMB.get().getEffectiveProficiencyMilestone(player);
+            CHARGING.put(player.getUUID(), new ChargeState(player.level(), player.level().getGameTime(), milestone));
         }
 
         private static void release(ServerPlayer player) {
@@ -228,7 +229,8 @@ public final class ScatterBomb extends Skill {
             if (state == null) return;
             var chargeTicks = Math.clamp(
                     (int) (player.level().getGameTime() - state.startTick), 0, MAX_CHARGE_TICKS);
-            if (chargeTicks < MIN_CHARGE_TICKS || state.level != player.level()) {
+            var minimumCharge = state.milestone >= 2 ? Math.round(MIN_CHARGE_TICKS * 0.8f) : MIN_CHARGE_TICKS;
+            if (chargeTicks < minimumCharge || state.level != player.level()) {
                 state.cleanup();
                 return;
             }
@@ -249,8 +251,10 @@ public final class ScatterBomb extends Skill {
                             MAX_HEALTH_DAMAGE_RATIO,
                             damageMultiplier,
                             radiationEnabled,
-                            DestroyBlocksSetting.canDestroyBlocks(player, skill)
+                            DestroyBlocksSetting.canDestroyBlocks(player, skill),
+                            ctx.milestone()
                     );
+                    if (ctx.milestone() >= 3) state.retargetMarked(player, beam);
                     beam.currentChargerTicks = beam.getAttackDelayTicks();
                     beam.setHeldCharge(false);
                     beam.setBetaTrailOnFire(true);
@@ -272,7 +276,9 @@ public final class ScatterBomb extends Skill {
             var elapsed = Math.clamp(
                     (int) (player.level().getGameTime() - state.startTick), 0, MAX_CHARGE_TICKS);
             Skills.SCATTER_BOMB.get().reportActivity(player, false);
-            var desired = Math.min(BEAM_COUNT, 1 + elapsed / SPAWN_INTERVAL_TICKS);
+            var maximum = state.milestone >= 2 ? 8 : BEAM_COUNT;
+            var interval = state.milestone >= 2 ? SPAWN_INTERVAL_TICKS * 0.8 : SPAWN_INTERVAL_TICKS;
+            var desired = Math.min(maximum, 1 + (int) Math.floor(elapsed / interval));
             state.ensureBeamCount(player, desired);
             state.follow(player);
         }
@@ -280,15 +286,17 @@ public final class ScatterBomb extends Skill {
         private static final class ChargeState {
             private final ServerLevel level;
             private final long startTick;
+            private final int milestone;
             private final List<HighSpeedElectronBeam> beams = new ArrayList<>();
 
-            private ChargeState(ServerLevel level, long startTick) {
+            private ChargeState(ServerLevel level, long startTick, int milestone) {
                 this.level = level;
                 this.startTick = startTick;
+                this.milestone = milestone;
             }
 
             private void ensureAllBeams(ServerPlayer player) {
-                ensureBeamCount(player, BEAM_COUNT);
+                ensureBeamCount(player, milestone >= 2 ? 8 : BEAM_COUNT);
                 follow(player);
             }
 
@@ -321,12 +329,28 @@ public final class ScatterBomb extends Skill {
                 if (right.lengthSqr() < 1.0e-6) right = new Vec3(1.0, 0.0, 0.0);
                 right = right.normalize();
                 var up = right.cross(forward).normalize();
-                var angle = index * Math.PI * 2.0 / BEAM_COUNT;
+                var maximum = Skills.SCATTER_BOMB.get().hasProficiencyMilestone(player, 2) ? 8 : BEAM_COUNT;
+                var angle = index * Math.PI * 2.0 / maximum;
                 var offset = right.scale(Math.cos(angle) * 0.9)
                         .add(up.scale(Math.sin(angle) * 0.405));
                 beam.setPos(eyePos.add(forward.scale(1.75)).add(offset));
                 beam.setYRot(player.getYRot());
                 beam.setXRot(player.getXRot());
+            }
+
+            private void retargetMarked(ServerPlayer player, HighSpeedElectronBeam beam) {
+                var endpoint = beam.position().add(beam.getLookAngle().scale(BEAM_LENGTH));
+                var target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                                new net.minecraft.world.phys.AABB(endpoint, endpoint).inflate(8.0),
+                                living -> living.isAlive() && !player.isAlliedTo(living)
+                                        && org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify
+                                        .isMarked(living, level.getGameTime()))
+                        .stream().min(java.util.Comparator.comparingDouble(living -> living.distanceToSqr(endpoint)))
+                        .orElse(null);
+                if (target == null) return;
+                var direction = target.getBoundingBox().getCenter().subtract(beam.position()).normalize();
+                beam.setYRot((float) Math.toDegrees(Math.atan2(-direction.x, direction.z)));
+                beam.setXRot((float) Math.toDegrees(-Math.asin(direction.y)));
             }
 
             private void cleanup() {

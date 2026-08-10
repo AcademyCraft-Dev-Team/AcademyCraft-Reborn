@@ -8,6 +8,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.TamableAnimal;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -111,13 +114,16 @@ public class SpatialSynergy extends Skill {
         public static void teleportNearbyTeam(ServerPlayer owner, ServerLevel destinationLevel,
                                               Vec3 ownerDestination) {
             if (!Skills.SPATIAL_SYNERGY.get().isEnabled(owner) || owner.getTeam() == null) return;
+            var skill = Skills.SPATIAL_SYNERGY.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(owner);
+            var radius = milestone >= 2 ? 6.0f : RADIUS;
             var origin = owner.position();
             var nearby = owner.level().getEntitiesOfClass(
                     ServerPlayer.class,
-                    owner.getBoundingBox().inflate(RADIUS),
+                    owner.getBoundingBox().inflate(radius),
                     player -> player != owner && player.isAlive()
                             && player.getTeam() == owner.getTeam()
-                            && player.distanceToSqr(owner) <= RADIUS * RADIUS
+                            && player.distanceToSqr(owner) <= radius * radius
             );
             for (var teammate : nearby) {
                 var desired = ownerDestination.add(teammate.position().subtract(origin));
@@ -130,6 +136,38 @@ public class SpatialSynergy extends Skill {
                             java.util.Set.of(), teammate.getYRot(), teammate.getXRot(), false);
                 }
                 teammate.resetFallDistance();
+            }
+            if (milestone < 3) return;
+            var extras = owner.level().getEntitiesOfClass(
+                    LivingEntity.class,
+                    owner.getBoundingBox().inflate(radius),
+                    entity -> entity != owner && !(entity instanceof ServerPlayer)
+                            && entity.isAlive() && entity.distanceToSqr(owner) <= radius * radius
+                            && (owner.isAlliedTo(entity)
+                            || entity instanceof TamableAnimal tame && tame.isOwnedBy(owner))
+            );
+            var system = AbilitySystemServer.getSystem(owner);
+            var processed = 0;
+            for (var entity : extras) {
+                if (processed >= 96 || entity.isPassenger()) continue;
+                if (!system.tryTimedOccupation(owner.getUUID(), 5.0f, skill, skill.getIterationTicks(owner))) {
+                    break;
+                }
+                var desired = ownerDestination.add(entity.position().subtract(origin));
+                var safe = TeleportSafety.findSafe(entity, destinationLevel, desired);
+                if (safe == null) continue;
+                teleportEntity(entity, destinationLevel, safe);
+                entity.resetFallDistance();
+                processed++;
+            }
+        }
+
+        private static void teleportEntity(Entity entity, ServerLevel destinationLevel, Vec3 safe) {
+            if (entity.level() == destinationLevel) {
+                TeleportSync.teleportInstantly(entity, safe);
+            } else {
+                entity.teleportTo(destinationLevel, safe.x, safe.y, safe.z,
+                        java.util.Set.of(), entity.getYRot(), entity.getXRot(), false);
             }
         }
     }
@@ -145,7 +183,7 @@ public class SpatialSynergy extends Skill {
             if (!player.isAlive() || player.hasDisconnected()
                     || !system.ensurePermanentOccupation(
                     player.getUUID(),
-                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill.getMaintenanceCost(player),
                     skill
             )) {
                 if (skill.isEnabled(player)) skill.toggle(player);

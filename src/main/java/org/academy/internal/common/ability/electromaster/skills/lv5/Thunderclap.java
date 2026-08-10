@@ -9,6 +9,11 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.entity.boss.wither.WitherBoss;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -189,14 +194,17 @@ public class Thunderclap extends Skill {
         public static void handle(UsePacket p) {
             var player = p.getPacketListener().getPlayer();
             if (!(player.level() instanceof ServerLevel level)) return;
-            var targetPos = resolveTarget(player, level);
+            var skill = Skills.THUNDERCLAP.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var targetPos = resolveTarget(player, level, milestone);
             if (targetPos == null) return;
-            Skills.THUNDERCLAP.get().executeActive(player, (_, _) -> strike(player, level, targetPos));
+            skill.executeActive(player, (context, _) -> strike(player, level, targetPos, context.milestone()));
         }
 
-        private static @Nullable Vec3 resolveTarget(ServerPlayer player, ServerLevel level) {
+        private static @Nullable Vec3 resolveTarget(ServerPlayer player, ServerLevel level, int milestone) {
             var start = player.getEyePosition();
-            var end = start.add(player.getLookAngle().scale(RANGE));
+            var range = milestone >= 2 ? 80.0 : RANGE;
+            var end = start.add(player.getLookAngle().scale(range));
             var blockHit = level.clip(new ClipContext(
                     start,
                     end,
@@ -214,21 +222,22 @@ public class Thunderclap extends Skill {
                             && entity != player
                             && entity.isAlive()
                             && entity.isPickable(),
-                    RANGE * RANGE
+                    range * range
             );
             return selectNearestTarget(start, blockPos, entityHit == null ? null : entityHit.getLocation());
         }
 
-        private static void strike(ServerPlayer player, ServerLevel level, Vec3 targetPos) {
+        private static void strike(ServerPlayer player, ServerLevel level, Vec3 targetPos, int milestone) {
             ElectromasterArcEffects.spawnSkyStrike(level, targetPos, SkyStrikeProfile.THUNDERCLAP);
 
             var system = AbilitySystemServer.getSystem(player);
             var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
             var source = SkillDamageSource.of(player, Skills.THUNDERCLAP.get());
-            var radiusSquared = RADIUS * RADIUS;
+            var radius = milestone >= 2 ? 6.0 : RADIUS;
+            var radiusSquared = radius * radius;
             var targets = level.getEntitiesOfClass(
                     LivingEntity.class,
-                    new AABB(targetPos, targetPos).inflate(RADIUS),
+                    new AABB(targetPos, targetPos).inflate(radius),
                     entity -> entity != player
                             && entity.isAlive()
                             && entity.distanceToSqr(targetPos) <= radiusSquared
@@ -239,6 +248,12 @@ public class Thunderclap extends Skill {
                         source,
                         1.0f + calculateDamage(target.getMaxHealth(), abilityPower)
                 );
+                if (milestone >= 3) {
+                    var duration = target instanceof Player || target instanceof EnderDragon || target instanceof WitherBoss
+                            ? 30 : 60;
+                    target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, 3));
+                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, 1));
+                }
             }
         }
     }

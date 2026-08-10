@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** Guards vanilla entity motion entry points for imprisonment and vector-reflection protection. */
@@ -48,6 +49,13 @@ public final class EntityMotionGuard {
         return shouldBlockMotion(entity);
     }
 
+    public static boolean shouldBlockMovement(Entity entity, Vec3 movement) {
+        if (entity != null && movement != null) {
+            noteAttemptedPosition(entity, entity.position().add(movement));
+        }
+        return shouldBlockMotion(entity);
+    }
+
     public static boolean shouldBlockVelocity(Entity entity) {
         return shouldBlockMotion(entity);
     }
@@ -56,7 +64,17 @@ public final class EntityMotionGuard {
         return shouldBlockMotion(entity);
     }
 
+    public static boolean shouldBlockTeleport(Entity entity, Vec3 destination) {
+        noteAttemptedPosition(entity, destination);
+        return shouldBlockMotion(entity);
+    }
+
     public static boolean shouldBlockPositionSnap(Entity entity) {
+        return shouldBlockMotion(entity);
+    }
+
+    public static boolean shouldBlockPositionSnap(Entity entity, Vec3 destination) {
+        noteAttemptedPosition(entity, destination);
         return shouldBlockMotion(entity);
     }
 
@@ -85,6 +103,16 @@ public final class EntityMotionGuard {
     }
 
     public static void imprison(LivingEntity entity, String sourceId, long durationTicks) {
+        imprison(entity, sourceId, durationTicks, 0.0, null);
+    }
+
+    public static void imprison(
+            LivingEntity entity,
+            String sourceId,
+            long durationTicks,
+            double forcedDisplacementThreshold,
+            Consumer<LivingEntity> forcedDisplacementReaction
+    ) {
         if (entity == null || entity.level().isClientSide()
                 || sourceId == null || sourceId.isBlank() || durationTicks <= 0L) {
             return;
@@ -98,6 +126,13 @@ public final class EntityMotionGuard {
                 current = new Imprisonment(entity, entity.position(), dimensionId(entity));
             }
             current.expirations.merge(sourceId, now + durationTicks, Math::max);
+            if (forcedDisplacementReaction != null && forcedDisplacementThreshold > 0.0) {
+                current.reactions.put(sourceId, new DisplacementReaction(
+                        now + durationTicks,
+                        forcedDisplacementThreshold * forcedDisplacementThreshold,
+                        forcedDisplacementReaction
+                ));
+            }
             return current;
         });
         applyImprisonmentEffects(entity, durationTicks);
@@ -129,6 +164,7 @@ public final class EntityMotionGuard {
         if (entity == null || entity.level().isClientSide() || sourceId == null) return;
         IMPRISONMENTS.computeIfPresent(entity.getUUID(), (ignored, state) -> {
             state.expirations.remove(sourceId);
+            state.reactions.remove(sourceId);
             return state.expirations.isEmpty() ? null : state;
         });
     }
@@ -143,6 +179,7 @@ public final class EntityMotionGuard {
         if (entity == null || entity.level().isClientSide()) return;
         var state = activeState(entity);
         if (state == null || ignoresImprisonment(entity)) return;
+        triggerDisplacementReactions(entity, state, entity.position());
         runInternalCorrection(entity, () -> {
             entity.setDeltaMovement(Vec3.ZERO);
             if (entity.position().distanceToSqr(state.anchor) > POSITION_EPSILON_SQUARED) {
@@ -325,6 +362,8 @@ public final class EntityMotionGuard {
         }
         var now = gameTime(entity);
         state.expirations.entrySet().removeIf(entry -> entry.getValue() <= now);
+        state.reactions.entrySet().removeIf(entry -> entry.getValue().expiration <= now
+                || !state.expirations.containsKey(entry.getKey()));
         if (!state.expirations.isEmpty()) return state;
         IMPRISONMENTS.remove(entity.getUUID(), state);
         return null;
@@ -338,6 +377,28 @@ public final class EntityMotionGuard {
         return entity.level().dimension().identifier().toString();
     }
 
+    private static void noteAttemptedPosition(Entity entity, Vec3 destination) {
+        if (!(entity instanceof LivingEntity living) || destination == null
+                || entity.level().isClientSide() || isInternalCorrection(entity)) {
+            return;
+        }
+        var state = activeState(living);
+        if (state != null) triggerDisplacementReactions(living, state, destination);
+    }
+
+    private static void triggerDisplacementReactions(
+            LivingEntity entity,
+            Imprisonment state,
+            Vec3 attemptedPosition
+    ) {
+        var distanceSquared = attemptedPosition.distanceToSqr(state.anchor);
+        for (var reaction : state.reactions.values()) {
+            if (reaction.triggered || distanceSquared <= reaction.thresholdSquared) continue;
+            reaction.triggered = true;
+            reaction.callback.accept(entity);
+        }
+    }
+
     private enum FrameDecision {
         SKIP,
         ALLOW,
@@ -349,11 +410,29 @@ public final class EntityMotionGuard {
         private final Vec3 anchor;
         private final String dimensionId;
         private final Map<String, Long> expirations = new HashMap<>();
+        private final Map<String, DisplacementReaction> reactions = new HashMap<>();
 
         private Imprisonment(LivingEntity entity, Vec3 anchor, String dimensionId) {
             this.entity = new WeakReference<>(entity);
             this.anchor = anchor;
             this.dimensionId = dimensionId;
+        }
+    }
+
+    private static final class DisplacementReaction {
+        private final long expiration;
+        private final double thresholdSquared;
+        private final Consumer<LivingEntity> callback;
+        private boolean triggered;
+
+        private DisplacementReaction(
+                long expiration,
+                double thresholdSquared,
+                Consumer<LivingEntity> callback
+        ) {
+            this.expiration = expiration;
+            this.thresholdSquared = thresholdSquared;
+            this.callback = callback;
         }
     }
 

@@ -2,13 +2,20 @@ package org.academy.internal.common.ability.mentalout.precision;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.ControlCapability;
+import org.academy.api.common.entitycontrol.ControlApplyException;
 import org.academy.api.common.entitycontrol.ControlDestination;
 import org.academy.api.common.entitycontrol.ControlDirective;
 import org.academy.api.common.entitycontrol.ControlFailureReason;
@@ -16,6 +23,7 @@ import org.academy.api.common.entitycontrol.ControlHandle;
 import org.academy.api.common.entitycontrol.ControlRequest;
 import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentaloutConfig;
@@ -38,6 +46,7 @@ import java.util.UUID;
 public final class PrecisionOperationRuntime {
     public static final int PRIORITY = 200;
     private static final Map<UUID, ActiveContext[]> ACTIVE = new HashMap<>();
+    private static long nextContextSequence;
 
     private PrecisionOperationRuntime() {
     }
@@ -57,25 +66,15 @@ public final class PrecisionOperationRuntime {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
         }
         var level = Math.clamp(skill.getLevel(player), 0, 2);
-        var targetLimit = switch (level) {
-            case 0 -> 4;
-            case 1 -> 6;
-            default -> 8;
-        };
+        var targetLimit = actionSubjectLimit(level);
         var evaluated = evaluate(player, program, targetLimit, player.level().getGameTime());
         if (!evaluated.valid()) {
             return ExecutionResult.failed(
                     evaluated.diagnostic, evaluated.nodeId, evaluated.port, evaluated.affectedCount);
         }
 
-        var existingCost = activeCost(slots);
         var removedSubjects = removedSubjects(evaluated.actions);
-        var previousCost = previous == null ? 0.0f : previous.cost();
-        var projectedCost = Math.max(
-                0.0f,
-                existingCost - previousCost - subjectCostExceptSlot(slots, slot, removedSubjects)
-        )
-                + evaluated.cost;
+        var projectedCost = projectedCost(player, slots, slot, evaluated, removedSubjects);
         var system = AbilitySystemServer.getSystem(player);
         if (!system.canCastWithPermanentOccupations(
                 player,
@@ -88,6 +87,7 @@ public final class PrecisionOperationRuntime {
 
         var activeActions = new ArrayList<ActiveAction>();
         var applyingNodeId = -1;
+        PrecisionGraph.NodeKind applyingKind = null;
         try {
             // A repeated cast refreshes this slot. Every action has its own completion condition,
             // so clicking the skill is never interpreted as a manual off switch.
@@ -95,6 +95,7 @@ public final class PrecisionOperationRuntime {
             if (previous != null) previous.close(player);
             for (var action : evaluated.actions) {
                 applyingNodeId = action.nodeId;
+                applyingKind = action.kind;
                 var subjectHandles = new HashMap<UUID, List<AutoCloseable>>();
                 var subjectCosts = new HashMap<UUID, Float>();
                 var fixedCost = 0.0f;
@@ -128,6 +129,9 @@ public final class PrecisionOperationRuntime {
                         );
                     }
                     case END_INTRUSION, REMOVE_CONTROL -> {
+                    }
+                    case HEALTH_RATIO_BRANCH, DISTANCE_BRANCH, ENTITY_TYPE_BRANCH,
+                         STATUS_EFFECT_BRANCH -> {
                     }
                     case PATH_TO -> applyDirective(
                             player, action.entities, new ControlDirective.MoveTo(action.destination),
@@ -163,13 +167,12 @@ public final class PrecisionOperationRuntime {
                 }
             }
             releaseSubjects(player, removedSubjects);
-            existingCost = activeCost(slots);
-            var appliedCost = existingCost;
-            for (var action : activeActions) appliedCost += action.cost();
+            slots[slot] = activeActions.isEmpty()
+                    ? null : new ActiveContext(++nextContextSequence, activeActions);
+            var appliedCost = activeCost(player, slots);
             if (!system.replacePermanentOccupation(player.getUUID(), appliedCost, skill)) {
                 throw new IllegalStateException("CP occupation rejected");
             }
-            slots[slot] = activeActions.isEmpty() ? null : new ActiveContext(activeActions);
             if (evaluated.endIntrusion) MentalIntrusionManager.stopAny(player);
             if (java.util.Arrays.stream(slots).allMatch(java.util.Objects::isNull)) {
                 ACTIVE.remove(player.getUUID());
@@ -177,12 +180,34 @@ public final class PrecisionOperationRuntime {
             return activeActions.isEmpty() ? ExecutionResult.completed() : ExecutionResult.started();
         } catch (RuntimeException exception) {
             activeActions.forEach(action -> action.close(player));
-            system.replacePermanentOccupation(player.getUUID(), activeCost(slots), skill);
-            var diagnostic = exception instanceof ProtectedTargetException
-                    ? PrecisionGraph.Diagnostic.PROTECTED_TARGET
-                    : PrecisionGraph.Diagnostic.ACTION_FAILED;
+            system.replacePermanentOccupation(player.getUUID(), activeCost(player, slots), skill);
+            var diagnostic = actionDiagnostic(exception);
+            if (diagnostic == PrecisionGraph.Diagnostic.ACTION_FAILED) {
+                AcademyCraft.LOGGER.error(
+                        "Precision Operation action node {} ({}) failed and was rolled back",
+                        applyingNodeId,
+                        applyingKind,
+                        exception
+                );
+            } else {
+                AcademyCraft.LOGGER.debug(
+                        "Precision Operation action node {} ({}) was rejected as {}",
+                        applyingNodeId,
+                        applyingKind,
+                        diagnostic,
+                        exception
+                );
+            }
             return ExecutionResult.failed(diagnostic, applyingNodeId, -1, 0);
         }
+    }
+
+    static int actionSubjectLimit(int level) {
+        return switch (Math.clamp(level, 0, 2)) {
+            case 0 -> 16;
+            case 1 -> 32;
+            default -> 64;
+        };
     }
 
     public static void tick(MinecraftServer server) {
@@ -212,7 +237,7 @@ public final class PrecisionOperationRuntime {
                 }
             }
             if (changed) {
-                var remaining = activeCost(entry.getValue());
+                var remaining = activeCost(player, entry.getValue());
                 var system = AbilitySystemServer.getSystem(player);
                 if (remaining <= 0.0f) {
                     system.releaseMaintenanceOccupation(
@@ -248,7 +273,7 @@ public final class PrecisionOperationRuntime {
                 if (context.empty()) entry.getValue()[slot] = null;
             }
             if (changed) {
-                var remaining = activeCost(entry.getValue());
+                var remaining = activeCost(player, entry.getValue());
                 var system = AbilitySystemServer.getSystem(player);
                 if (remaining <= 0.0f) {
                     system.releaseMaintenanceOccupation(
@@ -279,14 +304,21 @@ public final class PrecisionOperationRuntime {
     ) {
         var values = new HashMap<Integer, Object>();
         var actions = new ArrayList<PendingAction>();
-        var uniqueTargets = new HashSet<UUID>();
+        var uniqueSubjects = new HashSet<UUID>();
+        var roster = livingSet(MentaloutControlContext.subjects(player));
+        var rosterIds = roster.stream().map(LivingEntity::getUUID).collect(java.util.stream.Collectors.toSet());
+        var reachableActions = new HashSet<Integer>();
+        if (!program.actionOrder().isEmpty()) {
+            reachableActions.add(program.actionOrder().getFirst().id());
+        }
         var cost = 0.0f;
         var endIntrusion = false;
         for (var node : program.order()) {
+            if (node.kind().isAction() && !reachableActions.contains(node.id())) continue;
             try {
                 switch (node.kind()) {
                     case CASTER -> values.put(node.id(), player);
-                    case ROSTER -> values.put(node.id(), livingSet(MentaloutControlContext.subjects(player)));
+                    case ROSTER -> values.put(node.id(), roster);
                     case INTRUSION_TARGET -> values.put(node.id(), MentalIntrusionManager.target(player));
                     case LOOK_TARGET -> {
                         var target = MentaloutTargeting.findPrecisionLookedAtLiving(player);
@@ -296,7 +328,7 @@ public final class PrecisionOperationRuntime {
                         values.put(node.id(), target);
                     }
                     case SIGHT_POSITION -> {
-                        var observer = requireEntity(input(program, values, node, 0));
+                        var observer = requireLivingEntity(input(program, values, node, 0));
                         var destination = MentaloutTargeting.findSightDestination(
                                 observer, MentaloutTargeting.MAX_SIGHT_RANGE);
                         if (destination == null) {
@@ -304,7 +336,34 @@ public final class PrecisionOperationRuntime {
                         }
                         values.put(node.id(), destination);
                     }
-                    case NEARBY_ENTITIES -> values.put(node.id(), nearby(player, node.parameter()));
+                    case ENTITY_POSITION -> {
+                        var target = requireEntity(input(program, values, node, 0));
+                        var position = resolvedPosition(target, player);
+                        values.put(node.id(), new ControlDestination.Position(
+                                position.dimension(), position.value()));
+                    }
+                    case DIRECTION_BETWEEN -> {
+                        var origin = resolvedPosition(input(program, values, node, 0), player);
+                        var target = resolvedPosition(input(program, values, node, 1), player);
+                        requireSameDimension(origin, target);
+                        var delta = target.value().subtract(origin.value());
+                        if (delta.lengthSqr() <= 1.0e-8) {
+                            throw new EvaluationFailure(PrecisionGraph.Diagnostic.INVALID_DIRECTION);
+                        }
+                        values.put(node.id(), delta.normalize());
+                    }
+                    case POSITION_OFFSET -> {
+                        var origin = resolvedPosition(input(program, values, node, 0), player);
+                        var direction = requireDirection(input(program, values, node, 1));
+                        values.put(node.id(), new ControlDestination.Position(
+                                origin.dimension(), origin.value().add(direction.scale(node.parameter()))));
+                    }
+                    case NEARBY_ENTITIES -> values.put(node.id(), nearbyLiving(player, node.parameter()));
+                    case NEARBY_ALL_ENTITIES -> values.put(node.id(), nearbyEntities(player, node.parameter()));
+                    case NEARBY_ITEMS -> values.put(node.id(), nearbyEntities(player, node.parameter()).stream()
+                            .filter(ItemEntity.class::isInstance).toList());
+                    case NEARBY_PROJECTILES -> values.put(node.id(), nearbyEntities(player, node.parameter()).stream()
+                            .filter(Projectile.class::isInstance).toList());
                     case PLAYER_TARGET -> {
                         var target = player.getLastHurtMob();
                         values.put(node.id(), target != null && target.isAlive() && !target.isRemoved()
@@ -312,17 +371,18 @@ public final class PrecisionOperationRuntime {
                     }
                     case CURRENT_TARGET -> {
                         var subject = entity(input(program, values, node, 0));
-                        values.put(node.id(), subject == null ? null : effectiveTarget(subject));
+                        values.put(node.id(), subject instanceof LivingEntity living
+                                ? effectiveTarget(living) : null);
                     }
                     case LAST_ATTACKER -> {
                         var subject = entity(input(program, values, node, 0));
-                        var attacker = subject == null ? null : subject.getLastHurtByMob();
+                        var attacker = subject instanceof LivingEntity living ? living.getLastHurtByMob() : null;
                         values.put(node.id(), attacker != null && attacker.isAlive() && !attacker.isRemoved()
                                 && attacker.level() == player.level() ? attacker : null);
                     }
                     case ENTITY_TO_SET -> {
                         var selected = entity(input(program, values, node, 0));
-                        values.put(node.id(), selected == null ? List.of() : livingSet(List.of(selected)));
+                        values.put(node.id(), selected == null ? List.of() : entitySet(List.of(selected)));
                     }
                     case UNION -> values.put(node.id(), union(
                             entitySet(input(program, values, node, 0)),
@@ -339,7 +399,7 @@ public final class PrecisionOperationRuntime {
                                 .filter(entity -> !right.contains(entity)).toList());
                     }
                     case ALIVE -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                            .filter(LivingEntity::isAlive).filter(entity -> !entity.isRemoved()).toList());
+                            .filter(Entity::isAlive).filter(entity -> !entity.isRemoved()).toList());
                     case DISTANCE -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
                             .filter(entity -> entity.level() == player.level())
                             .filter(entity -> entity.distanceToSqr(player) <= node.parameter() * node.parameter())
@@ -351,7 +411,9 @@ public final class PrecisionOperationRuntime {
                     case ABILITY_SUPPORTED -> {
                         var capability = ControlCapability.values()[(int) node.parameter()];
                         values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                                .filter(entity -> MentalControlRuntime.evaluate(entity, capability).supported())
+                                .filter(LivingEntity.class::isInstance)
+                                .filter(entity -> MentalControlRuntime.evaluate(
+                                        (LivingEntity) entity, capability).supported())
                                 .toList());
                     }
                     case EXCLUDE -> {
@@ -364,30 +426,35 @@ public final class PrecisionOperationRuntime {
                     case FARTHEST -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
                             .min(farthestComparator(player)).orElse(null));
                     case LOWEST_HEALTH -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
+                            .filter(LivingEntity.class::isInstance)
                             .min(healthComparator(player)).orElse(null));
                     case HIGHEST_HEALTH -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
+                            .filter(LivingEntity.class::isInstance)
                             .min(highestHealthComparator(player)).orElse(null));
                     case LIMIT -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
                             .limit((int) node.parameter()).toList());
                     case TARGETED_BY -> {
-                        var target = requireEntity(input(program, values, node, 1));
+                        var target = requireLivingEntity(input(program, values, node, 1));
                         values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
                                 .filter(entity -> {
-                                    var current = effectiveTarget(entity);
+                                    var current = entity instanceof LivingEntity living
+                                            ? effectiveTarget(living) : null;
                                     return current != null && current.getUUID().equals(target.getUUID());
                                 })
                                 .toList());
                     }
                     case HOSTILE_TO -> {
-                        var target = requireEntity(input(program, values, node, 1));
+                        var target = requireLivingEntity(input(program, values, node, 1));
                         values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                                .filter(entity -> isHostileTo(entity, target))
+                                .filter(entity -> entity instanceof LivingEntity living
+                                        && isHostileTo(living, target))
                                 .toList());
                     }
                     case LAST_DAMAGED_BY -> {
-                        var target = requireEntity(input(program, values, node, 1));
+                        var target = requireLivingEntity(input(program, values, node, 1));
                         values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                                .filter(entity -> entity.getLastHurtByMob() == target)
+                                .filter(entity -> entity instanceof LivingEntity living
+                                        && living.getLastHurtByMob() == target)
                                 .toList());
                     }
                     case SORT_BY_DISTANCE -> {
@@ -407,97 +474,112 @@ public final class PrecisionOperationRuntime {
                             .filter(entity -> typeMatches((int) node.parameter(), entity))
                             .toList());
                     case HEALTH_FILTER -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                            .filter(entity -> entity.getMaxHealth() > 0.0f
-                                    && entity.getHealth() / entity.getMaxHealth() * 100.0 >= node.parameter())
+                            .filter(entity -> entity instanceof LivingEntity living
+                                    && living.getMaxHealth() > 0.0f
+                                    && living.getHealth() / living.getMaxHealth() * 100.0 >= node.parameter())
                             .toList());
                     case HEALTH_BELOW -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                            .filter(entity -> entity.getMaxHealth() > 0.0f
-                                    && entity.getHealth() / entity.getMaxHealth() * 100.0 <= node.parameter())
+                            .filter(entity -> entity instanceof LivingEntity living
+                                    && living.getMaxHealth() > 0.0f
+                                    && living.getHealth() / living.getMaxHealth() * 100.0 <= node.parameter())
                             .toList());
                     case HAS_TARGET -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                            .filter(entity -> effectiveTarget(entity) != null)
+                            .filter(entity -> entity instanceof LivingEntity living
+                                    && effectiveTarget(living) != null)
                             .toList());
                     case AFFECTED -> values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
-                            .filter(MentalControlApi::hasActiveControl)
+                            .filter(LivingEntity.class::isInstance)
+                            .filter(entity -> rosterIds.contains(entity.getUUID())
+                                    || MentalControlApi.hasActiveControl((LivingEntity) entity))
                             .toList());
                     case VISIBLE_FROM -> {
-                        var observer = requireEntity(input(program, values, node, 1));
+                        var observer = requireLivingEntity(input(program, values, node, 1));
                         values.put(node.id(), entitySet(input(program, values, node, 0)).stream()
                                 .filter(entity -> entity.level() == observer.level())
                                 .filter(observer::hasLineOfSight)
                                 .toList());
                     }
+                    case HEALTH_RATIO_BRANCH -> {
+                        var subject = requireLivingEntity(input(program, values, node, 0));
+                        values.put(node.id(), subject.getMaxHealth() > 0.0f
+                                && subject.getHealth() / subject.getMaxHealth() * 100.0 <= node.parameter());
+                    }
+                    case DISTANCE_BRANCH -> {
+                        var subject = requireEntity(input(program, values, node, 0));
+                        values.put(node.id(), subject.level() == player.level()
+                                && subject.distanceToSqr(player) <= node.parameter() * node.parameter());
+                    }
+                    case ENTITY_TYPE_BRANCH -> {
+                        var subject = requireEntity(input(program, values, node, 0));
+                        values.put(node.id(), typeMatches((int) node.parameter(), subject));
+                    }
+                    case STATUS_EFFECT_BRANCH -> {
+                        var subject = requireLivingEntity(input(program, values, node, 0));
+                        values.put(node.id(), !subject.getActiveEffects().isEmpty());
+                    }
                     case TARGET_MISIDENTIFICATION -> {
-                        var subjects = supportedSet(
+                        var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.FORCE_TARGET, player);
+                        var target = requireLivingEntity(input(program, values, node, 1));
+                        subjects = subjects.stream().filter(subject -> subject != target).toList();
                         if (subjects.isEmpty()) {
-                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                            return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
                         }
-                        var target = requireEntity(input(program, values, node, 1));
                         requireSkill(Skills.TARGET_MISIDENTIFICATION.get(), player);
                         cost += MentaloutConfig.targetMisidentificationCost(player) * subjects.size();
-                        addTargets(uniqueTargets, subjects, target);
+                        addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withBoth(
                                 node.id(), node.kind(), subjects, target, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case MENTAL_STUPOR -> {
-                        var subjects = supportedSet(
+                        var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.FREEZE_AI, player);
-                        if (subjects.isEmpty()) {
-                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
-                        }
                         requireSkill(Skills.MENTAL_STUPOR.get(), player);
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.mentalStuporCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, (LivingEntity) null);
+                        addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withSet(
                                 node.id(), node.kind(), subjects, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case IMPRESSION_MANIPULATION -> {
-                        var subjects = supportedSet(
+                        var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.RELATION_CONTROL, player);
-                        if (subjects.isEmpty()) {
-                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
-                        }
                         requireSkill(Skills.IMPRESSION_MANIPULATION.get(), player);
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.impressionManipulationCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, (LivingEntity) null);
+                        addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withSet(
                                 node.id(), node.kind(), subjects, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case PERCEPTION_MASK -> {
                         var observers = requireSet(input(program, values, node, 0));
-                        var hidden = requireEntity(input(program, values, node, 1));
+                        var hidden = requireLivingEntity(input(program, values, node, 1));
                         ensureUnprotected(player, observers);
                         requireSkill(Skills.SENSORY_DISTORTION.get(), player);
                         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.sensoryDistortionCost(player, sensoryLevel) * observers.size();
-                        addTargets(uniqueTargets, observers, hidden);
+                        addSubjects(uniqueSubjects, observers);
                         actions.add(PendingAction.withBoth(
                                 node.id(), node.kind(), observers, hidden, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case START_INTRUSION -> {
-                        var target = requireEntity(input(program, values, node, 0));
+                        var target = requireLivingEntity(input(program, values, node, 0));
                         ensureUnprotected(player, List.of(target));
                         requireSkill(Skills.MENTAL_INTRUSION.get(), player);
                         var intrusionLevel = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
                         cost += MentaloutConfig.mentalIntrusionCost(player, intrusionLevel);
-                        addTargets(uniqueTargets, List.of(), target);
+                        addSubjects(uniqueSubjects, List.of(target));
                         actions.add(PendingAction.withEntity(
                                 node.id(), node.kind(), target, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case PATH_TO -> {
-                        var subjects = supportedSet(
+                        var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.PATH_CONTROL, player);
-                        if (subjects.isEmpty()) {
-                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
-                        }
                         var destination = requireDestination(input(program, values, node, 1));
                         subjects = excludeDestinationTarget(subjects, destination);
                         if (subjects.isEmpty()) {
@@ -505,35 +587,29 @@ public final class PrecisionOperationRuntime {
                         }
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.precisionPathCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, destination);
+                        addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withDestination(
                                 node.id(), node.kind(), subjects, destination, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case VIEW_CONTROL -> {
-                        var subjects = supportedSet(
+                        var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.VIEW_CONTROL, player);
-                        if (subjects.isEmpty()) {
-                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
-                        }
-                        var target = requireEntity(input(program, values, node, 1));
+                        var target = requireLivingEntity(input(program, values, node, 1));
                         subjects = subjects.stream().filter(subject -> subject != target).toList();
                         if (subjects.isEmpty()) {
                             return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
                         }
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.precisionViewCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, target);
+                        addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withBoth(
                                 node.id(), node.kind(), subjects, target, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case GUARD_MODE -> {
-                        var subjects = supportedSet(
+                        var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.GUARD_CONTROL, player);
-                        if (subjects.isEmpty()) {
-                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
-                        }
                         var destination = requireDestination(input(program, values, node, 1));
                         subjects = excludeDestinationTarget(subjects, destination);
                         if (subjects.isEmpty()) {
@@ -541,7 +617,7 @@ public final class PrecisionOperationRuntime {
                         }
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
                                 player, entity, MentaloutConfig.precisionGuardCost(player))).sum();
-                        addTargets(uniqueTargets, subjects, destination);
+                        addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withDestination(
                                 node.id(), node.kind(), subjects, destination, actionExpiresAt(now, node.parameter())));
                         values.put(node.id(), Boolean.TRUE);
@@ -549,8 +625,9 @@ public final class PrecisionOperationRuntime {
                     case REMOVE_CONTROL -> {
                         var subjects = usableSet(input(program, values, node, 0), player);
                         if (subjects.isEmpty()) {
-                            return Evaluation.error(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET, node.id());
+                            return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
                         }
+                        addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withSet(node.id(), node.kind(), subjects, now + 1L));
                         values.put(node.id(), Boolean.TRUE);
                     }
@@ -560,12 +637,26 @@ public final class PrecisionOperationRuntime {
                         values.put(node.id(), Boolean.TRUE);
                     }
                 }
+                if (node.kind().isAction()) {
+                    var outputPort = node.kind().isConditionalBranch()
+                            && Boolean.FALSE.equals(values.get(node.id())) ? 1 : 0;
+                    var next = program.flowTarget(node.id(), outputPort);
+                    if (next != null) reachableActions.add(next);
+                }
             } catch (ProtectedTargetException exception) {
                 return Evaluation.error(PrecisionGraph.Diagnostic.PROTECTED_TARGET, node.id());
+            } catch (EvaluationFailure exception) {
+                return Evaluation.error(exception.diagnostic, node.id());
             } catch (RuntimeException exception) {
+                AcademyCraft.LOGGER.error(
+                        "Precision Operation failed while evaluating node {} ({})",
+                        node.id(),
+                        node.kind(),
+                        exception
+                );
                 return Evaluation.error(PrecisionGraph.Diagnostic.ACTION_FAILED, node.id());
             }
-            if (uniqueTargets.size() > targetLimit) {
+            if (uniqueSubjects.size() > targetLimit) {
                 return Evaluation.error(PrecisionGraph.Diagnostic.TARGET_LIMIT, node.id());
             }
         }
@@ -575,7 +666,7 @@ public final class PrecisionOperationRuntime {
                 actions,
                 cost,
                 endIntrusion,
-                Set.copyOf(uniqueTargets),
+                Set.copyOf(uniqueSubjects),
                 PrecisionGraph.Diagnostic.OK,
                 -1,
                 -1,
@@ -594,11 +685,19 @@ public final class PrecisionOperationRuntime {
         return values.get(edge.fromNode());
     }
 
-    private static List<LivingEntity> nearby(ServerPlayer player, double range) {
-        return livingSet(player.level().getEntitiesOfClass(
+    private static List<Entity> nearbyLiving(ServerPlayer player, double range) {
+        return entitySet(player.level().getEntitiesOfClass(
                 LivingEntity.class,
                 new AABB(player.position(), player.position()).inflate(range),
                 entity -> entity != player && entity.isAlive() && !entity.isRemoved()
+        ));
+    }
+
+    private static List<Entity> nearbyEntities(ServerPlayer player, double range) {
+        return entitySet(player.level().getEntities(
+                player,
+                new AABB(player.position(), player.position()).inflate(range),
+                entity -> entity.isAlive() && !entity.isRemoved()
         ));
     }
 
@@ -606,36 +705,40 @@ public final class PrecisionOperationRuntime {
         return List.copyOf(new LinkedHashSet<>(entities));
     }
 
-    private static List<LivingEntity> union(
-            List<? extends LivingEntity> left,
-            List<? extends LivingEntity> right
+    private static List<Entity> entitySet(List<? extends Entity> entities) {
+        return List.copyOf(new LinkedHashSet<>(entities));
+    }
+
+    private static List<Entity> union(
+            List<? extends Entity> left,
+            List<? extends Entity> right
     ) {
-        var result = new LinkedHashSet<LivingEntity>();
+        var result = new LinkedHashSet<Entity>();
         result.addAll(left);
         result.addAll(right);
         return List.copyOf(result);
     }
 
-    private static Comparator<LivingEntity> distanceComparator(ServerPlayer player) {
-        return Comparator.comparingDouble((LivingEntity entity) -> entity.distanceToSqr(player))
-                .thenComparing(LivingEntity::getUUID);
+    private static Comparator<Entity> distanceComparator(ServerPlayer player) {
+        return Comparator.comparingDouble((Entity entity) -> entity.distanceToSqr(player))
+                .thenComparing(Entity::getUUID);
     }
 
-    private static Comparator<LivingEntity> farthestComparator(ServerPlayer player) {
-        return Comparator.comparingDouble((LivingEntity entity) -> -entity.distanceToSqr(player))
-                .thenComparing(LivingEntity::getUUID);
+    private static Comparator<Entity> farthestComparator(ServerPlayer player) {
+        return Comparator.comparingDouble((Entity entity) -> -entity.distanceToSqr(player))
+                .thenComparing(Entity::getUUID);
     }
 
-    private static Comparator<LivingEntity> healthComparator(ServerPlayer player) {
-        return Comparator.comparingDouble(PrecisionOperationRuntime::healthRatio)
+    private static Comparator<Entity> healthComparator(ServerPlayer player) {
+        return Comparator.comparingDouble((Entity entity) -> healthRatio((LivingEntity) entity))
                 .thenComparingDouble(entity -> entity.distanceToSqr(player))
-                .thenComparing(LivingEntity::getUUID);
+                .thenComparing(Entity::getUUID);
     }
 
-    private static Comparator<LivingEntity> highestHealthComparator(ServerPlayer player) {
-        return Comparator.comparingDouble((LivingEntity entity) -> -healthRatio(entity))
+    private static Comparator<Entity> highestHealthComparator(ServerPlayer player) {
+        return Comparator.comparingDouble((Entity entity) -> -healthRatio((LivingEntity) entity))
                 .thenComparingDouble(entity -> entity.distanceToSqr(player))
-                .thenComparing(LivingEntity::getUUID);
+                .thenComparing(Entity::getUUID);
     }
 
     private static double healthRatio(LivingEntity entity) {
@@ -643,14 +746,14 @@ public final class PrecisionOperationRuntime {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<LivingEntity> entitySet(Object value) {
-        return value instanceof List<?> list && list.stream().allMatch(LivingEntity.class::isInstance)
-                ? (List<LivingEntity>) list
+    private static List<Entity> entitySet(Object value) {
+        return value instanceof List<?> list && list.stream().allMatch(Entity.class::isInstance)
+                ? (List<Entity>) list
                 : List.of();
     }
 
-    private static LivingEntity entity(Object value) {
-        return value instanceof LivingEntity living ? living : null;
+    private static Entity entity(Object value) {
+        return value instanceof Entity entity ? entity : null;
     }
 
     private static ControlDestination requireDestination(Object value) {
@@ -658,8 +761,48 @@ public final class PrecisionOperationRuntime {
             requireUsable(living);
             return new ControlDestination.Entity(living.getUUID());
         }
+        if (value instanceof Entity entity) {
+            requireUsable(entity);
+            return new ControlDestination.Position(
+                    entity.level().dimension().identifier(), entity.position());
+        }
         if (value instanceof ControlDestination destination) return destination;
-        throw new IllegalStateException("Unavailable destination");
+        throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_EFFECTIVE_TARGET);
+    }
+
+    private static ResolvedPosition resolvedPosition(Object value, ServerPlayer player) {
+        if (value instanceof Entity entity) {
+            requireUsable(entity);
+            return new ResolvedPosition(entity.level().dimension().identifier(), entity.position());
+        }
+        if (value instanceof ControlDestination.Position position) {
+            return new ResolvedPosition(position.dimension(), position.value());
+        }
+        if (value instanceof ControlDestination.Entity entity) {
+            Entity target = null;
+            for (var level : player.level().getServer().getAllLevels()) {
+                target = level.getEntity(entity.uuid());
+                if (target != null) break;
+            }
+            if (target == null) throw new EvaluationFailure(PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE);
+            return new ResolvedPosition(target.level().dimension().identifier(), target.position());
+        }
+        throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_EFFECTIVE_TARGET);
+    }
+
+    private static void requireSameDimension(ResolvedPosition origin, ResolvedPosition target) {
+        if (!origin.dimension().equals(target.dimension())) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE);
+        }
+    }
+
+    private static Vec3 requireDirection(Object value) {
+        if (!(value instanceof Vec3 direction) || direction.lengthSqr() <= 1.0e-8
+                || !Double.isFinite(direction.x) || !Double.isFinite(direction.y)
+                || !Double.isFinite(direction.z)) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.INVALID_DIRECTION);
+        }
+        return direction.normalize();
     }
 
     static long actionExpiresAt(long now, double seconds) {
@@ -667,30 +810,51 @@ public final class PrecisionOperationRuntime {
     }
 
     private static List<LivingEntity> requireSet(Object value) {
-        var entities = entitySet(value);
-        if (entities.isEmpty()) throw new IllegalStateException("Empty entity set");
+        var entities = entitySet(value).stream()
+                .filter(LivingEntity.class::isInstance)
+                .map(LivingEntity.class::cast)
+                .toList();
+        if (entities.isEmpty()) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS);
+        }
         for (var entity : entities) requireUsable(entity);
         return entities;
     }
 
-    private static LivingEntity requireEntity(Object value) {
+    private static Entity requireEntity(Object value) {
         var entity = entity(value);
+        if (entity == null) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_EFFECTIVE_TARGET);
+        }
         requireUsable(entity);
         return entity;
     }
 
-    private static void requireUsable(LivingEntity entity) {
+    private static LivingEntity requireLivingEntity(Object value) {
+        var entity = entity(value);
+        if (!(entity instanceof LivingEntity living)) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_EFFECTIVE_TARGET);
+        }
+        requireUsable(living);
+        return living;
+    }
+
+    private static void requireUsable(Entity entity) {
         if (entity == null || !entity.isAlive() || entity.isRemoved()) {
-            throw new IllegalStateException("Unavailable entity");
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE);
         }
     }
 
     private static void requireSkill(org.academy.api.common.ability.Skill skill, ServerPlayer player) {
-        if (!skill.isEnabled(player)) throw new IllegalStateException("Required skill unavailable");
+        if (!skill.isEnabled(player)) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
+        }
     }
 
-    private static boolean isAlly(ServerPlayer player, LivingEntity entity) {
-        return entity == player || player.isAlliedTo(entity) || FriendlyFireSetting.shouldPrevent(player, entity);
+    private static boolean isAlly(ServerPlayer player, Entity entity) {
+        return entity == player || player.isAlliedTo(entity)
+                || entity instanceof LivingEntity living
+                && FriendlyFireSetting.shouldPrevent(player, living);
     }
 
     private static double controlledCost(ServerPlayer player, LivingEntity entity, float base) {
@@ -699,38 +863,40 @@ public final class PrecisionOperationRuntime {
                 : 1.0f);
     }
 
-    private static void addTargets(Set<UUID> targetIds, List<LivingEntity> entities, LivingEntity entity) {
-        entities.forEach(target -> targetIds.add(target.getUUID()));
-        if (entity != null) targetIds.add(entity.getUUID());
-    }
-
-    private static void addTargets(
-            Set<UUID> targetIds,
-            List<LivingEntity> entities,
-            ControlDestination destination
-    ) {
-        entities.forEach(target -> targetIds.add(target.getUUID()));
-        if (destination instanceof ControlDestination.Entity entity) targetIds.add(entity.uuid());
+    private static void addSubjects(Set<UUID> subjectIds, List<LivingEntity> entities) {
+        entities.forEach(subject -> subjectIds.add(subject.getUUID()));
     }
 
     private static List<LivingEntity> usableSet(Object value, ServerPlayer player) {
         return entitySet(value).stream()
+                .filter(LivingEntity.class::isInstance)
+                .map(LivingEntity.class::cast)
                 .filter(LivingEntity::isAlive)
                 .filter(entity -> !entity.isRemoved())
                 .filter(entity -> entity.level() == player.level())
                 .toList();
     }
 
-    private static List<LivingEntity> supportedSet(
+    private static List<LivingEntity> requireSupportedSet(
             Object value,
             ControlCapability capability,
             ServerPlayer player
     ) {
         var entities = usableSet(value, player);
-        ensureUnprotected(player, entities);
-        return entities.stream()
-                .filter(entity -> MentalControlRuntime.evaluate(entity, capability).supported())
+        if (entities.isEmpty()) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS);
+        }
+        ensureUnprotected(player, entities, capability);
+        var supported = entities.stream()
+                .filter(entity -> entity == player
+                        && (capability == ControlCapability.PATH_CONTROL
+                        || capability == ControlCapability.VIEW_CONTROL)
+                        || MentalControlRuntime.evaluate(entity, capability).supported())
                 .toList();
+        if (supported.isEmpty()) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET);
+        }
+        return supported;
     }
 
     private static void ensureUnprotected(ServerPlayer player, List<LivingEntity> entities) {
@@ -741,6 +907,19 @@ public final class PrecisionOperationRuntime {
         if (protectedTarget == null) return;
         MentalControlRuntime.notifyProtectionBlocked(player, protectedTarget);
         throw new ProtectedTargetException();
+    }
+
+    private static void ensureUnprotected(
+            ServerPlayer player,
+            List<LivingEntity> entities,
+            ControlCapability capability
+    ) {
+        if (capability != ControlCapability.PATH_CONTROL
+                && capability != ControlCapability.VIEW_CONTROL) {
+            ensureUnprotected(player, entities);
+            return;
+        }
+        ensureUnprotected(player, entities.stream().filter(entity -> entity != player).toList());
     }
 
     private static List<LivingEntity> excludeDestinationTarget(
@@ -767,12 +946,16 @@ public final class PrecisionOperationRuntime {
                 || entity.getLastHurtByMob() == target;
     }
 
-    private static boolean typeMatches(int type, LivingEntity entity) {
+    private static boolean typeMatches(int type, Entity entity) {
         return switch (type) {
             case 0 -> entity instanceof Monster;
             case 1 -> entity instanceof Animal;
             case 2 -> entity instanceof ServerPlayer;
-            case 3 -> MentalControlRuntime.isBossCost(entity);
+            case 3 -> entity instanceof LivingEntity living && MentalControlRuntime.isBossCost(living);
+            case 4 -> entity instanceof Projectile;
+            case 5 -> !(entity instanceof LivingEntity);
+            case 6 -> entity instanceof LivingEntity;
+            case 7 -> entity instanceof ItemEntity;
             default -> false;
         };
     }
@@ -796,7 +979,7 @@ public final class PrecisionOperationRuntime {
             }
         }
         if (slots == null) return;
-        var remaining = activeCost(slots);
+        var remaining = activeCost(player, slots);
         var system = AbilitySystemServer.getSystem(player);
         if (remaining <= 0.0f) {
             system.releaseMaintenanceOccupation(
@@ -836,7 +1019,7 @@ public final class PrecisionOperationRuntime {
     }
 
     private static float actionCost(ServerPlayer player, LivingEntity subject, PrecisionGraph.NodeKind kind) {
-        return switch (kind) {
+        var baseCost = switch (kind) {
             case TARGET_MISIDENTIFICATION -> MentaloutConfig.targetMisidentificationCost(player);
             case MENTAL_STUPOR -> (float) controlledCost(player, subject, MentaloutConfig.mentalStuporCost(player));
             case IMPRESSION_MANIPULATION -> (float) controlledCost(
@@ -844,8 +1027,12 @@ public final class PrecisionOperationRuntime {
             case PATH_TO -> (float) controlledCost(player, subject, MentaloutConfig.precisionPathCost(player));
             case VIEW_CONTROL -> (float) controlledCost(player, subject, MentaloutConfig.precisionViewCost(player));
             case GUARD_MODE -> (float) controlledCost(player, subject, MentaloutConfig.precisionGuardCost(player));
+            case PERCEPTION_MASK -> MentaloutConfig.sensoryDistortionCost(
+                    player, Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2));
             default -> 0.0f;
         };
+        return Skills.PRECISION_OPERATION.get().adjustProficiencyCost(
+                player, SkillProficiencyProfile.CostKind.DYNAMIC, baseCost);
     }
 
     private static void applyDirective(
@@ -858,7 +1045,10 @@ public final class PrecisionOperationRuntime {
             Map<UUID, Float> subjectCosts
     ) {
         for (var subject : subjects) {
-            if (MentalControlRuntime.isProtectedTarget(subject)) {
+            var selfMovementOrView = subject == player
+                    && (kind == PrecisionGraph.NodeKind.PATH_TO
+                    || kind == PrecisionGraph.NodeKind.VIEW_CONTROL);
+            if (!selfMovementOrView && MentalControlRuntime.isProtectedTarget(subject)) {
                 MentalControlRuntime.notifyProtectionBlocked(player, subject);
                 throw new ProtectedTargetException();
             }
@@ -884,7 +1074,6 @@ public final class PrecisionOperationRuntime {
             Map<UUID, Float> subjectCosts
     ) {
         for (var subject : subjects) {
-            if (subject == target) continue;
             applyDirective(
                     player,
                     List.of(subject),
@@ -897,6 +1086,38 @@ public final class PrecisionOperationRuntime {
         }
     }
 
+    private static PrecisionGraph.Diagnostic actionDiagnostic(RuntimeException exception) {
+        if (exception instanceof ProtectedTargetException) {
+            return PrecisionGraph.Diagnostic.PROTECTED_TARGET;
+        }
+        if (exception instanceof ControlApplyException applyException) {
+            return switch (applyException.reason()) {
+                case IMMUNE_TAG, PROTECTED_PLAYER -> PrecisionGraph.Diagnostic.PROTECTED_TARGET;
+                case NO_ADAPTER, UNSUPPORTED_CAPABILITY -> PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET;
+                case TEMPORARILY_UNAVAILABLE, AMBIGUOUS_ADAPTER, ADAPTER_ERROR ->
+                        PrecisionGraph.Diagnostic.ADAPTER_ERROR;
+                case INVALID_DIRECTIVE -> PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE;
+                case SUPPORTED -> PrecisionGraph.Diagnostic.ACTION_FAILED;
+            };
+        }
+        if (exception instanceof IllegalStateException
+                && "CP occupation rejected".equals(exception.getMessage())) {
+            return PrecisionGraph.Diagnostic.INSUFFICIENT_CP;
+        }
+        return PrecisionGraph.Diagnostic.ACTION_FAILED;
+    }
+
+    private static final class EvaluationFailure extends RuntimeException {
+        private final PrecisionGraph.Diagnostic diagnostic;
+
+        private EvaluationFailure(PrecisionGraph.Diagnostic diagnostic) {
+            this.diagnostic = diagnostic;
+        }
+    }
+
+    private record ResolvedPosition(Identifier dimension, Vec3 value) {
+    }
+
     private static void applyPerception(
             ServerPlayer player,
             List<LivingEntity> observers,
@@ -906,7 +1127,11 @@ public final class PrecisionOperationRuntime {
             Map<UUID, Float> subjectCosts
     ) {
         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
-        var cost = MentaloutConfig.sensoryDistortionCost(player, sensoryLevel);
+        var cost = Skills.PRECISION_OPERATION.get().adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.DYNAMIC,
+                MentaloutConfig.sensoryDistortionCost(player, sensoryLevel)
+        );
         for (var observer : observers) {
             if (MentalControlRuntime.isProtectedTarget(observer)) {
                 MentalControlRuntime.notifyProtectionBlocked(player, observer);
@@ -931,7 +1156,7 @@ public final class PrecisionOperationRuntime {
         if (context == null) return;
         slots[slot] = null;
         context.close(player);
-        if (activeCost(slots) <= 0.0f) {
+        if (activeCost(player, slots) <= 0.0f) {
             AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                     player.getUUID(),
                     Skills.PRECISION_OPERATION.get().getKeyString()
@@ -939,7 +1164,7 @@ public final class PrecisionOperationRuntime {
         } else {
             AbilitySystemServer.getSystem(player).replacePermanentOccupation(
                     player.getUUID(),
-                    activeCost(slots),
+                    activeCost(player, slots),
                     Skills.PRECISION_OPERATION.get()
             );
         }
@@ -968,10 +1193,78 @@ public final class PrecisionOperationRuntime {
         }
     }
 
-    private static float activeCost(ActiveContext[] slots) {
+    private static float activeCost(ServerPlayer player, ActiveContext[] slots) {
+        var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
+        var shared = new HashSet<SharedCostKey>();
         var result = 0.0f;
-        for (var context : slots) if (context != null) result += context.cost();
+        var ordered = java.util.Arrays.stream(slots)
+                .filter(java.util.Objects::nonNull)
+                .sorted(Comparator.comparingLong(context -> context.sequence))
+                .toList();
+        for (var context : ordered) {
+            for (var action : context.actions) {
+                result += action.fixedCost;
+                for (var entry : action.subjectCosts.entrySet()) {
+                    var key = new SharedCostKey(action.kind, entry.getKey());
+                    if (!share || !isShareable(action.kind) || shared.add(key)) {
+                        result += entry.getValue();
+                    }
+                }
+            }
+        }
         return result;
+    }
+
+    private static float projectedCost(
+            ServerPlayer player,
+            ActiveContext[] slots,
+            int replacedSlot,
+            Evaluation evaluated,
+            Set<UUID> removedSubjects
+    ) {
+        var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
+        var shared = new HashSet<SharedCostKey>();
+        var result = 0.0f;
+        var ordered = java.util.stream.IntStream.range(0, slots.length)
+                .filter(slot -> slot != replacedSlot && slots[slot] != null)
+                .mapToObj(slot -> slots[slot])
+                .sorted(Comparator.comparingLong(context -> context.sequence))
+                .toList();
+        for (var context : ordered) {
+            for (var action : context.actions) {
+                result += action.fixedCost;
+                for (var entry : action.subjectCosts.entrySet()) {
+                    if (removedSubjects.contains(entry.getKey())) continue;
+                    var key = new SharedCostKey(action.kind, entry.getKey());
+                    if (!share || !isShareable(action.kind) || shared.add(key)) {
+                        result += entry.getValue();
+                    }
+                }
+            }
+        }
+        for (var action : evaluated.actions) {
+            if (action.kind == PrecisionGraph.NodeKind.START_INTRUSION) {
+                result += MentaloutConfig.mentalIntrusionCost(
+                        player, Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2));
+            }
+            for (var subject : action.entities) {
+                var key = new SharedCostKey(action.kind, subject.getUUID());
+                if (!share || !isShareable(action.kind) || shared.add(key)) {
+                    result += actionCost(player, subject, action.kind);
+                }
+            }
+        }
+        return Math.max(0.0f, result);
+    }
+
+    private static boolean isShareable(PrecisionGraph.NodeKind kind) {
+        return kind == PrecisionGraph.NodeKind.PERCEPTION_MASK
+                || kind == PrecisionGraph.NodeKind.PATH_TO
+                || kind == PrecisionGraph.NodeKind.VIEW_CONTROL
+                || kind == PrecisionGraph.NodeKind.GUARD_MODE;
+    }
+
+    private record SharedCostKey(PrecisionGraph.NodeKind kind, UUID subject) {
     }
 
     private static void closeReverse(List<? extends AutoCloseable> handles) {
@@ -1115,9 +1408,11 @@ public final class PrecisionOperationRuntime {
     }
 
     private static final class ActiveContext {
+        private final long sequence;
         private final List<ActiveAction> actions;
 
-        private ActiveContext(List<ActiveAction> actions) {
+        private ActiveContext(long sequence, List<ActiveAction> actions) {
+            this.sequence = sequence;
             this.actions = new ArrayList<>(actions);
         }
 
@@ -1313,8 +1608,10 @@ public final class PrecisionOperationRuntime {
         return switch (reason) {
             case UNREACHABLE_DESTINATION -> PrecisionGraph.Diagnostic.UNREACHABLE_DESTINATION;
             case TARGET_UNAVAILABLE -> PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE;
-            case CONTROL_RESISTANCE, UNSUPPORTED_MOVEMENT_MODE,
-                    PLANNING_BUDGET_EXHAUSTED, CLIENT_TIMEOUT -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
+            case CONTROL_RESISTANCE -> PrecisionGraph.Diagnostic.CONTROL_RESISTANCE;
+            case UNSUPPORTED_MOVEMENT_MODE -> PrecisionGraph.Diagnostic.UNSUPPORTED_MOVEMENT_MODE;
+            case PLANNING_BUDGET_EXHAUSTED -> PrecisionGraph.Diagnostic.PLANNING_BUDGET_EXHAUSTED;
+            case CLIENT_TIMEOUT -> PrecisionGraph.Diagnostic.CLIENT_TIMEOUT;
             case ADAPTER_ERROR -> PrecisionGraph.Diagnostic.ADAPTER_ERROR;
         };
     }

@@ -9,12 +9,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -27,7 +26,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -52,7 +50,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Map;
 
 public class MagneticWeapon extends Skill {
@@ -137,33 +134,6 @@ public class MagneticWeapon extends Skill {
             return Math.max(0.0f, attackDamage) * 0.6f * Math.max(0.0f, playerMultiplier);
         }
 
-        static float calculateWeaponAttackDamage(ServerPlayer player, ItemStack stack) {
-            var playerAttack = player.getAttribute(Attributes.ATTACK_DAMAGE);
-            if (playerAttack == null) return 0.0f;
-
-            var heldModifierIds = new HashSet<net.minecraft.resources.Identifier>();
-            player.getMainHandItem().forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
-                if (attribute.equals(Attributes.ATTACK_DAMAGE)) {
-                    heldModifierIds.add(modifier.id());
-                }
-            });
-
-            var calculated = new AttributeInstance(Attributes.ATTACK_DAMAGE, _ -> {
-            });
-            calculated.setBaseValue(playerAttack.getBaseValue());
-            for (var modifier : playerAttack.getModifiers()) {
-                if (!heldModifierIds.contains(modifier.id())) {
-                    calculated.addOrUpdateTransientModifier(modifier);
-                }
-            }
-            stack.forEachModifier(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
-                if (attribute.equals(Attributes.ATTACK_DAMAGE)) {
-                    calculated.addOrUpdateTransientModifier(modifier);
-                }
-            });
-            return (float) Math.max(0.0, calculated.getValue());
-        }
-
         public static boolean isActive(ServerPlayer player) {
             return CONTEXT_MAP.containsKey(player) && Skills.MAGNETIC_WEAPON.get().isEnabled(player);
         }
@@ -238,7 +208,7 @@ public class MagneticWeapon extends Skill {
 
             var system = AbilitySystemServer.getSystem(player);
             if (!system.ensurePermanentOccupation(
-                    player.getUUID(), skill.getMaintenanceCost(skill.getLevel(player)), skill)) {
+                    player.getUUID(), skill.getMaintenanceCost(player), skill)) {
                 end(true);
                 return;
             }
@@ -258,15 +228,18 @@ public class MagneticWeapon extends Skill {
             }
 
             var stack = player.getInventory().getItem(weaponSlot);
-            if (!stack.isEmpty()) {
-                player.getCooldowns().addCooldown(stack, 3);
-            }
 
             if (pendingAttack == null && attackCooldown <= 0
                     && player.level() instanceof ServerLevel level) {
+                var milestone = skill.getEffectiveProficiencyMilestone(player);
+                var radius = milestone >= 2 ? 20.0f : RADIUS;
+                if (milestone >= 3 && player.tickCount % 20 == 0 && interceptProjectile(level, stack)) {
+                    syncData();
+                    return;
+                }
                 var target = level.getEntitiesOfClass(
                                 LivingEntity.class,
-                                player.getBoundingBox().inflate(RADIUS),
+                                player.getBoundingBox().inflate(radius),
                                 entity -> isEnemy(player, entity) && player.hasLineOfSight(entity)
                         ).stream()
                         .min(Comparator.comparingDouble(player::distanceToSqr))
@@ -292,8 +265,22 @@ public class MagneticWeapon extends Skill {
                     weaponSlot,
                     stack.copyWithCount(1)
             );
-            attackCooldown = ATTACK_COOLDOWN;
+            attackCooldown = Skills.MAGNETIC_WEAPON.get().hasProficiencyMilestone(player, 2) ? 8 : ATTACK_COOLDOWN;
             blade.startAttack(target.getId(), attackSequence);
+        }
+
+        private boolean interceptProjectile(ServerLevel level, ItemStack stack) {
+            var look = player.getLookAngle();
+            var projectile = level.getEntitiesOfClass(Projectile.class, player.getBoundingBox().inflate(20.0),
+                            shot -> shot.isAlive() && shot.getOwner() != player
+                                    && shot.position().subtract(player.position()).dot(look) > 0.0
+                                    && player.position().subtract(shot.position()).dot(shot.getDeltaMovement()) > 0.0)
+                    .stream().min(Comparator.comparingDouble(player::distanceToSqr)).orElse(null);
+            if (projectile == null) return false;
+            var source = projectile.getOwner();
+            projectile.discard();
+            if (source instanceof LivingEntity living && isEnemy(player, living)) startAttack(living, stack);
+            return true;
         }
 
         private void advanceAttack(ServerLevel level, AbilitySystemServer system) {
@@ -337,15 +324,17 @@ public class MagneticWeapon extends Skill {
                 return;
             }
 
-            var stack = player.getInventory().getItem(pending.weaponSlot);
-            var damage = Server.calculateDamage(
-                    Server.calculateWeaponAttackDamage(player, stack),
-                    system.getPlayerDamageMultiplier(player.getUUID())
-            );
-            if (target.hurtServer(level,
-                    SkillDamageSource.of(player, Skills.MAGNETIC_WEAPON.get()), damage)) {
-                stack.hurtEnemy(target, player);
-                stack.postHurtEnemy(target, player);
+            try (var playerState = MagneticWeaponPlayerState.open(player, pending.weaponSlot);
+                 var attackContext = MagneticWeaponAttackContext.open(
+                         player,
+                         target,
+                         system.getPlayerDamageMultiplier(player.getUUID())
+                 )) {
+                player.attack(target);
+                var weaponAfterAttack = player.getInventory().getItem(pending.weaponSlot);
+                if (!weaponAfterAttack.isEmpty()) {
+                    weaponAfterAttack.onEntitySwing(player, InteractionHand.MAIN_HAND);
+                }
             }
             playArcSound(level, target.getBoundingBox().getCenter(), 0.55f, 0.95f);
         }

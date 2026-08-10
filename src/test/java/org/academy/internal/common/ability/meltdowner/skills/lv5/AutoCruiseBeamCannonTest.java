@@ -15,7 +15,7 @@ class AutoCruiseBeamCannonTest {
                 1.0f,
                 false
         ));
-        assertEquals(16.5f, MeltdownerBeamDamage.calculate(
+        assertEquals(16.0f, MeltdownerBeamDamage.calculate(
                 AutoCruiseBeamCannon.BASE_DAMAGE,
                 AutoCruiseBeamCannon.MAX_HEALTH_DAMAGE_RATIO,
                 100.0f,

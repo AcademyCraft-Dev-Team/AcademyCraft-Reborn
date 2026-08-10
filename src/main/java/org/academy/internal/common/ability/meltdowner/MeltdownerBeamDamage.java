@@ -19,10 +19,24 @@ public final class MeltdownerBeamDamage {
                 || !Float.isFinite(playerMultiplier)) {
             return 0.0f;
         }
-        var damage = (Math.max(0.0f, baseDamage)
-                + Math.max(0.0f, targetMaxHealth) * Math.max(0.0f, maxHealthRatio))
-                * Math.max(0.0f, playerMultiplier);
-        return amplify(damage, marked);
+        return calculate(baseDamage, maxHealthRatio, targetMaxHealth, playerMultiplier,
+                marked, RadiationIntensify.MARK_DAMAGE_MULTIPLIER);
+    }
+
+    public static float calculate(
+            float baseDamage,
+            float maxHealthRatio,
+            float targetMaxHealth,
+            float playerMultiplier,
+            boolean marked,
+            float markedMultiplier
+    ) {
+        if (!Float.isFinite(baseDamage) || !Float.isFinite(maxHealthRatio)
+                || !Float.isFinite(targetMaxHealth) || !Float.isFinite(playerMultiplier)
+                || !Float.isFinite(markedMultiplier)) return 0.0f;
+        var ordinary = Math.max(0.0f, baseDamage) * (marked ? Math.max(1.0f, markedMultiplier) : 1.0f);
+        var maximumHealth = Math.max(0.0f, targetMaxHealth) * Math.max(0.0f, maxHealthRatio);
+        return (ordinary + maximumHealth) * Math.max(0.0f, playerMultiplier);
     }
 
     public static float amplify(float damage, boolean marked) {

@@ -40,6 +40,7 @@ import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -146,7 +147,9 @@ public final class CutThrough extends Skill {
 
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
-                distance = Math.clamp(distance + event.yOffset, 0.0, MAX_DISTANCE);
+                var maximum = AbilitySystemClient.getSkillProficiencyMilestone(Skills.CUT_THROUGH.get()) >= 2
+                        ? 42.0 : MAX_DISTANCE;
+                distance = Math.clamp(distance + event.yOffset, 0.0, maximum);
                 event.setCanceled(true);
             }
 
@@ -215,7 +218,9 @@ public final class CutThrough extends Skill {
         public static void handle(TeleportPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var distance = packet.getDistance();
-            if (!Double.isFinite(distance) || distance < 0.0 || distance > MAX_DISTANCE) return;
+            var skill = Skills.CUT_THROUGH.get();
+            var maximum = skill.hasProficiencyMilestone(player, 2) ? 42.0 : MAX_DISTANCE;
+            if (!Double.isFinite(distance) || distance < 0.0 || distance > maximum) return;
 
             var center = player.getEyePosition().add(player.getLookAngle().normalize().scale(distance));
             if (!player.level().hasChunkAt(BlockPos.containing(center))) return;
@@ -228,13 +233,23 @@ public final class CutThrough extends Skill {
             );
             if (!player.level().noCollision(player, targetBox)) return;
 
-            Skills.CUT_THROUGH.get().executeActive(player, (ctx, actualCost) -> {
+            skill.executeActive(player, (ctx, actualCost) -> {
+                var previousMovement = player.getDeltaMovement();
                 var direction = player.getLookAngle().normalize();
                 var destination = new Vec3(center.x, center.y - dimensions.height() / 2.0, center.z);
                 SpatialSynergy.Server.teleportNearbyTeam(player, player.level(), destination);
                 player.teleportTo(destination.x, destination.y, destination.z);
                 player.resetFallDistance();
-                player.setDeltaMovement(direction.scale(0.1));
+                if (ctx.milestone() >= 3) {
+                    player.setDeltaMovement(previousMovement.x * 0.5, 0.1, previousMovement.z * 0.5);
+                    var previousNoPhysics = player.noPhysics;
+                    player.noPhysics = true;
+                    TimedSkillEffectRuntime.schedule(player, 10, () -> {
+                        if (!player.isRemoved()) player.noPhysics = previousNoPhysics;
+                    });
+                } else {
+                    player.setDeltaMovement(direction.scale(0.1));
+                }
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
                 player.level().playSound(null, player.blockPosition(), SoundEvents.PENETRATE_TELEPORT.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);

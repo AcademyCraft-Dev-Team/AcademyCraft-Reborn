@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
@@ -38,6 +39,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
@@ -177,23 +179,25 @@ public final class VacuumDomain extends Skill {
             }
             var skill = Skills.VACUUM_DOMAIN.get();
             skill.executeActive(player, context -> skill.getCpCost(context.level())
-                    * AeromanipConfig.cpMultiplier(player, SkillNames.VACUUM_DOMAIN), (_, _) -> {
+                    * AeromanipConfig.cpMultiplier(player, SkillNames.VACUUM_DOMAIN), (context, _) -> {
                 if (!(player.level() instanceof ServerLevel level)) return;
-                var center = resolveTargetPoint(level, player);
-                var range = RADIUS * AeromanipConfig.rangeMultiplier(player, SkillNames.VACUUM_DOMAIN);
+                var center = resolveTargetPoint(level, player, context.milestone());
+                var baseRadius = context.milestone() >= 2 ? 14.0 : RADIUS;
+                var range = baseRadius * AeromanipConfig.rangeMultiplier(player, SkillNames.VACUUM_DOMAIN);
                 var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(),
                         AirflowField.Type.VACUUM, AirflowField.Shape.SPHERE, center, player.getLookAngle(),
-                        range, 0.0, 1.0f, Integer.MAX_VALUE);
+                        range, 0.0, 1.0f, Integer.MAX_VALUE, context.milestone());
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });
         }
 
-        private static Vec3 resolveTargetPoint(ServerLevel level, ServerPlayer player) {
+        private static Vec3 resolveTargetPoint(ServerLevel level, ServerPlayer player, int milestone) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle();
             if (look.lengthSqr() <= 1.0e-6) return eye;
 
-            var end = eye.add(look.normalize().scale(MAX_TARGET_DISTANCE));
+            var maxDistance = milestone >= 2 ? 20.0 : MAX_TARGET_DISTANCE;
+            var end = eye.add(look.normalize().scale(maxDistance));
             var blockHit = level.clip(new ClipContext(
                     eye,
                     end,
@@ -226,8 +230,11 @@ public final class VacuumDomain extends Skill {
             var center = field.center();
             var radius = field.radius();
             spawnVisual(level, center, radius, ticks);
+            var entityCap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
             if (ticks <= 40) {
+                var handled = 0;
                 for (var entity : level.getEntities(player, field.bounds(), Entity::isAlive)) {
+                    if (handled++ >= entityCap) break;
                     if (!(entity instanceof Projectile)
                             || !field.contains(entity.getBoundingBox().getCenter(), entity.getBbWidth() * 0.5)) continue;
                     var velocity = entity.getDeltaMovement();
@@ -253,19 +260,36 @@ public final class VacuumDomain extends Skill {
                 power = system.getPlayerAbilityPowerMultiplier(player.getUUID())
                         * system.getPlayerDamageMultiplier(player.getUUID());
             }
+            var handled = 0;
             for (var target : targets) {
+                if (handled++ >= entityCap) break;
                 var protectedByBreathingFilm = target instanceof ServerPlayer targetPlayer
                         && Skills.BREATHING_FILM.get().isEnabled(targetPlayer);
                 target.setAirSupply(airSupplyInVacuum(
                         protectedByBreathingFilm,
                         target.getMaxAirSupply()
                 ));
+                if (field.proficiencyMilestone() >= 3) {
+                    target.clearFire();
+                    var pull = center.subtract(target.getBoundingBox().getCenter());
+                    if (pull.lengthSqr() > 1.0e-8) {
+                        AeromanipTargeting.addClampedVelocity(target, pull.normalize().scale(0.035));
+                    }
+                }
                 if (!damageTick) continue;
                 target.invulnerableTime = 0;
                 var damage = baseDamage(target.getMaxHealth(), isPercentDamageImmune(target))
                         * AeromanipConfig.damageMultiplier(player, SkillNames.VACUUM_DOMAIN) * power;
                 if (target instanceof ServerPlayer) damage = Math.min(4.0f, damage * 0.4f);
                 target.hurtServer(level, source, damage);
+            }
+            if (field.proficiencyMilestone() >= 3 && ticks % 10 == 0) {
+                var removed = 0;
+                for (var cloud : level.getEntitiesOfClass(AreaEffectCloud.class, box,
+                        cloud -> isInsideDomain(center, cloud.position(), radius))) {
+                    if (removed++ >= entityCap) break;
+                    cloud.discard();
+                }
             }
         }
 

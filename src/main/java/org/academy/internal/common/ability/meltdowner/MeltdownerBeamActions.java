@@ -14,6 +14,7 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearReflecti
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
 import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
+import org.academy.internal.common.ability.Skills;
 
 import java.util.function.Predicate;
 
@@ -90,17 +91,20 @@ public final class MeltdownerBeamActions {
                     var marked = radiationEnabled
                             && living != null
                             && RadiationIntensify.isMarked(living, level.getGameTime());
+                    var markMultiplier = Skills.RADIATION_INTENSIFY.get().hasProficiencyMilestone(player, 2)
+                            ? 1.6f : RadiationIntensify.MARK_DAMAGE_MULTIPLIER;
                     return MeltdownerBeamDamage.calculate(
                             baseDamage,
                             maxHealthRatio,
                             living == null ? 0.0f : living.getMaxHealth(),
                             playerMultiplier,
-                            marked
+                            marked,
+                            markMultiplier
                     );
                 })
                 .onHit((target, reflected, hurt) -> {
                     if (hurt && radiationEnabled && target instanceof LivingEntity living) {
-                        RadiationIntensify.mark(living, level.getGameTime());
+                        RadiationIntensify.mark(player, living, level.getGameTime());
                     }
                 })
                 .build();

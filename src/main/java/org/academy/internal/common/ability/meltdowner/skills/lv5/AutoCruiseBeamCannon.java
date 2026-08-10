@@ -180,7 +180,7 @@ public final class AutoCruiseBeamCannon extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             if (!system.ensurePermanentOccupation(
                     player.getUUID(),
-                    skill.getMaintenanceCost(skill.getLevel(player)),
+                    skill.getMaintenanceCost(player),
                     skill
             )) {
                 if (skill.isEnabled(player)) skill.toggle(player);
@@ -202,7 +202,8 @@ public final class AutoCruiseBeamCannon extends Skill {
                 }
                 if (now < shot.applyAtTick) return false;
                 var target = findTarget(owner, shot.targetId);
-                if (target != null) applyShot(owner, target, shot.playerMultiplier);
+                if (target != null) applyShot(owner, target, shot.playerMultiplier,
+                        shot.damageScale, shot.milestone);
                 return true;
             });
             if (pending.isEmpty()) PENDING.remove(owner);
@@ -219,7 +220,8 @@ public final class AutoCruiseBeamCannon extends Skill {
             return null;
         }
 
-        private static void applyShot(ServerPlayer owner, LivingEntity target, float playerMultiplier) {
+        private static void applyShot(ServerPlayer owner, LivingEntity target, float playerMultiplier,
+                                      float damageScale, int milestone) {
             if (!(target.level() instanceof ServerLevel level)) return;
             var marked = Skills.RADIATION_INTENSIFY.get().isEnabled(owner)
                     && RadiationIntensify.isMarked(target, level.getGameTime());
@@ -228,27 +230,32 @@ public final class AutoCruiseBeamCannon extends Skill {
                     MAX_HEALTH_DAMAGE_RATIO,
                     target.getMaxHealth(),
                     playerMultiplier,
-                    marked
-            );
+                    marked,
+                    milestone >= 2 ? 1.6f : RadiationIntensify.MARK_DAMAGE_MULTIPLIER
+            ) * damageScale;
             var hurt = target.hurtServer(
                     level,
                     SkillDamageSource.of(owner, Skills.AUTO_CRUISE_BEAM_CANNON.get()),
                     damage
             );
             if (hurt && Skills.RADIATION_INTENSIFY.get().isEnabled(owner)) {
-                RadiationIntensify.mark(target, level.getGameTime());
+                RadiationIntensify.mark(owner, target, level.getGameTime());
             }
         }
 
-        private static void fire(ServerPlayer owner, LivingEntity target, float playerMultiplier) {
+        private static void fire(ServerPlayer owner, LivingEntity target, float playerMultiplier,
+                                 float damageScale, int milestone) {
             if (!(owner.level() instanceof ServerLevel level)) return;
             var attackDelay = normalizeAttackDelay(
                     SingleHighSpeedElectronBeam.getConfiguredAttackDelayTicks(owner));
+            if (milestone >= 2) attackDelay = Math.max(1, Math.round(attackDelay * 0.75f));
             spawnVisual(level, owner, target, attackDelay);
             var now = level.getGameTime();
             var shot = new PendingShot(
                     target.getUUID(),
                     playerMultiplier,
+                    damageScale,
+                    milestone,
                     now + soundDelayTicks(attackDelay),
                     now + attackDelay
             );
@@ -309,28 +316,46 @@ public final class AutoCruiseBeamCannon extends Skill {
             private long lastDetect = Long.MIN_VALUE / 2;
             private long lastFire = Long.MIN_VALUE / 2;
             private final List<UUID> detected = new ArrayList<>();
+            private UUID consecutiveTarget;
+            private int consecutiveShots;
 
             private void tick(ServerPlayer player, AutoCruiseBeamCannon skill) {
                 skill.reportActivity(player, false);
                 var level = player.level();
                 var now = level.getGameTime();
+                var milestone = skill.getEffectiveProficiencyMilestone(player);
+                var scanRadius = milestone >= 2 ? 20.0 : SCAN_RADIUS;
                 if (now - lastDetect >= DETECT_INTERVAL_TICKS) {
                     detected.clear();
                     var targets = level.getEntitiesOfClass(
                             LivingEntity.class,
-                            player.getBoundingBox().inflate(SCAN_RADIUS),
+                            player.getBoundingBox().inflate(scanRadius),
                             target -> isDetectable(player, target)
-                                    && target.distanceToSqr(player) <= SCAN_RADIUS * SCAN_RADIUS
+                                    && target.distanceToSqr(player) <= scanRadius * scanRadius
                     );
                     for (var target : targets) detected.add(target.getUUID());
                     lastDetect = now;
                 }
                 if (now - lastFire < FIRE_INTERVAL_TICKS) return;
-                var target = pollRandomTarget(level, player, detected);
+                var target = pollTarget(level, player, detected, scanRadius, milestone);
                 if (target == null) return;
                 var multiplier = AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
-                if (skill.executeContinuous(player, (_, _) -> fire(player, target, multiplier), true)) {
+                if (skill.executeContinuous(player, (_, _) -> {
+                    fire(player, target, multiplier, 1.0f, milestone);
+                    if (milestone >= 3) {
+                        if (target.getUUID().equals(consecutiveTarget)) consecutiveShots++;
+                        else {
+                            consecutiveTarget = target.getUUID();
+                            consecutiveShots = 1;
+                        }
+                        if (consecutiveShots >= 4) {
+                            var alternate = findAlternate(level, player, target, scanRadius);
+                            if (alternate != null) fire(player, alternate, multiplier, 0.5f, milestone);
+                            consecutiveShots = 0;
+                        }
+                    }
+                }, true)) {
                     lastFire = now;
                 }
             }
@@ -347,26 +372,49 @@ public final class AutoCruiseBeamCannon extends Skill {
             return target instanceof Enemy || target instanceof Mob mob && mob.getTarget() == player;
         }
 
-        private static LivingEntity pollRandomTarget(
+        private static LivingEntity pollTarget(
                 ServerLevel level,
                 ServerPlayer player,
-                List<UUID> detected
+                List<UUID> detected,
+                double scanRadius,
+                int milestone
         ) {
+            if (milestone >= 3) {
+                return detected.stream().map(level::getEntity)
+                        .filter(LivingEntity.class::isInstance)
+                        .map(LivingEntity.class::cast)
+                        .filter(living -> isDetectable(player, living)
+                                && living.distanceToSqr(player) <= scanRadius * scanRadius)
+                        .min(java.util.Comparator
+                                .comparing((LivingEntity living) -> !RadiationIntensify.isMarked(living, level.getGameTime()))
+                                .thenComparingDouble(LivingEntity::getHealth))
+                        .orElse(null);
+            }
             while (!detected.isEmpty()) {
                 var index = level.getRandom().nextInt(detected.size());
                 var entity = level.getEntity(detected.remove(index));
                 if (entity instanceof LivingEntity living
                         && isDetectable(player, living)
-                        && living.distanceToSqr(player) <= SCAN_RADIUS * SCAN_RADIUS) {
+                        && living.distanceToSqr(player) <= scanRadius * scanRadius) {
                     return living;
                 }
             }
             return null;
         }
 
+        private static LivingEntity findAlternate(ServerLevel level, ServerPlayer player,
+                                                  LivingEntity primary, double scanRadius) {
+            return level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(scanRadius),
+                            target -> target != primary && isDetectable(player, target)
+                                    && target.distanceToSqr(player) <= scanRadius * scanRadius)
+                    .stream().min(java.util.Comparator.comparingDouble(LivingEntity::getHealth)).orElse(null);
+        }
+
         private static final class PendingShot {
             private final UUID targetId;
             private final float playerMultiplier;
+            private final float damageScale;
+            private final int milestone;
             private final long soundAtTick;
             private final long applyAtTick;
             private boolean soundPlayed;
@@ -374,11 +422,15 @@ public final class AutoCruiseBeamCannon extends Skill {
             private PendingShot(
                     UUID targetId,
                     float playerMultiplier,
+                    float damageScale,
+                    int milestone,
                     long soundAtTick,
                     long applyAtTick
             ) {
                 this.targetId = targetId;
                 this.playerMultiplier = playerMultiplier;
+                this.damageScale = damageScale;
+                this.milestone = milestone;
                 this.soundAtTick = soundAtTick;
                 this.applyAtTick = applyAtTick;
             }

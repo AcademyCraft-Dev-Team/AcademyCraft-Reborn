@@ -8,6 +8,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.resources.Identifier;
+import org.academy.AcademyCraft;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
@@ -24,6 +29,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -44,6 +50,7 @@ import java.util.UUID;
 public class Disintegrate extends Skill {
     private static final double PRIMARY_RANGE = 30.0;
     private static final double SCATTER_RADIUS = 12.0;
+    private static final Identifier DISINTEGRATION_ID = AcademyCraft.academy("disintegration_armor");
 
     public Disintegrate() {
         super(Builder.of(AbilityCategories.MELTDOWNER.get())
@@ -123,14 +130,16 @@ public class Disintegrate extends Skill {
                 var level = player.level();
                 cleanup(level.getGameTime());
                 var start = player.getEyePosition();
-                var range = LevelUtil.getValidViewDistance(player, PRIMARY_RANGE);
+                var range = LevelUtil.getValidViewDistance(player,
+                        context.milestone() >= 2 ? PRIMARY_RANGE * 1.2 : PRIMARY_RANGE);
                 var end = start.add(player.getLookAngle().scale(range));
                 var target = findFirstTarget(level, player, start, end);
                 if (target != null) {
                     end = target.getBoundingBox().getCenter();
                 }
                 spawnBeam(player, start, end, 0,
-                        DestroyBlocksSetting.canDestroyBlocks(player, Skills.DISINTEGRATE.get()));
+                        DestroyBlocksSetting.canDestroyBlocks(player, Skills.DISINTEGRATE.get()),
+                        context.milestone());
             });
         }
 
@@ -140,7 +149,7 @@ public class Disintegrate extends Skill {
             if (pending == null || !pending.owner().equals(player.getUUID())
                     || pending.expiresAt() < level.getGameTime() || pending.stage() >= 2) return;
 
-            var count = pending.stage() == 0 ? 3 : 1;
+            var count = pending.stage() == 0 ? (pending.milestone() >= 2 ? 4 : 3) : 1;
             var center = killed.getBoundingBox().getCenter();
             var targets = level.getEntitiesOfClass(
                             LivingEntity.class,
@@ -155,7 +164,8 @@ public class Disintegrate extends Skill {
                     .toList();
             for (var target : targets) {
                 var stage = pending.stage() + 1;
-                spawnBeam(player, center, target.getBoundingBox().getCenter(), stage, false);
+                spawnBeam(player, center, target.getBoundingBox().getCenter(), stage, false,
+                        pending.milestone());
             }
         }
 
@@ -174,11 +184,11 @@ public class Disintegrate extends Skill {
         }
 
         private static void spawnBeam(ServerPlayer player, Vec3 start, Vec3 end,
-                                      int stage, boolean destroysBlocks) {
+                                      int stage, boolean destroysBlocks, int milestone) {
             var level = player.level();
             var delta = end.subtract(start);
             if (delta.lengthSqr() <= 1.0e-8) return;
-            if (stage < 2) markTargetsAlongBeam(player, start, end, stage, level.getGameTime());
+            if (stage < 2) markTargetsAlongBeam(player, start, end, stage, level.getGameTime(), milestone);
             var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
             var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
             var multiplier = AbilitySystemServer.getSystem(player)
@@ -203,7 +213,7 @@ public class Disintegrate extends Skill {
         }
 
         private static void markTargetsAlongBeam(ServerPlayer player, Vec3 start, Vec3 end,
-                                                 int stage, long now) {
+                                                 int stage, long now, int milestone) {
             var search = new AABB(start, end).inflate(0.125);
             for (var candidate : player.level().getEntitiesOfClass(
                     LivingEntity.class,
@@ -214,12 +224,35 @@ public class Disintegrate extends Skill {
                             && (target.getBoundingBox().inflate(0.125).contains(start)
                             || target.getBoundingBox().inflate(0.125).clip(start, end).isPresent())
             )) {
-                mark(player, candidate, stage, now);
+                mark(player, candidate, stage, now, milestone);
             }
         }
 
-        private static void mark(ServerPlayer player, LivingEntity target, int stage, long now) {
-            PENDING_STAGES.put(target.getUUID(), new PendingStage(player.getUUID(), stage, now + 40));
+        private static void mark(ServerPlayer player, LivingEntity target, int stage, long now, int milestone) {
+            PENDING_STAGES.put(target.getUUID(), new PendingStage(player.getUUID(), stage, now + 40, milestone));
+            if (milestone >= 3) {
+                TimedSkillEffectRuntime.schedule(player, 2, () -> {
+                    if (target.isAlive()) applyDisintegration(player, target);
+                });
+            }
+        }
+
+        private static void applyDisintegration(ServerPlayer owner, LivingEntity target) {
+            var armor = target.getAttribute(Attributes.ARMOR);
+            if (armor == null) return;
+            if (armor.getModifier(DISINTEGRATION_ID) != null) armor.removeModifier(DISINTEGRATION_ID);
+            armor.addTransientModifier(new AttributeModifier(DISINTEGRATION_ID,
+                    target instanceof Player ? -0.125 : -0.25,
+                    AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+            var skill = Skills.DISINTEGRATE.get();
+            TimedSkillEffectRuntime.put(owner, target.getUUID(), skill, "armor_disintegration", 100, 1.0f);
+            TimedSkillEffectRuntime.schedule(owner, 100, () -> {
+                if (TimedSkillEffectRuntime.get(owner.getUUID(), target.getUUID(), skill,
+                        "armor_disintegration", owner.level().getGameTime()).isEmpty()) {
+                    var currentArmor = target.getAttribute(Attributes.ARMOR);
+                    if (currentArmor != null) currentArmor.removeModifier(DISINTEGRATION_ID);
+                }
+            });
         }
 
         private static void cleanup(long now) {
@@ -234,7 +267,7 @@ public class Disintegrate extends Skill {
             return point.distanceToSqr(start.add(segment.scale(progress)));
         }
 
-        private record PendingStage(UUID owner, int stage, long expiresAt) {
+        private record PendingStage(UUID owner, int stage, long expiresAt, int milestone) {
         }
     }
 

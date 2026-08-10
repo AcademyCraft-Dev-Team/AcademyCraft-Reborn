@@ -122,12 +122,25 @@ public final class DarkmatterRepair extends Skill {
 
         private static void tick(ServerPlayer player) {
             var skill = Skills.DARKMATTER_REPAIR.get();
-            if (!skill.isEnabled(player) || !player.isAlive()
-                    || player.getHealth() >= player.getMaxHealth()) return;
+            if (!skill.isEnabled(player) || !player.isAlive()) return;
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var missingHealth = Math.max(0.0f, player.getMaxHealth() - player.getHealth());
+            var absorptionRoom = milestone >= 3
+                    ? Math.max(0.0f, 8.0f - player.getAbsorptionAmount()) : 0.0f;
+            if (!(missingHealth > 0.0f) && !(absorptionRoom > 0.0f)) return;
 
             var system = AbilitySystemServer.getSystem(player);
-            skill.executeContinuous(player, (context, actualCost) -> {
-                player.heal(healAmount(system.getPlayerAbilityPowerMultiplier(player.getUUID())));
+            var baseHeal = healAmount(system.getPlayerAbilityPowerMultiplier(player.getUUID()));
+            var heal = baseHeal * (milestone >= 2 ? 1.25f : 1.0f);
+            var effective = Math.min(heal, missingHealth + absorptionRoom);
+            skill.executeContinuous(player, context -> 10.0f * effective / Math.max(0.001f, heal),
+                    (context, actualCost) -> {
+                var healthPart = Math.min(heal, missingHealth);
+                if (healthPart > 0.0f) player.heal(healthPart);
+                var overflow = Math.min(absorptionRoom, heal - healthPart);
+                if (overflow > 0.0f) {
+                    player.setAbsorptionAmount(Math.min(8.0f, player.getAbsorptionAmount() + overflow));
+                }
             }, true);
         }
     }

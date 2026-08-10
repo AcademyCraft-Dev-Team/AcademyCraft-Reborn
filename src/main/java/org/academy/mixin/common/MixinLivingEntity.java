@@ -3,6 +3,7 @@ package org.academy.mixin.common;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
@@ -21,11 +22,16 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.ability.aeromanip.skills.AtmosphereShield;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowReverse;
+import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
@@ -53,6 +59,16 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         var victim = (LivingEntity) (Object) this;
+        if (source.is(DamageTypeTags.IS_FALL)
+                && TimedSkillEffectRuntime.maxValueForTarget(
+                victim.getUUID(),
+                Skills.AREA_TELEPORT_START.get(),
+                "fall_protection",
+                level.getGameTime()) > 0.0f) {
+            victim.resetFallDistance();
+            cir.setReturnValue(false);
+            return;
+        }
         if (source.getEntity() instanceof LivingEntity attacker
                 && attacker != victim
                 && MentalControlRuntime.damageDecision(attacker, victim) == AttackDecision.DENY) {
@@ -355,6 +371,7 @@ public abstract class MixinLivingEntity {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;actuallyHurt(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)V")
     )
     private void academy$onSkillHurt(ServerLevel level, DamageSource source, float damage, CallbackInfoReturnable<Boolean> cir) {
+        if (MagneticWeaponAttackContext.onHurt(source, (LivingEntity) (Object) this, damage)) return;
         if (source instanceof SkillDamageSource skillSource) {
             if (skillSource.getEntity() instanceof ServerPlayer player) {
                 if (skillSource instanceof ReflectedSkillDamageSource reflected
@@ -366,6 +383,7 @@ public abstract class MixinLivingEntity {
 
     @Inject(method = "die", at = @At("HEAD"))
     private void academy$onSkillKill(DamageSource source, CallbackInfo ci) {
+        if (MagneticWeaponAttackContext.onKill(source, (LivingEntity) (Object) this)) return;
         if (source instanceof SkillDamageSource skillSource) {
             if (skillSource.getEntity() instanceof ServerPlayer player) {
                 if (skillSource instanceof ReflectedSkillDamageSource reflected
@@ -383,5 +401,12 @@ public abstract class MixinLivingEntity {
             PlatinumWing.Server.onEntitySwing(player, hand);
             IronSandArsenal.Server.onEntitySwing(player, hand);
         }
+    }
+
+    @ModifyVariable(method = "heal", at = @At("HEAD"), argsOnly = true)
+    private float academy$applyProficiencyHealingReduction(float amount) {
+        var target = (LivingEntity) (Object) this;
+        return FleshRipping.Server.adjustHealing(target,
+                BloodflowReverse.Server.adjustHealing(target, amount));
     }
 }
