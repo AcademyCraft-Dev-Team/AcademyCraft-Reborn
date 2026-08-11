@@ -19,9 +19,12 @@ import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Map;
 
 public final class DarkmatterSixWingsVfx implements Vfx {
@@ -46,22 +49,32 @@ public final class DarkmatterSixWingsVfx implements Vfx {
 
             var age = player.tickCount + ctx.partialTick();
             var model = new AvianWingsModel(AvianWingsModel.createBodyLayer().bakeRoot());
-            model.setupAnim(age);
 
             var poseStack = new PoseStack();
-            var root = new Matrix4f(entry.getValue());
             var camera = ctx.camera().pos();
-            root.translate(camera.x, camera.y, camera.z);
+            // Avatar render roots are camera-relative. Prepend the camera translation to recover
+            // world space; post-multiplying would rotate/scale the camera vector with the model.
+            var root = new Matrix4f()
+                    .translation((float) camera.x, (float) camera.y, (float) camera.z)
+                    .mul(entry.getValue());
             poseStack.mulPose(root);
             poseStack.mulPose(BASE_MATRIX);
             poseStack.scale(BASE_SCALE, BASE_SCALE, BASE_SCALE);
 
             vertexData.clear();
-            ensureCapacity(1024);
-            bakeMesh(model.root, poseStack, vertexData);
+            ensureCapacity(3072);
+            bakeWingPair(model, poseStack, vertexData, age, 0.92f, -58.0f);
+            bakeWingPair(model, poseStack, vertexData, age, 1.10f, 0.0f);
+            bakeWingPair(model, poseStack, vertexData, age, 0.92f, 58.0f);
             vertexData.flip();
             if (vertexData.hasRemaining()) {
-                var vertices = vertexData.slice();
+                // Each submitted item must own its bytes. A slice would share this scratch buffer,
+                // so sampling the next avatar (or frame) could rewrite vertices still queued for
+                // rendering and produce apparent texture/geometry flicker.
+                var vertices = BufferUtils.createByteBuffer(vertexData.remaining())
+                        .order(ByteOrder.nativeOrder());
+                vertices.put(vertexData.duplicate());
+                vertices.flip();
                 sink.push(new DarkmatterSixWingsData(
                         entry.getValue(),
                         vertices,
@@ -82,6 +95,22 @@ public final class DarkmatterSixWingsVfx implements Vfx {
     @Override
     public boolean isAlive() {
         return true;
+    }
+
+    private static void bakeWingPair(AvianWingsModel model, PoseStack poseStack,
+                                     ByteBuffer target, float age, float scale,
+                                     float zRotationDegrees) {
+        poseStack.pushPose();
+        if (zRotationDegrees < 0.0f) {
+            poseStack.translate(-0.30f, 0.25f, 0.0f);
+        } else if (zRotationDegrees > 0.0f) {
+            poseStack.translate(0.30f, 0.25f, 0.0f);
+        }
+        poseStack.mulPose(new Quaternionf().rotateZ(zRotationDegrees * Mth.DEG_TO_RAD));
+        poseStack.scale(scale, scale, scale);
+        model.setupAnim(age);
+        bakeMesh(model.root, poseStack, target);
+        poseStack.popPose();
     }
 
     private static void bakeMesh(ModelPart root, PoseStack poseStack, ByteBuffer target) {
@@ -114,13 +143,17 @@ public final class DarkmatterSixWingsVfx implements Vfx {
     }
 
     private static float[] transform(ModelPart.Vertex vertex, Matrix4f matrix) {
-        var x = vertex.worldX();
-        var y = vertex.worldY();
-        var z = vertex.worldZ();
+        // ModelPart cube vertices are authored in model pixels. ModelPart's normal compile path
+        // converts them to blocks, so the VFX mesh path must do the same before transformation.
+        var position = new Vector3f(
+                vertex.worldX() / 16.0f,
+                vertex.worldY() / 16.0f,
+                vertex.worldZ() / 16.0f
+        ).mulPosition(matrix);
         return new float[]{
-                matrix.m00() * x + matrix.m01() * y + matrix.m02() * z + matrix.m03(),
-                matrix.m10() * x + matrix.m11() * y + matrix.m12() * z + matrix.m13(),
-                matrix.m20() * x + matrix.m21() * y + matrix.m22() * z + matrix.m23(),
+                position.x,
+                position.y,
+                position.z,
                 vertex.u(),
                 vertex.v()
         };

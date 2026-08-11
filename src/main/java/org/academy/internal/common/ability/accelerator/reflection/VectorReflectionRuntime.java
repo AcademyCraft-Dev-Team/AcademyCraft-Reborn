@@ -30,11 +30,9 @@ public final class VectorReflectionRuntime {
         if (previous != null && previous != player) {
             EntityControlApi.allowExternalRemoval(previous);
             ClassPointerProtectionManager.restore(previous);
-            anchor.observerRebuildRequested = true;
         }
-        var repaired = ClassPointerProtectionManager.ensureServerPlayer(player);
+        ClassPointerProtectionManager.ensureServerPlayer(player);
         anchor.player = new WeakReference<>(player);
-        if (repaired) anchor.observerRebuildRequested = true;
 
         EntityControlApi.protectFromExternalRemoval(player);
         sanitize(player, anchor);
@@ -65,12 +63,6 @@ public final class VectorReflectionRuntime {
         }
         EntityControlApi.allowExternalRemoval(player);
         ClassPointerProtectionManager.restore(player);
-    }
-
-    public static void requestObserverRebuild(ServerPlayer player) {
-        if (player == null) return;
-        ANCHORS.computeIfAbsent(player.getUUID(), ignored -> new Anchor(player))
-                .observerRebuildRequested = true;
     }
 
     public static void onServerTick() {
@@ -148,6 +140,18 @@ public final class VectorReflectionRuntime {
 
     private static void rebuildObserversIfRequested(ServerPlayer player, Anchor anchor) {
         if (!anchor.observerRebuildRequested) return;
+        var level = player.level();
+        var registered = level.getEntity(player.getUUID());
+        var registeredAsPlayer = registered == player;
+        var conflictingRegistration = registered != null && !registeredAsPlayer;
+        var chunkTracked = level.getChunkSource().hasEntityWithId(player.getId());
+        if (!shouldRebuildObservers(
+                player.isRemoved(), registeredAsPlayer, conflictingRegistration, chunkTracked)) {
+            // A canceled kill/remove attempt must never churn an otherwise healthy tracker. This
+            // final guard also makes stale repair requests harmless.
+            anchor.observerRebuildRequested = false;
+            return;
+        }
         var now = player.level().getGameTime();
         if (now - anchor.lastObserverRebuildTick < OBSERVER_REBUILD_COOLDOWN) return;
 
@@ -161,6 +165,12 @@ public final class VectorReflectionRuntime {
         } catch (Throwable error) {
             logRecoveryFailure(player, "observer reconstruction", error, anchor);
         }
+    }
+
+    static boolean shouldRebuildObservers(boolean removed, boolean registeredAsPlayer,
+                                          boolean conflictingRegistration, boolean chunkTracked) {
+        if (conflictingRegistration) return false;
+        return removed || !registeredAsPlayer || !chunkTracked;
     }
 
     private static void logRecoveryFailure(ServerPlayer player, String operation,

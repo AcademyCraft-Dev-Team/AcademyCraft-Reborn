@@ -11,7 +11,6 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
@@ -67,7 +66,6 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
             super.die(source);
             return;
         }
-        VectorReflectionRuntime.requestObserverRebuild(this);
         VectorReflection.Server.maintainProtection(this);
     }
 
@@ -77,14 +75,12 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
             super.kill(level);
             return;
         }
-        VectorReflectionRuntime.requestObserverRebuild(this);
         VectorReflection.Server.maintainProtection(this);
     }
 
     @Override
     protected void actuallyHurt(ServerLevel level, DamageSource source, float damage) {
         if (academy$protected() && !VectorReflection.Server.isLegitimateHealthMutation(this)) {
-            VectorReflectionRuntime.requestObserverRebuild(this);
             VectorReflection.Server.maintainProtection(this);
             return;
         }
@@ -167,7 +163,6 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
             super.remove(reason);
             return;
         }
-        VectorReflectionRuntime.requestObserverRebuild(this);
         VectorReflection.Server.maintainProtection(this);
     }
 

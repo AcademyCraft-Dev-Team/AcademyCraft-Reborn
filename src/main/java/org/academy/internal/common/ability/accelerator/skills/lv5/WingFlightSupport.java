@@ -21,13 +21,13 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DamageTypes;
-import org.academy.mixin.common.EntitySharedFlagInvoker;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
@@ -41,8 +41,6 @@ final class WingFlightSupport {
     static final double FAN_COS_THRESHOLD = 0.35;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
     static final float FIXED_DAMAGE = 10.0f;
-    private static final long BOOST_GRACE_TICKS = 5L;
-
     private WingFlightSupport() {
     }
 
@@ -129,7 +127,7 @@ final class WingFlightSupport {
             );
             if (!active && skill.isEnabled(player)) skill.toggle(player);
             if (active && player.tickCount % 20 == 0
-                    && !system.tryTimedOccupation(player.getUUID(), upkeepCost(skill), skill, 1)) {
+                    && !system.tryTimedOccupation(player.getUUID(), upkeepCost(skill), skill, 5)) {
                 forceDeactivateSkill(player, skill);
                 active = false;
             }
@@ -157,17 +155,16 @@ final class WingFlightSupport {
             player.syncData(attachment);
         }
         if (!active) {
-            // All wing skills call this every player tick. Inactive cleanup must be transition-only.
+            // All wing skills call this every player tick. Shared pose cleanup must remain
+            // transition-only so an inactive sibling wing cannot clear the active wing's pose.
             lastBoostTick.remove(player.getUUID());
-            if (wasActive) {
-                ((EntitySharedFlagInvoker) player).academy$setSharedFlag(7, false);
-            }
+            if (wasActive) WingFlightPose.sync(player, false);
             return;
         }
         var boostTick = lastBoostTick.get(player.getUUID());
-        ((EntitySharedFlagInvoker) player).academy$setSharedFlag(
-                7,
-                boostTick != null && player.level().getGameTime() - boostTick <= BOOST_GRACE_TICKS
+        WingFlightPose.sync(
+                player,
+                WingFlightPose.isBoosting(player.level().getGameTime(), boostTick)
         );
     }
 

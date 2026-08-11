@@ -25,6 +25,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
@@ -72,9 +73,9 @@ public class VectorReflection extends Skill {
     public VectorReflection() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL3)
+                .level(AbilityLevel.LEVEL4)
                 .energyCost(30_000)
-                .maintenanceCost(50)
+                .maintenanceCost(40)
                 .iterationTicks(10)
                 .proficiencyProfile(SkillProficiencyProfile.builder()
                         .iterationTicks(10, 10, 10, 5)
@@ -83,7 +84,7 @@ public class VectorReflection extends Skill {
                 .initiallyDisabled()
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_REDUCTION)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition("Vector Reduction", "academy:vector_reduction"))
         );
     }
@@ -95,6 +96,7 @@ public class VectorReflection extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.registerSettings();
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_ALT)
@@ -118,6 +120,28 @@ public class VectorReflection extends Skill {
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REFLECTION + "_toggle";
         public static Config CONFIG = new Config();
+        private static boolean settingsRegistered;
+
+        private static void registerSettings() {
+            if (settingsRegistered) return;
+            settingsRegistered = true;
+            SkillSettingsRegistry.INSTANCE.register(
+                    Skills.VECTOR_REFLECTION.get(),
+                    new SkillSettingsRegistry.Module(
+                            "distortion_ring",
+                            "",
+                            List.of(new SkillSettingsRegistry.Toggle(
+                                    "first_person_distortion_ring",
+                                    "app.academy.skill_settings.advanced.vector_reflection_first_person_distortion_ring",
+                                    () -> CONFIG.isFirstPersonDistortionRingVisible(),
+                                    enabled -> {
+                                        CONFIG.setFirstPersonDistortionRingVisible(enabled);
+                                        AcademyCraftClient.Config.INSTANCE.save();
+                                    }
+                            ))
+                    )
+            );
+        }
 
         public static void onToggle() {
             if (!AbilitySystemClient.beginToggleRequest(Skills.VECTOR_REFLECTION.get())) return;
@@ -125,6 +149,16 @@ public class VectorReflection extends Skill {
         }
 
         public static class Config extends KeyBindingConfig {
+            private boolean firstPersonDistortionRingVisible = true;
+
+            public boolean isFirstPersonDistortionRingVisible() {
+                return firstPersonDistortionRingVisible;
+            }
+
+            public void setFirstPersonDistortionRingVisible(boolean visible) {
+                firstPersonDistortionRingVisible = visible;
+            }
+
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 
@@ -311,6 +345,7 @@ public class VectorReflection extends Skill {
                     system.getPlayerAvailableCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(player, skill),
+                    system.getPlayerMaxCP(player.getUUID()) * 0.01f,
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (result.remainingDamage() > 0.0f
@@ -356,6 +391,7 @@ public class VectorReflection extends Skill {
                     system.getPlayerAvailableCP(serverPlayer.getUUID()),
                     system.getPlayerCalculationIntensity(serverPlayer.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(serverPlayer, skill),
+                    system.getPlayerMaxCP(serverPlayer.getUUID()) * 0.01f,
                     false
             );
             var reflectedDamage = result.reflectedDamage();
@@ -393,11 +429,18 @@ public class VectorReflection extends Skill {
         static ReflectionResult calculateReflection(float damage, float availableCP,
                                                     float calculationIntensity, int milestone,
                                                     boolean devMode) {
+            return calculateReflection(damage, availableCP, calculationIntensity, milestone, 0.0f, devMode);
+        }
+
+        static ReflectionResult calculateReflection(float damage, float availableCP,
+                                                    float calculationIntensity, int milestone,
+                                                    float freeDamageThreshold, boolean devMode) {
             var result = VectorDefenseProficiency.calculate(
                     damage,
                     availableCP,
                     calculationIntensity,
                     milestone,
+                    freeDamageThreshold,
                     devMode
             );
             return new ReflectionResult(
@@ -727,8 +770,18 @@ public class VectorReflection extends Skill {
         }
 
         public static void spawnGlowCircle(ServerPlayer player, Vec3 direction, Vec3 position) {
+            spawnGlowCircle(player, direction, position, VectorRedirectKind.REFLECTION);
+        }
+
+        public static void spawnGlowCircle(
+                ServerPlayer player,
+                Vec3 direction,
+                Vec3 position,
+                VectorRedirectKind kind
+        ) {
             var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
             glowCircle.setPos(position);
+            glowCircle.setEffectOwner(player.getId(), kind);
             var yaw = (float) (Mth.atan2(direction.z, direction.x)) * Mth.RAD_TO_DEG - 90.0f;
             var pitch = (float) -(Math.asin(direction.y)) * Mth.RAD_TO_DEG;
             glowCircle.setYRot(yaw);
@@ -831,7 +884,6 @@ public class VectorReflection extends Skill {
                 return;
             }
             event.setCanceled(true);
-            VectorReflectionRuntime.requestObserverRebuild(player);
             Server.maintainProtection(player);
         }
 

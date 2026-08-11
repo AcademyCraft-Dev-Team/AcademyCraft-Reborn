@@ -62,6 +62,7 @@ public abstract class MixinLevelRenderer {
                 Minecraft.getInstance().getDeltaTracker(),
                 levelRenderState.cameraRenderState
         );
+        VfxManager.INSTANCE.submitWorldGeometry(poseStack, output);
         var event = new LevelRenderEvent(
                 Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false),
                 new MatrixStack().setFrom(poseStack.last()),

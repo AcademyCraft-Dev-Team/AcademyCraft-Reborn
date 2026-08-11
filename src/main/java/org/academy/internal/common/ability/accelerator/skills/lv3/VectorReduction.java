@@ -17,6 +17,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
@@ -70,17 +71,18 @@ public class VectorReduction extends Skill {
     public VectorReduction() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
-                .level(AbilityLevel.LEVEL2)
+                .level(AbilityLevel.LEVEL3)
                 .energyCost(10_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(75)
+                .maintenanceCost(40)
                 .iterationTicks(10)
                 .proficiencyProfile(SkillProficiencyProfile.builder()
                         .iterationTicks(10, 10, 10, 5)
                         .build())
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.KINETIC_ENERGY_APPLIED)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition(
                         "Kinetic Energy Applied", "academy:kinetic_energy_applied"))
         );
@@ -142,6 +144,7 @@ public class VectorReduction extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.registerSettings();
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N, InputConstants.PRESS, 0)
@@ -160,6 +163,28 @@ public class VectorReduction extends Skill {
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.VECTOR_REDUCTION + "_toggle";
         public static Config CONFIG = new Config();
+        private static boolean settingsRegistered;
+
+        private static void registerSettings() {
+            if (settingsRegistered) return;
+            settingsRegistered = true;
+            SkillSettingsRegistry.INSTANCE.register(
+                    Skills.VECTOR_REDUCTION.get(),
+                    new SkillSettingsRegistry.Module(
+                            "distortion_ring",
+                            "",
+                            List.of(new SkillSettingsRegistry.Toggle(
+                                    "first_person_distortion_ring",
+                                    "app.academy.skill_settings.advanced.vector_reduction_first_person_distortion_ring",
+                                    () -> CONFIG.isFirstPersonDistortionRingVisible(),
+                                    enabled -> {
+                                        CONFIG.setFirstPersonDistortionRingVisible(enabled);
+                                        AcademyCraftClient.Config.INSTANCE.save();
+                                    }
+                            ))
+                    )
+            );
+        }
 
         public static void onToggle() {
             if (!AbilitySystemClient.beginToggleRequest(Skills.VECTOR_REDUCTION.get())) return;
@@ -167,6 +192,16 @@ public class VectorReduction extends Skill {
         }
 
         public static class Config extends KeyBindingConfig {
+            private boolean firstPersonDistortionRingVisible = true;
+
+            public boolean isFirstPersonDistortionRingVisible() {
+                return firstPersonDistortionRingVisible;
+            }
+
+            public void setFirstPersonDistortionRingVisible(boolean visible) {
+                firstPersonDistortionRingVisible = visible;
+            }
+
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 
@@ -270,6 +305,7 @@ public class VectorReduction extends Skill {
                     system.getPlayerAvailableCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(player, skill),
+                    system.getPlayerMaxCP(player.getUUID()) * 0.01f,
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (!(result.processedDamage() > 0.0f)) {
@@ -366,6 +402,7 @@ public class VectorReduction extends Skill {
                     system.getPlayerAvailableCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(player, skill),
+                    system.getPlayerMaxCP(player.getUUID()) * 0.01f,
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (!result.isFull()) return false;
@@ -375,7 +412,8 @@ public class VectorReduction extends Skill {
                     (_, _) -> {
                         if (emitFeedback) {
                             var direction = refractedDirection(player.getLookAngle(), incomingDirection);
-                            VectorReflection.Server.spawnGlowCircle(player, direction, mirrorPoint);
+                            VectorReflection.Server.spawnGlowCircle(
+                                    player, direction, mirrorPoint, VectorRedirectKind.REFRACTION);
                             VectorReflection.Server.playReflectionSound(player);
                         }
                     },
@@ -422,7 +460,8 @@ public class VectorReduction extends Skill {
                 projectile.setPos(player.getBoundingBox().getCenter()
                         .add(refracted.normalize().scale(pushDistance)));
                 VectorProjectileStateAdapter.applyRedirect(projectile, refracted);
-                VectorReflection.Server.spawnGlowCircle(player, refracted, projectile.position());
+                VectorReflection.Server.spawnGlowCircle(
+                        player, refracted, projectile.position(), VectorRedirectKind.REFRACTION);
                 VectorReflection.Server.playReflectionSound(player);
             }, true);
         }

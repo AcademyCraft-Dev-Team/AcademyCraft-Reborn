@@ -134,8 +134,9 @@ public final class DarkmatterBeetle extends Monster {
         if (!(entity instanceof LivingEntity target)) return false;
         var owner = getOwnerPlayer();
         if (owner == null || !isCommandedTarget(owner, target)) return false;
-        var multiplier = AbilitySystemServer.getSystem(owner)
-                .getPlayerDamageMultiplier(owner.getUUID());
+        var system = AbilitySystemServer.getSystem(owner);
+        var multiplier = system.getPlayerAbilityPowerMultiplier(owner.getUUID())
+                * system.getPlayerDamageMultiplier(owner.getUUID());
         if (Skills.DARKMATTER_CREATION.get().hasProficiencyMilestone(owner, 3)) {
             var surrounding = serverLevel.getEntitiesOfClass(DarkmatterBeetle.class,
                     target.getBoundingBox().inflate(8.0), beetle -> beetle.isAlive()
