@@ -13,8 +13,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 @EventBusSubscriber(Dist.CLIENT)
-public enum FontLoader implements PreparableReloadListener {
-    INSTANCE;
+public final class FontLoader implements PreparableReloadListener {
+    public static final FontLoader INSTANCE = new FontLoader();
+
+    private FontLoader() {
+    }
 
     private static CompletableFuture<Void> loadFont(Identifier resource, Executor taskExecutor) {
         return CompletableFuture.runAsync(() -> MsdfFontService.loadFont(resource), taskExecutor);
