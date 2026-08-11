@@ -8,7 +8,6 @@ import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.Minecraft
-import net.minecraft.locale.Language
 import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
@@ -33,6 +32,7 @@ import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.resources.R
 import org.academy.api.client.vanilla.ResizeDisplayEvent
+import org.academy.api.common.util.L10n
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
 import org.joml.Vector3f
@@ -657,7 +657,7 @@ class AbilityInfoHud private constructor() {
             val binding = object : LabelWidget("") {
                 override fun tick() {
                     val current = InputSystem.formatBindingsForSkill(info.skill).ifBlank {
-                        Language.getInstance().getOrDefault("app.academy.settings.keybind.format.none")
+                        L10n["app.academy.settings.keybind.format.none"]
                     }
                     text = current
                 }
