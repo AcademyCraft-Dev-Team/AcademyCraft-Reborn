@@ -170,7 +170,12 @@ public class IronSandArsenal extends Skill {
             var context = CONTEXT_MAP.remove(player);
             if (context != null) context.end(false);
             var skill = Skills.IRON_SAND_ARSENAL.get();
-            if (skill.isEnabled(player)) skill.toggle(player);
+            var system = AbilitySystemServer.getSystem(player);
+            var data = skill.getRuntimeData(player).orElse(null);
+            if (data != null && data.isEnabled()) {
+                system.toggleSkill(player.getUUID(), skill.getKeyString());
+            }
+            system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             clearData(player);
         }
 
