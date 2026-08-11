@@ -44,7 +44,7 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
-import org.academy.api.client.sound.LoopingPlayerSoundInstance;
+import org.academy.api.client.resources.sounds.LoopingPlayerSoundInstance;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
