@@ -151,7 +151,7 @@ public final class VfxPipelines {
             .withFragmentShader(R.shaders.core.vfx_block_mesh)
             .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
             .withBindGroupLayout(BindGroupLayouts.PROJECTION)
-            .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER2)
             .withCull(false)
             .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
@@ -160,6 +160,7 @@ public final class VfxPipelines {
                     .addAttribute("Position", GpuFormat.RGB32_FLOAT)
                     .addAttribute("UV0", GpuFormat.RG32_FLOAT)
                     .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
+                    .addAttribute("UV2", DefaultVertexFormat.UV2_FORMAT)
                     .build())
             .build();
 

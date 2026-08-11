@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 import static org.lwjgl.glfw.GLFW.*;
 
 public final class CrossingTheAbyss extends Skill {
-    private static final float RESERVED_CP = 50.0f;
+    private static final float RESERVED_CP = 100.0f;
 
     public CrossingTheAbyss() {
         super(Builder.of(AbilityCategories.ACCELERATOR.get())
@@ -68,7 +68,7 @@ public final class CrossingTheAbyss extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(RESERVED_CP)
                 .iterationTicks(20)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.WHITE_WING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("White Wing", "academy:white_wing")));

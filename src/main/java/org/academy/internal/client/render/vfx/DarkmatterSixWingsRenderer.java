@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -59,7 +60,7 @@ public final class DarkmatterSixWingsRenderer implements VfxRenderer<DarkmatterS
         var camera = ctx.cameraPos();
         vertexData.clear();
         for (var item : data) {
-            var vertices = item.vertices();
+            var vertices = item.vertices().duplicate().order(ByteOrder.nativeOrder());
             var oldLimit = vertices.limit();
             vertices.limit(vertices.position() + item.vertexCount() * DarkmatterSixWingsVfx.VERTEX_STRIDE);
             while (vertices.hasRemaining()) {

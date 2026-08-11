@@ -108,7 +108,8 @@ public final class VectorExternalInterceptionService {
                 defender, leaseKey, VectorRedirectKind.REFLECTION, attack.damage())) {
             VectorInterceptionTickets.commit(defender, attack.fingerprint());
             var reflected = incomingDirection.scale(-1.0);
-            VectorCompatibilityEffectLimiter.emit(defender, leaseKey, reflected, mirrorPoint);
+            VectorCompatibilityEffectLimiter.emit(
+                    defender, leaseKey, reflected, mirrorPoint, VectorRedirectKind.REFLECTION);
             executeRedirect(
                     attack,
                     defender,
@@ -158,7 +159,8 @@ public final class VectorExternalInterceptionService {
             );
         }
         VectorCompatibilityEffectLimiter.emit(
-                defender, leaseKey, incomingDirection.scale(-1.0), mirrorPoint);
+                defender, leaseKey, incomingDirection.scale(-1.0), mirrorPoint,
+                VectorRedirectKind.REFLECTION);
         executeRedirect(
                 attack,
                 defender,
@@ -192,7 +194,8 @@ public final class VectorExternalInterceptionService {
                 && VectorContinuousInterceptionLeases.consume(
                 defender, leaseKey, VectorRedirectKind.REFRACTION, attack.damage())) {
             VectorInterceptionTickets.commit(defender, attack.fingerprint());
-            VectorCompatibilityEffectLimiter.emit(defender, leaseKey, redirected, mirrorPoint);
+            VectorCompatibilityEffectLimiter.emit(
+                    defender, leaseKey, redirected, mirrorPoint, VectorRedirectKind.REFRACTION);
             executeRedirect(
                     attack, defender, VectorRedirectKind.REFRACTION,
                     mirrorPoint, redirected, damageOnly, "continuous_lease");
@@ -235,7 +238,8 @@ public final class VectorExternalInterceptionService {
                     attack.damage()
             );
         }
-        VectorCompatibilityEffectLimiter.emit(defender, leaseKey, redirected, mirrorPoint);
+        VectorCompatibilityEffectLimiter.emit(
+                defender, leaseKey, redirected, mirrorPoint, VectorRedirectKind.REFRACTION);
         executeRedirect(
                 attack, defender, VectorRedirectKind.REFRACTION,
                 mirrorPoint, redirected, damageOnly,
