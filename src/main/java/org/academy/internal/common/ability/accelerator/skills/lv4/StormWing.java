@@ -205,11 +205,11 @@ public final class StormWing extends Skill {
             if (player == null) return;
             var skill = Skills.STORM_WING.get();
             var data = skill.getRuntimeData(player).orElse(null);
+            var system = AbilitySystemServer.getSystem(player);
             if (data != null && data.isEnabled()) {
-                var system = AbilitySystemServer.getSystem(player);
                 system.toggleSkill(player.getUUID(), skill.getKeyString());
-                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             }
+            system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             sync(player);
         }
 

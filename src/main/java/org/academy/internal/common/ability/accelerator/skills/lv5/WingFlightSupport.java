@@ -141,9 +141,10 @@ final class WingFlightSupport {
 
     static void forceDeactivateSkill(ServerPlayer player, Skill skill) {
         var data = skill.getRuntimeData(player).orElse(null);
-        if (data == null || !data.isEnabled()) return;
         var system = AbilitySystemServer.getSystem(player);
-        system.toggleSkill(player.getUUID(), skill.getKeyString());
+        if (data != null && data.isEnabled()) {
+            system.toggleSkill(player.getUUID(), skill.getKeyString());
+        }
         system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
     }
 
