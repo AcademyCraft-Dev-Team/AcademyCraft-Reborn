@@ -62,7 +62,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val entity = level.getBlockEntity(mainPos)
         if (entity is AbilityDeveloperBlockEntity) {
             blockEntity = entity
-            entity.setOpen(true)
+            entity.keepOpen()
         } else {
             throw RuntimeException("Invalid block entity at $mainPos")
         }
@@ -72,7 +72,6 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     override fun onClose() {
         super.onClose()
-        blockEntity.setOpen(false)
         NeoForge.EVENT_BUS.unregister(this)
         MisakaNetworkClient.send(StopDevPacket(mainPos))
         AbilitySystemClient.resetDevState()
@@ -84,7 +83,13 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     override fun tick() {
         super.tick()
+        blockEntity.keepOpen()
         refreshCompletedSkillDevelopment()
+    }
+
+    override fun removed() {
+        blockEntity.scheduleClosing()
+        super.removed()
     }
 
     override fun keyPressed(e: KeyEvent): Boolean {
