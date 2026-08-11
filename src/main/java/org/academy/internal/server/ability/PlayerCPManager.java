@@ -179,6 +179,19 @@ public class PlayerCPManager implements AbilitySubsystem {
         return 0.0f;
     }
 
+    static float initialPersistentMaxCp(float storedMaxCp, float derivedBonus) {
+        var safeStored = normalizeDebugMaxCP(storedMaxCp);
+        var safeDerived = normalizeDebugMaxCP(derivedBonus);
+        return Math.max(safeStored, BASE_MAX_CP + safeDerived);
+    }
+
+    static float applyDerivedMaxCpGrowth(float storedMaxCp, float appliedBonus, float desiredBonus) {
+        var safeStored = normalizeDebugMaxCP(storedMaxCp);
+        var safeApplied = normalizeDebugMaxCP(appliedBonus);
+        var safeDesired = normalizeDebugMaxCP(desiredBonus);
+        return Math.max(BASE_MAX_CP, safeStored + Math.max(0.0f, safeDesired - safeApplied));
+    }
+
     @Override
     public void onPlayerLogin(ServerPlayer player) {
         if (isAutomaticSkillDebugPlayer(player.getScoreboardName())) {
@@ -863,9 +876,19 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getMaxCP(UUID uuid) {
-        var naturalMaxCP = playerDataManager.getData(uuid) == null
-                ? BASE_MAX_CP
-                : BASE_MAX_CP + getDerivedMaxCpBonus(uuid);
+        var playerData = playerDataManager.getData(uuid);
+        var naturalMaxCP = BASE_MAX_CP;
+        if (playerData != null) {
+            naturalMaxCP = playerData.isMaxCpInitialized()
+                    ? normalizeDebugMaxCP(playerData.getCpData().getMaxCP())
+                    : initialPersistentMaxCp(
+                            playerData.getCpData().getMaxCP(),
+                            Math.max(
+                                    playerData.getAppliedCommonSkillMaxCpBonus(),
+                                    getDerivedMaxCpBonus(uuid)
+                            )
+                    );
+        }
         return resolveEffectiveMaxCP(naturalMaxCP, debugMaxCpOverrides.get(uuid));
     }
 
@@ -957,33 +980,36 @@ public class PlayerCPManager implements AbilitySubsystem {
         var appliedBonus = playerData.getAppliedCommonSkillMaxCpBonus();
         var cpData = playerData.getCpData();
         var debugMaxCP = debugMaxCpOverrides.get(uuid);
-        if (debugMaxCP != null) {
-            var changed = false;
-            if (Float.compare(cpData.getMaxCP(), BASE_MAX_CP) != 0) {
-                cpData.setMaxCP(BASE_MAX_CP);
-                changed = true;
-            }
-            if (Float.compare(desiredBonus, appliedBonus) != 0) {
-                playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
-                changed = true;
-            }
-            if (cpData.getAvailableCP() > debugMaxCP) {
-                cpData.setAvailableCP(debugMaxCP, debugMaxCP);
-                changed = true;
-            }
-            if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-            return;
-        }
-        if (Float.compare(desiredBonus, appliedBonus) == 0
-                && Float.compare(cpData.getMaxCP(), BASE_MAX_CP) == 0) return;
+        var changed = false;
 
-        var oldEffectiveMaxCP = cpData.getMaxCP() + appliedBonus;
-        var effectiveMaxCP = BASE_MAX_CP + desiredBonus;
-        var diff = effectiveMaxCP - oldEffectiveMaxCP;
-        cpData.setMaxCP(BASE_MAX_CP);
-        cpData.setAvailableCP(cpData.getAvailableCP() + diff, effectiveMaxCP);
-        playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
-        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+        if (!playerData.isMaxCpInitialized()) {
+            // Older saves stored a 100-point base and rebuilt all growth on login. Promote the
+            // already-earned derived total into the persisted max without double-applying it.
+            var trackedBonus = Math.max(appliedBonus, desiredBonus);
+            cpData.setMaxCP(initialPersistentMaxCp(cpData.getMaxCP(), trackedBonus));
+            playerData.setAppliedCommonSkillMaxCpBonus(trackedBonus);
+            playerData.setMaxCpInitialized(true);
+            appliedBonus = trackedBonus;
+            changed = true;
+        }
+
+        if (desiredBonus > appliedBonus) {
+            var oldMaxCp = cpData.getMaxCP();
+            var newMaxCp = applyDerivedMaxCpGrowth(oldMaxCp, appliedBonus, desiredBonus);
+            var delta = newMaxCp - oldMaxCp;
+            cpData.setMaxCP(newMaxCp);
+            var effectiveMaxCp = resolveEffectiveMaxCP(newMaxCp, debugMaxCP);
+            cpData.setAvailableCP(cpData.getAvailableCP() + delta, effectiveMaxCp);
+            playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
+            changed = true;
+        }
+
+        var effectiveMaxCp = resolveEffectiveMaxCP(cpData.getMaxCP(), debugMaxCP);
+        if (cpData.getAvailableCP() > effectiveMaxCp) {
+            cpData.setAvailableCP(effectiveMaxCp, effectiveMaxCp);
+            changed = true;
+        }
+        if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     private float getDerivedMaxCpBonus(UUID uuid) {
