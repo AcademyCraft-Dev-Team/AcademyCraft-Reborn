@@ -120,7 +120,7 @@ class ToggleStatusHud private constructor() {
             row.layoutParams = LinearLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.WRAP_CONTENT, SizeMode.WRAP_CONTENT)
 
-            val background = FillWidget(0x78000000)
+            val background = FillWidget(0x48343434)
             background.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             row.addChild("background", background)
 
@@ -149,9 +149,9 @@ class ToggleStatusHud private constructor() {
 
             val state = LabelWidget(statusText(skill))
             state.baseFontSize = 7f
-            state.setRed(0.42f)
-            state.setGreen(1f)
-            state.setBlue(0.62f)
+            state.setRed(37f / 255f)
+            state.setGreen(196f / 255f)
+            state.setBlue(1f)
             state.layoutParams = LinearLayoutWidget.LayoutParams()
                 .gravity(Gravity.CENTER_VERTICAL)
                 .margin(2f, 0f)
