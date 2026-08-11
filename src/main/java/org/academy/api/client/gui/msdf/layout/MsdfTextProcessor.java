@@ -15,7 +15,7 @@ public final class MsdfTextProcessor {
     }
 
     public static List<GlyphInstance> layout(String text, float fontSize) {
-        List<LineInfo> lines = new ArrayList<>();
+        var lines = new ArrayList<LineInfo>();
         var currentLine = new LineInfo();
 
         var i = 0;
@@ -54,7 +54,7 @@ public final class MsdfTextProcessor {
         }
         if (!currentLine.characters.isEmpty()) lines.add(currentLine);
 
-        List<GlyphInstance> rawInstances = new ArrayList<>();
+        var rawInstances = new ArrayList<GlyphInstance>();
         var yOffset = 0f;
         var minY = Float.MAX_VALUE;
         var maxY = -Float.MAX_VALUE;
@@ -105,7 +105,7 @@ public final class MsdfTextProcessor {
             yOffset += line.maxLineHeight;
         }
 
-        List<GlyphInstance> finalInstances = new ArrayList<>(rawInstances.size());
+        var finalInstances = new ArrayList<GlyphInstance>(rawInstances.size());
         var yShift = -minY;
         for (var inst : rawInstances) {
             finalInstances.add(new GlyphInstance(

@@ -19,7 +19,7 @@ public final class MsdfKerningManager {
         if (!FreeType.FT_HAS_KERNING(face)) return 0;
 
         var pairKey = (left << 32) | (right & 0xffffffffL);
-        var faceCache = KERNING_CACHE.computeIfAbsent(face, f -> new ConcurrentHashMap<>());
+        var faceCache = KERNING_CACHE.computeIfAbsent(face, _ -> new ConcurrentHashMap<>());
         var cached = faceCache.get(pairKey);
         if (cached != null) return cached;
 

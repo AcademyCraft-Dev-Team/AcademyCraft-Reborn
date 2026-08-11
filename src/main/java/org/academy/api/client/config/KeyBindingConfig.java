@@ -5,9 +5,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import org.academy.api.client.input.InputSystem;
+import org.jspecify.annotations.Nullable;
 
-import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 public abstract class KeyBindingConfig {
@@ -21,7 +22,7 @@ public abstract class KeyBindingConfig {
     public InputSystem.KeyCombination getKeyBinding(String name, InputSystem.KeyCombination defaultConfig) {
         InputSystem.rememberDefaultKeyBinding(name, defaultConfig);
         var keyBinding = decodeKeyBinding(keyBindingMap().get(name));
-        if (!InputSystem.isValidKeyCombination(keyBinding)) {
+        if (!(keyBinding != null)) {
             setKeyBinding(name, defaultConfig);
             return defaultConfig;
         }
@@ -29,9 +30,9 @@ public abstract class KeyBindingConfig {
         return keyBinding;
     }
 
-    public InputSystem.KeyCombination getKeyBinding(String name) {
+    public InputSystem.@Nullable KeyCombination getKeyBinding(String name) {
         var keyBinding = decodeKeyBinding(keyBindingMap().get(name));
-        if (!InputSystem.isValidKeyCombination(keyBinding)) {
+        if (!(keyBinding != null)) {
             return null;
         }
         migrateStoredKeyBinding(name, keyBinding);
@@ -66,33 +67,27 @@ public abstract class KeyBindingConfig {
     }
 
     private Map<String, JsonElement> keyBindingMap() {
-        if (keyBindings == null) {
-            keyBindings = new LinkedHashMap<>();
-        }
         return keyBindings;
     }
 
     private Map<String, Boolean> enabledBindingMap() {
-        if (enabledBindings == null) {
-            enabledBindings = new LinkedHashMap<>();
-        }
         return enabledBindings;
     }
 
     private void migrateStoredKeyBinding(String name, InputSystem.KeyCombination keyBinding) {
         var stored = keyBindingMap().get(name);
-        if (stored == null || !isCurrentKeyBinding(stored)) {
+        if (!isCurrentKeyBinding(stored)) {
             setKeyBinding(name, keyBinding);
         }
     }
 
-    private static boolean isCurrentKeyBinding(JsonElement element) {
+    private static boolean isCurrentKeyBinding(@Nullable JsonElement element) {
         if (element == null || !element.isJsonObject()) return false;
         var object = element.getAsJsonObject();
         return object.has("type") && object.has("keys");
     }
 
-    private static InputSystem.KeyCombination decodeKeyBinding(JsonElement element) {
+    private static InputSystem.@Nullable KeyCombination decodeKeyBinding(@Nullable JsonElement element) {
         if (element == null || !element.isJsonObject()) return null;
         try {
             if (isCurrentKeyBinding(element)) {
@@ -104,8 +99,10 @@ public abstract class KeyBindingConfig {
         }
     }
 
-    /** Converts the pre-KeyCombination InputPair/KeyInfo representation. */
-    private static InputSystem.KeyCombination decodeLegacyKeyBinding(JsonObject object) {
+    /**
+     * Converts the pre-KeyCombination InputPair/KeyInfo representation.
+     */
+    private static InputSystem.@Nullable KeyCombination decodeLegacyKeyBinding(JsonObject object) {
         if (!object.has("inputType") || !object.has("keyInfo") || !object.get("keyInfo").isJsonObject()) {
             return null;
         }
