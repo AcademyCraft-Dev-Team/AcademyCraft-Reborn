@@ -1,16 +1,24 @@
 package org.academy.internal.client.model;
 
+import net.minecraft.client.animation.KeyframeAnimation;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import org.academy.internal.client.definitions.AbilityControlTabletAnimation;
+import org.academy.internal.client.renderer.special.AbilityControlTabletRenderState;
 
-public final class AbilityControlTabletModel {
-    public static final ModelPart MODEL = createBodyLayer().bakeRoot().getChild("all");
+public final class AbilityControlTabletModel extends Model<AbilityControlTabletRenderState> {
+    public static final AbilityControlTabletModel MODEL = new AbilityControlTabletModel(createBodyLayer().bakeRoot());
+    private final KeyframeAnimation open;
 
-    private AbilityControlTabletModel() {
+    private AbilityControlTabletModel(ModelPart root) {
+        super(root, RenderTypes::entityCutout);
+        open = AbilityControlTabletAnimation.OPEN.bake(root);
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -67,5 +75,11 @@ public final class AbilityControlTabletModel {
         );
 
         return LayerDefinition.create(meshDefinition, 48, 48);
+    }
+
+    @Override
+    public void setupAnim(AbilityControlTabletRenderState renderState) {
+        super.setupAnim(renderState);
+        open.apply(renderState.animationTimeMillis(), 1.0F);
     }
 }
