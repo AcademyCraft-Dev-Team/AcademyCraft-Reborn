@@ -54,7 +54,7 @@ public final class ScatterBomb extends Skill {
     static final int MIN_CHARGE_TICKS = 20;
     static final int MAX_CHARGE_TICKS = 80;
     static final int BEAM_COUNT = 7;
-    static final float BASE_DAMAGE = 20.0f;
+    static final float BASE_DAMAGE = 16.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
     static final float BEAM_LENGTH = 50.0f;
 
@@ -65,7 +65,7 @@ public final class ScatterBomb extends Skill {
                 .energyCost(10_000)
                 .cpCost(40)
                 .iterationTicks(20)
-                .maxStacks(1)
+                .maxStacks(2)
                 .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -241,6 +241,7 @@ public final class ScatterBomb extends Skill {
                 level.playSound(null, player, SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
                 var damageMultiplier = ctx.system().getPlayerDamageMultiplier(player.getUUID());
+                var abilityPower = ctx.system().getPlayerAbilityPowerMultiplier(player.getUUID());
                 var radiationEnabled = Skills.RADIATION_INTENSIFY.get().isEnabled(player);
                 state.ensureAllBeams(player);
                 for (var beam : state.beams) {
@@ -249,6 +250,7 @@ public final class ScatterBomb extends Skill {
                             skill,
                             BASE_DAMAGE,
                             MAX_HEALTH_DAMAGE_RATIO,
+                            abilityPower,
                             damageMultiplier,
                             radiationEnabled,
                             DestroyBlocksSetting.canDestroyBlocks(player, skill),

@@ -64,7 +64,7 @@ public final class AirflowJet extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)
-                .iterationTicks(10)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
@@ -274,7 +274,7 @@ public final class AirflowJet extends Skill {
                                 skill.getCpCost(skill.getLevel(player))
                                         * AeromanipConfig.cpMultiplier(player, SkillNames.AIRFLOW_JET)),
                         skill,
-                        CP_INTERVAL_TICKS)) {
+                        5)) {
                     end();
                     return;
                 }

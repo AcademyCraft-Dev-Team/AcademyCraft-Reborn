@@ -56,15 +56,15 @@ import net.minecraft.util.Mth;
  * The 26.2 target for the reference Penetrate Teleport skill.
  */
 public final class CutThrough extends Skill {
-    private static final double MAX_DISTANCE = 36.0;
+    private static final double MAX_DISTANCE = 64.0;
 
     public CutThrough() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .cpCost(20)
-                .iterationTicks(20)
+                .cpCost(15)
+                .iterationTicks(5)
                 .maxStacks(20)
                 .dependsOn(Skills.SELF_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))

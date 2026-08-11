@@ -3,10 +3,11 @@ package org.academy.internal.common.ability.meltdowner;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityCategory;
+import org.academy.internal.common.ability.AbilityDevelopmentProfiles;
 
 public final class Meltdowner extends AbilityCategory {
     public Meltdowner() {
-        super(0.1F);
+        super(0.1F, AbilityDevelopmentProfiles.MELTDOWNER);
     }
 
     @Override

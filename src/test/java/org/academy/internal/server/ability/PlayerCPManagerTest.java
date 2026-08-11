@@ -167,4 +167,18 @@ class PlayerCPManagerTest {
         assertEquals(7, occupations.get(1).getIterationTicks());
         assertEquals(7, occupations.get(2).getIterationTicks());
     }
+
+    @Test
+    void dedicatedStackGroupsSeparateModesOfTheSameSkill() {
+        var occupations = new ArrayList<AbilityData.CpOccupationData>();
+        occupations.add(new AbilityData.CpOccupationData(
+                10.0f, 5, "academy:vector_blast", false, "vector_blast:blast"));
+        occupations.add(new AbilityData.CpOccupationData(
+                10.0f, 5, "academy:vector_blast", false, "academy:vector_blast"));
+        occupations.add(new AbilityData.CpOccupationData(
+                10.0f, 0, "academy:vector_blast", true, "vector_blast:blast"));
+
+        assertEquals(1, PlayerCPManager.countTimedStacks(occupations, "vector_blast:blast"));
+        assertEquals(1, PlayerCPManager.countTimedStacks(occupations, "academy:vector_blast"));
+    }
 }

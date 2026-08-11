@@ -148,8 +148,8 @@ public class BallLightning extends Skill {
     public static final class Server {
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
 
-        public static float calculateImpactDamage(float currentHealth, float abilityPower, float playerMultiplier) {
-            return (Math.max(0.0f, currentHealth) * 0.3f + 10.0f)
+        public static float calculateImpactDamage(float maxHealth, float abilityPower, float playerMultiplier) {
+            return (Math.max(0.0f, maxHealth) * 0.3f + 10.0f)
                     * Math.max(0.0f, abilityPower)
                     * Math.max(0.0f, playerMultiplier);
         }
@@ -393,7 +393,7 @@ public class BallLightning extends Skill {
                     for (var entity : entities) {
                         entity.hurtServer(level, damageSource,
                                 calculateImpactDamage(
-                                        entity.getHealth(),
+                                        entity.getMaxHealth(),
                                         system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                                         system.getPlayerDamageMultiplier(player.getUUID())
                                 ));
@@ -444,7 +444,7 @@ public class BallLightning extends Skill {
                         var system = AbilitySystemServer.getSystem(player);
                         var source = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
                         for (var target : MathUtil.getEntitiesInSphereByHP(level(), position, 3.0, entity -> entity != player)) {
-                            target.hurtServer(level(), source, calculateImpactDamage(target.getHealth(),
+                            target.hurtServer(level(), source, calculateImpactDamage(target.getMaxHealth(),
                                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                                     system.getPlayerDamageMultiplier(player.getUUID())) * 0.3f);
                         }

@@ -35,7 +35,7 @@ public final class PrecisionOperation extends Skill {
                 .energyCost(100_000)
                 .cpCost(0)
                 .iterationTicks(0)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.IMPRESSION_MANIPULATION, Skills.MENTAL_STUPOR)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition(

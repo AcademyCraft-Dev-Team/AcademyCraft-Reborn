@@ -63,9 +63,9 @@ public final class FleshRipping extends Skill {
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
-                .cpCost(30)
+                .cpCost(20)
                 .iterationTicks(10)
-                .maxStacks(20)
+                .maxStacks(10)
                 .dependsOn(Skills.CUT_THROUGH)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:cut_through"))
@@ -224,6 +224,7 @@ public final class FleshRipping extends Skill {
                 var damage = TeleportDamage.fleshRipping(
                         BASE_DAMAGE,
                         target.getMaxHealth(),
+                        ctx.system().getPlayerAbilityPowerMultiplier(player.getUUID()),
                         SpaceFoldingTheorem.damageMultiplier(player)
                 ) * ctx.system().getPlayerDamageMultiplier(player.getUUID());
                 player.level().playSound(null, target.blockPosition(), SoundEvents.FLESH_RIPPING.get(),

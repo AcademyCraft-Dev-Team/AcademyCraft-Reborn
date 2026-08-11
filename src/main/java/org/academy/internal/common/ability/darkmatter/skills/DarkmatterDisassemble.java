@@ -56,7 +56,7 @@ import java.util.List;
 
 public final class DarkmatterDisassemble extends Skill {
     static final double RANGE = 32.0;
-    static final float BASE_DAMAGE = 12.0f;
+    static final float BASE_DAMAGE = 8.0f;
     private static final Identifier ARMOR_PENETRATION_ID =
             AcademyCraft.academy("darkmatter_disassemble_penetration");
 
@@ -65,9 +65,9 @@ public final class DarkmatterDisassemble extends Skill {
                 .of(AbilityCategories.DARKMATTER.get())
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
-                .cpCost(30)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .cpCost(10)
+                .iterationTicks(5)
+                .maxStacks(20)
                 .dependsOn(Skills.DARKMATTER_SHAPING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -198,8 +198,9 @@ public final class DarkmatterDisassemble extends Skill {
                     target.getBoundingBox().inflate(finalRadius), candidate -> validTarget(player, candidate))
                     : List.of(target);
             return skill.executeActive(player, (context, actualCost) -> {
-                var multiplier = AbilitySystemServer.getSystem(player)
-                        .getPlayerDamageMultiplier(player.getUUID());
+                var system = AbilitySystemServer.getSystem(player);
+                var multiplier = system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                        * system.getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, skill);
                 for (var current : targets) {
                     var hurt = current == target && context.milestone() >= 3

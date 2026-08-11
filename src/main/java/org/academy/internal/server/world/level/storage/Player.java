@@ -259,11 +259,15 @@ public final class Player {
         for (var occupation : cpOccupations) {
             var targetId = canonicalizeSkillId(occupation.getSkillId());
             changed |= !targetId.equals(occupation.getSkillId());
+            var stackGroup = occupation.getStackGroup().equals(occupation.getSkillId())
+                    ? targetId
+                    : occupation.getStackGroup();
             migrated.add(new AbilityData.CpOccupationData(
                     occupation.getAmount(),
                     occupation.getIterationTicks(),
                     targetId,
-                    occupation.isPermanent()
+                    occupation.isPermanent(),
+                    stackGroup
             ));
         }
         if (changed) cpOccupations = migrated;

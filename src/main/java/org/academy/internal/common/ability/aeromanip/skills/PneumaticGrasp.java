@@ -65,7 +65,7 @@ public final class PneumaticGrasp extends Skill {
         super(Builder.of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .iterationTicks(10)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.FLOW_SENSE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2)));
@@ -203,7 +203,7 @@ public final class PneumaticGrasp extends Skill {
                 if (look.lengthSqr() <= 1.0e-8) return;
                 var skillLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
                 var milestone = skill.getEffectiveProficiencyMilestone(player);
-                var range = 20.0 + skillLevel * 2.0 + (milestone >= 1 ? 4.0 : 0.0);
+                var range = 16.0 + skillLevel * 4.0 + (milestone >= 1 ? 8.0 : 0.0);
                 if (!isValidTarget(controlledTarget, skillLevel, range)) {
                     controlledTarget = findTarget(eye, look, skillLevel, range);
                     controlledSpeedCap = controlledTarget instanceof Projectile
@@ -214,9 +214,9 @@ public final class PneumaticGrasp extends Skill {
                 activeTicks++;
                 if (activeTicks % 10 == 0 && !AbilitySystemServer.getSystem(player).tryTimedOccupation(
                         player.getUUID(),
-                        2.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
+                        10.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
                         skill,
-                        10)) {
+                        5)) {
                     end();
                     return;
                 }
@@ -273,8 +273,7 @@ public final class PneumaticGrasp extends Skill {
             private void adjustDistance(int steps) {
                 if (steps == 0) return;
                 var skillLevel = Math.max(0, Math.min(2, Skills.PNEUMATIC_GRASP.get().getLevel(player)));
-                var maxDistance = 10.0 + skillLevel * 2.0
-                        + (Skills.PNEUMATIC_GRASP.get().hasProficiencyMilestone(player, 1) ? 4.0 : 0.0);
+                var maxDistance = 12.0 + skillLevel * 2.0;
                 holdDistance = AeromanipTargeting.adjustControlDistance(
                         holdDistance, steps, DISTANCE_STEP, MIN_CONTROL_DISTANCE, maxDistance);
             }

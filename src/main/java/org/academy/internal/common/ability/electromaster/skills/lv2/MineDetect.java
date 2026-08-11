@@ -70,9 +70,9 @@ public final class MineDetect extends Skill {
                 .energyCost(5_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(20)
+                .maintenanceCost(30)
                 .iterationTicks(20)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.MAGNET_MANIPULATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );

@@ -64,7 +64,7 @@ public final class AutoCruiseBeamCannon extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(10)
-                .iterationTicks(FIRE_INTERVAL_TICKS)
+                .iterationTicks(5)
                 .maxStacks(Skill.NO_STACK_LIMIT)
                 .initiallyDisabled()
                 .maintenanceCost(50)

@@ -49,7 +49,7 @@ import java.util.UUID;
 public final class AtmosphericDominion extends Skill {
     public AtmosphericDominion() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL5).energyCost(100_000)
-                .cpCost(160).iterationTicks(20).maxStacks(1).dependsOn(Skills.ATMOSPHERE_BLAST_GUN, Skills.VORTEX_PULL)
+                .cpCost(100).iterationTicks(20).maxStacks(1).dependsOn(Skills.ATMOSPHERE_BLAST_GUN, Skills.VORTEX_PULL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5)));
     }
 
@@ -113,7 +113,7 @@ public final class AtmosphericDominion extends Skill {
                     * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION), (context, _) -> {
                 if (!(player.level() instanceof ServerLevel level)) return;
                 var range = AeromanipConfig.rangeMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION);
-                var durationTicks = context.milestone() >= 2 ? 240 : 200;
+                var durationTicks = context.milestone() >= 2 ? 480 : 400;
                 var duration = Math.max(1, Math.round(durationTicks * AeromanipConfig.durationMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION)));
                 var radius = context.milestone() >= 2 ? 26.0 : 22.0;
                 var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.ATMOSPHERIC_DOMINION,
@@ -137,7 +137,7 @@ public final class AtmosphericDominion extends Skill {
                 var friendly = allied;
                 if (friendly) {
                     if (target instanceof LivingEntity living) {
-                        living.addEffect(new MobEffectInstance(MobEffects.SPEED, 12, 0, false, false, true));
+                        living.addEffect(new MobEffectInstance(MobEffects.SPEED, 12, 1, false, false, true));
                         living.resetFallDistance();
                         if (living.getAirSupply() < living.getMaxAirSupply())
                             living.setAirSupply(living.getMaxAirSupply());

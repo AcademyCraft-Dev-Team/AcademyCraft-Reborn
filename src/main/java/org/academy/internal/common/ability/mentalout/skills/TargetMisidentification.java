@@ -42,8 +42,8 @@ public final class TargetMisidentification extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(40)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.MENTAL_INTERVENTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
                 .devCondition(new DevCondition.DependencyCondition(

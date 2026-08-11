@@ -54,7 +54,7 @@ import java.util.UUID;
 import java.util.WeakHashMap;
 
 public final class SelfTeleport extends Skill {
-    private static final double MAX_DISTANCE = 20.0;
+    private static final double MAX_DISTANCE = 32.0;
     public static InputSystem.@Nullable KeyCombination KEY_START;
     public static InputSystem.@Nullable KeyCombination KEY_END;
     public static Client.@Nullable Config CONFIG;
@@ -65,7 +65,7 @@ public final class SelfTeleport extends Skill {
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(10)
-                .iterationTicks(4)
+                .iterationTicks(5)
                 .maxStacks(20)
                 .dependsOn(Skills.THREATENING_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))

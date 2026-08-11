@@ -156,6 +156,20 @@ public abstract class Skill {
         return executeActive(player, ctx -> cpCost, action);
     }
 
+    protected final boolean executeActive(ServerPlayer player, String stackGroup, int stackLimit,
+                                          SkillAction action) {
+        if (!isEnabled(player)) return false;
+        return AbilitySystemServer.getSystem(player)
+                .castCpIfPossible(player, this, ctx -> {
+                    var baseCost = cpCost;
+                    var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                            SkillProficiencyProfile.CostKind.CAST, ctx.milestone(), baseCost);
+                    var categoryCost = DarkmatterSixWings.Server.adjustCategoryCost(
+                            player, this, baseCost, proficiencyCost);
+                    return CurrentSymbiosis.Server.adjustNextCastCost(player, this, categoryCost);
+                }, action, stackGroup, stackLimit);
+    }
+
     /**
      * Pays CP for one tick of an already-running skill without treating the payment as a new cast.
      */

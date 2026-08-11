@@ -51,7 +51,9 @@ public class SpatialSynergy extends Skill {
                 .energyCost(10_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(50)
+                .maintenanceCost(20)
+                .iterationTicks(5)
+                .maxStacks(NO_STACK_LIMIT)
                 .maxSkillLevel(0)
                 .dependsOn(Skills.SELF_TELEPORT)
         );
@@ -151,7 +153,7 @@ public class SpatialSynergy extends Skill {
             var processed = 0;
             for (var entity : extras) {
                 if (processed >= 96 || entity.isPassenger()) continue;
-                if (!system.tryTimedOccupation(owner.getUUID(), 5.0f, skill, skill.getIterationTicks(owner))) {
+                if (!system.tryTimedOccupation(owner.getUUID(), 10.0f, skill, skill.getIterationTicks(owner))) {
                     break;
                 }
                 var desired = ownerDestination.add(entity.position().subtract(origin));

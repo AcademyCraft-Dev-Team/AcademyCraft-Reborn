@@ -50,7 +50,7 @@ public class ThunderLance extends Skill {
     static final float QUICK_BASE_DAMAGE = 16.0f;
     static final float QUICK_RANGE = 32.0f;
     static final float QUICK_RADIUS = 2.0f;
-    static final float QUICK_CP_COST = 40.0f;
+    static final float QUICK_CP_COST = 20.0f;
     private static final long RETURN_SEED_MASK = 0xA24BAED4963EE407L;
 
     public ThunderLance() {
@@ -58,9 +58,9 @@ public class ThunderLance extends Skill {
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .cpCost(40)
-                .iterationTicks(20)
-                .maxStacks(NO_STACK_LIMIT)
+                .cpCost(20)
+                .iterationTicks(10)
+                .maxStacks(10)
                 .dependsOn(Skills.ARC_GENERATE)
         );
     }

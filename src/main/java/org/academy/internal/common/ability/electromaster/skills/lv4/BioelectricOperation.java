@@ -67,6 +67,7 @@ public final class BioelectricOperation extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(40)
                 .iterationTicks(20)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.ELECTRICAL_CONTACT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
         );
@@ -189,7 +190,7 @@ public final class BioelectricOperation extends Skill {
             if (enabled && milestone >= 3 && player.getHealth() < player.getMaxHealth() * 0.3f) {
                 var now = player.level().getGameTime();
                 if (player.tickCount % 20 == 0 && system.tryTimedOccupation(
-                        player.getUUID(), 5.0f, skill, 20)) {
+                        player.getUUID(), 5.0f, skill, 10)) {
                     TimedSkillEffectRuntime.put(player, player.getUUID(), skill,
                             "bioelectric_overload", 20, 1.0f);
                 }

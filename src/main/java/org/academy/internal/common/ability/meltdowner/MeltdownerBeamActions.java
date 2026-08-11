@@ -28,6 +28,7 @@ public final class MeltdownerBeamActions {
             float radius,
             float baseDamage,
             float maxHealthRatio,
+            float abilityPower,
             float playerMultiplier,
             boolean radiationEnabled
     ) {
@@ -38,6 +39,7 @@ public final class MeltdownerBeamActions {
                 radius,
                 baseDamage,
                 maxHealthRatio,
+                abilityPower,
                 playerMultiplier,
                 radiationEnabled
         );
@@ -52,6 +54,7 @@ public final class MeltdownerBeamActions {
             float radius,
             float baseDamage,
             float maxHealthRatio,
+            float abilityPower,
             float playerMultiplier,
             boolean radiationEnabled
     ) {
@@ -62,6 +65,7 @@ public final class MeltdownerBeamActions {
                 radius,
                 baseDamage,
                 maxHealthRatio,
+                abilityPower,
                 playerMultiplier,
                 radiationEnabled,
                 target -> target instanceof LivingEntity
@@ -75,6 +79,7 @@ public final class MeltdownerBeamActions {
             float radius,
             float baseDamage,
             float maxHealthRatio,
+            float abilityPower,
             float playerMultiplier,
             boolean radiationEnabled,
             Predicate<Entity> targetFilter
@@ -90,10 +95,11 @@ public final class MeltdownerBeamActions {
                             && RadiationIntensify.isMarked(living, level.getGameTime());
                     var markMultiplier = Skills.RADIATION_INTENSIFY.get().hasProficiencyMilestone(player, 2)
                             ? 1.6f : RadiationIntensify.MARK_DAMAGE_MULTIPLIER;
-                    return MeltdownerBeamDamage.calculate(
+                    return MeltdownerBeamDamage.calculatePowerScaledBase(
                             baseDamage,
                             maxHealthRatio,
                             living == null ? 0.0f : living.getMaxHealth(),
+                            abilityPower,
                             playerMultiplier,
                             marked,
                             markMultiplier

@@ -47,7 +47,7 @@ public final class DarkmatterRepair extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .cpCost(10)
-                .iterationTicks(20)
+                .iterationTicks(15)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.DARKMATTER_SHAPING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))

@@ -44,7 +44,7 @@ public final class MentalIntervention extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)
-                .iterationTicks(20)
+                .iterationTicks(5)
                 .maxStacks(Skill.NO_STACK_LIMIT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );

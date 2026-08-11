@@ -40,7 +40,7 @@ import net.minecraft.util.Mth;
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
     public static final int DEFAULT_ATTACK_DELAY_TICKS = 10;
-    static final float BASE_DAMAGE = 20.0f;
+    static final float BASE_DAMAGE = 16.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
 
     public SingleHighSpeedElectronBeam() {
@@ -48,9 +48,9 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
-                .cpCost(20)
+                .cpCost(15)
                 .iterationTicks(10)
-                .maxStacks(1)
+                .maxStacks(20)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }
@@ -160,6 +160,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                         Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
                         BASE_DAMAGE,
                         MAX_HEALTH_DAMAGE_RATIO,
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                         system.getPlayerDamageMultiplier(player.getUUID()),
                         Skills.RADIATION_INTENSIFY.get().isEnabled(player),
                         DestroyBlocksSetting.canDestroyBlocks(player, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()),

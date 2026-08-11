@@ -55,9 +55,9 @@ public final class DarkmatterCut extends Skill {
                 .of(AbilityCategories.DARKMATTER.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .cpCost(40)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .cpCost(20)
+                .iterationTicks(10)
+                .maxStacks(10)
                 .dependsOn(Skills.DARKMATTER_DISASSEMBLE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -156,9 +156,10 @@ public final class DarkmatterCut extends Skill {
                 spawnSlash(level, player, enhanced ? 3.0f : 1.0f);
                 level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                         SoundSource.PLAYERS, 1.0f, 1.0f);
+                var system = AbilitySystemServer.getSystem(player);
                 var damage = (enhanced ? SIX_WINGS_DAMAGE : BASE_DAMAGE)
-                        * AbilitySystemServer.getSystem(player)
-                        .getPlayerDamageMultiplier(player.getUUID());
+                        * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                        * system.getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, skill);
                 for (var target : targets) {
                     if (!target.hurtServer(level, source, damage)) continue;

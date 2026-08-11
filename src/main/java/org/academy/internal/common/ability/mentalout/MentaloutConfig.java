@@ -26,24 +26,57 @@ public final class MentaloutConfig {
     }
 
     public static float mentalStuporCost(ServerPlayer player) {
-        return nonNegative(settings(player).mentalStuporCostPerTarget, 30.0f);
+        return nonNegative(settings(player).mentalStuporCostPerTarget, 10.0f);
     }
 
     public static float impressionManipulationCost(ServerPlayer player) {
-        return nonNegative(settings(player).impressionManipulationCostPerTarget, 20.0f);
+        return nonNegative(settings(player).impressionManipulationCostPerTarget, 10.0f);
     }
 
+    public static float commandPositioningCost(ServerPlayer player) {
+        return nonNegative(settings(player).commandPositioningCostPerTarget, 10.0f);
+    }
+
+    public static float precisionStuporCost(ServerPlayer player) {
+        return nonNegative(settings(player).precisionStuporCostPerTarget, 10.0f);
+    }
+
+    public static float precisionImpressionCost(ServerPlayer player) {
+        return nonNegative(settings(player).precisionImpressionCostPerTarget, 10.0f);
+    }
+
+    public static float precisionMisidentificationCost(ServerPlayer player) {
+        return nonNegative(settings(player).precisionMisidentificationCostPerTarget, 20.0f);
+    }
 
     public static float precisionPathCost(ServerPlayer player) {
-        return nonNegative(settings(player).precisionPathCostPerTarget, 10.0f);
+        return nonNegative(settings(player).precisionPathCostPerTarget, 5.0f);
     }
 
     public static float precisionViewCost(ServerPlayer player) {
-        return nonNegative(settings(player).precisionViewCostPerTarget, 8.0f);
+        return nonNegative(settings(player).precisionViewCostPerTarget, 5.0f);
     }
 
     public static float precisionGuardCost(ServerPlayer player) {
-        return nonNegative(settings(player).precisionGuardCostPerTarget, 20.0f);
+        return nonNegative(settings(player).precisionGuardCostPerTarget, 10.0f);
+    }
+
+    public static float precisionSensoryCost(ServerPlayer player, int level) {
+        var settings = settings(player);
+        return switch (Mth.clamp(level, 0, 2)) {
+            case 0 -> nonNegative(settings.precisionSensoryCostLevel0, 20.0f);
+            case 1 -> nonNegative(settings.precisionSensoryCostLevel1, 15.0f);
+            default -> nonNegative(settings.precisionSensoryCostLevel2, 10.0f);
+        };
+    }
+
+    public static float precisionIntrusionCost(ServerPlayer player, int level) {
+        var settings = settings(player);
+        return switch (Mth.clamp(level, 0, 2)) {
+            case 0 -> nonNegative(settings.precisionIntrusionCostLevel0, 20.0f);
+            case 1 -> nonNegative(settings.precisionIntrusionCostLevel1, 15.0f);
+            default -> nonNegative(settings.precisionIntrusionCostLevel2, 10.0f);
+        };
     }
 
     public static float bossCostMultiplier(ServerPlayer player) {
@@ -71,10 +104,10 @@ public final class MentaloutConfig {
     }
 
     public static double mentalIntrusionRange(ServerPlayer player, int level) {
-        var maximum = Mth.clamp(finite(settings(player).mentalIntrusionRange, 16.0f), 1.0f, 16.0f);
+        var maximum = Mth.clamp(finite(settings(player).mentalIntrusionRange, 32.0f), 1.0f, 32.0f);
         return maximum * switch (Mth.clamp(level, 0, 2)) {
-            case 0 -> 0.75;
-            case 1 -> 0.875;
+            case 0 -> 0.5;
+            case 1 -> 0.75;
             default -> 1.0;
         };
     }

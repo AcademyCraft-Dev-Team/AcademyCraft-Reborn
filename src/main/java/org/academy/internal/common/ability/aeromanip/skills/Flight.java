@@ -48,10 +48,10 @@ import java.util.WeakHashMap;
 public final class Flight extends Skill {
     private static final Identifier FLIGHT_SOURCE =
             AcademyCraft.academy(SkillNames.FLIGHT);
-    private static final float ACCELERATION_CP_COST = 8.0f;
+    private static final float ACCELERATION_CP_COST = 10.0f;
     private static final int ACCELERATION_CP_INTERVAL_TICKS = 20;
     private static final double NORMAL_FLIGHT_SPEED_CAP = 0.7;
-    private static final double ACCELERATED_FLIGHT_SPEED_CAP = 1.1;
+    private static final double ACCELERATED_FLIGHT_SPEED_CAP = 1.2;
 
     public Flight() {
         super(Builder
@@ -60,8 +60,8 @@ public final class Flight extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(60)
-                .iterationTicks(20)
+                .maintenanceCost(50)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.WIND_CORRIDOR)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
@@ -197,7 +197,7 @@ public final class Flight extends Skill {
                     ACCELERATION_CP_COST
                             * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT),
                     skill,
-                    ACCELERATION_CP_INTERVAL_TICKS
+                    5
             );
             if (paid) {
                 NEXT_ACCELERATION_COST_TICK.put(

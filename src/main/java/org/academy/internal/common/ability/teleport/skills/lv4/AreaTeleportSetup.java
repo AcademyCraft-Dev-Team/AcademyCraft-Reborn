@@ -38,7 +38,7 @@ public final class AreaTeleportSetup extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .iterationTicks(40)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.AREA_TELEPORT_SELECT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition("Area Teleport Select", "academy:area_teleport_select")));

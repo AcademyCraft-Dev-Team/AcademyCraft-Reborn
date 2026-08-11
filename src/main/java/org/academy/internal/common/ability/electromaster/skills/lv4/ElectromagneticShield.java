@@ -67,7 +67,7 @@ public final class ElectromagneticShield extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(40)
-                .iterationTicks(COOLING_INTERVAL_TICKS)
+                .iterationTicks(15)
                 .maxStacks(NO_STACK_LIMIT)
                 .withCustomData(
                         ElectromagneticShieldData.ID,

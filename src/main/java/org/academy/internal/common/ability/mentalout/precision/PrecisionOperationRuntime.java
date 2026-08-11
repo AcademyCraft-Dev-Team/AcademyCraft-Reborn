@@ -74,13 +74,14 @@ public final class PrecisionOperationRuntime {
         }
 
         var removedSubjects = removedSubjects(evaluated.actions);
-        var projectedCost = projectedCost(player, slots, slot, evaluated, removedSubjects);
+        var occupationPlan = projectedOccupationPlan(
+                player, slots, slot, evaluated, removedSubjects, player.level().getGameTime());
         var system = AbilitySystemServer.getSystem(player);
-        if (!system.canCastWithPermanentOccupations(
-                player,
+        if (!system.canReplacePermanentOccupationAndAddTimedOccupations(
+                player.getUUID(),
                 skill,
-                0.0f,
-                Map.of(skill, projectedCost)
+                occupationPlan.permanentCost(),
+                occupationPlan.timedCharges()
         )) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.INSUFFICIENT_CP);
         }
@@ -123,10 +124,7 @@ public final class PrecisionOperationRuntime {
                                 action.expiresAt
                         );
                         if (intrusionSession == null) throw new IllegalStateException("Intrusion rejected");
-                        fixedCost += MentaloutConfig.mentalIntrusionCost(
-                                player,
-                                Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2)
-                        );
+                        fixedCost += fixedActionCost(player, action.kind);
                     }
                     case END_INTRUSION, REMOVE_CONTROL -> {
                     }
@@ -169,8 +167,8 @@ public final class PrecisionOperationRuntime {
             releaseSubjects(player, removedSubjects);
             slots[slot] = activeActions.isEmpty()
                     ? null : new ActiveContext(++nextContextSequence, activeActions);
-            var appliedCost = activeCost(player, slots);
-            if (!system.replacePermanentOccupation(player.getUUID(), appliedCost, skill)) {
+            if (!system.replacePermanentOccupationAndAddTimedOccupations(
+                    player.getUUID(), skill, occupationPlan.permanentCost(), occupationPlan.timedCharges())) {
                 throw new IllegalStateException("CP occupation rejected");
             }
             if (evaluated.endIntrusion) MentalIntrusionManager.stopAny(player);
@@ -180,7 +178,7 @@ public final class PrecisionOperationRuntime {
             return activeActions.isEmpty() ? ExecutionResult.completed() : ExecutionResult.started();
         } catch (RuntimeException exception) {
             activeActions.forEach(action -> action.close(player));
-            system.replacePermanentOccupation(player.getUUID(), activeCost(player, slots), skill);
+            system.replacePermanentOccupation(player.getUUID(), permanentCost(player, slots), skill);
             var diagnostic = actionDiagnostic(exception);
             if (diagnostic == PrecisionGraph.Diagnostic.ACTION_FAILED) {
                 AcademyCraft.LOGGER.error(
@@ -237,7 +235,7 @@ public final class PrecisionOperationRuntime {
                 }
             }
             if (changed) {
-                var remaining = activeCost(player, entry.getValue());
+                var remaining = permanentCost(player, entry.getValue());
                 var system = AbilitySystemServer.getSystem(player);
                 if (remaining <= 0.0f) {
                     system.releaseMaintenanceOccupation(
@@ -273,7 +271,7 @@ public final class PrecisionOperationRuntime {
                 if (context.empty()) entry.getValue()[slot] = null;
             }
             if (changed) {
-                var remaining = activeCost(player, entry.getValue());
+                var remaining = permanentCost(player, entry.getValue());
                 var system = AbilitySystemServer.getSystem(player);
                 if (remaining <= 0.0f) {
                     system.releaseMaintenanceOccupation(
@@ -526,7 +524,7 @@ public final class PrecisionOperationRuntime {
                             return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
                         }
                         requireSkill(Skills.TARGET_MISIDENTIFICATION.get(), player);
-                        cost += MentaloutConfig.targetMisidentificationCost(player) * subjects.size();
+                        cost += MentaloutConfig.precisionMisidentificationCost(player) * subjects.size();
                         addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withBoth(
                                 node.id(), node.kind(), subjects, target, actionExpiresAt(now, node.parameter())));
@@ -537,7 +535,7 @@ public final class PrecisionOperationRuntime {
                                 input(program, values, node, 0), ControlCapability.FREEZE_AI, player);
                         requireSkill(Skills.MENTAL_STUPOR.get(), player);
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
-                                player, entity, MentaloutConfig.mentalStuporCost(player))).sum();
+                                player, entity, MentaloutConfig.precisionStuporCost(player))).sum();
                         addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withSet(
                                 node.id(), node.kind(), subjects, actionExpiresAt(now, node.parameter())));
@@ -548,7 +546,7 @@ public final class PrecisionOperationRuntime {
                                 input(program, values, node, 0), ControlCapability.RELATION_CONTROL, player);
                         requireSkill(Skills.IMPRESSION_MANIPULATION.get(), player);
                         cost += subjects.stream().mapToDouble(entity -> controlledCost(
-                                player, entity, MentaloutConfig.impressionManipulationCost(player))).sum();
+                                player, entity, MentaloutConfig.precisionImpressionCost(player))).sum();
                         addSubjects(uniqueSubjects, subjects);
                         actions.add(PendingAction.withSet(
                                 node.id(), node.kind(), subjects, actionExpiresAt(now, node.parameter())));
@@ -560,7 +558,7 @@ public final class PrecisionOperationRuntime {
                         ensureUnprotected(player, observers);
                         requireSkill(Skills.SENSORY_DISTORTION.get(), player);
                         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
-                        cost += MentaloutConfig.sensoryDistortionCost(player, sensoryLevel) * observers.size();
+                        cost += MentaloutConfig.precisionSensoryCost(player, sensoryLevel) * observers.size();
                         addSubjects(uniqueSubjects, observers);
                         actions.add(PendingAction.withBoth(
                                 node.id(), node.kind(), observers, hidden, actionExpiresAt(now, node.parameter())));
@@ -571,7 +569,7 @@ public final class PrecisionOperationRuntime {
                         ensureUnprotected(player, List.of(target));
                         requireSkill(Skills.MENTAL_INTRUSION.get(), player);
                         var intrusionLevel = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
-                        cost += MentaloutConfig.mentalIntrusionCost(player, intrusionLevel);
+                        cost += MentaloutConfig.precisionIntrusionCost(player, intrusionLevel);
                         addSubjects(uniqueSubjects, List.of(target));
                         actions.add(PendingAction.withEntity(
                                 node.id(), node.kind(), target, actionExpiresAt(now, node.parameter())));
@@ -979,7 +977,7 @@ public final class PrecisionOperationRuntime {
             }
         }
         if (slots == null) return;
-        var remaining = activeCost(player, slots);
+        var remaining = permanentCost(player, slots);
         var system = AbilitySystemServer.getSystem(player);
         if (remaining <= 0.0f) {
             system.releaseMaintenanceOccupation(
@@ -1020,14 +1018,14 @@ public final class PrecisionOperationRuntime {
 
     private static float actionCost(ServerPlayer player, LivingEntity subject, PrecisionGraph.NodeKind kind) {
         var baseCost = switch (kind) {
-            case TARGET_MISIDENTIFICATION -> MentaloutConfig.targetMisidentificationCost(player);
-            case MENTAL_STUPOR -> (float) controlledCost(player, subject, MentaloutConfig.mentalStuporCost(player));
+            case TARGET_MISIDENTIFICATION -> MentaloutConfig.precisionMisidentificationCost(player);
+            case MENTAL_STUPOR -> (float) controlledCost(player, subject, MentaloutConfig.precisionStuporCost(player));
             case IMPRESSION_MANIPULATION -> (float) controlledCost(
-                    player, subject, MentaloutConfig.impressionManipulationCost(player));
+                    player, subject, MentaloutConfig.precisionImpressionCost(player));
             case PATH_TO -> (float) controlledCost(player, subject, MentaloutConfig.precisionPathCost(player));
             case VIEW_CONTROL -> (float) controlledCost(player, subject, MentaloutConfig.precisionViewCost(player));
             case GUARD_MODE -> (float) controlledCost(player, subject, MentaloutConfig.precisionGuardCost(player));
-            case PERCEPTION_MASK -> MentaloutConfig.sensoryDistortionCost(
+            case PERCEPTION_MASK -> MentaloutConfig.precisionSensoryCost(
                     player, Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2));
             default -> 0.0f;
         };
@@ -1130,7 +1128,7 @@ public final class PrecisionOperationRuntime {
         var cost = Skills.PRECISION_OPERATION.get().adjustProficiencyCost(
                 player,
                 SkillProficiencyProfile.CostKind.DYNAMIC,
-                MentaloutConfig.sensoryDistortionCost(player, sensoryLevel)
+                MentaloutConfig.precisionSensoryCost(player, sensoryLevel)
         );
         for (var observer : observers) {
             if (MentalControlRuntime.isProtectedTarget(observer)) {
@@ -1149,6 +1147,7 @@ public final class PrecisionOperationRuntime {
             subjectCosts.merge(observer.getUUID(), cost, Float::sum);
         }
     }
+
     private static void stop(ServerPlayer player, int slot) {
         var slots = ACTIVE.get(player.getUUID());
         if (slots == null || slot < 0 || slot >= slots.length) return;
@@ -1156,7 +1155,7 @@ public final class PrecisionOperationRuntime {
         if (context == null) return;
         slots[slot] = null;
         context.close(player);
-        if (activeCost(player, slots) <= 0.0f) {
+        if (permanentCost(player, slots) <= 0.0f) {
             AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                     player.getUUID(),
                     Skills.PRECISION_OPERATION.get().getKeyString()
@@ -1164,7 +1163,7 @@ public final class PrecisionOperationRuntime {
         } else {
             AbilitySystemServer.getSystem(player).replacePermanentOccupation(
                     player.getUUID(),
-                    activeCost(player, slots),
+                    permanentCost(player, slots),
                     Skills.PRECISION_OPERATION.get()
             );
         }
@@ -1193,7 +1192,7 @@ public final class PrecisionOperationRuntime {
         }
     }
 
-    private static float activeCost(ServerPlayer player, ActiveContext[] slots) {
+    private static float permanentCost(ServerPlayer player, ActiveContext[] slots) {
         var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
         var shared = new HashSet<SharedCostKey>();
         var result = 0.0f;
@@ -1203,6 +1202,7 @@ public final class PrecisionOperationRuntime {
                 .toList();
         for (var context : ordered) {
             for (var action : context.actions) {
+                if (!action.isPermanent()) continue;
                 result += action.fixedCost;
                 for (var entry : action.subjectCosts.entrySet()) {
                     var key = new SharedCostKey(action.kind, entry.getKey());
@@ -1215,16 +1215,19 @@ public final class PrecisionOperationRuntime {
         return result;
     }
 
-    private static float projectedCost(
+    private static PrecisionOccupationPlan projectedOccupationPlan(
             ServerPlayer player,
             ActiveContext[] slots,
             int replacedSlot,
             Evaluation evaluated,
-            Set<UUID> removedSubjects
+            Set<UUID> removedSubjects,
+            long now
     ) {
         var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
-        var shared = new HashSet<SharedCostKey>();
-        var result = 0.0f;
+        var sharedPermanent = new HashSet<SharedCostKey>();
+        var sharedTimed = new HashSet<SharedCostKey>();
+        var permanentCost = 0.0f;
+        var timedCharges = new ArrayList<AbilitySystemServer.TimedOccupationCharge>();
         var ordered = java.util.stream.IntStream.range(0, slots.length)
                 .filter(slot -> slot != replacedSlot && slots[slot] != null)
                 .mapToObj(slot -> slots[slot])
@@ -1232,29 +1235,54 @@ public final class PrecisionOperationRuntime {
                 .toList();
         for (var context : ordered) {
             for (var action : context.actions) {
-                result += action.fixedCost;
+                var permanent = action.isPermanent();
+                var shared = permanent ? sharedPermanent : sharedTimed;
+                if (permanent) permanentCost += action.fixedCost;
                 for (var entry : action.subjectCosts.entrySet()) {
                     if (removedSubjects.contains(entry.getKey())) continue;
                     var key = new SharedCostKey(action.kind, entry.getKey());
                     if (!share || !isShareable(action.kind) || shared.add(key)) {
-                        result += entry.getValue();
+                        if (permanent) permanentCost += entry.getValue();
                     }
                 }
             }
         }
         for (var action : evaluated.actions) {
-            if (action.kind == PrecisionGraph.NodeKind.START_INTRUSION) {
-                result += MentaloutConfig.mentalIntrusionCost(
-                        player, Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2));
-            }
+            var permanent = action.expiresAt == Long.MAX_VALUE;
+            var shared = permanent ? sharedPermanent : sharedTimed;
+            var cost = fixedActionCost(player, action.kind);
             for (var subject : action.entities) {
                 var key = new SharedCostKey(action.kind, subject.getUUID());
                 if (!share || !isShareable(action.kind) || shared.add(key)) {
-                    result += actionCost(player, subject, action.kind);
+                    cost += actionCost(player, subject, action.kind);
                 }
             }
+            if (!(cost > 0.0f)) continue;
+            if (permanent) {
+                permanentCost += cost;
+            } else {
+                timedCharges.add(new AbilitySystemServer.TimedOccupationCharge(
+                        cost, durationIterationPoints(now, action.expiresAt)));
+            }
         }
-        return Math.max(0.0f, result);
+        return new PrecisionOccupationPlan(
+                Math.max(0.0f, permanentCost), List.copyOf(timedCharges));
+    }
+
+    private static float fixedActionCost(ServerPlayer player, PrecisionGraph.NodeKind kind) {
+        if (kind != PrecisionGraph.NodeKind.START_INTRUSION) return 0.0f;
+        var level = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
+        return Skills.PRECISION_OPERATION.get().adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.DYNAMIC,
+                MentaloutConfig.precisionIntrusionCost(player, level)
+        );
+    }
+
+    static int durationIterationPoints(long now, long expiresAt) {
+        if (expiresAt == Long.MAX_VALUE) return 0;
+        var durationTicks = Math.max(1L, expiresAt - now);
+        return Math.clamp((int) Math.ceil(durationTicks / 40.0), 5, 20);
     }
 
     private static boolean isShareable(PrecisionGraph.NodeKind kind) {
@@ -1265,6 +1293,12 @@ public final class PrecisionOperationRuntime {
     }
 
     private record SharedCostKey(PrecisionGraph.NodeKind kind, UUID subject) {
+    }
+
+    private record PrecisionOccupationPlan(
+            float permanentCost,
+            List<AbilitySystemServer.TimedOccupationCharge> timedCharges
+    ) {
     }
 
     private static void closeReverse(List<? extends AutoCloseable> handles) {
@@ -1516,6 +1550,10 @@ public final class PrecisionOperationRuntime {
             var total = fixedCost;
             for (var cost : subjectCosts.values()) total += cost;
             return total;
+        }
+
+        private boolean isPermanent() {
+            return expiresAt == Long.MAX_VALUE;
         }
 
         private ActionTick tick(ServerPlayer player, long now) {
