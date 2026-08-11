@@ -74,9 +74,9 @@ public final class LocationTeleport extends Skill {
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
-                .cpCost(30)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .cpCost(40)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.CUT_THROUGH)
                 .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, LocationTeleportData::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
@@ -284,7 +284,7 @@ public final class LocationTeleport extends Skill {
 
             var originDimension = player.level().dimension();
             var originPosition = player.position();
-            skill.executeActive(player, ctx -> returning ? 15.0f : 30.0f, (ctx, actualCost) -> {
+            skill.executeActive(player, ctx -> returning ? 20.0f : 40.0f, (ctx, actualCost) -> {
                 if (!returning) {
                     forceDestinationChunk(level, mark.x(), mark.z(), "location_" + player.getStringUUID());
                     level.getChunk(mark.x() >> 4, mark.z() >> 4);

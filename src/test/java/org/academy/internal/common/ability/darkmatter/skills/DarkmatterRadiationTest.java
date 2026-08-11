@@ -8,8 +8,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class DarkmatterRadiationTest {
     @Test
     void damageCombinesFlatAndDarkmatterComponents() {
-        assertEquals(4.0f, DarkmatterRadiation.Server.damage(20, 1), 0.0001f);
-        assertEquals(12.0f, DarkmatterRadiation.Server.damage(10_000, 1), 0.0001f);
+        assertEquals(4.0f, DarkmatterRadiation.Server.damage(20, 1, 1), 0.0001f);
+        assertEquals(12.0f, DarkmatterRadiation.Server.damage(10_000, 1, 1), 0.0001f);
+        assertEquals(16.0f, DarkmatterRadiation.Server.damage(10_000, 1, 3), 0.0001f);
     }
 
     @Test

@@ -59,7 +59,7 @@ public final class LaminarCutter extends Skill {
 
     public LaminarCutter() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL3).energyCost(30_000)
-                .cpCost(30).iterationTicks(20).maxStacks(1).dependsOn(Skills.PNEUMATIC_GRASP)
+                .cpCost(20).iterationTicks(10).maxStacks(20).dependsOn(Skills.PNEUMATIC_GRASP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
 
@@ -133,7 +133,7 @@ public final class LaminarCutter extends Skill {
                 level.playSound(null, player.blockPosition(),
                         SoundEvents.AIRFLOW_IMPACT.get(),
                         SoundSource.PLAYERS, 0.65f, 1.15f);
-                var damage = 6.0f * AeromanipConfig.damageMultiplier(player, SkillNames.LAMINAR_CUTTER)
+                var damage = 4.0f * AeromanipConfig.damageMultiplier(player, SkillNames.LAMINAR_CUTTER)
                         * context.system().getPlayerAbilityPowerMultiplier(player.getUUID())
                         * context.system().getPlayerDamageMultiplier(player.getUUID());
                 var finalBladeRight = bladeRight;

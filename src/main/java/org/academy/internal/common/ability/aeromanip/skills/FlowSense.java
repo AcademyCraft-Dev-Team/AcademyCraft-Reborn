@@ -29,6 +29,7 @@ public final class FlowSense extends Skill {
                 .energyCost(5_000)
                 .passive()
                 .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.AIRFLOW_JET)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1)));
     }

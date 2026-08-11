@@ -78,7 +78,7 @@ public final class LightShield extends Skill {
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
-                .iterationTicks(0)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
@@ -313,7 +313,7 @@ public final class LightShield extends Skill {
             skill.reportActivity(player, true);
             var system = AbilitySystemServer.getSystem(player);
             if (ticks % CP_INTERVAL_TICKS == 0
-                    && !system.tryTimedOccupation(player.getUUID(), 5.0f, skill)) {
+                    && !system.tryTimedOccupation(player.getUUID(), 4.0f, skill)) {
                 end();
                 return;
             }

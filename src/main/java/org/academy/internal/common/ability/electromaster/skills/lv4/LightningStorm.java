@@ -177,8 +177,9 @@ public class LightningStorm extends Skill {
     }
 
     public static final class Server {
-        public static float calculateDamage(float abilityPower, float playerMultiplier) {
-            return DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
+        public static float calculateDamage(float maxHealth, float abilityPower, float playerMultiplier) {
+            return Math.max(0.0f, maxHealth) * 0.02f
+                    + DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
         }
 
         @SubscribePacket
@@ -250,16 +251,15 @@ public class LightningStorm extends Skill {
                 var box = new AABB(topPos).inflate(3);
                 var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
                 var system = AbilitySystemServer.getSystem(player);
-                var damage = Server.calculateDamage(
-                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                        system.getPlayerDamageMultiplier(player.getUUID())
-                );
+                var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
+                var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(
                         player,
                         skill,
                         DamageTypes.ELECTRO_DAMAGE
                 );
                 for (var target : targets) {
+                    var damage = Server.calculateDamage(target.getMaxHealth(), abilityPower, damageMultiplier);
                     if (target.hurtServer(serverLevel, source, damage)) struckTargets.add(target.getUUID());
                 }
             }

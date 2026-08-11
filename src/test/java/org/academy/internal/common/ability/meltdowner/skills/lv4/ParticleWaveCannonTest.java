@@ -8,19 +8,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ParticleWaveCannonTest {
     @Test
     void damageUsesReferenceHealthFormulaAndRadiationMultiplier() {
-        assertEquals(41.0f, MeltdownerBeamDamage.calculate(
+        assertEquals(121.0f, MeltdownerBeamDamage.calculatePowerScaledBase(
                 ParticleWaveCannon.BASE_DAMAGE,
                 ParticleWaveCannon.MAX_HEALTH_DAMAGE_RATIO,
                 100.0f,
-                1.0f,
-                false
+                2.0f,
+                1.5f,
+                false,
+                1.5f
         ));
-        assertEquals(61.0f, MeltdownerBeamDamage.calculate(
+        assertEquals(181.0f, MeltdownerBeamDamage.calculatePowerScaledBase(
                 ParticleWaveCannon.BASE_DAMAGE,
                 ParticleWaveCannon.MAX_HEALTH_DAMAGE_RATIO,
                 100.0f,
-                1.0f,
-                true
+                2.0f,
+                1.5f,
+                true,
+                1.5f
         ));
     }
 
@@ -30,6 +34,6 @@ class ParticleWaveCannonTest {
         assertEquals(2, ParticleWaveCannon.CP_INTERVAL_TICKS);
         assertEquals(10, ParticleWaveCannon.DAMAGE_INTERVAL_TICKS);
         assertEquals(85.0f, ParticleWaveCannon.MAX_LENGTH);
-        assertEquals(3, ParticleWaveCannon.MINING_TIER);
+        assertEquals(4, ParticleWaveCannon.MINING_TIER);
     }
 }

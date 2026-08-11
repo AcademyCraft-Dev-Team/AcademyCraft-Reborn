@@ -70,15 +70,35 @@ public class AbilityConfig {
         @SerializedName("targetMisidentificationCost")
         public float targetMisidentificationCost = 40.0f;
         @SerializedName("mentalStuporCostPerTarget")
-        public float mentalStuporCostPerTarget = 30.0f;
+        public float mentalStuporCostPerTarget = 10.0f;
         @SerializedName("impressionManipulationCostPerTarget")
-        public float impressionManipulationCostPerTarget = 20.0f;
+        public float impressionManipulationCostPerTarget = 10.0f;
+        @SerializedName("commandPositioningCostPerTarget")
+        public float commandPositioningCostPerTarget = 10.0f;
+        @SerializedName("precisionStuporCostPerTarget")
+        public float precisionStuporCostPerTarget = 10.0f;
+        @SerializedName("precisionImpressionCostPerTarget")
+        public float precisionImpressionCostPerTarget = 10.0f;
+        @SerializedName("precisionMisidentificationCostPerTarget")
+        public float precisionMisidentificationCostPerTarget = 20.0f;
         @SerializedName("precisionPathCostPerTarget")
-        public float precisionPathCostPerTarget = 10.0f;
+        public float precisionPathCostPerTarget = 5.0f;
         @SerializedName("precisionViewCostPerTarget")
-        public float precisionViewCostPerTarget = 8.0f;
+        public float precisionViewCostPerTarget = 5.0f;
         @SerializedName("precisionGuardCostPerTarget")
-        public float precisionGuardCostPerTarget = 20.0f;
+        public float precisionGuardCostPerTarget = 10.0f;
+        @SerializedName("precisionSensoryCostLevel0")
+        public float precisionSensoryCostLevel0 = 20.0f;
+        @SerializedName("precisionSensoryCostLevel1")
+        public float precisionSensoryCostLevel1 = 15.0f;
+        @SerializedName("precisionSensoryCostLevel2")
+        public float precisionSensoryCostLevel2 = 10.0f;
+        @SerializedName("precisionIntrusionCostLevel0")
+        public float precisionIntrusionCostLevel0 = 20.0f;
+        @SerializedName("precisionIntrusionCostLevel1")
+        public float precisionIntrusionCostLevel1 = 15.0f;
+        @SerializedName("precisionIntrusionCostLevel2")
+        public float precisionIntrusionCostLevel2 = 10.0f;
         @SerializedName("bossCostMultiplier")
         public float bossCostMultiplier = 2.0f;
         @SerializedName("playerControlCostMultiplier")
@@ -92,7 +112,7 @@ public class AbilityConfig {
         @SerializedName("sensoryDistortionMaintenanceCost")
         public float sensoryDistortionMaintenanceCost = 30.0f;
         @SerializedName("mentalIntrusionRange")
-        public float mentalIntrusionRange = 16.0f;
+        public float mentalIntrusionRange = 32.0f;
         @SerializedName("mentalIntrusionMaxDistance")
         public float mentalIntrusionMaxDistance = 96.0f;
         @SerializedName("playerIntrusionMaxTicks")

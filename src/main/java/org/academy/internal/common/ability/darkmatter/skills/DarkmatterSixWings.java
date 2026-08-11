@@ -44,7 +44,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 
 public final class DarkmatterSixWings extends Skill {
-    public static final float RESERVED_CP = 70.0f;
+    public static final float RESERVED_CP = 50.0f;
     private static final Identifier FLIGHT_SOURCE =
             AcademyCraft.academy(SkillNames.DARKMATTER_SIX_WINGS);
     private static final Identifier TRUE_RESISTANCE_MODIFIER_ID =
@@ -59,6 +59,7 @@ public final class DarkmatterSixWings extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(RESERVED_CP)
                 .iterationTicks(20)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.DARKMATTER_SHAPING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition(

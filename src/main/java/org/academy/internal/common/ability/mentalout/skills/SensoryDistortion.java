@@ -30,7 +30,7 @@ public final class SensoryDistortion extends Skill {
                 .energyCost(10_000)
                 .cpCost(0)
                 .iterationTicks(0)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.MENTAL_INTRUSION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition(

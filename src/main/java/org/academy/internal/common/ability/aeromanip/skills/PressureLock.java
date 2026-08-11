@@ -54,7 +54,7 @@ import java.util.WeakHashMap;
 public final class PressureLock extends Skill {
     public PressureLock() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL4).energyCost(60_000)
-                .cpCost(65).iterationTicks(10).maxStacks(1).dependsOn(Skills.VORTEX_PULL)
+                .cpCost(40).iterationTicks(15).maxStacks(1).dependsOn(Skills.VORTEX_PULL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4)));
     }
     @Override public void initClient() {
@@ -135,7 +135,7 @@ public final class PressureLock extends Skill {
                                     skill.getCpCost(skill.getLevel(player))
                                             * AeromanipConfig.cpMultiplier(player, SkillNames.PRESSURE_LOCK)),
                             skill,
-                            10
+                            15
                     )) {
                         end();
                         return;

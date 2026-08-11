@@ -63,8 +63,8 @@ public final class ArcGenerate extends Skill {
                         .level(AbilityLevel.LEVEL1)
                         .energyCost(5_000)
                         .cpCost(10)
-                        .iterationTicks(4)
-                        .maxStacks(1)
+                        .iterationTicks(5)
+                        .maxStacks(20)
                         .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }

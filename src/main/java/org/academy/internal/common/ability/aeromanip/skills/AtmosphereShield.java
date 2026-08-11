@@ -65,7 +65,7 @@ public final class AtmosphereShield extends Skill {
                 .energyCost(30_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(35)
+                .maintenanceCost(30)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.BREATHING_FILM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
@@ -226,7 +226,7 @@ public final class AtmosphereShield extends Skill {
                             * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD));
             if (!system.tryTimedOccupation(player.getUUID(),
                     defenseCost,
-                    skill, 10)) return;
+                    skill, 5)) return;
             event.setAmount(event.getAmount() - prevented);
             player.level().playSound(
                     null,
