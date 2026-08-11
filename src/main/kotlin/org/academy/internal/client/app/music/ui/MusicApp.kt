@@ -511,6 +511,7 @@ object MusicApp : App {
             tooltip: String,
             action: () -> Unit
         ): ButtonWidget {
+            val isPlayIcon = texture == R.textures.gui.app.music.play
             return ButtonWidget().apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(22f, 22f)
@@ -519,8 +520,15 @@ object MusicApp : App {
                 onClickListener = { action() }
                 addChild("icon", ImageWidget(texture).apply {
                     setSampler(FilterMode.LINEAR, false)
+                    // Keep the click target comfortable while reducing the visible glyph by 30%.
+                    // play.png has asymmetric transparent padding, so center its visible pixels
+                    // instead of the full 128 x 128 canvas.
+                    if (isPlayIcon) {
+                        translationX = 1.25f
+                        translationY = -0.9f
+                    }
                     layoutParams = FrameLayoutWidget.LayoutParams()
-                        .size(14f, 14f)
+                        .size(9.8f, 9.8f)
                         .gravity(Gravity.CENTER)
                 })
             }
