@@ -74,19 +74,22 @@ public final class AbilityDeveloperBlock extends MultiBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (!player.isShiftKeyDown()) {
+            var mainBlockEntity = getMainBlockEntity(level, pos);
+            if (level.isClientSide() && mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
+                abilityDeveloper.startOpening();
+            }
+
             if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-                if (serverLevel.getBlockEntity(pos) instanceof AbilityDeveloperBlockEntity blockEntity) {
-                    if (blockEntity.mainPos != null) {
-                        var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
-                        payloadBuffer.writeBlockPos(blockEntity.mainPos);
+                if (mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
+                    var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
+                    payloadBuffer.writeBlockPos(abilityDeveloper.getBlockPos());
 
-                        var dataPayload = new byte[payloadBuffer.readableBytes()];
-                        payloadBuffer.readBytes(dataPayload);
+                    var dataPayload = new byte[payloadBuffer.readableBytes()];
+                    payloadBuffer.readBytes(dataPayload);
 
-                        serverPlayer.connection.send(new S2CPacket(
-                                new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN, dataPayload)
-                        ));
-                    }
+                    serverPlayer.connection.send(new S2CPacket(
+                            new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN, dataPayload)
+                    ));
                 }
             }
         }
