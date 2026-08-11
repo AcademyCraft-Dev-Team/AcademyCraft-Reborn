@@ -58,8 +58,8 @@ import java.util.*;
 
 public final class PulseCharge extends Skill {
     static final double CHARGE_REACH = 5.0;
-    static final float CP_COST_PER_CHARGE_TICK = 20.0f;
-    static final int CP_CHARGE_INTERVAL_TICKS = 5;
+    static final float CP_COST_PER_CHARGE_TICK = 30.0f;
+    static final int CP_CHARGE_INTERVAL_TICKS = 20;
     private static final String LEGACY_CURRENT_RECHARGE = "academy:current_recharge";
 
     public PulseCharge() {
@@ -67,7 +67,7 @@ public final class PulseCharge extends Skill {
                 .of(AbilityCategories.ELECTROMASTER.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
-                .iterationTicks(20)
+                .iterationTicks(10)
                 .maxStacks(Skill.NO_STACK_LIMIT)
                 .dependsOn(Skills.MAGNET_MANIPULATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
@@ -312,7 +312,7 @@ public final class PulseCharge extends Skill {
             var costTick = ticks % CP_CHARGE_INTERVAL_TICKS == 0;
             if (costTick && !system.tryTimedOccupation(
                     player.getUUID(), skill.adjustProficiencyCost(player,
-                            SkillProficiencyProfile.CostKind.CONTINUOUS, CP_COST_PER_CHARGE_TICK), skill, 20
+                            SkillProficiencyProfile.CostKind.CONTINUOUS, CP_COST_PER_CHARGE_TICK), skill, 10
             )) {
                 clearPoweredBlock();
                 return;

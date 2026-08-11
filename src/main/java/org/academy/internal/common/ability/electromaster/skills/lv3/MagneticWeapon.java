@@ -64,8 +64,9 @@ public class MagneticWeapon extends Skill {
                 .energyCost(30_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(40)
+                .maintenanceCost(30)
                 .iterationTicks(20)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.MAGNET_MANIPULATION));
     }
 

@@ -58,7 +58,7 @@ public final class CommandPositioning extends Skill {
                 .energyCost(25_000)
                 .cpCost(0)
                 .iterationTicks(10)
-                .maxStacks(1)
+                .maxStacks(10)
                 .dependsOn(Skills.MENTAL_INTERVENTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition(
@@ -192,7 +192,7 @@ public final class CommandPositioning extends Skill {
                 return;
             }
 
-            var baseCost = MentaloutConfig.precisionPathCost(player);
+            var baseCost = MentaloutConfig.commandPositioningCost(player);
             var cost = 0.0f;
             for (var subject : subjects) {
                 cost += baseCost * (MentalControlRuntime.isBossCost(subject)

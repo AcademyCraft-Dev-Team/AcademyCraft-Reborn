@@ -63,7 +63,7 @@ public final class DarkmatterRadiation extends Skill {
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .cpCost(10)
-                .iterationTicks(20)
+                .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.DARKMATTER_CUT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
@@ -164,8 +164,12 @@ public final class DarkmatterRadiation extends Skill {
             ACTIVE.remove(packet.getPacketListener().getPlayer().getUUID());
         }
 
-        static float damage(float maxHealth, float abilityPower) {
-            return FLAT_DAMAGE + darkmatterDamage(maxHealth, abilityPower);
+        static float damage(float maxHealth, float abilityPower, float damageMultiplier) {
+            return flatDamage(abilityPower, damageMultiplier) + darkmatterDamage(maxHealth, abilityPower);
+        }
+
+        static float flatDamage(float abilityPower, float damageMultiplier) {
+            return FLAT_DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, damageMultiplier);
         }
 
         static float darkmatterDamage(float maxHealth, float abilityPower) {
@@ -203,12 +207,14 @@ public final class DarkmatterRadiation extends Skill {
             if (targets.isEmpty()) return;
 
             var skill = Skills.DARKMATTER_RADIATION.get();
-            var power = AbilitySystemServer.getSystem(player)
-                    .getPlayerAbilityPowerMultiplier(player.getUUID());
+            var system = AbilitySystemServer.getSystem(player);
+            var power = system.getPlayerAbilityPowerMultiplier(player.getUUID());
+            var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
             var darkmatterSource = SkillDamageSource.of(player, skill);
             for (var target : targets) {
                 target.invulnerableTime = 0;
-                var hit = target.hurtServer(level, darkmatterSource, FLAT_DAMAGE);
+                var hit = target.hurtServer(level, darkmatterSource,
+                        flatDamage(power, damageMultiplier));
                 if (target.isAlive()) {
                     target.invulnerableTime = 0;
                     hit |= target.hurtServer(
@@ -222,7 +228,7 @@ public final class DarkmatterRadiation extends Skill {
                     var exposure = state.exposure.merge(target.getUUID(), 1, Integer::sum);
                     if (exposure >= 20) {
                         state.exposure.put(target.getUUID(), 0);
-                        radiationPulse(level, player, target, skill, power);
+                        radiationPulse(level, player, target, skill, power, damageMultiplier);
                     }
                 }
                 level.sendParticles(ParticleTypes.PORTAL,
@@ -232,14 +238,15 @@ public final class DarkmatterRadiation extends Skill {
         }
 
         private static void radiationPulse(ServerLevel level, ServerPlayer player, LivingEntity center,
-                                           Skill skill, float power) {
+                                           Skill skill, float power, float damageMultiplier) {
             var source = SkillDamageSource.of(player, skill);
             var processed = 0;
             for (var target : level.getEntitiesOfClass(LivingEntity.class,
                     center.getBoundingBox().inflate(3.0), target -> isHostileTarget(player, target))) {
                 if (processed++ >= 96) break;
                 target.invulnerableTime = 0;
-                target.hurtServer(level, source, damage(target.getMaxHealth(), power) * 4.0f);
+                target.hurtServer(level, source,
+                        damage(target.getMaxHealth(), power, damageMultiplier) * 4.0f);
             }
             level.sendParticles(ParticleTypes.WITCH, center.getX(), center.getY() + center.getBbHeight() * 0.5,
                     center.getZ(), 24, 1.5, 1.5, 1.5, 0.08);

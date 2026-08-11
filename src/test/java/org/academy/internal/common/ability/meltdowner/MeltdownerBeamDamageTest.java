@@ -13,6 +13,14 @@ class MeltdownerBeamDamageTest {
     }
 
     @Test
+    void powerScaledFormulaOnlyScalesTheFixedDamageTerm() {
+        assertEquals(65.0f, MeltdownerBeamDamage.calculatePowerScaledBase(
+                16.0f, 0.01f, 100.0f, 2.0f, 2.0f, false, 1.5f));
+        assertEquals(97.0f, MeltdownerBeamDamage.calculatePowerScaledBase(
+                16.0f, 0.01f, 100.0f, 2.0f, 2.0f, true, 1.5f));
+    }
+
+    @Test
     void damageRejectsNonFiniteValuesAndClampsNegativeInputs() {
         assertEquals(0.0f, MeltdownerBeamDamage.calculate(Float.NaN, 0.01f, 100.0f, 1.0f, false));
         assertEquals(0.0f, MeltdownerBeamDamage.calculate(20.0f, 0.01f, 100.0f, Float.POSITIVE_INFINITY, false));

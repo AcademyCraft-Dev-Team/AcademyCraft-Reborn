@@ -31,6 +31,7 @@ public final class RadiationIntensify extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .passive()
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
                 .devCondition(new DevCondition.DependencyCondition(

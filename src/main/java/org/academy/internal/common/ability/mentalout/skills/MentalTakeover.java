@@ -32,7 +32,7 @@ public final class MentalTakeover extends Skill {
                 .energyCost(60_000)
                 .cpCost(0)
                 .iterationTicks(10)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.MENTAL_INTRUSION, Skills.COMMAND_POSITIONING, Skills.MENTAL_STUPOR)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
                 .devCondition(new DevCondition.DependencyCondition(

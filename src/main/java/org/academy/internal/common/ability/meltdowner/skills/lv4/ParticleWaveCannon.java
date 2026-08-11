@@ -59,7 +59,7 @@ public final class ParticleWaveCannon extends Skill {
     static final float BASE_DAMAGE = 40.0f;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
     static final float BREAK_RADIUS = 0.6f;
-    static final int MINING_TIER = 3;
+    static final int MINING_TIER = 4;
 
     public ParticleWaveCannon() {
         super(Builder
@@ -67,7 +67,7 @@ public final class ParticleWaveCannon extends Skill {
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(10)
-                .iterationTicks(CP_INTERVAL_TICKS)
+                .iterationTicks(15)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SCATTER_BOMB)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
@@ -232,6 +232,7 @@ public final class ParticleWaveCannon extends Skill {
                     damageRadius,
                     BASE_DAMAGE,
                     MAX_HEALTH_DAMAGE_RATIO,
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                     system.getPlayerDamageMultiplier(player.getUUID()),
                     Skills.RADIATION_INTENSIFY.get().isEnabled(player)
             );

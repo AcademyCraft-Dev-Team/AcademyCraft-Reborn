@@ -32,8 +32,8 @@ public final class AirCushion extends Skill {
         super(Builder.of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .iterationTicks(5)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.AIRFLOW_JET)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1)));
     }
@@ -65,9 +65,9 @@ public final class AirCushion extends Skill {
             var owner = findOwner(player);
             if (owner == null || event.getDistance() < 7.0f) return;
             var system = AbilitySystemServer.getSystem(owner);
-            var baseCost = 12.0f * AeromanipConfig.cpMultiplier(owner, SkillNames.AIR_CUSHION);
+            var baseCost = 10.0f * AeromanipConfig.cpMultiplier(owner, SkillNames.AIR_CUSHION);
             var cost = skill.adjustProficiencyCost(owner, SkillProficiencyProfile.CostKind.CAST, baseCost);
-            if (!system.tryTimedOccupation(owner.getUUID(), cost, skill, 20)) return;
+            if (!system.tryTimedOccupation(owner.getUUID(), cost, skill, 5)) return;
             var level = Math.max(0, Math.min(2, skill.getLevel(owner)));
             event.setDamageMultiplier(Math.max(0.0f, 1.0f - REDUCTION[level]));
             if (skill.hasProficiencyMilestone(owner, 3)) triggerAirBurst(owner, player);

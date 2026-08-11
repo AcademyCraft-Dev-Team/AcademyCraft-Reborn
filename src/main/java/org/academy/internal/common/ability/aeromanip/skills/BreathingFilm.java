@@ -52,6 +52,7 @@ public final class BreathingFilm extends Skill {
                 .passive()
                 .maintenanceCost(20)
                 .iterationTicks(20)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.FLOW_SENSE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
         );
@@ -185,7 +186,7 @@ public final class BreathingFilm extends Skill {
             var skill = Skills.BREATHING_FILM.get();
             if (!skill.isEnabled(player)) return;
             if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player.getUUID(),
-                    25.0f * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_FILM), skill, 1)) return;
+                    15.0f * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_FILM), skill, 5)) return;
             for (var target : player.level().getEntitiesOfClass(
                     LivingEntity.class,
                     player.getBoundingBox().inflate(ACTIVE_RADIUS),

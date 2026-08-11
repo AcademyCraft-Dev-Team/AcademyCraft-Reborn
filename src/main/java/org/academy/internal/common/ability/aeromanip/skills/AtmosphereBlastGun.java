@@ -54,9 +54,9 @@ public final class AtmosphereBlastGun extends Skill {
                 .of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
-                .cpCost(40)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .cpCost(30)
+                .iterationTicks(15)
+                .maxStacks(10)
                 .dependsOn(Skills.ATMOSPHERE_SHIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
         );
@@ -197,7 +197,7 @@ public final class AtmosphereBlastGun extends Skill {
             if (!(player.level() instanceof ServerLevel level)) return false;
             var skill = Skills.ATMOSPHERE_BLAST_GUN.get();
             var focused = chargeTicks > 0;
-            return skill.executeActive(player, context -> (focused ? 60.0f : 40.0f)
+            return skill.executeActive(player, context -> (focused ? 40.0f : 30.0f)
                     * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_BLAST_GUN), (context, _) -> {
                 var eye = player.getEyePosition();
                 var look = player.getLookAngle();
@@ -211,7 +211,7 @@ public final class AtmosphereBlastGun extends Skill {
                 }
                 var width = focused ? 0.5 : HALF_WIDTH;
                 var resolvedLength = length;
-                var damageBase = (focused ? 10.0f : 6.0f)
+                var damageBase = (focused ? 14.0f : 10.0f)
                         * AeromanipConfig.damageMultiplier(player, SkillNames.ATMOSPHERE_BLAST_GUN);
                 var searchBox = new AABB(eye, eye).inflate(length);
                 var targets = level.getEntitiesOfClass(

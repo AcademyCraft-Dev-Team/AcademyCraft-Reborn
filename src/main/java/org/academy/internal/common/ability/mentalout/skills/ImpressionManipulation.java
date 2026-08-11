@@ -43,7 +43,7 @@ public final class ImpressionManipulation extends Skill {
                 .energyCost(30_000)
                 .cpCost(0)
                 .iterationTicks(0)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.MENTAL_INTERVENTION, Skills.TARGET_MISIDENTIFICATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition(

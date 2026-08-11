@@ -72,7 +72,7 @@ public final class VacuumDomain extends Skill {
                 .of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
-                .cpCost(120)
+                .cpCost(50)
                 .iterationTicks(20)
                 .maxStacks(1)
                 .dependsOn(Skills.ATMOSPHERIC_DOMINION)
@@ -187,7 +187,8 @@ public final class VacuumDomain extends Skill {
                 return;
             }
             var skill = Skills.VACUUM_DOMAIN.get();
-            skill.executeActive(player, context -> skill.getCpCost(context.level())
+            skill.executeActive(player, context -> (skill.getCpCost(context.level())
+                    + context.system().getPlayerMaxCP(player.getUUID()) * 0.2f)
                     * AeromanipConfig.cpMultiplier(player, SkillNames.VACUUM_DOMAIN), (context, _) -> {
                 if (!(player.level() instanceof ServerLevel level)) return;
                 var center = resolveTargetPoint(level, player, context.milestone());
@@ -288,7 +289,6 @@ public final class VacuumDomain extends Skill {
                 target.invulnerableTime = 0;
                 var damage = baseDamage(target.getMaxHealth(), isPercentDamageImmune(target))
                         * AeromanipConfig.damageMultiplier(player, SkillNames.VACUUM_DOMAIN) * power;
-                if (target instanceof ServerPlayer) damage = Math.min(4.0f, damage * 0.4f);
                 target.hurtServer(level, source, damage);
             }
             if (field.proficiencyMilestone() >= 3 && ticks % 10 == 0) {

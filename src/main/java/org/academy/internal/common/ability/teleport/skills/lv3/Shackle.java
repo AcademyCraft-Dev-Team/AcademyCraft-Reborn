@@ -47,8 +47,8 @@ public class Shackle extends Skill {
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
-                .cpCost(40)
-                .iterationTicks(20)
+                .cpCost(30)
+                .iterationTicks(10)
                 .maxStacks(1)
                 .dependsOn(Skills.SELF_TELEPORT)
         );
@@ -154,7 +154,7 @@ public class Shackle extends Skill {
     }
 
     public static final class Server {
-        private static final int SHACKLE_DURATION = 100;
+        private static final int SHACKLE_DURATION = 160;
 
         @SubscribePacket
         public static void handle(UsePacket packet) {
@@ -170,7 +170,7 @@ public class Shackle extends Skill {
                         || !canShackle(player, target)
                         || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
                 target.stopRiding();
-                var duration = ctx.milestone() >= 2 && !(target instanceof Player) ? 130 : SHACKLE_DURATION;
+                var duration = ctx.milestone() >= 2 && !(target instanceof Player) ? 200 : SHACKLE_DURATION;
                 var sourceId = "shackle:" + player.getStringUUID();
                 if (ctx.milestone() >= 3) {
                     EntityMotionGuard.imprison(target, sourceId, duration, 2.0, displaced -> {

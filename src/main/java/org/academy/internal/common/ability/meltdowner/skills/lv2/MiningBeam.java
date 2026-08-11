@@ -54,21 +54,21 @@ import java.util.List;
 import java.util.Map;
 
 public final class MiningBeam extends Skill {
-    static final int CP_INTERVAL_TICKS = 2;
+    static final int CP_INTERVAL_TICKS = 20;
     static final int BREAK_INTERVAL_TICKS = 3;
     static final int DAMAGE_INTERVAL_TICKS = 20;
     static final float MAX_LENGTH = 48.0f;
     static final float DAMAGE_RADIUS = 0.6f;
     static final float BASE_DAMAGE = 12.0f;
     static final float BREAK_RADIUS = 0.35f;
-    static final int MINING_TIER = 3;
+    static final int MINING_TIER = 4;
     public MiningBeam() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .cpCost(5)
-                .iterationTicks(CP_INTERVAL_TICKS)
+                .cpCost(20)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
