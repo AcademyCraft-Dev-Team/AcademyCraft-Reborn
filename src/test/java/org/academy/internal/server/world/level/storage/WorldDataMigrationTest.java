@@ -67,6 +67,25 @@ class WorldDataMigrationTest {
     }
 
     @Test
+    void persistsTheGrownCpMaximumAndItsMigrationMarker() {
+        var worldData = new WorldData();
+        var player = new Player();
+        player.getCpData().setMaxCP(640.0f);
+        player.getCpData().setAvailableCP(512.0f);
+        player.setMaxCpInitialized(true);
+        worldData.getPlayers().put(PLAYER_ID, player);
+
+        var gson = WorldData.createGson();
+        var restored = gson.fromJson(gson.toJson(worldData), WorldData.class)
+                .getPlayers().get(PLAYER_ID);
+
+        assertNotNull(restored);
+        assertEquals(640.0f, restored.getCpData().getMaxCP());
+        assertEquals(512.0f, restored.getCpData().getAvailableCP());
+        assertTrue(restored.isMaxCpInitialized());
+    }
+
+    @Test
     void removesRetiredHellFlareDataAndOccupation() {
         var json = """
                 {

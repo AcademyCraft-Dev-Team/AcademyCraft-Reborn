@@ -119,6 +119,19 @@ class PlayerCPManagerTest {
     }
 
     @Test
+    void migratesRecalculatedCpGrowthIntoThePersistentMaximum() {
+        assertEquals(400.0f, PlayerCPManager.initialPersistentMaxCp(100.0f, 300.0f));
+        assertEquals(640.0f, PlayerCPManager.initialPersistentMaxCp(640.0f, 300.0f));
+    }
+
+    @Test
+    void appliesOnlyNewGrowthToThePersistentMaximum() {
+        assertEquals(420.0f, PlayerCPManager.applyDerivedMaxCpGrowth(400.0f, 300.0f, 320.0f));
+        assertEquals(400.0f, PlayerCPManager.applyDerivedMaxCpGrowth(400.0f, 300.0f, 300.0f));
+        assertEquals(420.0f, PlayerCPManager.applyDerivedMaxCpGrowth(420.0f, 320.0f, 20.0f));
+    }
+
+    @Test
     void calculationEfficiencyIsPointZeroFivePercentOfMaximumCp() {
         assertEquals(0.05f, PlayerCPManager.calculationEfficiency(100.0f));
         assertEquals(0.5f, PlayerCPManager.calculationEfficiency(1000.0f));

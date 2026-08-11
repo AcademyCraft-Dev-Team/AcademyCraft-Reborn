@@ -53,6 +53,8 @@ public final class Player {
     private AbilityData cpData = new AbilityData();
     @SerializedName("appliedCommonSkillMaxCpBonus")
     private float appliedCommonSkillMaxCpBonus;
+    @SerializedName("maxCpInitialized")
+    private boolean maxCpInitialized;
     @SerializedName("challengeCpBonus")
     private float challengeCpBonus;
 
@@ -167,6 +169,17 @@ public final class Player {
     public void setAppliedCommonSkillMaxCpBonus(float bonus) {
         if (Float.compare(appliedCommonSkillMaxCpBonus, bonus) != 0) {
             appliedCommonSkillMaxCpBonus = bonus;
+            markDirty();
+        }
+    }
+
+    public boolean isMaxCpInitialized() {
+        return maxCpInitialized;
+    }
+
+    public void setMaxCpInitialized(boolean initialized) {
+        if (maxCpInitialized != initialized) {
+            maxCpInitialized = initialized;
             markDirty();
         }
     }
