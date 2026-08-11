@@ -143,12 +143,12 @@ public final class DarkmatterSixWingsVfx implements Vfx {
     }
 
     private static float[] transform(ModelPart.Vertex vertex, Matrix4f matrix) {
-        // ModelPart cube vertices are authored in model pixels. ModelPart's normal compile path
-        // converts them to blocks, so the VFX mesh path must do the same before transformation.
+        // worldX/Y/Z already apply ModelPart.Vertex.SCALE_FACTOR (1 / 16). Applying it a second
+        // time collapses each textured face to 1 / 256 model scale, leaving only scattered texels.
         var position = new Vector3f(
-                vertex.worldX() / 16.0f,
-                vertex.worldY() / 16.0f,
-                vertex.worldZ() / 16.0f
+                vertex.worldX(),
+                vertex.worldY(),
+                vertex.worldZ()
         ).mulPosition(matrix);
         return new float[]{
                 position.x,
