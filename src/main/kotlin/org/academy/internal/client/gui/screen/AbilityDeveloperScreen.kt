@@ -8,7 +8,6 @@ import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.Minecraft
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.core.BlockPos
-import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.neoforged.neoforge.common.NeoForge
@@ -222,7 +221,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
         val categoryKey = category.key
         val translationKey = "ability_category.${categoryKey.namespace}.${categoryKey.path}"
-        val translatedName = Language.getInstance().getOrDefault(translationKey)
+        val translatedName = L10n[translationKey]
             .takeUnless { it == translationKey }
             ?: category.getDisplayName()
         val nameLabel = LabelWidget(translatedName)
@@ -1364,7 +1363,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                             val next = milestone == index
                             val marker = if (reached) "✓" else if (next) "→" else "•"
                             val key = "${skill.descriptionId}.proficiency.$threshold"
-                            val label = LabelWidget("$marker $threshold  ${Language.getInstance().getOrDefault(key)}")
+                            val label = LabelWidget("$marker $threshold  ${L10n[key]}")
                             label.baseFontSize = 7f
                             label.layoutParams = WidgetContainer.LayoutParams()
                                 .gravity(Gravity.LEFT)

@@ -2,7 +2,6 @@ package org.academy.api.client.hud.ability
 
 import com.mojang.blaze3d.pipeline.RenderTarget
 import net.minecraft.client.Minecraft
-import net.minecraft.locale.Language
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
@@ -15,6 +14,7 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.vanilla.ResizeDisplayEvent
+import org.academy.api.common.util.L10n
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState.Entry
 import org.academy.internal.client.gui.DataTerminalTheme
@@ -322,7 +322,7 @@ class ControlledTargetsHud private constructor() {
         }
 
         private fun text(key: String, vararg values: Any): String {
-            return Language.getInstance().getOrDefault(key).format(*values)
+            return L10n[key].format(*values)
         }
 
         private fun support(value: Byte): String {
@@ -361,7 +361,7 @@ class ControlledTargetsHud private constructor() {
             val parts = typeId.split(':', limit = 2)
             if (parts.size != 2) return typeId
             val fallback = parts[1].replace('_', ' ')
-            return Language.getInstance().getOrDefault("entity.${parts[0]}.${parts[1]}", fallback)
+            return L10n.getOrDefault("entity.${parts[0]}.${parts[1]}", fallback)
         }
 
         private fun distance(distance: Float): String {

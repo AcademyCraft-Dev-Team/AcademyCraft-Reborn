@@ -3,7 +3,6 @@ package org.academy.api.common.ability;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.locale.Language;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
@@ -18,6 +17,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.skilldata.CommonSkillData;
@@ -406,11 +406,11 @@ public abstract class Skill {
     }
 
     public String getTranslatedName() {
-        return Language.getInstance().getOrDefault(getDescriptionId());
+        return L10nUtil.get(getDescriptionId());
     }
 
     public String getTranslatedDescription() {
-        return Language.getInstance().getOrDefault(getDescriptionId() + ".desc");
+        return L10nUtil.get(getDescriptionId() + ".desc");
     }
 
     public String getKeyBindingKeyName(String name) {
