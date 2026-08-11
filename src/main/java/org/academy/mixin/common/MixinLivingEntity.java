@@ -18,7 +18,6 @@ import org.academy.api.client.util.QuantumUtil;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
@@ -29,7 +28,6 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.ability.aeromanip.skills.AtmosphereShield;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
@@ -238,7 +236,6 @@ public abstract class MixinLivingEntity {
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)
                 && reason != Entity.RemovalReason.CHANGED_DIMENSION
                 && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
             ci.cancel();
         }
     }
@@ -248,7 +245,6 @@ public abstract class MixinLivingEntity {
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isActive(player)
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
@@ -259,7 +255,6 @@ public abstract class MixinLivingEntity {
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isActive(player)
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }

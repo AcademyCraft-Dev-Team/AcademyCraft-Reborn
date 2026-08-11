@@ -103,9 +103,9 @@ import java.util.WeakHashMap;
 
 public class KineticEnergyApplied extends Skill {
     public static final int MIN_IMPACT_LEVEL = 1;
-    public static final int MAX_IMPACT_LEVEL = 6;
+    public static final int MAX_IMPACT_LEVEL = 5;
     public static final int DEFAULT_IMPACT_LEVEL = 1;
-    private static final float DAMAGE_PER_IMPACT_LEVEL_SQUARED = 4.0f;
+    private static final float BASE_IMPACT_DAMAGE = 4.0f;
     private static final double SERVER_AIR_VERIFY_REACH = 6.0;
     private static final float MAX_VISUAL_RADIUS = 24.0f;
     private static final int MAX_BLOCKS_PER_TASK_TICK = 1024;
@@ -125,7 +125,7 @@ public class KineticEnergyApplied extends Skill {
                 .energyCost(10_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(20)
+                .maintenanceCost(15)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_ACCEL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
@@ -149,7 +149,7 @@ public class KineticEnergyApplied extends Skill {
 
     public static float getImpactDamage(int impactLevel, float abilityPower, float damageMultiplier) {
         var level = clampImpactLevel(impactLevel);
-        return level * level * DAMAGE_PER_IMPACT_LEVEL_SQUARED
+        return (BASE_IMPACT_DAMAGE + level * level)
                 * Math.max(0.0f, abilityPower)
                 * Math.max(0.0f, damageMultiplier);
     }
@@ -407,7 +407,7 @@ public class KineticEnergyApplied extends Skill {
                     player.getUUID(),
                     impactLevel * 10.0f,
                     Skills.KINETIC_ENERGY_APPLIED.get(),
-                    20
+                    5
             )) return;
             var blockRadius = getImpactRadius(impactLevel);
             var radius = Skills.KINETIC_ENERGY_APPLIED.get().hasProficiencyMilestone(player, 2)

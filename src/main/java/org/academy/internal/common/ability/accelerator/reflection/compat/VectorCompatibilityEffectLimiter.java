@@ -19,7 +19,8 @@ public final class VectorCompatibilityEffectLimiter {
             ServerPlayer defender,
             long attackKey,
             Vec3 direction,
-            Vec3 position
+            Vec3 position,
+            VectorRedirectKind kind
     ) {
         if (defender == null || direction == null || position == null) return;
         var now = defender.level().getGameTime();
@@ -30,7 +31,7 @@ public final class VectorCompatibilityEffectLimiter {
         if (LAST_EFFECT_TICKS.size() > 2048) {
             LAST_EFFECT_TICKS.entrySet().removeIf(entry -> now - entry.getValue() > 100L);
         }
-        VectorReflection.Server.spawnGlowCircle(defender, direction, position);
+        VectorReflection.Server.spawnGlowCircle(defender, direction, position, kind);
         VectorReflection.Server.playReflectionSound(defender);
     }
 

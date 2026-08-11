@@ -27,12 +27,17 @@ public final class VectorDefenseProficiency {
             float availableCp,
             float calculationIntensity,
             int milestone,
+            float freeDamageThreshold,
             boolean debugMode
     ) {
         if (!(incomingDamage > 0.0f) || !Float.isFinite(incomingDamage)) {
             return Result.NONE;
         }
         if (debugMode) return new Result(incomingDamage, 0.0f, 0.0f);
+        if (milestone >= 3 && Float.isFinite(freeDamageThreshold)
+                && incomingDamage < Math.max(0.0f, freeDamageThreshold)) {
+            return new Result(incomingDamage, 0.0f, 0.0f);
+        }
         if (!(availableCp > 0.0f) || !Float.isFinite(availableCp)
                 || !(calculationIntensity > 0.0f) || !Float.isFinite(calculationIntensity)) {
             return new Result(0.0f, incomingDamage, 0.0f);

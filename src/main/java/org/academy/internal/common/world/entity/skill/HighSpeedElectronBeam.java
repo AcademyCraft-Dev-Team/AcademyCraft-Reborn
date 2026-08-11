@@ -91,7 +91,9 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private Skill sourceSkill;
     private float baseDamage;
     private float targetMaxHealthDamageRatio;
+    private float abilityPower = 1.0f;
     private float playerDamageMultiplier;
+    private boolean powerScaledBase;
     private boolean radiationEnabled;
     private boolean betaTrailOnFire;
     private int proficiencyMilestone;
@@ -192,6 +194,23 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         configure(owner, sourceSkill, baseDamage, targetMaxHealthDamageRatio,
                 playerDamageMultiplier, radiationEnabled, destroysBlocks);
         this.proficiencyMilestone = Math.max(0, Math.min(3, proficiencyMilestone));
+    }
+
+    public void configure(
+            ServerPlayer owner,
+            Skill sourceSkill,
+            float baseDamage,
+            float targetMaxHealthDamageRatio,
+            float abilityPower,
+            float playerDamageMultiplier,
+            boolean radiationEnabled,
+            boolean destroysBlocks,
+            int proficiencyMilestone
+    ) {
+        configure(owner, sourceSkill, baseDamage, targetMaxHealthDamageRatio,
+                playerDamageMultiplier, radiationEnabled, destroysBlocks, proficiencyMilestone);
+        this.abilityPower = Math.max(0.0f, abilityPower);
+        powerScaledBase = true;
     }
 
     @Override
@@ -326,10 +345,15 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                             .isMarked(living, level.getGameTime());
                     var markMultiplier = org.academy.internal.common.ability.Skills.RADIATION_INTENSIFY.get()
                             .hasProficiencyMilestone(owner, 2) ? 1.6f : 1.5f;
-                    return org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage.calculate(
-                            index == 0 ? baseDamage : baseDamage * 0.6f,
-                            index == 0 ? targetMaxHealthDamageRatio : 0.0f,
-                            living == null ? 0.0f : living.getMaxHealth(),
+                    var hitBaseDamage = index == 0 ? baseDamage : baseDamage * 0.6f;
+                    var hitMaxHealthRatio = index == 0 ? targetMaxHealthDamageRatio : 0.0f;
+                    var targetMaxHealth = living == null ? 0.0f : living.getMaxHealth();
+                    return powerScaledBase
+                            ? org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage
+                            .calculatePowerScaledBase(hitBaseDamage, hitMaxHealthRatio, targetMaxHealth,
+                                    abilityPower, playerDamageMultiplier, marked, markMultiplier)
+                            : org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage.calculate(
+                            hitBaseDamage, hitMaxHealthRatio, targetMaxHealth,
                             playerDamageMultiplier, marked, markMultiplier);
                 })
                 .onHit((target, _, hurt) -> {

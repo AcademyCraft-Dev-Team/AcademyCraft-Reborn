@@ -3,7 +3,9 @@ package org.academy.api.client.render.vfx;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.lightning.ArcExecutor;
 import org.academy.api.common.profiler.AcademyProfiler;
@@ -79,6 +81,11 @@ public final class VfxManager {
                 frameData.clear();
             }
         });
+    }
+
+    public void submitWorldGeometry(PoseStack poseStack, SubmitNodeCollector output) {
+        if (!initialized || frameData.isEmpty()) return;
+        VfxRegistry.submitWorldGeometry(frameData, renderContext, poseStack, output);
     }
 
     public void renderAfterSkyFrame() {

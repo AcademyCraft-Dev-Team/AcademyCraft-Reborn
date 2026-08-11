@@ -294,8 +294,6 @@ public final class PlatinumWing extends Skill {
                     DamageTypes.CTA
             );
             new CTAEntityActuallyHurt(living).actuallyHurt(source, damage, true);
-            if (living.isAlive()) EntityControlApi.forceSetTrueHealth(living, 0.0f);
-            if (living.isAlive() && !(living instanceof Player)) living.discard();
             level.playSound(null, target, SoundEvents.PLAYER_ATTACK_CRIT,
                     SoundSource.PLAYERS, 1.0f, 0.7f);
         }

@@ -172,6 +172,7 @@ class VectorCompatibilityModelTest {
         assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:hot_floor"));
         assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:in_fire"));
         assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:campfire"));
+        assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:fall"));
         assertTrue(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:sweet_berry_bush"));
         assertFalse(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:on_fire"));
         assertFalse(VectorEnvironmentalFeedbackController.isSupportedDamageType("minecraft:drown"));

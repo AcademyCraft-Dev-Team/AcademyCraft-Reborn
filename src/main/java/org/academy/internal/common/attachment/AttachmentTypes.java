@@ -80,6 +80,9 @@ public final class AttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> ACTIVATED_PLATINUM_WING = REGISTER.register("activated_platinum_wing",
             () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()
     );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WING_BOOST_POSE = REGISTER.register("wing_boost_pose",
+            () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()
+    );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> CROSSING_THE_ABYSS_ACTIVE = REGISTER.register("crossing_the_abyss_active",
             () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()
     );
