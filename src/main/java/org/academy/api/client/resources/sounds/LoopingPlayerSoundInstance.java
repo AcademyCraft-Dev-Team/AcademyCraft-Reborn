@@ -1,4 +1,4 @@
-package org.academy.api.client.sound;
+package org.academy.api.client.resources.sounds;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
