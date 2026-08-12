@@ -39,6 +39,7 @@ import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.item.crafting.RecipeSerializers;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
+import org.academy.internal.common.world.level.material.Fluids;
 
 import static org.academy.AcademyCraft.MODID;
 import static org.academy.AcademyCraft.MOD_NAME;
@@ -64,6 +65,8 @@ public final class AcademyCraftRegister {
     }
 
     public static void register(IEventBus modEventBus) {
+        Fluids.FLUID_TYPES.register(modEventBus);
+        Fluids.FLUIDS.register(modEventBus);
         Blocks.BLOCKS.register(modEventBus);
         Items.ITEMS.register(modEventBus);
         RecipeSerializers.RECIPE_SERIALIZERS.register(modEventBus);

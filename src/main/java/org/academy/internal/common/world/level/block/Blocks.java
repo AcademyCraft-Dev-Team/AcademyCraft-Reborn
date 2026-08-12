@@ -1,8 +1,13 @@
 package org.academy.internal.common.world.level.block;
 
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.internal.common.world.level.material.Fluids;
 
 import static org.academy.AcademyCraft.MODID;
 
@@ -24,6 +29,23 @@ public final class Blocks {
             BLOCKS.registerBlock("cat_engine", CatEngineBlock::new);
     public static final DeferredHolder<Block, SolarGenBlock> SOLAR_GEN =
             BLOCKS.registerBlock("solar_gen", SolarGenBlock::new);
+    public static final DeferredHolder<Block, LiquidBlock> IMAG_PHASE =
+            BLOCKS.registerBlock(
+                    "imag_phase",
+                    properties -> new LiquidBlock(
+                            Fluids.IMAG_PHASE.get(),
+                            properties
+                    ),
+                    () -> BlockBehaviour.Properties.of()
+                            .replaceable()
+                            .noCollision()
+                            .randomTicks()
+                            .strength(100.0F)
+                            .pushReaction(PushReaction.DESTROY)
+                            .noLootTable()
+                            .liquid()
+                            .sound(SoundType.EMPTY)
+            );
 
     private Blocks() {
     }
