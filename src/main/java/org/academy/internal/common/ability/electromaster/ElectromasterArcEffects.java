@@ -3,27 +3,41 @@ package org.academy.internal.common.ability.electromaster;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.modifier.HelixModifier;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.modifier.TaperModifier;
 import org.academy.api.common.arc.path.CirclePath;
 import org.academy.api.common.arc.path.LinePath;
+import org.academy.api.common.arc.path.PolylinePath;
 import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.arc.property.Knot;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
+import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.util.Mth;
+import java.util.Random;
 
 public final class ElectromasterArcEffects {
     private static final AttributeCurve FULL_THICKNESS = new AttributeCurve(List.of(
             new Knot(0.0f, 1.0f),
             new Knot(0.82f, 1.0f),
+            new Knot(1.0f, 0.05f)
+    ));
+    private static final AttributeCurve SPEAR_CORE_THICKNESS = new AttributeCurve(List.of(
+            new Knot(0.0f, 0.45f),
+            new Knot(0.08f, 1.0f),
+            new Knot(0.78f, 1.0f),
+            new Knot(1.0f, 0.03f)
+    ));
+    private static final AttributeCurve CHAIN_THICKNESS = new AttributeCurve(List.of(
+            new Knot(0.0f, 0.12f),
+            new Knot(0.12f, 1.0f),
+            new Knot(0.84f, 0.82f),
             new Knot(1.0f, 0.05f)
     ));
 
@@ -42,25 +56,91 @@ public final class ElectromasterArcEffects {
         );
     }
 
-    public static List<ArcPath> intertwinedBundle(Vec3 start, Vec3 end, int strands, float radius) {
-        var paths = new ArrayList<ArcPath>(Math.max(1, strands));
-        var length = Math.max(1.0, start.distanceTo(end));
-        var turns = (float) Mth.clamp(length / 3.5, 2.0, 8.0);
-        for (var i = 0; i < Math.max(1, strands); i++) {
-            var phase = (float) (Mth.TWO_PI * i / Math.max(1, strands));
+    /**
+     * Builds a long electric spear with a dense core and several jagged strands. The outer strands
+     * expand from the caster's hand, weave around the shaft, then converge at the impact point.
+     */
+    public static List<ArcPath> spearBundle(Vec3 start, Vec3 end, int strands, float radius) {
+        return spearBundle(start, end, strands, radius, randomSeed());
+    }
+
+    public static List<ArcPath> spearBundle(Vec3 start, Vec3 end, int strands, float radius, long seed) {
+        if (!isFinite(start) || !isFinite(end) || start.distanceToSqr(end) < 1.0E-8) return List.of();
+
+        var strandCount = Math.max(3, strands);
+        var resolvedRadius = Math.max(0.04f, radius);
+        var length = start.distanceTo(end);
+        var direction = end.subtract(start).normalize();
+        var reference = Math.abs(direction.y) < 0.92 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+        var right = direction.cross(reference).normalize();
+        var up = right.cross(direction).normalize();
+        var vertexCount = Mth.clamp((int) Math.ceil(length / 2.4) + 1, 10, 26);
+
+        var paths = new ArrayList<ArcPath>(strandCount + 1);
+        paths.add(new ArcPath(
+                new LinePath(start.toVector3f(), end.toVector3f()),
+                List.of(
+                        new JaggedModifier(0.09f, 4, mixSeed(seed, 0)),
+                        new TaperModifier(SPEAR_CORE_THICKNESS, 1.18f)
+                ),
+                0.72f,
+                List.of()
+        ));
+
+        for (var strand = 0; strand < strandCount; strand++) {
+            var random = new Random(mixSeed(seed, strand + 1));
+            var angle = random.nextDouble() * Mth.TWO_PI;
+            var angularStep = (random.nextDouble() - 0.5) * 1.2;
+            var strandRadius = resolvedRadius * (0.62 + random.nextDouble() * 0.38);
+            var vertices = new ArrayList<Vector3fc>(vertexCount);
+            for (var vertex = 0; vertex < vertexCount; vertex++) {
+                var progress = (double) vertex / (vertexCount - 1);
+                var entry = smoothStep(Mth.clamp(progress / 0.12, 0.0, 1.0));
+                var tip = smoothStep(Mth.clamp((1.0 - progress) / 0.30, 0.0, 1.0));
+                var envelope = entry * tip;
+                if (vertex > 0 && vertex < vertexCount - 1) {
+                    angularStep = Mth.clamp(angularStep * 0.42 + random.nextGaussian() * 0.68,
+                            -1.35, 1.35);
+                    angle += angularStep;
+                }
+                var radialJitter = 0.48 + random.nextDouble() * 0.52;
+                var offsetRadius = strandRadius * radialJitter * envelope;
+                var offset = right.scale(Math.cos(angle) * offsetRadius)
+                        .add(up.scale(Math.sin(angle) * offsetRadius));
+                vertices.add(start.lerp(end, progress).add(offset).toVector3f());
+            }
             paths.add(new ArcPath(
-                    new LinePath(start.toVector3f(), end.toVector3f()),
+                    new PolylinePath(List.copyOf(vertices)),
                     List.of(
-                            new HelixModifier(radius * (0.72f + (i & 1) * 0.28f),
-                                    turns + i * 0.18f, phase),
-                            new JaggedModifier(0.16f, 3, randomSeed()),
-                            new TaperModifier(FULL_THICKNESS, 0.72f)
+                            new JaggedModifier(0.11f, 2, mixSeed(seed, strand + 1)),
+                            new TaperModifier(SPEAR_CORE_THICKNESS, 0.78f)
                     ),
-                    2.4f,
+                    0.62f,
                     List.of()
             ));
         }
-        return paths;
+        return List.copyOf(paths);
+    }
+
+    public static List<ArcPath> chainBundle(Vec3 start, Vec3 end, long seed) {
+        if (!isFinite(start) || !isFinite(end) || start.distanceToSqr(end) < 1.0E-8) return List.of();
+        var paths = new ArrayList<ArcPath>(3);
+        for (var strand = 0; strand < 3; strand++) {
+            paths.add(new ArcPath(
+                    new LinePath(start.toVector3f(), end.toVector3f()),
+                    List.of(
+                            new JaggedModifier(0.20f + strand * 0.07f, 3, mixSeed(seed, strand)),
+                            new TaperModifier(CHAIN_THICKNESS, 0.92f - strand * 0.18f)
+                    ),
+                    1.1f,
+                    List.of()
+            ));
+        }
+        return List.copyOf(paths);
+    }
+
+    public static void spawnChainArc(ServerLevel level, Vec3 start, Vec3 end) {
+        spawnArc(level, chainBundle(start, end, randomSeed()), 8, start);
     }
 
     public static void spawnBeamCoils(ServerLevel level, LinearSegment segment) {
@@ -182,5 +262,21 @@ public final class ElectromasterArcEffects {
 
     private static long randomSeed() {
         return RandomSource.create().nextLong();
+    }
+
+    private static long mixSeed(long seed, int index) {
+        var mixed = seed + 0x9E3779B97F4A7C15L * (index + 1L);
+        mixed = (mixed ^ (mixed >>> 30)) * 0xBF58476D1CE4E5B9L;
+        mixed = (mixed ^ (mixed >>> 27)) * 0x94D049BB133111EBL;
+        return mixed ^ (mixed >>> 31);
+    }
+
+    private static double smoothStep(double value) {
+        return value * value * (3.0 - 2.0 * value);
+    }
+
+    private static boolean isFinite(Vec3 value) {
+        return value != null && Double.isFinite(value.x) && Double.isFinite(value.y)
+                && Double.isFinite(value.z);
     }
 }

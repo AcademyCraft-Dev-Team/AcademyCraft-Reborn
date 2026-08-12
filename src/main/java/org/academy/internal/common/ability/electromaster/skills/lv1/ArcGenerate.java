@@ -34,6 +34,7 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearAttackEx
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -310,11 +311,11 @@ public final class ArcGenerate extends Skill {
             for (var index = 0; index < Math.min(2, candidates.size()); index++) {
                 var target = candidates.get(index);
                 target.hurtServer(level, source, damage * factors[index]);
-                var effect = new ArcEffect(level, 8);
-                effect.setPos(origin.getBoundingBox().getCenter());
-                effect.setArcPaths(List.of(createRootPath(origin.getBoundingBox().getCenter(),
-                        target.getBoundingBox().getCenter(), MathUtil.RANDOM.nextLong(), List.of())));
-                level.addFreshEntity(effect);
+                ElectromasterArcEffects.spawnChainArc(
+                        level,
+                        origin.getBoundingBox().getCenter(),
+                        target.getBoundingBox().getCenter()
+                );
                 origin = target;
             }
         }

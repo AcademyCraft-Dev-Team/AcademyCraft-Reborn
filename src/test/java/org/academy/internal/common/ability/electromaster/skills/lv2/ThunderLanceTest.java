@@ -1,40 +1,21 @@
 package org.academy.internal.common.ability.electromaster.skills.lv2;
 
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.modifier.JaggedModifier;
+import org.academy.api.common.arc.modifier.TaperModifier;
 import org.academy.api.common.arc.path.LinePath;
+import org.academy.api.common.arc.path.PolylinePath;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.joml.Vector3fc;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ThunderLanceTest {
-    private static List<Vec3> strandOffsets() {
-        return List.of(
-                new Vec3(0.5, 0.5, 0),
-                new Vec3(0.5, -0.5, 0),
-                new Vec3(-0.5, 0.5, 0),
-                new Vec3(-0.5, -0.5, 0)
-        );
-    }
-
-    private static void assertLine(ArcPath path, Vec3 expectedStart, Vec3 expectedEnd) {
-        var line = assertInstanceOf(LinePath.class, path.path());
-        assertVector(expectedStart, line.start());
-        assertVector(expectedEnd, line.end());
-    }
-
     private static void assertVector(Vec3 expected, Vector3fc actual) {
         assertEquals(expected.x, actual.x(), 1.0e-6);
         assertEquals(expected.y, actual.y(), 1.0e-6);
         assertEquals(expected.z, actual.z(), 1.0e-6);
-    }
-
-    private static long jaggedSeed(ArcPath path) {
-        return assertInstanceOf(JaggedModifier.class, path.modifiers().getFirst()).seed();
     }
 
     @Test
@@ -54,53 +35,60 @@ class ThunderLanceTest {
     }
 
     @Test
-    void unreflectedVisualKeepsFourFullLengthStrands() {
-        var hand = new Vec3(1, 2, 3);
-        var target = new Vec3(1, 2, 11);
-        var offsets = strandOffsets();
-        var seeds = List.of(11L, 12L, 13L, 14L);
+    void spearBundleHasAConcentratedCoreAndIrregularStrandsConvergingAtBothEnds() {
+        var start = new Vec3(1, 2, 3);
+        var end = new Vec3(1, 2, 43);
+        var paths = ElectromasterArcEffects.spearBundle(start, end, 7, 0.20f, 91L);
 
-        var paths = ThunderLance.createUnreflectedQuickArcPaths(hand, target, offsets, seeds);
+        assertEquals(8, paths.size());
+        var core = assertInstanceOf(LinePath.class, paths.getFirst().path());
+        assertVector(start, core.start());
+        assertVector(end, core.end());
 
-        assertEquals(4, paths.size());
-        for (var i = 0; i < paths.size(); i++) {
-            assertLine(paths.get(i), hand, target.add(offsets.get(i)));
-            assertEquals(seeds.get(i).longValue(), jaggedSeed(paths.get(i)));
+        var widestRadius = 0.0;
+        var clockwiseTurns = 0;
+        var counterclockwiseTurns = 0;
+        for (var path : paths.subList(1, paths.size())) {
+            var strand = assertInstanceOf(PolylinePath.class, path.path());
+            assertVector(start, strand.vertices().getFirst());
+            assertVector(end, strand.vertices().getLast());
+            assertInstanceOf(JaggedModifier.class, path.modifiers().getFirst());
+            assertInstanceOf(TaperModifier.class, path.modifiers().getLast());
+            for (var vertex : strand.vertices()) {
+                widestRadius = Math.max(widestRadius,
+                        Math.sqrt(Math.pow(vertex.x() - start.x, 2) + Math.pow(vertex.y() - start.y, 2)));
+            }
+            for (var index = 2; index < strand.vertices().size() - 1; index++) {
+                var previous = strand.vertices().get(index - 1);
+                var current = strand.vertices().get(index);
+                var turn = (previous.x() - start.x) * (current.y() - start.y)
+                        - (previous.y() - start.y) * (current.x() - start.x);
+                if (turn > 1.0e-5) counterclockwiseTurns++;
+                if (turn < -1.0e-5) clockwiseTurns++;
+            }
         }
+        assertTrue(widestRadius > 0.10, "outer arcs should remain visible around the spear core");
+        assertTrue(widestRadius <= 0.20, "outer arcs should stay concentrated around the spear core");
+        assertTrue(clockwiseTurns > 0 && counterclockwiseTurns > 0,
+                "outer arcs should cross irregularly instead of winding like a spring");
     }
 
     @Test
-    void reflectedVisualUsesFourClippedOutboundAndFourFullLengthReturnStrands() {
-        var hand = new Vec3(1, 2, 3);
-        var target = new Vec3(1, 2, 11);
-        var mirrorPoint = hand.lerp(target, 0.25);
-        var returnEnd = mirrorPoint.subtract(target.subtract(hand));
-        var offsets = strandOffsets();
-        var seeds = List.of(11L, 12L, 13L, 14L);
+    void chainBundleUsesSeveralIndependentlyJaggedArcs() {
+        var start = new Vec3(1, 2, 3);
+        var end = new Vec3(4, 5, 6);
+        var paths = ElectromasterArcEffects.chainBundle(start, end, 17L);
 
-        var paths = ThunderLance.createReflectedQuickArcPaths(
-                hand,
-                mirrorPoint,
-                returnEnd,
-                0.25f,
-                offsets,
-                seeds
-        );
-
-        assertEquals(8, paths.size());
-        for (var i = 0; i < offsets.size(); i++) {
-            var reflectionPoint = hand.lerp(target.add(offsets.get(i)), 0.25);
-            var strandReturnEnd = returnEnd.subtract(offsets.get(i).scale(0.75));
-            assertLine(paths.get(i), hand, reflectionPoint);
-            assertLine(paths.get(i + offsets.size()), reflectionPoint, strandReturnEnd);
-            assertEquals(
-                    hand.distanceTo(target.add(offsets.get(i))),
-                    reflectionPoint.distanceTo(strandReturnEnd),
-                    1.0e-9
-            );
-            assertEquals(seeds.get(i).longValue(), jaggedSeed(paths.get(i)));
-            assertEquals(ThunderLance.deriveReturnSeed(seeds.get(i)), jaggedSeed(paths.get(i + offsets.size())));
-            assertNotEquals(seeds.get(i).longValue(), ThunderLance.deriveReturnSeed(seeds.get(i)));
+        assertEquals(3, paths.size());
+        var seeds = paths.stream()
+                .map(path -> assertInstanceOf(JaggedModifier.class, path.modifiers().getFirst()).seed())
+                .distinct()
+                .toList();
+        assertEquals(3, seeds.size());
+        for (var path : paths) {
+            var line = assertInstanceOf(LinePath.class, path.path());
+            assertVector(start, line.start());
+            assertVector(end, line.end());
         }
     }
 }
