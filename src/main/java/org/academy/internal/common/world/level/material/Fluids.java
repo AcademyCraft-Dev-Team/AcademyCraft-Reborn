@@ -15,7 +15,13 @@ public final class Fluids {
             DeferredRegister.create(NeoForgeRegistries.Keys.FLUID_TYPES, MODID);
 
     public static final DeferredHolder<FluidType, FluidType> IMAG_PHASE_TYPE =
-            FLUID_TYPES.register("imag_phase", () -> new FluidType(FluidType.Properties.create()));
+            FLUID_TYPES.register("imag_phase", () -> new FluidType(
+                    FluidType.Properties.create()
+                            .descriptionId("fluid.academy.imag_phase")
+                            .canSwim(true)
+                            .canPushEntity(true)
+                            .isWaterLike(true)
+            ));
     public static final DeferredHolder<Fluid, ImagPhaseFluid.Source> IMAG_PHASE =
             FLUIDS.register("imag_phase", ImagPhaseFluid.Source::new);
     public static final DeferredHolder<Fluid, ImagPhaseFluid.Flowing> FLOWING_IMAG_PHASE =

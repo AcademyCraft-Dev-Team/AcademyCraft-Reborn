@@ -3,7 +3,6 @@ package org.academy.internal.common.world.level.material;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -16,7 +15,6 @@ import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.neoforged.neoforge.fluids.FluidType;
-import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 
@@ -24,23 +22,6 @@ public abstract class ImagPhaseFluid extends FlowingFluid {
     @Override
     public FluidType getFluidType() {
         return Fluids.IMAG_PHASE_TYPE.get();
-    }
-
-    @Override
-    protected void animateTick(Level level, BlockPos pos, FluidState state, RandomSource random) {
-        int particleCount = random.nextInt(2, 5);
-        double height = Math.max(0.125, state.getOwnHeight());
-        for (int i = 0; i < particleCount; i++) {
-            level.addParticle(
-                    ParticleTypes.IMAG_PHASE_FLUID.get(),
-                    pos.getX() + random.nextDouble(),
-                    pos.getY() + random.nextDouble() * height,
-                    pos.getZ() + random.nextDouble(),
-                    0.0,
-                    0.0,
-                    0.0
-            );
-        }
     }
 
     @Override
