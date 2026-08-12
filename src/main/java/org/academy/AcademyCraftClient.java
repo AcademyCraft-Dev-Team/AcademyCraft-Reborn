@@ -89,6 +89,7 @@ import java.io.File;
 import java.util.function.BiConsumer;
 
 import static org.academy.AcademyCraft.academy;
+import static org.academy.AcademyCraft.vanilla;
 
 @EventBusSubscriber(Dist.CLIENT)
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
@@ -462,12 +463,14 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onRegisterFluidModels(RegisterFluidModelsEvent event) {
-        var black = new Material(academy("block/black"));
+        var still = new Material(vanilla("block/water_still"));
+        var flowing = new Material(vanilla("block/water_flow"));
+        var overlay = new Material(vanilla("block/water_overlay"));
         var model = new FluidModel.Unbaked(
-                black,
-                black,
-                null,
-                FluidTintSources.constant(0xFF000000),
+                still,
+                flowing,
+                overlay,
+                FluidTintSources.constant(0x5008050D),
                 ImagPhaseFluidRenderer.INSTANCE
         );
         event.register(
