@@ -7,6 +7,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.ArcPath;
+import org.academy.api.common.arc.Branch;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.modifier.TaperModifier;
 import org.academy.api.common.arc.path.CirclePath;
@@ -16,6 +17,7 @@ import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.arc.property.Knot;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
+import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 import java.util.ArrayList;
@@ -33,6 +35,11 @@ public final class ElectromasterArcEffects {
             new Knot(0.08f, 1.0f),
             new Knot(0.78f, 1.0f),
             new Knot(1.0f, 0.03f)
+    ));
+    private static final AttributeCurve SPEAR_BRANCH_THICKNESS = new AttributeCurve(List.of(
+            new Knot(0.0f, 0.72f),
+            new Knot(0.48f, 1.0f),
+            new Knot(1.0f, 0.02f)
     ));
     private static final AttributeCurve CHAIN_THICKNESS = new AttributeCurve(List.of(
             new Knot(0.0f, 0.12f),
@@ -75,6 +82,7 @@ public final class ElectromasterArcEffects {
         var right = direction.cross(reference).normalize();
         var up = right.cross(direction).normalize();
         var vertexCount = Mth.clamp((int) Math.ceil(length / 2.4) + 1, 10, 26);
+        var branches = createSpearBranches(length, seed);
 
         var paths = new ArrayList<ArcPath>(strandCount + 1);
         paths.add(new ArcPath(
@@ -84,7 +92,7 @@ public final class ElectromasterArcEffects {
                         new TaperModifier(SPEAR_CORE_THICKNESS, 1.18f)
                 ),
                 0.72f,
-                List.of()
+                branches
         ));
 
         for (var strand = 0; strand < strandCount; strand++) {
@@ -120,6 +128,37 @@ public final class ElectromasterArcEffects {
             ));
         }
         return List.copyOf(paths);
+    }
+
+    private static List<Branch> createSpearBranches(double spearLength, long seed) {
+        var branchCount = Mth.clamp((int) Math.round(spearLength / 7.0), 1, 6);
+        var lengthScale = Mth.clamp(spearLength / 6.0, 0.20, 1.0);
+        var random = new Random(mixSeed(seed, 64));
+        var branches = new ArrayList<Branch>(branchCount);
+        for (var branch = 0; branch < branchCount; branch++) {
+            var baseProgress = (branch + 1.0) / (branchCount + 1.0);
+            var progress = (float) Mth.clamp(baseProgress + (random.nextDouble() - 0.5) * 0.10,
+                    0.12, 0.90);
+            var angle = random.nextDouble() * Mth.TWO_PI;
+            var radialLength = (0.24 + random.nextDouble() * 0.48) * lengthScale;
+            var forwardLength = (0.14 + random.nextDouble() * 0.42) * lengthScale;
+            var localEnd = new Vector3f(
+                    (float) (Math.cos(angle) * radialLength),
+                    (float) (Math.sin(angle) * radialLength),
+                    (float) forwardLength
+            );
+            var child = new ArcPath(
+                    new LinePath(new Vector3f(), localEnd),
+                    List.of(
+                            new JaggedModifier(0.13f, 2, mixSeed(seed, 96 + branch)),
+                            new TaperModifier(SPEAR_BRANCH_THICKNESS, 0.34f)
+                    ),
+                    0.46f,
+                    List.of()
+            );
+            branches.add(new Branch(progress, child));
+        }
+        return List.copyOf(branches);
     }
 
     public static List<ArcPath> chainBundle(Vec3 start, Vec3 end, long seed) {
