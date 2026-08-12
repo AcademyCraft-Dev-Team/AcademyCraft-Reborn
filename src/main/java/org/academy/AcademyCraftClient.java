@@ -9,10 +9,12 @@ import net.irisshaders.iris.pipeline.programs.ShaderKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
@@ -27,6 +29,7 @@ import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
+import net.neoforged.neoforge.client.fluid.FluidTintSources;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.gui.editor.UiLayoutEditor;
@@ -65,9 +68,11 @@ import org.academy.internal.client.hud.HudDebugScreen;
 import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.particle.BloodSplashParticle;
 import org.academy.internal.client.particle.BloodSprayParticle;
+import org.academy.internal.client.particle.ImagPhaseFluidParticle;
 import org.academy.internal.client.particle.VectorBlastParticle;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.render.vfx.*;
+import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
@@ -78,6 +83,7 @@ import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
+import org.academy.internal.common.world.level.material.Fluids;
 
 import java.io.File;
 import java.util.function.BiConsumer;
@@ -396,6 +402,22 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
+        event.registerSpriteSet(ParticleTypes.IMAG_PHASE_FLUID.get(), sprites ->
+                (type, level, x, y, z, xSpeed, ySpeed, zSpeed, random) -> {
+                    var particle = new ImagPhaseFluidParticle(level, sprites, x, y, z, random);
+                    particle.scale(0.5F + random.nextFloat() * 0.25F);
+                    int[][] colors = {
+                            {245, 144, 144}, {178, 232, 243}, {209, 170, 225},
+                            {243, 182, 224}, {196, 238, 156}
+                    };
+                    int[] color = colors[random.nextInt(colors.length)];
+                    particle.setColor(
+                            Math.max(0, Math.min(255, color[0] + random.nextInt(-20, 20))) / 255.0F,
+                            Math.max(0, Math.min(255, color[1] + random.nextInt(-20, 20))) / 255.0F,
+                            Math.max(0, Math.min(255, color[2] + random.nextInt(-20, 20))) / 255.0F
+                    );
+                    return particle;
+                });
         event.registerSpriteSet(ParticleTypes.VECTOR_BLAST.get(), VectorBlastParticle.Provider::new);
         event.registerSpriteSet(ParticleTypes.BLOOD_SPLASH.get(), BloodSplashParticle.Provider::new);
         event.registerSpriteSet(ParticleTypes.BLOOD_SPRAY_GROUND.get(), BloodSprayParticle.Provider::new);
@@ -435,6 +457,23 @@ public final class AcademyCraftClient {
         event.register(
                 academy("solar_gen"),
                 SolarGenSpecialRenderer.Unbaked.MAP_CODEC
+        );
+    }
+
+    @SubscribeEvent
+    public static void onRegisterFluidModels(RegisterFluidModelsEvent event) {
+        var black = new Material(academy("block/black"));
+        var model = new FluidModel.Unbaked(
+                black,
+                black,
+                null,
+                FluidTintSources.constant(0xFF000000),
+                ImagPhaseFluidRenderer.INSTANCE
+        );
+        event.register(
+                model,
+                Fluids.IMAG_PHASE,
+                Fluids.FLOWING_IMAG_PHASE
         );
     }
 

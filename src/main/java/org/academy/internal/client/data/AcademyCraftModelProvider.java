@@ -35,6 +35,11 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         new TextureMapping().put(
                                 TextureSlot.ALL, new Material(academy("break_db").withPrefix("block/"))
                         ), ModelTemplates.CUBE_ALL);
+        var providerBlack = createDefault(
+                _ ->
+                        new TextureMapping().put(
+                                TextureSlot.ALL, new Material(academy("black").withPrefix("block/"))
+                        ), ModelTemplates.CUBE_ALL);
 
 
         blockModels.createTrivialBlock(Blocks.WIRELESS_NODE.get(), providerW);
@@ -44,6 +49,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.OMNI_CRAFTING_TABLE.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.SOLAR_GEN.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
+        blockModels.createTrivialBlock(Blocks.IMAG_PHASE.get(), providerBlack);
 
         blockModels.createTrivialBlock(Blocks.CAT_ENGINE.get(), createDefault(
                 _ ->
@@ -60,6 +66,8 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.DARK_MATTER_CHESTPLATE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_LEGGINGS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_BOOTS.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.IMAG_PHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
 
         {
             var coinItem = Items.COIN.get();
