@@ -25,7 +25,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.electromaster.skills.lv1.PulseCharge;
+import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.util.EnergyChargeHelper;
 import org.misaka.MisakaNetworkClient;
@@ -51,7 +51,7 @@ public final class CurrentSymbiosis extends Skill {
                 .maintenanceCost(30)
                 .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.PULSE_CHARGE)
+                .dependsOn(Skills.CURRENT_RECHARGE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
     }
@@ -86,7 +86,7 @@ public final class CurrentSymbiosis extends Skill {
                 AbilityCategories.ELECTROMASTER.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.CURRENT_SYMBIOSIS.get(),
-                        List.of(PulseCharge.Client.SKILL_INFO),
+                        List.of(CurrentRecharge.Client.SKILL_INFO),
                         R.textures.current_symbiosis_icon,
                         144,
                         46

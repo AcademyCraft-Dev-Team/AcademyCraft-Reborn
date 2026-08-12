@@ -18,7 +18,7 @@ public final class PhysicalTraining extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .passive()
                 .energyCost(5_000)
-                .dependsOn(Skills.LEVEL0_PASSIVE_LV1)
+                .dependsOn(Skills.BRAIN_DOMAIN_DEVELOPMENT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1)));
     }
 
@@ -35,8 +35,8 @@ public final class PhysicalTraining extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addCommonSkillInfo(
                 new AbilitySystemClient.SkillInfo(
                         Skills.PHYSICAL_TRAINING.get(),
-                        List.of(Level0PassiveLv1.Client.SKILL_INFO),
-                        R.textures.ability.level0.skill.level0_passive_lv3.icon,
+                        List.of(BrainDomainDevelopment.Client.SKILL_INFO),
+                        R.textures.ability.level0.skill.parallel_thought_computation.icon,
                         75,
                         100
                 )

@@ -2,21 +2,22 @@ package org.academy.internal.common.ability.teleport.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
-import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
@@ -36,10 +37,11 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.teleport.TeleportDamage;
 import org.academy.internal.common.ability.teleport.TeleportTargeting;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.teleport.skills.lv1.SpaceFoldingTheorem;
+import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
@@ -50,8 +52,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.List;
 
 public final class FleshRipping extends Skill {
     private static final double MAX_RANGE = 32.0;
@@ -66,9 +66,9 @@ public final class FleshRipping extends Skill {
                 .cpCost(20)
                 .iterationTicks(10)
                 .maxStacks(10)
-                .dependsOn(Skills.CUT_THROUGH)
+                .dependsOn(Skills.PIERCING_TELEPORTATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
-                .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:cut_through"))
+                .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:piercing_teleportation"))
         );
     }
 
@@ -99,7 +99,7 @@ public final class FleshRipping extends Skill {
                 AbilityCategories.TELEPORT.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.FLESH_RIPPING.get(),
-                        List.of(CutThrough.Client.SKILL_INFO),
+                        List.of(PiercingTeleportation.Client.SKILL_INFO),
                         R.textures.flesh_ripping_icon,
                         130,
                         12

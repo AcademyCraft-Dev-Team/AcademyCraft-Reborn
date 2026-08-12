@@ -91,10 +91,10 @@ public final class VectorReflectionClientRuntime {
         return !ReflectionFilter.shouldAcceptEffect(data, effect);
     }
 
-    private static boolean isVectorReductionActive(LocalPlayer player) {
+    private static boolean isVectorDeviationActive(LocalPlayer player) {
         return player != null
-                && AbilitySystemClient.isSkillLearned(Skills.VECTOR_REDUCTION.get())
-                && AbilitySystemClient.getSkillData(Skills.VECTOR_REDUCTION.get())
+                && AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get())
+                && AbilitySystemClient.getSkillData(Skills.VECTOR_DEVIATION.get())
                 .map(data -> data.isEnabled() && AbilitySystemClient.getAvailableCP() > 0.0f)
                 .orElse(false);
     }
@@ -106,7 +106,7 @@ public final class VectorReflectionClientRuntime {
             return true;
         }
         return AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
-                || AbilitySystemClient.isSkillLearned(Skills.VECTOR_REDUCTION.get());
+                || AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get());
     }
 
     public static float protectHealthRead(LocalPlayer player, float original) {
@@ -126,7 +126,7 @@ public final class VectorReflectionClientRuntime {
     public static void imaginebreaker(LocalPlayer player, float amount) {
         if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
         var reflectionActive = isProtected(player);
-        if (!reflectionActive && !isVectorReductionActive(player)) return;
+        if (!reflectionActive && !isVectorDeviationActive(player)) return;
 
         var uuid = player.getUUID();
         if (reflectionActive) player.getHealth();

@@ -10,9 +10,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.ControlRejectionReason;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
 import org.jspecify.annotations.Nullable;
@@ -42,7 +42,7 @@ final class MentalControlProtection {
         if (subject == null) return Kind.IMMUNE_TAG;
         if (subject.getType().builtInRegistryHolder().is(IMMUNE_ENTITY_TYPES)) return Kind.IMMUNE_TAG;
         if (!(subject instanceof ServerPlayer player)) return null;
-        if (VectorReflection.Server.isActive(player) || VectorReduction.Server.isActive(player)) {
+        if (VectorReflection.Server.isActive(player) || VectorDeviation.Server.isActive(player)) {
             return Kind.VECTOR_FILTER;
         }
         if (ElectromagneticShield.Server.isActive(player)) return Kind.ELECTROMAGNETIC_FIELD;

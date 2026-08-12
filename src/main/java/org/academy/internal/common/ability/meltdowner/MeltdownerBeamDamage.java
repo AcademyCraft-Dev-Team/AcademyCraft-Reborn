@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.meltdowner;
 
-import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 
 public final class MeltdownerBeamDamage {
     private MeltdownerBeamDamage() {

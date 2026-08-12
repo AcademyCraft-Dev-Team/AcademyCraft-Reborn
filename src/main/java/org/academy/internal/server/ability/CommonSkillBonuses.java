@@ -13,11 +13,11 @@ import net.minecraft.util.Mth;
 final class CommonSkillBonuses {
     static final Bonuses NONE = new Bonuses(0.0f, 0, 1.0f, 10.0f, false, 0.0, 0.0, 0.0);
 
-    private static final String BRAIN_DEVELOPMENT = id(SkillNames.LEVEL0_PASSIVE_LV1);
-    private static final String MULTI_BRAIN = id(SkillNames.LEVEL0_PASSIVE_LV2);
-    private static final String PARALLEL_THOUGHT = id(SkillNames.LEVEL0_PASSIVE_LV3);
-    private static final String CONSCIOUSNESS_ANALYSIS = id(SkillNames.LEVEL0_PASSIVE_LV4);
-    private static final String ABSOLUTE_SELF_CONTROL = id(SkillNames.LEVEL0_PASSIVE_LV5);
+    private static final String BRAIN_DEVELOPMENT = id(SkillNames.BRAIN_DOMAIN_DEVELOPMENT);
+    private static final String MULTI_BRAIN = id(SkillNames.MULTIPLE_BRAIN_DOMAIN_SEGMENTATION);
+    private static final String PARALLEL_THOUGHT = id(SkillNames.PARALLEL_THOUGHT_COMPUTATION);
+    private static final String CONSCIOUSNESS_ANALYSIS = id(SkillNames.COMPLETE_CONSCIOUSNESS_ANALYSIS);
+    private static final String ABSOLUTE_SELF_CONTROL = id(SkillNames.ABSOLUTE_SELF_CONTROL);
     private static final String ENDURANCE_TRAINING = id(SkillNames.ENDURANCE_TRAINING);
     private static final String PHYSICAL_TRAINING = id(SkillNames.PHYSICAL_TRAINING);
 

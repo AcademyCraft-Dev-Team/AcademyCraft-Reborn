@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.meltdowner.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.network.codec.StreamCodec;
@@ -44,7 +45,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
-import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
@@ -57,8 +58,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.*;
 
 public final class LightShield extends Skill {
     static final int CP_INTERVAL_TICKS = 2;

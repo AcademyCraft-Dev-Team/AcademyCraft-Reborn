@@ -3,11 +3,13 @@ package org.academy.api.common.ability;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
+import java.util.*;
 import net.minecraft.locale.Language;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -20,16 +22,13 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
+import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
-import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.*;
-import net.minecraft.util.Mth;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;

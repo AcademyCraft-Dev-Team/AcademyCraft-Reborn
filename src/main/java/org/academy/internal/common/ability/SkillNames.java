@@ -41,7 +41,7 @@ public final class SkillNames {
     public static final String MAGNET_MANIPULATION = "magnet_manipulation";
     public static final String MINE_DETECT = "mine_detect";
     public static final String VECTOR_ACCEL = "vector_accel";
-    public static final String PULSE_CHARGE = "pulse_charge";
+    public static final String CURRENT_RECHARGE = "current_recharge";
     public static final String THREATENING_TELEPORT = "threatening_teleport";
     public static final String SPACE_FOLDING_THEOREM = "space_folding_theorem";
     public static final String FLESH_RIPPING = "flesh_ripping";
@@ -60,14 +60,14 @@ public final class SkillNames {
     public static final String DARKMATTER_CREATION = "darkmatter_creation";
     public static final String DARKMATTER_SIX_WINGS = "darkmatter_six_wings";
     public static final String ELECTRICAL_CONTACT = "electrical_contact";
-    public static final String VECTOR_REDUCTION = "vector_reduction";
+    public static final String VECTOR_DEVIATION = "vector_deviation";
     public static final String SPATIAL_SYNERGY = "spatial_synergy";
     public static final String THUNDER_LANCE = "thunder_lance";
     public static final String MINING_BEAM = "mining_beam";
     public static final String LIGHT_SHIELD = "light_shield";
     public static final String PARTICLE_WAVE_CANNON = "particle_wave_cannon";
     public static final String AUTO_CRUISE_BEAM_CANNON = "auto_cruise_beam_cannon";
-    public static final String CUT_THROUGH = "cut_through";
+    public static final String PIERCING_TELEPORTATION = "piercing_teleportation";
     public static final String LIGHTNING_NOVA = "lightning_nova";
     public static final String CLOUDROOM = "cloudroom";
     public static final String JET_STRIKE = "jet_strike";
@@ -88,11 +88,11 @@ public final class SkillNames {
     public static final String MENTAL_STUPOR = "mental_stupor";
     public static final String COMMAND_POSITIONING = "command_positioning";
     public static final String PRECISION_OPERATION = "precision_operation";
-    public static final String LEVEL0_PASSIVE_LV1 = "level0_passive_lv1";
-    public static final String LEVEL0_PASSIVE_LV2 = "level0_passive_lv2";
-    public static final String LEVEL0_PASSIVE_LV3 = "level0_passive_lv3";
-    public static final String LEVEL0_PASSIVE_LV4 = "level0_passive_lv4";
-    public static final String LEVEL0_PASSIVE_LV5 = "level0_passive_lv5";
+    public static final String BRAIN_DOMAIN_DEVELOPMENT = "brain_domain_development";
+    public static final String MULTIPLE_BRAIN_DOMAIN_SEGMENTATION = "multiple_brain_domain_segmentation";
+    public static final String PARALLEL_THOUGHT_COMPUTATION = "parallel_thought_computation";
+    public static final String COMPLETE_CONSCIOUSNESS_ANALYSIS = "complete_consciousness_analysis";
+    public static final String ABSOLUTE_SELF_CONTROL = "absolute_self_control";
     public static final String ENDURANCE_TRAINING = "endurance_training";
     public static final String PHYSICAL_TRAINING = "physical_training";
 }

@@ -13,18 +13,18 @@ public final class SkillProficiencyProfiles {
             "airflow_jet", "air_cushion", "flow_sense", "atmosphere_shield", "breathing_film",
             "pneumatic_grasp", "tailwind_field", "laminar_cutter", "vortex_pull", "atmosphere_blast_gun",
             "wind_corridor", "pressure_lock", "flight", "vacuum_domain", "atmospheric_dominion",
-            "vector_reflection", "reflection_filter", "vector_blast", "vector_accel", "vector_reduction",
+            "vector_reflection", "reflection_filter", "vector_blast", "vector_accel", "vector_deviation",
             "kinetic_energy_applied", "dir_strike", "bloodflow_reverse", "black_wing", "white_wing",
             "platinum_wing", "crossing_the_abyss", "storm_wing", "plasma_generation",
             "arc_generate", "magnet_manipulation", "mine_detect", "magnetic_weapon", "current_symbiosis",
             "bioelectric_operation", "electromagnetic_shield", "iron_sand_arsenal", "thunder_lance",
-            "railgun", "ball_lightning", "pulse_charge", "electrical_contact", "lightning_nova",
+            "railgun", "ball_lightning", "current_recharge", "electrical_contact", "lightning_nova",
             "lightning_storm", "thunderclap",
             "single_high_speed_electron_beam", "scatter_bomb", "radiation_intensify", "mining_beam",
             "light_shield", "cloudroom", "particle_wave_cannon", "jet_strike", "disintegrate",
             "auto_cruise_beam_cannon",
             "threatening_teleport", "space_folding_theorem", "self_teleport", "spatial_synergy",
-            "cut_through", "flesh_ripping", "location_teleport", "quick_location_teleport",
+            "piercing_teleportation", "flesh_ripping", "location_teleport", "quick_location_teleport",
             "area_teleport_select", "area_teleport_setup", "area_teleport_start", "flashing",
             "defensive_teleport", "spacial_excision", "disarm", "shackle",
             "darkmatter_shaping", "darkmatter_disassemble", "darkmatter_cut", "darkmatter_radiation",
@@ -68,7 +68,7 @@ public final class SkillProficiencyProfiles {
     private static Map<String, SkillProficiencyProfile> createProfiles() {
         var profiles = new HashMap<String, SkillProficiencyProfile>();
 
-        put(profiles, continuous(0.9f), "airflow_jet", "magnet_manipulation", "pulse_charge",
+        put(profiles, continuous(0.9f), "airflow_jet", "magnet_manipulation", "current_recharge",
                 "mining_beam", "light_shield", "particle_wave_cannon", "spacial_excision",
                 "darkmatter_radiation", "darkmatter_repair");
         put(profiles, cast(5.0f / 6.0f), "air_cushion");
@@ -84,7 +84,7 @@ public final class SkillProficiencyProfiles {
                 "vector_blast", "vector_accel", "dir_strike", "bloodflow_reverse", "plasma_generation",
                 "arc_generate", "thunder_lance", "railgun", "ball_lightning", "lightning_nova",
                 "lightning_storm", "thunderclap", "single_high_speed_electron_beam", "scatter_bomb",
-                "jet_strike", "disintegrate", "threatening_teleport", "self_teleport", "cut_through",
+                "jet_strike", "disintegrate", "threatening_teleport", "self_teleport", "piercing_teleportation",
                 "flesh_ripping", "location_teleport", "quick_location_teleport", "area_teleport_start",
                 "disarm", "shackle", "darkmatter_shaping", "darkmatter_disassemble", "darkmatter_cut",
                 "mental_intervention", "target_misidentification");
@@ -99,7 +99,7 @@ public final class SkillProficiencyProfiles {
         put(profiles, SkillProficiencyProfile.builder()
                         .iterationTicks(10, 10, 10, 5)
                         .build(),
-                "vector_reflection", "vector_reduction");
+                "vector_reflection", "vector_deviation");
         return Map.copyOf(profiles);
     }
 

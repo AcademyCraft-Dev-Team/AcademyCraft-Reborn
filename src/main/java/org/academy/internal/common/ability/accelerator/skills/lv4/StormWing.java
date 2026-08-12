@@ -36,7 +36,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
-import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
+import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
