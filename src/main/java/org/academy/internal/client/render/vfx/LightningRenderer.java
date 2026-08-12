@@ -80,9 +80,8 @@ public final class LightningRenderer implements VfxRenderer<LightningMeshData> {
                 color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(glow ? VfxPipelines.LIGHTNING_TUBE_BLOOM : VfxPipelines.LIGHTNING_TUBE);
-            var projection = RenderSystem.getProjectionMatrixBuffer();
-            if (projection != null) renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            renderPass.setUniform("Projection", ctx.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(ctx.viewRotationMatrix());
             renderPass.setUniform("DynamicTransforms", transform);
             renderPass.setUniform("LightningUniforms", uniformBuffer.slice());
 

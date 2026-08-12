@@ -81,9 +81,8 @@ public final class DarkmatterSixWingsRenderer implements VfxRenderer<DarkmatterS
                 () -> "VFX Darkmatter Six Wings", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.MODEL_MESH);
-            var projection = RenderSystem.getProjectionMatrixBuffer();
-            if (projection != null) renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            renderPass.setUniform("Projection", ctx.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(ctx.viewRotationMatrix());
             renderPass.setUniform("DynamicTransforms", transform);
             var texture = Minecraft.getInstance().getTextureManager().getTexture(R.textures.darkmatter_six_wings_effect);
             renderPass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());

@@ -90,9 +90,8 @@ public final class SmokeRenderer implements VfxRenderer<SmokeData> {
                 () -> "VFX Smoke", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.TEX_BILLBOARD_TRANSLUCENT);
-            var projection = RenderSystem.getProjectionMatrixBuffer();
-            if (projection != null) renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            renderPass.setUniform("Projection", ctx.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(ctx.viewRotationMatrix());
             renderPass.setUniform("DynamicTransforms", transform);
 
             var texture = Minecraft.getInstance().getTextureManager().getTexture(TEXTURE);

@@ -109,8 +109,6 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
         }
 
         var cameraPos = ctx.cameraPos();
-        var baseModelView = RenderSystem.getModelViewMatrixCopy();
-
         var writeEncoder = ctx.device().createCommandEncoder();
         writeBallInstances(data, cameraPos, instanceData);
         writeEncoder.writeToBuffer(ballInstanceBuffer.slice(0, neededBytes), instanceData);
@@ -121,9 +119,9 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
         try (var renderPass = passEncoder.createRenderPass(
                 () -> glow ? "VFX Beam Glow" : "VFX Beam Core", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
-            var projection = Objects.requireNonNull(RenderSystem.getProjectionMatrixBuffer());
-            renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(baseModelView, colorModulator);
+            renderPass.setUniform("Projection", ctx.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms()
+                    .writeTransform(ctx.viewRotationMatrix(), colorModulator);
             renderPass.setUniform("DynamicTransforms", transform);
 
             drawBallInstances(renderPass, instanceCount, ballInstanceBuffer);
