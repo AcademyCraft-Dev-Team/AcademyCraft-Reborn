@@ -141,6 +141,11 @@ public final class AcademyCraftClient {
     }
 
     @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        AbilityControlTabletSpecialRenderer.tickHeldItems();
+    }
+
+    @SubscribeEvent
     public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(
                 Commands.literal("academy")
