@@ -44,6 +44,16 @@ class ThunderLanceTest {
         var core = assertInstanceOf(LinePath.class, paths.getFirst().path());
         assertVector(start, core.start());
         assertVector(end, core.end());
+        assertEquals(6, paths.getFirst().branches().size());
+        for (var branch : paths.getFirst().branches()) {
+            assertTrue(branch.attachmentProgress() >= 0.12f && branch.attachmentProgress() <= 0.90f);
+            var branchPath = branch.child();
+            var branchLine = assertInstanceOf(LinePath.class, branchPath.path());
+            assertEquals(0.0f, branchLine.start().lengthSquared(), 1.0e-6f);
+            assertTrue(branchLine.end().length() < 1.0f, "minor branches should remain short");
+            assertInstanceOf(JaggedModifier.class, branchPath.modifiers().getFirst());
+            assertInstanceOf(TaperModifier.class, branchPath.modifiers().getLast());
+        }
 
         var widestRadius = 0.0;
         var clockwiseTurns = 0;
