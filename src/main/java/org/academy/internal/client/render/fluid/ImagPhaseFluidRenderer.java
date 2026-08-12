@@ -3,17 +3,16 @@ package org.academy.internal.client.render.fluid;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.irisshaders.iris.shaderpack.materialmap.WorldRenderingSettings;
-import net.irisshaders.iris.uniforms.CapturedRenderingState;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.block.FluidRenderer;
-import net.minecraft.client.renderer.blockentity.TheEndPortalRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.context.ContextKey;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
@@ -21,13 +20,12 @@ import net.minecraft.world.level.material.FluidState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.IRenderableSection;
 import net.neoforged.neoforge.client.event.AddSectionGeometryEvent;
 import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
 import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.client.fluid.CustomFluidRenderer;
 import org.academy.AcademyCraft;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.render.post.PostEffect;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.joml.Matrix4fc;
 
@@ -43,6 +41,14 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
     public static final ImagPhaseFluidRenderer INSTANCE = new ImagPhaseFluidRenderer();
     private static final ContextKey<ImagPhaseRenderState> CONTEXT_KEY =
             new ContextKey<>(academy("imag_phase_fluid"));
+    private static final RenderType BLACK_BACKGROUND =
+            RenderTypes.entitySolid(academy("textures/block/black.png"));
+    private static final RenderType[] STAR_LAYERS = {
+            RenderTypes.entityTranslucent(academy("textures/particle/imag_phase_fluid_0.png")),
+            RenderTypes.entityTranslucent(academy("textures/particle/imag_phase_fluid_1.png")),
+            RenderTypes.entityTranslucent(academy("textures/particle/imag_phase_fluid_2.png")),
+            RenderTypes.entityTranslucent(academy("textures/particle/imag_phase_fluid_3.png"))
+    };
     private static final Object LOCK = new Object();
     private static final Map<Level, Long2ObjectOpenHashMap<List<FluidSurface>>> SURFACES_BY_LEVEL =
             new WeakHashMap<>();
@@ -59,7 +65,9 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
             FluidRenderer.Output output,
             BlockState blockState
     ) {
-        return true;
+        // Keep the ordinary fluid mesh as a dark, animated foundation. The solid black
+        // background is submitted separately during level rendering.
+        return false;
     }
 
     @SubscribeEvent
@@ -128,67 +136,117 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
             return;
         }
 
-        var surfacesBySection = new Long2ObjectOpenHashMap<List<FluidSurface>>();
-        stored.forEach((section, surfaces) -> surfacesBySection.put(section, List.copyOf(surfaces)));
-        event.getRenderState().setRenderData(CONTEXT_KEY, new ImagPhaseRenderState(surfacesBySection));
+        var visibleSections = new ArrayList<SectionSurfaces>();
+        stored.long2ObjectEntrySet().forEach(entry -> {
+            long section = entry.getLongKey();
+            List<FluidSurface> surfaces = entry.getValue();
+            if (surfaces.isEmpty()) {
+                return;
+            }
+
+            int sectionX = SectionPos.x(section);
+            int sectionY = SectionPos.y(section);
+            int sectionZ = SectionPos.z(section);
+            if (!level.hasChunk(sectionX, sectionZ)) {
+                return;
+            }
+
+            BlockPos origin = new BlockPos(
+                    SectionPos.sectionToBlockCoord(sectionX),
+                    SectionPos.sectionToBlockCoord(sectionY),
+                    SectionPos.sectionToBlockCoord(sectionZ)
+            );
+            AABB bounds = new AABB(
+                    origin.getX(), origin.getY(), origin.getZ(),
+                    origin.getX() + 16, origin.getY() + 16, origin.getZ() + 16
+            );
+            if (event.getFrustum().isVisible(bounds)) {
+                visibleSections.add(new SectionSurfaces(origin, List.copyOf(surfaces)));
+            }
+        });
+        event.getRenderState().setRenderData(
+                CONTEXT_KEY,
+                visibleSections.isEmpty()
+                        ? ImagPhaseRenderState.EMPTY
+                        : new ImagPhaseRenderState(List.copyOf(visibleSections), level.getGameTime())
+        );
     }
 
     @SubscribeEvent
     public static void onSubmitCustomGeometry(SubmitCustomGeometryEvent event) {
         ImagPhaseRenderState state = event.getLevelRenderState().getRenderData(CONTEXT_KEY);
-        if (state == null || state.surfacesBySection().isEmpty()) {
+        if (state == null || state.sections().isEmpty()) {
             return;
         }
 
         var camera = event.getLevelRenderState().cameraRenderState.pos;
         var collector = event.getSubmitNodeCollector();
-        RenderType renderType = RenderTypes.endGateway();
-        if (IrisCompat.isShaderPackInUse()) {
-            var blockStateIds = WorldRenderingSettings.INSTANCE.getBlockStateIds();
-            if (blockStateIds != null) {
-                int endPortalId = blockStateIds.applyAsInt(net.minecraft.world.level.block.Blocks.END_PORTAL.defaultBlockState());
-                CapturedRenderingState.INSTANCE.setCurrentBlockEntity(endPortalId);
-            }
-            renderType = RenderTypes.entitySolid(TheEndPortalRenderer.END_PORTAL_LOCATION);
-        }
-
-        RenderType finalRenderType = renderType;
-        event.getRenderableSections().forEach(section -> submitSection(
+        state.sections().forEach(section -> submitBackground(
                 section,
-                state,
                 event.getPoseStack(),
                 collector,
-                finalRenderType,
                 camera.x,
                 camera.y,
                 camera.z
         ));
+
+        // The normal particle pass is submitted before custom opaque geometry. Buffer the
+        // colored stars into the final post phase so the black surface can never overwrite them.
+        for (int layer = 0; layer < STAR_LAYERS.length; layer++) {
+            VertexConsumer starBuffer = PostEffect.getPost().getBuffer(STAR_LAYERS[layer]);
+            int finalLayer = layer;
+            state.sections().forEach(section -> bufferStars(
+                    section,
+                    event.getPoseStack(),
+                    starBuffer,
+                    finalLayer,
+                    state.animationTick(),
+                    camera.x,
+                    camera.y,
+                    camera.z
+            ));
+        }
     }
 
-    private static void submitSection(
-            IRenderableSection section,
-            ImagPhaseRenderState state,
+    private static void submitBackground(
+            SectionSurfaces section,
             PoseStack poseStack,
             net.minecraft.client.renderer.SubmitNodeCollector collector,
-            RenderType renderType,
             double cameraX,
             double cameraY,
             double cameraZ
     ) {
-        BlockPos origin = section.getRenderOrigin();
-        long sectionKey = sectionKey(origin);
-        List<FluidSurface> surfaces = state.surfacesBySection().get(sectionKey);
-        if (surfaces == null || surfaces.isEmpty()) {
-            return;
-        }
+        BlockPos origin = section.origin();
+        List<FluidSurface> surfaces = section.surfaces();
 
         poseStack.pushPose();
         poseStack.translate(origin.getX() - cameraX, origin.getY() - cameraY, origin.getZ() - cameraZ);
-        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+        collector.submitCustomGeometry(poseStack, BLACK_BACKGROUND, (pose, buffer) -> {
             for (FluidSurface surface : surfaces) {
-                surface.render(pose.pose(), buffer);
+                surface.renderBackground(pose.pose(), buffer);
             }
         });
+        poseStack.popPose();
+    }
+
+    private static void bufferStars(
+            SectionSurfaces section,
+            PoseStack poseStack,
+            VertexConsumer buffer,
+            int layer,
+            long animationTick,
+            double cameraX,
+            double cameraY,
+            double cameraZ
+    ) {
+        BlockPos origin = section.origin();
+        List<FluidSurface> surfaces = section.surfaces();
+
+        poseStack.pushPose();
+        poseStack.translate(origin.getX() - cameraX, origin.getY() - cameraY, origin.getZ() - cameraZ);
+        for (FluidSurface surface : surfaces) {
+            surface.renderStars(poseStack.last().pose(), buffer, layer, animationTick);
+        }
         poseStack.popPose();
     }
 
@@ -254,9 +312,11 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
         return new float[]{weighted, weight};
     }
 
-    private record ImagPhaseRenderState(Long2ObjectOpenHashMap<List<FluidSurface>> surfacesBySection) {
-        private static final ImagPhaseRenderState EMPTY =
-                new ImagPhaseRenderState(new Long2ObjectOpenHashMap<>());
+    private record ImagPhaseRenderState(List<SectionSurfaces> sections, long animationTick) {
+        private static final ImagPhaseRenderState EMPTY = new ImagPhaseRenderState(List.of(), 0L);
+    }
+
+    private record SectionSurfaces(BlockPos origin, List<FluidSurface> surfaces) {
     }
 
     private record FluidSurface(
@@ -267,7 +327,17 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
             float southWest,
             int faceMask
     ) {
-        private static final float TOP_OFFSET = 0.001F;
+        private static final float BACKGROUND_OFFSET = 0.002F;
+        private static final float STAR_OFFSET = 0.008F;
+        private static final int STARS_PER_SURFACE = 7;
+        private static final int[][] STAR_COLORS = {
+                {245, 144, 144},
+                {178, 232, 243},
+                {209, 170, 225},
+                {194, 238, 138},
+                {255, 190, 139},
+                {238, 174, 220}
+        };
 
         private static FluidSurface extract(
                 BlockAndTintGetter level,
@@ -309,52 +379,109 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
             return new FluidSurface(pos.immutable(), northWest, northEast, southEast, southWest, mask);
         }
 
-        private void render(Matrix4fc pose, VertexConsumer buffer) {
+        private void renderBackground(Matrix4fc pose, VertexConsumer buffer) {
             float x = pos.getX() & 15;
             float y = pos.getY() & 15;
             float z = pos.getZ() & 15;
             if (has(Direction.UP)) {
-                quad(buffer, pose,
-                        x, y + northWest - TOP_OFFSET, z,
-                        x, y + southWest - TOP_OFFSET, z + 1,
-                        x + 1, y + southEast - TOP_OFFSET, z + 1,
-                        x + 1, y + northEast - TOP_OFFSET, z);
+                quad(buffer, pose, 0, 1, 0,
+                        x, y + northWest - BACKGROUND_OFFSET, z,
+                        x, y + southWest - BACKGROUND_OFFSET, z + 1,
+                        x + 1, y + southEast - BACKGROUND_OFFSET, z + 1,
+                        x + 1, y + northEast - BACKGROUND_OFFSET, z);
             }
             if (has(Direction.DOWN)) {
-                quad(buffer, pose,
-                        x, y + TOP_OFFSET, z + 1,
-                        x, y + TOP_OFFSET, z,
-                        x + 1, y + TOP_OFFSET, z,
-                        x + 1, y + TOP_OFFSET, z + 1);
+                quad(buffer, pose, 0, -1, 0,
+                        x, y + BACKGROUND_OFFSET, z + 1,
+                        x, y + BACKGROUND_OFFSET, z,
+                        x + 1, y + BACKGROUND_OFFSET, z,
+                        x + 1, y + BACKGROUND_OFFSET, z + 1);
             }
             if (has(Direction.NORTH)) {
-                quad(buffer, pose,
-                        x + 1, y + northEast, z + TOP_OFFSET,
-                        x + 1, y, z + TOP_OFFSET,
-                        x, y, z + TOP_OFFSET,
-                        x, y + northWest, z + TOP_OFFSET);
+                quad(buffer, pose, 0, 0, -1,
+                        x + 1, y + northEast, z + BACKGROUND_OFFSET,
+                        x + 1, y, z + BACKGROUND_OFFSET,
+                        x, y, z + BACKGROUND_OFFSET,
+                        x, y + northWest, z + BACKGROUND_OFFSET);
             }
             if (has(Direction.SOUTH)) {
-                quad(buffer, pose,
-                        x, y + southWest, z + 1 - TOP_OFFSET,
-                        x, y, z + 1 - TOP_OFFSET,
-                        x + 1, y, z + 1 - TOP_OFFSET,
-                        x + 1, y + southEast, z + 1 - TOP_OFFSET);
+                quad(buffer, pose, 0, 0, 1,
+                        x, y + southWest, z + 1 - BACKGROUND_OFFSET,
+                        x, y, z + 1 - BACKGROUND_OFFSET,
+                        x + 1, y, z + 1 - BACKGROUND_OFFSET,
+                        x + 1, y + southEast, z + 1 - BACKGROUND_OFFSET);
             }
             if (has(Direction.WEST)) {
-                quad(buffer, pose,
-                        x + TOP_OFFSET, y + northWest, z,
-                        x + TOP_OFFSET, y, z,
-                        x + TOP_OFFSET, y, z + 1,
-                        x + TOP_OFFSET, y + southWest, z + 1);
+                quad(buffer, pose, -1, 0, 0,
+                        x + BACKGROUND_OFFSET, y + northWest, z,
+                        x + BACKGROUND_OFFSET, y, z,
+                        x + BACKGROUND_OFFSET, y, z + 1,
+                        x + BACKGROUND_OFFSET, y + southWest, z + 1);
             }
             if (has(Direction.EAST)) {
-                quad(buffer, pose,
-                        x + 1 - TOP_OFFSET, y + southEast, z + 1,
-                        x + 1 - TOP_OFFSET, y, z + 1,
-                        x + 1 - TOP_OFFSET, y, z,
-                        x + 1 - TOP_OFFSET, y + northEast, z);
+                quad(buffer, pose, 1, 0, 0,
+                        x + 1 - BACKGROUND_OFFSET, y + southEast, z + 1,
+                        x + 1 - BACKGROUND_OFFSET, y, z + 1,
+                        x + 1 - BACKGROUND_OFFSET, y, z,
+                        x + 1 - BACKGROUND_OFFSET, y + northEast, z);
             }
+        }
+
+        private void renderStars(Matrix4fc pose, VertexConsumer buffer, int layer, long animationTick) {
+            if (!has(Direction.UP)) {
+                return;
+            }
+
+            float blockX = pos.getX() & 15;
+            float blockY = pos.getY() & 15;
+            float blockZ = pos.getZ() & 15;
+            long baseSeed = mix(pos.asLong());
+            for (int index = 0; index < STARS_PER_SURFACE; index++) {
+                long seed = mix(baseSeed + index * 0x9E3779B97F4A7C15L);
+                if ((seed & 3L) != layer) {
+                    continue;
+                }
+
+                float u = 0.08F + randomUnit(seed) * 0.84F;
+                float v = 0.08F + randomUnit(seed + 1L) * 0.84F;
+                float northHeight = lerp(u, northWest, northEast);
+                float southHeight = lerp(u, southWest, southEast);
+                float surfaceHeight = lerp(v, northHeight, southHeight);
+
+                float phase = randomUnit(seed + 2L) * ((float) Math.PI * 2.0F);
+                float pulse = 0.78F + 0.22F * (float) Math.sin(animationTick * 0.18F + phase);
+                float size = (0.035F + randomUnit(seed + 3L) * 0.075F) * pulse;
+                float angle = phase + animationTick * (0.004F + randomUnit(seed + 4L) * 0.006F);
+                float cos = (float) Math.cos(angle) * size;
+                float sin = (float) Math.sin(angle) * size;
+                float centerX = blockX + u;
+                float centerY = blockY + surfaceHeight + STAR_OFFSET;
+                float centerZ = blockZ + v;
+                int[] color = STAR_COLORS[(int) Math.floorMod(seed >>> 8, STAR_COLORS.length)];
+
+                starVertex(buffer, pose, centerX - cos + sin, centerY, centerZ - sin - cos,
+                        0.0F, 0.0F, color);
+                starVertex(buffer, pose, centerX - cos - sin, centerY, centerZ - sin + cos,
+                        0.0F, 1.0F, color);
+                starVertex(buffer, pose, centerX + cos - sin, centerY, centerZ + sin + cos,
+                        1.0F, 1.0F, color);
+                starVertex(buffer, pose, centerX + cos + sin, centerY, centerZ + sin - cos,
+                        1.0F, 0.0F, color);
+            }
+        }
+
+        private static float lerp(float delta, float start, float end) {
+            return start + delta * (end - start);
+        }
+
+        private static long mix(long value) {
+            value = (value ^ (value >>> 30)) * 0xBF58476D1CE4E5B9L;
+            value = (value ^ (value >>> 27)) * 0x94D049BB133111EBL;
+            return value ^ (value >>> 31);
+        }
+
+        private static float randomUnit(long seed) {
+            return (float) ((mix(seed) >>> 40) & 0xFFFFFFL) / 0xFFFFFF;
         }
 
         private boolean has(Direction direction) {
@@ -368,6 +495,9 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
         private static void quad(
                 VertexConsumer buffer,
                 Matrix4fc pose,
+                float normalX,
+                float normalY,
+                float normalZ,
                 float x0,
                 float y0,
                 float z0,
@@ -381,10 +511,48 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
                 float y3,
                 float z3
         ) {
-            buffer.addVertex(pose, x0, y0, z0);
-            buffer.addVertex(pose, x1, y1, z1);
-            buffer.addVertex(pose, x2, y2, z2);
-            buffer.addVertex(pose, x3, y3, z3);
+            vertex(buffer, pose, x0, y0, z0, 0.0F, 0.0F, normalX, normalY, normalZ);
+            vertex(buffer, pose, x1, y1, z1, 0.0F, 1.0F, normalX, normalY, normalZ);
+            vertex(buffer, pose, x2, y2, z2, 1.0F, 1.0F, normalX, normalY, normalZ);
+            vertex(buffer, pose, x3, y3, z3, 1.0F, 0.0F, normalX, normalY, normalZ);
+        }
+
+        private static void vertex(
+                VertexConsumer buffer,
+                Matrix4fc pose,
+                float x,
+                float y,
+                float z,
+                float u,
+                float v,
+                float normalX,
+                float normalY,
+                float normalZ
+        ) {
+            buffer.addVertex(pose, x, y, z)
+                    .setColor(255, 255, 255, 255)
+                    .setUv(u, v)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(0x00F000F0)
+                    .setNormal(normalX, normalY, normalZ);
+        }
+
+        private static void starVertex(
+                VertexConsumer buffer,
+                Matrix4fc pose,
+                float x,
+                float y,
+                float z,
+                float u,
+                float v,
+                int[] color
+        ) {
+            buffer.addVertex(pose, x, y, z)
+                    .setColor(color[0], color[1], color[2], 255)
+                    .setUv(u, v)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(0x00F000F0)
+                    .setNormal(0.0F, 1.0F, 0.0F);
         }
     }
 }
