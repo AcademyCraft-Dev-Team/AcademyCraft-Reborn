@@ -55,7 +55,6 @@ import org.academy.internal.client.app.props.PropsIcon;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
 import org.academy.internal.client.commands.ClientProfileCommand;
-import org.academy.internal.client.compatibility.InventoryProfilesNextCompat;
 import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
 import org.academy.internal.client.gui.debug.UiDebugLayoutDefinition;
 import org.academy.internal.client.gui.debug.UiDebugLayoutRegistry;
@@ -136,7 +135,6 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onClientStarted(ClientStartedEvent event) {
-        InventoryProfilesNextCompat.initialize();
         ImGuiUtilApi.INSTANCE.init();
         initMain();
         initRender();

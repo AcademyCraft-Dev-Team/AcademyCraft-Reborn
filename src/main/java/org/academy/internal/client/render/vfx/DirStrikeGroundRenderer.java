@@ -96,9 +96,8 @@ public final class DirStrikeGroundRenderer implements VfxRenderer<DirStrikeGroun
                 () -> "VFX Dir Strike Ground", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.BLOCK_MESH);
-            var projection = RenderSystem.getProjectionMatrixBuffer();
-            if (projection != null) renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            renderPass.setUniform("Projection", ctx.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(ctx.viewRotationMatrix());
             renderPass.setUniform("DynamicTransforms", transform);
             var texture = Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
             renderPass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());

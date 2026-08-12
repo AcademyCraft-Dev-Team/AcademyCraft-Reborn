@@ -128,7 +128,8 @@ public final class TexturedQuadRenderer implements VfxRenderer<WorldQuadData> {
                     ? VfxPipelines.SKY_STRIKE_QUAD_ADDITIVE
                     : VfxPipelines.SKY_STRIKE_QUAD_TRANSLUCENT);
             RenderSystem.bindDefaultUniforms(pass);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            pass.setUniform("Projection", context.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(context.viewRotationMatrix());
             pass.setUniform("DynamicTransforms", transform);
             var texture = Minecraft.getInstance().getTextureManager().getTexture(textureId);
             pass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());

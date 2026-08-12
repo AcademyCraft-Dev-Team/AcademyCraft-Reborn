@@ -96,8 +96,8 @@ public final class WingRenderer implements VfxRenderer<WingData> {
         try (var renderPass = passEncoder.createRenderPass(
                 () -> "VFX Wing", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
-            var projection = Objects.requireNonNull(RenderSystem.getProjectionMatrixBuffer());
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            var projection = ctx.projectionUniform();
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(ctx.viewRotationMatrix());
             var sequential = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
             var drawOffset = 0L;
             for (var item : data) {

@@ -102,10 +102,8 @@ public final class PlasmaCloudRenderer implements VfxRenderer<PlasmaCloudData> {
                 OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.TEX_RING_TRANSLUCENT);
-            var projection = RenderSystem.getProjectionMatrixBuffer();
-            if (projection != null) renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms()
-                    .writeTransform(RenderSystem.getModelViewMatrixCopy());
+            renderPass.setUniform("Projection", context.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(context.viewRotationMatrix());
             renderPass.setUniform("DynamicTransforms", transform);
             var texture = Minecraft.getInstance().getTextureManager()
                     .getTexture(R.textures.plasma_generation_cloud);
