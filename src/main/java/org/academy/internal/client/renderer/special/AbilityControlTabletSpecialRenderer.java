@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
@@ -23,6 +24,7 @@ import java.util.WeakHashMap;
 import java.util.function.Consumer;
 
 import static org.academy.internal.client.model.AbilityControlTabletModel.MODEL;
+import static org.academy.internal.client.model.AbilityControlTabletModel.SCREEN_MODEL;
 
 public final class AbilityControlTabletSpecialRenderer implements SpecialModelRenderer<AbilityControlTabletRenderState> {
     public static final AbilityControlTabletSpecialRenderer INSTANCE = new AbilityControlTabletSpecialRenderer();
@@ -111,6 +113,16 @@ public final class AbilityControlTabletSpecialRenderer implements SpecialModelRe
                 poseStack,
                 RenderTypes.entityCutout(R.textures.model.ability_control_tablet),
                 packedLight,
+                packedOverlay,
+                outlineColor,
+                null
+        );
+        submitNodeCollector.submitModel(
+                SCREEN_MODEL,
+                renderState,
+                poseStack,
+                RenderTypes.entityTranslucent(R.textures.model.ability_control_tablet),
+                LightCoordsUtil.lightCoordsWithEmission(packedLight, 5),
                 packedOverlay,
                 outlineColor,
                 null
