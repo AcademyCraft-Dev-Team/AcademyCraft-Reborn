@@ -341,7 +341,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                     var index = hitIndex.getAndIncrement();
                     if (index > (proficiencyMilestone >= 3 ? 1 : 0)) return 0.0f;
                     var marked = radiationEnabled && living != null
-                            && org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify
+                            && org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify
                             .isMarked(living, level.getGameTime());
                     var markMultiplier = org.academy.internal.common.ability.Skills.RADIATION_INTENSIFY.get()
                             .hasProficiencyMilestone(owner, 2) ? 1.6f : 1.5f;
@@ -358,7 +358,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 })
                 .onHit((target, _, hurt) -> {
                     if (hurt && radiationEnabled && target instanceof net.minecraft.world.entity.LivingEntity living) {
-                        org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify
+                        org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify
                                 .mark(owner, living, level.getGameTime());
                     }
                 })

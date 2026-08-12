@@ -1683,7 +1683,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
         val iconProgressRef = AtomicReference(0f)
         val levelIconPath =
-            AcademyCraft.academy("textures/abilities/condition/any${(level.levelCode + 1).coerceIn(1, 5)}.png")
+            AcademyCraft.academy("textures/ability/condition/any${(level.levelCode + 1).coerceIn(1, 5)}.png")
 
         val coverCenter = LinearLayoutWidget()
         coverCenter.layoutParams = WidgetContainer.LayoutParams()

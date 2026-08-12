@@ -519,7 +519,7 @@ public final class AbilitySystemClient {
         var category = getCategory();
         if (category == null || !category.supportsCommonSkills()) return base;
         var stackData = SKILL_DATA.get(
-                AcademyCraft.academy(SkillNames.LEVEL0_PASSIVE_LV2).toString()
+                AcademyCraft.academy(SkillNames.MULTIPLE_BRAIN_DOMAIN_SEGMENTATION).toString()
         );
         var bonus = stackData == null
                 ? 0

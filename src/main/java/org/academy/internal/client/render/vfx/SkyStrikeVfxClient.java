@@ -1,6 +1,7 @@
 package org.academy.internal.client.render.vfx;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -13,9 +14,8 @@ import org.academy.api.client.render.vfx.VfxPhase;
 import org.academy.api.client.render.vfx.VfxRegistry;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.electromaster.SkyStrikeVisualPacket;
-import org.academy.internal.common.ability.electromaster.skills.lv4.LightningStorm;
+import org.academy.internal.common.ability.electromaster.skills.lv5.LightningStorm;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Thunderclap;
-import net.minecraft.util.Mth;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SkyStrikeVfxClient {

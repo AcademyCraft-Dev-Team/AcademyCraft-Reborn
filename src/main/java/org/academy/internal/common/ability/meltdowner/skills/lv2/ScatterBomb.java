@@ -2,6 +2,11 @@ package org.academy.internal.common.ability.meltdowner.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -30,12 +35,12 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -43,12 +48,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class ScatterBomb extends Skill {
     static final int MIN_CHARGE_TICKS = 20;
@@ -345,7 +344,7 @@ public final class ScatterBomb extends Skill {
                 var target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
                                 new net.minecraft.world.phys.AABB(endpoint, endpoint).inflate(8.0),
                                 living -> living.isAlive() && !player.isAlliedTo(living)
-                                        && org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify
+                                        && org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify
                                         .isMarked(living, level.getGameTime()))
                         .stream().min(java.util.Comparator.comparingDouble(living -> living.distanceToSqr(endpoint)))
                         .orElse(null);

@@ -42,13 +42,13 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.VectorDefenseProficiency;
 import org.academy.internal.common.ability.accelerator.reflection.ReflectionHealthRecordCodec;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.compat.*;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.network.PacketTypes;
@@ -83,9 +83,9 @@ public class VectorReflection extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.VECTOR_REDUCTION)
+                .dependsOn(Skills.VECTOR_DEVIATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
-                .devCondition(new DevCondition.DependencyCondition("Vector Reduction", "academy:vector_reduction"))
+                .devCondition(new DevCondition.DependencyCondition("Vector Reduction", "academy:vector_deviation"))
         );
     }
 
@@ -227,7 +227,7 @@ public class VectorReflection extends Skill {
                 return;
             }
 
-            VectorReduction.Server.forceDeactivate(player);
+            VectorDeviation.Server.forceDeactivate(player);
             maintainProtection(player);
         }
 
@@ -583,7 +583,7 @@ public class VectorReflection extends Skill {
         public static void imaginebreaker(ServerPlayer player, float amount) {
             if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
             var reflectionActive = isActive(player);
-            var reductionActive = VectorReduction.Server.isActive(player);
+            var reductionActive = VectorDeviation.Server.isActive(player);
             if (!reflectionActive && !reductionActive) return;
 
             var uuid = player.getUUID();
@@ -611,7 +611,7 @@ public class VectorReflection extends Skill {
             }
 
             if (depleted) {
-                VectorReduction.Server.forceDeactivate(player);
+                VectorDeviation.Server.forceDeactivate(player);
                 forceDeactivate(player);
             }
         }
@@ -819,8 +819,8 @@ public class VectorReflection extends Skill {
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var skill = Skills.VECTOR_REFLECTION.get();
-            if (skill.isEnabled(player) && Skills.VECTOR_REDUCTION.get().isEnabled(player)) {
-                VectorReduction.Server.forceDeactivate(player);
+            if (skill.isEnabled(player) && Skills.VECTOR_DEVIATION.get().isEnabled(player)) {
+                VectorDeviation.Server.forceDeactivate(player);
             }
             if (Server.deactivateUnavailableProtection(player)) return;
             if (skill.isEnabled(player)) {

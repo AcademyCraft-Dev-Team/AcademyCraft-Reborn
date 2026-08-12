@@ -12,7 +12,7 @@ import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.internal.client.renderer.entity.state.GlowCircleRenderState;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 
@@ -79,7 +79,7 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
             return true;
         }
         return state.redirectKind == VectorRedirectKind.REFRACTION
-                ? VectorReduction.Client.CONFIG.isFirstPersonDistortionRingVisible()
+                ? VectorDeviation.Client.CONFIG.isFirstPersonDistortionRingVisible()
                 : VectorReflection.Client.CONFIG.isFirstPersonDistortionRingVisible();
     }
 }

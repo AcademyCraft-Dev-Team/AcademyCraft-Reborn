@@ -2,6 +2,7 @@ package org.academy.internal.server.world.level.storage;
 
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.data.AbilityData;
@@ -10,20 +11,26 @@ import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.*;
-import net.minecraft.util.Mth;
 
 public final class Player {
     private static final Map<String, String> LEGACY_SKILL_ALIASES = Map.ofEntries(
-            Map.entry("current_recharge", "pulse_charge"),
+            Map.entry("pulse_charge", "current_recharge"),
+            Map.entry("vector_reduction", "vector_deviation"),
             Map.entry("lightning_spear", "thunder_lance"),
             Map.entry("thunder_clap", "thunderclap"),
-            Map.entry("penetrate_teleport", "cut_through"),
+            Map.entry("penetrate_teleport", "piercing_teleportation"),
+            Map.entry("cut_through", "piercing_teleportation"),
             Map.entry("assault_jet", "jet_strike"),
-            Map.entry("brain_development_lv1", "level0_passive_lv1"),
-            Map.entry("brain_development_lv2", "level0_passive_lv2"),
-            Map.entry("brain_development_lv3", "level0_passive_lv3"),
-            Map.entry("brain_development_lv4", "level0_passive_lv4"),
-            Map.entry("brain_development_lv5", "level0_passive_lv5"),
+            Map.entry("brain_development_lv1", "brain_domain_development"),
+            Map.entry("brain_development_lv2", "multiple_brain_domain_segmentation"),
+            Map.entry("brain_development_lv3", "parallel_thought_computation"),
+            Map.entry("brain_development_lv4", "complete_consciousness_analysis"),
+            Map.entry("brain_development_lv5", "absolute_self_control"),
+            Map.entry("level0_passive_lv1", "brain_domain_development"),
+            Map.entry("level0_passive_lv2", "multiple_brain_domain_segmentation"),
+            Map.entry("level0_passive_lv3", "parallel_thought_computation"),
+            Map.entry("level0_passive_lv4", "complete_consciousness_analysis"),
+            Map.entry("level0_passive_lv5", "absolute_self_control"),
             Map.entry("spreading_blast", "scatter_bomb"),
             Map.entry("kinetic_superposition", "kinetic_energy_applied"),
             Map.entry("directed_shock", "kinetic_energy_applied"),

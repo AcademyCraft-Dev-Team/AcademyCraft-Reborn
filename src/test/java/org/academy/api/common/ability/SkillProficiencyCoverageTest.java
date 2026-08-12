@@ -74,7 +74,7 @@ class SkillProficiencyCoverageTest {
 
     @Test
     void bothVectorDefensesUseTenTenTenFiveIterationSequence() {
-        for (var path : new String[]{"vector_reflection", "vector_reduction"}) {
+        for (var path : new String[]{"vector_reflection", "vector_deviation"}) {
             var profile = SkillProficiencyProfiles.forSkill("academy:" + path);
             assertEquals(10, profile.resolveIterationTicks(0, 40), path);
             assertEquals(10, profile.resolveIterationTicks(1, 40), path);

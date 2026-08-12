@@ -1,5 +1,8 @@
 package org.academy.internal.common.world.entity.ability;
 
+import java.util.Comparator;
+import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,13 +24,9 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.skills.DarkmatterCreation;
-import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
+import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Comparator;
-import java.util.Optional;
-import java.util.UUID;
 
 public final class DarkmatterBeetle extends Monster {
     private UUID ownerUUID;

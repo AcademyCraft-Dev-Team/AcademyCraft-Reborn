@@ -1,0 +1,303 @@
+package org.academy.internal.common.ability.aeromanip.skills.lv3;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import io.netty.buffer.ByteBuf;
+import java.util.List;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
+import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
+import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingFilm;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.common.network.PacketTypes;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.ThreadType;
+import org.misaka.api.common.network.annotation.PacketTarget;
+import org.misaka.api.common.network.annotation.SubscribePacket;
+import org.misaka.api.common.network.packet.Packet;
+import org.misaka.api.common.network.packet.PacketType;
+
+public final class AtmosphereShield extends Skill {
+    private static final float[] REDUCTION = {0.20f, 0.28f, 0.35f};
+    private static final Identifier ATTACK_KNOCKBACK_MODIFIER_ID =
+            AcademyCraft.academy("atmosphere_shield_attack_knockback");
+    private static final Identifier TRUE_RESISTANCE_MODIFIER_ID =
+            AcademyCraft.academy("atmosphere_shield_true_resistance");
+
+    public AtmosphereShield() {
+        super(Builder
+                .of(AbilityCategories.AEROMANIP.get())
+                .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
+                .passive()
+                .initiallyDisabled()
+                .maintenanceCost(30)
+                .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.BREATHING_FILM)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+        );
+    }
+
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        InputSystem.addKeyBinding(
+                Client.KEY_NAME_TOGGLE,
+                Client.CONFIG.getKeyBinding(
+                        Client.KEY_NAME_TOGGLE,
+                        InputSystem.combo(
+                                InputSystem.InputType.KEYBOARD,
+                                InputConstants.KEY_N,
+                                InputConstants.RELEASE,
+                                InputConstants.MOD_ALT
+                        )
+                ),
+                _ -> Client.toggle()
+        );
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.AEROMANIP.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.ATMOSPHERE_SHIELD.get(),
+                        List.of(BreathingFilm.Client.SKILL_INFO),
+                        R.textures.atmosphere_shield_icon,
+                        20,
+                        72
+                )
+        );
+        public static final String KEY_NAME_TOGGLE = SkillNames.ATMOSPHERE_SHIELD + "_toggle";
+        public static Config CONFIG = new Config();
+
+        private Client() {
+        }
+
+        private static void toggle() {
+            if (!AbilitySystemClient.beginToggleRequest(Skills.ATMOSPHERE_SHIELD.get())) return;
+            MisakaNetworkClient.send(TogglePacket.INSTANCE);
+        }
+
+        public static final class Config extends KeyBindingConfig {
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
+        }
+    }
+
+    public static final class Server {
+        private Server() {
+        }
+
+        @SubscribePacket
+        public static void handle(TogglePacket packet) {
+            Skills.ATMOSPHERE_SHIELD.get().toggle(packet.getPacketListener().getPlayer());
+        }
+
+        public static boolean isActive(ServerPlayer player) {
+            return player != null && Skills.ATMOSPHERE_SHIELD.get().isEnabled(player);
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+            var skill = Skills.ATMOSPHERE_SHIELD.get();
+            var enabled = skill.isEnabled(player);
+            if (enabled) {
+                var system = AbilitySystemServer.getSystem(player);
+                enabled = player.isAlive() && !player.hasDisconnected() && system.ensurePermanentOccupation(
+                        player.getUUID(),
+                        skill.getMaintenanceCost(player)
+                                * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
+                        skill
+                );
+                if (!enabled && skill.isEnabled(player)) {
+                    system.toggleSkill(player.getUUID(), skill.getKeyString());
+                }
+            }
+            var power = enabled
+                    ? AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
+                    : 0;
+            syncModifier(
+                    player.getAttribute(Attributes.ATTACK_KNOCKBACK),
+                    ATTACK_KNOCKBACK_MODIFIER_ID,
+                    0.5 * power,
+                    enabled
+            );
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player,
+                    TRUE_RESISTANCE_MODIFIER_ID,
+                    6.0,
+                    enabled
+            );
+            if (enabled) stopNearbyProjectiles(player);
+        }
+
+        @SubscribeEvent(priority = EventPriority.HIGH)
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
+            if (!(event.getAmount() > 0.0f)) return;
+            var skill = Skills.ATMOSPHERE_SHIELD.get();
+            if (!skill.isEnabled(player)) return;
+            if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
+                projectile.setDeltaMovement(Vec3.ZERO);
+                projectile.hurtMarked = true;
+                expireStoppedProjectile(player, projectile, skill);
+                event.setCanceled(true);
+                return;
+            }
+            if (event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
+            var system = AbilitySystemServer.getSystem(player);
+            var immunityThreshold = skill.hasProficiencyMilestone(player, 3) ? 6.0f : 4.0f;
+            var lowDamageCost = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC, 10.0f);
+            if (event.getAmount() < immunityThreshold && system.tryTimedOccupation(
+                    player.getUUID(), lowDamageCost, skill, 5
+            )) {
+                event.setCanceled(true);
+                return;
+            }
+            var level = Math.max(0, Math.min(2, skill.getLevel(player)));
+            var reduction = REDUCTION[level];
+            if (skill.hasProficiencyMilestone(player, 3)) reduction = Math.min(0.5f, reduction + 0.1f);
+            var prevented = event.getAmount() * reduction;
+            var defenseCost = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC,
+                    Math.min(30.0f, 4.0f + prevented * 2.0f)
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD));
+            if (!system.tryTimedOccupation(player.getUUID(),
+                    defenseCost,
+                    skill, 5)) return;
+            event.setAmount(event.getAmount() - prevented);
+            player.level().playSound(
+                    null,
+                    player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.SHIELD_BLOCK,
+                    SoundSource.PLAYERS,
+                    1.0f,
+                    0.9f + player.getRandom().nextFloat() * 0.2f
+            );
+        }
+
+        private static void stopNearbyProjectiles(ServerPlayer player) {
+            var handled = 0;
+            var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
+            for (var projectile : player.level().getEntitiesOfClass(
+                    Projectile.class,
+                    player.getBoundingBox().inflate(1.0),
+                    projectile -> projectile.isAlive() && projectile.getOwner() != player
+            )) {
+                if (handled++ >= cap) break;
+                projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                projectile.hurtMarked = true;
+                expireStoppedProjectile(player, projectile, Skills.ATMOSPHERE_SHIELD.get());
+            }
+        }
+
+        private static void expireStoppedProjectile(ServerPlayer player, Projectile projectile, Skill skill) {
+            if (!skill.hasProficiencyMilestone(player, 2)) return;
+            var now = player.level().getGameTime();
+            if (TimedSkillEffectRuntime.get(player.getUUID(), projectile.getUUID(), skill,
+                    "stopped_projectile", now).isPresent()) return;
+            if (!TimedSkillEffectRuntime.put(player, projectile.getUUID(), skill,
+                    "stopped_projectile", 20, 1.0f)) return;
+            TimedSkillEffectRuntime.schedule(player, 20, () -> {
+                if (projectile.isAlive()) projectile.discard();
+            });
+        }
+
+        private static void syncModifier(
+                AttributeInstance attribute,
+                Identifier id,
+                double amount,
+                boolean enabled
+        ) {
+            if (attribute == null) return;
+            var current = attribute.getModifier(id);
+            if (!enabled) {
+                if (current != null) attribute.removeModifier(id);
+                return;
+            }
+            if (current != null && Double.compare(current.amount(), amount) == 0) return;
+            if (current != null) attribute.removeModifier(id);
+            attribute.addTransientModifier(new AttributeModifier(
+                    id,
+                    amount,
+                    AttributeModifier.Operation.ADD_VALUE
+            ));
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
+        public static final TogglePacket INSTANCE = new TogglePacket();
+        public static final StreamCodec<ByteBuf, TogglePacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private TogglePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+            return PacketTypes.ATMOSPHERE_SHIELD_TOGGLE.get();
+        }
+    }
+}

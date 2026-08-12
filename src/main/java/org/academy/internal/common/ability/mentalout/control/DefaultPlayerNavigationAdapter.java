@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.mentalout.control;
 
+import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -17,11 +18,9 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.skills.Flight;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
-
-import java.util.*;
 
 /**
  * Built-in bounded navigation for vanilla player movement, water, flight, and ridden vehicles.

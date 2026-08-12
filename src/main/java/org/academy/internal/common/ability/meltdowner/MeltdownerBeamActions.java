@@ -1,19 +1,18 @@
 package org.academy.internal.common.ability.meltdowner;
 
+import java.util.function.Predicate;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
-import org.academy.internal.common.ability.accelerator.reflection.*;
-import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
 import org.academy.internal.common.ability.Skills;
-
-import java.util.function.Predicate;
-import net.minecraft.util.Mth;
+import org.academy.internal.common.ability.accelerator.reflection.*;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 
 public final class MeltdownerBeamActions {
     private MeltdownerBeamActions() {
