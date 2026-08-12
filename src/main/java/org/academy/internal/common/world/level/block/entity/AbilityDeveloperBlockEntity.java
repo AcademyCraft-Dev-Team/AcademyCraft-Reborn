@@ -29,6 +29,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     public String name;
     public int energyStored;
     public int ticks;
+    // Transient client animation state. Serializing it would let energy updates restart the door animation.
     public boolean isOpen = false;
     @Nullable
     private BlockPos connectedNodePos = null;
@@ -194,7 +195,6 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         super.saveAdditional(output);
         if (isMain()) {
             output.putInt("energy_stored", energyStored);
-            output.putBoolean("is_open", isOpen);
             if (connectedNodePos != null) {
                 output.putLong("connected_node_pos", connectedNodePos.asLong());
             }
@@ -208,13 +208,11 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
             energyStored = Mth.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
             connectedNodePos = null;
             input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
-            isOpen = input.getBooleanOr("is_open", false);
         } else {
             connectedNodePos = null;
             if (level != null && mainPos != null && level.isClientSide()) {
                 var mainBE = level.getBlockEntity(mainPos);
                 if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
-                    isOpen = mainDevBE.isOpen;
                     energyStored = mainDevBE.getEnergyStored();
                     connectedNodePos = mainDevBE.connectedNodePos;
                 }
