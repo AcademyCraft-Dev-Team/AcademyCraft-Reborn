@@ -3,17 +3,22 @@ package org.academy.internal.common.ability.mentalout.precision;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
-import org.academy.internal.common.ability.mentalout.skills.PrecisionOperation;
+import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
 import org.misaka.MisakaNetworkClient;
@@ -23,12 +28,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import net.minecraft.util.Mth;
 
 public final class PrecisionOperationManager {
     private static final Map<UUID, CachedPrograms> COMPILED = new HashMap<>();

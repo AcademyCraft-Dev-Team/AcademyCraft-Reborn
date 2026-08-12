@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -7,18 +8,15 @@ import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.api.client.resources.R;
-import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
-
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
-import java.util.Map;
-
-import static org.academy.internal.common.ability.electromaster.skills.lv5.Railgun.CHARGE_TIME;
-import static org.academy.internal.common.ability.electromaster.skills.lv5.Railgun.RELEASE_VISUAL_TICKS;
+import static org.academy.internal.common.ability.electromaster.skills.lv4.Railgun.CHARGE_TIME;
+import static org.academy.internal.common.ability.electromaster.skills.lv4.Railgun.RELEASE_VISUAL_TICKS;
 
 public final class RailgunVfx implements Vfx {
     private static final int RING_SEGMENTS = 28;

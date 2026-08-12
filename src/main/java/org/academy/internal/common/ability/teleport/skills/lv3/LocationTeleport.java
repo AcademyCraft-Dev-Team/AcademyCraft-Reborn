@@ -2,6 +2,14 @@ package org.academy.internal.common.ability.teleport.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.WeakHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
@@ -41,10 +49,11 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
+import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.skilldata.LocationTeleportData;
 import org.academy.internal.common.skilldata.LocationTeleportData.Mark;
+import org.academy.internal.common.skilldata.LocationTeleportData;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -52,15 +61,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.Map;
-import java.util.UUID;
-import java.util.WeakHashMap;
 
 public final class LocationTeleport extends Skill {
     public static final int MAX_MARKS = 32;
@@ -77,10 +77,10 @@ public final class LocationTeleport extends Skill {
                 .cpCost(40)
                 .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.CUT_THROUGH)
+                .dependsOn(Skills.PIERCING_TELEPORTATION)
                 .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, LocationTeleportData::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
-                .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:cut_through"))
+                .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:piercing_teleportation"))
         );
     }
 
@@ -140,7 +140,7 @@ public final class LocationTeleport extends Skill {
                 AbilityCategories.TELEPORT.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.LOCATION_TELEPORT.get(),
-                        List.of(CutThrough.Client.SKILL_INFO),
+                        List.of(PiercingTeleportation.Client.SKILL_INFO),
                         R.textures.location_teleport_icon,
                         118,
                         50

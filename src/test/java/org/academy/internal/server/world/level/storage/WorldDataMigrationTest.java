@@ -48,8 +48,8 @@ class WorldDataMigrationTest {
 
         var skills = player.getSkillDataMap();
         assertTrue(skills.containsKey("academy:arc_generate"));
-        assertTrue(skills.containsKey("academy:pulse_charge"));
-        assertTrue(skills.containsKey("academy:level0_passive_lv3"));
+        assertTrue(skills.containsKey("academy:current_recharge"));
+        assertTrue(skills.containsKey("academy:parallel_thought_computation"));
         assertTrue(skills.containsKey("academy:thunder_lance"));
         assertTrue(skills.containsKey("academy:thunderclap"));
         assertTrue(skills.containsKey("academy:scatter_bomb"));
@@ -64,6 +64,15 @@ class WorldDataMigrationTest {
     @Test
     void keepsForeignNamespacedSkillIdsUntouched() {
         assertEquals("othermod:custom_skill", Player.canonicalizeSkillId("othermod:custom_skill"));
+    }
+
+    @Test
+    void migratesRenamedCurrentSkillIdentifiers() {
+        assertEquals("academy:current_recharge", Player.canonicalizeSkillId("academy:pulse_charge"));
+        assertEquals("academy:vector_deviation", Player.canonicalizeSkillId("academy:vector_reduction"));
+        assertEquals("academy:piercing_teleportation", Player.canonicalizeSkillId("academy:cut_through"));
+        assertEquals("academy:parallel_thought_computation",
+                Player.canonicalizeSkillId("academy:level0_passive_lv3"));
     }
 
     @Test
