@@ -45,6 +45,7 @@ import java.util.function.Consumer
 
 class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()) {
     private val blockEntity: AbilityDeveloperBlockEntity
+        get() = resolveBlockEntity() ?: throw RuntimeException("Invalid block entity at $mainPos")
     private lateinit var area: FrameLayoutWidget
     private lateinit var mainWidget: FrameLayoutWidget
     private var isConsoleMode: Boolean = false
@@ -58,15 +59,11 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private val maxDuSkills = 10f
 
     init {
-        val level = minecraft.level ?: throw RuntimeException("Level is null")
-        val entity = level.getBlockEntity(mainPos)
-        if (entity is AbilityDeveloperBlockEntity) {
-            blockEntity = entity
-            entity.keepOpen()
-        } else {
-            throw RuntimeException("Invalid block entity at $mainPos")
-        }
+        blockEntity.keepOpen()
     }
+
+    private fun resolveBlockEntity(): AbilityDeveloperBlockEntity? =
+        minecraft.level?.getBlockEntity(mainPos) as? AbilityDeveloperBlockEntity
 
     override fun isPauseScreen(): Boolean = false
 
@@ -83,12 +80,12 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     override fun tick() {
         super.tick()
-        blockEntity.keepOpen()
+        resolveBlockEntity()?.keepOpen()
         refreshCompletedSkillDevelopment()
     }
 
     override fun removed() {
-        blockEntity.scheduleClosing()
+        resolveBlockEntity()?.scheduleClosing()
         super.removed()
     }
 
