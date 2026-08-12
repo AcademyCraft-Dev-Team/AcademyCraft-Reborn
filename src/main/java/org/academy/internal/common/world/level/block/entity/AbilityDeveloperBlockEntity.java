@@ -19,7 +19,7 @@ import java.util.Objects;
 import net.minecraft.util.Mth;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
-    public static final int CLOSE_DELAY_TICKS = 40;
+    public static final int CLOSE_DELAY_TICKS = 20;
 
     public final AnimationState openingState = new AnimationState();
     public final AnimationState closingState = new AnimationState();
@@ -44,12 +44,12 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     }
 
     public void setOpen(boolean open) {
-        if (isOpen == open) return;
+        var targetAnimationState = open ? openingState : closingState;
+        if (isOpen == open && targetAnimationState.isStarted()) return;
 
         var previousIsOpen = isOpen;
         isOpen = open;
         var currentAnimationState = previousIsOpen ? openingState : closingState;
-        var targetAnimationState = open ? openingState : closingState;
         var targetAnimationDefinition = open ? AbilityDeveloperAnimation.OPENING : AbilityDeveloperAnimation.CLOSING;
         var elapsedMillis = currentAnimationState.getTimeInMillis(ticks);
         openingState.stop();
@@ -77,7 +77,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     }
 
     public void scheduleClosing() {
-        closeDelayTicks = isOpen ? CLOSE_DELAY_TICKS : -1;
+        closeDelayTicks = CLOSE_DELAY_TICKS;
     }
 
     private void handleStateChangeOnClient(boolean wasNearby, boolean isNearby) {
