@@ -13,42 +13,60 @@ import org.academy.api.common.sync.packet.SyncDataPacket;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackPacket;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
-import org.academy.internal.common.ability.accelerator.skills.lv1.KineticEnergyApplied;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackPacket;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
+import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrikeVisualPacket;
-import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.*;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.FlowSensePacket;
-import org.academy.internal.common.ability.aeromanip.skills.*;
-import org.academy.internal.common.ability.darkmatter.skills.*;
+import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingFilm;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.TailwindField;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.VortexPull;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.AtmosphereBlastGun;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.PressureLock;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.WindCorridor;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.AtmosphericDominion;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.VacuumDomain;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
+import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
+import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
+import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
+import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterRepair;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.electromaster.SkyStrikeVisualPacket;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ElectricalContact;
-import org.academy.internal.common.ability.electromaster.skills.lv1.PulseCharge;
 import org.academy.internal.common.ability.electromaster.skills.lv2.LightningNova;
-import org.academy.internal.common.ability.electromaster.skills.lv2.MagnetManipulation;
-import org.academy.internal.common.ability.electromaster.skills.lv2.MineDetect;
+import org.academy.internal.common.ability.electromaster.skills.lv2.ThunderLance;
+import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
-import org.academy.internal.common.ability.electromaster.skills.lv3.ThunderLance;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MineDetect;
 import org.academy.internal.common.ability.electromaster.skills.lv4.BioelectricOperation;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
-import org.academy.internal.common.ability.electromaster.skills.lv4.LightningStorm;
+import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
 import org.academy.internal.common.ability.electromaster.skills.lv5.BallLightning;
-import org.academy.internal.common.ability.electromaster.skills.lv5.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.lv5.LightningStorm;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Thunderclap;
-import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
 import org.academy.internal.common.ability.meltdowner.skills.lv3.Cloudroom;
@@ -61,12 +79,16 @@ import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
-import org.academy.internal.common.ability.mentalout.skills.*;
-import org.academy.internal.common.ability.teleport.skills.SelfTeleport;
+import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntervention;
+import org.academy.internal.common.ability.mentalout.skills.lv1.TargetMisidentification;
+import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
+import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
+import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
+import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
+import org.academy.internal.common.ability.teleport.skills.lv2.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
-import org.academy.internal.common.ability.teleport.skills.lv3.CutThrough;
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv3.Shackle;
@@ -494,21 +516,21 @@ public final class PacketTypes {
     /**
      * Phase 1 - New Skills
      */
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PulseCharge.StartPacket>>
-            PULSE_CHARGE_START = PACKET_TYPES.register("pulse_charge_start",
-            () -> new PacketType<>(PulseCharge.StartPacket.class, PulseCharge.StartPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PulseCharge.StopPacket>>
-            PULSE_CHARGE_STOP = PACKET_TYPES.register("pulse_charge_stop",
-            () -> new PacketType<>(PulseCharge.StopPacket.class, PulseCharge.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CurrentRecharge.StartPacket>>
+            CURRENT_RECHARGE_START = PACKET_TYPES.register("current_recharge_start",
+            () -> new PacketType<>(CurrentRecharge.StartPacket.class, CurrentRecharge.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CurrentRecharge.StopPacket>>
+            CURRENT_RECHARGE_STOP = PACKET_TYPES.register("current_recharge_stop",
+            () -> new PacketType<>(CurrentRecharge.StopPacket.class, CurrentRecharge.StopPacket.CODEC));
     /**
      * Phase 2 - Aura and Toggle Skills
      */
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ElectricalContact.TogglePacket>>
             ELECTRICAL_CONTACT_TOGGLE = PACKET_TYPES.register("electrical_contact_toggle",
             () -> new PacketType<>(ElectricalContact.TogglePacket.class, ElectricalContact.TogglePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorReduction.TogglePacket>>
-            VECTOR_REDUCTION_TOGGLE = PACKET_TYPES.register("vector_reduction_toggle",
-            () -> new PacketType<>(VectorReduction.TogglePacket.class, VectorReduction.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorDeviation.TogglePacket>>
+            VECTOR_DEVIATION_TOGGLE = PACKET_TYPES.register("vector_deviation_toggle",
+            () -> new PacketType<>(VectorDeviation.TogglePacket.class, VectorDeviation.TogglePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpatialSynergy.TogglePacket>>
             SPATIAL_SYNERGY_TOGGLE = PACKET_TYPES.register("spatial_synergy_toggle",
             () -> new PacketType<>(SpatialSynergy.TogglePacket.class, SpatialSynergy.TogglePacket.CODEC));
@@ -548,9 +570,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AutoCruiseBeamCannon.TogglePacket>>
             AUTO_CRUISE_BEAM_CANNON_TOGGLE = PACKET_TYPES.register("auto_cruise_beam_cannon_toggle",
             () -> new PacketType<>(AutoCruiseBeamCannon.TogglePacket.class, AutoCruiseBeamCannon.TogglePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CutThrough.TeleportPacket>>
-            CUT_THROUGH_TELEPORT = PACKET_TYPES.register("cut_through_teleport",
-            () -> new PacketType<>(CutThrough.TeleportPacket.class, CutThrough.TeleportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PiercingTeleportation.TeleportPacket>>
+            PIERCING_TELEPORTATION_TELEPORT = PACKET_TYPES.register("piercing_teleportation_teleport",
+            () -> new PacketType<>(PiercingTeleportation.TeleportPacket.class, PiercingTeleportation.TeleportPacket.CODEC));
     /**
      * Phase 4 - Complex Skills
      */

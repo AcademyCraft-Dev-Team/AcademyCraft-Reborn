@@ -9,18 +9,21 @@ class TeleportDamageTest {
     void threateningDamageUsesWeaponPlayerAndSpaceFoldingMultipliers() {
         assertEquals(7.0f, TeleportDamage.threatening(4.0f, 3.0f, 1.0f, false));
         assertEquals(17.5f, TeleportDamage.threatening(4.0f, 3.0f, 2.0f, true));
+        assertEquals(35.0f, TeleportDamage.threatening(4.0f, 3.0f, 2.0f, 2.0f, 1.25f));
     }
 
     @Test
     void fleshRippingUsesTargetMaximumHealthWithoutPlayerMultiplier() {
         assertEquals(17.0f, TeleportDamage.fleshRipping(12.0f, 100.0f, false));
         assertEquals(21.25f, TeleportDamage.fleshRipping(12.0f, 100.0f, true));
+        assertEquals(36.25f, TeleportDamage.fleshRipping(12.0f, 100.0f, 2.0f, 1.25f));
     }
 
     @Test
     void formulasRejectNonFiniteValuesAndClampNegativeInputs() {
         assertEquals(0.0f, TeleportDamage.threatening(Float.NaN, 3.0f, 1.0f, false));
         assertEquals(0.0f, TeleportDamage.threatening(4.0f, 3.0f, Float.POSITIVE_INFINITY, true));
+        assertEquals(0.0f, TeleportDamage.threatening(4.0f, 3.0f, 1.0f, 1.0f, Float.NaN));
         assertEquals(0.0f, TeleportDamage.fleshRipping(0.0f, -100.0f, false));
     }
 }

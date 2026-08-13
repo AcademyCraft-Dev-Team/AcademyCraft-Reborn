@@ -57,6 +57,10 @@ public final class Items {
             ITEMS.registerSimpleBlockItem("cat_engine", Blocks.CAT_ENGINE);
     public static final DeferredHolder<Item, BlockItem> SOLAR_GEN =
             ITEMS.registerSimpleBlockItem("solar_gen", Blocks.SOLAR_GEN);
+    public static final DeferredHolder<Item, EmptyUnitItem> EMPTY_UNIT =
+            ITEMS.registerItem("empty_unit", EmptyUnitItem::new);
+    public static final DeferredHolder<Item, ImagPhaseUnitItem> IMAG_PHASE_UNIT =
+            ITEMS.registerItem("imag_phase_unit", ImagPhaseUnitItem::new);
 
     private Items() {
     }

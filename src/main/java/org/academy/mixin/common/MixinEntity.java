@@ -8,7 +8,6 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -233,9 +232,6 @@ public abstract class MixinEntity {
         if ((protectedByReflection || protectedByEntityControl)
                 && reason != Entity.RemovalReason.CHANGED_DIMENSION
                 && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
-            if (protectedByReflection && (Object) this instanceof ServerPlayer player) {
-                VectorReflectionRuntime.requestObserverRebuild(player);
-            }
             ci.cancel();
         }
     }
@@ -276,7 +272,6 @@ public abstract class MixinEntity {
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isActive(player)
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }

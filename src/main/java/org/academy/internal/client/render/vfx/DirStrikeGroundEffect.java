@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.quad.BakedNormals;
+import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
@@ -137,10 +138,20 @@ public final class DirStrikeGroundEffect implements Vfx {
         if (requiredVertices == 0) return;
         ensureCapacity(requiredVertices);
         vertexData.clear();
-        var vertexCount = renderLayer(vertexData, timelines, now);
-        if (vertexCount == 0) return;
-        vertexData.flip();
-        sink.push(new DirStrikeGroundData(vertexData, vertexCount));
+        var shaderPackInUse = IrisCompat.isShaderPackInUse();
+        for (var layer : ChunkSectionLayer.values()) {
+            var start = vertexData.position();
+            var vertexCount = renderLayer(vertexData, timelines, now, layer, shaderPackInUse);
+            if (vertexCount == 0) continue;
+            var end = vertexData.position();
+            var layerVertices = vertexData.duplicate();
+            layerVertices.position(start).limit(end);
+            sink.push(new DirStrikeGroundData(
+                    layerVertices.slice().order(vertexData.order()),
+                    vertexCount,
+                    layer
+            ));
+        }
     }
 
     private void ensureCapacity(int requiredVertices) {
@@ -162,7 +173,7 @@ public final class DirStrikeGroundEffect implements Vfx {
                 if (activeTick < 0.0f || activeTick > sample.localEndTick()) continue;
                 var amount = motion(activeTick, sample.duration, sample.holdTicks);
                 if (amount <= 0.001f) continue;
-                count += mesh.allVertices().size();
+                count += mesh.vertexCount();
             }
         }
         return count;
@@ -186,18 +197,20 @@ public final class DirStrikeGroundEffect implements Vfx {
         return 1.0f - fall * fall;
     }
 
-    private static int renderLayer(ByteBuffer vertexData,
-                                   List<Timeline> timelines, double now) {
+    private static int renderLayer(ByteBuffer vertexData, List<Timeline> timelines, double now,
+                                   ChunkSectionLayer layer, boolean transformNormals) {
         var poseStack = new PoseStack();
         var rotation = new Quaternionf();
         var transformedPosition = new Vector3f();
         var vertexCount = 0;
 
         for (var timeline : timelines) {
+            if (!timeline.hasLayer(layer)) continue;
             var age = now - timeline.startTick;
             for (var sample : timeline.samples) {
                 var mesh = sample.mesh;
-                if (mesh.isEmpty()) continue;
+                var vertices = mesh.vertices(layer);
+                if (vertices.isEmpty()) continue;
                 var activeTick = (float) (age - sample.delay);
                 if (activeTick < 0.0f || activeTick > sample.localEndTick()) continue;
                 var amount = motion(activeTick, sample.duration, sample.holdTicks);
@@ -223,7 +236,7 @@ public final class DirStrikeGroundEffect implements Vfx {
                 poseStack.scale(0.98f, 0.98f, 0.98f);
                 poseStack.translate(-0.5, 0.0, -0.5);
                 var count = putVertices(
-                        poseStack.last(), vertexData, mesh.allVertices(), transformedPosition);
+                        poseStack.last(), vertexData, vertices, transformedPosition, transformNormals);
                 vertexCount += count;
                 poseStack.popPose();
             }
@@ -232,8 +245,10 @@ public final class DirStrikeGroundEffect implements Vfx {
     }
 
     private static int putVertices(PoseStack.Pose pose, ByteBuffer target,
-                                   List<CachedVertex> vertices, Vector3f position) {
+                                   List<CachedVertex> vertices, Vector3f position,
+                                   boolean transformNormals) {
         var positionMatrix = pose.pose();
+        var normal = transformNormals ? new Vector3f() : null;
         var count = 0;
         for (var vertex : vertices) {
             positionMatrix.transformPosition(vertex.x, vertex.y, vertex.z, position);
@@ -246,6 +261,17 @@ public final class DirStrikeGroundEffect implements Vfx {
             target.putFloat(position.z);
             target.putFloat(vertex.u).putFloat(vertex.v);
             target.putFloat(r).putFloat(g).putFloat(b).putFloat(a);
+            target.putShort(DirStrikeGroundData.packedBlockCoordinate(vertex.light));
+            target.putShort(DirStrikeGroundData.packedSkyCoordinate(vertex.light));
+            if (normal == null) {
+                target.putInt(0);
+            } else {
+                pose.transformNormal(vertex.normalX, vertex.normalY, vertex.normalZ, normal).normalize();
+                target.put(DirStrikeGroundData.packNormal(normal.x));
+                target.put(DirStrikeGroundData.packNormal(normal.y));
+                target.put(DirStrikeGroundData.packNormal(normal.z));
+                target.put((byte) 0);
+            }
             count++;
         }
         return count;
@@ -522,14 +548,8 @@ public final class DirStrikeGroundEffect implements Vfx {
             };
         }
 
-        private List<CachedVertex> allVertices() {
-            if (solid.isEmpty()) return cutout.isEmpty() ? translucent : cutout;
-            if (cutout.isEmpty()) return solid;
-            var combined = new ArrayList<CachedVertex>(solid.size() + cutout.size() + translucent.size());
-            combined.addAll(solid);
-            combined.addAll(cutout);
-            combined.addAll(translucent);
-            return combined;
+        private int vertexCount() {
+            return solid.size() + cutout.size() + translucent.size();
         }
 
         private boolean isEmpty() {

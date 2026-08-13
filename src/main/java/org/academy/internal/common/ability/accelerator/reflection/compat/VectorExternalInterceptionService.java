@@ -10,7 +10,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -36,7 +36,7 @@ public final class VectorExternalInterceptionService {
         }
 
         if (VectorReflection.Server.canMaintainLinearReflectionLease(defender)
-                || VectorReduction.Server.canMaintain(defender)) {
+                || VectorDeviation.Server.canMaintain(defender)) {
             var reflection = VectorReflection.Server.hurtServer(
                     defender,
                     defender.level(),
@@ -83,7 +83,7 @@ public final class VectorExternalInterceptionService {
             if (tryFullReflection(attack)) event.setCanceled(true);
             return;
         }
-        if (VectorReduction.Server.isActive(defender)) {
+        if (VectorDeviation.Server.isActive(defender)) {
             if (tryFullRefraction(attack)) event.setCanceled(true);
             return;
         }
@@ -108,7 +108,8 @@ public final class VectorExternalInterceptionService {
                 defender, leaseKey, VectorRedirectKind.REFLECTION, attack.damage())) {
             VectorInterceptionTickets.commit(defender, attack.fingerprint());
             var reflected = incomingDirection.scale(-1.0);
-            VectorCompatibilityEffectLimiter.emit(defender, leaseKey, reflected, mirrorPoint);
+            VectorCompatibilityEffectLimiter.emit(
+                    defender, leaseKey, reflected, mirrorPoint, VectorRedirectKind.REFLECTION);
             executeRedirect(
                     attack,
                     defender,
@@ -158,7 +159,8 @@ public final class VectorExternalInterceptionService {
             );
         }
         VectorCompatibilityEffectLimiter.emit(
-                defender, leaseKey, incomingDirection.scale(-1.0), mirrorPoint);
+                defender, leaseKey, incomingDirection.scale(-1.0), mirrorPoint,
+                VectorRedirectKind.REFLECTION);
         executeRedirect(
                 attack,
                 defender,
@@ -175,24 +177,25 @@ public final class VectorExternalInterceptionService {
     public static boolean tryFullRefraction(VectorAttackDescriptor attack) {
         if (attack == null) return false;
         var defender = attack.defender();
-        if (!VectorReduction.Server.isActive(defender)
+        if (!VectorDeviation.Server.isActive(defender)
                 || !attack.confidence().atLeast(VectorAttackConfidence.LOW)) return false;
         if (VectorInterceptionTickets.wasCommitted(defender, attack.fingerprint())) return true;
 
         var mirrorPoint = defender.getBoundingBox().getCenter();
         var incomingDirection = attack.direction();
-        var redirected = VectorReduction.refractedDirection(defender.getLookAngle(), incomingDirection);
+        var redirected = VectorDeviation.refractedDirection(defender.getLookAngle(), incomingDirection);
         if (redirected.lengthSqr() < 1.0E-8) return false;
         var damageOnly = !attack.confidence().atLeast(VectorAttackConfidence.MEDIUM);
         var continuous = attack.executionPolicy().continuous();
         var leaseKey = VectorAttackFingerprint.computeLeaseKey(
                 defender.getId(), attack.source(), incomingDirection);
         if (continuous
-                && VectorReduction.Server.canMaintain(defender)
+                && VectorDeviation.Server.canMaintain(defender)
                 && VectorContinuousInterceptionLeases.consume(
                 defender, leaseKey, VectorRedirectKind.REFRACTION, attack.damage())) {
             VectorInterceptionTickets.commit(defender, attack.fingerprint());
-            VectorCompatibilityEffectLimiter.emit(defender, leaseKey, redirected, mirrorPoint);
+            VectorCompatibilityEffectLimiter.emit(
+                    defender, leaseKey, redirected, mirrorPoint, VectorRedirectKind.REFRACTION);
             executeRedirect(
                     attack, defender, VectorRedirectKind.REFRACTION,
                     mirrorPoint, redirected, damageOnly, "continuous_lease");
@@ -235,7 +238,8 @@ public final class VectorExternalInterceptionService {
                     attack.damage()
             );
         }
-        VectorCompatibilityEffectLimiter.emit(defender, leaseKey, redirected, mirrorPoint);
+        VectorCompatibilityEffectLimiter.emit(
+                defender, leaseKey, redirected, mirrorPoint, VectorRedirectKind.REFRACTION);
         executeRedirect(
                 attack, defender, VectorRedirectKind.REFRACTION,
                 mirrorPoint, redirected, damageOnly,
@@ -249,7 +253,7 @@ public final class VectorExternalInterceptionService {
             DamageSource source,
             float damage
     ) {
-        if (!VectorReduction.Server.isActive(defender)) return false;
+        if (!VectorDeviation.Server.isActive(defender)) return false;
         var attack = VectorExternalAttackClassifier.classify(defender, source, damage).orElse(null);
         return tryFullRefraction(attack);
     }
@@ -276,7 +280,7 @@ public final class VectorExternalInterceptionService {
         return kind == VectorRedirectKind.REFLECTION
                 ? VectorReflection.Server.tryReflectLinearAttack(
                 defender, damage, mirrorPoint, incomingDirection, emitFeedback)
-                : VectorReduction.Server.tryRefractLinearAttack(
+                : VectorDeviation.Server.tryRefractLinearAttack(
                 defender, damage, mirrorPoint, incomingDirection, emitFeedback);
     }
 

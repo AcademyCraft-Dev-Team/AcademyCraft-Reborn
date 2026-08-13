@@ -3,7 +3,7 @@ package org.academy.internal.common.ability.accelerator.reflection.compat;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 
@@ -66,22 +66,22 @@ public final class VectorIncomingDamageCoordinator {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         if (VectorReflection.Server.isLegitimateHealthMutation(defender)
-                || !VectorReduction.Server.canRefractSource(defender, source)) {
+                || !VectorDeviation.Server.canRefractSource(defender, source)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         if (isAnomalousDamage(damage)
-                && VectorReduction.Server.canMaintain(defender)
-                && VectorReduction.Server.absorbAnomalousDamage(defender, source, damage)) {
+                && VectorDeviation.Server.canMaintain(defender)
+                && VectorDeviation.Server.absorbAnomalousDamage(defender, source, damage)) {
             return VectorIncomingDamageResult.fullRedirect();
         }
-        if (!VectorReduction.Server.isActive(defender)) {
+        if (!VectorDeviation.Server.isActive(defender)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         var classified = VectorExternalAttackClassifier.classify(defender, source, damage).orElse(null);
         if (VectorExternalInterceptionService.tryFullRefraction(classified)) {
             return VectorIncomingDamageResult.fullRedirect();
         }
-        return VectorReduction.Server.applyPartialReduction(defender, source, damage);
+        return VectorDeviation.Server.applyPartialReduction(defender, source, damage);
     }
 
     public static boolean isAnomalousDamage(float damage) {

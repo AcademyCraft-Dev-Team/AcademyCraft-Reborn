@@ -2,11 +2,13 @@ package org.academy.internal.common.ability.meltdowner.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.*;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
@@ -33,8 +35,8 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
-import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
-import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -47,9 +49,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-import java.util.*;
-import net.minecraft.util.Mth;
 
 public final class AutoCruiseBeamCannon extends Skill {
     static final int DETECT_INTERVAL_TICKS = 10;
@@ -64,7 +63,7 @@ public final class AutoCruiseBeamCannon extends Skill {
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(10)
-                .iterationTicks(FIRE_INTERVAL_TICKS)
+                .iterationTicks(5)
                 .maxStacks(Skill.NO_STACK_LIMIT)
                 .initiallyDisabled()
                 .maintenanceCost(50)

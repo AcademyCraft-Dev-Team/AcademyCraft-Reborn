@@ -319,12 +319,19 @@ public class AbilityData {
         private final boolean isPermanent;
         private float amount;
         private int iterationTicks;
+        private String stackGroup;
 
         public CpOccupationData(float amount, int iterationTicks, String skillId, boolean isPermanent) {
+            this(amount, iterationTicks, skillId, isPermanent, skillId);
+        }
+
+        public CpOccupationData(float amount, int iterationTicks, String skillId, boolean isPermanent,
+                                String stackGroup) {
             this.amount = amount;
             this.iterationTicks = iterationTicks;
             this.skillId = skillId;
             this.isPermanent = isPermanent;
+            this.stackGroup = stackGroup;
         }
 
         public boolean isFree() {
@@ -349,6 +356,10 @@ public class AbilityData {
 
         public String getSkillId() {
             return skillId;
+        }
+
+        public String getStackGroup() {
+            return stackGroup == null || stackGroup.isBlank() ? skillId : stackGroup;
         }
 
         public boolean isPermanent() {

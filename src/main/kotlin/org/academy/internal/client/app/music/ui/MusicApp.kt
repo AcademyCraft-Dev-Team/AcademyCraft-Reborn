@@ -6,6 +6,7 @@ import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.DynamicTexture
+import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import org.academy.AcademyCraft
 import org.academy.api.client.app.App
@@ -306,7 +307,7 @@ object MusicApp : App {
             })
             searchRow.addChild(
                 "return_list", createTextButton(
-                    tr("app.academy.music_player.back_to_list"), 24f, 0.5f
+                    tr("app.academy.music_player.back_to_list"), 24f, 0.65f
                 ) {
                     showingSearchResults = false
                     libraryViewRevision++
@@ -422,10 +423,16 @@ object MusicApp : App {
                                 .height(0f)
                                 .gravity(Gravity.CENTER_LEFT)
                         })
-                    row.addChild("add", createTextButton("+", 16f) {
+                    row.addChild("add", createActionButton(
+                        R.textures.gui.icon.add,
+                        tr("app.academy.music_player.action.add")
+                    ) {
                         OnlineMusicManager.add(entry)
                     })
-                    row.addChild("play", createTextButton("▶", 24f, 0.9f, 22f) {
+                    row.addChild("play", createActionButton(
+                        R.textures.gui.app.music.play,
+                        tr("app.academy.music_player.action.play")
+                    ) {
                         OnlineMusicManager.add(entry, true)
                     })
                     container.addChild("result_$index", row)
@@ -446,21 +453,25 @@ object MusicApp : App {
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(24f)
                 }
-                row.addChild("play", ButtonWidget().apply {
+                row.addChild("name", LabelWidget(mediaInfo.name).apply {
+                    scale = 0.68f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
-                        .height(24f)
-                    onClickListener = { MusicPlayerBackend.getInstance().play(index) }
-                    addChild("text", LabelWidget(mediaInfo.name).apply {
-                        scale = 0.68f
-                        layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                            .gravity(Gravity.CENTER_LEFT)
-                            .padding(2f, 0f)
-                    })
+                        .height(0f)
+                        .gravity(Gravity.CENTER_LEFT)
+                        .padding(2f, 0f)
+                })
+                row.addChild("play", createActionButton(
+                    R.textures.gui.app.music.play,
+                    tr("app.academy.music_player.action.play")
+                ) {
+                    MusicPlayerBackend.getInstance().play(index)
                 })
                 if (mediaInfo.provider != "local") {
-                    row.addChild("remove", createTextButton("×", 24f, 0.9f, 22f) {
+                    row.addChild("remove", createActionButton(
+                        R.textures.gui.icon.close,
+                        tr("app.academy.music_player.action.remove")
+                    ) {
                         OnlineMusicManager.remove(mediaInfo)
                     })
                 }
@@ -496,7 +507,35 @@ object MusicApp : App {
             }
         }
 
-        private fun tr(key: String): String = L10n[key]
+        private fun createActionButton(
+            texture: Identifier,
+            tooltip: String,
+            action: () -> Unit
+        ): ButtonWidget {
+            val isPlayIcon = texture == R.textures.gui.app.music.play
+            return ButtonWidget().apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .size(22f, 22f)
+                    .gravity(Gravity.CENTER_VERTICAL)
+                tooltipText = tooltip
+                onClickListener = { action() }
+                addChild("icon", ImageWidget(texture).apply {
+                    setSampler(FilterMode.LINEAR, false)
+                    // Keep the click target comfortable while reducing the visible glyph by 30%.
+                    // play.png has asymmetric transparent padding, so center its visible pixels
+                    // instead of the full 128 x 128 canvas.
+                    if (isPlayIcon) {
+                        translationX = 1.25f
+                        translationY = -0.9f
+                    }
+                    layoutParams = FrameLayoutWidget.LayoutParams()
+                        .size(9.8f, 9.8f)
+                        .gravity(Gravity.CENTER)
+                })
+            }
+        }
+
+        private fun tr(key: String): String = Language.getInstance().getOrDefault(key)
 
         private class LoginQrWidget : ImageWidget(R.textures.gui.app.music.icon) {
             private var uploadedBytes: ByteArray? = null

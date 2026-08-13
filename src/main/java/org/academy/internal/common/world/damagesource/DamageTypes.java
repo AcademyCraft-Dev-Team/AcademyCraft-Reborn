@@ -23,7 +23,10 @@ public final class DamageTypes {
             AERO_DAMAGE, DM_DAMAGE, ELECTRO_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA
     );
     private static final Set<ResourceKey<DamageType>> DIRECT_ACTUALLY_HURT_TYPES = Set.of(
-            DM_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE
+            DM_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA
+    );
+    private static final Set<ResourceKey<DamageType>> VERIFIED_TRUE_HEALTH_TYPES = Set.of(
+            VEC, CTA
     );
 
     private DamageTypes() {
@@ -43,6 +46,14 @@ public final class DamageTypes {
 
     public static boolean usesDirectActuallyHurt(DamageSource source) {
         return source != null && DIRECT_ACTUALLY_HURT_TYPES.stream().anyMatch(source::is);
+    }
+
+    public static boolean usesVerifiedTrueHealth(ResourceKey<DamageType> type) {
+        return VERIFIED_TRUE_HEALTH_TYPES.contains(type);
+    }
+
+    public static boolean usesVerifiedTrueHealth(DamageSource source) {
+        return source != null && VERIFIED_TRUE_HEALTH_TYPES.stream().anyMatch(source::is);
     }
 
     public static boolean isImmunePlayer(Player player, DamageSource source) {

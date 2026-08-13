@@ -7,6 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -25,11 +26,17 @@ public abstract class AbilityCategory {
      * 成为此能力的概率喵
      */
     private final float probability;
+    private final @Nullable AbilityFactorProfile developmentProfile;
 
     private Map<Class<? extends Skill>, Skill> skills = new HashMap<>();
 
     protected AbilityCategory(float probability) {
+        this(probability, null);
+    }
+
+    protected AbilityCategory(float probability, @Nullable AbilityFactorProfile developmentProfile) {
         this.probability = probability;
+        this.developmentProfile = developmentProfile;
     }
 
     public final void addSkill(Skill skill) {
@@ -50,6 +57,13 @@ public abstract class AbilityCategory {
 
     public final float getProbability() {
         return probability;
+    }
+
+    /**
+     * Optional P.R.O.P.S profile used for server-authoritative initial ability prediction.
+     */
+    public final Optional<AbilityFactorProfile> getDevelopmentProfile() {
+        return Optional.ofNullable(developmentProfile);
     }
 
     /**

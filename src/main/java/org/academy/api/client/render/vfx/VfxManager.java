@@ -1,12 +1,17 @@
 package org.academy.api.client.render.vfx;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.lightning.ArcExecutor;
 import org.academy.api.common.profiler.AcademyProfiler;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -81,6 +86,11 @@ public final class VfxManager {
         });
     }
 
+    public void submitWorldGeometry(PoseStack poseStack, SubmitNodeCollector output) {
+        if (!initialized || frameData.isEmpty()) return;
+        VfxRegistry.submitWorldGeometry(frameData, renderContext, poseStack, output);
+    }
+
     public void renderAfterSkyFrame() {
         if (!initialized || frameData.isEmpty()) return;
         AcademyProfiler.runZone("academy.vfx.after_sky", () ->
@@ -115,6 +125,9 @@ public final class VfxManager {
     private static final class MainRenderContext implements VfxRenderContext {
         private final Vector3f cameraPos = new Vector3f();
         private final Quaternionf cameraOrientation = new Quaternionf();
+        private final Matrix4f projectionMatrix = new Matrix4f();
+        private final Matrix4f viewRotationMatrix = new Matrix4f();
+        private @Nullable GpuBufferSlice projectionUniform;
         private @Nullable GpuTextureView bloomInputColor;
         private @Nullable GpuTextureView bloomInputDepth;
         private float gameTime;
@@ -123,6 +136,9 @@ public final class VfxManager {
             gameTime = frame.gameTime();
             cameraPos.set(frame.camera().pos());
             cameraOrientation.set(frame.camera().orientation());
+            projectionMatrix.set(frame.camera().projectionMatrix());
+            viewRotationMatrix.set(frame.camera().viewRotationMatrix());
+            projectionUniform = frame.camera().projectionUniform();
         }
 
         void setBloomInput(@Nullable GpuTextureView color, @Nullable GpuTextureView depth) {
@@ -148,6 +164,18 @@ public final class VfxManager {
         @Override
         public Quaternionf cameraOrientation() {
             return cameraOrientation;
+        }
+
+        @Override
+        public Matrix4f viewRotationMatrix() {
+            return viewRotationMatrix;
+        }
+
+        @Override
+        public GpuBufferSlice projectionUniform() {
+            var captured = projectionUniform;
+            if (captured != null) return captured;
+            return Render.Buffers.getInstance().getProjectionUB(projectionMatrix).slice();
         }
 
         @Override

@@ -56,6 +56,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class VectorBlast extends Skill {
+    private static final String BLAST_STACK_GROUP = "vector_blast:blast";
+    private static final int BLAST_STACK_LIMIT = 10;
     static final double RANGE = 64.0;
     static final double BEAM_RADIUS = 1.0;
     static final double ABYSS_TARGET_RANGE = 32.0;
@@ -68,7 +70,7 @@ public final class VectorBlast extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)
-                .iterationTicks(10)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_ACCEL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
@@ -225,7 +227,7 @@ public final class VectorBlast extends Skill {
 
     public static final class Server {
         private static final double CONTROL_RANGE = 32.0;
-        private static final int CONTROL_COST_INTERVAL = 5;
+        private static final int CONTROL_COST_INTERVAL = 10;
         private static final Map<UUID, ControlState> ACTIVE_CONTROLS = new ConcurrentHashMap<>();
 
         private Server() {
@@ -247,7 +249,8 @@ public final class VectorBlast extends Skill {
         public static boolean tryAutomatedAttack(ServerPlayer player) {
             if (!(player.level() instanceof ServerLevel level)) return false;
             return Skills.VECTOR_BLAST.get().executeActive(
-                    player, (context, actualCost) -> fire(player, level));
+                    player, BLAST_STACK_GROUP, BLAST_STACK_LIMIT,
+                    (context, actualCost) -> fire(player, level));
         }
 
         private static void startControl(ServerPlayer player, ServerLevel level, ControlMode mode) {

@@ -80,9 +80,11 @@ public class Thunderclap extends Skill {
                 : blockTarget;
     }
 
-    static float calculateDamage(float maxHealth, float abilityPower) {
-        if (!Float.isFinite(maxHealth) || !Float.isFinite(abilityPower)) return 0;
-        return Math.max(0, maxHealth) * HEALTH_DAMAGE_RATIO * Math.max(0, abilityPower);
+    static float calculateDamage(float maxHealth, float abilityPower, float damageMultiplier) {
+        if (!Float.isFinite(maxHealth) || !Float.isFinite(abilityPower)
+                || !Float.isFinite(damageMultiplier)) return 0;
+        return Math.max(0, maxHealth) * HEALTH_DAMAGE_RATIO
+                + 20.0f * Math.max(0, abilityPower) * Math.max(0, damageMultiplier);
     }
 
     @Override
@@ -248,6 +250,7 @@ public class Thunderclap extends Skill {
 
             var system = AbilitySystemServer.getSystem(player);
             var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
+            var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
             var source = SkillDamageSource.of(player, Skills.THUNDERCLAP.get());
             var radius = milestone >= 2 ? 6.0 : RADIUS;
             var radiusSquared = radius * radius;
@@ -262,7 +265,7 @@ public class Thunderclap extends Skill {
                 target.hurtServer(
                         level,
                         source,
-                        1.0f + calculateDamage(target.getMaxHealth(), abilityPower)
+                        calculateDamage(target.getMaxHealth(), abilityPower, damageMultiplier)
                 );
                 if (milestone >= 3) {
                     var duration = target instanceof Player || target instanceof EnderDragon || target instanceof WitherBoss

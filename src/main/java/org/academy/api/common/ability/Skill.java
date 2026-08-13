@@ -3,10 +3,12 @@ package org.academy.api.common.ability;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
+import java.util.*;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -20,16 +22,13 @@ import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
+import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
-import org.academy.internal.common.ability.darkmatter.skills.DarkmatterSixWings;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.*;
-import net.minecraft.util.Mth;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
@@ -154,6 +153,20 @@ public abstract class Skill {
 
     protected final boolean executeActive(ServerPlayer player, SkillAction action) {
         return executeActive(player, ctx -> cpCost, action);
+    }
+
+    protected final boolean executeActive(ServerPlayer player, String stackGroup, int stackLimit,
+                                          SkillAction action) {
+        if (!isEnabled(player)) return false;
+        return AbilitySystemServer.getSystem(player)
+                .castCpIfPossible(player, this, ctx -> {
+                    var baseCost = cpCost;
+                    var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                            SkillProficiencyProfile.CostKind.CAST, ctx.milestone(), baseCost);
+                    var categoryCost = DarkmatterSixWings.Server.adjustCategoryCost(
+                            player, this, baseCost, proficiencyCost);
+                    return CurrentSymbiosis.Server.adjustNextCastCost(player, this, categoryCost);
+                }, action, stackGroup, stackLimit);
     }
 
     /**

@@ -4,7 +4,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
@@ -18,28 +17,21 @@ import org.academy.api.client.util.QuantumUtil;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
+import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowReverse;
 import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAbyss;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
-import org.academy.internal.common.ability.aeromanip.skills.AtmosphereShield;
-import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
-import org.academy.api.common.entitycontrol.MentalPerceptionApi;
-import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
-import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowReverse;
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
-import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.world.damagesource.DamageTypes;
@@ -238,7 +230,6 @@ public abstract class MixinLivingEntity {
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)
                 && reason != Entity.RemovalReason.CHANGED_DIMENSION
                 && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
             ci.cancel();
         }
     }
@@ -248,7 +239,6 @@ public abstract class MixinLivingEntity {
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isActive(player)
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
@@ -259,7 +249,6 @@ public abstract class MixinLivingEntity {
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isActive(player)
                 && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
-            VectorReflectionRuntime.requestObserverRebuild(player);
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }

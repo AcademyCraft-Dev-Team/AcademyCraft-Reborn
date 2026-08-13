@@ -64,8 +64,9 @@ public class MagneticWeapon extends Skill {
                 .energyCost(30_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(40)
+                .maintenanceCost(30)
                 .iterationTicks(20)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.MAGNET_MANIPULATION));
     }
 
@@ -156,7 +157,14 @@ public class MagneticWeapon extends Skill {
             var context = CONTEXT_MAP.remove(player);
             if (context != null) context.end(false);
             var skill = Skills.MAGNETIC_WEAPON.get();
-            if (skill.isEnabled(player)) skill.toggle(player);
+            var system = AbilitySystemServer.getSystem(player);
+            var data = skill.getRuntimeData(player).orElse(null);
+            if (data != null && data.isEnabled()) {
+                system.toggleSkill(player.getUUID(), skill.getKeyString());
+            }
+            // Release even if the runtime flag and context became desynchronized. Mutual switches
+            // must be able to reuse the old lease in the same server tick.
+            system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             clearData(player);
         }
 

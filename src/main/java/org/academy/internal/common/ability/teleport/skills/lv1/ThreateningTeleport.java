@@ -58,8 +58,8 @@ public final class ThreateningTeleport extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .iterationTicks(5)
+                .maxStacks(10)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
     }
@@ -216,6 +216,7 @@ public final class ThreateningTeleport extends Skill {
                 var damage = TeleportDamage.threatening(
                         BASE_DAMAGE,
                         weaponBonus,
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                         system.getPlayerDamageMultiplier(player.getUUID()),
                         SpaceFoldingTheorem.damageMultiplier(player)
                 );

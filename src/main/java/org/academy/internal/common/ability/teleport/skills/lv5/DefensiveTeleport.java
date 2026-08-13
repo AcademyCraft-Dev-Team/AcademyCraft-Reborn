@@ -64,9 +64,9 @@ public final class DefensiveTeleport extends Skill {
         super(Builder.of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
-                .cpCost(10)
-                .iterationTicks(20)
-                .maxStacks(NO_STACK_LIMIT)
+                .cpCost(20)
+                .iterationTicks(10)
+                .maxStacks(20)
                 .dependsOn(Skills.QUICK_LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition(

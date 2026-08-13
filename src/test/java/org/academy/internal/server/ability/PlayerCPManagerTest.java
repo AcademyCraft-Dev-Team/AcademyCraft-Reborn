@@ -119,6 +119,19 @@ class PlayerCPManagerTest {
     }
 
     @Test
+    void migratesRecalculatedCpGrowthIntoThePersistentMaximum() {
+        assertEquals(400.0f, PlayerCPManager.initialPersistentMaxCp(100.0f, 300.0f));
+        assertEquals(640.0f, PlayerCPManager.initialPersistentMaxCp(640.0f, 300.0f));
+    }
+
+    @Test
+    void appliesOnlyNewGrowthToThePersistentMaximum() {
+        assertEquals(420.0f, PlayerCPManager.applyDerivedMaxCpGrowth(400.0f, 300.0f, 320.0f));
+        assertEquals(400.0f, PlayerCPManager.applyDerivedMaxCpGrowth(400.0f, 300.0f, 300.0f));
+        assertEquals(420.0f, PlayerCPManager.applyDerivedMaxCpGrowth(420.0f, 320.0f, 20.0f));
+    }
+
+    @Test
     void calculationEfficiencyIsPointZeroFivePercentOfMaximumCp() {
         assertEquals(0.05f, PlayerCPManager.calculationEfficiency(100.0f));
         assertEquals(0.5f, PlayerCPManager.calculationEfficiency(1000.0f));
@@ -166,5 +179,19 @@ class PlayerCPManagerTest {
         assertEquals(7, occupations.get(0).getIterationTicks());
         assertEquals(7, occupations.get(1).getIterationTicks());
         assertEquals(7, occupations.get(2).getIterationTicks());
+    }
+
+    @Test
+    void dedicatedStackGroupsSeparateModesOfTheSameSkill() {
+        var occupations = new ArrayList<AbilityData.CpOccupationData>();
+        occupations.add(new AbilityData.CpOccupationData(
+                10.0f, 5, "academy:vector_blast", false, "vector_blast:blast"));
+        occupations.add(new AbilityData.CpOccupationData(
+                10.0f, 5, "academy:vector_blast", false, "academy:vector_blast"));
+        occupations.add(new AbilityData.CpOccupationData(
+                10.0f, 0, "academy:vector_blast", true, "vector_blast:blast"));
+
+        assertEquals(1, PlayerCPManager.countTimedStacks(occupations, "vector_blast:blast"));
+        assertEquals(1, PlayerCPManager.countTimedStacks(occupations, "academy:vector_blast"));
     }
 }

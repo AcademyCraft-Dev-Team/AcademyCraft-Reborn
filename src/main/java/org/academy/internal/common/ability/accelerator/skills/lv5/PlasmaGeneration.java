@@ -63,7 +63,7 @@ public class PlasmaGeneration extends Skill {
     public static final float RADIUS_PER_STAGE = 5.0f;
     public static final float DAMAGE_PER_STAGE = 50.0f;
     public static final float BLOCK_BLAST_RADIUS_PER_STAGE = 2.5f;
-    public static final int CP_PER_SECOND = 20;
+    public static final int CP_PER_SECOND = 40;
 
     public PlasmaGeneration() {
         super(Builder

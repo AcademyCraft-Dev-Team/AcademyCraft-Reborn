@@ -86,9 +86,8 @@ public final class ParticleRenderer implements VfxRenderer<ParticleData> {
                 () -> "VFX Particles", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.PARTICLE_ADDITIVE);
-            var projection = RenderSystem.getProjectionMatrixBuffer();
-            if (projection != null) renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            renderPass.setUniform("Projection", ctx.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(ctx.viewRotationMatrix());
             renderPass.setUniform("DynamicTransforms", transform);
 
             renderPass.setVertexBuffer(0, quadBuffer.slice());

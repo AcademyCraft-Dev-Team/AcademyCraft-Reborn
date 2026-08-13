@@ -45,8 +45,9 @@ public class ElectricalContact extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(15)
+                .maintenanceCost(10)
                 .iterationTicks(20)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.ARC_GENERATE)
         );
     }
@@ -121,7 +122,7 @@ public class ElectricalContact extends Skill {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        private static final int DAMAGE_INTERVAL = 40;
+        private static final int DAMAGE_INTERVAL = 20;
         private static final float DAMAGE_AMOUNT = 2.0f;
         private static final float RADIUS = 2.0f;
 
@@ -140,7 +141,7 @@ public class ElectricalContact extends Skill {
                 return;
             }
             var milestone = skill.getEffectiveProficiencyMilestone(player);
-            var interval = milestone >= 2 ? 30 : DAMAGE_INTERVAL;
+            var interval = milestone >= 2 ? 15 : DAMAGE_INTERVAL;
             if (player.level().getGameTime() % interval != 0) return;
 
             var level = player.level();

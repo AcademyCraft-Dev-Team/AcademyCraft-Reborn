@@ -73,7 +73,7 @@ public class BloodflowReverse extends Skill {
                 .energyCost(100_000)
                 .cpCost(100)
                 .iterationTicks(20)
-                .maxStacks(16)
+                .maxStacks(2)
                 .dependsOn(Skills.VECTOR_REFLECTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("Vector Reflection", "academy:vector_reflection"))
@@ -201,14 +201,20 @@ public class BloodflowReverse extends Skill {
     public static final class Server {
         private static final String EFFECT_KEY = "bloodflow_reverse_level";
 
-        public static float calculateDamage(float currentHealth, float playerMultiplier) {
-            return Math.max(0.0f, currentHealth) * Math.max(0.0f, playerMultiplier);
+        public static float calculateDamage(float maxHealth) {
+            return Math.max(0.0f, maxHealth);
         }
 
         @SubscribePacket
         public static void onAction(ReverseBloodflowPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.BLOODFLOW_REVERSE.get().executeActive(player, (ctx, actualCost) -> {
+            Skills.BLOODFLOW_REVERSE.get().executeActive(
+                    player,
+                    context -> Math.max(
+                            100.0f,
+                            context.system().getPlayerMaxCP(player.getUUID()) * 0.2f
+                    ),
+                    (ctx, actualCost) -> {
                 var serverLevel = player.level();
                 if (!(serverLevel instanceof ServerLevel)) return;
                 var target = findTarget(player);
@@ -220,9 +226,7 @@ public class BloodflowReverse extends Skill {
                 var skill = Skills.BLOODFLOW_REVERSE.get();
                 var duration = skill.hasProficiencyMilestone(player, 2) ? 250 : 200;
 
-                var multiplier = AbilitySystemServer.getSystem(player)
-                        .getPlayerDamageMultiplier(player.getUUID());
-                var damage = calculateDamage(target.getHealth(), multiplier);
+                var damage = calculateDamage(target.getMaxHealth());
                 var damaged = target.hurtServer(serverLevel,
                         SkillDamageSource.of(
                                 player,

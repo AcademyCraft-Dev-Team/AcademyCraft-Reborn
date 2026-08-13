@@ -23,6 +23,7 @@ import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -176,6 +177,19 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (level == 3) return 60.0f;
         if (level == 2) return 20.0f;
         return 0.0f;
+    }
+
+    static float initialPersistentMaxCp(float storedMaxCp, float derivedBonus) {
+        var safeStored = normalizeDebugMaxCP(storedMaxCp);
+        var safeDerived = normalizeDebugMaxCP(derivedBonus);
+        return Math.max(safeStored, BASE_MAX_CP + safeDerived);
+    }
+
+    static float applyDerivedMaxCpGrowth(float storedMaxCp, float appliedBonus, float desiredBonus) {
+        var safeStored = normalizeDebugMaxCP(storedMaxCp);
+        var safeApplied = normalizeDebugMaxCP(appliedBonus);
+        var safeDesired = normalizeDebugMaxCP(desiredBonus);
+        return Math.max(BASE_MAX_CP, safeStored + Math.max(0.0f, safeDesired - safeApplied));
     }
 
     @Override
@@ -381,6 +395,11 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public boolean tryOccupation(UUID uuid, float amount, Skill skill, int iterationTicks, boolean isPermanent) {
+        return tryOccupation(uuid, amount, skill, iterationTicks, isPermanent, null, Skill.NO_STACK_LIMIT);
+    }
+
+    public boolean tryOccupation(UUID uuid, float amount, Skill skill, int iterationTicks,
+                                 boolean isPermanent, String stackGroup, int stackLimit) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
 
@@ -393,12 +412,13 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (enterOverloadIfDepleted(uuid, cpData)) return false;
         if (cpData.getAvailableCP() < amount) return false;
 
-        var maxStacks = getMaxStacks(uuid, skill, level);
+        var hasDedicatedStackGroup = stackGroup != null && !stackGroup.isBlank();
+        var normalizedStackGroup = hasDedicatedStackGroup ? stackGroup : skill.getKeyString();
+        var maxStacks = hasDedicatedStackGroup
+                ? (stackLimit == Skill.NO_STACK_LIMIT ? Skill.NO_STACK_LIMIT : Math.max(0, stackLimit))
+                : getMaxStacks(uuid, skill, level);
         if (!isPermanent && maxStacks != Skill.NO_STACK_LIMIT) {
-            var currentStacks = occupations.stream()
-                    .filter(occupation -> !occupation.isPermanent())
-                    .filter(occ -> skill.getKeyString().equals(occ.getSkillId()))
-                    .count();
+            var currentStacks = countTimedStacks(occupations, normalizedStackGroup);
             if (currentStacks >= maxStacks) return false;
         }
 
@@ -412,11 +432,20 @@ public class PlayerCPManager implements AbilitySubsystem {
                 amount,
                 effectiveIterationTicks,
                 skill.getKeyString(),
-                isPermanent
+                isPermanent,
+                normalizedStackGroup
         ));
         cpData.setAvailableCP(cpData.getAvailableCP() - amount, getMaxCP(uuid));
         enterOverloadIfDepleted(uuid, cpData);
         return true;
+    }
+
+    static long countTimedStacks(List<AbilityData.CpOccupationData> occupations, String stackGroup) {
+        if (occupations == null || stackGroup == null || stackGroup.isBlank()) return 0;
+        return occupations.stream()
+                .filter(occupation -> !occupation.isPermanent())
+                .filter(occupation -> stackGroup.equals(occupation.getStackGroup()))
+                .count();
     }
 
     public void releaseMaintenanceOccupation(UUID uuid, String skillId) {
@@ -524,6 +553,100 @@ public class PlayerCPManager implements AbilitySubsystem {
                 timedAmount,
                 iterationTicks
         ) != null;
+    }
+
+    public boolean replacePermanentOccupationAndTryTimedOccupations(
+            UUID uuid,
+            Skill skill,
+            float permanentAmount,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        var plan = createMixedOccupationPlan(uuid, skill, permanentAmount, timedCharges);
+        if (plan == null) return false;
+
+        var playerData = plan.playerData();
+        var cpData = playerData.getCpData();
+        var occupations = playerData.getCpOccupations();
+        occupations.removeIf(occupation -> occupation.isPermanent()
+                && plan.skill().getKeyString().equals(occupation.getSkillId()));
+        if (plan.permanentAmount() > 0.0f) {
+            occupations.add(new AbilityData.CpOccupationData(
+                    plan.permanentAmount(), 0, plan.skill().getKeyString(), true));
+        }
+        for (var charge : plan.timedCharges()) {
+            if (charge.amount() <= 0.0f) continue;
+            occupations.add(new AbilityData.CpOccupationData(
+                    charge.amount(), charge.iterationTicks(), plan.skill().getKeyString(), false));
+        }
+        cpData.setAvailableCP(plan.availableAfterRelease() - plan.totalRequired(), getMaxCP(uuid));
+        enterOverloadIfDepleted(uuid, cpData);
+        playerData.markDirty();
+        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+        return true;
+    }
+
+    public boolean canReplacePermanentOccupationAndTryTimedOccupations(
+            UUID uuid,
+            Skill skill,
+            float permanentAmount,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        return createMixedOccupationPlan(uuid, skill, permanentAmount, timedCharges) != null;
+    }
+
+    private MixedOccupationPlan createMixedOccupationPlan(
+            UUID uuid,
+            Skill skill,
+            float permanentAmount,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null || skill == null || timedCharges == null
+                || !Float.isFinite(permanentAmount) || permanentAmount < 0.0f) return null;
+        var cpData = playerData.getCpData();
+        if (cpData.getStatus() == AbilityData.Status.OVERLOAD || enterOverloadIfDepleted(uuid, cpData)) return null;
+
+        var normalizedCharges = new ArrayList<TimedOccupationCharge>(timedCharges.size());
+        var timedTotal = 0.0f;
+        for (var charge : timedCharges) {
+            if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
+            if (charge.amount() <= 0.0f) continue;
+            var iterationTicks = charge.iterationTicks() > 0
+                    ? charge.iterationTicks()
+                    : Math.max(1, Mth.ceil(charge.amount() * 0.5f));
+            normalizedCharges.add(new TimedOccupationCharge(charge.amount(), iterationTicks));
+            timedTotal += charge.amount();
+            if (!Float.isFinite(timedTotal)) return null;
+        }
+
+        var occupations = playerData.getCpOccupations();
+        var maxStacks = getMaxStacks(uuid, skill, getSkillLevel(playerData, skill));
+        if (maxStacks != Skill.NO_STACK_LIMIT) {
+            var currentStacks = occupations.stream()
+                    .filter(occupation -> !occupation.isPermanent())
+                    .filter(occupation -> skill.getKeyString().equals(occupation.getSkillId()))
+                    .count();
+            if (currentStacks + normalizedCharges.size() > maxStacks) return null;
+        }
+
+        var released = occupations.stream()
+                .filter(AbilityData.CpOccupationData::isPermanent)
+                .filter(occupation -> skill.getKeyString().equals(occupation.getSkillId()))
+                .mapToDouble(AbilityData.CpOccupationData::getAmount)
+                .sum();
+        var totalRequired = permanentAmount + timedTotal;
+        if (!Float.isFinite(totalRequired)
+                || !isAtomicReplacementAffordable(cpData.getAvailableCP(), (float) released, totalRequired)) {
+            return null;
+        }
+        return new MixedOccupationPlan(
+                playerData,
+                skill,
+                permanentAmount,
+                List.copyOf(normalizedCharges),
+                cpData.getAvailableCP() + (float) released,
+                totalRequired
+        );
     }
 
     private AtomicOccupationPlan createAtomicOccupationPlan(
@@ -753,9 +876,19 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public float getMaxCP(UUID uuid) {
-        var naturalMaxCP = playerDataManager.getData(uuid) == null
-                ? BASE_MAX_CP
-                : BASE_MAX_CP + getDerivedMaxCpBonus(uuid);
+        var playerData = playerDataManager.getData(uuid);
+        var naturalMaxCP = BASE_MAX_CP;
+        if (playerData != null) {
+            naturalMaxCP = playerData.isMaxCpInitialized()
+                    ? normalizeDebugMaxCP(playerData.getCpData().getMaxCP())
+                    : initialPersistentMaxCp(
+                            playerData.getCpData().getMaxCP(),
+                            Math.max(
+                                    playerData.getAppliedCommonSkillMaxCpBonus(),
+                                    getDerivedMaxCpBonus(uuid)
+                            )
+                    );
+        }
         return resolveEffectiveMaxCP(naturalMaxCP, debugMaxCpOverrides.get(uuid));
     }
 
@@ -847,33 +980,36 @@ public class PlayerCPManager implements AbilitySubsystem {
         var appliedBonus = playerData.getAppliedCommonSkillMaxCpBonus();
         var cpData = playerData.getCpData();
         var debugMaxCP = debugMaxCpOverrides.get(uuid);
-        if (debugMaxCP != null) {
-            var changed = false;
-            if (Float.compare(cpData.getMaxCP(), BASE_MAX_CP) != 0) {
-                cpData.setMaxCP(BASE_MAX_CP);
-                changed = true;
-            }
-            if (Float.compare(desiredBonus, appliedBonus) != 0) {
-                playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
-                changed = true;
-            }
-            if (cpData.getAvailableCP() > debugMaxCP) {
-                cpData.setAvailableCP(debugMaxCP, debugMaxCP);
-                changed = true;
-            }
-            if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-            return;
-        }
-        if (Float.compare(desiredBonus, appliedBonus) == 0
-                && Float.compare(cpData.getMaxCP(), BASE_MAX_CP) == 0) return;
+        var changed = false;
 
-        var oldEffectiveMaxCP = cpData.getMaxCP() + appliedBonus;
-        var effectiveMaxCP = BASE_MAX_CP + desiredBonus;
-        var diff = effectiveMaxCP - oldEffectiveMaxCP;
-        cpData.setMaxCP(BASE_MAX_CP);
-        cpData.setAvailableCP(cpData.getAvailableCP() + diff, effectiveMaxCP);
-        playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
-        syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+        if (!playerData.isMaxCpInitialized()) {
+            // Older saves stored a 100-point base and rebuilt all growth on login. Promote the
+            // already-earned derived total into the persisted max without double-applying it.
+            var trackedBonus = Math.max(appliedBonus, desiredBonus);
+            cpData.setMaxCP(initialPersistentMaxCp(cpData.getMaxCP(), trackedBonus));
+            playerData.setAppliedCommonSkillMaxCpBonus(trackedBonus);
+            playerData.setMaxCpInitialized(true);
+            appliedBonus = trackedBonus;
+            changed = true;
+        }
+
+        if (desiredBonus > appliedBonus) {
+            var oldMaxCp = cpData.getMaxCP();
+            var newMaxCp = applyDerivedMaxCpGrowth(oldMaxCp, appliedBonus, desiredBonus);
+            var delta = newMaxCp - oldMaxCp;
+            cpData.setMaxCP(newMaxCp);
+            var effectiveMaxCp = resolveEffectiveMaxCP(newMaxCp, debugMaxCP);
+            cpData.setAvailableCP(cpData.getAvailableCP() + delta, effectiveMaxCp);
+            playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
+            changed = true;
+        }
+
+        var effectiveMaxCp = resolveEffectiveMaxCP(cpData.getMaxCP(), debugMaxCP);
+        if (cpData.getAvailableCP() > effectiveMaxCp) {
+            cpData.setAvailableCP(effectiveMaxCp, effectiveMaxCp);
+            changed = true;
+        }
+        if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
     private float getDerivedMaxCpBonus(UUID uuid) {
@@ -960,6 +1096,19 @@ public class PlayerCPManager implements AbilitySubsystem {
             Skill timedSkill,
             float timedAmount,
             int iterationTicks,
+            float availableAfterRelease,
+            float totalRequired
+    ) {
+    }
+
+    public record TimedOccupationCharge(float amount, int iterationTicks) {
+    }
+
+    private record MixedOccupationPlan(
+            Player playerData,
+            Skill skill,
+            float permanentAmount,
+            List<TimedOccupationCharge> timedCharges,
             float availableAfterRelease,
             float totalRequired
     ) {

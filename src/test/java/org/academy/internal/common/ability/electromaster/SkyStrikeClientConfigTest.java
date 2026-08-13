@@ -1,7 +1,7 @@
 package org.academy.internal.common.ability.electromaster;
 
 import com.google.gson.Gson;
-import org.academy.internal.common.ability.electromaster.skills.lv4.LightningStorm;
+import org.academy.internal.common.ability.electromaster.skills.lv5.LightningStorm;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Thunderclap;
 import org.junit.jupiter.api.Test;
 

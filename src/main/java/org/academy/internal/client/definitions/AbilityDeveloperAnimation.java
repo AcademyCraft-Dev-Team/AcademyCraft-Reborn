@@ -5,146 +5,140 @@ import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
 
-/**
- * @author MapleBadd
- */
 public final class AbilityDeveloperAnimation {
-    public static final AnimationDefinition OPENING = AnimationDefinition.Builder.withLength(1.25F)
-            .addAnimation("rside", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+    public static final AnimationDefinition OPENING = AnimationDefinition.Builder.withLength(0.75F)
+            .addAnimation("L1", scale(
+                    keyframe(0.5F, 1.0F, 1.0F, 1.0F),
+                    keyframe(0.75F, 1.0F, 0.0F, 1.0F)
             ))
-            .addAnimation("rside", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("R1", scale(
+                    keyframe(0.5F, 1.0F, 1.0F, 1.0F),
+                    keyframe(0.75F, 1.0F, 0.0F, 1.0F)
             ))
-            .addAnimation("rside", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.75F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.0F, KeyframeAnimations.scaleVec(1.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("L2", scale(
+                    keyframe(0.25F, 1.0F, 1.0F, 1.0F),
+                    keyframe(0.5F, 0.0F, 0.0F, 1.0F)
             ))
-            .addAnimation("lside", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("L3", scale(
+                    keyframe(0.0F, 1.0F, 1.0F, 1.0F),
+                    keyframe(0.25F, 0.0F, 1.0F, 1.0F)
             ))
-            .addAnimation("lside", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("R2", scale(
+                    keyframe(0.25F, 1.0F, 1.0F, 1.0F),
+                    keyframe(0.5F, 0.0F, 0.0F, 1.0F)
             ))
-            .addAnimation("lside", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.75F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.0F, KeyframeAnimations.scaleVec(1.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("rside2", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.75F, KeyframeAnimations.scaleVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("lside1", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(0.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("lside2", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.75F, KeyframeAnimations.scaleVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("rside1", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(0.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("R3", scale(
+                    keyframe(0.0F, 1.0F, 1.0F, 1.0F),
+                    keyframe(0.25F, 0.0F, 1.0F, 1.0F)
             ))
             .build();
 
-    public static final AnimationDefinition CLOSING = AnimationDefinition.Builder.withLength(1.0F)
-            .addAnimation("rside", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(1.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+    public static final AnimationDefinition CLOSING = AnimationDefinition.Builder.withLength(0.75F)
+            .addAnimation("L1", scale(
+                    keyframe(0.0F, 1.0F, 0.0F, 1.0F),
+                    keyframe(0.25F, 1.0F, 1.0F, 1.0F)
             ))
-            .addAnimation("rside", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(1.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("R1", scale(
+                    keyframe(0.0F, 1.0F, 0.0F, 1.0F),
+                    keyframe(0.25F, 1.0F, 1.0F, 1.0F)
             ))
-            .addAnimation("rside", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.25F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("L2", scale(
+                    keyframe(0.25F, 0.0F, 0.0F, 1.0F),
+                    keyframe(0.5F, 1.0F, 1.0F, 1.0F)
             ))
-            .addAnimation("lside", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(1.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("L3", scale(
+                    keyframe(0.5F, 0.0F, 1.0F, 1.0F),
+                    keyframe(0.75F, 1.0F, 1.0F, 1.0F)
             ))
-            .addAnimation("lside", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(1.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("R2", scale(
+                    keyframe(0.25F, 0.0F, 0.0F, 1.0F),
+                    keyframe(0.5F, 1.0F, 1.0F, 1.0F)
             ))
-            .addAnimation("lside", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.25F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("lside1", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(0.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("lside2", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.25F, KeyframeAnimations.scaleVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("rside1", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(0.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.9583F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("rside2", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.25F, KeyframeAnimations.scaleVec(0.0F, 0.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.5F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("R3", scale(
+                    keyframe(0.5F, 0.0F, 1.0F, 1.0F),
+                    keyframe(0.75F, 1.0F, 1.0F, 1.0F)
             ))
             .build();
 
     public static final AnimationDefinition STANDING = AnimationDefinition.Builder.withLength(1.5F)
-            .addAnimation("middle", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.6667F, KeyframeAnimations.degreeVec(-43.67F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.875F, KeyframeAnimations.degreeVec(-52.75F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.125F, KeyframeAnimations.degreeVec(-58.15F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.2917F, KeyframeAnimations.degreeVec(-60.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("poles", rotation(
+                    rotationKeyframe(0.0F, 0.0F, 0.0F, 0.0F),
+                    rotationKeyframe(0.625F, -18.83F, 0.0F, 0.0F),
+                    rotationKeyframe(1.0417F, -39.72F, 0.0F, 0.0F),
+                    rotationKeyframe(1.2917F, -47.83F, 0.0F, 0.0F),
+                    rotationKeyframe(1.5F, -50.0F, 0.0F, 0.0F)
             ))
-            .addAnimation("middle", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.2917F, KeyframeAnimations.posVec(0.0F, -1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("poles", scale(
+                    keyframe(0.0F, 1.0F, 1.0F, 0.5F),
+                    keyframe(0.375F, 1.0F, 1.0F, 0.525F),
+                    keyframe(0.5F, 1.0F, 1.0F, 0.4F),
+                    keyframe(0.75F, 1.0F, 1.0F, 0.75F),
+                    keyframe(1.5F, 1.0F, 1.0F, 1.2F)
             ))
-            .addAnimation("middle", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 0.5F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.2917F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("up", rotation(
+                    rotationKeyframe(0.0F, 0.0F, 0.0F, 0.0F),
+                    rotationKeyframe(0.5F, 0.0F, 0.0F, 0.0F),
+                    rotationKeyframe(1.5F, 60.0F, 0.0F, 0.0F)
             ))
-            .addAnimation("sideBar", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(1.1667F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.5F, KeyframeAnimations.posVec(-1.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("up", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.2917F, KeyframeAnimations.degreeVec(60.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("up", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.2917F, KeyframeAnimations.posVec(0.0F, 0.0F, 13.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("up", position(
+                    positionKeyframe(0.0F, 0.0F, 0.0F, 0.0F),
+                    positionKeyframe(0.2083F, 0.0F, 1.0F, 0.0F),
+                    positionKeyframe(0.5F, 0.0F, 1.0F, 0.0F),
+                    positionKeyframe(1.5F, 0.0F, 1.0F, 2.0F)
             ))
             .build();
 
     public static final AnimationDefinition LYING_DOWN = AnimationDefinition.Builder.withLength(1.5F)
-            .addAnimation("middle", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(0.25F, KeyframeAnimations.degreeVec(-60.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.6667F, KeyframeAnimations.degreeVec(-48.06F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.0417F, KeyframeAnimations.degreeVec(-28.03F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.5F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("poles", rotation(
+                    rotationKeyframe(0.0F, -50.0F, 0.0F, 0.0F),
+                    rotationKeyframe(0.2083F, -47.83F, 0.0F, 0.0F),
+                    rotationKeyframe(0.4583F, -39.72F, 0.0F, 0.0F),
+                    rotationKeyframe(0.875F, -18.83F, 0.0F, 0.0F),
+                    rotationKeyframe(1.5F, 0.0F, 0.0F, 0.0F)
             ))
-            .addAnimation("middle", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(0.25F, KeyframeAnimations.posVec(0.0F, -1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.5F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("poles", scale(
+                    keyframe(0.0F, 1.0F, 1.0F, 1.2F),
+                    keyframe(0.75F, 1.0F, 1.0F, 0.75F),
+                    keyframe(1.0F, 1.0F, 1.0F, 0.4F),
+                    keyframe(1.125F, 1.0F, 1.0F, 0.525F),
+                    keyframe(1.5F, 1.0F, 1.0F, 0.5F)
             ))
-            .addAnimation("middle", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.25F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.5F, KeyframeAnimations.scaleVec(1.0F, 0.5F, 1.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("up", rotation(
+                    rotationKeyframe(0.0F, 60.0F, 0.0F, 0.0F),
+                    rotationKeyframe(1.0F, 0.0F, 0.0F, 0.0F),
+                    rotationKeyframe(1.5F, 0.0F, 0.0F, 0.0F)
             ))
-            .addAnimation("sideBar", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(0.0F, KeyframeAnimations.posVec(-1.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.2917F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("up", new AnimationChannel(AnimationChannel.Targets.ROTATION,
-                    new Keyframe(0.25F, KeyframeAnimations.degreeVec(60.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.5F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
-            ))
-            .addAnimation("up", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                    new Keyframe(0.25F, KeyframeAnimations.posVec(0.0F, 0.0F, 13.0F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(1.5F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+            .addAnimation("up", position(
+                    positionKeyframe(0.0F, 0.0F, 1.0F, 2.0F),
+                    positionKeyframe(1.0F, 0.0F, 1.0F, 0.0F),
+                    positionKeyframe(1.2917F, 0.0F, 1.0F, 0.0F),
+                    positionKeyframe(1.5F, 0.0F, 0.0F, 0.0F)
             ))
             .build();
+
+    private static AnimationChannel scale(Keyframe... keyframes) {
+        return new AnimationChannel(AnimationChannel.Targets.SCALE, keyframes);
+    }
+
+    private static AnimationChannel rotation(Keyframe... keyframes) {
+        return new AnimationChannel(AnimationChannel.Targets.ROTATION, keyframes);
+    }
+
+    private static AnimationChannel position(Keyframe... keyframes) {
+        return new AnimationChannel(AnimationChannel.Targets.POSITION, keyframes);
+    }
+
+    private static Keyframe keyframe(float time, float x, float y, float z) {
+        return new Keyframe(time, KeyframeAnimations.scaleVec(x, y, z), AnimationChannel.Interpolations.LINEAR);
+    }
+
+    private static Keyframe rotationKeyframe(float time, float x, float y, float z) {
+        return new Keyframe(time, KeyframeAnimations.degreeVec(x, y, z), AnimationChannel.Interpolations.LINEAR);
+    }
+
+    private static Keyframe positionKeyframe(float time, float x, float y, float z) {
+        return new Keyframe(time, KeyframeAnimations.posVec(x, y, z), AnimationChannel.Interpolations.LINEAR);
+    }
 
     private AbilityDeveloperAnimation() {
     }
