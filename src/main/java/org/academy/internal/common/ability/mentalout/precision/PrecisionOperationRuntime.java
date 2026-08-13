@@ -976,21 +976,23 @@ public final class PrecisionOperationRuntime {
                 if (context != null) context.releaseSubjects(subjects);
             }
         }
-        if (slots == null) return;
-        var remaining = permanentCost(player, slots);
-        var system = AbilitySystemServer.getSystem(player);
-        if (remaining <= 0.0f) {
-            system.releaseMaintenanceOccupation(
-                    player.getUUID(),
-                    Skills.PRECISION_OPERATION.get().getKeyString()
-            );
-        } else {
-            system.replacePermanentOccupation(
-                    player.getUUID(),
-                    remaining,
-                    Skills.PRECISION_OPERATION.get()
-            );
+        if (slots != null) {
+            var remaining = permanentCost(player, slots);
+            var system = AbilitySystemServer.getSystem(player);
+            if (remaining <= 0.0f) {
+                system.releaseMaintenanceOccupation(
+                        player.getUUID(),
+                        Skills.PRECISION_OPERATION.get().getKeyString()
+                );
+            } else {
+                system.replacePermanentOccupation(
+                        player.getUUID(),
+                        remaining,
+                        Skills.PRECISION_OPERATION.get()
+                );
+            }
         }
+        MentaloutControlContext.releaseInterventionSubjects(player, subjects);
     }
 
     private static float subjectCost(ActiveContext[] slots, Set<UUID> subjects) {

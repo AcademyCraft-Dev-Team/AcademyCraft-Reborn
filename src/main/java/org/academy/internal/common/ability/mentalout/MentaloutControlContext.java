@@ -67,6 +67,21 @@ public final class MentaloutControlContext extends ServerContext {
         return context.entries.values().stream().map(entry -> entry.subject).toList();
     }
 
+    public static void releaseInterventionSubjects(ServerPlayer controller, Set<UUID> subjectIds) {
+        if (controller == null || subjectIds == null || subjectIds.isEmpty()) return;
+        var context = get(controller);
+        if (context == null) return;
+        var released = subjectIds.stream()
+                .map(context.entries::get)
+                .filter(Objects::nonNull)
+                .map(entry -> entry.subject)
+                .toList();
+        for (var subject : released) {
+            if (subject instanceof Mob mob) MentalControlRecall.suppressUntilExit(controller, mob);
+            context.remove(subject.getUUID());
+        }
+    }
+
     public static void releaseController(UUID controllerUuid) {
         var context = BY_CONTROLLER.get(controllerUuid);
         if (context != null) context.unregister();
