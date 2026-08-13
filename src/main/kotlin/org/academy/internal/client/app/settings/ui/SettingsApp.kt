@@ -589,12 +589,7 @@ object SettingsApp : App {
                         val target = capturing ?: return
                         val current = target.section.config.getKeyBinding(target.bindingName) ?: return
                         resetCaptureState()
-                        if (current != null) {
-                            applyCapture(InputSystem.unbound(current))
-                        } else {
-                            exitCapture()
-                            showPage(PAGE_KEYBINDINGS)
-                        }
+                        applyCapture(InputSystem.unbound(current))
                         return
                     }
                     if (isModifierKey(key)) return
@@ -646,7 +641,7 @@ object SettingsApp : App {
                     if (pendingKeys.isEmpty()) return null
                     InputSystem.combo(
                         type, pendingKeys.toSet(),
-                        current?.action ?: 1, pendingModifiers, current?.availableWhenScreen ?: true
+                        current.action, pendingModifiers, current.availableWhenScreen
                     )
                 }
 
@@ -654,7 +649,7 @@ object SettingsApp : App {
                     if (pendingMouseButton < 0) return null
                     InputSystem.combo(
                         type, pendingMouseButton,
-                        current?.action ?: 1, pendingModifiers, current?.availableWhenScreen ?: true
+                        current.action, pendingModifiers, current.availableWhenScreen
                     )
                 }
             }

@@ -298,7 +298,7 @@ object ImGuiProfilerWindow {
 
         ImGui.text(
             "Thread total: %.2f ms   Path total: %.2f ms".format(
-                zones.rootTotalNs / 1e6, (zones.sliceAt(zonePath)?.totalNs ?: 0L) / 1e6
+                zones.rootTotalNs / 1e6, zones.sliceAt(zonePath).totalNs / 1e6
             )
         )
     }
