@@ -470,7 +470,7 @@ public final class AcademyCraftClient {
                 still,
                 flowing,
                 overlay,
-                FluidTintSources.constant(0x5008050D),
+                FluidTintSources.constant(0x9908050D),
                 ImagPhaseFluidRenderer.INSTANCE
         );
         event.register(

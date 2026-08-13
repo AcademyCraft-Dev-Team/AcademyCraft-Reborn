@@ -8,6 +8,7 @@ import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.BindGroupLayouts;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -24,6 +25,13 @@ import static org.academy.AcademyCraft.academy;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class VfxPipelines {
+    public static final RenderPipeline IMAG_PHASE_PARTICLE_ALWAYS_VISIBLE = builder(RenderPipelines.PARTICLE_SNIPPET)
+            .withLocation(academy("pipeline/imag_phase_particle_always_visible"))
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(Optional.empty())
+            .withCull(false)
+            .build();
+
     public static final RenderPipeline PARTICLE_ADDITIVE = builder()
             .withLocation(academy("pipeline/vfx_particle"))
             .withVertexShader(R.shaders.core.vfx_particle)
