@@ -29,6 +29,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.DamageRecursionGuard;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -125,6 +126,7 @@ public class ElectricalContact extends Skill {
         private static final int DAMAGE_INTERVAL = 20;
         private static final float DAMAGE_AMOUNT = 2.0f;
         private static final float RADIUS = 2.0f;
+        private static final Object RETALIATION_RECURSION_GUARD = new Object();
 
         public static float calculateDamage(float abilityPower, float playerMultiplier) {
             return DAMAGE_AMOUNT * Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier);
@@ -170,6 +172,7 @@ public class ElectricalContact extends Skill {
         @SubscribeEvent
         public static void onIncomingDamage(LivingIncomingDamageEvent event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            if (DamageRecursionGuard.isActive(RETALIATION_RECURSION_GUARD)) return;
             var skill = Skills.ELECTRICAL_CONTACT.get();
             if (skill.getLevel(player) < 1) return;
             if (!skill.isEnabled(player)) return;
@@ -178,19 +181,21 @@ public class ElectricalContact extends Skill {
             if (attacker instanceof LivingEntity livingAttacker && livingAttacker != player
                     && !player.isAlliedTo(livingAttacker)) {
                 if (player.level() instanceof ServerLevel serverLevel) {
-                    var system = AbilitySystemServer.getSystem(player);
-                    var damage = calculateDamage(
-                            system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                            system.getPlayerDamageMultiplier(player.getUUID())
-                    );
-                    livingAttacker.hurtServer(serverLevel,
-                            SkillDamageSource.of(player, skill,
-                                    DamageTypes.ELECTRO_DAMAGE),
-                            damage);
-                    if (skill.hasProficiencyMilestone(player, 3)) {
-                        TimedSkillEffectRuntime.put(player, livingAttacker.getUUID(), skill,
-                                "conductive", 80, 1.0f);
-                    }
+                    DamageRecursionGuard.runGuarded(RETALIATION_RECURSION_GUARD, () -> {
+                        var system = AbilitySystemServer.getSystem(player);
+                        var damage = calculateDamage(
+                                system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                                system.getPlayerDamageMultiplier(player.getUUID())
+                        );
+                        livingAttacker.hurtServer(serverLevel,
+                                SkillDamageSource.of(player, skill,
+                                        DamageTypes.ELECTRO_DAMAGE),
+                                damage);
+                        if (skill.hasProficiencyMilestone(player, 3)) {
+                            TimedSkillEffectRuntime.put(player, livingAttacker.getUUID(), skill,
+                                    "conductive", 80, 1.0f);
+                        }
+                    });
                 }
             }
         }
