@@ -542,7 +542,13 @@ object SkillSettingsApp : App {
                 .paddingLeft(3f)
             row.addChild(
                 "label", LabelWidget(
-                    translate("app.academy.skill_settings.advanced.block_destruction")
+                    translate(
+                        if (DestroyBlocksSetting.usesIndependentBlockDestructionSetting(skill)) {
+                            "app.academy.skill_settings.advanced.block_destruction_independent"
+                        } else {
+                            "app.academy.skill_settings.advanced.block_destruction"
+                        }
+                    )
                 ).apply {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)

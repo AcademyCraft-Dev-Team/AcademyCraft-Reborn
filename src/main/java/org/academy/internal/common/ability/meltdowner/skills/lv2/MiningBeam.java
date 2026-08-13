@@ -224,7 +224,7 @@ public final class MiningBeam extends Skill {
 
             var breakTick = ticks % BREAK_INTERVAL_TICKS == 0;
             var damageTick = ticks % DAMAGE_INTERVAL_TICKS == 0;
-            var destroyBlocks = DestroyBlocksSetting.canDestroyBlocksBySkillSetting(
+            var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(
                     player,
                     Skills.MINING_BEAM.get()
             );
