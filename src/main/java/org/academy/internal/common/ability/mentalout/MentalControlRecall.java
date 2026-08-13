@@ -21,16 +21,30 @@ public final class MentalControlRecall {
 
     public static void suppressUntilExit(ServerPlayer controller, Mob subject) {
         if (controller == null || subject == null) return;
-        SUPPRESSED_UNTIL_EXIT.computeIfAbsent(controller.getUUID(), _ -> new HashSet<>())
-                .add(subject.getUUID());
+        suppressUntilExit(controller.getUUID(), subject.getUUID());
+    }
+
+    static void suppressUntilExit(UUID controllerId, UUID subjectId) {
+        if (controllerId == null || subjectId == null) return;
+        SUPPRESSED_UNTIL_EXIT.computeIfAbsent(controllerId, _ -> new HashSet<>()).add(subjectId);
     }
 
     public static void allow(ServerPlayer controller, Mob subject) {
         if (controller == null || subject == null) return;
-        var suppressed = SUPPRESSED_UNTIL_EXIT.get(controller.getUUID());
+        allow(controller.getUUID(), subject.getUUID());
+    }
+
+    static void allow(UUID controllerId, UUID subjectId) {
+        if (controllerId == null || subjectId == null) return;
+        var suppressed = SUPPRESSED_UNTIL_EXIT.get(controllerId);
         if (suppressed == null) return;
-        suppressed.remove(subject.getUUID());
-        if (suppressed.isEmpty()) SUPPRESSED_UNTIL_EXIT.remove(controller.getUUID());
+        suppressed.remove(subjectId);
+        if (suppressed.isEmpty()) SUPPRESSED_UNTIL_EXIT.remove(controllerId);
+    }
+
+    static boolean isSuppressed(UUID controllerId, UUID subjectId) {
+        if (controllerId == null || subjectId == null) return false;
+        return SUPPRESSED_UNTIL_EXIT.getOrDefault(controllerId, Set.of()).contains(subjectId);
     }
 
     public static void releaseController(UUID controllerId) {
