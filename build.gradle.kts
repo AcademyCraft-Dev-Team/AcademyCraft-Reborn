@@ -147,6 +147,14 @@ sourceSets.named("test") {
     runtimeClasspath += sourceSets.named("main").get().compileClasspath
 }
 
+// Standalone desktop tooling (out-of-game UI editors). Inherits the mod's
+// Minecraft/NeoForge/LWJGL runtime classpath so it can host the Blaze3D stack
+// and the mod's UI framework without launching the game.
+val editorSourceSet = sourceSets.create("editor") {
+    compileClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().compileClasspath
+    runtimeClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().runtimeClasspath
+}
+
 repositories {
     maven {
         name = "AC Dev Team's maven"
@@ -260,6 +268,33 @@ neoForge {
             environment("IS_DEV", "true")
             gameDirectory.set(file("run/gametest"))
         }
+        register("uiEditor") {
+            client()
+            environment("IS_DEV", "true")
+            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
+            sourceSet.set(editorSourceSet)
+            systemProperty("academy.desktop.main", "org.academy.desktop.uieditor.UiEditorMainKt")
+            programArguments.add("--project-root=${layout.projectDirectory}")
+            providers.gradleProperty("academyDumpLayout").orNull?.let {
+                systemProperty("academy.desktop.dumpLayout", it)
+            }
+        }
+        register("desktopSample") {
+            client()
+            environment("IS_DEV", "true")
+            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
+            sourceSet.set(editorSourceSet)
+            systemProperty("academy.desktop.main", "org.academy.desktop.SampleMainKt")
+            programArguments.add("--project-root=${layout.projectDirectory}")
+        }
+        register("hudEditor") {
+            client()
+            environment("IS_DEV", "true")
+            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
+            sourceSet.set(editorSourceSet)
+            systemProperty("academy.desktop.main", "org.academy.desktop.hudeditor.HudEditorMainKt")
+            programArguments.add("--project-root=${layout.projectDirectory}")
+        }
         configureEach {
             logLevel.set(Level.DEBUG)
             systemProperty("terminal.ansi", "true")
@@ -268,13 +303,7 @@ neoForge {
 
             systemProperty("mixin.debug.export", "true")
 
-            val vmVendor = System.getProperty("java.vm.vendor", "")
-            val runtimeName = System.getProperty("java.runtime.name", "")
-            if (vmVendor.contains("JetBrains", ignoreCase = true)
-                || runtimeName.contains("JetBrains", ignoreCase = true)
-            ) {
-                jvmArgument("-XX:+AllowEnhancedClassRedefinition")
-            }
+            jvmArgument("-XX:+AllowEnhancedClassRedefinition")
             jvmArgument("-Xverify:none")
         }
     }
@@ -282,6 +311,7 @@ neoForge {
     mods {
         create(modId) {
             sourceSet(sourceSets.main.get())
+            sourceSet(editorSourceSet)
         }
     }
 }

@@ -26,17 +26,24 @@ open class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
         val anchorX = getAbsoluteX() + width / 2.0f
         val anchorY = getAbsoluteY() + height / 2.0f
 
-        val mc = Minecraft.getInstance()
-        val mh = mc.mouseHandler
-        val w = mc.window
-        val mouseX = mh.getScaledXPos(w)
-        val mouseY = mh.getScaledYPos(w)
+        val mc: Minecraft? = Minecraft.getInstance()
+        val motionX: Float
+        val motionY: Float
+        if (mc != null) {
+            val mh = mc.mouseHandler
+            val w = mc.window
+            val mouseX = mh.getScaledXPos(w)
+            val mouseY = mh.getScaledYPos(w)
 
-        val deviationX = ((mouseX - anchorX) / anchorX).toFloat()
-        val deviationY = ((mouseY - anchorY) / anchorY).toFloat()
+            val deviationX = ((mouseX - anchorX) / anchorX).toFloat()
+            val deviationY = ((mouseY - anchorY) / anchorY).toFloat()
 
-        val motionX = Mth.clamp(deviationX * parallaxFactorX, -1.0f, 1.0f)
-        val motionY = Mth.clamp(deviationY * parallaxFactorY, -1.0f, 1.0f)
+            motionX = Mth.clamp(deviationX * parallaxFactorX, -1.0f, 1.0f)
+            motionY = Mth.clamp(deviationY * parallaxFactorY, -1.0f, 1.0f)
+        } else {
+            motionX = 0f
+            motionY = 0f
+        }
 
         val maxUOffset = 1.0f - imageToViewRatioWidth
         val maxVOffset = 1.0f - imageToViewRatioHeight

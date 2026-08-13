@@ -297,10 +297,9 @@ public final class Render {
         }
 
         private void createSDC() {
-            var mc = Minecraft.getInstance();
-            var window = mc.getWindow();
-            var width = window.getGuiScaledWidth();
-            var height = window.getGuiScaledHeight();
+            var environment = org.academy.api.client.gui.environment.UiEnvironment.get();
+            var width = environment.getGuiScaledWidth();
+            var height = environment.getGuiScaledHeight();
 
             try (
                     var byteBufferBuilder = ByteBufferBuilder.exactlySized(

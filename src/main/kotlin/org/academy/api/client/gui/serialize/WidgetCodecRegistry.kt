@@ -2,6 +2,7 @@ package org.academy.api.client.gui.serialize
 
 import com.google.gson.JsonObject
 import org.academy.api.client.gui.widget.Widget
+import org.academy.api.client.gui.widget.WidgetContainer
 
 /**
  * 单个控件类型的编解码器. [create] 负责构造控件并初始化正确的 [org.academy.api.client.gui.widget.WidgetContainer.LayoutParams]
@@ -26,14 +27,19 @@ interface WidgetCodec<T : Widget> {
 
 object WidgetCodecRegistry {
     private val codecs: MutableList<WidgetCodec<*>> = ArrayList()
+    private var byNameCache: Map<String, WidgetCodec<*>>? = null
+    private var typesCache: List<String>? = null
 
     fun register(codec: WidgetCodec<*>) {
         codecs.add(codec)
+        byNameCache = null
+        typesCache = null
     }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : Widget> byType(type: String): WidgetCodec<T>? {
-        return codecs.firstOrNull { it.typeName == type } as WidgetCodec<T>?
+        val cache = byNameCache ?: codecs.associateBy { it.typeName }.also { byNameCache = it }
+        return cache[type] as WidgetCodec<T>?
     }
 
     /** 查找最具体的 codec (子类优先于父类). */
@@ -58,5 +64,11 @@ object WidgetCodecRegistry {
         return best as WidgetCodec<T>?
     }
 
-    fun types(): List<String> = codecs.map { it.typeName }
+    fun types(): List<String> = typesCache ?: codecs.map { it.typeName }.also { typesCache = it }
+
+    /** True when the type is a container that can host children widgets. */
+    fun isContainerType(type: String): Boolean {
+        val codec = byType<Widget>(type) ?: return false
+        return WidgetContainer::class.java.isAssignableFrom(codec.widgetClass)
+    }
 }

@@ -6,20 +6,19 @@ import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.systems.RenderSystem
-import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.SubmittedCommand
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.render.BatchProcessor.UboUploader
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.UniformPayload
 import org.academy.api.client.thread.MainThread
 import org.academy.api.client.thread.RenderThread
-import org.academy.api.client.util.ClientUtil
 import org.academy.api.common.util.UncheckedUtil
 import org.joml.Matrix4f
 import org.joml.Vector4f
@@ -43,17 +42,17 @@ open class UiContext {
     private var dynamicTransformsUbo: GpuBuffer? = null
 
     init {
-        ClientUtil.getRenderEventLoop().execute { this.initOnRenderThread() }
+        UiEnvironment.get().runOnMainThread { this.initOnRenderThread() }
     }
 
     @MainThread
     fun perform(rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float) {
         if (closed.get() || closing.get()) return
 
-        val window = Minecraft.getInstance().window
+        val environment = UiEnvironment.get()
 
-        val width = window.guiScaledWidth
-        val height = window.guiScaledHeight
+        val width = environment.guiScaledWidth
+        val height = environment.guiScaledHeight
 
         val widthSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, width.toFloat())
         val heightSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, height.toFloat())
@@ -107,10 +106,10 @@ open class UiContext {
                 }
             })
 
-        val effectiveScale = Minecraft.getInstance().window.guiScale.toFloat()
-        val window = Minecraft.getInstance().window
-        val guiScaledWidth = window.width / effectiveScale
-        val guiScaledHeight = window.height / effectiveScale
+        val environment = UiEnvironment.get()
+        val effectiveScale = environment.guiScale
+        val guiScaledWidth = environment.physicalWidth / effectiveScale
+        val guiScaledHeight = environment.physicalHeight / effectiveScale
         projection.setupOrtho(0f, 1f, guiScaledWidth, guiScaledHeight, true)
         val projectionBufferSlice = projectionMatrixBuffer.getBuffer(projection)
         commandExecutor.execute(
@@ -176,7 +175,7 @@ open class UiContext {
     fun close() {
         if (closing.get() || closed.get()) return
         closing.set(true)
-        ClientUtil.getRenderEventLoop().execute { this.closeOnRenderThread() }
+        UiEnvironment.get().runOnMainThread { this.closeOnRenderThread() }
     }
 
     fun closeOnRenderThread() {
