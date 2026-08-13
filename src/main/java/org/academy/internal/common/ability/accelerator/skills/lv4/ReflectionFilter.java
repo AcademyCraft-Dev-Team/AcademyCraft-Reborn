@@ -6,6 +6,8 @@ import io.netty.handler.codec.DecoderException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -776,6 +778,13 @@ public final class ReflectionFilter extends Skill {
             if (event.button() == 0) {
                 var mouseX = event.x();
                 var mouseY = event.y();
+                if (inside(mouseX, mouseY, searchBox.getX(), searchBox.getY(), searchBox.getWidth(), 16)) {
+                    setFocused(searchBox);
+                    searchBox.setFocused(true);
+                    searchBox.mouseClicked(event, doubleClick);
+                    return true;
+                }
+                searchBox.setFocused(false);
                 if (handleEffectClick(mouseX, mouseY)
                         || handleMiddleButtons(mouseX, mouseY)
                         || handleModeButtons(mouseX, mouseY)
@@ -785,6 +794,22 @@ public final class ReflectionFilter extends Skill {
                 }
             }
             return super.mouseClicked(event, doubleClick);
+        }
+
+        @Override
+        public boolean keyPressed(KeyEvent event) {
+            if (searchBox != null && searchBox.isFocused() && searchBox.keyPressed(event)) {
+                return true;
+            }
+            return super.keyPressed(event);
+        }
+
+        @Override
+        public boolean charTyped(CharacterEvent event) {
+            if (searchBox != null && searchBox.isFocused() && searchBox.charTyped(event)) {
+                return true;
+            }
+            return super.charTyped(event);
         }
 
         private boolean handleEffectClick(double mouseX, double mouseY) {
