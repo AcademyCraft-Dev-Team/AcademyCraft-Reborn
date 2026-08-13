@@ -7,6 +7,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.sounds.SoundEvents;
 
@@ -27,17 +28,20 @@ public final class ClientUtil {
     }
 
     public static float animationFactor(float animationDuration) {
-        return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks() / animationDuration;
+        return UiEnvironment.get().frameDeltaTicks() / animationDuration;
     }
 
     public static double animationFactor(double animationDuration) {
-        return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks() / animationDuration;
+        return UiEnvironment.get().frameDeltaTicks() / animationDuration;
     }
 
     public static void playDownSound() {
-        Minecraft.getInstance().getSoundManager().play(
-                SimpleSoundInstance.forUI(SoundEvents.SELECT, 1.0F)
-        );
+        var minecraft = Minecraft.getInstance();
+        if (minecraft != null) {
+            minecraft.getSoundManager().play(
+                    SimpleSoundInstance.forUI(SoundEvents.SELECT, 1.0F)
+            );
+        }
     }
 
     public static ReentrantBlockableEventLoop<?> getRenderEventLoop() {

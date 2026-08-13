@@ -1,9 +1,9 @@
 package org.academy.api.client.gui.serialize
 
 import com.google.gson.JsonObject
-import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 import org.academy.AcademyCraft
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.LinearLayoutWidget
 import org.academy.api.client.gui.widget.Widget
@@ -179,8 +179,7 @@ object WidgetSerializer {
 
     /** 可写布局目录: <gameDir>/academy/ui */
     fun layoutDir(): Path {
-        val gameDir = Minecraft.getInstance().gameDirectory.toPath()
-        return gameDir.resolve("academy").resolve("ui")
+        return UiEnvironment.get().layoutDir()
     }
 
     fun export(root: WidgetContainer, file: Path) {
@@ -194,8 +193,7 @@ object WidgetSerializer {
 
     /** 从 assets (只读) 加载布局. */
     fun loadLayout(identifier: Identifier): Widget {
-        val resourceManager = Minecraft.getInstance().resourceManager
-        val json = resourceManager.open(identifier).use { stream ->
+        val json = UiEnvironment.get().openResource(identifier.namespace, identifier.path)?.use { stream ->
             UiJson.GSON.fromJson(stream.reader(), JsonObject::class.java)
         } ?: throw IllegalArgumentException("Layout '$identifier' is empty")
         return decode(json)
