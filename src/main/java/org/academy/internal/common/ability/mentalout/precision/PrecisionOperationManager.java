@@ -14,6 +14,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
 import org.academy.internal.common.ability.Skills;
@@ -41,6 +42,7 @@ public final class PrecisionOperationManager {
         if (clientInitialized) return;
         clientInitialized = true;
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+        NeoForge.EVENT_BUS.register(PrecisionOperationClient.class);
     }
 
     public static synchronized void initServer() {
