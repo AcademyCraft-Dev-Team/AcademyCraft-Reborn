@@ -4,10 +4,10 @@ import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
-import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import org.academy.api.client.gui.command.ImageDrawCommand
 import org.academy.api.client.gui.command.PosTexRectDrawCommand
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.UniformPayload
@@ -130,8 +130,7 @@ class BlendQuadWidget : AbstractWidget() {
 
     private fun renderLines(context: RenderContext, finalAlpha: Float, paddedWidth: Float, paddedHeight: Float) {
         val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
-        val textureManager = Minecraft.getInstance().textureManager
-        val lineTextureView = textureManager.getTexture(R.textures.gui.element.line).getTextureView()
+        val lineTextureView = UiEnvironment.get().loadTexture(R.textures.gui.element.line)
         val lineH = 4.0f
         run {
             val topLineCommand = ImageDrawCommand(
