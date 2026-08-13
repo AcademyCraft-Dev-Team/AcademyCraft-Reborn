@@ -1,24 +1,37 @@
 package org.academy.internal.client.particle;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.render.Render;
+import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.vfx.VfxPipelines;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 public final class ImagPhaseFluidParticle extends SingleQuadParticle {
     private static final float HALF_PI = (float) (Math.PI * 0.5);
+    private static final Layer ALWAYS_VISIBLE_LAYER = new Layer(
+            true,
+            TextureAtlas.LOCATION_PARTICLES,
+            VfxPipelines.IMAG_PHASE_PARTICLE_ALWAYS_VISIBLE
+    );
     private final float baseRotationX;
     private final float baseRotationY;
     private final float rotationSpeed;
+    private final Vector3f vertexScratch = new Vector3f();
 
     public ImagPhaseFluidParticle(
             ClientLevel level,
@@ -71,6 +84,31 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
                 .rotateX(baseRotationX + spin * 0.7F)
                 .rotateY(baseRotationY + spin);
 
+        if (IrisCompat.isShaderPackInUse()) {
+            if (!IrisCompat.isShadowRendererActive()) {
+                VertexConsumer postBuffer = PostEffect.getPost()
+                        .getBuffer(Render.RenderTypes.IMAG_PHASE_PARTICLE_POST);
+                extractPostQuad(postBuffer, rotation, renderX, renderY, renderZ, partialTick);
+                extractPostQuad(
+                        postBuffer,
+                        new Quaternionf(rotation).rotateY(HALF_PI),
+                        renderX,
+                        renderY,
+                        renderZ,
+                        partialTick
+                );
+                extractPostQuad(
+                        postBuffer,
+                        new Quaternionf(rotation).rotateX(HALF_PI),
+                        renderX,
+                        renderY,
+                        renderZ,
+                        partialTick
+                );
+            }
+            return;
+        }
+
         // Three mutually perpendicular star planes form a spatial particle instead of a
         // surface decal or a single camera-facing quad.
         extractRotatedQuad(renderState, rotation, renderX, renderY, renderZ, partialTick);
@@ -92,9 +130,45 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
         );
     }
 
+    private void extractPostQuad(
+            VertexConsumer output,
+            Quaternionf rotation,
+            float x,
+            float y,
+            float z,
+            float partialTick
+    ) {
+        float scale = getQuadSize(partialTick);
+        postVertex(output, rotation, x, y, z, 1.0F, -1.0F, scale, getU1(), getV1());
+        postVertex(output, rotation, x, y, z, 1.0F, 1.0F, scale, getU1(), getV0());
+        postVertex(output, rotation, x, y, z, -1.0F, 1.0F, scale, getU0(), getV0());
+        postVertex(output, rotation, x, y, z, -1.0F, -1.0F, scale, getU0(), getV1());
+    }
+
+    private void postVertex(
+            VertexConsumer output,
+            Quaternionf rotation,
+            float x,
+            float y,
+            float z,
+            float cornerX,
+            float cornerY,
+            float scale,
+            float u,
+            float v
+    ) {
+        var vertex = vertexScratch.set(cornerX, cornerY, 0.0F)
+                .rotate(rotation)
+                .mul(scale)
+                .add(x, y, z);
+        output.addVertex(vertex.x(), vertex.y(), vertex.z())
+                .setUv(u, v)
+                .setColor(rCol, gCol, bCol, alpha);
+    }
+
     @Override
     public SingleQuadParticle.Layer getLayer() {
-        return SingleQuadParticle.Layer.TRANSLUCENT;
+        return ALWAYS_VISIBLE_LAYER;
     }
 
     @Override

@@ -28,6 +28,7 @@ import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
@@ -855,6 +856,18 @@ public final class Render {
                 .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
                 .build();
 
+        public static final RenderPipeline IMAG_PHASE_PARTICLE_POST = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/imag_phase_particle_post"))
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.position_tex_color)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withDepthStencilState(Optional.empty())
+                .build();
+
         public static final RenderPipeline PLATINUM_COSMIC_WING = builder()
                 .withLocation(academy("pipeline/platinum_cosmic_wing"))
                 .withVertexShader(R.shaders.core.platinum_cosmic_wing)
@@ -1108,6 +1121,17 @@ public final class Render {
                 RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE)
                         .withTexture(
                                 "Sampler0", R.textures.iron_sand_arsenal_effect,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                        )
+                        .sortOnUpload()
+                        .createRenderSetup()
+        );
+
+        public static final RenderType IMAG_PHASE_PARTICLE_POST = create(
+                "imag_phase_particle_post",
+                RenderSetup.builder(RenderPipelines.IMAG_PHASE_PARTICLE_POST)
+                        .withTexture(
+                                "Sampler0", TextureAtlas.LOCATION_PARTICLES,
                                 () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
                         )
                         .sortOnUpload()
