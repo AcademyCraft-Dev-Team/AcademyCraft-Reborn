@@ -4,6 +4,7 @@ import net.minecraft.client.renderer.entity.state.ArmedEntityRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.client.renderer.special.AbilityControlTabletSpecialRenderer;
+import org.academy.internal.client.renderer.special.ImagPhaseDowsingRodSpecialRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,5 +21,6 @@ public abstract class MixinArmedEntityRenderState {
             CallbackInfo ci
     ) {
         AbilityControlTabletSpecialRenderer.prepareThirdPersonRender(entity);
+        ImagPhaseDowsingRodSpecialRenderer.prepareThirdPersonRender(entity);
     }
 }

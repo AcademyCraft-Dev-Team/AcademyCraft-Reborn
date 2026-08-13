@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "academy:item/imag_phase_dowsing_rod",
+    "model": {
+      "type": "academy:imag_phase_dowsing_rod"
+    }
+  }
+}

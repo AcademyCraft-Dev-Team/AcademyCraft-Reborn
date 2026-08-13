@@ -199,6 +199,24 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .pattern("IRI")
                 .unlockedBy("has_daylight_detector", has(DAYLIGHT_DETECTOR))
                 .save(output);
+
+        shaped(RecipeCategory.MISC, Items.IMAG_PHASE_PLATE.get())
+                .define('I', IRON_INGOT)
+                .define('P', Items.IMAG_PHASE_POLYMER.get())
+                .pattern("I")
+                .pattern("P")
+                .pattern("I")
+                .unlockedBy("has_imag_phase_polymer", has(Items.IMAG_PHASE_POLYMER.get()))
+                .save(output);
+
+        shaped(RecipeCategory.MISC, Items.WIND_GEN_BASE_SCREEN.get())
+                .define('G', GLASS)
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .pattern("GPG")
+                .pattern("PGP")
+                .pattern("GPG")
+                .unlockedBy("has_imag_phase_plate", has(Items.IMAG_PHASE_PLATE.get()))
+                .save(output);
     }
 
     public static final class Runner extends RecipeProvider.Runner {

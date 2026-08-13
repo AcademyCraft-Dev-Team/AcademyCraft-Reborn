@@ -1,0 +1,44 @@
+{
+  "parent": "minecraft:item/generated",
+  "gui_light": "front",
+  "textures": {
+    "layer0": "academy:block/air"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 0, 0],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 0, 0],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, -90, 25],
+      "translation": [1.13, 3.2, 1.13],
+      "scale": [0.68, 0.68, 0.68]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, 90, -25],
+      "translation": [1.13, 3.2, 1.13],
+      "scale": [0.68, 0.68, 0.68]
+    },
+    "gui": {
+      "rotation": [-45, -145, 30],
+      "translation": [-2.4, 12.8, 0],
+      "scale": [0.95, 0.95, 0.95]
+    },
+    "ground": {
+      "rotation": [0, 90, 0],
+      "translation": [0, 8, 0],
+      "scale": [0.475, 0.475, 0.475]
+    },
+    "fixed": {
+      "rotation": [0, 180, 0],
+      "translation": [0, 8, 0],
+      "scale": [0.475, 0.475, 0.475]
+    }
+  }
+}
