@@ -103,6 +103,7 @@ import org.academy.internal.common.attribute.PropsPackets;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.item.CoinItem;
+import org.academy.internal.common.world.item.ImagPhaseDowsingRodItem;
 import org.misaka.api.common.network.packet.PacketType;
 import org.misaka.api.common.registries.MisakaNetworkRegistries;
 
@@ -174,6 +175,11 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CoinItem.ThrowCoinPacket>>
             THROW_COIN_WITH_VELOCITY = PACKET_TYPES.register("throw_coin_with_velocity",
             () -> new PacketType<>(CoinItem.ThrowCoinPacket.class, CoinItem.ThrowCoinPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ImagPhaseDowsingRodItem.SyncPacket>>
+            IMAG_PHASE_DOWSING_SYNC = PACKET_TYPES.register("imag_phase_dowsing_sync",
+            () -> new PacketType<>(ImagPhaseDowsingRodItem.SyncPacket.class,
+                    ImagPhaseDowsingRodItem.SyncPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AirflowJet.StartPacket>>
             AIRFLOW_JET_START = PACKET_TYPES.register("airflow_jet_start",

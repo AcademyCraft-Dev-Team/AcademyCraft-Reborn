@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_imag_phase_plate": {
+      "conditions": {
+        "items": [
+          {
+            "items": "academy:imag_phase_plate"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "academy:wind_gen_base_screen"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_imag_phase_plate"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "academy:wind_gen_base_screen"
+    ]
+  }
+}

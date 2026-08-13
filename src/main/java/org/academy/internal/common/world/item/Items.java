@@ -15,6 +15,20 @@ public final class Items {
             ITEMS.registerItem("icon", Item::new);
     public static final DeferredHolder<Item, Item> DARKMATTER =
             ITEMS.registerItem("darkmatter", Item::new);
+    public static final DeferredHolder<Item, Item> IMAG_PHASE_INGOT =
+            ITEMS.registerItem("imag_phase_ingot", Item::new);
+    public static final DeferredHolder<Item, Item> IMAG_PHASE_POLYMER =
+            ITEMS.registerItem("imag_phase_polymer", Item::new);
+    public static final DeferredHolder<Item, Item> IMAG_PHASE_PLATE =
+            ITEMS.registerItem("imag_phase_plate", Item::new);
+    public static final DeferredHolder<Item, Item> IMAG_PHASE_CIRCUIT =
+            ITEMS.registerItem("imag_phase_circuit", Item::new);
+    public static final DeferredHolder<Item, Item> NEEDLE =
+            ITEMS.registerItem("needle", Item::new);
+    public static final DeferredHolder<Item, Item> WIND_GEN_BASE_SCREEN =
+            ITEMS.registerItem("wind_gen_base_screen", Item::new);
+    public static final DeferredHolder<Item, ImagPhaseDowsingRodItem> IMAG_PHASE_DOWSING_ROD =
+            ITEMS.registerItem("imag_phase_dowsing_rod", ImagPhaseDowsingRodItem::new);
     public static final DeferredHolder<Item, Item> DARK_MATTER_HELMET =
             ITEMS.registerItem("dark_matter_helmet", properties -> new Item(
                     properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.HELMET)));

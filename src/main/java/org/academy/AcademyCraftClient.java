@@ -9,6 +9,7 @@ import net.irisshaders.iris.pipeline.programs.ShaderKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -20,6 +21,8 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -27,6 +30,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import net.neoforged.neoforge.client.fluid.FluidTintSources;
@@ -77,10 +82,12 @@ import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
+import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
 import org.academy.internal.common.world.level.material.Fluids;
@@ -117,6 +124,7 @@ public final class AcademyCraftClient {
         ProficiencyPolicy.initClient();
         ProficiencySkillSettings.initClient();
         ClientSyncManager.init();
+        ImagPhaseDowsingRodClient.init();
         BeamVfxClient.register();
         SmokeVfxClient.register();
         ArcVfxClient.register();
@@ -150,6 +158,7 @@ public final class AcademyCraftClient {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         AbilityControlTabletSpecialRenderer.tickHeldItems();
+        ImagPhaseDowsingRodClient.tick();
     }
 
     @SubscribeEvent
@@ -459,6 +468,24 @@ public final class AcademyCraftClient {
                 academy("solar_gen"),
                 SolarGenSpecialRenderer.Unbaked.MAP_CODEC
         );
+        event.register(
+                academy("imag_phase_dowsing_rod"),
+                ImagPhaseDowsingRodSpecialRenderer.Unbaked.MAP_CODEC
+        );
+    }
+
+    @SubscribeEvent
+    public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerItem(new IClientItemExtensions() {
+            @Override
+            public HumanoidModel.ArmPose getArmPose(
+                    LivingEntity entity,
+                    InteractionHand hand,
+                    ItemStack stack
+            ) {
+                return HumanoidModel.ArmPose.CROSSBOW_HOLD;
+            }
+        }, Items.IMAG_PHASE_DOWSING_ROD.get());
     }
 
     @SubscribeEvent

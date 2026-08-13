@@ -1,9 +1,6 @@
 {
   "model": {
-    "type": "minecraft:special",
-    "base": "minecraft:block/block",
-    "model": {
-      "type": "academy:ability_developer"
-    }
+    "type": "minecraft:model",
+    "model": "academy:item/ability_developer"
   }
 }
