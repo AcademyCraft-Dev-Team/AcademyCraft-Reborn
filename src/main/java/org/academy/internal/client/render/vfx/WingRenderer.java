@@ -107,7 +107,7 @@ public final class WingRenderer implements VfxRenderer<WingData> {
                     drawOffset += itemBytes;
                     continue;
                 }
-                if (item.kind() == WingKind.PLATINUM) {
+                if (item.kind() == WingKind.PLATINUM && item.layer() == WingData.Layer.STABLE) {
                     renderPass.setPipeline(VfxPipelines.WING_RING_COSMIC);
                     renderPass.setUniform("Projection", projection);
                     renderPass.setUniform("DynamicTransforms", transform);
@@ -117,10 +117,15 @@ public final class WingRenderer implements VfxRenderer<WingData> {
                     var starfield = textureManager.getTexture(R.textures.platinum_wing_starfield);
                     renderPass.bindTexture("Sampler1", starfield.getTextureView(), starfield.getSampler());
                 } else {
-                    renderPass.setPipeline(VfxPipelines.TEX_RING_TRANSLUCENT);
+                    renderPass.setPipeline(item.layer() == WingData.Layer.ASCENSION
+                            ? VfxPipelines.TEX_RING_ADDITIVE
+                            : VfxPipelines.TEX_RING_TRANSLUCENT);
                     renderPass.setUniform("Projection", projection);
                     renderPass.setUniform("DynamicTransforms", transform);
-                    var texture = textureManager.getTexture(tornadoTexture(item.kind()));
+                    var textureId = item.layer() == WingData.Layer.ASCENSION
+                            ? R.textures.white_wing_ascension
+                            : tornadoTexture(item.kind());
+                    var texture = textureManager.getTexture(textureId);
                     renderPass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());
                 }
                 renderPass.setVertexBuffer(0, ringBuffer.slice());
