@@ -4,11 +4,11 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
-import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.ImageDrawCommand
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.widget.Widget
 
@@ -68,8 +68,8 @@ open class TextureDrawable : Drawable {
         }
 
         try {
-            val texture = Minecraft.getInstance().textureManager.getTexture(textureLocation)
-            this.texture = texture.getTextureView()
+            val textureView = UiEnvironment.get().loadTexture(textureLocation)
+            this.texture = textureView
         } catch (e: Exception) {
             logger.error("Failed to resolve texture view for {}", textureLocation, e)
             texture = null
