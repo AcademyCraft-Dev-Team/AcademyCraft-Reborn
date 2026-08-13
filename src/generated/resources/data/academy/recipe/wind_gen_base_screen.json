@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "G": "minecraft:glass",
+    "P": "academy:imag_phase_plate"
+  },
+  "pattern": [
+    "GPG",
+    "PGP",
+    "GPG"
+  ],
+  "result": {
+    "id": "academy:wind_gen_base_screen"
+  }
+}

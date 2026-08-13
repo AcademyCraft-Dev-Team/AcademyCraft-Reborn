@@ -62,12 +62,35 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.CAT_ENGINE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DATA_TERMINAL.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARKMATTER.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.IMAG_PHASE_INGOT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.IMAG_PHASE_POLYMER.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.IMAG_PHASE_PLATE.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.IMAG_PHASE_CIRCUIT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.NEEDLE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_HELMET.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_CHESTPLATE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_LEGGINGS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_BOOTS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.ABILITY_DEVELOPER.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
+        itemModels.generateFlatItem(Items.WIND_GEN_BASE.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
+        itemModels.generateFlatItem(Items.WIND_GEN_TOP.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
+        itemModels.generateFlatItem(Items.WIND_GEN_PILLAR.get(), ModelTemplates.FLAT_ITEM);
+
+        {
+            var screenItem = Items.WIND_GEN_BASE_SCREEN.get();
+            itemModels.itemModelOutput.accept(screenItem, ItemModelUtils.plainModel(
+                    ModelTemplates.FLAT_ITEM.create(
+                            ModelLocationUtils.getModelLocation(screenItem),
+                            new TextureMapping().put(
+                                    TextureSlot.LAYER0,
+                                    new Material(academy("screen").withPrefix("item/"))
+                            ),
+                            itemModels.modelOutput
+                    )
+            ));
+        }
 
         {
             var coinItem = Items.COIN.get();
@@ -120,13 +143,6 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                 )
         );
         itemModels.itemModelOutput.accept(
-                Items.ABILITY_DEVELOPER.get(),
-                ItemModelUtils.specialModel(
-                        AcademyCraft.vanilla("block").withPrefix("block/"),
-                        AbilityDeveloperSpecialRenderer.Unbaked.INSTANCE
-                )
-        );
-        itemModels.itemModelOutput.accept(
                 Items.ABILITY_CONTROL_TABLET.get(),
                 ItemModelUtils.specialModel(
                         academy("ability_control_tablet").withPrefix("item/"),
@@ -134,31 +150,17 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                 )
         );
         itemModels.itemModelOutput.accept(
+                Items.IMAG_PHASE_DOWSING_ROD.get(),
+                ItemModelUtils.specialModel(
+                        academy("imag_phase_dowsing_rod").withPrefix("item/"),
+                        ImagPhaseDowsingRodSpecialRenderer.Unbaked.INSTANCE
+                )
+        );
+        itemModels.itemModelOutput.accept(
                 Items.OMNI_CRAFTING_TABLE.get(),
                 ItemModelUtils.specialModel(
                         AcademyCraft.vanilla("block").withPrefix("block/"),
                         OmniCraftingTableSpecialRenderer.Unbaked.INSTANCE
-                )
-        );
-        itemModels.itemModelOutput.accept(
-                Items.WIND_GEN_BASE.get(),
-                ItemModelUtils.specialModel(
-                        academy("wind_gen_base_transforms").withPrefix("block/"),
-                        WindGenBaseSpecialRenderer.Unbaked.INSTANCE
-                )
-        );
-        itemModels.itemModelOutput.accept(
-                Items.WIND_GEN_PILLAR.get(),
-                ItemModelUtils.specialModel(
-                        AcademyCraft.vanilla("block").withPrefix("block/"),
-                        WindGenPillarSpecialRenderer.Unbaked.INSTANCE
-                )
-        );
-        itemModels.itemModelOutput.accept(
-                Items.WIND_GEN_TOP.get(),
-                ItemModelUtils.specialModel(
-                        AcademyCraft.vanilla("block").withPrefix("block/"),
-                        WindGenTopSpecialRenderer.Unbaked.INSTANCE
                 )
         );
         itemModels.itemModelOutput.accept(

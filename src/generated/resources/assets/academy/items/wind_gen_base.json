@@ -1,9 +1,6 @@
 {
   "model": {
-    "type": "minecraft:special",
-    "base": "academy:block/wind_gen_base_transforms",
-    "model": {
-      "type": "academy:wind_gen_base"
-    }
+    "type": "minecraft:model",
+    "model": "academy:item/wind_gen_base"
   }
 }

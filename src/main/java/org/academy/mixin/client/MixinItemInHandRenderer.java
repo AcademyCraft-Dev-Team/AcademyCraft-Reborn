@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.client.renderer.special.AbilityControlTabletSpecialRenderer;
+import org.academy.internal.client.renderer.special.ImagPhaseDowsingRodSpecialRenderer;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.spongepowered.asm.mixin.Mixin;
@@ -85,6 +86,7 @@ public abstract class MixinItemInHandRenderer implements ControlledItemInHandRen
             CallbackInfo ci
     ) {
         AbilityControlTabletSpecialRenderer.prepareItemRender(entity, stack, displayContext);
+        ImagPhaseDowsingRodSpecialRenderer.prepareItemRender(entity, stack, displayContext);
         if (!(entity instanceof Avatar avatar)) return;
         var data = avatar.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA.get());
         if (!data.active() || !data.hideMainHand()) return;

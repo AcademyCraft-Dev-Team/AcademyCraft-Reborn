@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "academy:item/wind_gen_pillar"
+    "model": "academy:item/needle"
   }
 }
