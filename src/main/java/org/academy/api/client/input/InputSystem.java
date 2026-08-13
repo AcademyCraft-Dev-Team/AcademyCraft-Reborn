@@ -45,7 +45,7 @@ public final class InputSystem {
 
     public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
         rememberDefaultKeyBinding(keyName, combo);
-        KEY_BINDINGS.put(keyName, new KeyBinding(safeKeyCombination(keyName, combo), handler, true));
+        KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler, true));
         bindingRevision++;
     }
 
@@ -85,9 +85,7 @@ public final class InputSystem {
     public static void setKeyBinding(String keyName, KeyCombination combo) {
         var binding = KEY_BINDINGS.get(keyName);
         if (binding == null) return;
-        KEY_BINDINGS.put(keyName, new KeyBinding(
-                safeKeyCombination(keyName, combo), binding.handler, binding.enabled
-        ));
+        KEY_BINDINGS.put(keyName, new KeyBinding(combo, binding.handler, binding.enabled));
         bindingRevision++;
     }
 
@@ -562,16 +560,6 @@ public final class InputSystem {
             }
             return builder.toString();
         }
-    }
-
-    private static KeyCombination safeKeyCombination(String keyName, KeyCombination combo) {
-        return combo;
-    }
-
-    private static KeyCombination disabledKeyCombination() {
-        return new KeyCombination(
-                InputType.KEYBOARD, Set.of(), ANY_ACTION, ANY_MODIFIER, false, true
-        );
     }
 
     public record BindingContext(InputType type, int input, int action, int modifiers) {
