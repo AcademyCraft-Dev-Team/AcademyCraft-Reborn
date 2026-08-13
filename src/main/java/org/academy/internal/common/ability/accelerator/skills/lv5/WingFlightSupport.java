@@ -298,6 +298,15 @@ final class WingFlightSupport {
         }
     }
 
+    static void broadcastBlackToWhiteTransition(ServerPlayer player) {
+        var packet = new AdvancedWingTransitionPacket(player.getId());
+        for (var other : player.level().players()) {
+            if (other.distanceToSqr(player) <= 128.0 * 128.0) {
+                MisakaNetworkServer.send(other, packet);
+            }
+        }
+    }
+
     static boolean isInFan(Vec3 origin, Vec3 forward, Vec3 target, double range, double cosThreshold) {
         if (origin == null || forward == null || target == null || range <= 0) return false;
         var delta = target.subtract(origin);

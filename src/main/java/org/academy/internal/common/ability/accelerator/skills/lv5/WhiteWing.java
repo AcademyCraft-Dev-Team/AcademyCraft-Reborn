@@ -64,6 +64,7 @@ public final class WhiteWing extends Skill {
     @Override
     public void initClient() {
         AdvancedWingSweepPacket.initClient();
+        AdvancedWingTransitionPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -143,7 +144,10 @@ public final class WhiteWing extends Skill {
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.WHITE_WING.get();
-            if (!skill.isEnabled(player)) {
+            var enabling = !skill.isEnabled(player);
+            var upgradingFromBlack = enabling
+                    && player.getData(AttachmentTypes.ACTIVATED_BLACK_WING.get());
+            if (enabling) {
                 StormWing.Server.forceDeactivate(player);
                 BlackWing.Server.forceDeactivate(player);
                 PlatinumWing.Server.forceDeactivate(player);
@@ -151,6 +155,9 @@ public final class WhiteWing extends Skill {
             skill.toggle(player);
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_WHITE_WING.get(),
                     skill.isEnabled(player), LAST_BOOST_TICK);
+            if (upgradingFromBlack && skill.isEnabled(player)) {
+                WingFlightSupport.broadcastBlackToWhiteTransition(player);
+            }
         }
 
         @SubscribePacket

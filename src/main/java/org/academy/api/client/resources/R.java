@@ -182,6 +182,7 @@ public final class R {
         public static final Identifier storm_wing = academy("textures/ability/accelerator/skill/storm_wing/effect/tornado_ring.png");
         public static final Identifier black_wing = academy("textures/ability/accelerator/skill/black_wing/effect/tornado_ring.png");
         public static final Identifier white_wing = academy("textures/ability/accelerator/skill/white_wing/effect/tornado_ring.png");
+        public static final Identifier white_wing_ascension = academy("textures/ability/accelerator/skill/white_wing/effect/ascension_ring.png");
         public static final Identifier platinum_wing_starfield = academy("textures/ability/accelerator/skill/platinum_wing/effect/starfield.png");
         public static final Identifier vec_accel_icon = academy("textures/ability/accelerator/skill/vec_accel/icon.png");
         public static final Identifier vector_deviation_icon = academy("textures/ability/accelerator/skill/vector_deviation/icon.png");

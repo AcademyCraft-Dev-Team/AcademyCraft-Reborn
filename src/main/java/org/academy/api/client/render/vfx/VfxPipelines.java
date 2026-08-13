@@ -153,6 +153,23 @@ public final class VfxPipelines {
                     .build())
             .build();
 
+    public static final RenderPipeline TEX_RING_ADDITIVE = builder()
+            .withLocation(academy("pipeline/vfx_tex_ring_additive"))
+            .withVertexShader(R.shaders.core.vfx_ring)
+            .withFragmentShader(R.shaders.core.vfx_ring)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.QUADS)
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+            .withVertexBinding(1, VertexFormat.builder(1)
+                    .addAttribute("InstanceMat", GpuFormat.RGBA32_FLOAT, 4)
+                    .build())
+            .build();
+
     public static final RenderPipeline BLOCK_MESH = builder()
             .withLocation(academy("pipeline/vfx_block_mesh"))
             .withVertexShader(R.shaders.core.vfx_block_mesh)

@@ -22,6 +22,7 @@ import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -94,6 +95,7 @@ public final class WingVfx implements Vfx {
 
     private static final Map<WingKind, SweepAnimationTimeline<SweepAnimation>> SWEEP_ANIMATIONS =
             new EnumMap<>(WingKind.class);
+    private static final Map<Integer, Long> BLACK_TO_WHITE_TRANSITIONS = new HashMap<>();
     private static ClientLevel animationLevel;
     private static final int INSTANCE_STRIDE = 64;
 
@@ -102,6 +104,7 @@ public final class WingVfx implements Vfx {
     }
 
     private final Map<WingKind, ByteBuffer> instanceBuffers = new EnumMap<>(WingKind.class);
+    private ByteBuffer ascensionBuffer;
 
     public static void enqueueSweep(WingKind kind, int entityId, boolean leftWing,
                                     float yawOffsetDeg, float pitchOffsetDeg) {
@@ -120,6 +123,16 @@ public final class WingVfx implements Vfx {
         );
     }
 
+    public static void enqueueBlackToWhiteTransition(int entityId) {
+        var minecraft = Minecraft.getInstance();
+        if (minecraft.level == null || minecraft.level.getEntity(entityId) == null) return;
+        if (animationLevel != minecraft.level) {
+            clearSweeps();
+            animationLevel = minecraft.level;
+        }
+        BLACK_TO_WHITE_TRANSITIONS.put(entityId, minecraft.level.getGameTime());
+    }
+
     public static void clientTick() {
         var minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
@@ -136,10 +149,15 @@ public final class WingVfx implements Vfx {
             timeline.prune(currentTick, SWEEP_DURATION_TICKS,
                     entityId -> minecraft.level.getEntity(entityId) != null);
         }
+        BLACK_TO_WHITE_TRANSITIONS.entrySet().removeIf(entry ->
+                !WingTransitionAnimation.isActive(currentTick - entry.getValue())
+                        || minecraft.level.getEntity(entry.getKey()) == null
+        );
     }
 
     public static void clearSweeps() {
         for (var timeline : SWEEP_ANIMATIONS.values()) timeline.clear();
+        BLACK_TO_WHITE_TRANSITIONS.clear();
         animationLevel = null;
         PlatinumCosmosPass.clear();
     }
@@ -155,12 +173,15 @@ public final class WingVfx implements Vfx {
         var partialTick = ctx.partialTick();
         var currentTick = (double) ctx.gameTime();
         var counts = new EnumMap<WingKind, Integer>(WingKind.class);
+        var ascensionInstances = 0;
 
         for (var root : roots.entrySet()) {
             var entity = level.getEntity(root.getKey());
             if (!(entity instanceof Player player)) continue;
+            var transition = transitionProjection(player.getId(), currentTick);
             for (var kind : WingKind.values()) {
-                if (!isActive(player, kind)) continue;
+                var active = isActive(player, kind);
+                if (!active && !isTransitionWing(kind, transition)) continue;
                 if (kind == WingKind.PLATINUM && PlatinumCosmosPass.worldMode() == PlatinumCosmosRenderMode.EXACT) {
                     var poseStack = new PoseStack();
                     poseStack.last().pose().set(root.getValue());
@@ -169,10 +190,13 @@ public final class WingVfx implements Vfx {
                     );
                     continue;
                 }
-                counts.merge(kind, countInstances(kind, player.getId(), currentTick), Integer::sum);
+                counts.merge(kind, countInstances(kind, player.getId(), currentTick, active), Integer::sum);
+            }
+            if (transition != null && transition.ascension().visible()) {
+                ascensionInstances += 2 * RINGS_PER_TORNADO;
             }
         }
-        if (counts.isEmpty()) return;
+        if (counts.isEmpty() && ascensionInstances == 0) return;
 
         for (var countEntry : counts.entrySet()) {
             var kind = countEntry.getKey();
@@ -181,15 +205,46 @@ public final class WingVfx implements Vfx {
             for (var root : roots.entrySet()) {
                 var entity = level.getEntity(root.getKey());
                 if (!(entity instanceof Player player)) continue;
-                if (!isActive(player, kind)) continue;
+                var active = isActive(player, kind);
+                var transition = transitionProjection(player.getId(), currentTick);
+                if (!active && !isTransitionWing(kind, transition)) continue;
                 if (kind == WingKind.PLATINUM && PlatinumCosmosPass.worldMode() == PlatinumCosmosRenderMode.EXACT)
                     continue;
                 var effectTime = player.tickCount + partialTick;
-                buildPersistentWings(builder, root.getValue(), kind, effectTime);
-                buildSweepAnimations(builder, root.getValue(), kind, player.getId(), currentTick, effectTime);
+                if (isTransitionWing(kind, transition)) {
+                    var pose = kind == WingKind.BLACK ? transition.blackWing() : transition.whiteWing();
+                    buildTransitionWings(builder, root.getValue(), kind, effectTime, pose);
+                } else {
+                    buildPersistentWings(builder, root.getValue(), kind, effectTime);
+                }
+                if (active) {
+                    buildSweepAnimations(builder, root.getValue(), kind, player.getId(), currentTick, effectTime);
+                }
             }
             buffer.flip();
-            if (buffer.hasRemaining()) sink.push(new WingData(kind, buffer));
+            if (buffer.hasRemaining()) sink.push(new WingData(kind, WingData.Layer.STABLE, buffer));
+        }
+
+        if (ascensionInstances > 0) {
+            var buffer = ensureAscensionBuffer(ascensionInstances);
+            var builder = Std140Builder.intoBuffer(buffer);
+            for (var root : roots.entrySet()) {
+                var entity = level.getEntity(root.getKey());
+                if (!(entity instanceof Player player)) continue;
+                var transition = transitionProjection(player.getId(), currentTick);
+                if (transition == null || !transition.ascension().visible()) continue;
+                buildTransitionWings(
+                        builder,
+                        root.getValue(),
+                        WingKind.WHITE,
+                        player.tickCount + partialTick,
+                        transition.ascension()
+                );
+            }
+            buffer.flip();
+            if (buffer.hasRemaining()) {
+                sink.push(new WingData(WingKind.WHITE, WingData.Layer.ASCENSION, buffer));
+            }
         }
     }
 
@@ -222,14 +277,27 @@ public final class WingVfx implements Vfx {
         return kind == WingKind.STORM ? 4 : 2;
     }
 
-    private static int countInstances(WingKind kind, int entityId, double currentTick) {
+    private static int countInstances(WingKind kind, int entityId, double currentTick, boolean includeSweeps) {
         var count = persistentTornadoCount(kind) * RINGS_PER_TORNADO;
-        if (entityId < 0) return count;
+        if (entityId < 0 || !includeSweeps) return count;
         for (var entry : SWEEP_ANIMATIONS.get(kind).entries(entityId)) {
             var progress = SweepAnimationTimeline.progress(entry, currentTick, SWEEP_DURATION_TICKS);
             if (progress >= 0.0f && progress < 1.0f) count += RINGS_PER_TORNADO;
         }
         return count;
+    }
+
+    private static WingTransitionAnimation.Projection transitionProjection(int entityId, double currentTick) {
+        var startTick = BLACK_TO_WHITE_TRANSITIONS.get(entityId);
+        if (startTick == null) return null;
+        var elapsedTicks = currentTick - startTick;
+        return WingTransitionAnimation.isActive(elapsedTicks)
+                ? WingTransitionAnimation.sample(elapsedTicks)
+                : null;
+    }
+
+    private static boolean isTransitionWing(WingKind kind, WingTransitionAnimation.Projection transition) {
+        return transition != null && (kind == WingKind.BLACK || kind == WingKind.WHITE);
     }
 
     private ByteBuffer ensureBuffer(WingKind kind, int requiredInstances) {
@@ -241,6 +309,15 @@ public final class WingVfx implements Vfx {
         }
         buffer.clear();
         return buffer;
+    }
+
+    private ByteBuffer ensureAscensionBuffer(int requiredInstances) {
+        var requiredBytes = (long) requiredInstances * INSTANCE_STRIDE;
+        if (ascensionBuffer == null || ascensionBuffer.capacity() < requiredBytes) {
+            ascensionBuffer = BufferUtils.createByteBuffer(Math.max((int) requiredBytes, 256 * INSTANCE_STRIDE));
+        }
+        ascensionBuffer.clear();
+        return ascensionBuffer;
     }
 
     private static void buildPersistentWings(Std140Builder builder, Matrix4f modelRoot, WingKind kind, float time) {
@@ -256,11 +333,53 @@ public final class WingVfx implements Vfx {
             var m4 = new Matrix4f(tornado).mul(new Matrix4f().rotate(new Quaternionf().rotateZ(-30.0f * Mth.DEG_TO_RAD).rotateX(-30.0f * Mth.DEG_TO_RAD)));
             renderTornado(builder, m4, time + TORNADO_OFFSET_4, widthScale);
         } else {
-            var m1 = new Matrix4f(tornado).mul(new Matrix4f().rotate(new Quaternionf().rotateZ(30.0f * Mth.DEG_TO_RAD).rotateX(30.0f * Mth.DEG_TO_RAD)));
-            renderTornado(builder, m1, time + TORNADO_OFFSET_LEFT, widthScale);
-            var m2 = new Matrix4f(tornado).mul(new Matrix4f().rotate(new Quaternionf().rotateZ(-30.0f * Mth.DEG_TO_RAD).rotateX(30.0f * Mth.DEG_TO_RAD)));
-            renderTornado(builder, m2, time + TORNADO_OFFSET_RIGHT, widthScale);
+            buildAdvancedWings(builder, tornado, time, widthScale, 1.0f, 1.0f, 30.0f, 30.0f);
         }
+    }
+
+    private static void buildTransitionWings(
+            Std140Builder builder,
+            Matrix4f modelRoot,
+            WingKind kind,
+            float time,
+            WingTransitionAnimation.Pose pose
+    ) {
+        if (!pose.visible()) return;
+        var tornado = new Matrix4f(modelRoot).mul(WING_BASE_MATRIX);
+        buildAdvancedWings(
+                builder,
+                tornado,
+                time,
+                ringWidthScale(kind),
+                pose.radialScale(),
+                pose.lengthScale(),
+                pose.spreadDegrees(),
+                pose.pitchDegrees()
+        );
+    }
+
+    private static void buildAdvancedWings(
+            Std140Builder builder,
+            Matrix4f tornado,
+            float time,
+            float widthScale,
+            float radialScale,
+            float lengthScale,
+            float spreadDegrees,
+            float pitchDegrees
+    ) {
+        var left = new Matrix4f(tornado)
+                .rotate(new Quaternionf()
+                        .rotateZ(spreadDegrees * Mth.DEG_TO_RAD)
+                        .rotateX(pitchDegrees * Mth.DEG_TO_RAD))
+                .scale(radialScale, lengthScale, radialScale);
+        renderTornado(builder, left, time + TORNADO_OFFSET_LEFT, widthScale);
+        var right = new Matrix4f(tornado)
+                .rotate(new Quaternionf()
+                        .rotateZ(-spreadDegrees * Mth.DEG_TO_RAD)
+                        .rotateX(pitchDegrees * Mth.DEG_TO_RAD))
+                .scale(radialScale, lengthScale, radialScale);
+        renderTornado(builder, right, time + TORNADO_OFFSET_RIGHT, widthScale);
     }
 
     private static void buildSweepAnimations(Std140Builder builder, Matrix4f modelRoot, WingKind kind,
