@@ -104,7 +104,7 @@ public final class WhiteWing extends Skill {
             var player = Minecraft.getInstance().player;
             WingFlightSupport.clientTick(
                     player != null && player.getData(AttachmentTypes.ACTIVATED_WHITE_WING.get()),
-                    state -> MisakaNetworkClient.send(new ControlPacket(state))
+                    (state, yRot, xRot) -> MisakaNetworkClient.send(new ControlPacket(state, yRot, xRot))
             );
         }
 
@@ -157,7 +157,7 @@ public final class WhiteWing extends Skill {
         public static void handleControl(ControlPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (!isActive(player)) return;
-            WingFlightSupport.applyControl(player, packet.state, LAST_BOOST_TICK);
+            WingFlightSupport.applyControl(player, packet.state, packet.yRot, packet.xRot, LAST_BOOST_TICK);
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -216,12 +216,21 @@ public final class WhiteWing extends Skill {
     public static final class ControlPacket extends Packet<ServerGamePacketListenerImpl, ControlPacket> {
         private static final StreamCodec<ByteBuf, StormWing.State> STATE_CODEC =
                 ByteBufCodecs.idMapper(index -> StormWing.State.values()[index], Enum::ordinal);
-        public static final StreamCodec<ByteBuf, ControlPacket> CODEC =
-                STATE_CODEC.map(ControlPacket::new, packet -> packet.state);
+        public static final StreamCodec<ByteBuf, ControlPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    STATE_CODEC.encode(buf, packet.state);
+                    buf.writeFloat(packet.yRot);
+                    buf.writeFloat(packet.xRot);
+                },
+                buf -> new ControlPacket(STATE_CODEC.decode(buf), buf.readFloat(), buf.readFloat()));
         private final StormWing.State state;
+        private final float yRot;
+        private final float xRot;
 
-        public ControlPacket(StormWing.State state) {
+        public ControlPacket(StormWing.State state, float yRot, float xRot) {
             this.state = state;
+            this.yRot = yRot;
+            this.xRot = xRot;
         }
 
         @Override

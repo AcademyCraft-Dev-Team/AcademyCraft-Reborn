@@ -35,6 +35,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightDirection;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
@@ -131,7 +132,8 @@ public final class StormWing extends Skill {
             if (mc.level != null && mc.player != null && mc.player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())) {
                 if (mc.gui.screen() == null
                         && InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_SPACE)) {
-                    MisakaNetworkClient.send(new ControlPacket(State.BOOST));
+                    MisakaNetworkClient.send(new ControlPacket(
+                            State.BOOST, mc.player.getYRot(), mc.player.getXRot()));
                     return;
                 }
                 var front = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_W);
@@ -152,7 +154,10 @@ public final class StormWing extends Skill {
 
                 if (states.isEmpty()) states.add(State.KEEP);
 
-                for (var state : states) MisakaNetworkClient.send(new ControlPacket(state));
+                for (var state : states) {
+                    MisakaNetworkClient.send(new ControlPacket(
+                            state, mc.player.getYRot(), mc.player.getXRot()));
+                }
             }
         }
 
@@ -218,6 +223,8 @@ public final class StormWing extends Skill {
             var state = packet.getState();
             var player = packet.getPacketListener().getPlayer();
             if (isActive(player)) {
+                var look = WingFlightDirection.resolve(
+                        player.getLookAngle(), packet.getYRot(), packet.getXRot());
                 if (state == State.BOOST) {
                     LAST_BOOST_TICK.put(player.getUUID(), player.level().getGameTime());
                 }
@@ -227,20 +234,18 @@ public final class StormWing extends Skill {
                             : 1.0;
                     switch (state) {
                         case FRONT -> {
-                            var vec3 = player.getLookAngle().add(0, 0.35, 0).scale(0.2 * movementScale);
+                            var vec3 = look.add(0, 0.35, 0).scale(0.2 * movementScale);
                             player.push(vec3.x, vec3.y * 1.5, vec3.z);
                         }
                         case BACK -> {
-                            var vec3 = player.getLookAngle().add(0, -0.35, 0).scale(-0.2 * movementScale);
+                            var vec3 = look.add(0, -0.35, 0).scale(-0.2 * movementScale);
                             player.push(vec3.x, vec3.y, vec3.z);
                         }
                         case LEFT -> {
-                            var look = player.getLookAngle();
                             var left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2 * movementScale);
                             player.push(left.x, left.y, left.z);
                         }
                         case RIGHT -> {
-                            var look = player.getLookAngle();
                             var right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2 * movementScale);
                             player.push(right.x, right.y, right.z);
                         }
@@ -253,7 +258,7 @@ public final class StormWing extends Skill {
                             player.resetFallDistance();
                         }
                         case BOOST -> {
-                            var vec3 = player.getLookAngle().scale(2.0 * movementScale);
+                            var vec3 = look.scale(2.0 * movementScale);
                             player.push(vec3.x, vec3.y, vec3.z);
                             player.resetFallDistance();
                         }
@@ -371,16 +376,34 @@ public final class StormWing extends Skill {
     @PacketTarget(ThreadType.SERVER)
     public static final class ControlPacket extends Packet<ServerGamePacketListenerImpl, ControlPacket> {
         public static final StreamCodec<ByteBuf, State> STATE_CODEC = ByteBufCodecs.idMapper(i -> State.values()[i], Enum::ordinal);
-        public static final StreamCodec<ByteBuf, ControlPacket> CODEC = STATE_CODEC.map(ControlPacket::new, ControlPacket::getState);
+        public static final StreamCodec<ByteBuf, ControlPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    STATE_CODEC.encode(buf, packet.state);
+                    buf.writeFloat(packet.yRot);
+                    buf.writeFloat(packet.xRot);
+                },
+                buf -> new ControlPacket(STATE_CODEC.decode(buf), buf.readFloat(), buf.readFloat()));
 
         private final State state;
+        private final float yRot;
+        private final float xRot;
 
-        public ControlPacket(State state) {
+        public ControlPacket(State state, float yRot, float xRot) {
             this.state = state;
+            this.yRot = yRot;
+            this.xRot = xRot;
         }
 
         public State getState() {
             return state;
+        }
+
+        public float getYRot() {
+            return yRot;
+        }
+
+        public float getXRot() {
+            return xRot;
         }
 
         @Override
