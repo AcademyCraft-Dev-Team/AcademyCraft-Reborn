@@ -67,10 +67,15 @@ class InputSystemPrimaryBindingTest {
     }
 
     @Test
-    void malformedBindingIsRegisteredAsSafelyUnbound() {
+    void unboundBindingIsSafelyInactive() {
         InputSystem.addKeyBinding(
                 TEST_BINDING,
-                new InputSystem.KeyCombination(null, null, 0, 0, false, false),
+                InputSystem.unbound(InputSystem.combo(
+                        InputSystem.InputType.KEYBOARD,
+                        InputConstants.KEY_Y,
+                        InputConstants.PRESS,
+                        0
+                )),
                 ignored -> {
                 }
         );
