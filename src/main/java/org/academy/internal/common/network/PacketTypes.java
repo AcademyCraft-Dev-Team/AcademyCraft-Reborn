@@ -464,6 +464,10 @@ public final class PacketTypes {
             ADVANCED_WING_SWEEP = PACKET_TYPES.register("advanced_wing_sweep",
             () -> new PacketType<>(AdvancedWingSweepPacket.class, AdvancedWingSweepPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingTransitionPacket>>
+            ADVANCED_WING_TRANSITION = PACKET_TYPES.register("advanced_wing_transition",
+            () -> new PacketType<>(AdvancedWingTransitionPacket.class, AdvancedWingTransitionPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, VectorRedirectEffectPacket>>
             VECTOR_REDIRECT_EFFECT = PACKET_TYPES.register("vector_redirect_effect",
             () -> new PacketType<>(VectorRedirectEffectPacket.class, VectorRedirectEffectPacket.CODEC));
