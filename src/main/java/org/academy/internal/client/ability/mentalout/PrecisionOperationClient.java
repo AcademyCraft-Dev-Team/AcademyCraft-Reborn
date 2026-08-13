@@ -3,6 +3,8 @@ package org.academy.internal.client.ability.mentalout;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
@@ -11,6 +13,7 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionGraphCod
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.misaka.MisakaNetworkClient;
 
+import java.util.Arrays;
 import java.util.Locale;
 import net.minecraft.util.Mth;
 
@@ -123,6 +126,24 @@ public final class PrecisionOperationClient {
         if (screen != null && Minecraft.getInstance().gui.screen() == screen) {
             screen.applyResult(slot, type, revision, diagnostic, nodeId, port);
         }
+    }
+
+    @SubscribeEvent
+    public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        resetSession();
+    }
+
+    static void resetSession() {
+        Arrays.fill(GRAPHS, PrecisionGraph.EMPTY);
+        Arrays.fill(SERVER_GRAPHS, PrecisionGraph.EMPTY);
+        Arrays.fill(LAST_DIAGNOSTICS, PrecisionGraph.Diagnostic.OK);
+        Arrays.fill(LAST_NODES, -1);
+        Arrays.fill(LAST_PORTS, -1);
+        Arrays.fill(ACTIVE_SLOTS, false);
+        Arrays.fill(ACTIVE_FAILURES, false);
+        revision = 0L;
+        selectedSlot = 0;
+        screen = null;
     }
 
     static PrecisionGraph graph(int slot) {
