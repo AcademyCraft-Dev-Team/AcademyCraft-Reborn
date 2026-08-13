@@ -7,9 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 class KeyBindingConfigMigrationTest {
     private static final Gson GSON = new Gson();
@@ -39,7 +37,7 @@ class KeyBindingConfigMigrationTest {
         assertEquals(Set.of(1), binding.keys());
         assertEquals(InputConstants.PRESS, binding.action());
         assertEquals(InputConstants.MOD_SHIFT | InputConstants.MOD_ALT, binding.modifiers());
-        assertEquals(true, binding.availableWhenScreen());
+        assertTrue(binding.availableWhenScreen());
 
         var migrated = GSON.toJsonTree(config).getAsJsonObject()
                 .getAsJsonObject("keyBindings").getAsJsonObject(NAME);

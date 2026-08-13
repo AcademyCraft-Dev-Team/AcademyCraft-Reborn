@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.msdf.font;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.lwjgl.system.MemoryStack;
@@ -76,9 +75,10 @@ public class MsdfFontService {
 
     private static ByteBuffer loadResourceToBuffer(Identifier identifier) {
         try {
-            var resource = Minecraft.getInstance().getResourceManager().getResource(identifier);
-            var optionalResource = resource.orElseThrow(() -> new IOException("Resource not found: " + identifier));
-            try (var is = optionalResource.open()) {
+            var is = org.academy.api.client.gui.environment.UiEnvironment.get()
+                    .openResource(identifier.getNamespace(), identifier.getPath());
+            if (is == null) throw new IOException("Resource not found: " + identifier);
+            try (is) {
                 var bytes = is.readAllBytes();
                 var buffer = MemoryUtil.memAlloc(bytes.length);
                 buffer.put(bytes);
