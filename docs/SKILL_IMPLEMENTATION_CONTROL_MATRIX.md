@@ -137,8 +137,8 @@
 | 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `darkmatter_shaping` 未元物质塑型 | 移植 | L1 / 5k / 50 | 空手生成未元物质；持物时修复并切换未元物质强化 | `U↑` | 无 | `DarkmatterShaping` |
-| `darkmatter_disassemble` 未元物质分解 | 移植 | L1 / 5k / 30 | 服务端 32 格射线分解目标实体或通过保护检查的方块 | `Alt+鼠标左键↑` | 未元物质塑型 | `DarkmatterDisassemble` |
-| `darkmatter_cut` 未元物质切割 | 移植 | L2 / 10k / 40 | 前方八格锥形斩击，并生成同步斩击实体效果 | `R↑` | 未元物质分解 | `DarkmatterCut` |
+| `darkmatter_disassemble` 未元物质分解 | 移植 | L1 / 5k / 10 | 服务端 32 格射线分解目标实体或通过保护检查的方块 | `Alt+鼠标左键↑` | 未元物质塑型 | `DarkmatterDisassemble` |
+| `darkmatter_cut` 未元物质切割 | 移植 | L2 / 10k / 20 | 前方八格锥形斩击，并生成同步斩击实体效果 | `R↑` | 未元物质分解 | `DarkmatterCut` |
 | `darkmatter_radiation` 未元物质照射 | 移植 | L3 / 30k / 周期 10 | 按住照射前方半球 32 格内的敌对目标 | `C↓ / C↑` | 未元物质切割 | `DarkmatterRadiation` |
 | `darkmatter_repair` 未元物质修补 | 移植 | L4 / 60k / 治疗时 10 | 切换持续自我修复，仅实际恢复生命时消耗 CP | `Alt+U↑` | 未元物质塑型 | `DarkmatterRepair` |
 | `darkmatter_creation` 未元物质创生 | 移植 | L4 / 60k / 80 + 每虫维持 20 | 最多召唤八只所属独角仙；看向所属独角仙再次施放可解散 | `G↑` | 未元物质修补 | `DarkmatterCreation` |

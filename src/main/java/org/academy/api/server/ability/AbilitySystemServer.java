@@ -53,6 +53,8 @@ public final class AbilitySystemServer {
     private final PlayerCPManager playerCPManager;
     private final PropsManager propsManager;
     private final SyncManager syncManager;
+    private final InitialAbilityRecommendationCache initialAbilityRecommendations =
+            new InitialAbilityRecommendationCache();
 
     public AbilitySystemServer(MinecraftServerContext context, WorldData worldData, AbilityConfig abilityConfig) {
         syncManager = new SyncManager(context);
@@ -240,6 +242,13 @@ public final class AbilitySystemServer {
         var instance = server.getAcademyCraftServer().getAbilitySystemServer();
         var currentCategory = instance.getPlayerAbilityCategory(player.getUUID());
         var initialDevelopment = currentCategory == AbilityCategories.LEVEL0.get();
+        var mode = payload.getMode();
+        if (!initialDevelopment && mode != StartLevelDevPacket.Mode.DIRECT) {
+            return new StartLevelDevPacket.Response(
+                    false,
+                    "P.R.O.P.S confirmation is only available for initial development"
+            );
+        }
         var currentLevel = instance.getPlayerLevel(player.getUUID());
         var developData = getDevelopData(player.getUUID());
         if (developData.isDeveloping()) {
@@ -265,6 +274,61 @@ public final class AbilitySystemServer {
         if (developer.extractEnergy(cost, true) < cost) {
             return new StartLevelDevPacket.Response(false, "Insufficient energy");
         }
+
+        AbilityCategory selectedInitialCategory = null;
+        if (initialDevelopment) {
+            var propsData = instance.getPlayerData(player.getUUID()).getPropsData();
+            if (mode == StartLevelDevPacket.Mode.DIRECT && propsData.isStarted()) {
+                mode = StartLevelDevPacket.Mode.PREVIEW;
+            }
+            if (mode == StartLevelDevPacket.Mode.PREVIEW) {
+                if (!propsData.isStarted()) {
+                    return new StartLevelDevPacket.Response(false, "P.R.O.P.S is not initialized");
+                }
+                var recommendation = InitialAbilitySelector.choose(
+                        Registries.ABILITY_CATEGORIES,
+                        propsData::get
+                );
+                if (recommendation != null) {
+                    instance.initialAbilityRecommendations.put(
+                            player.getUUID(),
+                            recommendation,
+                            player.level().dimension().identifier(),
+                            devPos,
+                            player.level().getGameTime()
+                    );
+                    return new StartLevelDevPacket.Response(
+                            StartLevelDevPacket.Response.Status.CONFIRMATION_REQUIRED,
+                            "P.R.O.P.S confirmation required",
+                            recommendation.getKey()
+                    );
+                }
+                mode = StartLevelDevPacket.Mode.DIRECT;
+            }
+
+            if (mode == StartLevelDevPacket.Mode.ACCEPT_PROPS
+                    || mode == StartLevelDevPacket.Mode.RANDOM) {
+                var recommendation = instance.initialAbilityRecommendations.consume(
+                        player.getUUID(),
+                        player.level().dimension().identifier(),
+                        devPos,
+                        player.level().getGameTime()
+                );
+                if (recommendation == null || !propsData.isStarted()) {
+                    return new StartLevelDevPacket.Response(false, "P.R.O.P.S recommendation expired");
+                }
+                selectedInitialCategory = mode == StartLevelDevPacket.Mode.ACCEPT_PROPS
+                        ? recommendation
+                        : chooseInitialAbilityCategory();
+            } else if (mode == StartLevelDevPacket.Mode.DIRECT) {
+                instance.initialAbilityRecommendations.clear(player.getUUID());
+                selectedInitialCategory = chooseInitialAbilityCategory();
+            } else {
+                return new StartLevelDevPacket.Response(false, "Invalid initial development mode");
+            }
+        }
+
+        var frozenInitialCategory = selectedInitialCategory;
 
         var started = developData.start(new DevelopAction() {
             @Override
@@ -298,8 +362,7 @@ public final class AbilitySystemServer {
             @Override
             public void onComplete(ServerPlayer sp, WirelessUser dev) {
                 if (initialDevelopment) {
-                    var abilityCategory = chooseInitialAbilityCategory();
-                    instance.setPlayerAbilityCategory(sp.getUUID(), abilityCategory);
+                    instance.setPlayerAbilityCategory(sp.getUUID(), frozenInitialCategory);
                     instance.setPlayerLevel(sp.getUUID(), plan.targetLevel());
                     instance.setPlayerBaseMaxCP(sp.getUUID(), AbilityLevel.LEVEL1.getBasicCP());
                 } else {
@@ -474,6 +537,7 @@ public final class AbilitySystemServer {
     public void onPlayerLogout(ServerPlayer player) {
         var development = DEVELOP_DATA_MAP.remove(player.getUUID());
         if (development != null) development.abort();
+        initialAbilityRecommendations.clear(player.getUUID());
         syncManager.onPlayerLogout(player);
         for (var sub : SubsystemRegistry.getSubsystems()) {
             sub.onPlayerLogout(player);
@@ -564,6 +628,7 @@ public final class AbilitySystemServer {
             AbilityCategory abilityCategory,
             boolean clearCategorySkills
     ) {
+        initialAbilityRecommendations.clear(uuid);
         var previousCategory = playerDataManager.getPlayerAbilityCategory(uuid);
         var categoryChanged = previousCategory != abilityCategory;
         if (!categoryChanged && !clearCategorySkills) return;
@@ -701,21 +766,31 @@ public final class AbilitySystemServer {
     public boolean castCpIfPossible(ServerPlayer player, Skill skill,
                                     Skill.CostCalculator calculator,
                                     Skill.SkillAction action) {
-        return castCpIfPossible(player, skill, calculator, action, true, true);
+        return castCpIfPossible(player, skill, calculator, action, true, true, null, Skill.NO_STACK_LIMIT);
+    }
+
+    public boolean castCpIfPossible(ServerPlayer player, Skill skill,
+                                    Skill.CostCalculator calculator,
+                                    Skill.SkillAction action,
+                                    String stackGroup,
+                                    int stackLimit) {
+        return castCpIfPossible(player, skill, calculator, action, true, true, stackGroup, stackLimit);
     }
 
     public boolean castContinuousCpIfPossible(ServerPlayer player, Skill skill,
                                               Skill.CostCalculator calculator,
                                               Skill.SkillAction action,
                                               boolean effective) {
-        return castCpIfPossible(player, skill, calculator, action, false, effective);
+        return castCpIfPossible(player, skill, calculator, action, false, effective, null, Skill.NO_STACK_LIMIT);
     }
 
     private boolean castCpIfPossible(ServerPlayer player, Skill skill,
                                      Skill.CostCalculator calculator,
                                      Skill.SkillAction action,
                                      boolean discreteTrigger,
-                                     boolean effective) {
+                                     boolean effective,
+                                     String stackGroup,
+                                     int stackLimit) {
         var uuid = player.getUUID();
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var proficiency = skill.getProficiency(player);
@@ -732,7 +807,9 @@ public final class AbilitySystemServer {
         if (!Float.isFinite(baseCost) || baseCost < 0) return false;
         var actualCost = Math.max(0, baseCost * playerCPManager.getCalculationIntensity(uuid));
         var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCost);
-        if (playerCPManager.tryOccupation(uuid, actualCost, skill, iterationPoints, false)) {
+        if (playerCPManager.tryOccupation(
+                uuid, actualCost, skill, iterationPoints, false, stackGroup, stackLimit
+        )) {
             EntityMotionGuard.runWithMotionSource(
                     player,
                     () -> action.execute(ctx, actualCost)
@@ -837,6 +914,56 @@ public final class AbilitySystemServer {
                 0,
                 0
         );
+    }
+
+    public boolean replacePermanentOccupationAndAddTimedOccupations(
+            UUID uuid,
+            Skill skill,
+            float permanentAmount,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        var actual = prepareMixedOccupationCharges(uuid, skill, permanentAmount, timedCharges);
+        return actual != null && playerCPManager.replacePermanentOccupationAndTryTimedOccupations(
+                uuid, skill, actual.permanentAmount(), actual.timedCharges());
+    }
+
+    public boolean canReplacePermanentOccupationAndAddTimedOccupations(
+            UUID uuid,
+            Skill skill,
+            float permanentAmount,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        var actual = prepareMixedOccupationCharges(uuid, skill, permanentAmount, timedCharges);
+        return actual != null && playerCPManager.canReplacePermanentOccupationAndTryTimedOccupations(
+                uuid, skill, actual.permanentAmount(), actual.timedCharges());
+    }
+
+    private MixedOccupationCharges prepareMixedOccupationCharges(
+            UUID uuid,
+            Skill skill,
+            float permanentAmount,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        if (skill == null || timedCharges == null
+                || !Float.isFinite(permanentAmount) || permanentAmount < 0.0f) return null;
+        var intensity = playerCPManager.getCalculationIntensity(uuid);
+        var actualTimed = new ArrayList<PlayerCPManager.TimedOccupationCharge>(timedCharges.size());
+        for (var charge : timedCharges) {
+            if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
+            actualTimed.add(new PlayerCPManager.TimedOccupationCharge(
+                    Math.max(0.0f, charge.amount() * intensity), charge.iterationPoints()));
+        }
+        return new MixedOccupationCharges(
+                Math.max(0.0f, permanentAmount * intensity), List.copyOf(actualTimed));
+    }
+
+    public record TimedOccupationCharge(float amount, int iterationPoints) {
+    }
+
+    private record MixedOccupationCharges(
+            float permanentAmount,
+            List<PlayerCPManager.TimedOccupationCharge> timedCharges
+    ) {
     }
 
     public boolean castWithPermanentOccupations(

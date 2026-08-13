@@ -411,6 +411,23 @@ class TerminalHud private constructor() {
             }
         }
         if (!isActive || !ClientUtil.hasNoScreen()) return
+        if (TextBoxWidget.hasActiveTextInput() && event.key != InputConstants.KEY_ESCAPE) {
+            if (!ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)) {
+                context.get().dispatchEvent(
+                    KeyEvent(
+                        if (event.action == InputConstants.RELEASE) EventType.KEY_RELEASED
+                        else EventType.KEY_PRESSED,
+                        event.key,
+                        event.scanCode,
+                        event.modifiers
+                    )
+                )
+            }
+            // Text input owns every keyboard event except Escape. This prevents the inventory key,
+            // terminal toggle key, and other gameplay bindings from closing or affecting the HUD.
+            event.setCanceled(true)
+            return
+        }
         if (InputSystem.matchesKeyBinding(
                 KEY_NAME_TOGGLE,
                 InputSystem.InputType.KEYBOARD,

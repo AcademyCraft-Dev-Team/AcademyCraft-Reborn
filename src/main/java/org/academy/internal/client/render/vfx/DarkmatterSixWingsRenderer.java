@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -59,7 +60,7 @@ public final class DarkmatterSixWingsRenderer implements VfxRenderer<DarkmatterS
         var camera = ctx.cameraPos();
         vertexData.clear();
         for (var item : data) {
-            var vertices = item.vertices();
+            var vertices = item.vertices().duplicate().order(ByteOrder.nativeOrder());
             var oldLimit = vertices.limit();
             vertices.limit(vertices.position() + item.vertexCount() * DarkmatterSixWingsVfx.VERTEX_STRIDE);
             while (vertices.hasRemaining()) {
@@ -80,9 +81,8 @@ public final class DarkmatterSixWingsRenderer implements VfxRenderer<DarkmatterS
                 () -> "VFX Darkmatter Six Wings", color, Optional.empty(), depth, OptionalDouble.empty()
         )) {
             renderPass.setPipeline(VfxPipelines.MODEL_MESH);
-            var projection = RenderSystem.getProjectionMatrixBuffer();
-            if (projection != null) renderPass.setUniform("Projection", projection);
-            var transform = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+            renderPass.setUniform("Projection", ctx.projectionUniform());
+            var transform = RenderSystem.getDynamicUniforms().writeTransform(ctx.viewRotationMatrix());
             renderPass.setUniform("DynamicTransforms", transform);
             var texture = Minecraft.getInstance().getTextureManager().getTexture(R.textures.darkmatter_six_wings_effect);
             renderPass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());

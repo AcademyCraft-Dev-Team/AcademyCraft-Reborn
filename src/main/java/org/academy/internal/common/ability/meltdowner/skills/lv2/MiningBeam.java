@@ -2,6 +2,8 @@ package org.academy.internal.common.ability.meltdowner.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.List;
+import java.util.Map;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,10 +27,10 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
+import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
@@ -38,7 +40,7 @@ import org.academy.internal.common.ability.meltdowner.ContinuousReflectionSessio
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.ContinuousBeam;
-import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
@@ -50,25 +52,22 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.List;
-import java.util.Map;
-
 public final class MiningBeam extends Skill {
-    static final int CP_INTERVAL_TICKS = 2;
+    static final int CP_INTERVAL_TICKS = 20;
     static final int BREAK_INTERVAL_TICKS = 3;
     static final int DAMAGE_INTERVAL_TICKS = 20;
     static final float MAX_LENGTH = 48.0f;
     static final float DAMAGE_RADIUS = 0.6f;
     static final float BASE_DAMAGE = 12.0f;
     static final float BREAK_RADIUS = 0.35f;
-    static final int MINING_TIER = 3;
+    static final int MINING_TIER = 4;
     public MiningBeam() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .cpCost(5)
-                .iterationTicks(CP_INTERVAL_TICKS)
+                .cpCost(20)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))

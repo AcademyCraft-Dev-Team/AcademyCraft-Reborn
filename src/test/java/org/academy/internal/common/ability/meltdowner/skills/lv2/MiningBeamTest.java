@@ -14,10 +14,10 @@ class MiningBeamTest {
 
     @Test
     void referenceIntervalsAndRangesRemainStable() {
-        assertEquals(2, MiningBeam.CP_INTERVAL_TICKS);
+        assertEquals(20, MiningBeam.CP_INTERVAL_TICKS);
         assertEquals(3, MiningBeam.BREAK_INTERVAL_TICKS);
         assertEquals(20, MiningBeam.DAMAGE_INTERVAL_TICKS);
         assertEquals(48.0f, MiningBeam.MAX_LENGTH);
-        assertEquals(3, MiningBeam.MINING_TIER);
+        assertEquals(4, MiningBeam.MINING_TIER);
     }
 }

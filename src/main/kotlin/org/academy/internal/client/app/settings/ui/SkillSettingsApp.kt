@@ -205,13 +205,16 @@ object SkillSettingsApp : App {
                 "toggle_title", LabelWidget(
                     translate("app.academy.settings.keybind.toggle")
                 ).apply {
-                    scale = 0.65f
+                    scale = 0.8f
                     layoutParams = LinearLayoutWidget.LayoutParams()
-                        .width(22f)
+                        .width(16f)
                         .height(10f)
                         .gravity(Gravity.CENTER)
                 })
             columnHeader.addChild("rebind_spacer", FillWidget(0).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
+            })
+            columnHeader.addChild("reset_spacer", FillWidget(0).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
             })
             page.addChild("column_header", columnHeader)

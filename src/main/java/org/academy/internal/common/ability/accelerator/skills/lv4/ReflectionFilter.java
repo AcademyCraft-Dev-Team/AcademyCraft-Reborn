@@ -63,7 +63,7 @@ public final class ReflectionFilter extends Skill {
                 .of(AbilityCategories.ACCELERATOR.get())
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
-                .maxStacks(1)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_REFLECTION)
                 .withCustomData(Data.ID, Data.class, Data::new)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
@@ -112,9 +112,9 @@ public final class ReflectionFilter extends Skill {
     public static float getReflectionMaintenanceCost(ServerPlayer player) {
         var data = normalizeData(Server.getOrCreateData(player));
         var modeCost = switch (data.getMode()) {
-            case REFLECT_ALL -> 50.0f;
+            case REFLECT_ALL -> 40.0f;
             case POSITIVE_FILTER -> 60.0f;
-            case NEUTRAL_FILTER -> 70.0f;
+            case NEUTRAL_FILTER -> 80.0f;
         };
         return modeCost + (data.whitelist.size() + data.blacklist.size()) * 5.0f;
     }

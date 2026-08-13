@@ -27,7 +27,7 @@ class PlasmaGenerationTest {
     @Test
     void referenceRuntimeConstantsStayAligned() {
         assertEquals(240, PlasmaGeneration.MAX_CHARGE_TICKS);
-        assertEquals(20, PlasmaGeneration.CP_PER_SECOND);
+        assertEquals(40, PlasmaGeneration.CP_PER_SECOND);
         assertEquals(2.5, PlasmaGeneration.TRAVEL_SPEED, 0.0001);
         assertEquals(6, PlasmaGeneration.MAX_STAGE);
     }

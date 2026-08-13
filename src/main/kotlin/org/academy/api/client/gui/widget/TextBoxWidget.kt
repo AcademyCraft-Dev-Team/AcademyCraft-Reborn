@@ -616,6 +616,8 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         @Volatile
         private var activeTextBox: TextBoxWidget? = null
 
+        fun hasActiveTextInput(): Boolean = activeTextBox?.isFocused == true
+
         fun handlePreeditInput(event: PreeditEvent?): Boolean {
             return activeTextBox?.updatePreedit(event) == true
         }
