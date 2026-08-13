@@ -21,6 +21,7 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightDirection;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -32,7 +33,6 @@ import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -44,16 +44,23 @@ final class WingFlightSupport {
     private WingFlightSupport() {
     }
 
-    static void clientTick(boolean active, Consumer<StormWing.State> sender) {
+    @FunctionalInterface
+    interface ControlSender {
+        void send(StormWing.State state, float yRot, float xRot);
+    }
+
+    static void clientTick(boolean active, ControlSender sender) {
         if (!active) return;
         var minecraft = Minecraft.getInstance();
         if (minecraft.player == null) return;
+        var yRot = minecraft.player.getYRot();
+        var xRot = minecraft.player.getXRot();
         if (minecraft.gui.screen() != null) {
-            sender.accept(StormWing.State.KEEP);
+            sender.send(StormWing.State.KEEP, yRot, xRot);
             return;
         }
         if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_SPACE)) {
-            sender.accept(StormWing.State.BOOST);
+            sender.send(StormWing.State.BOOST, yRot, xRot);
             return;
         }
 
@@ -63,37 +70,37 @@ final class WingFlightSupport {
         var right = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_D);
         var sent = false;
         if (front != back) {
-            sender.accept(front ? StormWing.State.FRONT : StormWing.State.BACK);
+            sender.send(front ? StormWing.State.FRONT : StormWing.State.BACK, yRot, xRot);
             sent = true;
         }
         if (left != right) {
-            sender.accept(left ? StormWing.State.LEFT : StormWing.State.RIGHT);
+            sender.send(left ? StormWing.State.LEFT : StormWing.State.RIGHT, yRot, xRot);
             sent = true;
         }
-        if (!sent) sender.accept(StormWing.State.KEEP);
+        if (!sent) sender.send(StormWing.State.KEEP, yRot, xRot);
     }
 
-    static void applyControl(ServerPlayer player, StormWing.State state, Map<UUID, Long> lastBoostTick) {
+    static void applyControl(ServerPlayer player, StormWing.State state, float yRot, float xRot,
+                             Map<UUID, Long> lastBoostTick) {
         if (state == StormWing.State.BOOST) {
             lastBoostTick.put(player.getUUID(), player.level().getGameTime());
         }
+        var look = WingFlightDirection.resolve(player.getLookAngle(), yRot, xRot);
         EntityMotionGuard.runWithMotionSource(player, () -> {
             switch (state) {
                 case FRONT -> {
-                    var movement = player.getLookAngle().add(0, 0.35, 0).scale(0.2);
+                    var movement = look.add(0, 0.35, 0).scale(0.2);
                     player.push(movement.x, movement.y * 1.5, movement.z);
                 }
                 case BACK -> {
-                    var movement = player.getLookAngle().add(0, -0.35, 0).scale(-0.2);
+                    var movement = look.add(0, -0.35, 0).scale(-0.2);
                     player.push(movement.x, movement.y, movement.z);
                 }
                 case LEFT -> {
-                    var look = player.getLookAngle();
                     var movement = new Vec3(look.z, -look.y + 0.15, -look.x).scale(0.2);
                     player.push(movement.x, movement.y, movement.z);
                 }
                 case RIGHT -> {
-                    var look = player.getLookAngle();
                     var movement = new Vec3(-look.z, -look.y + 0.15, look.x).scale(0.2);
                     player.push(movement.x, movement.y, movement.z);
                 }
@@ -106,7 +113,7 @@ final class WingFlightSupport {
                     player.resetFallDistance();
                 }
                 case BOOST -> {
-                    var movement = player.getLookAngle().scale(2.0);
+                    var movement = look.scale(2.0);
                     player.push(movement.x, movement.y, movement.z);
                     player.resetFallDistance();
                 }
