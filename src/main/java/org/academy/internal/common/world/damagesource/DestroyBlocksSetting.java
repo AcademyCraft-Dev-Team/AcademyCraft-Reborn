@@ -38,6 +38,9 @@ public final class DestroyBlocksSetting {
             "academy:disintegrate",
             "academy:laminar_cutter"
     );
+    private static final Set<String> GLOBAL_SETTING_INDEPENDENT_SKILLS = Set.of(
+            "academy:mining_beam"
+    );
     private static boolean serverInitialized;
 
     private DestroyBlocksSetting() {
@@ -70,8 +73,8 @@ public final class DestroyBlocksSetting {
     }
 
     public static boolean canDestroyBlocks(ServerPlayer player, Skill skill) {
-        return canDestroyBlocksBySkillSetting(player, skill)
-                && canDestroyBlocks(player);
+        if (!canDestroyBlocksBySkillSetting(player, skill)) return false;
+        return usesIndependentBlockDestructionSetting(skill) || canDestroyBlocks(player);
     }
 
     /**
@@ -80,6 +83,14 @@ public final class DestroyBlocksSetting {
     public static boolean canDestroyBlocksBySkillSetting(Player player, Skill skill) {
         return supportsSkillBlockDestruction(skill)
                 && isSkillDestroyBlocksEnabled(player, skill);
+    }
+
+    public static boolean usesIndependentBlockDestructionSetting(Skill skill) {
+        return skill != null && usesIndependentBlockDestructionSetting(skill.getKeyString());
+    }
+
+    static boolean usesIndependentBlockDestructionSetting(String skillId) {
+        return skillId != null && GLOBAL_SETTING_INDEPENDENT_SKILLS.contains(skillId);
     }
 
     public static void setDestroyBlocksEnabled(Player player, boolean enabled) {
