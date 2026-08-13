@@ -11,8 +11,6 @@ import net.minecraft.core.BlockPos
 import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
-import net.minecraft.util.ARGB
-import net.minecraft.util.Mth
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
@@ -30,22 +28,19 @@ import org.academy.api.client.gui.util.WirelessPanelUtil
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.common.ability.*
-import org.academy.api.common.registries.Registries
 import org.academy.api.common.util.L10n
 import org.academy.api.common.wireless.GetCurrentNodePacket
 import org.academy.internal.common.ability.AbilityCategories
 import org.academy.internal.common.ability.ProficiencyPolicy
 import org.academy.internal.common.ability.level0.Level0
-import org.academy.internal.client.app.props.PropsClientState
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity
 import org.apache.commons.lang3.RandomStringUtils
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
-import java.util.function.Consumer
+import net.minecraft.util.Mth
 
 class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()) {
     private val blockEntity: AbilityDeveloperBlockEntity
-        get() = resolveBlockEntity() ?: throw RuntimeException("Invalid block entity at $mainPos")
     private lateinit var area: FrameLayoutWidget
     private lateinit var mainWidget: FrameLayoutWidget
     private var isConsoleMode: Boolean = false
@@ -59,16 +54,21 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private val maxDuSkills = 10f
 
     init {
-        blockEntity.keepOpen()
+        val level = minecraft.level ?: throw RuntimeException("Level is null")
+        val entity = level.getBlockEntity(mainPos)
+        if (entity is AbilityDeveloperBlockEntity) {
+            blockEntity = entity
+            entity.setOpen(true)
+        } else {
+            throw RuntimeException("Invalid block entity at $mainPos")
+        }
     }
-
-    private fun resolveBlockEntity(): AbilityDeveloperBlockEntity? =
-        minecraft.level?.getBlockEntity(mainPos) as? AbilityDeveloperBlockEntity
 
     override fun isPauseScreen(): Boolean = false
 
     override fun onClose() {
         super.onClose()
+        blockEntity.setOpen(false)
         NeoForge.EVENT_BUS.unregister(this)
         MisakaNetworkClient.send(StopDevPacket(mainPos))
         AbilitySystemClient.resetDevState()
@@ -80,13 +80,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
     override fun tick() {
         super.tick()
-        resolveBlockEntity()?.keepOpen()
         refreshCompletedSkillDevelopment()
-    }
-
-    override fun removed() {
-        resolveBlockEntity()?.scheduleClosing()
-        super.removed()
     }
 
     override fun keyPressed(e: KeyEvent): Boolean {
@@ -175,12 +169,12 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     .size(257f, 139f)
                 area = a
                 if (category !is Level0) {
-                    val courseTabs = RadioGroupWidget()
+                    val courseTabs = LinearLayoutWidget()
                     courseTabs.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.TOP_LEFT)
-                        .margin(14f, 160f, 0f, 0f)
-                        .size(COURSE_TABS_WIDTH, COURSE_TAB_HEIGHT)
-                    courseTabs.orientation = Orientation.HORIZONTAL
+                        .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                        .margin(1f, 0f, 0f, 0f)
+                        .size(COURSE_TAB_WIDTH, COURSE_TABS_HEIGHT)
+                    courseTabs.orientation = Orientation.VERTICAL
                     courseTabs.spacing = COURSE_TAB_GAP
                     parentRight.addChild("course_tabs", courseTabs) {
                         fillCourseTabs(courseTabs)
@@ -226,7 +220,12 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
             logoAbility.addChild("icon", icon)
         }
 
-        val nameLabel = LabelWidget(categoryDisplayName(category))
+        val categoryKey = category.key
+        val translationKey = "ability_category.${categoryKey.namespace}.${categoryKey.path}"
+        val translatedName = Language.getInstance().getOrDefault(translationKey)
+            .takeUnless { it == translationKey }
+            ?: category.getDisplayName()
+        val nameLabel = LabelWidget(translatedName)
         nameLabel.baseFontSize = 13f
         nameLabel.layoutParams = WidgetContainer.LayoutParams()
             .gravity(Gravity.TOP_LEFT)
@@ -477,10 +476,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         )
     }
 
-    private fun createCommandInputArea(
-        outputs: LinearLayoutWidget,
-        mode: ConsoleInputMode
-    ): LinearLayoutWidget {
+    private fun createCommandInputArea(outputs: LinearLayoutWidget): LinearLayoutWidget {
         val inputArea = LinearLayoutWidget()
         inputArea.layoutParams = WidgetContainer.LayoutParams()
             .gravity(Gravity.BOTTOM_LEFT)
@@ -506,25 +502,57 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     outputs,
                     "${L10n["academy.ability_developer.console.prompt"]} $input"
                 )
-                val command = input.trim().lowercase()
-                if (command == "exit") {
-                    onClose()
-                } else if (mode == ConsoleInputMode.PROPS_CONFIRMATION) {
-                    when (command) {
-                        "y" -> requestLevelDevelopment(outputs, StartLevelDevPacket.Mode.ACCEPT_PROPS)
-                        "n" -> requestLevelDevelopment(outputs, StartLevelDevPacket.Mode.RANDOM)
-                        else -> {
-                            addOutputLine(outputs, L10n["academy.ability_developer.console.props_invalid_answer"])
-                            attachCommandInput(outputs, ConsoleInputMode.PROPS_CONFIRMATION)
+                when (input.trim().lowercase()) {
+                    "learn" -> {
+                        addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
+                        AbilitySystemClient.resetDevState()
+                        MisakaNetworkClient.FUTURE_MANAGER.send(StartLevelDevPacket(mainPos.asLong())) { response ->
+                            if (response != null && response.isSuccess) {
+                                val progressLabel = LabelWidget(
+                                    L10n["academy.ability_developer.progress"] + " 0%"
+                                )
+                                progressLabel.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
+                                outputs.addChild("dev_progress", progressLabel)
+                                consoleScrollPanel.scrollToEnd()
+
+                                fun poll() {
+                                    when (AbilitySystemClient.getDevState()) {
+                                        DevState.DEVELOPING -> {
+                                            progressLabel.text =
+                                                L10n["academy.ability_developer.progress"] + " " + (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
+                                            consoleScrollPanel.pollNextFrame { poll() }
+                                        }
+
+                                        DevState.DONE -> {
+                                            progressLabel.text = L10n["academy.ability_developer.dev_successful"]
+                                            rebuildAfterCategoryLearned()
+                                        }
+
+                                        DevState.FAILED -> {
+                                            progressLabel.text = developmentFailureMessage()
+                                            attachCommandInput(outputs)
+                                        }
+
+                                        else -> {
+                                            consoleScrollPanel.pollNextFrame { poll() }
+                                        }
+                                    }
+                                }
+                                poll()
+                            } else {
+                                addOutputLine(outputs, response?.message ?: "Unknown error")
+                                attachCommandInput(outputs)
+                            }
                         }
                     }
-                } else {
-                    when (command) {
-                        "learn" -> requestInitialDevelopment(outputs)
-                        else -> {
-                            addOutputLine(outputs, L10n["academy.ability_developer.console.invalid_command"])
-                            attachCommandInput(outputs)
-                        }
+
+                    "exit" -> {
+                        onClose()
+                    }
+
+                    else -> {
+                        addOutputLine(outputs, L10n["academy.ability_developer.console.invalid_command"])
+                        attachCommandInput(outputs)
                     }
                 }
             }
@@ -533,135 +561,13 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         return inputArea
     }
 
-    private fun requestInitialDevelopment(outputs: LinearLayoutWidget) {
-        if (PropsClientState.isStarted()) {
-            AbilitySystemClient.resetDevState()
-            MisakaNetworkClient.FUTURE_MANAGER.send(
-                StartLevelDevPacket(mainPos.asLong(), StartLevelDevPacket.Mode.PREVIEW)
-            ) { response ->
-                when {
-                    response?.requiresConfirmation() == true -> {
-                        val recommendation = resolveRecommendedCategory(response.recommendedCategory)
-                        if (recommendation == null) {
-                            showLevelDevelopmentError(outputs, response)
-                            return@send
-                        }
-                        addOutput(
-                            outputs,
-                            L10n["academy.ability_developer.console.props_expected"]
-                                .format(categoryDisplayName(recommendation))
-                        ) {
-                            addOutput(outputs, L10n["academy.ability_developer.console.props_confirm"]) {
-                                attachCommandInput(outputs, ConsoleInputMode.PROPS_CONFIRMATION)
-                            }
-                        }
-                    }
-
-                    response?.isSuccess == true -> startDevelopmentPolling(outputs)
-                    else -> showLevelDevelopmentError(outputs, response)
-                }
-            }
-        } else {
-            requestLevelDevelopment(outputs, StartLevelDevPacket.Mode.DIRECT)
-        }
-    }
-
-    private fun requestLevelDevelopment(
-        outputs: LinearLayoutWidget,
-        mode: StartLevelDevPacket.Mode
-    ) {
-        AbilitySystemClient.resetDevState()
-        MisakaNetworkClient.FUTURE_MANAGER.send(
-            StartLevelDevPacket(mainPos.asLong(), mode)
-        ) { response ->
-            when {
-                response?.isSuccess == true -> startDevelopmentPolling(outputs)
-                response?.requiresConfirmation() == true -> {
-                    val recommendation = resolveRecommendedCategory(response.recommendedCategory)
-                    if (recommendation == null) {
-                        showLevelDevelopmentError(outputs, response)
-                        return@send
-                    }
-                    addOutputLine(
-                        outputs,
-                        L10n["academy.ability_developer.console.props_expected"]
-                            .format(categoryDisplayName(recommendation))
-                    )
-                    addOutputLine(outputs, L10n["academy.ability_developer.console.props_confirm"])
-                    attachCommandInput(outputs, ConsoleInputMode.PROPS_CONFIRMATION)
-                }
-
-                else -> showLevelDevelopmentError(outputs, response)
-            }
-        }
-    }
-
-    private fun startDevelopmentPolling(outputs: LinearLayoutWidget) {
-        addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
-        val progressLabel = LabelWidget(L10n["academy.ability_developer.progress"] + " 0%")
-        progressLabel.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
-        outputs.addChild("dev_progress", progressLabel)
-        consoleScrollPanel.scrollToEnd()
-
-        fun poll() {
-            when (AbilitySystemClient.getDevState()) {
-                DevState.DEVELOPING -> {
-                    progressLabel.text =
-                        L10n["academy.ability_developer.progress"] + " " +
-                                (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
-                    consoleScrollPanel.pollNextFrame { poll() }
-                }
-
-                DevState.DONE -> {
-                    progressLabel.text = L10n["academy.ability_developer.dev_successful"]
-                    rebuildAfterCategoryLearned()
-                }
-
-                DevState.FAILED -> {
-                    progressLabel.text = developmentFailureMessage()
-                    attachCommandInput(outputs)
-                }
-
-                else -> consoleScrollPanel.pollNextFrame { poll() }
-            }
-        }
-        poll()
-    }
-
-    private fun showLevelDevelopmentError(
-        outputs: LinearLayoutWidget,
-        response: StartLevelDevPacket.Response?
-    ) {
-        val message = if (response?.message == "P.R.O.P.S recommendation expired") {
-            L10n["academy.ability_developer.console.props_expired"]
-        } else {
-            response?.message ?: "Unknown error"
-        }
-        addOutputLine(outputs, message)
-        attachCommandInput(outputs)
-    }
-
-    private fun attachCommandInput(
-        outputs: LinearLayoutWidget,
-        mode: ConsoleInputMode = ConsoleInputMode.COMMAND
-    ) {
+    private fun attachCommandInput(outputs: LinearLayoutWidget) {
         outputs.removeChild("input_area")
-        val inputArea = createCommandInputArea(outputs, mode)
+        val inputArea = createCommandInputArea(outputs)
         outputs.addChild("input_area", inputArea)
         inputArea.children["text_box"]?.let { inputArea.focusedChild = it }
         scrollConsoleToEndAfterLayout()
     }
-
-    private fun categoryDisplayName(category: AbilityCategory): String {
-        val categoryKey = category.key
-        val translationKey = "ability_category.${categoryKey.namespace}.${categoryKey.path}"
-        return Language.getInstance().getOrDefault(translationKey)
-            .takeUnless { it == translationKey }
-            ?: category.getDisplayName()
-    }
-
-    private fun resolveRecommendedCategory(identifier: Identifier?): AbilityCategory? = identifier
-        ?.let { Registries.ABILITY_CATEGORIES.get(it).orElse(null)?.value() }
 
     private fun addOutputLine(outputs: LinearLayoutWidget, text: String) {
         val label = LabelWidget(text)
@@ -1121,11 +1027,6 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         ABILITY
     }
 
-    private enum class ConsoleInputMode {
-        COMMAND,
-        PROPS_CONFIRMATION
-    }
-
     private fun addCover(cover: FrameLayoutWidget) {
         if (activeCover != null) return
         activeCover = cover
@@ -1197,64 +1098,72 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         }
     }
 
-    private fun fillCourseTabs(tabs: RadioGroupWidget) {
-        val common = createCourseTab(
-            CoursePage.COMMON,
-            L10n["academy.ability_developer.course.common"]
+    private fun fillCourseTabs(tabs: LinearLayoutWidget) {
+        tabs.addChild(
+            "common_course",
+            createCourseTab(CoursePage.COMMON, L10n["academy.ability_developer.course.common"])
         )
-        val ability = createCourseTab(
-            CoursePage.ABILITY,
-            L10n["academy.ability_developer.course.ability"]
+        tabs.addChild(
+            "ability_course",
+            createCourseTab(CoursePage.ABILITY, L10n["academy.ability_developer.course.ability"])
         )
-        tabs.addChild("common_course", common)
-        tabs.addChild("ability_course", ability)
-        tabs.selectButton(if (coursePage == CoursePage.COMMON) common else ability)
     }
 
-    private fun createCourseTab(page: CoursePage, labelText: String): RadioButtonWidget {
-        val button = RadioButtonWidget()
-        button.layoutParams = LinearLayoutWidget.LayoutParams()
-            .weight(1f)
-            .height(COURSE_TAB_HEIGHT)
-        button.tooltipText = labelText
-        button.onClickListener = { _: Widget? ->
-            if (coursePage != page) {
-                coursePage = page
-                viewedSkillInfo = null
-                skillLineBindings.clear()
-                area.clearChildren()
-                fillSkillTreeArea(area)
+    private fun createCourseTab(page: CoursePage, labelText: String): ButtonWidget {
+        val background = FillWidget(COURSE_TAB_IDLE_COLOR)
+        val edge = FillWidget(COURSE_TAB_EDGE_IDLE_COLOR)
+        val topLine = FillWidget(COURSE_TAB_LINE_COLOR)
+        val bottomLine = FillWidget(COURSE_TAB_LINE_COLOR)
+        val label = LabelWidget(labelText)
+        val button = object : ButtonWidget() {
+            override fun render(context: RenderContext) {
+                val selected = coursePage == page
+                background.setColor(
+                    when {
+                        selected -> COURSE_TAB_SELECTED_COLOR
+                        isHovered -> COURSE_TAB_HOVER_COLOR
+                        else -> COURSE_TAB_IDLE_COLOR
+                    }
+                )
+                edge.setColor(if (selected) COURSE_TAB_EDGE_SELECTED_COLOR else COURSE_TAB_EDGE_IDLE_COLOR)
+                label.setRed(if (selected) 0.72f else 0.78f)
+                label.setGreen(if (selected) 0.93f else 0.82f)
+                label.setBlue(if (selected) 1.0f else 0.85f)
+                super.render(context)
             }
         }
-        val background = FillWidget(0)
-        background.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        button.layoutParams = WidgetContainer.LayoutParams().size(COURSE_TAB_WIDTH, COURSE_TAB_HEIGHT)
+        button.tooltipText = labelText
+        background.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         button.addChild("background", background)
-        button.addChild("label", LabelWidget(labelText).apply {
-            isEnabled = false
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER)
-        })
 
-        val progressState = AtomicReference(0f)
-        val updateState = Consumer<Float> { progress ->
-            progressState.set(progress)
-            background.setColor(ARGB.color((progress * 0.5f * 255f).toInt(), 255, 255, 255))
+        label.baseFontSize = 5.5f
+        label.isEnabled = false
+        label.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.CENTER)
+            .margin(1.5f, 0f, 0.5f, 0f)
+            .size(COURSE_TAB_WIDTH - 2f, 9f)
+        edge.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            .size(1.5f, COURSE_TAB_HEIGHT - 6f)
+        topLine.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            .size(COURSE_TAB_WIDTH - 2f, 0.5f)
+        bottomLine.layoutParams = WidgetContainer.LayoutParams()
+            .gravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+            .size(COURSE_TAB_WIDTH - 2f, 0.5f)
+        button.addChild("edge", edge)
+        button.addChild("top_line", topLine)
+        button.addChild("bottom_line", bottomLine)
+        button.addChild("label", label)
+        button.onClickListener = OnClickListener {
+            if (coursePage == page) return@OnClickListener
+            coursePage = page
+            viewedSkillInfo = null
+            skillLineBindings.clear()
+            area.clearChildren()
+            fillSkillTreeArea(area)
         }
-        val animator = StateListAnimator()
-        animator.addState(
-            Widget.SELECTED,
-            ObjectAnimator.ofFloat({ progressState.get() }, updateState, 1.0f)
-                .setDuration(100)
-                .setInterpolator(EasingFunctions.EASE_OUT_SINE)
-        )
-        animator.addState(
-            Widget.NONE,
-            ObjectAnimator.ofFloat({ progressState.get() }, updateState, 0.0f)
-                .setDuration(100)
-                .setInterpolator(EasingFunctions.EASE_OUT_SINE)
-        )
-        button.stateListAnimator = animator
         return button
     }
 
@@ -1280,18 +1189,27 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     }
 
     private fun createSkillBackButton(): ButtonWidget {
-        val button = ButtonWidget()
+        val background = FillWidget(COURSE_TAB_SELECTED_COLOR)
+        val label = LabelWidget("<")
+        val button = object : ButtonWidget() {
+            override fun render(context: RenderContext) {
+                background.setColor(if (isHovered) COURSE_TAB_HOVER_COLOR else COURSE_TAB_SELECTED_COLOR)
+                super.render(context)
+            }
+        }
         button.layoutParams = WidgetContainer.LayoutParams()
             .gravity(Gravity.TOP_RIGHT)
             .margin(0f, 3f, 3f, 0f)
-            .size(16f, 16f)
+            .size(22f, 14f)
         button.tooltipText = L10n["academy.ability_developer.back"]
         button.onClickListener = OnClickListener { rebuildSkillTree() }
 
-        val icon = ImageWidget(R.textures.gui.icon.arrow_back)
-        icon.setSampler(FilterMode.LINEAR, false)
-        icon.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        button.addChild("icon", icon)
+        background.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        button.addChild("background", background)
+        label.baseFontSize = 9f
+        label.isEnabled = false
+        label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.CENTER).size(10f, 10f)
+        button.addChild("label", label)
         return button
     }
 
@@ -1680,7 +1598,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
 
         val iconProgressRef = AtomicReference(0f)
         val levelIconPath =
-            AcademyCraft.academy("textures/ability/condition/any${(level.levelCode + 1).coerceIn(1, 5)}.png")
+            AcademyCraft.academy("textures/abilities/condition/any${(level.levelCode + 1).coerceIn(1, 5)}.png")
 
         val coverCenter = LinearLayoutWidget()
         coverCenter.layoutParams = WidgetContainer.LayoutParams()
@@ -1837,9 +1755,16 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     companion object {
         const val PANEL_MAIN_WIDTH: Float = 400f
         const val PANEL_MAIN_HEIGHT: Float = 187f
-        private const val COURSE_TABS_WIDTH = 70f
-        private const val COURSE_TAB_HEIGHT = 14f
-        private const val COURSE_TAB_GAP = 2f
+        private const val COURSE_TAB_WIDTH = 12f
+        private const val COURSE_TAB_HEIGHT = 30f
+        private const val COURSE_TAB_GAP = 3f
+        private const val COURSE_TABS_HEIGHT = COURSE_TAB_HEIGHT * 2f + COURSE_TAB_GAP
+        private val COURSE_TAB_IDLE_COLOR = 0xA0161D21.toInt()
+        private val COURSE_TAB_HOVER_COLOR = 0xC024343C.toInt()
+        private val COURSE_TAB_SELECTED_COLOR = 0xE02B4652.toInt()
+        private val COURSE_TAB_EDGE_IDLE_COLOR = 0x80687579.toInt()
+        private val COURSE_TAB_EDGE_SELECTED_COLOR = 0xFF8EDCF3.toInt()
+        private val COURSE_TAB_LINE_COLOR = 0x7093ABB3.toInt()
         private const val CONSOLE_CHAR_DELAY_MS: Long = 10L
     }
 }

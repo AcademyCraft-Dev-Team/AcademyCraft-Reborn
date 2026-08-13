@@ -2,7 +2,6 @@ package org.academy.internal.client.app.props
 
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.client.Minecraft
-import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import org.academy.api.client.app.App
 import org.academy.api.client.gui.layout.Gravity
@@ -13,6 +12,7 @@ import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.resources.R
 import org.academy.api.common.attribute.AbilityFactor
 import org.academy.api.common.attribute.PlayerAttributes
+import org.academy.api.common.util.L10n
 import org.academy.internal.common.attribute.PropsMath
 import org.academy.internal.common.attribute.PropsPackets
 import org.misaka.MisakaNetworkClient
@@ -305,5 +305,5 @@ object PropsApp : App {
         }
     }
 
-    private fun tr(key: String): String = Language.getInstance().getOrDefault(key)
+    private fun tr(key: String): String = L10n[key]
 }

@@ -2,7 +2,6 @@ package org.academy.internal.client.app.settings.ui
 
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.client.Minecraft
-import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import net.neoforged.fml.ModList
@@ -24,6 +23,7 @@ import org.academy.api.client.hud.terminal.TerminalConfig
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
+import org.academy.api.common.util.L10n
 import org.academy.internal.client.hud.HudLayoutEditorScreen
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
@@ -42,7 +42,7 @@ object SettingsApp : App {
     }
 
     override fun name(): String {
-        return Language.getInstance().getOrDefault("app.academy.settings.name")
+        return L10n["app.academy.settings.name"]
     }
 
     override fun icon(): Identifier {
@@ -167,13 +167,13 @@ object SettingsApp : App {
                 .widthMode(SizeMode.MATCH_PARENT)
             tabBar.addChild(
                 "general", createTabButton(
-                    Language.getInstance().getOrDefault("app.academy.settings.tab.general"),
+                    L10n["app.academy.settings.tab.general"],
                     PAGE_GENERAL
                 )
             )
             tabBar.addChild(
                 "keybindings", createTabButton(
-                    Language.getInstance().getOrDefault("app.academy.settings.tab.keybindings"),
+                    L10n["app.academy.settings.tab.keybindings"],
                     PAGE_KEYBINDINGS
                 )
             )
@@ -245,14 +245,14 @@ object SettingsApp : App {
             val player = Minecraft.getInstance().player
             page.addChild(
                 "friendly_fire", createSettingToggle(
-                    Language.getInstance().getOrDefault("app.academy.settings.general.friendly_fire"),
+                    L10n["app.academy.settings.general.friendly_fire"],
                     player?.let(FriendlyFireSetting::isFriendlyFireEnabled) ?: true
                 ) { enabled ->
                     MisakaNetworkClient.send(FriendlyFireSetting.SetPacket(enabled))
                 })
             page.addChild(
                 "destroy_blocks", createSettingToggle(
-                    Language.getInstance().getOrDefault("app.academy.settings.general.destroy_blocks"),
+                    L10n["app.academy.settings.general.destroy_blocks"],
                     player?.let(DestroyBlocksSetting::isDestroyBlocksEnabled) ?: true
                 ) { enabled ->
                     MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
@@ -270,7 +270,7 @@ object SettingsApp : App {
                 .height(18f)
             row.addChild(
                 "label", LabelWidget(
-                    Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout")
+                    L10n["app.academy.settings.general.hud_layout"]
                 ).apply {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
@@ -287,7 +287,7 @@ object SettingsApp : App {
                 }
                 addChild(
                     "text", LabelWidget(
-                        Language.getInstance().getOrDefault("app.academy.settings.general.hud_layout.open")
+                        L10n["app.academy.settings.general.hud_layout.open"]
                     ).apply {
                         scale = 0.65f
                         layoutParams = FrameLayoutWidget.LayoutParams()
@@ -353,7 +353,7 @@ object SettingsApp : App {
             })
             columnHeader.addChild(
                 "toggle_title", LabelWidget(
-                    Language.getInstance().getOrDefault("app.academy.settings.keybind.toggle")
+                    L10n["app.academy.settings.keybind.toggle"]
                 ).apply {
                     scale = 0.65f
                     layoutParams = LinearLayoutWidget.LayoutParams()
@@ -398,7 +398,7 @@ object SettingsApp : App {
             return listOf(
                 BindingSection(
                     "general_terminal",
-                    Language.getInstance().getOrDefault("app.academy.settings.keybind.group.terminal"),
+                    L10n["app.academy.settings.keybind.group.terminal"],
                     R.textures.gui.terminal.icon,
                     terminalConfig
                 ) { updated ->
@@ -406,7 +406,7 @@ object SettingsApp : App {
                 }.copy(hiddenBindings = setOf(TerminalHud.KEY_NAME_TOGGLE)),
                 BindingSection(
                     "general_ability_hud",
-                    Language.getInstance().getOrDefault("app.academy.settings.keybind.group.ability_hud"),
+                    L10n["app.academy.settings.keybind.group.ability_hud"],
                     AbilitySystemClient.getCategory().developerIcon,
                     abilityConfig
                 ) { updated ->
@@ -465,7 +465,7 @@ object SettingsApp : App {
                 .widthMode(SizeMode.MATCH_PARENT)
 
             val name = LabelWidget(
-                Language.getInstance().getOrDefault("key.academy.$bindingName")
+                L10n["key.academy.$bindingName"]
             )
             name.layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
@@ -505,7 +505,7 @@ object SettingsApp : App {
             }
             rebindButton.addChild(
                 "text", LabelWidget(
-                    Language.getInstance().getOrDefault("app.academy.settings.keybind.rebind")
+                    L10n["app.academy.settings.keybind.rebind"]
                 ).apply {
                     scale = 0.7f
                     layoutParams = FrameLayoutWidget.LayoutParams()
@@ -523,7 +523,7 @@ object SettingsApp : App {
             }
             resetButton.addChild(
                 "text", LabelWidget(
-                    Language.getInstance().getOrDefault("app.academy.settings.keybind.reset")
+                    L10n["app.academy.settings.keybind.reset"]
                 ).apply {
                     scale = 0.7f
                     layoutParams = FrameLayoutWidget.LayoutParams()
@@ -587,7 +587,7 @@ object SettingsApp : App {
                     val key = event.keyCode
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
                         val target = capturing ?: return
-                        val current = target.section.config.getKeyBinding(target.bindingName)
+                        val current = target.section.config.getKeyBinding(target.bindingName) ?: return
                         resetCaptureState()
                         applyCapture(InputSystem.unbound(current))
                         return
@@ -635,7 +635,7 @@ object SettingsApp : App {
         private fun buildPendingCombo(): InputSystem.KeyCombination? {
             val type = pendingType ?: return null
             val target = capturing ?: return null
-            val current = target.section.config.getKeyBinding(target.bindingName)
+            val current = target.section.config.getKeyBinding(target.bindingName) ?: return null
             return when (type) {
                 InputSystem.InputType.KEYBOARD -> {
                     if (pendingKeys.isEmpty()) return null
@@ -699,7 +699,7 @@ object SettingsApp : App {
 
         private fun displayBinding(combo: InputSystem.KeyCombination): String {
             return if (combo.unbound) {
-                Language.getInstance().getOrDefault("app.academy.settings.keybind.format.none")
+                L10n["app.academy.settings.keybind.format.none"]
             } else {
                 combo.displayName()
             }
@@ -709,9 +709,9 @@ object SettingsApp : App {
             val target = capturing
             captureHint.text = if (target != null) {
                 val preview = buildPendingCombo()?.let(::displayBinding)
-                    ?: Language.getInstance().getOrDefault("app.academy.skill_settings.capture.key")
-                Language.getInstance().getOrDefault("app.academy.skill_settings.capture.hint")
-                    .replace($$"%1$s", Language.getInstance().getOrDefault("key.academy.${target.bindingName}"))
+                    ?: L10n["app.academy.skill_settings.capture.key"]
+                L10n["app.academy.skill_settings.capture.hint"]
+                    .replace($$"%1$s", L10n["key.academy.${target.bindingName}"])
                     .replace($$"%2$s", preview)
             } else {
                 ""

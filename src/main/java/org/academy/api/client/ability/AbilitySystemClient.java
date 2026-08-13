@@ -47,8 +47,7 @@ public final class AbilitySystemClient {
     private static final List<SkillInfo> COMMON_SKILL_INFOS = new ArrayList<>();
     private static final long SKILL_DENIAL_MESSAGE_INTERVAL_MS = 1_500L;
     private static final long TOGGLE_REQUEST_TIMEOUT_MS = 750L;
-    @Nullable
-    public static AbilityCategory category;
+    public static AbilityCategory category = AbilityCategories.LEVEL0.get();
     private static boolean activeHUD = false;
     private static AbilityData cpData = new AbilityData();
     private static float calculationIntensity = 1.0f;
@@ -257,7 +256,7 @@ public final class AbilitySystemClient {
         devState = DevState.IDLE;
         devProgress = 0.0f;
         devMessage = "";
-        devTargetId = targetId == null ? "" : targetId;
+        devTargetId = targetId;
         devRequestPending = true;
     }
 
@@ -265,7 +264,7 @@ public final class AbilitySystemClient {
         if (!devRequestPending || !Objects.equals(devTargetId, targetId)) return;
         devRequestPending = false;
         devState = DevState.FAILED;
-        devMessage = message == null ? "Failed" : message;
+        devMessage = message;
     }
 
     public static void resetDevState() {
@@ -277,7 +276,7 @@ public final class AbilitySystemClient {
     }
 
     public static boolean isSkillLearned(String skillId) {
-        if (skillId == null || skillId.isBlank()) return false;
+        if (skillId.isBlank()) return false;
         return LEARNED_SKILLS.stream().anyMatch(skill -> skillId.equals(skill.getKeyString()));
     }
 
@@ -311,14 +310,13 @@ public final class AbilitySystemClient {
     }
 
     private static boolean shouldNotifySkillUseDenied(Skill skill, SkillUseStatus status) {
-        if (skill == null || !canToggleSkill(skill)) return false;
+        if (!canToggleSkill(skill)) return false;
         return status.failure() != SkillUseFailure.UNAVAILABLE
                 && status.failure() != SkillUseFailure.DISABLED;
     }
 
     public static SkillUseStatus getSkillUseStatus(Skill skill) {
-        if (skill == null || !LearningHelper.isSkillAvailableForCategory(category, skill)
-                || !LEARNED_SKILLS.contains(skill)) {
+        if (!LearningHelper.isSkillAvailableForCategory(category, skill) || !LEARNED_SKILLS.contains(skill)) {
             return SkillUseStatus.denied(SkillUseFailure.UNAVAILABLE);
         }
         var skillData = getSkillData(skill).orElse(null);
@@ -409,13 +407,10 @@ public final class AbilitySystemClient {
     }
 
     public static boolean canToggleSkill(Skill skill) {
-        return skill != null
-                && LearningHelper.isSkillAvailableForCategory(category, skill)
-                && LEARNED_SKILLS.contains(skill);
+        return LearningHelper.isSkillAvailableForCategory(category, skill) && LEARNED_SKILLS.contains(skill);
     }
 
     public static boolean beginToggleRequest(Skill skill) {
-        if (skill == null) return false;
         var shuttingDown = getSkillData(skill).map(SkillData::isEnabled).orElse(false);
         if (!shuttingDown && !canToggleSkill(skill)) return false;
         var now = Util.getMillis();
@@ -489,7 +484,7 @@ public final class AbilitySystemClient {
     }
 
     public static AbilityCategory getCategory() {
-        return category == null ? AbilityCategories.LEVEL0.get() : category;
+        return category;
     }
 
     public static float getSkillExp(Skill skill) {
@@ -516,8 +511,7 @@ public final class AbilitySystemClient {
     public static int getEffectiveMaxStacks(Skill skill, int skillLevel) {
         var base = skill.getMaxStacks(skillLevel);
         if (base == Skill.NO_STACK_LIMIT) return Skill.NO_STACK_LIMIT;
-        var category = getCategory();
-        if (category == null || !category.supportsCommonSkills()) return base;
+        if (!getCategory().supportsCommonSkills()) return base;
         var stackData = SKILL_DATA.get(
                 AcademyCraft.academy(SkillNames.MULTIPLE_BRAIN_DOMAIN_SEGMENTATION).toString()
         );

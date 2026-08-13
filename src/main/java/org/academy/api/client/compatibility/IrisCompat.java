@@ -5,6 +5,7 @@ import net.irisshaders.iris.shadows.ShadowRenderer;
 import net.irisshaders.iris.vertices.ImmediateState;
 import net.neoforged.fml.loading.FMLLoader;
 import org.academy.AcademyCraft;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -80,7 +81,7 @@ public final class IrisCompat {
         warnHandBridgeFallback(null);
     }
 
-    private static void warnHandBridgeFallback(Throwable throwable) {
+    private static void warnHandBridgeFallback(@Nullable Throwable throwable) {
         if (!HAND_BRIDGE_WARNING_LOGGED.compareAndSet(false, true)) return;
         if (throwable == null) {
             AcademyCraft.getLogger().warn(
