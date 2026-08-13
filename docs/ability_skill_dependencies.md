@@ -1,6 +1,6 @@
 # 能力技能前置关系清单
 
-本清单按当前源码中的 `Skill.Builder.dependsOn(...)` 整理，共 91 个技能，其中 83 个技能具有直接前置。
+本清单按当前源码中的 `Skill.Builder.dependsOn(...)` 整理，共 94 个技能，其中 86 个技能具有直接前置。
 
 - “等级”是技能的推荐能力等级，不是熟练度推导出的技能效果等级。
 - 表中只列直接前置；学习时会通过前置技能继续形成完整依赖链。
@@ -12,11 +12,13 @@
 
 | 等级 | 技能 | 直接前置 |
 |---:|---|---|
-| 1 | 脑域开发 (`academy:level0_passive_lv1`) | 无 |
-| 2 | 多重脑域分割 (`academy:level0_passive_lv2`) | `academy:level0_passive_lv1` |
-| 3 | 思考并列演算 (`academy:level0_passive_lv3`) | `academy:level0_passive_lv2` |
-| 4 | 意识完全解析 (`academy:level0_passive_lv4`) | `academy:level0_passive_lv3` |
-| 5 | 自我绝对控制 (`academy:level0_passive_lv5`) | `academy:level0_passive_lv4` |
+| 1 | 脑域开发 (`academy:brain_domain_development`) | 无 |
+| 1 | 耐力训练 (`academy:endurance_training`) | `academy:brain_domain_development` |
+| 1 | 体术训练 (`academy:physical_training`) | `academy:brain_domain_development` |
+| 2 | 多重脑域分割 (`academy:multiple_brain_domain_segmentation`) | `academy:brain_domain_development` |
+| 3 | 思考并列演算 (`academy:parallel_thought_computation`) | `academy:multiple_brain_domain_segmentation` |
+| 4 | 意识完全解析 (`academy:complete_consciousness_analysis`) | `academy:parallel_thought_computation` |
+| 5 | 自我绝对控制 (`academy:absolute_self_control`) | `academy:complete_consciousness_analysis` |
 
 ## 电气使 (`academy:electromaster`)
 
@@ -27,10 +29,10 @@
 | 3 | 矿物探测 (`academy:mine_detect`) | `academy:magnet_manipulation` |
 | 2 | 闪电新星 (`academy:lightning_nova`) | `academy:thunder_lance` |
 | 2 | 雷击之枪 (`academy:thunder_lance`) | `academy:arc_generate` |
-| 3 | 电流共生 (`academy:current_symbiosis`) | `academy:pulse_charge` |
+| 3 | 电流共生 (`academy:current_symbiosis`) | `academy:current_recharge` |
 | 3 | 磁力操纵 (`academy:magnet_manipulation`) | `academy:arc_generate` |
 | 3 | 磁悬武装 (`academy:magnetic_weapon`) | `academy:magnet_manipulation` |
-| 3 | 电流充能 (`academy:pulse_charge`) | `academy:magnet_manipulation` |
+| 3 | 电流充能 (`academy:current_recharge`) | `academy:magnet_manipulation` |
 | 4 | 生物电操作 (`academy:bioelectric_operation`) | `academy:electrical_contact` |
 | 4 | 电磁护盾 (`academy:electromagnetic_shield`) | `academy:magnet_manipulation` |
 | 4 | 铁砂操作 (`academy:iron_sand_arsenal`) | `academy:magnetic_weapon` |
@@ -45,12 +47,12 @@
 |---:|---|---|
 | 1 | 空间折叠理论 (`academy:space_folding_theorem`) | `academy:threatening_teleport` |
 | 1 | 威胁传送 (`academy:threatening_teleport`) | 无 |
-| 2 | 穿透传送 (`academy:cut_through`) | `academy:self_teleport` |
+| 2 | 穿透传送 (`academy:piercing_teleportation`) | `academy:self_teleport` |
 | 2 | 缴械传送 (`academy:disarm`) | `academy:self_teleport` |
 | 2 | 自身传送 (`academy:self_teleport`) | `academy:threatening_teleport` |
 | 2 | 空间协同 (`academy:spatial_synergy`) | `academy:self_teleport` |
-| 3 | 肉体撕裂 (`academy:flesh_ripping`) | `academy:cut_through` |
-| 3 | 位置传送 (`academy:location_teleport`) | `academy:cut_through` |
+| 3 | 肉体撕裂 (`academy:flesh_ripping`) | `academy:piercing_teleportation` |
+| 3 | 位置传送 (`academy:location_teleport`) | `academy:piercing_teleportation` |
 | 3 | 禁锢传送 (`academy:shackle`) | `academy:self_teleport` |
 | 4 | 区域传送·选择 (`academy:area_teleport_select`) | `academy:location_teleport` |
 | 4 | 区域传送·设置 (`academy:area_teleport_setup`) | `academy:area_teleport_select` |
@@ -68,8 +70,8 @@
 | 1 | 矢量冲击 (`academy:vector_blast`) | `academy:vector_accel` |
 | 2 | 导向踏击 (`academy:dir_strike`) | `academy:vector_blast` |
 | 2 | 动能加持 (`academy:kinetic_energy_applied`) | `academy:vector_accel` |
-| 2 | 矢量偏移 (`academy:vector_reduction`) | `academy:kinetic_energy_applied` |
-| 3 | 矢量反射 (`academy:vector_reflection`) | `academy:vector_reduction` |
+| 3 | 矢量偏移 (`academy:vector_deviation`) | `academy:kinetic_energy_applied` |
+| 4 | 矢量反射 (`academy:vector_reflection`) | `academy:vector_deviation` |
 | 4 | 过滤网 (`academy:reflection_filter`) | `academy:vector_reflection` |
 | 4 | 风暴之翼 (`academy:storm_wing`) | `academy:vector_reflection` |
 | 5 | 黑翼 (`academy:black_wing`) | `academy:storm_wing` |

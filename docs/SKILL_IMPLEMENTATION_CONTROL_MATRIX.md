@@ -1,13 +1,12 @@
 # 技能实现与调控总表
 
-本文档按当前 `Skills` 注册表和各技能源码整理，共 89 个已注册技能。表内按键是源码默认值；玩家在数据终端修改后的实时绑定以 `config/academy-client.json` 为准。
+本文档由当前 `Skills` 注册表、全技能效果总表和前置关系清单汇总，共 94 个已注册技能。运行 `powershell -NoProfile -ExecutionPolicy Bypass -File tools/docs/sync_skill_control_matrix.ps1` 可在基础文档变更后重新生成本表。按键是源码默认值或“见源码”提示；玩家实时覆盖值以 `config/academy-client.json` 为准。
 
 ## 标记说明
 
 - `↓`：按下；`↑`：松开；同一技能同时列出两项表示按住/蓄力或开始/结束。
-- `移植`：1.21.1 合同已经迁入或合并；`保留`：26.2 原有技能；`P6`：已有实现，但仍在 Accelerator 高版本适配阶段。
-- `IF=0` 通常表示现存技能尚未补齐开发消耗，而不代表已确认应免费学习。
-- `维持 CP` 表示切换开启后的永久或周期占用。普通 `CP` 为施放成本或源码 Builder 基值。
+- `IF` 为当前源码 `energyCost`；消耗栏来自全技能效果总表。
+- “见源码（可配置）”表示尚未在本表固化默认组合，不表示技能没有按键。
 
 ## 全局控制
 
@@ -18,152 +17,153 @@
 | HUD 下一技能 | `↓键↓` | 技能轮盘向下 |
 | 数据终端 | `右 Alt↓` | 打开数据终端及设置应用 |
 
-## Level0 公共脑开发
-
-| 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `level0_passive_lv1` 频率提升 | 移植 | L1 / 0 / 0 | 被动：+4 最大生命、+2 攻击；配置默认另加 20 最大 CP、1 CP 恢复 | 无 | 无 | `Level0PassiveLv1` |
-| `level0_passive_lv2` 简化运算 | 移植 | L2 / 10k / 0 | 被动维持急迫 I；配置默认 +5% 计算效率 | 无 | Lv1 | `Level0PassiveLv2` |
-| `level0_passive_lv3` 基础体术 | 移植 | L3 / 30k / 0 | 被动：+2 护甲、+2 护甲韧性；另加 100 最大 CP、5 CP 恢复 | 无 | Lv2 | `Level0PassiveLv3` |
-| `level0_passive_lv4` 工程科学 | 移植 | L4 / 60k / 0 | 被动：+0.02 移速、+0.5 攻速；另加 15% 计算效率 | 无 | Lv3 | `Level0PassiveLv4` |
-| `level0_passive_lv5` 带宽拓展 | 移植 | L5 / 100k / 0 | 被动：+2 最大生命、+2 护甲；另加 500 最大 CP、25 CP 恢复、30% 计算效率 | 无 | Lv4 | `Level0PassiveLv5` |
-
 ## Aeromanip 气动操纵
 
-| 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `airflow_jet` 气流喷射 | 完善 | L1 / 5k / 每 10 tick 消耗 10 | 按住时由服务端持续沿视线推进，松开结束；潜行时快速制动并重置坠落距离 | `R` 按住 | 无 | `AirflowJet` |
-| `atmosphere_shield` 大气护盾 | 移植 | L3 / 30k / 维持 50 | 切换压缩空气薄膜，增强近战伤害和击退 | `Alt+N↑` | 气流喷射 | `AtmosphereShield` |
-| `breathing_film` 呼吸薄膜 | 移植 | L2 / 10k / 维持 20 | 学会后自动维持空气，周期恢复水下氧气 | 无 | 大气护盾 | `BreathingFilm` |
-| `atmosphere_blast_gun` 大气爆破枪 | 移植 | L4 / 60k / 40 | 8 格短程气爆，8 基础伤害并强力击飞敌人 | `Alt+鼠标左键↑` | 大气护盾 | `AtmosphereBlastGun` |
-| `flight` 飞行 | 移植 | L5 / 100k / 维持 50 | 切换受服务端控制的创造式飞行租约 | `Alt+F↑` | 呼吸薄膜 | `Flight` |
-| `vacuum_domain` 真空领域 | 移植 | L5 / 100k / 100 | 在 16 格目标处创建半径 12、持续 200 tick 的真空领域，周期造成最大生命 5% 伤害 | `Y↑` | 呼吸薄膜 | `VacuumDomain` |
+| `airflow_jet` 气流喷射 | 现行 | L1 / 5k / 每 10 tick 10 | 按住沿视线推进；初速 1.4、速度倍率 1.5，水下速度再 ×0.4；潜行制动。 | `R` 按住 | 无 | `AirflowJet` |
+| `air_cushion` 气垫缓冲 | 现行 | L1 / 5k / 每次触发 10 | 自动把坠落伤害降低 70%/85%/100%；熟练度可把 3 格友军保护扩至 5 格。 | 见源码（可配置） | `academy:airflow_jet` | `AirCushion` |
+| `flow_sense` 流场感知 | 现行 | L1 / 5k / 0 | 每 10 tick 感知移动实体/投射物并显示方向与速度；技能级范围 12/16/20，熟练度后 +4，最高频率 5 tick。 | 见源码（可配置） | `academy:airflow_jet` | `FlowSense` |
+| `atmosphere_shield` 大气护盾 | 现行 | L3 / 30k / 维持 30；低伤免疫 10；一般防御 `min(30,4+2×减免伤害)` | 维持时攻击击退 `+0.5A`、真实抗性 +6，并停止附近投射物；普通伤害减免 20%/28%/35%，高熟练度最高 50%。 | `Alt+N↑` | `academy:breathing_film` | `AtmosphereShield` |
+| `breathing_film` 呼吸薄膜 | 现行 | L2 / 10k / 维持 20；主动 15 | 每 10 tick 恢复自身氧气；主动施放为 16 格内友军补满氧气。 | 无 | `academy:flow_sense` | `BreathingFilm` |
+| `pneumatic_grasp` 气动牵引 | 现行 | L2 / 10k / 每 10 tick 10；满熟练度抬升落地生物另每 5 tick 5 | 牵引/推动物品、经验球、投射物和敌对生物；基础范围 16/20/24，高熟练度 +8，控制距离 2–16。 | 见源码（可配置） | `academy:flow_sense` | `PneumaticGrasp` |
+| `tailwind_field` 顺风场 | 现行 | L2 / 10k / 维持 20 | 维持半径 4、长度 14 的风道；强度 0.15/0.20/0.25，友军与顺向投射物加速、逆向敌人减速。 | 见源码（可配置） | `academy:air_cushion` | `TailwindField` |
+| `laminar_cutter` 层流切割 | 现行 | L3 / 30k / 20 | 发射长度 24/28/32 的层流刃，伤害 `4AD`；可切除获准软方块。 | 见源码（可配置） | `academy:pneumatic_grasp` | `LaminarCutter` |
+| `vortex_pull` 涡流牵引 | 现行 | L3 / 30k / 30 | 在 16 格内生成半径 9/10/11、持续 80 tick 的上升涡流；可捕获并重新发射投射物。 | 见源码（可配置） | `academy:pneumatic_grasp` | `VortexPull` |
+| `atmosphere_blast_gun` 大气爆枪 | 现行 | L4 / 60k / 宽域 30；聚焦 40 | 宽域：长度 8、半宽 1、`10AD`；聚焦：长度 20、半宽 0.5、`14AD`；击退 1.8、上抛至少 0.45。 | `Alt+鼠标左键↑` | `academy:atmosphere_shield` | `AtmosphereBlastGun` |
+| `wind_corridor` 定向风道 | 现行 | L4 / 60k / 40；重定向 20 | 生成半径 2.5、长度 24、持续 160 tick 的运输风道；高熟练度为长度 30、持续 220，可半价重定向旧风道。 | 见源码（可配置） | `academy:tailwind_field` | `WindCorridor` |
+| `pressure_lock` 压力禁锢 | 现行 | L4 / 60k / 每次锁定 40 | 锁定 18 格视线目标并压制位移，持续 200 tick；高熟练度 240 tick。 | 见源码（可配置） | `academy:vortex_pull` | `PressureLock` |
+| `flight` 飞行 | 现行 | L5 / 100k / 维持 50；加速每 20 tick 10 | 获得服务端控制飞行；普通速度上限 0.7，加速上限 1.2。 | `Alt+F↑` | `academy:wind_corridor` | `Flight` |
+| `vacuum_domain` 真空领域 | 现行 | L5 / 100k / 50+20%最大CP | 16 格内创建半径 12 的真空区，每 10 tick 造成 `max(1,5%Hmax)AD` 并清空氧气；领域持续到再次施放取消。 | `Y↑` | `academy:atmospheric_dominion` | `VacuumDomain` |
+| `atmospheric_dominion` 大气支配 | 现行 | L5 / 100k / 100 | 自身中心半径 22、持续 400 tick：友军速度 II、免坠落并补氧；敌人减速，投射物受风向影响。高熟练度为半径 26、480 tick。 | 见源码（可配置） | `academy:atmosphere_blast_gun`<br>`academy:vortex_pull` | `AtmosphericDominion` |
 
 ## Accelerator 矢量操纵
 
-| 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `vector_blast` 矢量冲击 | 移植 | L1 / 5k / 10 | 64 格服务端射线，10 基础技能伤害并沿射线击退 | `Alt+鼠标左键↑` | 无 | `VectorBlast` |
-| `vector_accel` 矢量加速 | P6 | L1 / 5k / 10 | 最长蓄力 2 秒的定向冲刺，服务端速度上限 2.5，带残影预览 | `C↓ / C↑` | 无 | `VectorAccel` |
-| `flow_control` 气流操控 | 保留 | L1 / 0 / 实际 55 | 前方锥形推开目标；潜行时改为较短距离拉近，范围和力度随技能等级增长 | `V↓` | 无 | `FlowControl` |
-| `directed_shock` 集束冲击 | 保留 | L1 / 0 / 50 | 蓄力锥形冲击，当前 8 伤害、3–4 格范围并强击退 | `Shift+R↓ / Shift+R↑` | 无 | `DirectedShock` |
-| `kinetic_energy_applied` 动能加持 | P6 | L2 / 10k / 10 | 切换后加速玩家发射的投射物，并附加 2–5 点额外伤害 | `K↓` | 矢量加速 | `KineticEnergyApplied` |
-| `dir_strike` 定向打击 | P6 | L2 / 10k / 20 | 向视线方向抛射方块并对目标造成当前 6 点伤害 | `Alt+R↓` | 矢量冲击 | `DirStrike` |
-| `kinetic_superposition` 动能叠加 | 保留 | L2 / 0 / 55 | 切换急迫效果；近战追加 4–6 魔法伤害，重型武器额外提高 20% | `Alt+P↓` | 动能加持 | `KineticSuperposition` |
-| `vector_reduction` 减速力场 | 保留 | L2 / 0 / 维持 75 | 半径 6–10 的减速场，降低实体速度 50–80%，投射物速度降至 10% 并施加虚弱/挖掘疲劳 | `N↓` | 矢量加速 | `VectorReduction` |
-| `hyper_accelerate` 矢量跳跃 | 保留 | L3 / 0 / 50 | 蓄力高速发射自身，最高速度 3；接触目标时造成轻伤和位移 | `Shift+C↓ / Shift+C↑` | 矢量加速 | `HyperAccelerate` |
-| `vector_reflection` 矢量反射 | P6 | L3 / 30k / 维持 50 | 拦截并反射部分来袭伤害；吸收上限为最大 CP 的 5–8%，完全反射倍率当前为 1.5 | `R↓` | 动能加持 | `VectorReflection` |
-| `storm_wing` 风暴之翼 | P6 | L4 / 60k / 20 | 切换同步风暴翼状态，并通过服务端控制包提供空中移动和坠落控制 | `B↓` | 矢量反射 | `StormWing` |
-| `bloodflow_reverse` 血流逆流 | P6 | L5 / 100k / 100 | 短程目标攻击；叠加减速、虚弱和挖掘疲劳，伤害为最大生命 20% 起并随层数增加 | `Alt+Shift+R↓` | 矢量反射 | `BloodflowReverse` |
-| `plasma_generation` 等离子体 | P6 | L5 / 100k / 500 | 3–20 秒蓄力的高成本等离子攻击，基础伤害 50 并按蓄力增长 | `Alt+Ctrl+C↓ / Alt+Ctrl+C↑` | 矢量反射、风暴之翼 | `PlasmaGeneration` |
-
-尚未注册、因此未列入现存表：`reflection_filter`、`black_wing`、`white_wing`、`crossing_the_abyss`、`platinum_wing`。
+| `vector_blast` 矢量冲击 | 现行 | L1 / 5k / 射击 10；拉/推每 10 tick 10 | 64 格、半径 1 射线造成 `10AD`；也可在 32 格内持续拉/推。跨越深渊启用时追加半径 8 的真实范围伤害。 | `Alt+鼠标左键↑` | `academy:vector_accel` | `VectorBlast` |
+| `vector_accel` 矢量加速 | 现行 | L1 / 5k / 10 | 最长蓄力 40 tick，速度 `7×sin(0.4+0.6C)`；满熟练度冲撞追加 `6AD`。 | `C↓ / C↑` | 无 | `VectorAccel` |
+| `vector_deviation` 矢量偏移 | 现行 | L3 / 10k / 维持 40；拦截伤害/投射物按处理量动态计费（满熟练时低于 `1%最大CP` 的伤害无消耗） | 维持减速场：半径 6–10、实体减速 50%–80%、投射物速度 ×0.1；还能折射来伤、线性攻击和投射物。 | `N↓` | `academy:kinetic_energy_applied` | `VectorDeviation` |
+| `kinetic_energy_applied` 动能加持 | 现行 | L2 / 10k / 维持 15；每次冲击 `10L` | 维持移动/攻击强化；1–5 级冲击伤害 `(4+L²)AD`、半径 `L²+2`，并可破坏方块；其他攻击先 ×2，再追加 `4AD`。 | `K↓` | `academy:vector_accel` | `KineticEnergyApplied` |
+| `dir_strike` 导向踏击 | 现行 | L2 / 10k / 15 | 半径 12 地面环形冲击造成 `12AD`；空中俯冲半径再 +6。 | `Alt+R↓` | `academy:vector_blast` | `DirStrike` |
+| `vector_reflection` 矢量反射 | 现行 | L4 / 30k / 维持基础 40；过滤模式为 40/60/80，名单每项 +5；另按来伤动态扣除（满熟练时低于 `1%最大CP` 的伤害无消耗） | 反射可处理的来伤并把投射物速度反向 ×1.2；每点处理伤害消耗 CP 倍率为 2/1/0.5/0.5（熟练度档位）。 | `R↓` | `academy:vector_deviation` | `VectorReflection` |
+| `reflection_filter` 过滤网 | 现行 | L4 / 60k / 自身 0；会改变矢量反射维持占用 | 配置矢量反射的全反射/正面过滤/中性过滤模式，以及效果白名单和黑名单（合计最多 256 项）。 | 见源码（可配置） | `academy:vector_reflection` | `ReflectionFilter` |
+| `storm_wing` 风暴之翼 | 现行 | L4 / 60k / 维持 40；每 20 tick 维持费 10 | 维持矢量飞行、悬停和高速推进。 | `B↓` | `academy:vector_reflection` | `StormWing` |
+| `bloodflow_reverse` 血流逆流 | 现行 | L5 / 100k / 100或最大CP的20%取高 | 近距离造成 `Hmax`，叠加缓慢/虚弱/挖掘疲劳（最高效果等级 V），持续 200 tick。 | `Alt+Shift+R↓` | `academy:vector_reflection` | `BloodflowReverse` |
+| `black_wing` 黑翼 | 现行 | L5 / 100k / 维持 60；每 20 tick 20；每次扇击 20 | 双翼矢量飞行；32 格扇击造成 `(基础攻击+1%Htmax+10)D` 真实/复合伤害。 | 见源码（可配置） | `academy:storm_wing` | `BlackWing` |
+| `white_wing` 白翼 | 现行 | L5 / 100k / 维持 80；每 20 tick 40；每次扇击 20 | 保留黑翼飞行与 32 格真实生命扇击。 | 见源码（可配置） | `academy:black_wing` | `WhiteWing` |
+| `platinum_wing` 白金翼 | 现行 | L5 / 100k / 维持 160；每 20 tick 80；每次扇击 20 | 保留扇击；潜行攻击可处决 128 格非玩家目标：通常 `(2Htmax+1000)D`，高熟练度对 Boss 改为 `15%Htmax×D`。 | 见源码（可配置） | `academy:white_wing` | `PlatinumWing` |
+| `crossing_the_abyss` 跨越深渊 | 现行 | L5 / 100k / 维持 100 | 压低目标真实生命并锁定治疗上限；目标连续 3 次从致死伤害中存活后强制终结，并强化矢量冲击。 | 见源码（可配置） | `academy:white_wing` | `CrossingTheAbyss` |
+| `plasma_generation` 等离子体 | 现行 | L5 / 100k / 每完成 1 秒蓄力 40 | 每 40 tick 增长 1 阶，最多 6 阶；每阶伤害 `50AD`、伤害半径 5阶数、爆破半径2.5阶数，最大选点 128。 | `Alt+Ctrl+C↓ / Alt+Ctrl+C↑` | `academy:storm_wing` | `PlasmaGeneration` |
 
 ## Electromaster 电气操纵
 
-| 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `arc_generate` 电弧生成 | 移植 | L1 / 5k / 10 | 十格短射线，当前 4 基础技能伤害并使用电弧效果 | `Alt+G↓` | 无 | `ArcGenerate` |
-| `pulse_charge` 电流回充 | 保留 | L1 / 0 / 15 | 在视线位置生成电弧并触发目标方块的红石邻居更新 | `Ctrl+G↓` | 无 | `PulseCharge` |
-| `electrical_contact` 带电接触 | 保留 | L1 / 0 / 维持 15 | 切换后每 40 tick 对两格内目标或攻击者造成 2 点闪电伤害 | `H↓` | 无 | `ElectricalContact` |
-| `mine_detect` 矿物探测 | 移植 | L1 / 5k / 维持 20 | 客户端分批扫描已加载区块并显示 64 格内矿物轮廓 | `Alt+M↑` | 磁力操纵 | `MineDetect` |
-| `bioelectric_surge` 生物电涌 | 保留 | L2 / 0 / 维持 30；技能3级为15 | 开启时维持力量、再生、速度、急迫和饥饿；关闭时按持续时间施加多种负面效果 | `J↓` | 电弧生成 | `BioelectricSurge` |
-| `magnet_moment_charge` 磁矩爆发 | 保留 | L2 / 0 / 40 | 生成前进的磁力球，并持续牵引附近目标 | `Alt+Shift+G↓` | 电弧生成 | `MagnetMomentCharge` |
-| `lightning_nova` 闪电新星 | 保留 | L2 / 0 / 60 | 持续 200 tick 向外扩张至半径 16，脉冲造成 4 点闪电伤害 | `Ctrl+N↓` | 带电接触 | `LightningNova` |
-| `magnet_manipulation` 磁力操纵 | 移植/合并 | L3 / 30k / 30 | Alt+X 拉动自身或目标；按住 R 以 10 CP/s 朝 64 格服务端目标飞行 | `Alt+X↓ / Alt+Shift+X↓ / R↓ / R↑` | 电弧生成 | `MagnetManipulation` |
-| `current_recharge` 电流充能 | 移植 | L3 / 30k / 周期 5/tick | 按住 H 为五格内方块、生物或装备的 NeoForge 能量存储充能 | `H↓ / H↑` | 磁力操纵 | `CurrentRecharge` |
-| `current_symbiosis` 电流共生 | 移植 | L3 / 30k / 维持 30 | 切换后周期为手持和穿戴装备充能 | `Y↑` | 电流充能 | `CurrentSymbiosis` |
-| `magnetic_weapon` 磁悬武装 | 保留 | L3 / 0 / 维持 40 | 切换悬浮武器，约每 15 tick 自动攻击四格内目标，伤害取武器伤害的 60% | `Alt+Shift+M↓` | 磁力操纵、磁矩爆发 | `MagneticWeapon` |
-| `thunder_lance` 雷击之枪 | 移植/合并 | L3 / 0 / 60 | 保留蓄力雷枪，并加入 Alt+右键松开的 32 格快速闪电枪模式 | `Ctrl+T↓ / Alt+鼠标右键↑` | 电弧生成 | `ThunderLance` |
-| `bioelectric_operation` 生物电操纵 | 移植 | L4 / 60k / 维持 40 | 通过瞬态属性强化移动、攻击、挖掘、跳跃、台阶和坠落控制 | `Alt+N↑` | 电流共生 | `BioelectricOperation` |
-| `electromagnetic_shield` 电磁护盾 | 移植 | L4 / 60k / 维持 40 | 吸收伤害，上限为 `100 × 能力强度`；每 40 tick 花 20 CP 冷却 10 点负荷 | `Alt+K↑` | 磁力操纵 | `ElectromagneticShield` |
-| `iron_sand_arsenal` 铁砂之剑 | 保留 | L4 / 0 / 维持 50 | 切换铁砂武装并循环剑、鞭、锤形态；当前伤害 15/8/25 | `Alt+Shift+I↓ / Alt+Shift+G↓` | 磁悬武装 | `IronSandArsenal` |
-| `lightning_storm` 闪电风暴 | 保留 | L4 / 0 / 80 | 在目标区域生成 21 次雷击，半径 8，单次当前 8 点伤害 | `Alt+Shift+L↓` | 闪电新星 | `LightningStorm` |
-| `railgun` 电磁炮 | 移植/增强 | L4 / 60k / 200 | 蓄力消耗硬币、铁锭、铁块或已抛硬币，发射 150 基础伤害的电磁弹 | `X↓` | 雷击之枪、磁力操纵 | `Railgun` |
-| `ball_lightning` 球状闪电 | 保留/高风险 | L5 / 0 / 80 | 生成自动索敌球状闪电；命中五格范围时直接将生命乘 0.7 后再造成 10 点伤害 | `Y↓` | 当前 Builder 无依赖 | `BallLightning` |
-| `thunderclap` 终极落雷 | 移植 | L5 / 100k / 100 | 64 格服务端选点，半径 5 内造成 `20% 最大生命 × 玩家倍率` 的普通闪电伤害 | `Alt+Shift+Y↓` | 闪电风暴 | `Thunderclap` |
+| `arc_generate` 电弧生成 | 现行 | L1 / 5k / 10 | 10 格短射线造成 `4AD`，路径半径 0.125。 | `Alt+G↓` | 无 | `ArcGenerate` |
+| `electrical_contact` 接触电击 | 现行 | L1 / 0 / 维持 10 | 每 20 tick 电击半径 2 内敌人，并反击近战攻击者；每次 `2AD`。 | `H↓` | `academy:arc_generate` | `ElectricalContact` |
+| `current_recharge` 电流充能 | 现行 | L3 / 30k / 每 20 tick 30 | 按住为 5 格内方块、生物与装备充能；仅有效充能时收费。 | `H↓ / H↑` | `academy:magnet_manipulation` | `CurrentRecharge` |
+| `lightning_nova` 闪电新星 | 现行 | L2 / 10k / 15 | 扩张电环持续 200 tick、最大半径 16，波前每次造成 `4AD`。 | `Ctrl+N↓` | `academy:thunder_lance` | `LightningNova` |
+| `magnet_manipulation` 磁力操纵 | 现行 | L3 / 30k / 移动期间每 20 tick 10 | 48 格内把自身拉向含铁目标（0.9/tick），或把目标拉到面前 2.5 格（1.15/tick）。 | `Alt+X↓ / Alt+Shift+X↓ / R↓ / R↑` | `academy:arc_generate` | `MagnetManipulation` |
+| `mine_detect` 矿物探测 | 现行 | L3 / 5k / 维持 30 | 显示已加载区块内半径 64 的矿物；每 tick 最多扫描 32768 点，每 100 tick 重扫。 | `Alt+M↑` | `academy:magnet_manipulation` | `MineDetect` |
+| `magnetic_weapon` 磁悬武装 | 现行 | L3 / 30k / 维持 30 | 悬浮武器每 10 tick 攻击半径 16 内威胁，伤害 `0.6×武器攻击×D`。 | `Alt+Shift+M↓` | `academy:magnet_manipulation` | `MagneticWeapon` |
+| `current_symbiosis` 电流共生 | 现行 | L3 / 30k / 维持 30 | 每 10 tick 为手持与穿戴装备补充能量；过充可使下一次同系施放成本 ×0.8（触发后冷却 100 tick）。 | `Y↑` | `academy:current_recharge` | `CurrentSymbiosis` |
+| `bioelectric_operation` 生物电操作 | 现行 | L4 / 60k / 维持 40；满熟练度低血量时每 20 tick 5 | 提供移速 +0.1、台阶 +0.4、移动效率 +1、跳跃 +0.58、攻速 +2.4、挖掘速度 +0.5、安全坠落 +10；攻击伤害属性 `+4A`。 | `Alt+N↑` | `academy:electrical_contact` | `BioelectricOperation` |
+| `electromagnetic_shield` 电磁护盾 | 现行 | L4 / 60k / 维持 40；每次冷却 20 | 容量 `100A`，先吸收来伤；每 20 tick 可清除 `10A` 负荷。 | `Alt+K↑` | `academy:magnet_manipulation` | `ElectromagneticShield` |
+| `iron_sand_arsenal` 铁砂操作 | 现行 | L4 / 60k / 维持 40 | 半径 2 近身脉冲 `4AD`；主手挥动向前 120°、半径 12 横扫并造成 `10AD`。 | `Alt+Shift+I↓ / Alt+Shift+G↓` | `academy:magnetic_weapon` | `IronSandArsenal` |
+| `thunder_lance` 雷击之枪 | 现行 | L2 / 10k / 20 | 向 32 格路径发射四道闪电，路径半径 2，伤害 `16AD`。 | `Ctrl+T↓ / Alt+鼠标右键↑` | `academy:arc_generate` | `ThunderLance` |
+| `lightning_storm` 闪电风暴 | 现行 | L5 / 60k / 80 | 50 格选点，在半径 8 内召唤 21 次雷击；每次技能伤害 `2%Hmax+8AD`。 | `Alt+Shift+L↓` | `academy:ball_lightning` | `LightningStorm` |
+| `railgun` 电磁炮 | 现行 | L4 / 60k / 100 + 1 个弹药 | 蓄力并消耗弹药；基础伤害 `150AD×弹药倍率`。硬币/铁锭/铁块/铁砧倍率为 0.8/1/1.5/2，射程与宽度也随弹药增加。 | `X↓` | `academy:thunder_lance` | `Railgun` |
+| `ball_lightning` 球状闪电 | 现行 | L5 / 100k / 80 | 最长存在 2000 tick、索敌半径 64；接近目标后在半径 5 造成 `(0.3Hmax+10)AD`。 | `Y↓` | `academy:lightning_nova` | `BallLightning` |
+| `thunderclap` 雷鸣 | 现行 | L5 / 100k / 100 | 64 格选点、半径 5；先造成 1 点，再造成 `20%Hmax+20AD`。 | `Alt+Shift+Y↓` | `academy:ball_lightning` | `Thunderclap` |
 
 ## Meltdowner 原子崩坏
 
-| 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `single_high_speed_electron_beam` 单发高速电子束 | 移植 | L1 / 5k / 20 | 40 tick 延迟电子束，造成 `20 + 1% 目标最大生命` 的缩放伤害 | `Alt+鼠标左键↓` | 无 | `SingleHighSpeedElectronBeam` |
-| `radiation_intensify` 辐射强化 | 移植 | L1 / 5k / — | 被动：命中施加 200 tick 辐射标记和负面效果，后续兼容射束伤害 ×1.5 | 无 | 单发高速电子束 | `RadiationIntensify` |
-| `trace_ring` 轨迹环绕 | 保留 | L1 / 0 / 维持 60 | 生成内外两圈共 12 个光球，持续环绕并对接触目标造成 2 点伤害 | `C↓` | 无 | `TraceRing` |
-| `spreading_blast` 霰流射束 | 移植/合并 | L2 / 10k / 40 | 蓄力 20–80 tick 后释放 7–8 条延迟射束，应用生命比例伤害、辐射和方块权限 | `Alt+鼠标右键↓ / Alt+鼠标右键↑` | 单发高速电子束 | `SpreadingBlast` |
-| `electron_barrier` 电子屏障 | 保留 | L2 / 0 / 维持 120 | 前方半径 3 的持续屏障，造成 4 点伤害并击退 | `Alt+B↓` | 无 | `ElectronBarrier` |
-| `mining_beam` 采矿光束 | 移植 | L2 / 10k / 周期 5 | 按住维持最长 48 格的采矿射束；周期破坏有权限方块并造成 12 点缩放伤害 | `M↓ / M↑` | 单发高速电子束 | `MiningBeam` |
-| `homing_blast` 归一射束 | 保留 | L3 / 0 / 200 | 生成当前 24 个追踪光球，在八格索敌并造成每个 4 点伤害 | `Alt+Shift+H↓` | 霰流射束 | `HomingBlast` |
-| `cloudroom` 粒子云室 | 保留 | L3 / 0 / 维持 30 | 在半径 16 内追踪实体并生成短寿命烟雾轨迹，主要为侦测/视觉效果 | `Alt+U↓` | 无 | `Cloudroom` |
-| `beta_particle_stream` β粒子流 | 保留 | L3 / 0 / 40 | 蓄力后向 16 格目标方向发射多束粒子流，单束当前 6 点伤害 | `Alt+Shift+F↓ / Alt+Shift+F↑` | 无 | `BetaParticleStream` |
-| `light_shield` 光盾 | 移植 | L3 / 30k / 周期 5 | 按住获得抗性提升 II，并每四 tick 对半径 3.5 的敌人造成伤害和击退 | `H↓ / H↑` | 单发高速电子束 | `LightShield` |
-| `hell_flare` 地狱烈焰 | 保留 | L4 / 0 / 600 | 锁定 32 格目标并进入三阶段持续射线；每 30 tick 伤害依次为 2/6/12 | `Alt+Shift+N↓` | 当前 Builder 无依赖 | `HellFlare` |
-| `particle_wave_cannon` 粒机波形高速炮 | 移植 | L4 / 60k / 周期 10 | 蓄力 25 tick 后维持最长 85 格宽射束，周期破坏方块并造成 `40 + 1% 最大生命` 伤害 | `C↓ / C↑` | 霰流射束 | `ParticleWaveCannon` |
-| `jet_strike` 突击喷射 | 移植/合并 | L4 / 60k / 20 | 服务端选择八格内安全落点并突进，对半径 3.25 目标造成伤害 | `R↓` | 光盾 | `JetStrike` |
-| `chain_fusion` 链式聚变 | 保留 | L5 / 0 / 150 | 发射聚变球；初始 15 伤害，随后在五格范围最多链式跳转五次、每次 10 伤害 | `Alt+Shift+U↓` | 当前 Builder 无依赖 | `ChainFusion` |
-| `disintegrate` 解离射线 | 保留/高风险 | L5 / 0 / 200 | 30 格窄射线破坏高硬度方块；当前伤害变量取枚举中最后目标生命的 99% 并应用到全部目标 | `Alt+Shift+K↓` | 当前 Builder 无依赖 | `Disintegrate` |
-| `auto_cruise_beam_cannon` 自动巡航电子炮 | 移植 | L5 / 100k / 维持 50，单发 10 | 扫描 16 格敌人并自动发射带 40 tick 延迟的电子束 | `Y↑` | 霰流射束 | `AutoCruiseBeamCannon` |
+| `single_high_speed_electron_beam` 粒机波形高速炮 | 现行 | L1 / 5k / 15 | 延迟 10 tick 成形的 50 格窄射束，伤害 `16MAD+1%Hmax`。 | `Alt+鼠标左键↓` | 无 | `SingleHighSpeedElectronBeam` |
+| `scatter_bomb` 电子弹散射 | 现行 | L2 / 10k / 40 | 蓄力 20–80 tick 后释放 7 束 50 格射线；每束 `16MAD+1%Hmax`。 | 见源码（可配置） | `academy:single_high_speed_electron_beam` | `ScatterBomb` |
+| `radiation_intensify` 镭射强化 | 现行 | L1 / 5k / 0 | 被动：射束命中施加 200 tick 标记，使后续兼容射束的固定基础伤害 ×1.5。 | 无 | `academy:single_high_speed_electron_beam` | `RadiationIntensify` |
+| `mining_beam` 采矿光束 | 现行 | L2 / 10k / 每 20 tick 20 | 最长 48 格；每 20 tick 对路径实体造成 `12AD`，每 3 tick 破坏半径 0.35、采掘等级 4 的方块。 | `M↓ / M↑` | `academy:single_high_speed_electron_beam` | `MiningBeam` |
+| `light_shield` 光盾 | 现行 | L3 / 30k / 每 2 tick 4 | 按住获得抗性提升 II；每 4 tick 对半径 3.5 的敌人造成 `3AD` 并击退。 | `H↓ / H↑` | `academy:single_high_speed_electron_beam` | `LightShield` |
+| `cloudroom` 粒子云室 | 现行 | L3 / 30k / 维持 30 | 显示 16 格内生物轨迹；每实体每 5 tick 最多 6 条，轨迹寿命 30 tick。 | `Alt+U↓` | `academy:light_shield` | `Cloudroom` |
+| `particle_wave_cannon` 波形粒子炮 | 现行 | L4 / 60k / 启动 10；维持每 2 tick 10 | 蓄力 25 tick 后维持 85 格宽射束；每 10 tick `40MAD+1%Hmax`，破坏半径 0.6、采掘等级 4。 | `C↓ / C↑` | `academy:scatter_bomb` | `ParticleWaveCannon` |
+| `jet_strike` 突击喷射 | 现行 | L4 / 60k / 20 | 突进 8 格，在落点半径 3.25 造成 `10AD`。 | `R↓` | `academy:light_shield` | `JetStrike` |
+| `disintegrate` 解离射线 | 现行 | L5 / 100k / 100或最大CP的20%取高 | 30 格射线造成 `20%Hmax×D` 并按服务器权限破坏路径方块；击杀后最多散射 3 束，二段击杀可再散射 1 束且不继续连锁。 | `Alt+Shift+K↓` | `academy:particle_wave_cannon` | `Disintegrate` |
+| `auto_cruise_beam_cannon` 自动巡航光束炮 | 现行 | L5 / 100k / 维持 50；每发 10 | 每 10 tick 扫描 16 格敌人，最快每 2 tick 发射一束 `(10M+1%Hmax)D` 延迟射线。 | `Y↑` | `academy:scatter_bomb` | `AutoCruiseBeamCannon` |
 
 ## Teleport 空间移动
 
-| 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `threatening_teleport` 威胁传送 | 移植 | L1 / 5k / 10 | 将主手物品传入 24 格目标体内，造成 `4 + 武器攻击加成` 伤害 | `Alt+鼠标左键↓` | 无 | `ThreateningTeleport` |
-| `space_folding_theorem` 空间折叠理论 | 移植 | L1 / 5k / — | 被动：兼容的空间伤害 ×1.25 | 无 | 威胁传送 | `SpaceFoldingTheorem` |
-| `matter_warp` 危险传送 | 保留 | L1 / 0 / 20 | 在视线落点生成空间攻击和烟雾，对附近目标造成等级缩放魔法伤害 | `Alt+V↓` | 无 | `MatterWarp` |
-| `clip_through` 隧穿移动 | 保留/待审计 | L1 / 0 / 150 | 沿客户端提交方向穿越至技能距离末端，碰撞失败时回退半格 | `Alt+F↓` | 无 | `ClipThrough` |
-| `self_teleport` 自身传送 | 移植 | L2 / 10k / 释放时计算 | 按住并滚轮预览 20 格内安全位置，松开后服务端校验传送 | `R↓ / R↑` | 威胁传送 | `SelfTeleport` |
-| `cut_through` 穿透传送 | 移植/合并 | L2 / 10k / 20 | 按住预览最长 36 格、可穿过中间方块的安全落点 | `Alt+R↓ / Alt+R↑` | 自身传送 | `CutThrough` |
-| `spatial_synergy` 空间协同 | 保留 | L2 / 0 / 维持 20 | 玩家传送时同步传送两格内其他玩家，并按额外人数增加 CP 消耗 | `X↓` | 自身传送 | `SpatialSynergy` |
-| `visual_teleport` 目视传送 | 保留/高风险 | L2 / 0 / 0 | 直接使用客户端提交的视线目标坐标传送，当前缺少完整服务端距离/碰撞重算 | `Shift+X↓` | 无 | `VisualTeleport` |
-| `disarm` 缴械传送 | 保留 | L2 / 0 / 实际 50 | 将视线目标的手持物品弹出并造成 1 点攻击伤害 | `Alt+D↓` | 危险传送 | `Disarm` |
-| `flesh_ripping` 肉体撕裂 | 移植 | L3 / 30k / 30 | 锁定 14 格目标，松开造成 `12 + 5% 最大生命` 的空间伤害 | `Alt+鼠标右键↓ / Alt+鼠标右键↑` | 穿透传送 | `FleshRipping` |
-| `location_teleport` 位置传送 | 移植 | L3 / 30k / 30 | 保存最多 32 个命名位置并通过界面执行跨维度自身传送 | `L↓` | 穿透传送 | `LocationTeleport` |
-| `coordinate_teleport` 坐标传送 | 保留/待审计 | L3 / 0 / 0 | 保存客户端提交坐标；请求后计算 200 tick，再传送到最后一个保存点 | `Alt+Shift+T↓ / Alt+Shift+Y↓` | 空间协同、穿透传送 | `CoordinateTeleport` |
-| `shackle` 禁锢传送 | 保留 | L3 / 0 / 80 | 定身目标并施加 160 tick 高级减速、挖掘疲劳和虚弱，同时造成 3 点伤害 | `Alt+Shift+S↓` | 危险传送 | `Shackle` |
-| `quick_location_teleport` 快速位置传送 | 移植 | L4 / 60k / 30 | 将自身或服务端选中的目标快速送往位置传送当前标记 | `C↓` | 位置传送 | `QuickLocationTeleport` |
-| `area_teleport_select` 区域传送·选择 | 移植 | L4 / 60k / — | 服务端射线选择并同步最大 32³ 的源区域角点 | `U↓` | 位置传送 | `AreaTeleportSelect` |
-| `area_teleport_setup` 区域传送·设置 | 移植 | L4 / 60k / — | 设置区域传送目标锚点 | `Alt+U↓` | 区域选择 | `AreaTeleportSetup` |
-| `area_teleport_start` 区域传送·启动 | 移植 | L4 / 60k / 50 | 使用缓冲、保护事件、区块租约和回滚移动区域方块、方块实体及实体 | `Shift+U↓` | 区域设置 | `AreaTeleportStart` |
-| `flash_back` 高速闪现 | 保留 | L4 / 0 / — | 切换后在受实体攻击时向远离攻击者方向瞬移约三格 | `Alt+Shift+Q↓` | 自身传送、隧穿移动 | `FlashBack` |
-| `phantom_falling` 坠落幻痛 | 保留 | L4 / 0 / 60 | 将十格内目标上移八格后强制下坠，造成 8 点坠落伤害并施加减速/虚弱 | `Alt+Shift+F↓` | 穿透传送 | `PhantomFalling` |
-| `flashing` 连续闪现 | 移植 | L5 / 100k / 维持 30，单次 10 | 开启后沿移动方向执行八格安全闪现 | `H↓` | 位置传送 | `Flashing` |
-| `defensive_teleport` 防御传送 | 移植 | L5 / 100k / 维持 30，单目标 10 | 扫描附近敌对生物和来袭投射物并将其传送至安全位置 | `Alt+G↑` | 快速位置传送 | `DefensiveTeleport` |
-| `spacial_replace` 空间置换 | 保留/高风险 | L5 / 0 / 300 | 选择两个角点并把选区方块复制到目标位置；当前两个角点绑定完全相同 | `Alt+Shift+Ctrl+任意键↓` 两条 / `Alt+Shift+Ctrl+P↓` | 坐标传送 | `SpacialReplace` |
-| `spacial_excision` 空间切除 | 保留/高风险 | L5 / 0 / 0 | 持续扩大球形范围，周期造成 20 魔法伤害并遍历/切除范围方块 | `Alt+Shift+Ctrl+O↓` | 坐标传送 | `SpacialExcision` |
+| `threatening_teleport` 威胁传送 | 现行 | L1 / 5k / 10 + 1 个主手物品 | 将 1 个主手物品传入 32 格内目标，伤害 `(4+武器攻击加成)AD`，再受空间折叠倍率影响。 | `Alt+鼠标左键↓` | 无 | `ThreateningTeleport` |
+| `space_folding_theorem` 空间折叠理论 | 现行 | L1 / 5k / 0 | 被动：适用传送伤害 ×1.25；熟练度档位提高到 1.30/1.35/1.40，满熟练度击杀可返还 20% 实际施放 CP（60 tick 冷却）。 | 无 | `academy:threatening_teleport` | `SpaceFoldingTheorem` |
+| `self_teleport` 自身传送 | 现行 | L2 / 10k / 去程 10；返程 5 | 按住预览 32 格内安全落点，松开传送；可返回上次起点。 | `R↓ / R↑` | `academy:threatening_teleport` | `SelfTeleport` |
+| `spatial_synergy` 空间协同 | 现行 | L2 / 10k / 维持 20；每名被携带玩家 10 | 自我/穿透/定位传送时携带半径 4 内同队玩家。 | `X↓` | `academy:self_teleport` | `SpatialSynergy` |
+| `piercing_teleportation` 穿透传送 | 现行 | L2 / 10k / 15 | 在 64 格内选择安全落点，可穿过中间方块。 | `Alt+R↓ / Alt+R↑` | `academy:self_teleport` | `PiercingTeleportation` |
+| `disarm` 缴械传送 | 现行 | L2 / 10k / 单手 20；双手 40 | 16 格内缴械目标并造成 1 点技能伤害；高熟练度可同时取走双手物品。 | `Alt+D↓` | `academy:self_teleport` | `Disarm` |
+| `flesh_ripping` 肉体撕裂 | 现行 | L3 / 30k / 20 | 锁定 32 格内目标，造成 `(12A+5%Hmax)D`，再受空间折叠倍率影响。 | `Alt+鼠标右键↓ / Alt+鼠标右键↑` | `academy:piercing_teleportation` | `FleshRipping` |
+| `shackle` 禁锢传送 | 现行 | L3 / 30k / 30 | 禁锢 32 格内目标 160 tick 并造成 3 点技能伤害；高熟练度非玩家目标持续 200 tick。 | `Alt+Shift+S↓` | `academy:self_teleport` | `Shackle` |
+| `location_teleport` 位置传送 | 现行 | L3 / 30k / 去程 40；返程 20 | 保存最多 32 个命名位置并跨维度传送；可返回上次起点。 | `L↓` | `academy:piercing_teleportation` | `LocationTeleport` |
+| `quick_location_teleport` 快速位置传送 | 现行 | L4 / 60k / 30 | 将准星 32 格内实体或自身送往当前已保存位置。 | `C↓` | `academy:location_teleport` | `QuickLocationTeleport` |
+| `area_teleport_select` 区域传送·选择 | 现行 | L4 / 60k / 0 | 96 格服务端射线选择源区域两角，每轴最多 32 格。 | `U↓` | `academy:location_teleport` | `AreaTeleportSelect` |
+| `area_teleport_setup` 区域传送·设置 | 现行 | L4 / 60k / 0 | 为已选区域设置同尺寸目的锚点，可切换交换模式。 | `Alt+U↓` | `academy:area_teleport_select` | `AreaTeleportSetup` |
+| `area_teleport_start` 区域传送·启动 | 现行 | L4 / 60k / 50 | 事务式搬移最多 `32³` 个方块、方块实体和非玩家实体；失败回滚。 | `Shift+U↓` | `academy:area_teleport_setup` | `AreaTeleportStart` |
+| `flashing` 高速闪现 | 现行 | L5 / 100k / 维持 50；每次 5 | 启用后沿移动方向安全闪现 8 格，客户端每 6 tick 可重复。 | `H↓` | `academy:location_teleport` | `Flashing` |
+| `defensive_teleport` 防御传送 | 现行 | L5 / 100k / 每次 20 | 按住框选前方 5×5×5 区域，松开后把其中敌对生物/投射物传送到位置传送当前坐标。 | `Alt+G↑` | `academy:quick_location_teleport` | `DefensiveTeleport` |
+| `spacial_excision` 空间切除 | 现行 | L5 / 100k / `最大CP`；1000 熟练度后 `0.9×最大CP` | 蓄力 40 tick 后每 10 tick 造成 `20D` 并切除获准方块；半径从 2 按每 tick +0.05 增长，最多持续 200 tick。 | `Alt+Shift+Ctrl+O↓` | `academy:area_teleport_start` | `SpacialExcision` |
 
 ## Darkmatter 未元物质
 
-| 技能 | 状态 | 等级 / IF / CP | 实现与当前效果 | 默认按键 | 依赖 | 实现类 |
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `darkmatter_shaping` 未元物质塑型 | 移植 | L1 / 5k / 50 | 空手生成未元物质；持物时修复并切换未元物质强化 | `U↑` | 无 | `DarkmatterShaping` |
-| `darkmatter_disassemble` 未元物质分解 | 移植 | L1 / 5k / 10 | 服务端 32 格射线分解目标实体或通过保护检查的方块 | `Alt+鼠标左键↑` | 未元物质塑型 | `DarkmatterDisassemble` |
-| `darkmatter_cut` 未元物质切割 | 移植 | L2 / 10k / 20 | 前方八格锥形斩击，并生成同步斩击实体效果 | `R↑` | 未元物质分解 | `DarkmatterCut` |
-| `darkmatter_radiation` 未元物质照射 | 移植 | L3 / 30k / 周期 10 | 按住照射前方半球 32 格内的敌对目标 | `C↓ / C↑` | 未元物质切割 | `DarkmatterRadiation` |
-| `darkmatter_repair` 未元物质修补 | 移植 | L4 / 60k / 治疗时 10 | 切换持续自我修复，仅实际恢复生命时消耗 CP | `Alt+U↑` | 未元物质塑型 | `DarkmatterRepair` |
-| `darkmatter_creation` 未元物质创生 | 移植 | L4 / 60k / 80 + 每虫维持 20 | 最多召唤八只所属独角仙；看向所属独角仙再次施放可解散 | `G↑` | 未元物质修补 | `DarkmatterCreation` |
-| `darkmatter_six_wings` 未元物质六翼 | 移植 | L5 / 100k / 维持 70 | 切换六翼飞行，并强化未元物质切割与分解 | `Alt+R↑` | 未元物质塑型 | `DarkmatterSixWings` |
+| `darkmatter_shaping` 未元物质塑型 | 现行 | L1 / 5k / 空手 50；持物且熟练度≥2000 为 25；自动修复按修复比例计费 | 空手生成未元物质；持物时修复并切换强化。满熟练度每秒可自动修复最多 15% 耐久。 | `U↑` | 无 | `DarkmatterShaping` |
+| `darkmatter_disassemble` 未元物质分解 | 现行 | L1 / 5k / 10 | 32 格射线对实体造成 `8AD` 或分解方块；六翼启用时对目标周围半径 3 同样生效。 | `Alt+鼠标左键↑` | `academy:darkmatter_shaping` | `DarkmatterDisassemble` |
+| `darkmatter_cut` 未元物质切割 | 现行 | L2 / 10k / 20 | 前方约 120° 锥形斩击：普通半径 8、`12AD`；六翼半径 24、`16AD`。满熟练度命中后延迟 6 tick 追加 50% 伤害。 | `R↑` | `academy:darkmatter_disassemble` | `DarkmatterCut` |
+| `darkmatter_radiation` 未元物质照射 | 现行 | L3 / 30k / 每 2 tick 10 | 持续照射前方半球 32 格；每 tick 造成 `2AD + max(2,0.1%Hmax)A`。 | `C↓ / C↑` | `academy:darkmatter_cut` | `DarkmatterRadiation` |
+| `darkmatter_repair` 未元物质修补 | 现行 | L4 / 60k / 完整治疗笔 10；不足 4 点时按比例 | 仅受伤时每 tick 治疗 `4A`，并按实际治疗比例收费。 | `Alt+U↑` | `academy:darkmatter_shaping` | `DarkmatterRepair` |
+| `darkmatter_creation` 未元物质创生 | 现行 | L4 / 60k / 每只召唤 80；每只维持 20（最多 160） | 最多召唤 8 只所属独角仙；每只攻击 `12AD`。 | `G↑` | `academy:darkmatter_repair` | `DarkmatterCreation` |
+| `darkmatter_six_wings` 未元物质六翼 | 现行 | L5 / 100k / 维持 50；低伤免疫每次 10 | 获得飞行、真实抗性 +4，并强化分解/切割；低于 2 点的来伤可花 CP 免疫。满熟练度还降低同系技能成本。 | `Alt+R↑` | `academy:darkmatter_shaping` | `DarkmatterSixWings` |
+
+## Mentalout 心理掌握
+
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `mental_intervention` 心灵介入 | 现行 | L1 / 5k / 每次加入 10 | 将 16 格内兼容生物/允许的玩家加入或移出受控清单。 | 见源码（可配置） | 无 | `MentalIntervention` |
+| `target_misidentification` 目标误认 | 现行 | L1 / 5k / 每次设置 40 | 令受控兼容生物永久把选中目标视为敌人；再次选择解除。 | 见源码（可配置） | `academy:mental_intervention` | `TargetMisidentification` |
+| `mental_stupor` 呆然自失 | 现行 | L2 / 10k / 每目标维持 10；Boss ×2、玩家 ×3 | 持续冻结受控目标的移动与 AI。 | 见源码（可配置） | `academy:target_misidentification` | `MentalStupor` |
+| `impression_manipulation` 印象操作 | 现行 | L3 / 30k / 每目标维持 10；Boss ×2、玩家 ×3 | 令受控目标把施术者和同清单目标视为盟友并抑制自然仇恨。 | 见源码（可配置） | `academy:mental_intervention`<br>`academy:target_misidentification` | `ImpressionManipulation` |
+| `mental_intrusion` 心灵潜入 | 现行 | L1 / 5k / 维持 20/17/14 | 观察目标而不移动/控制它；技能级 0/1/2 的范围为 16/24/32，玩家观察上限移除 | 见源码（可配置） | `academy:mental_intervention` | `MentalIntrusion` |
+| `mental_takeover` 意识接管 | 现行 | L4 / 60k / 维持 100 | 在心灵潜入期间接管清单目标的移动、视角和攻击；玩家可挣扎解除。 | 见源码（可配置） | `academy:mental_intrusion`<br>`academy:command_positioning`<br>`academy:mental_stupor` | `MentalTakeover` |
+| `sensory_distortion` 感官扭曲 | 现行 | L2 / 10k / 维持 30/25/21；Boss ×2 、玩家 ×3 | 潜入期间屏蔽目标对施术者的视线、仇恨记忆、渲染和直接交互感知。 | 见源码（可配置） | `academy:mental_intrusion` | `SensoryDistortion` |
+| `command_positioning` 指挥定位 | 现行 | L3 / 25k / 每目标 10；Boss ×2 | 命令受控实体移动至准星方块外侧或跟随准星实体，最远 64 格。 | 见源码（可配置） | `academy:mental_intervention` | `CommandPositioning` |
+| `precision_operation` 精密操作 | 现行 | L5 / 100k / 按节点累加：路径 5、视角 5、守卫 10、误认 20、呆然 10、印象 10、感官 20/15/10、潜入 20/15/10；路径/视角/守卫/呆然/印象对 Boss ×2 | 编辑并并行执行 4 个无环心理程序；各持续行动可限时或永久。 | 见源码（可配置） | `academy:impression_manipulation`<br>`academy:mental_stupor` | `PrecisionOperation` |
+
+## Level0 公共脑开发
+
+| 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `brain_domain_development` 脑域开发 | 现行 | L1 / 5k / 0 | 最大 CP `+T×能力等级×5`，能力 L5 满档为 +100。 | 无 | 无 | `BrainDomainDevelopment` |
+| `endurance_training` 耐力训练 | 现行 | L1 / 5k / 0 | 耐受力 `+50T`，满档 +200。 | 见源码（可配置） | `academy:brain_domain_development` | `EnduranceTraining` |
+| `physical_training` 体术训练 | 现行 | L1 / 5k / 0 | 肌肉力量、灵巧度各 `+25T`，满档各 +100。 | 见源码（可配置） | `academy:brain_domain_development` | `PhysicalTraining` |
+| `multiple_brain_domain_segmentation` 多重脑域分割 | 现行 | L2 / 10k / 0 | 有限堆栈技能的声明上限 `+T`；当前因全局堆栈限制关闭而不生效。 | 无 | `academy:brain_domain_development` | `MultipleBrainDomainSegmentation` |
+| `parallel_thought_computation` 思考并列演算 | 现行 | L3 / 30k / 0 | CP 迭代速度 `×(1+5%T)`，满档 ×1.2。 | 无 | `academy:multiple_brain_domain_segmentation` | `ParallelThoughtComputation` |
+| `complete_consciousness_analysis` 意识完全解析 | 现行 | L4 / 60k / 0 | 每点 SP 可恢复的 CP `10×(1+10%T)`，满档 14 CP/SP。 | 无 | `academy:parallel_thought_computation` | `CompleteConsciousnessAnalysis` |
+| `absolute_self_control` 自我绝对控制 | 现行 | L5 / 100k / 0 | 免疫能力过载；已过载时立即恢复正常。 | 无 | `academy:complete_consciousness_analysis` | `AbsoluteSelfControl` |
 
 ## 默认按键冲突与调控优先级
 
 | 优先级 | 冲突/问题 | 影响 | 建议 |
 | --- | --- | --- | --- |
-| P0 | 全局能力 HUD `V↓` 与 Accelerator `flow_control` 的 `V↓` 完全相同 | Accelerator 玩家按 V 会同时切 HUD 并施放技能 | 立即为 `flow_control` 更换默认键，或让 HUD 激活键在技能输入前消费事件 |
-| P0 | Electromaster：`electrical_contact` 与 `current_recharge` 都使用 `H↓` | 按 H 会切换带电接触并开始充能；松开才停止充能 | 至少修改其中一个默认绑定 |
-| P0 | Electromaster：`magnet_moment_charge` 与 `iron_sand_arsenal` 形态切换都是 `Alt+Shift+G↓` | 两个技能可能同时发送动作 | 为铁砂形态切换指定独立按键 |
-| P0 | Meltdowner：`trace_ring` 和 `particle_wave_cannon` 都以 `C↓` 启动 | 蓄力粒机炮时会同时切换轨迹环绕 | 修改其中一个默认键 |
-| P0 | Teleport：`spacial_replace` 的角点 1/2 都是 `Alt+Shift+Ctrl+任意键↓` | 同一次输入会同时设置两个角点，默认选择不可用 | 改为两个明确且不同的键，并禁止 `anyKey` 用作可编辑绑定默认值 |
-| P1 | Electromaster：`ball_lightning` 为 `Y↓`，`current_symbiosis` 为 `Y↑` | 一次完整按键会施放球状闪电并切换电流共生 | 为其中一个技能换键 |
-| P1 | 多个现存技能 `IF=0` 或依赖为空 | 开发树平衡和技能顺序不统一 | 先集中补齐当前保留技能的等级、IF、依赖和图标节点 |
-| P1 | `BallLightning` 直接改生命值；`Disintegrate` 复用最后目标伤害；部分现存 Teleport 接受客户端坐标 | 难以统一倍率，也存在服务端权威与兼容风险 | 在统一数值调整前先重构为 `SkillDamageSource`、逐目标计算和服务端射线/位置验证 |
+| P0 | Electromaster：`electrical_contact` 与 `current_recharge` 都以 `H↓` 启动 | 同一按下动作可能切换带电接触并开始充能 | 为其中一个技能更换默认绑定，并在客户端验收按下/松开事件 |
+| P1 | Electromaster：`ball_lightning` 为 `Y↓`，`current_symbiosis` 为 `Y↑` | 一次完整按键可能施放球状闪电并切换电流共生 | 为其中一个技能换键，或明确消费输入事件 |
+| P1 | 新增和重命名技能仍有“见源码”按键项 | 表格不能独立用于默认键冲突审计 | 后续从统一输入注册表导出默认键，避免手工维护 |
+| P1 | 高伤害、方块修改、区域传送和玩家控制技能 | 数值统一前仍需服务端权威、权限与多人生命周期验收 | 按 `RUNTIME_ACCEPTANCE.md` 完成客户端和双玩家专服门禁 |
 
 ## 建议的统一修改入口
 
-目前技能参数仍分散在各实现类中：
-
 - 等级、IF、基础 CP、维持 CP、依赖：各技能构造器的 `Skill.Builder`。
 - 默认键：各技能 `initClient()` 中的 `InputSystem.combo(...)`；玩家覆盖值由统一 `InputSystem` 配置保存。
-- 范围、伤害、持续时间、扫描间隔：各类的常量或 `getDamage/getRange` 等方法。
-- 少量全局参数：服务端 `AbilityConfig`，目前仅覆盖总体倍率、脑开发、金属列表及部分 Railgun 参数。
-
-后续建议增加按技能 ID 索引的 `SkillBalanceConfig`，至少统一 `enabled`、`damage`、`range`、`duration`、`cpCost`、`maintenanceCost`、`cooldown/iterationTicks`，并让源码常量仅作为默认值。这样可在不重新构建 JAR 的情况下完成服务器统一调控。
+- 范围、伤害、持续时间、扫描间隔：各类常量、计算方法和运行时管理器。
+- 熟练度成本与迭代修正：`SkillProficiencyProfiles.java`。
+- 当前验收边界和未关闭人工检查：`RUNTIME_ACCEPTANCE.md`。

@@ -8,7 +8,7 @@
 >
 > 目标项目：AcademyCraft Reborn 26.2
 >
-> 目标范围：当前注册的 91 个技能
+> 目标范围：当前注册的 94 个技能
 
 ## 1. 执行摘要
 n
@@ -50,7 +50,7 @@ n
 
 ### 2.3 目标
 
-- 当前 91 个技能均能在技能设置界面发现相应的方案或策略入口。
+- 当前 94 个技能均能在技能设置界面发现相应的方案或策略入口。
 - 为全部主动技能提供至少一个可保存的参数方案。
 - 为持续、切换、防御和被动技能提供有边界的策略配置。
 - 为复杂技能提供可扩展节点编辑能力。
@@ -79,11 +79,11 @@ n
 | Aeromanip | 15 |
 | Darkmatter | 7 |
 | Electromaster | 16 |
-| Level 0 / 通用被动 | 5 |
+| Level 0 / 通用被动 | 7 |
 | Meltdowner | 10 |
-| Mentalout | 8 |
+| Mentalout | 9 |
 | Teleport | 16 |
-| **合计** | **91** |
+| **合计** | **94** |
 
 ### 3.2 已有可复用能力
 
@@ -101,7 +101,7 @@ n
 2. `NodeKind` 是封闭枚举，节点语义直接绑定心理掌握的目标和控制动作。
 3. `PrecisionOperationRuntime` 直接调用心理控制、感知和实体控制运行时。
 4. 当前每个 `Skill` 只能绑定一种自定义 `SkillData`；已有技能正在占用该扩展点。
-5. 将 91×4 个完整方案塞进现有技能数据全量同步会放大登录包和存档序列化成本。
+5. 将 94×4 个完整方案塞进现有技能数据全量同步会放大登录包和存档序列化成本。
 6. 每个技能复制 Request/Save/Execute/Sync/Result 包会造成协议和安全逻辑漂移。
 
 因此需要抽取通用方案层，并让现有“精密操作”成为该层的第一个适配器与迁移来源。
@@ -176,7 +176,7 @@ n
 ### 5.4 快捷键策略
 
 - 原有技能按键执行该技能的当前方案。
-- 增加一个全局“方案轮盘/切换”操作，不为 91 个技能分别注册四个槽位键。
+- 增加一个全局“方案轮盘/切换”操作，不为 94 个技能分别注册四个槽位键。
 - “精密操作”原 Alt+1–4 可作为兼容按键保留一个版本，之后迁移到全局方案选择。
 - 按下、持续、释放的输入阶段仍由原技能决定，方案不能伪造输入状态。
 
@@ -547,7 +547,7 @@ decode
 ### 10.2 缓存
 
 - 保存成功后立即编译并缓存。
-- 玩家登录不预编译全部 91×4 个方案。
+- 玩家登录不预编译全部 94×4 个方案。
 - 第一次执行或打开预览时按需编译。
 - 下列事件使缓存失效：revision 变化、policy reload、definition version 变化、技能移除或依赖变化。
 - 缓存只保留不可变计划，不持有 Level、Entity 或 Player 引用。
@@ -597,7 +597,7 @@ decode
 | VectorBlast | P/G | 方向来源、散射/集中、目标过滤、击退档位 | A1 |
 | VectorAccel | P | 加速方向、强度档、持续输入模式 | A1 |
 | DirStrike | P | 方向、单体/小范围、击退策略 | A1 |
-| VectorReduction | S/G | 防御阈值、伤害来源过滤、优先级 | A2 |
+| VectorDeviation | S/G | 防御阈值、伤害来源过滤、优先级 | A2 |
 | VectorReflection | S/G | 反射类型、目标过滤、兼容模式 | A2 |
 | ReflectionFilter | S/G | 攻击分类白名单、未知攻击策略 | A2 |
 | StormWing | P/S | 飞行模式、攻击反馈、自动关闭阈值 | A2 |
@@ -635,7 +635,7 @@ decode
 | MagnetManipulation | P/G | 移动/拉取模式、目标材质、方向与优先级 | 垂直切片 |
 | ArcGenerate | P | 射程、扩散、目标优先级 | C1 |
 | ElectricalContact | S | 充能/放电倾向、CP 下限、目标规则 | C1 |
-| PulseCharge | P/S | 红石输出模式、持续档、目标选择 | C1 |
+| CurrentRecharge | P/S | 充能目标、持续档、溢出策略 | C1 |
 | LightningNova | P | 半径、蓄力档、击退策略 | C1 |
 | MineDetect | S/V | 矿物过滤、范围、刷新频率、显示样式 | C1 |
 | CurrentSymbiosis | S | 物品优先级、充能阈值、速率档 | C2 |
@@ -673,7 +673,7 @@ decode
 | SpaceFoldingTheorem | S | 兼容伤害类型、反馈提示 | E1 |
 | Disarm | P | 距离档、目标手、掉落策略 | E1 |
 | SpatialSynergy | S | 跟随者过滤、人数上限、确认策略 | E1 |
-| CutThrough | P/S | 穿透距离、安全检测强度、回退策略 | E1 |
+| PiercingTeleportation | P/S | 穿透距离、安全检测强度、回退策略 | E1 |
 | FleshRipping | P | 锁定距离、释放策略、目标过滤 | E2 |
 | LocationTeleport | P/M | 地标、跨维度许可、安全策略 | E2 |
 | Shackle | P | 距离、持续档、目标过滤 | E2 |
@@ -697,7 +697,7 @@ decode
 | DarkmatterRepair | S | 目标优先级、生命阈值、CP 下限 | F2 |
 | DarkmatterSixWings | P/S/G | 飞行、扫击、队形、模式切换 | F2 |
 
-### 11.7 Mentalout（8）
+### 11.7 Mentalout（9）
 
 | 技能 | 首版 | 首批可配置内容 | 波次 |
 | --- | --- | --- | --- |
@@ -709,16 +709,19 @@ decode
 | MentalIntrusion | P/S/G | 目标、距离、维持阈值、进入/退出动作 | G2 |
 | SensoryDistortion | P/S/G | 观察者过滤、范围、维持策略 | G2 |
 | CommandPositioning | P/S/G | 受控目标、目的地、驻守/路径策略 | G2 |
+| MentalTakeover | P/S/G | 受控目标、输入租约、挣脱与退出策略 | G2 |
 
-### 11.8 Level 0 / 通用被动（5）
+### 11.8 Level 0 / 通用被动（7）
 
 | 技能 | 首版 | 首批可配置内容 | 波次 |
 | --- | --- | --- | --- |
-| Level0PassiveLv1 | S/V | 数值提示、阈值通知 | 垂直切片 |
-| Level0PassiveLv2 | S/V | 效率反馈、通知策略 | H1 |
-| Level0PassiveLv3 | S/V | CP 恢复提示、显示阈值 | H1 |
-| Level0PassiveLv4 | S/V | 效率反馈、通知策略 | H1 |
-| Level0PassiveLv5 | S/V | 综合 CP 预警、HUD 策略 | H1 |
+| BrainDomainDevelopment | S/V | 数值提示、阈值通知 | 垂直切片 |
+| EnduranceTraining | S/V | 耐受力反馈、通知策略 | H1 |
+| PhysicalTraining | S/V | 肌力与灵巧反馈、通知策略 | H1 |
+| MultipleBrainDomainSegmentation | S/V | 堆栈反馈、通知策略 | H1 |
+| ParallelThoughtComputation | S/V | 迭代反馈、通知策略 | H1 |
+| CompleteConsciousnessAnalysis | S/V | CP 恢复提示、显示阈值 | H1 |
+| AbsoluteSelfControl | S/V | 过载预警、HUD 策略 | H1 |
 
 Level 0 被动的核心数值不允许玩家调整；其“策略”只控制提示、展示及不改变平衡的触发偏好。
 
@@ -726,7 +729,7 @@ Level 0 被动的核心数值不允许玩家调整；其“策略”只控制提
 
 | 里程碑 | 预计 | 范围 | 退出条件 |
 | --- | ---: | --- | --- |
-| M0 规格冻结与审计 | 1–2 人周 | 91 技能分类、默认行为基线、ADR | 无未分类技能；核心数据/协议决策冻结 |
+| M0 规格冻结与审计 | 1–2 人周 | 94 技能分类、默认行为基线、ADR | 无未分类技能；核心数据/协议决策冻结 |
 | M1 通用核心 | 3–4 人周 | definition、schema、存储、codec、policy、协议 | 参数方案可保存、冲突、同步并通过单测 |
 | M2 UI 与精密操作迁移 | 3–4 人周 | 四槽 UI、表单、图编辑器适配、旧数据兼容 | 精密操作新旧方案等价且可回退 |
 | M3 八类垂直切片 | 4–5 人周 | 每种执行原型/能力系代表技能 | Instant/Held/Toggle/Passive/Multi-stage/Graph 均验证 |
@@ -736,7 +739,7 @@ Level 0 被动的核心数值不允许玩家调整；其“策略”只控制提
 
 ### 12.1 M0：规格冻结与审计
 
-- 为 91 个技能记录：输入阶段、服务端包、CP 路径、目标来源、持续状态和清理事件。
+- 为 94 个技能记录：输入阶段、服务端包、CP 路径、目标来源、持续状态和清理事件。
 - 标记当前具有自定义 `SkillData`、独立 UI、跨维度、方块修改和区块票据的技能。
 - 冻结首版 ProjectKind、值类型、诊断码和四槽位规则。
 - 编写 ADR：独立存储、懒同步、Identifier 协议、默认等价原则。
@@ -775,7 +778,7 @@ Level 0 被动的核心数值不允许玩家调整；其“策略”只控制提
 | 安全位置解析 | SelfTeleport |
 | 持续实体/召唤 | DarkmatterCreation |
 | 区域/组合控制 | AtmosphericDominion |
-| 被动/表现策略 | Level0PassiveLv1 |
+| 被动/表现策略 | BrainDomainDevelopment |
 
 每个切片必须完成 UI、存储、协议、适配、单测、GameTest 和多人烟测，不能只完成 schema。
 
@@ -848,7 +851,7 @@ Level 0 被动的核心数值不允许玩家调整；其“策略”只控制提
 | SP-043 | Passive/Event adapter | SP-015 | 白名单事件、冷却、限流 |
 | SP-044 | Multi-stage adapter | SP-015 | 事务状态、回滚、过期 |
 | SP-045 | Graph adapter | SP-031/040–044 | 有界动作链与错误定位 |
-| SP-046 | 91 技能接入矩阵 | SP-040–045 | 第 11 节全部达到计划层级 |
+| SP-046 | 94 技能接入矩阵 | SP-040–045 | 第 11 节全部达到计划层级 |
 
 ### Epic F：质量与发布
 
@@ -1001,7 +1004,7 @@ Level 0 被动的核心数值不允许玩家调整；其“策略”只控制提
 | 每技能复制协议 | 安全逻辑漂移 | 单一通用 ProjectService 与 packets |
 | 自动策略导致刷怪/扫描 | TPS 降低 | 默认关闭、事件白名单、冷却和目标预算 |
 | 方案改变现有平衡 | 回归和玩家争议 | 默认等价、档位成本曲线、服主边界 |
-| 91 个适配器长期漂移 | 维护成本高 | 按执行原型复用 adapter 与契约测试 |
+| 94 个适配器长期漂移 | 维护成本高 | 按执行原型复用 adapter 与契约测试 |
 | Mod 节点注册不一致 | 客户端无法编辑或执行 | 握手摘要、稳定 ID、未知节点保留 |
 | 切换方案泄漏持续状态 | CP/属性/实体残留 | 生命周期协调器、lease 幂等清理测试 |
 | 导入恶意方案 | 内存/CPU/权限风险 | 大小上限、先解码校验、无脚本、重新编译 |
@@ -1022,7 +1025,7 @@ Level 0 被动的核心数值不允许玩家调整；其“策略”只控制提
 
 ### 19.2 系统完成定义
 
-- 91 个技能均在第 11 节达到计划的 P/S/G/V/M 层级。
+- 94 个技能均在第 11 节达到计划的 P/S/G/V/M 层级。
 - 未保存任何方案的旧玩家体验保持不变。
 - 旧精密操作 schema 1–3 方案可无损迁移或保留恢复数据。
 - 恶意、超限、未知和过期 payload 不修改存档、不执行动作。
