@@ -27,7 +27,9 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.UiScreen;
+import org.academy.api.client.gui.widget.BlendQuadWidget;
 import org.academy.api.client.gui.widget.EmptyWidget;
+import org.academy.api.client.gui.widget.FillWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.client.input.InputSystem;
@@ -38,7 +40,6 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.gui.DataTerminalTheme;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -403,16 +404,23 @@ public final class ReflectionFilter extends Skill {
     }
 
     private static final class ReflectionFilterScreen extends UiScreen implements SerializedUiDebugHost {
-        private static final int ACCENT = DataTerminalTheme.FILTER_ACCENT;
-        private static final int ROW = DataTerminalTheme.ROW_BACKGROUND;
-        private static final int ROW_HOVER = DataTerminalTheme.HOVER;
-        private static final int ROW_SELECTED = DataTerminalTheme.FILTER_SELECTED;
-        private static final int TEXT = DataTerminalTheme.TEXT;
-        private static final int DIM = DataTerminalTheme.TEXT_DIM;
-        private static final int GOOD = DataTerminalTheme.GOOD;
-        private static final int BAD = DataTerminalTheme.DANGER;
-        private static final int NEUTRAL = DataTerminalTheme.WARNING;
-        private static final int ROW_H = 18;
+        private static final int ACTIVE = 0xFFFFFFFF;
+        private static final int SECTION = 0x40000000;
+        private static final int CONTROL = 0x28000000;
+        private static final int INPUT = 0x5F1F1F1F;
+        private static final int INPUT_FOCUSED = 0x5F5A5A5A;
+        private static final int ROW = 0x3DFFFFFF;
+        private static final int ROW_HOVER = 0x55FFFFFF;
+        private static final int ROW_SELECTED = 0x55FFFFFF;
+        private static final int BORDER = 0x99FFFFFF;
+        private static final int BORDER_DIM = 0x60FFFFFF;
+        private static final int TEXT = 0xFFFFFFFF;
+        private static final int DIM = 0xBFFFFFFF;
+        private static final int DISABLED = 0x33FFFFFF;
+        private static final int GOOD = 0xFF25C4FF;
+        private static final int BAD = 0xFFFF6C00;
+        private static final int NEUTRAL = 0xFF7680DE;
+        private static final int ROW_H = 20;
         private static final int GAP = 3;
         private static final int MIN_W = 460;
         private static final int PREFERRED_W = 520;
@@ -422,6 +430,26 @@ public final class ReflectionFilter extends Skill {
         private static final int COLUMN_GAP = 10;
         private static final int MIDDLE_W = 74;
         private static final int MIDDLE_H = 24;
+        private static final int SECTION_TOP = 30;
+        private static final int SECTION_BOTTOM_PAD = 14;
+        private static final int CONTENT_BOTTOM_PAD = 19;
+        private static final int SEARCH_X_PAD = 5;
+        private static final int SEARCH_Y = 35;
+        private static final int SEARCH_H = 16;
+        private static final int SEARCH_FRAME_PAD_X = 3;
+        private static final int SEARCH_FRAME_PAD_Y = 2;
+        private static final int EFFECTS_LABEL_Y = 56;
+        private static final int EFFECT_LIST_Y = 68;
+        private static final int MODE_BUTTON_Y = 34;
+        private static final int MODE_BUTTON_H = 22;
+        private static final int MODE_LABEL_Y = 62;
+        private static final int MODE_DESCRIPTION_Y = 74;
+        private static final int FORCED_MOVEMENT_Y = 88;
+        private static final int FORCED_MOVEMENT_H = 18;
+        private static final int SIDE_LIST_Y = 126;
+        private static final int RIGHT_CONTENT_INSET = 6;
+        private static final int MIDDLE_WHITE_Y = 102;
+        private static final int MIDDLE_BLACK_Y = 138;
 
         private final List<EffectEntry> allEffects = new ArrayList<>();
         private final List<EffectEntry> filteredEffects = new ArrayList<>();
@@ -489,7 +517,14 @@ public final class ReflectionFilter extends Skill {
 
         private static void drawScrollBar(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
                                           int scroll, int maxScroll) {
-            DataTerminalTheme.scrollBar(graphics, x, y, width, height, scroll, maxScroll, ACCENT);
+            graphics.fill(x, y, x + width, y + height, CONTROL);
+            if (maxScroll <= 0) {
+                graphics.fill(x, y, x + width, y + height, DISABLED);
+                return;
+            }
+            var thumbHeight = Math.max(10, height / 4);
+            var thumbY = y + (int) ((height - thumbHeight) * (scroll / (float) maxScroll));
+            graphics.fill(x, thumbY, x + width, thumbY + thumbHeight, DIM);
         }
 
         private static int maxScroll(int size, int visible) {
@@ -498,6 +533,10 @@ public final class ReflectionFilter extends Skill {
 
         private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
             return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
+        }
+
+        private static boolean inside(double mouseX, double mouseY, Rect bounds) {
+            return inside(mouseX, mouseY, bounds.x, bounds.y, bounds.width, bounds.height);
         }
 
         private static Rect rect(Widget widget) {
@@ -515,7 +554,7 @@ public final class ReflectionFilter extends Skill {
             serializedLayoutId = "reflection_filter_" + (compact ? "compact" : "wide");
             var layout = SerializedUiLayout.INSTANCE.loadBundled(
                     AcademyCraft.academy("ui/layout/" + serializedLayoutId + ".json"),
-                    List.of("panel", "left_column", "middle_column", "right_column", "title_accent"),
+                    List.of("panel", "left_column", "middle_column", "right_column"),
                     () -> fallbackLayout(compact)
             );
             serializedLayout = layout;
@@ -539,21 +578,28 @@ public final class ReflectionFilter extends Skill {
             leftX = panelX + INNER_PAD;
             midX = leftX + leftW + COLUMN_GAP;
             rightX = midX + MIDDLE_W + COLUMN_GAP;
-            listBottom = panelY + panelH - 16;
+            listBottom = panelY + panelH - CONTENT_BOTTOM_PAD;
 
-            searchBox = new EditBox(font, leftX + 5, panelY + 34, leftW - 10, 16, Component.empty());
+            searchBox = new EditBox(
+                    font,
+                    leftX + SEARCH_X_PAD,
+                    panelY + SEARCH_Y,
+                    leftW - SEARCH_X_PAD * 2,
+                    SEARCH_H,
+                    Component.empty()
+            );
             searchBox.setHint(Component.translatable("screen.academy.reflection_filter.search"));
             searchBox.setMaxLength(64);
             searchBox.setBordered(false);
             searchBox.setTextColor(TEXT);
             addRenderableWidget(searchBox);
 
-            var sideListW = (rightW - 8) / 2;
+            var sideListW = sideListWidth();
             whiteX = rightX;
             blackX = rightX + sideListW + 8;
-            listY = panelY + 66;
-            sideListY = panelY + 108;
-            sideListBottom = panelY + panelH - 16;
+            listY = panelY + EFFECT_LIST_Y;
+            sideListY = panelY + SIDE_LIST_Y;
+            sideListBottom = panelY + panelH - CONTENT_BOTTOM_PAD;
             rebuildFilteredEffects();
         }
 
@@ -565,6 +611,23 @@ public final class ReflectionFilter extends Skill {
             var fallbackHeight = compact ? MIN_H : PREFERRED_H;
             panel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                     .size(fallbackWidth, fallbackHeight).gravity(Gravity.CENTER));
+            var projection = new BlendQuadWidget();
+            projection.setAlpha(0.5f);
+            projection.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT).margin(1, 0, 1, 0));
+            panel.addChild("panel_background", projection);
+            var leftBorder = new FillWidget(BORDER_DIM);
+            leftBorder.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                    .size(1, fallbackHeight - 8).gravity(Gravity.LEFT).marginTop(4));
+            panel.addChild("border_left", leftBorder);
+            var rightBorder = new FillWidget(BORDER_DIM);
+            rightBorder.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                    .size(1, fallbackHeight - 8).gravity(Gravity.RIGHT).marginTop(4));
+            panel.addChild("border_right", rightBorder);
+            var titleDivider = new FillWidget(BORDER_DIM);
+            titleDivider.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                    .size(fallbackWidth - 14, 1).margin(7, 24, 7, 0));
+            panel.addChild("title_divider", titleDivider);
             var columnsW = fallbackWidth - INNER_PAD * 2 - MIDDLE_W - COLUMN_GAP * 2;
             var leftWidth = Math.min(170, Math.max(120, (int) (columnsW * 0.4f)));
             var rightWidth = Math.max(1, columnsW - leftWidth);
@@ -593,16 +656,16 @@ public final class ReflectionFilter extends Skill {
             midX = middle.x;
             rightX = right.x;
             rightW = right.width;
-            listBottom = panelY + panelH - 16;
-            searchBox.setX(leftX + 5);
-            searchBox.setY(panelY + 34);
-            searchBox.setWidth(Math.max(1, leftW - 10));
-            var sideListW = Math.max(1, (rightW - 8) / 2);
+            listBottom = panelY + panelH - CONTENT_BOTTOM_PAD;
+            searchBox.setX(leftX + SEARCH_X_PAD);
+            searchBox.setY(panelY + SEARCH_Y);
+            searchBox.setWidth(Math.max(1, leftW - SEARCH_X_PAD * 2));
+            var sideListW = sideListWidth();
             whiteX = rightX;
             blackX = rightX + sideListW + 8;
-            listY = panelY + 66;
-            sideListY = panelY + 126;
-            sideListBottom = panelY + panelH - 16;
+            listY = panelY + EFFECT_LIST_Y;
+            sideListY = panelY + SIDE_LIST_Y;
+            sideListBottom = panelY + panelH - CONTENT_BOTTOM_PAD;
         }
 
         private void rebuildAllEffects() {
@@ -644,17 +707,19 @@ public final class ReflectionFilter extends Skill {
         public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             super.extractRenderState(graphics, mouseX, mouseY, partialTick);
             syncSerializedLayout();
-            DataTerminalTheme.panel(graphics, panelX, panelY, panelW, panelH, 24);
-            fillSection(graphics, leftX, panelY + 30, leftW, panelH - 44);
-            fillSection(graphics, rightX - 5, panelY + 30, rightW + 5, panelH - 44);
-            DataTerminalTheme.input(graphics, searchBox.getX(), searchBox.getY(),
-                    searchBox.getWidth(), 16, searchBox.isFocused(), ACCENT);
+            fillSection(graphics, leftX, panelY + SECTION_TOP, leftW,
+                    panelH - SECTION_TOP - SECTION_BOTTOM_PAD);
+            fillSection(graphics, rightX - 5, panelY + SECTION_TOP, rightW + 5,
+                    panelH - SECTION_TOP - SECTION_BOTTOM_PAD);
+            var searchFrame = searchFrame();
+            drawInput(graphics, searchFrame.x, searchFrame.y, searchFrame.width, searchFrame.height,
+                    searchBox.isFocused());
             searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
             var query = searchBox == null ? "" : searchBox.getValue().strip().toLowerCase(Locale.ROOT);
             if (!query.equals(lastSearch)) rebuildFilteredEffects();
             graphics.centeredText(font, title, panelX + panelW / 2, panelY + 8, TEXT);
             graphics.text(font, Component.translatable("screen.academy.reflection_filter.effects"),
-                    leftX + 5, panelY + 54, DIM, false);
+                    leftX + SEARCH_X_PAD, panelY + EFFECTS_LABEL_Y, DIM, false);
             renderEffects(graphics, mouseX, mouseY);
             renderMiddleButtons(graphics, mouseX, mouseY);
             renderModes(graphics, mouseX, mouseY);
@@ -673,12 +738,13 @@ public final class ReflectionFilter extends Skill {
                 var hover = inside(mouseX, mouseY, leftX + 5, y, leftW - 10, ROW_H);
                 graphics.fill(leftX + 5, y, leftX + leftW - 5, y + ROW_H,
                         selected ? ROW_SELECTED : hover ? ROW_HOVER : ROW);
-                if (selected) graphics.fill(leftX + 5, y, leftX + 7, y + ROW_H, ACCENT);
-                graphics.fill(leftX + 10, y + 5, leftX + 15, y + 10, categoryColor(entry.category));
+                if (selected) graphics.fill(leftX + 5, y + 2, leftX + 7, y + ROW_H - 2, ACTIVE);
+                var markerY = y + (ROW_H - 5) / 2;
+                graphics.fill(leftX + 10, markerY, leftX + 15, markerY + 5, categoryColor(entry.category));
                 graphics.text(font, font.plainSubstrByWidth(entry.name, leftW - 36),
                         leftX + 19, y + 2, TEXT, false);
                 graphics.text(font, font.plainSubstrByWidth(entry.id, leftW - 36),
-                        leftX + 19, y + 10, DIM, false);
+                        leftX + 19, y + 11, DIM, false);
             }
             graphics.disableScissor();
             drawScrollBar(graphics, leftX + leftW - 7, listY, 3, listBottom - listY,
@@ -686,30 +752,32 @@ public final class ReflectionFilter extends Skill {
         }
 
         private void renderMiddleButtons(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-            drawButton(graphics, midX, panelY + 102, MIDDLE_W, MIDDLE_H,
+            drawButton(graphics, midX, panelY + MIDDLE_WHITE_Y, MIDDLE_W, MIDDLE_H,
                     Component.translatable("screen.academy.reflection_filter.add_white"),
                     mouseX, mouseY, selectedEffect != null, false);
-            drawButton(graphics, midX, panelY + 138, MIDDLE_W, MIDDLE_H,
+            drawButton(graphics, midX, panelY + MIDDLE_BLACK_Y, MIDDLE_W, MIDDLE_H,
                     Component.translatable("screen.academy.reflection_filter.add_black"),
                     mouseX, mouseY, selectedEffect != null, false);
         }
 
         private void renderModes(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-            var buttonW = (rightW - 12) / 3;
+            var contentW = rightContentWidth();
+            var buttonW = (contentW - 12) / 3;
             var mode = data.getMode();
-            drawButton(graphics, rightX, panelY + 34, buttonW, 22,
+            drawButton(graphics, rightX, panelY + MODE_BUTTON_Y, buttonW, MODE_BUTTON_H,
                     Component.translatable("screen.academy.reflection_filter.mode.all"),
                     mouseX, mouseY, true, mode == Mode.REFLECT_ALL);
-            drawButton(graphics, rightX + buttonW + 6, panelY + 34, buttonW, 22,
+            drawButton(graphics, rightX + buttonW + 6, panelY + MODE_BUTTON_Y, buttonW, MODE_BUTTON_H,
                     Component.translatable("screen.academy.reflection_filter.mode.positive"),
                     mouseX, mouseY, true, mode == Mode.POSITIVE_FILTER);
-            drawButton(graphics, rightX + (buttonW + 6) * 2, panelY + 34,
-                    rightW - (buttonW + 6) * 2, 22,
+            drawButton(graphics, rightX + (buttonW + 6) * 2, panelY + MODE_BUTTON_Y,
+                    contentW - (buttonW + 6) * 2, MODE_BUTTON_H,
                     Component.translatable("screen.academy.reflection_filter.mode.neutral"),
                     mouseX, mouseY, true, mode == Mode.NEUTRAL_FILTER);
             graphics.text(font, Component.translatable("screen.academy.reflection_filter.mode"),
-                    rightX, panelY + 62, DIM, false);
-            graphics.text(font, modeDescription(mode), rightX, panelY + 74, TEXT, false);
+                    rightX, panelY + MODE_LABEL_Y, DIM, false);
+            graphics.text(font, font.plainSubstrByWidth(modeDescription(mode).getString(), contentW),
+                    rightX, panelY + MODE_DESCRIPTION_Y, TEXT, false);
         }
 
         private void renderForcedMovementProtection(
@@ -721,9 +789,9 @@ public final class ReflectionFilter extends Skill {
             drawButton(
                     graphics,
                     rightX,
-                    panelY + 88,
-                    rightW,
-                    18,
+                    panelY + FORCED_MOVEMENT_Y,
+                    rightContentWidth(),
+                    FORCED_MOVEMENT_H,
                     Component.translatable(enabled
                             ? "screen.academy.reflection_filter.forced_movement.on"
                             : "screen.academy.reflection_filter.forced_movement.off"),
@@ -735,11 +803,11 @@ public final class ReflectionFilter extends Skill {
         }
 
         private void renderSideLists(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-            var listW = (rightW - 8) / 2;
-            graphics.text(font, Component.translatable("screen.academy.reflection_filter.whitelist"),
-                    whiteX, sideListY - 13, GOOD, false);
-            graphics.text(font, Component.translatable("screen.academy.reflection_filter.blacklist"),
-                    blackX, sideListY - 13, BAD, false);
+            var listW = sideListWidth();
+            graphics.centeredText(font, Component.translatable("screen.academy.reflection_filter.whitelist"),
+                    whiteX + listW / 2, sideListY - 13, TEXT);
+            graphics.centeredText(font, Component.translatable("screen.academy.reflection_filter.blacklist"),
+                    blackX + listW / 2, sideListY - 13, TEXT);
             renderIdList(graphics, mouseX, mouseY, data.whitelist, whiteX, listW, true);
             renderIdList(graphics, mouseX, mouseY, data.blacklist, blackX, listW, false);
         }
@@ -759,14 +827,14 @@ public final class ReflectionFilter extends Skill {
                 graphics.text(font, font.plainSubstrByWidth(effectDisplayName(id), width - 22),
                         x + 5, y + 2, TEXT, false);
                 graphics.text(font, font.plainSubstrByWidth(id, width - 22),
-                        x + 5, y + 10, DIM, false);
-                graphics.text(font, "x", x + width - 12, y + 5,
-                        hover ? 0xFFFFFFFF : DataTerminalTheme.DANGER, false);
+                        x + 5, y + 11, DIM, false);
+                graphics.text(font, "x", x + width - 12, y + (ROW_H - 8) / 2,
+                        hover ? TEXT : BAD, false);
             }
             graphics.disableScissor();
             if (ids.isEmpty()) {
                 graphics.centeredText(font, Component.translatable("screen.academy.reflection_filter.empty"),
-                        x + width / 2, sideListY + 8, DIM);
+                        x + width / 2, sideListY + (ROW_H - 8) / 2, DIM);
             }
             drawScrollBar(graphics, x + width - 3, sideListY, 3, sideListBottom - sideListY,
                     scroll, maxScroll(ids.size(), visible));
@@ -778,7 +846,7 @@ public final class ReflectionFilter extends Skill {
             if (event.button() == 0) {
                 var mouseX = event.x();
                 var mouseY = event.y();
-                if (inside(mouseX, mouseY, searchBox.getX(), searchBox.getY(), searchBox.getWidth(), 16)) {
+                if (inside(mouseX, mouseY, searchFrame())) {
                     setFocused(searchBox);
                     searchBox.setFocused(true);
                     searchBox.mouseClicked(event, doubleClick);
@@ -825,12 +893,12 @@ public final class ReflectionFilter extends Skill {
 
         private boolean handleMiddleButtons(double mouseX, double mouseY) {
             if (selectedEffect == null) return false;
-            if (inside(mouseX, mouseY, midX, panelY + 102, MIDDLE_W, MIDDLE_H)) {
+            if (inside(mouseX, mouseY, midX, panelY + MIDDLE_WHITE_Y, MIDDLE_W, MIDDLE_H)) {
                 addToList(data.whitelist, data.blacklist, selectedEffect);
                 sendUpdate();
                 return true;
             }
-            if (inside(mouseX, mouseY, midX, panelY + 138, MIDDLE_W, MIDDLE_H)) {
+            if (inside(mouseX, mouseY, midX, panelY + MIDDLE_BLACK_Y, MIDDLE_W, MIDDLE_H)) {
                 addToList(data.blacklist, data.whitelist, selectedEffect);
                 sendUpdate();
                 return true;
@@ -839,13 +907,15 @@ public final class ReflectionFilter extends Skill {
         }
 
         private boolean handleModeButtons(double mouseX, double mouseY) {
-            var buttonW = (rightW - 12) / 3;
-            if (inside(mouseX, mouseY, rightX, panelY + 34, buttonW, 22)) {
+            var contentW = rightContentWidth();
+            var buttonW = (contentW - 12) / 3;
+            if (inside(mouseX, mouseY, rightX, panelY + MODE_BUTTON_Y, buttonW, MODE_BUTTON_H)) {
                 data.mode = Mode.REFLECT_ALL.name();
-            } else if (inside(mouseX, mouseY, rightX + buttonW + 6, panelY + 34, buttonW, 22)) {
+            } else if (inside(mouseX, mouseY, rightX + buttonW + 6, panelY + MODE_BUTTON_Y,
+                    buttonW, MODE_BUTTON_H)) {
                 data.mode = Mode.POSITIVE_FILTER.name();
-            } else if (inside(mouseX, mouseY, rightX + (buttonW + 6) * 2, panelY + 34,
-                    rightW - (buttonW + 6) * 2, 22)) {
+            } else if (inside(mouseX, mouseY, rightX + (buttonW + 6) * 2, panelY + MODE_BUTTON_Y,
+                    contentW - (buttonW + 6) * 2, MODE_BUTTON_H)) {
                 data.mode = Mode.NEUTRAL_FILTER.name();
             } else {
                 return false;
@@ -855,14 +925,15 @@ public final class ReflectionFilter extends Skill {
         }
 
         private boolean handleForcedMovementProtection(double mouseX, double mouseY) {
-            if (!inside(mouseX, mouseY, rightX, panelY + 88, rightW, 18)) return false;
+            if (!inside(mouseX, mouseY, rightX, panelY + FORCED_MOVEMENT_Y,
+                    rightContentWidth(), FORCED_MOVEMENT_H)) return false;
             data.forcedMovementProtection = !data.forcedMovementProtection;
             sendUpdate();
             return true;
         }
 
         private boolean handleSideListClick(double mouseX, double mouseY) {
-            var listW = (rightW - 8) / 2;
+            var listW = sideListWidth();
             if (removeFromList(mouseX, mouseY, data.whitelist, whiteX, listW, true)) return true;
             return removeFromList(mouseX, mouseY, data.blacklist, blackX, listW, false);
         }
@@ -895,7 +966,7 @@ public final class ReflectionFilter extends Skill {
                         maxScroll(filteredEffects.size(), effectVisibleRows()));
                 return true;
             }
-            var listW = (rightW - 8) / 2;
+            var listW = sideListWidth();
             if (inside(mouseX, mouseY, whiteX, sideListY, listW, sideListBottom - sideListY)) {
                 whiteScroll = Mth.clamp(whiteScroll - step, 0,
                         maxScroll(data.whitelist.size(), sideVisibleRows()));
@@ -941,6 +1012,23 @@ public final class ReflectionFilter extends Skill {
             return Math.max(1, (sideListBottom - sideListY) / (ROW_H + GAP));
         }
 
+        private int rightContentWidth() {
+            return Math.max(1, rightW - RIGHT_CONTENT_INSET);
+        }
+
+        private int sideListWidth() {
+            return Math.max(1, (rightContentWidth() - 8) / 2);
+        }
+
+        private Rect searchFrame() {
+            return new Rect(
+                    searchBox.getX() - SEARCH_FRAME_PAD_X,
+                    searchBox.getY() - SEARCH_FRAME_PAD_Y,
+                    searchBox.getWidth() + SEARCH_FRAME_PAD_X * 2,
+                    SEARCH_H + SEARCH_FRAME_PAD_Y * 2
+            );
+        }
+
         private String effectDisplayName(String id) {
             for (var entry : allEffects) {
                 if (entry.id.equals(id)) return entry.name;
@@ -949,15 +1037,48 @@ public final class ReflectionFilter extends Skill {
         }
 
         private void fillSection(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
-            DataTerminalTheme.section(graphics, x, y, width, height);
+            graphics.fill(x, y, x + width, y + height, SECTION);
+            border(graphics, x, y, width, height, BORDER_DIM);
+        }
+
+        private void drawInput(
+                GuiGraphicsExtractor graphics,
+                int x,
+                int y,
+                int width,
+                int height,
+                boolean focused
+        ) {
+            graphics.fill(x, y, x + width, y + height, focused ? INPUT_FOCUSED : INPUT);
+            border(graphics, x, y, width, height, focused ? ACTIVE : BORDER_DIM);
+            if (focused) graphics.fill(x + 1, y + 2, x + 3, y + height - 2, ACTIVE);
+        }
+
+        private static void border(
+                GuiGraphicsExtractor graphics,
+                int x,
+                int y,
+                int width,
+                int height,
+                int color
+        ) {
+            graphics.fill(x + 1, y, x + width - 1, y + 1, color);
+            graphics.fill(x + 1, y + height - 1, x + width - 1, y + height, color);
+            graphics.fill(x, y + 1, x + 1, y + height - 1, color);
+            graphics.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
         }
 
         private void drawButton(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
                                 Component label, int mouseX, int mouseY, boolean enabled, boolean selected) {
             var hover = enabled && inside(mouseX, mouseY, x, y, width, height);
-            DataTerminalTheme.button(graphics, x, y, width, height, enabled, selected, hover,
-                    ACCENT, ROW_SELECTED);
-            var color = enabled ? TEXT : DataTerminalTheme.TEXT_DISABLED;
+            var background = !enabled ? 0x18000000
+                    : selected ? ROW_SELECTED
+                    : hover ? ROW : CONTROL;
+            graphics.fill(x, y, x + width, y + height, background);
+            border(graphics, x, y, width, height,
+                    selected ? ACTIVE : hover ? BORDER : BORDER_DIM);
+            if (selected) graphics.fill(x + 1, y + 2, x + 3, y + height - 2, ACTIVE);
+            var color = enabled ? TEXT : DISABLED;
             graphics.centeredText(font, font.plainSubstrByWidth(label.getString(), Math.max(1, width - 6)),
                     x + width / 2, y + (height - 8) / 2, color);
         }

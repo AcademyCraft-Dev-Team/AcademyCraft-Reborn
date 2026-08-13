@@ -15,45 +15,61 @@
           "width_mode": "FIXED",
           "height_mode": "FIXED",
           "width": 420,
-          "height": 212,
+          "height": 236,
           "gravity": 17
         },
         "children": [
           {
-            "type": "fill",
+            "type": "blend_quad",
             "name": "panel_background",
             "layout": {
               "width_mode": "MATCH_PARENT",
-              "height_mode": "MATCH_PARENT"
+              "height_mode": "MATCH_PARENT",
+              "margin_left": 1,
+              "margin_right": 1
+            },
+            "common": {
+              "alpha": 0.12
             },
             "props": {
-              "color": -652995566
+              "margin_left": 4,
+              "margin_top": 4,
+              "margin_right": 4,
+              "margin_bottom": 4,
+              "draw_line": false,
+              "red": 0,
+              "green": 0,
+              "blue": 0
             }
           },
           {
             "type": "fill",
             "name": "border_top",
             "layout": {
-              "width_mode": "MATCH_PARENT",
+              "width_mode": "FIXED",
               "height_mode": "FIXED",
+              "width": 412,
               "height": 1,
-              "gravity": 48
+              "gravity": 48,
+              "margin_left": 4
             },
             "props": {
-              "color": -638982953
+              "color": -9010978
             }
           },
           {
             "type": "fill",
             "name": "border_bottom",
             "layout": {
-              "width_mode": "MATCH_PARENT",
+              "width_mode": "FIXED",
               "height_mode": "FIXED",
+              "width": 412,
               "height": 1,
-              "gravity": 80
+              "gravity": 80,
+              "margin_left": 4
             },
             "props": {
-              "color": -638982953
+              "color": -9010978
             }
           },
           {
@@ -61,12 +77,14 @@
             "name": "border_left",
             "layout": {
               "width_mode": "FIXED",
-              "height_mode": "MATCH_PARENT",
+              "height_mode": "FIXED",
               "width": 1,
-              "gravity": 3
+              "height": 228,
+              "gravity": 3,
+              "margin_top": 4
             },
             "props": {
-              "color": -638982953
+              "color": -9010978
             }
           },
           {
@@ -74,12 +92,14 @@
             "name": "border_right",
             "layout": {
               "width_mode": "FIXED",
-              "height_mode": "MATCH_PARENT",
+              "height_mode": "FIXED",
               "width": 1,
-              "gravity": 5
+              "height": 228,
+              "gravity": 5,
+              "margin_top": 4
             },
             "props": {
-              "color": -638982953
+              "color": -9010978
             }
           },
           {
@@ -90,26 +110,11 @@
               "height_mode": "FIXED",
               "height": 1,
               "margin_left": 7,
-              "margin_top": 18,
+              "margin_top": 24,
               "margin_right": 7
             },
             "props": {
-              "color": -1713317172
-            }
-          },
-          {
-            "type": "fill",
-            "name": "title_accent",
-            "layout": {
-              "width_mode": "FIXED",
-              "height_mode": "FIXED",
-              "width": 2,
-              "height": 8,
-              "margin_left": 7,
-              "margin_top": 6
-            },
-            "props": {
-              "color": -2049969
+              "color": -9010978
             }
           },
           {
@@ -119,9 +124,9 @@
               "width_mode": "FIXED",
               "height_mode": "FIXED",
               "width": 396,
-              "height": 16,
+              "height": 20,
               "margin_left": 12,
-              "margin_top": 25
+              "margin_top": 32
             }
           },
           {
@@ -131,9 +136,9 @@
               "width_mode": "FIXED",
               "height_mode": "FIXED",
               "width": 396,
-              "height": 16,
+              "height": 20,
               "margin_left": 12,
-              "margin_top": 47
+              "margin_top": 58
             }
           },
           {
@@ -142,10 +147,10 @@
             "layout": {
               "width_mode": "FIXED",
               "height_mode": "FIXED",
-              "width": 192,
-              "height": 16,
+              "width": 194,
+              "height": 20,
               "margin_left": 12,
-              "margin_top": 69
+              "margin_top": 84
             }
           },
           {
@@ -154,10 +159,10 @@
             "layout": {
               "width_mode": "FIXED",
               "height_mode": "FIXED",
-              "width": 192,
-              "height": 16,
-              "margin_left": 216,
-              "margin_top": 69
+              "width": 194,
+              "height": 20,
+              "margin_left": 214,
+              "margin_top": 84
             }
           },
           {
@@ -167,9 +172,9 @@
               "width_mode": "FIXED",
               "height_mode": "FIXED",
               "width": 396,
-              "height": 93,
+              "height": 94,
               "margin_left": 12,
-              "margin_top": 91
+              "margin_top": 108
             }
           },
           {
@@ -178,10 +183,10 @@
             "layout": {
               "width_mode": "FIXED",
               "height_mode": "FIXED",
-              "width": 192,
-              "height": 16,
+              "width": 194,
+              "height": 20,
               "margin_left": 12,
-              "margin_top": 190
+              "margin_top": 208
             }
           },
           {
@@ -190,10 +195,10 @@
             "layout": {
               "width_mode": "FIXED",
               "height_mode": "FIXED",
-              "width": 192,
-              "height": 16,
-              "margin_left": 216,
-              "margin_top": 190
+              "width": 194,
+              "height": 20,
+              "margin_left": 214,
+              "margin_top": 208
             }
           }
         ]
