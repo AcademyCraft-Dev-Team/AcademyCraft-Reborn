@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.meltdowner;
 
-import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 
 public final class MeltdownerBeamDamage {
     private MeltdownerBeamDamage() {
@@ -42,5 +42,27 @@ public final class MeltdownerBeamDamage {
     public static float amplify(float damage, boolean marked) {
         if (!Float.isFinite(damage)) return 0.0f;
         return Math.max(0.0f, damage) * (marked ? RadiationIntensify.MARK_DAMAGE_MULTIPLIER : 1.0f);
+    }
+
+    public static float calculatePowerScaledBase(
+            float baseDamage,
+            float maxHealthRatio,
+            float targetMaxHealth,
+            float abilityPower,
+            float playerMultiplier,
+            boolean marked,
+            float markedMultiplier
+    ) {
+        if (!Float.isFinite(baseDamage) || !Float.isFinite(maxHealthRatio)
+                || !Float.isFinite(targetMaxHealth) || !Float.isFinite(abilityPower)
+                || !Float.isFinite(playerMultiplier) || !Float.isFinite(markedMultiplier)) {
+            return 0.0f;
+        }
+        var ordinary = Math.max(0.0f, baseDamage)
+                * (marked ? Math.max(1.0f, markedMultiplier) : 1.0f)
+                * Math.max(0.0f, abilityPower)
+                * Math.max(0.0f, playerMultiplier);
+        var maximumHealth = Math.max(0.0f, targetMaxHealth) * Math.max(0.0f, maxHealthRatio);
+        return ordinary + maximumHealth;
     }
 }

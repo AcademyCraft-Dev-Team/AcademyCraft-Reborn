@@ -11,6 +11,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilt
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
+import org.academy.internal.coremod.ProtectionBackend;
 
 import java.lang.ref.WeakReference;
 import java.util.*;
@@ -31,16 +32,24 @@ public final class VectorReflectionClientRuntime {
         var previous = currentPlayer.get();
         if (previous != null && previous != player) {
             deactivate(previous);
+            ClassPointerProtectionManager.restore(previous);
         }
         currentPlayer = new WeakReference<>(player);
         if (player == null) return;
+
+        // Arm the dispatch class as soon as either vector defense is learned and retain it for the
+        // lifetime of this LocalPlayer. The generated overrides delegate to vanilla while
+        // reflection is disabled, so toggling a skill no longer changes the runtime class between
+        // two rendered frames.
+        if (shouldKeepClassPointerArmed(player)) {
+            ClassPointerProtectionManager.ensureClientPlayer(player);
+        }
         if (!isProtected(player)) {
             deactivate(player);
             return;
         }
 
         player.getHealth();
-        ClassPointerProtectionManager.ensureClientPlayer(player);
         sanitize(player);
         var level = minecraft.level;
         if (level != null && level.getEntity(player.getId()) != player) {
@@ -82,12 +91,22 @@ public final class VectorReflectionClientRuntime {
         return !ReflectionFilter.shouldAcceptEffect(data, effect);
     }
 
-    private static boolean isVectorReductionActive(LocalPlayer player) {
+    private static boolean isVectorDeviationActive(LocalPlayer player) {
         return player != null
-                && AbilitySystemClient.isSkillLearned(Skills.VECTOR_REDUCTION.get())
-                && AbilitySystemClient.getSkillData(Skills.VECTOR_REDUCTION.get())
+                && AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get())
+                && AbilitySystemClient.getSkillData(Skills.VECTOR_DEVIATION.get())
                 .map(data -> data.isEnabled() && AbilitySystemClient.getAvailableCP() > 0.0f)
                 .orElse(false);
+    }
+
+    private static boolean shouldKeepClassPointerArmed(LocalPlayer player) {
+        if (player == null) return false;
+        if (ClassPointerProtectionManager.backend(player)
+                == ProtectionBackend.CLASS_POINTER) {
+            return true;
+        }
+        return AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
+                || AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get());
     }
 
     public static float protectHealthRead(LocalPlayer player, float original) {
@@ -107,7 +126,7 @@ public final class VectorReflectionClientRuntime {
     public static void imaginebreaker(LocalPlayer player, float amount) {
         if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
         var reflectionActive = isProtected(player);
-        if (!reflectionActive && !isVectorReductionActive(player)) return;
+        if (!reflectionActive && !isVectorDeviationActive(player)) return;
 
         var uuid = player.getUUID();
         if (reflectionActive) player.getHealth();
@@ -195,15 +214,11 @@ public final class VectorReflectionClientRuntime {
     private static void deactivate(LocalPlayer player) {
         var uuid = player.getUUID();
         var encoded = HEALTH_RECORDS.get(uuid);
-        if (encoded == null) {
-            ClassPointerProtectionManager.restore(player);
-            return;
-        }
+        if (encoded == null) return;
         var reported = player.getHealth();
         var restored = ReflectionHealthRecordCodec.lockedHealth(
                 ReflectionHealthRecordCodec.decode(uuid, encoded, reported), reported);
         HEALTH_RECORDS.remove(uuid);
-        ClassPointerProtectionManager.restore(player);
         if (Float.isFinite(restored)) setOriginalHealth(player, Math.max(0.0f, restored));
     }
 

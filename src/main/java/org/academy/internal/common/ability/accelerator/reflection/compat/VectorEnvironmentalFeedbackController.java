@@ -42,7 +42,8 @@ public final class VectorEnvironmentalFeedbackController {
             Vec3 fallbackPosition
     ) {
         if (emitEnvironmental(defender, source, VectorRedirectKind.REFLECTION)) return;
-        VectorReflection.Server.spawnGlowCircle(defender, fallbackDirection, fallbackPosition);
+        VectorReflection.Server.spawnGlowCircle(
+                defender, fallbackDirection, fallbackPosition, VectorRedirectKind.REFLECTION);
         VectorReflection.Server.playReflectionSound(defender);
     }
 
@@ -58,7 +59,8 @@ public final class VectorEnvironmentalFeedbackController {
                 defender,
                 fallbackAttackKey,
                 fallbackDirection,
-                fallbackPosition
+                fallbackPosition,
+                VectorRedirectKind.REFRACTION
         );
     }
 
@@ -134,7 +136,8 @@ public final class VectorEnvironmentalFeedbackController {
                 VectorReflection.Server.spawnGlowCircle(
                         defender,
                         origin.normal,
-                        origin.ringPosition
+                        origin.ringPosition,
+                        redirectKind
                 );
             }
             state.lastVisualTick = now;
@@ -156,6 +159,16 @@ public final class VectorEnvironmentalFeedbackController {
             EnvironmentKind environmentKind
     ) {
         var bounds = defender.getBoundingBox();
+        if (environmentKind == EnvironmentKind.FALL) {
+            var floorCenter = new Vec3(
+                    (bounds.minX + bounds.maxX) * 0.5,
+                    bounds.minY - 0.05,
+                    (bounds.minZ + bounds.maxZ) * 0.5
+            );
+            return Optional.of(new EnvironmentalFeedbackOrigin(
+                    floorCenter, floorCenter, new Vec3(0.0, -1.0, 0.0)
+            ));
+        }
         var scanDepth = environmentKind.floorBiased ? FLOOR_SCAN_DEPTH : SCAN_MARGIN;
         var scanBounds = new AABB(
                 bounds.minX - SCAN_MARGIN,
@@ -231,7 +244,8 @@ public final class VectorEnvironmentalFeedbackController {
         HOT_FLOOR(true),
         IN_FIRE(false),
         CAMPFIRE(true),
-        SWEET_BERRY_BUSH(false);
+        SWEET_BERRY_BUSH(false),
+        FALL(true);
 
         private final boolean floorBiased;
 
@@ -248,6 +262,7 @@ public final class VectorEnvironmentalFeedbackController {
                 case "in_fire", "minecraft:in_fire" -> IN_FIRE;
                 case "campfire", "minecraft:campfire" -> CAMPFIRE;
                 case "sweet_berry_bush", "minecraft:sweet_berry_bush" -> SWEET_BERRY_BUSH;
+                case "fall", "minecraft:fall" -> FALL;
                 default -> null;
             };
         }
@@ -261,6 +276,7 @@ public final class VectorEnvironmentalFeedbackController {
                 case IN_FIRE -> state.is(BlockTags.FIRE);
                 case CAMPFIRE -> CampfireBlock.isLitCampfire(state);
                 case SWEET_BERRY_BUSH -> state.is(Blocks.SWEET_BERRY_BUSH);
+                case FALL -> false;
             };
         }
 

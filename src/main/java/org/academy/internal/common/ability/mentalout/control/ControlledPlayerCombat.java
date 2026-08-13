@@ -6,10 +6,10 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
-import org.academy.internal.common.ability.aeromanip.skills.AtmosphereBlastGun;
-import org.academy.internal.common.ability.darkmatter.skills.DarkmatterDisassemble;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.AtmosphereBlastGun;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
-import org.academy.internal.common.ability.meltdowner.skills.SingleHighSpeedElectronBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 
 /**
  * Server-owned ability selection for a player acting on an explicit forced target.

@@ -57,9 +57,9 @@ public class Disintegrate extends Skill {
         super(Builder.of(AbilityCategories.MELTDOWNER.get())
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
-                .cpCost(200)
+                .cpCost(100)
                 .iterationTicks(20)
-                .maxStacks(1)
+                .maxStacks(2)
                 .dependsOn(Skills.PARTICLE_WAVE_CANNON));
     }
 
@@ -127,21 +127,28 @@ public class Disintegrate extends Skill {
         @SubscribePacket
         public static void handle(UsePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.DISINTEGRATE.get().executeActive(player, (context, _) -> {
-                var level = player.level();
-                cleanup(level.getGameTime());
-                var start = player.getEyePosition();
-                var range = LevelUtil.getValidViewDistance(player,
-                        context.milestone() >= 2 ? PRIMARY_RANGE * 1.2 : PRIMARY_RANGE);
-                var end = start.add(player.getLookAngle().scale(range));
-                var target = findFirstTarget(level, player, start, end);
-                if (target != null) {
-                    end = target.getBoundingBox().getCenter();
-                }
-                spawnBeam(player, start, end, 0,
-                        DestroyBlocksSetting.canDestroyBlocks(player, Skills.DISINTEGRATE.get()),
-                        context.milestone());
-            });
+            Skills.DISINTEGRATE.get().executeActive(
+                    player,
+                    context -> Math.max(
+                            100.0f,
+                            context.system().getPlayerMaxCP(player.getUUID()) * 0.2f
+                    ),
+                    (context, _) -> {
+                        var level = player.level();
+                        cleanup(level.getGameTime());
+                        var start = player.getEyePosition();
+                        var range = LevelUtil.getValidViewDistance(player,
+                                context.milestone() >= 2 ? PRIMARY_RANGE * 1.2 : PRIMARY_RANGE);
+                        var end = start.add(player.getLookAngle().scale(range));
+                        var target = findFirstTarget(level, player, start, end);
+                        if (target != null) {
+                            end = target.getBoundingBox().getCenter();
+                        }
+                        spawnBeam(player, start, end, 0,
+                                DestroyBlocksSetting.canDestroyBlocks(player, Skills.DISINTEGRATE.get()),
+                                context.milestone());
+                    }
+            );
         }
 
         private static void onKilled(ServerPlayer player, LivingEntity killed) {

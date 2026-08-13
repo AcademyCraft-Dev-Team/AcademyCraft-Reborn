@@ -6,6 +6,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 
@@ -46,44 +47,47 @@ public final class CTAEntityActuallyHurt {
         return owner instanceof ServerPlayer player ? player : null;
     }
 
-    public void actuallyHurt(DamageSource source, float amount, boolean special) {
-        if (entity == null || source == null || !(entity.level() instanceof ServerLevel level)) return;
-        if (!Float.isFinite(amount) || amount <= 0.0f || entity.isDeadOrDying()) return;
-        if (entity instanceof Player player && DamageTypes.isImmunePlayer(player)) return;
-        if (shouldPreventFriendlyFire(source)) return;
+    public boolean actuallyHurt(DamageSource source, float amount, boolean special) {
+        if (entity == null || source == null || !(entity.level() instanceof ServerLevel level)) return false;
+        if (!Float.isFinite(amount) || amount <= 0.0f || entity.isDeadOrDying()) return false;
+        if (entity instanceof Player player && DamageTypes.isImmunePlayer(player)) return false;
+        if (shouldPreventFriendlyFire(source)) return false;
 
         var adjustedAmount = entity instanceof Player player
                 ? PlayerAttributeRuntime.reduceDamage(player, amount, 0.08)
                 : amount;
-        PlayerAttributeRuntime.runWithoutResistance(() -> apply(level, source, adjustedAmount));
+        var applied = new boolean[1];
+        PlayerAttributeRuntime.runWithoutResistance(
+                () -> applied[0] = apply(level, source, adjustedAmount)
+        );
+        return applied[0];
     }
 
-    private void apply(ServerLevel level, DamageSource source, float amount) {
-
+    private boolean apply(ServerLevel level, DamageSource source, float amount) {
         var before = readTrueHealth(entity);
-        if (!Float.isFinite(before) || before <= 0.0f) return;
+        if (!Float.isFinite(before) || before <= 0.0f) return false;
         var expected = Math.max(0.0f, before - amount);
-        EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);
-
-        entity.invulnerableTime = 0;
-        try {
-            entity.hurtServer(level, source, amount);
-        } catch (Throwable ignored) {
-        }
-
+        var wrote = EntityControlApi.forceSetTrueHealth(entity, expected);
         var observed = readTrueHealth(entity);
-        if (!Float.isFinite(observed) || observed > expected + EPSILON) {
-            EntityControlApi.forceSetTrueHealth(entity, expected);
+        if (!wrote || !Float.isFinite(observed) || Math.abs(observed - expected) > EPSILON) {
+            return false;
         }
-        if (expected > EPSILON || !entity.isAlive()) return;
 
-        EntityControlApi.forceSetTrueHealth(entity, 0.0f);
+        // Install the short anti-heal ceiling only after the exact write has been verified. Doing
+        // this before a damage call used to pre-kill lethal targets and skip vanilla die/loot.
+        EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);
+        var inflicted = Math.max(0.0f, before - observed);
+        if (!(inflicted > 0.0f)) return false;
+
+        entity.getCombatTracker().recordDamage(source, inflicted);
         entity.invulnerableTime = 0;
-        try {
-            entity.hurtServer(level, source, Float.MAX_VALUE);
-        } catch (Throwable ignored) {
-        }
-        if (entity.isAlive()) EntityControlApi.forceSetTrueHealth(entity, 0.0f);
+        var attacker = resolveOwnerPlayer(source);
+        var skill = source instanceof SkillDamageSource skillSource ? skillSource.getSkill() : null;
+        SkillDamageUtil.completeDirectDamage(
+                level, entity, source, amount, inflicted, attacker, skill,
+                expected == 0.0f, false
+        );
+        return true;
     }
 
     private boolean shouldPreventFriendlyFire(DamageSource source) {

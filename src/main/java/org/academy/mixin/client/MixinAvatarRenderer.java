@@ -43,4 +43,18 @@ public abstract class MixinAvatarRenderer {
             state.leftHandItemStack = ItemStack.EMPTY;
         }
     }
+
+    @Inject(
+            method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V",
+            at = @At("RETURN")
+    )
+    private void applyWingBoostPose(
+            Avatar avatar, AvatarRenderState state, float partialTick, CallbackInfo ci
+    ) {
+        if (!avatar.getData(AttachmentTypes.WING_BOOST_POSE.get())) return;
+        // Keep the Elytra-like pose entirely inside the render state. Writing vanilla shared flag
+        // 7 makes collision/ground checks race the skill tick and destabilizes entity tracking.
+        state.isFallFlying = true;
+        state.fallFlyingTimeInTicks = Math.max(state.fallFlyingTimeInTicks, 10.0f);
+    }
 }

@@ -19,6 +19,7 @@ import java.util.Objects;
 import net.minecraft.util.Mth;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
+    public static final int CLOSE_DELAY_TICKS = 20;
 
     public final AnimationState openingState = new AnimationState();
     public final AnimationState closingState = new AnimationState();
@@ -28,10 +29,12 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     public String name;
     public int energyStored;
     public int ticks;
+    // Transient client animation state. Serializing it would let energy updates restart the door animation.
     public boolean isOpen = false;
     @Nullable
     private BlockPos connectedNodePos = null;
     private boolean playerNearby = false;
+    private int closeDelayTicks = -1;
 
     public AbilityDeveloperBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.ABILITY_DEVELOPER.get(), pos, blockState);
@@ -41,10 +44,12 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     }
 
     public void setOpen(boolean open) {
+        var targetAnimationState = open ? openingState : closingState;
+        if (isOpen == open && targetAnimationState.isStarted()) return;
+
         var previousIsOpen = isOpen;
         isOpen = open;
         var currentAnimationState = previousIsOpen ? openingState : closingState;
-        var targetAnimationState = open ? openingState : closingState;
         var targetAnimationDefinition = open ? AbilityDeveloperAnimation.OPENING : AbilityDeveloperAnimation.CLOSING;
         var elapsedMillis = currentAnimationState.getTimeInMillis(ticks);
         openingState.stop();
@@ -59,6 +64,20 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         } else {
             targetAnimationState.start(ticks);
         }
+    }
+
+    public void startOpening() {
+        closeDelayTicks = CLOSE_DELAY_TICKS;
+        setOpen(true);
+    }
+
+    public void keepOpen() {
+        closeDelayTicks = -1;
+        setOpen(true);
+    }
+
+    public void scheduleClosing() {
+        closeDelayTicks = CLOSE_DELAY_TICKS;
     }
 
     private void handleStateChangeOnClient(boolean wasNearby, boolean isNearby) {
@@ -176,7 +195,6 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         super.saveAdditional(output);
         if (isMain()) {
             output.putInt("energy_stored", energyStored);
-            output.putBoolean("is_open", isOpen);
             if (connectedNodePos != null) {
                 output.putLong("connected_node_pos", connectedNodePos.asLong());
             }
@@ -190,13 +208,11 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
             energyStored = Mth.clamp(input.getIntOr("energy_stored", 0), 0, getMaxEnergyStorage());
             connectedNodePos = null;
             input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
-            isOpen = input.getBooleanOr("is_open", false);
         } else {
             connectedNodePos = null;
             if (level != null && mainPos != null && level.isClientSide()) {
                 var mainBE = level.getBlockEntity(mainPos);
                 if (mainBE instanceof AbilityDeveloperBlockEntity mainDevBE) {
-                    isOpen = mainDevBE.isOpen;
                     energyStored = mainDevBE.getEnergyStored();
                     connectedNodePos = mainDevBE.connectedNodePos;
                 }
@@ -208,6 +224,11 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         ticks++;
 
         if (isMain() && level != null) {
+            if (closeDelayTicks > 0 && --closeDelayTicks == 0) {
+                closeDelayTicks = -1;
+                setOpen(false);
+            }
+
             var wasNearby = playerNearby;
             var nearbyPlayers = level.getEntitiesOfClass(Player.class, new AABB(worldPosition).inflate(10.0));
             playerNearby = !nearbyPlayers.isEmpty() && energyStored > 0;

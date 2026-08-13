@@ -513,7 +513,7 @@ public final class AbilitySystemClient {
         if (base == Skill.NO_STACK_LIMIT) return Skill.NO_STACK_LIMIT;
         if (!getCategory().supportsCommonSkills()) return base;
         var stackData = SKILL_DATA.get(
-                AcademyCraft.academy(SkillNames.LEVEL0_PASSIVE_LV2).toString()
+                AcademyCraft.academy(SkillNames.MULTIPLE_BRAIN_DOMAIN_SEGMENTATION).toString()
         );
         var bonus = stackData == null
                 ? 0

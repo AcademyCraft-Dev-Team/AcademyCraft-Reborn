@@ -55,6 +55,7 @@ public class Cloudroom extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(30)
+                .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.LIGHT_SHIELD)
         );
     }

@@ -1,19 +1,18 @@
 package org.academy.internal.common.ability.meltdowner;
 
+import java.util.function.Predicate;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
-import org.academy.internal.common.ability.accelerator.reflection.*;
-import org.academy.internal.common.ability.meltdowner.skills.RadiationIntensify;
 import org.academy.internal.common.ability.Skills;
-
-import java.util.function.Predicate;
-import net.minecraft.util.Mth;
+import org.academy.internal.common.ability.accelerator.reflection.*;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 
 public final class MeltdownerBeamActions {
     private MeltdownerBeamActions() {
@@ -28,6 +27,7 @@ public final class MeltdownerBeamActions {
             float radius,
             float baseDamage,
             float maxHealthRatio,
+            float abilityPower,
             float playerMultiplier,
             boolean radiationEnabled
     ) {
@@ -38,6 +38,7 @@ public final class MeltdownerBeamActions {
                 radius,
                 baseDamage,
                 maxHealthRatio,
+                abilityPower,
                 playerMultiplier,
                 radiationEnabled
         );
@@ -52,6 +53,7 @@ public final class MeltdownerBeamActions {
             float radius,
             float baseDamage,
             float maxHealthRatio,
+            float abilityPower,
             float playerMultiplier,
             boolean radiationEnabled
     ) {
@@ -62,6 +64,7 @@ public final class MeltdownerBeamActions {
                 radius,
                 baseDamage,
                 maxHealthRatio,
+                abilityPower,
                 playerMultiplier,
                 radiationEnabled,
                 target -> target instanceof LivingEntity
@@ -75,6 +78,7 @@ public final class MeltdownerBeamActions {
             float radius,
             float baseDamage,
             float maxHealthRatio,
+            float abilityPower,
             float playerMultiplier,
             boolean radiationEnabled,
             Predicate<Entity> targetFilter
@@ -90,10 +94,11 @@ public final class MeltdownerBeamActions {
                             && RadiationIntensify.isMarked(living, level.getGameTime());
                     var markMultiplier = Skills.RADIATION_INTENSIFY.get().hasProficiencyMilestone(player, 2)
                             ? 1.6f : RadiationIntensify.MARK_DAMAGE_MULTIPLIER;
-                    return MeltdownerBeamDamage.calculate(
+                    return MeltdownerBeamDamage.calculatePowerScaledBase(
                             baseDamage,
                             maxHealthRatio,
                             living == null ? 0.0f : living.getMaxHealth(),
+                            abilityPower,
                             playerMultiplier,
                             marked,
                             markMultiplier

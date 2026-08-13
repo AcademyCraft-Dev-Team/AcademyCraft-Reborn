@@ -5,7 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorReduction;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -47,7 +47,7 @@ public final class LinearReflectionResolver {
             if (VectorReflection.Server.isActive(player)) {
                 return LinearReflectionCandidate.Mode.REFLECTION;
             }
-            if (VectorReduction.Server.isActive(player)) {
+            if (VectorDeviation.Server.isActive(player)) {
                 return LinearReflectionCandidate.Mode.REFRACTION;
             }
             if (payload.skill().getCategory() == AbilityCategories.MELTDOWNER.get()
@@ -117,7 +117,7 @@ public final class LinearReflectionResolver {
                     candidate.mirrorPoint(),
                     candidate.incomingDirection()
             );
-            case REFRACTION -> VectorReduction.Server.tryRefractLinearAttack(
+            case REFRACTION -> VectorDeviation.Server.tryRefractLinearAttack(
                     candidate.reflector(),
                     candidate.expectedDamage(),
                     candidate.mirrorPoint(),
@@ -141,7 +141,7 @@ public final class LinearReflectionResolver {
             case REFRACTION -> fullRangeRefractedSegment(
                     original,
                     mirrorPoint,
-                    VectorReduction.refractedDirection(
+                    VectorDeviation.refractedDirection(
                             candidate.reflector().getLookAngle(),
                             candidate.incomingDirection()
                     )

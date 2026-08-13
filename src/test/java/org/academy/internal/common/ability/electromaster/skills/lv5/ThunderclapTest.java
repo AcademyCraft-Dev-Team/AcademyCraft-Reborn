@@ -9,9 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class ThunderclapTest {
     @Test
     void damageUsesTwentyPercentOfMaximumHealth() {
-        assertEquals(20.0f, Thunderclap.calculateDamage(100.0f, 1.0f));
-        assertEquals(30.0f, Thunderclap.calculateDamage(100.0f, 1.5f));
-        assertEquals(0.0f, Thunderclap.calculateDamage(-10.0f, 1.0f));
+        assertEquals(40.0f, Thunderclap.calculateDamage(100.0f, 1.0f, 1.0f));
+        assertEquals(65.0f, Thunderclap.calculateDamage(100.0f, 1.5f, 1.5f));
+        assertEquals(0.0f, Thunderclap.calculateDamage(-10.0f, 0.0f, 1.0f));
     }
 
     @Test

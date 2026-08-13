@@ -2,6 +2,7 @@ package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -10,10 +11,13 @@ import net.minecraft.util.Mth;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.internal.client.renderer.entity.state.GlowCircleRenderState;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 
 public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRenderState> {
-    private static final float MAX_RADIUS = 1.5f;
+    private static final float MAX_RADIUS = 1.5f * 2.2f;
 
     public GlowCircleRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -25,6 +29,7 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
 
     @Override
     public void submit(GlowCircleRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
+        if (!isVisibleForCurrentCamera(renderState)) return;
         var yaw = renderState.yRot;
         var pitch = renderState.xRot;
         var distortionStrength = 0.025f;
@@ -61,5 +66,20 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
         reusedState.radius = sizeCurve(progress);
         reusedState.xRot = entity.getXRot();
         reusedState.yRot = entity.getYRot();
+        reusedState.ownerEntityId = entity.getEffectOwnerId();
+        reusedState.redirectKind = entity.getRedirectKind();
+    }
+
+    private static boolean isVisibleForCurrentCamera(GlowCircleRenderState state) {
+        var minecraft = Minecraft.getInstance();
+        var player = minecraft.player;
+        if (player == null
+                || !minecraft.options.getCameraType().isFirstPerson()
+                || state.ownerEntityId != player.getId()) {
+            return true;
+        }
+        return state.redirectKind == VectorRedirectKind.REFRACTION
+                ? VectorDeviation.Client.CONFIG.isFirstPersonDistortionRingVisible()
+                : VectorReflection.Client.CONFIG.isFirstPersonDistortionRingVisible();
     }
 }

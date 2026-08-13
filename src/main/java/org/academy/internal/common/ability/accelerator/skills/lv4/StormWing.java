@@ -35,14 +35,14 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.accelerator.skills.lv2.VectorAccel;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.mixin.common.EntitySharedFlagInvoker;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -73,7 +73,7 @@ public final class StormWing extends Skill {
                 .passive()
                 .initiallyDisabled()
                 .maintenanceCost(RESERVED_CP)
-                .iterationTicks(1)
+                .iterationTicks(5)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.VECTOR_REFLECTION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
@@ -184,7 +184,6 @@ public final class StormWing extends Skill {
     public static final class Server {
         private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
         private static final Map<UUID, ArrayDeque<TrailPoint>> TRAILS = new HashMap<>();
-        private static final long BOOST_GRACE_TICKS = 5;
 
         private Server() {
         }
@@ -206,11 +205,11 @@ public final class StormWing extends Skill {
             if (player == null) return;
             var skill = Skills.STORM_WING.get();
             var data = skill.getRuntimeData(player).orElse(null);
+            var system = AbilitySystemServer.getSystem(player);
             if (data != null && data.isEnabled()) {
-                var system = AbilitySystemServer.getSystem(player);
                 system.toggleSkill(player.getUUID(), skill.getKeyString());
-                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             }
+            system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             sync(player);
         }
 
@@ -281,9 +280,7 @@ public final class StormWing extends Skill {
             if (!active) {
                 // This path runs for every player tick. Never clear fall distance here.
                 LAST_BOOST_TICK.remove(player.getUUID());
-                if (wasActive) {
-                    ((EntitySharedFlagInvoker) player).academy$setSharedFlag(7, false);
-                }
+                if (wasActive) WingFlightPose.sync(player, false);
             }
         }
 
@@ -297,7 +294,7 @@ public final class StormWing extends Skill {
                                 player, SkillProficiencyProfile.CostKind.MAINTENANCE, RESERVED_CP), skill);
                 if (!active && skill.isEnabled(player)) skill.toggle(player);
                 if (active && player.tickCount % UPKEEP_INTERVAL_TICKS == 0
-                        && !system.tryTimedOccupation(player.getUUID(), UPKEEP_CP, skill, 1)) {
+                        && !system.tryTimedOccupation(player.getUUID(), UPKEEP_CP, skill, 5)) {
                     forceDeactivate(player);
                     active = false;
                 }
@@ -306,8 +303,8 @@ public final class StormWing extends Skill {
             if (!isActive(player)) return;
             var boostTick = LAST_BOOST_TICK.get(player.getUUID());
             var now = player.level().getGameTime();
-            var boosting = boostTick != null && now - boostTick <= BOOST_GRACE_TICKS;
-            ((EntitySharedFlagInvoker) player).academy$setSharedFlag(7, boosting);
+            var boosting = WingFlightPose.isBoosting(now, boostTick);
+            WingFlightPose.sync(player, boosting);
             tickTurbulence(player, now, boosting);
         }
 

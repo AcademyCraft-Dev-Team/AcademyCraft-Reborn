@@ -1,5 +1,6 @@
 package org.academy.api.client.render.vfx;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
@@ -18,7 +19,8 @@ public final class VfxContexts {
                 new Quaternionf(cameraState.orientation),
                 new Matrix4f(cameraState.projectionMatrix),
                 new Matrix4f(cameraState.viewRotationMatrix),
-                fov(cameraState)
+                fov(cameraState),
+                RenderSystem.getProjectionMatrixBuffer()
         );
         var partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
         var level = Minecraft.getInstance().level;

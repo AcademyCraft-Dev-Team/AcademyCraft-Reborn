@@ -48,6 +48,7 @@
     "common.item.MixinMaceItemAirflowMomentum"
   ],
   "client": [
+    "client.MixinArmedEntityRenderState",
     "client.MixinAvatarRenderer",
     "client.MixinCamera",
     "client.MixinClientLevelMentalPerception",

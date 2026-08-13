@@ -57,9 +57,9 @@ public class Disarm extends Skill {
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .cpCost(40)
-                .iterationTicks(20)
-                .maxStacks(1)
+                .cpCost(20)
+                .iterationTicks(10)
+                .maxStacks(5)
                 .dependsOn(Skills.SELF_TELEPORT)
         );
     }
@@ -124,7 +124,9 @@ public class Disarm extends Skill {
                                        boolean delayedPickup) {
         var item = new ItemEntity(level, target.getX(), target.getY() + 1, target.getZ(), stack.copy());
         level.addFreshEntity(item);
-        if (delayedPickup) item.setPickUpDelay(100);
+        // Mobs evaluate nearby-item pickup on the same tick. Piglin brutes otherwise reclaim
+        // their own golden axe before the disarm impulse has moved it away.
+        if (delayedPickup || !(target instanceof Player)) item.setPickUpDelay(100);
         item.setDeltaMovement(new Vec3(
                 rng.nextDouble() * 4 - 2, rng.nextDouble() * 2, rng.nextDouble() * 4 - 2));
         return item;
@@ -260,7 +262,7 @@ public class Disarm extends Skill {
                     || player.distanceToSqr(target) > range * range) return;
             var canTakeSecond = skill.hasProficiencyMilestone(player, 2)
                     && !target.getOffhandItem().isEmpty() && !target.getMainHandItem().isEmpty();
-            skill.executeActive(player, ctx -> canTakeSecond ? 60.0f : 40.0f, (ctx, actualCost) -> {
+            skill.executeActive(player, ctx -> canTakeSecond ? 40.0f : 20.0f, (ctx, actualCost) -> {
                 if (!target.isAlive() || target.level() != player.level()
                         || player.distanceToSqr(target) > range * range) return;
                 disarmTarget(target, ctx.milestone() >= 3);

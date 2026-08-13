@@ -143,7 +143,7 @@ public final class R {
         public static final Identifier threatening_teleport_icon = academy("textures/ability/teleport/skill/threatening_teleport/icon.png");
         public static final Identifier space_folding_theorem_icon = academy("textures/ability/teleport/skill/space_folding_theorem/icon.png");
         public static final Identifier self_teleport_icon = academy("textures/ability/teleport/skill/self_teleport/icon.png");
-        public static final Identifier cut_through_icon = academy("textures/ability/teleport/skill/cut_through/icon.png");
+        public static final Identifier piercing_teleportation_icon = academy("textures/ability/teleport/skill/piercing_teleportation/icon.png");
         public static final Identifier flesh_ripping_icon = academy("textures/ability/teleport/skill/flesh_ripping/icon.png");
         public static final Identifier location_teleport_icon = academy("textures/ability/teleport/skill/location_teleport/icon.png");
         public static final Identifier quick_location_teleport_icon = academy("textures/ability/teleport/skill/quick_location_teleport/icon.png");
@@ -184,7 +184,7 @@ public final class R {
         public static final Identifier white_wing = academy("textures/ability/accelerator/skill/white_wing/effect/tornado_ring.png");
         public static final Identifier platinum_wing_starfield = academy("textures/ability/accelerator/skill/platinum_wing/effect/starfield.png");
         public static final Identifier vec_accel_icon = academy("textures/ability/accelerator/skill/vec_accel/icon.png");
-        public static final Identifier vector_reduction_icon = academy("textures/ability/accelerator/skill/vector_reduction/icon.png");
+        public static final Identifier vector_deviation_icon = academy("textures/ability/accelerator/skill/vector_deviation/icon.png");
         public static final Identifier airflow_jet_icon = academy("textures/ability/aeromanip/skill/airflow_jet/icon.png");
         public static final Identifier air_cushion_icon = academy("textures/ability/aeromanip/skill/air_cushion/icon.png");
         public static final Identifier flow_sense_icon = academy("textures/ability/aeromanip/skill/flow_sense/icon.png");
@@ -200,11 +200,11 @@ public final class R {
         public static final Identifier flight_icon = academy("textures/ability/aeromanip/skill/flight/icon.png");
         public static final Identifier vacuum_domain_icon = academy("textures/ability/aeromanip/skill/vacuum_domain/icon.png");
         public static final Identifier atmospheric_dominion_icon = academy("textures/ability/aeromanip/skill/atmospheric_dominion/icon.png");
-        public static final Identifier level0_passive_lv1_icon = academy("textures/ability/level0/skill/level0_passive_lv1/icon.png");
-        public static final Identifier level0_passive_lv2_icon = academy("textures/ability/level0/skill/level0_passive_lv2/icon.png");
-        public static final Identifier level0_passive_lv3_icon = academy("textures/ability/level0/skill/level0_passive_lv3/icon.png");
-        public static final Identifier level0_passive_lv4_icon = academy("textures/ability/level0/skill/level0_passive_lv4/icon.png");
-        public static final Identifier level0_passive_lv5_icon = academy("textures/ability/level0/skill/level0_passive_lv5/icon.png");
+        public static final Identifier brain_domain_development_icon = academy("textures/ability/level0/skill/brain_domain_development/icon.png");
+        public static final Identifier multiple_brain_domain_segmentation_icon = academy("textures/ability/level0/skill/multiple_brain_domain_segmentation/icon.png");
+        public static final Identifier parallel_thought_computation_icon = academy("textures/ability/level0/skill/parallel_thought_computation/icon.png");
+        public static final Identifier complete_consciousness_analysis_icon = academy("textures/ability/level0/skill/complete_consciousness_analysis/icon.png");
+        public static final Identifier absolute_self_control_icon = academy("textures/ability/level0/skill/absolute_self_control/icon.png");
         public static final Identifier condition_any1 = academy("textures/ability/condition/any1.png");
         public static final Identifier condition_any2 = academy("textures/ability/condition/any2.png");
         public static final Identifier condition_any3 = academy("textures/ability/condition/any3.png");
@@ -234,11 +234,11 @@ public final class R {
             }
 
             public static final class condition {
-                public static final Identifier any1 = academy("textures/abilities/condition/any1.png");
-                public static final Identifier any2 = academy("textures/abilities/condition/any2.png");
-                public static final Identifier any3 = academy("textures/abilities/condition/any3.png");
-                public static final Identifier any4 = academy("textures/abilities/condition/any4.png");
-                public static final Identifier any5 = academy("textures/abilities/condition/any5.png");
+                public static final Identifier any1 = academy("textures/ability/condition/any1.png");
+                public static final Identifier any2 = academy("textures/ability/condition/any2.png");
+                public static final Identifier any3 = academy("textures/ability/condition/any3.png");
+                public static final Identifier any4 = academy("textures/ability/condition/any4.png");
+                public static final Identifier any5 = academy("textures/ability/condition/any5.png");
 
                 private condition() {
                 }
@@ -310,10 +310,10 @@ public final class R {
                         }
                     }
 
-                    public static final class vector_reduction {
-                        public static final Identifier icon = academy("textures/ability/accelerator/skill/vector_reduction/icon.png");
+                    public static final class vector_deviation {
+                        public static final Identifier icon = academy("textures/ability/accelerator/skill/vector_deviation/icon.png");
 
-                        private vector_reduction() {
+                        private vector_deviation() {
                         }
                     }
 
@@ -428,38 +428,38 @@ public final class R {
                     private skill() {
                     }
 
-                    public static final class level0_passive_lv1 {
-                        public static final Identifier icon = academy("textures/ability/level0/skill/level0_passive_lv1/icon.png");
+                    public static final class brain_domain_development {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/brain_domain_development/icon.png");
 
-                        private level0_passive_lv1() {
+                        private brain_domain_development() {
                         }
                     }
 
-                    public static final class level0_passive_lv2 {
-                        public static final Identifier icon = academy("textures/ability/level0/skill/level0_passive_lv2/icon.png");
+                    public static final class multiple_brain_domain_segmentation {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/multiple_brain_domain_segmentation/icon.png");
 
-                        private level0_passive_lv2() {
+                        private multiple_brain_domain_segmentation() {
                         }
                     }
 
-                    public static final class level0_passive_lv3 {
-                        public static final Identifier icon = academy("textures/ability/level0/skill/level0_passive_lv3/icon.png");
+                    public static final class parallel_thought_computation {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/parallel_thought_computation/icon.png");
 
-                        private level0_passive_lv3() {
+                        private parallel_thought_computation() {
                         }
                     }
 
-                    public static final class level0_passive_lv4 {
-                        public static final Identifier icon = academy("textures/ability/level0/skill/level0_passive_lv4/icon.png");
+                    public static final class complete_consciousness_analysis {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/complete_consciousness_analysis/icon.png");
 
-                        private level0_passive_lv4() {
+                        private complete_consciousness_analysis() {
                         }
                     }
 
-                    public static final class level0_passive_lv5 {
-                        public static final Identifier icon = academy("textures/ability/level0/skill/level0_passive_lv5/icon.png");
+                    public static final class absolute_self_control {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/absolute_self_control/icon.png");
 
-                        private level0_passive_lv5() {
+                        private absolute_self_control() {
                         }
                     }
                 }

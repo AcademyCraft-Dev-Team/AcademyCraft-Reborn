@@ -30,6 +30,12 @@ public final class AbilityRegistrationValidator {
             if (categoryKey == null) {
                 throw new IllegalStateException("Unregistered ability category instance: " + category);
             }
+            if (AcademyCraft.MOD_ID.equals(categoryKey.getNamespace())
+                    && category != AbilityCategories.LEVEL0.get()
+                    && category.getDevelopmentProfile().isEmpty()) {
+                throw new IllegalStateException("Core ability category " + categoryKey
+                        + " has no P.R.O.P.S development profile");
+            }
 
             for (var skill : category.getSkills()) {
                 if (skill.getScope() != SkillScope.CATEGORY) {

@@ -100,9 +100,7 @@ public final class MentalIntrusionManager {
 
         var revision = nextRevision(SESSION_REVISIONS, player.getUUID());
         var sessionId = UUID.randomUUID();
-        var maximumEnd = target instanceof ServerPlayer
-                ? now + playerIntrusionDuration(player, skill, level)
-                : Long.MAX_VALUE;
+        var maximumEnd = Long.MAX_VALUE;
         var session = new Session(
                 sessionId,
                 revision,
@@ -144,11 +142,7 @@ public final class MentalIntrusionManager {
             return null;
         }
         var now = player.level().getGameTime();
-        var maximumEnd = target instanceof ServerPlayer
-                ? Math.min(
-                Math.max(now + 1L, expiresAt),
-                now + playerIntrusionDuration(player, intrusion, level))
-                : Math.max(now + 1L, expiresAt);
+        var maximumEnd = Math.max(now + 1L, expiresAt);
         if (target instanceof ServerPlayer) {
             var cooldownKey = new CooldownKey(player.getUUID(), target.getUUID());
             if (PLAYER_COOLDOWNS.getOrDefault(cooldownKey, Long.MIN_VALUE) > now) return null;
@@ -233,7 +227,9 @@ public final class MentalIntrusionManager {
                 SkillProficiencyProfile.CostKind.MAINTENANCE,
                 MentaloutConfig.sensoryDistortionCost(player, level)
         );
-        if (MentalControlRuntime.isBossCost(session.target)) {
+        if (session.target instanceof ServerPlayer) {
+            cost *= MentaloutConfig.playerControlCostMultiplier(player);
+        } else if (MentalControlRuntime.isBossCost(session.target)) {
             cost *= MentaloutConfig.bossCostMultiplier(player);
         }
         if (!AbilitySystemServer.getSystem(player).replacePermanentOccupation(

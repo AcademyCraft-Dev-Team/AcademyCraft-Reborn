@@ -11,6 +11,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -169,7 +171,7 @@ public class LevelUtil {
 
     private static void checkAndCollectBlock(BlockCollectionContext ctx, BlockState state, int x, int y, int z) {
         ctx.mutablePos.set(x, y, z);
-        var shape = state.getCollisionShape(ctx.level, ctx.mutablePos);
+        var shape = getAbilityInteractionShape(state, ctx.level, ctx.mutablePos);
         if (shape.isEmpty()) return;
 
         var blockAABB = shape.bounds().move(x, y, z);
@@ -202,7 +204,7 @@ public class LevelUtil {
         }
         var minT = 1.0;
         for (var pos : unbreakableBlocks) {
-            var shape = level.getBlockState(pos).getCollisionShape(level, pos);
+            var shape = getAbilityInteractionShape(level.getBlockState(pos), level, pos);
             if (shape.isEmpty()) continue;
 
             var t = getIntersectionT(start, end, shape.bounds().move(pos).inflate(radius));
@@ -227,7 +229,7 @@ public class LevelUtil {
     ) {
         var air = Blocks.AIR.defaultBlockState();
         for (var pos : breakableBlocks) {
-            var shape = level.getBlockState(pos).getCollisionShape(level, pos);
+            var shape = getAbilityInteractionShape(level.getBlockState(pos), level, pos);
             if (shape.isEmpty()) continue;
 
             var t = getIntersectionT(start, end, shape.bounds().move(pos).inflate(radius));
@@ -251,6 +253,20 @@ public class LevelUtil {
                 }
             }
         }
+    }
+
+    /**
+     * Ability beams interact with visible block geometry, not only entity collision geometry.
+     * Snow layers and powder snow deliberately expose an empty collision shape in several
+     * contexts, while their outline shape still describes the volume the beam must hit.
+     */
+    static VoxelShape getAbilityInteractionShape(BlockState state, BlockGetter level, BlockPos pos) {
+        var collision = state.getCollisionShape(level, pos);
+        return selectAbilityInteractionShape(collision, state.getShape(level, pos));
+    }
+
+    static VoxelShape selectAbilityInteractionShape(VoxelShape collision, VoxelShape outline) {
+        return collision.isEmpty() ? outline : collision;
     }
 
     private static boolean canAbilityBreak(
