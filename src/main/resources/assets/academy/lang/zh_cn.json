@@ -512,7 +512,7 @@
   "screen.academy.precision_operation.node.random": "随机实体",
   "screen.academy.precision_operation.node.random.description": "由服务端从集合中随机选取一个实体。",
   "screen.academy.precision_operation.node.remove_control": "解除控制",
-  "screen.academy.precision_operation.node.remove_control.description": "解除所选主体受到的精密操作控制。",
+  "screen.academy.precision_operation.node.remove_control.description": "解除所选主体的介入编队与精密操作控制，并阻止其在离开召回范围前被自动重新加入。",
   "screen.academy.precision_operation.node.roster": "受控清单",
   "screen.academy.precision_operation.node.roster.description": "返回施术者当前控制的实体集合。",
   "screen.academy.precision_operation.node.sight_position": "视线位置",

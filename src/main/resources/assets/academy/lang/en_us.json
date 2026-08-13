@@ -512,7 +512,7 @@
   "screen.academy.precision_operation.node.random": "Random Entity",
   "screen.academy.precision_operation.node.random.description": "Selects one random entity from a set on the server.",
   "screen.academy.precision_operation.node.remove_control": "Release Control",
-  "screen.academy.precision_operation.node.remove_control.description": "Releases Precision Operation control from the selected subjects.",
+  "screen.academy.precision_operation.node.remove_control.description": "Releases the selected subjects from the intervention roster and Precision Operation control, suppressing automatic recall until they leave recall range.",
   "screen.academy.precision_operation.node.roster": "Controlled Roster",
   "screen.academy.precision_operation.node.roster.description": "Returns the caster's currently controlled entities.",
   "screen.academy.precision_operation.node.sight_position": "Sight Position",
