@@ -60,6 +60,7 @@ const categoryHeadings = new Map([
   ["## Meltdowner 原子崩坏", "Meltdowner"],
   ["## Teleport 空间移动", "Teleport"],
   ["## Darkmatter 未元物质", "Darkmatter"],
+  ["## Mentalout 心理掌握", "Mentalout"],
 ]);
 
 function parseParameter(parameter) {
@@ -113,13 +114,12 @@ for (const line of lines) {
   if (cells.length === 4) conflicts.push(cells);
 }
 
-if (skills.length !== 89) throw new Error(`Expected 89 skills, found ${skills.length}`);
-if (conflicts.length !== 8) throw new Error(`Expected 8 conflict/risk rows, found ${conflicts.length}`);
+if (skills.length !== 94) throw new Error(`Expected 94 skills, found ${skills.length}`);
+if (conflicts.length !== 4) throw new Error(`Expected 4 conflict/risk rows, found ${conflicts.length}`);
 
 const conflictSkillIds = new Set([
-  "flow_control", "electrical_contact", "current_recharge", "magnet_moment_charge",
-  "iron_sand_arsenal", "trace_ring", "particle_wave_cannon", "spacial_replace",
-  "ball_lightning", "current_symbiosis", "disintegrate", "visual_teleport",
+  "electrical_contact", "current_recharge", "ball_lightning", "current_symbiosis",
+  "area_teleport_start", "spacial_excision", "mental_takeover", "precision_operation",
 ]);
 
 function suggestedPriority(skill) {
