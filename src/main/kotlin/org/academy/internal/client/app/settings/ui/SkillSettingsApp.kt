@@ -745,12 +745,7 @@ object SkillSettingsApp : App {
                         val target = capturing ?: return
                         val current = target.section.config.getKeyBinding(target.bindingName) ?: return
                         resetCaptureState()
-                        if (current != null) {
-                            applyCapture(InputSystem.unbound(current))
-                        } else {
-                            exitCapture()
-                            refreshPage()
-                        }
+                        applyCapture(InputSystem.unbound(current))
                         return
                     }
                     if (isModifierKey(key) || pendingType == InputSystem.InputType.MOUSE) return
@@ -797,9 +792,9 @@ object SkillSettingsApp : App {
                     InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
                         pendingKeys.toSet(),
-                        current?.action ?: 1,
+                        current.action,
                         pendingModifiers,
-                        current?.availableWhenScreen ?: true
+                        current.availableWhenScreen
                     )
                 }
 
@@ -808,9 +803,9 @@ object SkillSettingsApp : App {
                     InputSystem.combo(
                         InputSystem.InputType.MOUSE,
                         pendingMouseButton,
-                        current?.action ?: 1,
+                        current.action,
                         pendingModifiers,
-                        current?.availableWhenScreen ?: true
+                        current.availableWhenScreen
                     )
                 }
             }
