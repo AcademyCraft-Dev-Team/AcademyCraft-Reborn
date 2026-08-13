@@ -14,7 +14,7 @@
 ## 开发者指南
 推荐 IntelliJ IDEA，并且需要 JetBrains Runtime 25。
 
-完整的游戏命令、管理命令和客户端调试命令说明参见 [AcademyCraft 命令参考](docs/COMMANDS.zh-CN.md)。
+现行设计、技能、命令和验收文档参见 [文档索引](docs/README.md)；完整命令说明参见 [AcademyCraft 命令参考](docs/COMMANDS.zh-CN.md)。
 
 ### 如果你需要使用 ClientDevWithRenderDoc 运行游戏
 ```bash
