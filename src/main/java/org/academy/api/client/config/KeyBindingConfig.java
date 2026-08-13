@@ -22,7 +22,7 @@ public abstract class KeyBindingConfig {
     public InputSystem.KeyCombination getKeyBinding(String name, InputSystem.KeyCombination defaultConfig) {
         InputSystem.rememberDefaultKeyBinding(name, defaultConfig);
         var keyBinding = decodeKeyBinding(keyBindingMap().get(name));
-        if (!(keyBinding != null)) {
+        if (keyBinding == null) {
             setKeyBinding(name, defaultConfig);
             return defaultConfig;
         }
@@ -32,9 +32,7 @@ public abstract class KeyBindingConfig {
 
     public InputSystem.@Nullable KeyCombination getKeyBinding(String name) {
         var keyBinding = decodeKeyBinding(keyBindingMap().get(name));
-        if (!(keyBinding != null)) {
-            return null;
-        }
+        if (keyBinding == null) return null;
         migrateStoredKeyBinding(name, keyBinding);
         return keyBinding;
     }
@@ -84,7 +82,8 @@ public abstract class KeyBindingConfig {
     private static boolean isCurrentKeyBinding(@Nullable JsonElement element) {
         if (element == null || !element.isJsonObject()) return false;
         var object = element.getAsJsonObject();
-        return object.has("type") && object.has("keys");
+        if (!object.has("type") || !object.has("keys")) return false;
+        return !object.get("type").isJsonNull() && !object.get("keys").isJsonNull();
     }
 
     private static InputSystem.@Nullable KeyCombination decodeKeyBinding(@Nullable JsonElement element) {
@@ -99,9 +98,6 @@ public abstract class KeyBindingConfig {
         }
     }
 
-    /**
-     * Converts the pre-KeyCombination InputPair/KeyInfo representation.
-     */
     private static InputSystem.@Nullable KeyCombination decodeLegacyKeyBinding(JsonObject object) {
         if (!object.has("inputType") || !object.has("keyInfo") || !object.get("keyInfo").isJsonObject()) {
             return null;

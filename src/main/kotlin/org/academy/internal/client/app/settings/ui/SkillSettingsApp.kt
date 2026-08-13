@@ -743,7 +743,7 @@ object SkillSettingsApp : App {
                     val key = event.keyCode
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
                         val target = capturing ?: return
-                        val current = target.section.config.getKeyBinding(target.bindingName)
+                        val current = target.section.config.getKeyBinding(target.bindingName) ?: return
                         resetCaptureState()
                         applyCapture(InputSystem.unbound(current))
                         return
@@ -785,7 +785,7 @@ object SkillSettingsApp : App {
 
         private fun buildPendingCombo(): InputSystem.KeyCombination? {
             val target = capturing ?: return null
-            val current = target.section.config.getKeyBinding(target.bindingName)
+            val current = target.section.config.getKeyBinding(target.bindingName) ?: return null
             return when (pendingType ?: return null) {
                 InputSystem.InputType.KEYBOARD -> {
                     if (pendingKeys.isEmpty()) return null
