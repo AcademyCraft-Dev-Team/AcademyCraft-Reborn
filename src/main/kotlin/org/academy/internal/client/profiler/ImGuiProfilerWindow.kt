@@ -147,10 +147,6 @@ object ImGuiProfilerWindow {
     private fun drawSamplerTab() {
         val snapshot = AcademyProfiler.snapshot()
         val sampler = snapshot.sampler
-        if (sampler == null) {
-            ImGui.text("Sampling is off. Click 'Start Sampling' in the toolbar.")
-            return
-        }
 
         for (ref in AcademyProfiler.samplerThreads()) {
             val enabled = ImBoolean(ref.enabled)
@@ -302,7 +298,7 @@ object ImGuiProfilerWindow {
 
         ImGui.text(
             "Thread total: %.2f ms   Path total: %.2f ms".format(
-                zones.rootTotalNs / 1e6, (zones.sliceAt(zonePath)?.totalNs ?: 0L) / 1e6
+                zones.rootTotalNs / 1e6, zones.sliceAt(zonePath).totalNs / 1e6
             )
         )
     }

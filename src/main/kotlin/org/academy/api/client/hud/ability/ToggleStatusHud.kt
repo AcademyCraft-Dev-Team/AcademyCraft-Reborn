@@ -2,7 +2,6 @@ package org.academy.api.client.hud.ability
 
 import com.mojang.blaze3d.pipeline.RenderTarget
 import net.minecraft.client.Minecraft
-import net.minecraft.locale.Language
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
@@ -18,6 +17,7 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.ability.LearningHelper
 import org.academy.api.common.ability.Skill
 import org.academy.api.common.registries.Registries
+import org.academy.api.common.util.L10n
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
 import java.util.concurrent.ConcurrentHashMap
@@ -178,7 +178,7 @@ class ToggleStatusHud private constructor() {
 
         private fun statusText(skill: Skill): String {
             return detailProviders[skill]?.get()
-                ?: Language.getInstance().getOrDefault("hud.academy.toggle_status.on")
+                ?: L10n["hud.academy.toggle_status.on"]
         }
 
         private fun isToggleActive(skill: Skill): Boolean {

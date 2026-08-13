@@ -44,10 +44,8 @@ public final class InputSystem {
     }
 
     public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
-        if (isValidKeyCombination(combo)) {
-            rememberDefaultKeyBinding(keyName, combo);
-        }
-        KEY_BINDINGS.put(keyName, new KeyBinding(safeKeyCombination(keyName, combo), handler, true));
+        rememberDefaultKeyBinding(keyName, combo);
+        KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler, true));
         bindingRevision++;
     }
 
@@ -57,16 +55,7 @@ public final class InputSystem {
     }
 
     public static void rememberDefaultKeyBinding(String keyName, KeyCombination combo) {
-        if (isValidKeyCombination(combo)) {
-            DEFAULT_BINDINGS.putIfAbsent(keyName, combo);
-        }
-    }
-
-    public static boolean isValidKeyCombination(@Nullable KeyCombination combo) {
-        return combo != null
-                && combo.type != null
-                && combo.keys != null
-                && combo.keys.stream().noneMatch(Objects::isNull);
+        DEFAULT_BINDINGS.putIfAbsent(keyName, combo);
     }
 
     public static List<BindingInfo> getKeyBindings() {
@@ -96,9 +85,7 @@ public final class InputSystem {
     public static void setKeyBinding(String keyName, KeyCombination combo) {
         var binding = KEY_BINDINGS.get(keyName);
         if (binding == null) return;
-        KEY_BINDINGS.put(keyName, new KeyBinding(
-                safeKeyCombination(keyName, combo), binding.handler, binding.enabled
-        ));
+        KEY_BINDINGS.put(keyName, new KeyBinding(combo, binding.handler, binding.enabled));
         bindingRevision++;
     }
 
@@ -135,7 +122,6 @@ public final class InputSystem {
     }
 
     public static String formatKeyCombination(KeyCombination combo) {
-        if (!isValidKeyCombination(combo)) return "None";
         if (combo.unbound) return "None";
         var parts = new ArrayList<String>();
         if (combo.modifiers != ANY_MODIFIER) {
@@ -238,7 +224,7 @@ public final class InputSystem {
         var binding = KEY_BINDINGS.get(keyName);
         if (binding == null || !binding.enabled) return false;
         var combo = binding.combo;
-        if (!isValidKeyCombination(combo) || combo.unbound || combo.type != context.type) return false;
+        if (combo.unbound || combo.type != context.type) return false;
         if (combo.modifiers != ANY_MODIFIER
                 && normalizeModifiers(combo.modifiers) != normalizeModifiers(context.modifiers)) return false;
         return combo.keys.isEmpty() || combo.keys.contains(context.input);
@@ -324,7 +310,6 @@ public final class InputSystem {
     }
 
     public static KeyCombination unbound(KeyCombination template) {
-        if (!isValidKeyCombination(template)) return disabledKeyCombination();
         return new KeyCombination(
                 template.type, Set.of(), template.action, template.modifiers, template.availableWhenScreen, true
         );
@@ -516,7 +501,6 @@ public final class InputSystem {
     }
 
     private static boolean matches(KeyCombination combo, InputType eventType, int input, int action, int modifiers) {
-        if (!isValidKeyCombination(combo)) return false;
         if (combo.unbound) return false;
         if (combo.type != eventType) return false;
         if (!combo.availableWhenScreen && ClientUtil.hasScreen()) return false;
@@ -559,9 +543,6 @@ public final class InputSystem {
         }
 
         public String displayName() {
-            if (!isValidKeyCombination(this)) {
-                return "None";
-            }
             if (unbound) {
                 return "None";
             }
@@ -579,18 +560,6 @@ public final class InputSystem {
             }
             return builder.toString();
         }
-    }
-
-    private static KeyCombination safeKeyCombination(String keyName, KeyCombination combo) {
-        if (isValidKeyCombination(combo)) return combo;
-        var defaultCombo = DEFAULT_BINDINGS.get(keyName);
-        return isValidKeyCombination(defaultCombo) ? defaultCombo : disabledKeyCombination();
-    }
-
-    private static KeyCombination disabledKeyCombination() {
-        return new KeyCombination(
-                InputType.KEYBOARD, Set.of(), ANY_ACTION, ANY_MODIFIER, false, true
-        );
     }
 
     public record BindingContext(InputType type, int input, int action, int modifiers) {

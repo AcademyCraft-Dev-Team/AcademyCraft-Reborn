@@ -2,7 +2,6 @@ package org.academy.api.client.gui.util
 
 import org.academy.api.client.gui.command.GlyphDrawCommand
 import org.academy.api.client.gui.msdf.Constants
-import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor
 import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor.layout
 
 object GlyphCommandGenerator {
@@ -12,9 +11,9 @@ object GlyphCommandGenerator {
         red: Float, green: Float, blue: Float, alpha: Float
     ): MutableList<GlyphDrawCommand> {
         val commands: MutableList<GlyphDrawCommand> = mutableListOf()
-        val instances: MutableList<MsdfTextProcessor.GlyphInstance> = layout(text, fontSize)
+        val result = layout(text, fontSize)
 
-        for (instance in instances) {
+        for (instance in result.instances) {
             commands.add(
                 GlyphDrawCommand(
                     instance.textureView,

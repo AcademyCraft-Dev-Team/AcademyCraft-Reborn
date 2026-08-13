@@ -8,8 +8,8 @@ import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.systems.RenderPass
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.GpuTextureView
-import net.minecraft.client.Minecraft
 import org.academy.AcademyCraft
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformBinding
 import java.lang.AutoCloseable
@@ -231,8 +231,8 @@ class CommandExecutor : AutoCloseable {
         val scissor = drawCall.scissorArea
         var scissorEnabled = false
         if (scissor != null) {
-            val physicalWidth = Minecraft.getInstance().window.width
-            val physicalHeight = Minecraft.getInstance().window.height
+            val physicalWidth = UiEnvironment.get().physicalWidth
+            val physicalHeight = UiEnvironment.get().physicalHeight
             val pos = scissor.position
             val screenX = (pos.x * guiScale).toInt()
             val screenWidth = (scissor.width * guiScale).toInt()

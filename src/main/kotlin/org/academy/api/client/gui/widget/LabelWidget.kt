@@ -40,7 +40,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
     protected var drawCommands: MutableList<GlyphDrawCommand> = mutableListOf()
     private var colorChanged = false
 
-    protected fun calculateLayoutScale(
+    protected open fun calculateLayoutScale(
         baseTextWidth: Float,
         baseTextHeight: Float,
         constraintWidth: Float,
@@ -214,23 +214,11 @@ open class LabelWidget(text: String) : AbstractWidget() {
     companion object {
         const val DEFAULT_BASE_FONT_SIZE: Float = 8f
         fun getTextWidth(text: String, baseFontSize: Float): Float {
-            val instances = layout(text, baseFontSize)
-            var maxX = 0f
-            for (inst in instances) {
-                val right = inst.x + inst.quadWidth
-                if (right > maxX) maxX = right
-            }
-            return maxX
+            return layout(text, baseFontSize).width
         }
 
         fun getTextHeight(text: String, baseFontSize: Float): Float {
-            val instances = layout(text, baseFontSize)
-            var maxY = 0f
-            for (inst in instances) {
-                val bottom = inst.y + inst.quadHeight
-                if (bottom > maxY) maxY = bottom
-            }
-            return maxY
+            return layout(text, baseFontSize).height
         }
     }
 }

@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.widget
 
 import com.mojang.blaze3d.platform.InputConstants
-import net.minecraft.client.Minecraft
 import net.minecraft.client.input.PreeditEvent
 import net.neoforged.bus.api.Event
 import net.neoforged.bus.api.ICancellableEvent
@@ -9,11 +8,14 @@ import net.neoforged.neoforge.common.NeoForge
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.event.CharTypedEvent
 import org.academy.api.client.gui.event.KeyEvent
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
+import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor
 import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.util.GlyphCommandGenerator
 import java.util.function.Consumer
 import java.util.function.Predicate
 import kotlin.math.max
@@ -32,8 +34,9 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     protected var onFocusLostCallback: Runnable? = null
     protected var clearWhenEnter: Boolean = true
     protected var inputValidator: Predicate<String>? = null
+    private var composedText: String = ""
     override var text: String
-        get() = stringBuilder.toString()
+        get() = composedText
         set(text) {
             stringBuilder.setLength(0)
             val codePointCount = text.codePointCount(0, text.length)
@@ -53,6 +56,15 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     private var dragStartPos = 0
     private var preeditText = ""
 
+    /** Shown in gray when the box is empty and not focused. Not written back to the model. */
+    var placeholder: String = ""
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
     init {
         isClickable = true
 
@@ -68,6 +80,10 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         context.drawOrder().push()
         run {
             super.render(context)
+            if (text.isEmpty() && placeholder.isNotEmpty() && !isFocused) {
+                context.drawOrder().advance()
+                renderPlaceholder(context)
+            }
             if (hasSelection) {
                 context.drawOrder().advance()
                 renderSelection(context)
@@ -80,36 +96,67 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         context.drawOrder().pop()
     }
 
+    private fun renderPlaceholder(context: RenderContext) {
+        val lp = layoutParams
+        val finalScale = scale * layoutScale
+        val availableWidth = width - lp.paddingLeft - lp.paddingRight
+        val availableHeight = height - lp.paddingTop - lp.paddingBottom
+        val placeholderWidth = getTextWidth(placeholder) * finalScale
+        val placeholderHeight = getTextHeight(placeholder) * finalScale
+
+        var alignmentOffsetX = 0f
+        val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
+        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX = (availableWidth - placeholderWidth) / 2.0f
+        else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX = availableWidth - placeholderWidth
+        var alignmentOffsetY = 0f
+        val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
+        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY = (availableHeight - placeholderHeight) / 2.0f
+        else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY = availableHeight - placeholderHeight
+
+        context.pose().pushPose()
+        context.pose().translate(lp.paddingLeft + alignmentOffsetX, lp.paddingTop + alignmentOffsetY)
+        context.pose().scale(finalScale, finalScale)
+        val commands = GlyphCommandGenerator.generate(
+            placeholder, baseFontSize, 0f, 0.5f, 0.5f, 0.5f, alpha * context.accumulatedAlpha
+        )
+        for (command in commands) context.submit(command)
+        context.pose().popPose()
+    }
+
     private fun renderCaret(context: RenderContext) {
         val lp = layoutParams
         val finalScale = layoutScale * scale
         val textBeforeCaret = stringBuilder.substring(0, getCodeUnitIndexForCodePoint(caretPos)) + preeditText
-        val caretXOffset = getTextWidth(textBeforeCaret) * finalScale
+        val lastNewline = textBeforeCaret.lastIndexOf('\n')
+        val caretLineText = if (lastNewline >= 0) textBeforeCaret.substring(lastNewline + 1) else textBeforeCaret
+        val lineIndex = textBeforeCaret.count { it == '\n' }
+        val lineAdvance = lineAdvancePx()
         val availableHeight = height - lp.paddingTop - lp.paddingBottom
-        val visualTextHeight = availableHeight * finalScale
         val availableWidth = width - lp.paddingLeft - lp.paddingRight
 
         var alignmentOffsetX = 0f
         val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
         if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX =
-            (availableWidth - getTextWidth(stringBuilder.toString()) * finalScale) / 2.0f
+            (availableWidth - getTextWidth(composedText) * finalScale) / 2.0f
         else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX =
-            availableWidth - getTextWidth(stringBuilder.toString()) * finalScale
+            availableWidth - getTextWidth(composedText) * finalScale
         var alignmentOffsetY = 0f
         val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
-        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY = (availableHeight - visualTextHeight) / 2.0f
+        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY =
+            (availableHeight - getTextHeight(composedText) * finalScale) / 2.0f
         else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY =
-            availableHeight - visualTextHeight
+            availableHeight - getTextHeight(composedText) * finalScale
 
+        val caretXOffset = lineXAt(caretLineText, caretLineText.length) * finalScale
         val finalX = lp.paddingLeft + alignmentOffsetX + caretXOffset
-        val finalY = lp.paddingTop + alignmentOffsetY
+        val finalY = lp.paddingTop + alignmentOffsetY + lineIndex * lineAdvance * finalScale
 
         context.pose().pushPose()
         context.pose().translate(finalX, finalY)
         context.submit(
             FillRectDrawCommand(
                 0.5f,
-                visualTextHeight,
+                lineAdvance * finalScale,
                 1f,
                 1f,
                 1f,
@@ -122,23 +169,18 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     private fun renderSelection(context: RenderContext) {
         val lp = layoutParams
         val finalScale = layoutScale * scale
-        val fullText = stringBuilder.toString()
+        val fullText = composedText
 
         val start = min(selectionStart, selectionEnd)
         val end = max(selectionStart, selectionEnd)
 
         if (start >= end) return
 
-        val textBeforeStart = fullText.substring(0, getCodeUnitIndexForCodePoint(start))
-        val selectedText = fullText.substring(
-            getCodeUnitIndexForCodePoint(start),
-            getCodeUnitIndexForCodePoint(end)
-        )
+        val startUnit = getCodeUnitIndexForCodePoint(start)
+        val endUnit = getCodeUnitIndexForCodePoint(end)
 
-        val startXOffset = getTextWidth(textBeforeStart) * finalScale + 0.5f
-        val selectionWidth = getTextWidth(selectedText) * finalScale
-        val visualTextHeight = getTextHeight(fullText) * finalScale
-
+        val lines = fullText.split('\n')
+        val lineAdvance = lineAdvancePx()
         val availableWidth = width - lp.paddingLeft - lp.paddingRight
         val availableHeight = height - lp.paddingTop - lp.paddingBottom
 
@@ -150,26 +192,38 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
             availableWidth - getTextWidth(fullText) * finalScale
         var alignmentOffsetY = 0f
         val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
-        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY = (availableHeight - visualTextHeight) / 2.0f
+        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY =
+            (availableHeight - getTextHeight(fullText) * finalScale) / 2.0f
         else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY =
-            availableHeight - visualTextHeight
+            availableHeight - getTextHeight(fullText) * finalScale
 
-        val finalX = lp.paddingLeft + alignmentOffsetX + startXOffset
-        val finalY = lp.paddingTop + alignmentOffsetY
+        val baseX = lp.paddingLeft + alignmentOffsetX
+        val baseY = lp.paddingTop + alignmentOffsetY
 
-        context.pose().pushPose()
-        context.pose().translate(finalX, finalY)
-        context.submit(
-            FillRectDrawCommand(
-                selectionWidth,
-                visualTextHeight,
-                0.3f,
-                0.5f,
-                0.8f,
-                alpha * context.accumulatedAlpha * 0.5f
-            )
-        )
-        context.pose().popPose()
+        // Draw a highlight rect per overlapped line (code-unit range within each line).
+        var lineStartUnit = 0
+        for ((index, line) in lines.withIndex()) {
+            val lineEndUnit = lineStartUnit + line.length
+            val overlapStart = max(startUnit, lineStartUnit)
+            val overlapEnd = min(endUnit, lineEndUnit)
+            if (overlapStart < overlapEnd) {
+                val x0 = lineXAt(line, overlapStart - lineStartUnit) * finalScale
+                val x1 = lineXAt(line, overlapEnd - lineStartUnit) * finalScale
+                val y = baseY + index * lineAdvance * finalScale
+                context.pose().pushPose()
+                context.pose().translate(baseX + x0, y)
+                context.submit(
+                    FillRectDrawCommand(
+                        (x1 - x0).coerceAtLeast(0f),
+                        lineAdvance * finalScale,
+                        0.3f, 0.5f, 0.8f,
+                        alpha * context.accumulatedAlpha * 0.5f
+                    )
+                )
+                context.pose().popPose()
+            }
+            lineStartUnit = lineEndUnit + 1
+        }
     }
 
     override fun onCharTyped(event: CharTypedEvent) {
@@ -361,12 +415,14 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
 
     private fun updateTextComponent() {
         if (preeditText.isEmpty() || !isFocused) {
-            super.text = stringBuilder.toString()
+            composedText = stringBuilder.toString()
+            super.text = composedText
             return
         }
-        super.text = StringBuilder(stringBuilder)
+        composedText = StringBuilder(stringBuilder)
             .insert(getCodeUnitIndexForCodePoint(caretPos), preeditText)
             .toString()
+        super.text = composedText
     }
 
     private fun updatePreedit(event: PreeditEvent?): Boolean {
@@ -398,7 +454,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     override fun onMousePressed(event: MouseEvent) {
         if (event.button == 0 && isMouseOver(event.x, event.y)) {
             mouseDragging = true
-            dragStartPos = getCaretPosAtMouse(event.x)
+            dragStartPos = getCaretPosAtMouse(event.x, event.y)
             caretPos = dragStartPos
             selectionStart = dragStartPos
             selectionEnd = dragStartPos
@@ -420,7 +476,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
 
     override fun onMouseDragged(event: MouseEvent) {
         if (mouseDragging && event.button == 0) {
-            val newCaretPos = getCaretPosAtMouse(event.x)
+            val newCaretPos = getCaretPosAtMouse(event.x, event.y)
 
             if (!hasSelection && newCaretPos != dragStartPos) {
                 hasSelection = true
@@ -437,26 +493,87 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         }
     }
 
-    private fun getCaretPosAtMouse(mouseX: Double): Int {
+    private fun getCaretPosAtMouse(mouseX: Double, mouseY: Double): Int {
         val lp = layoutParams
         val finalScale = scale * layoutScale
+        val fullText = composedText
         val availableWidth = width - lp.paddingLeft - lp.paddingRight
-        val visualTextWidth = getTextWidth(stringBuilder.toString()) * finalScale
+        val availableHeight = height - lp.paddingTop - lp.paddingBottom
+
+        var alignmentOffsetY = 0f
+        val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
+        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY =
+            (availableHeight - getTextHeight(fullText) * finalScale) / 2.0f
+        else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY =
+            availableHeight - getTextHeight(fullText) * finalScale
+
+        val lineAdvance = lineAdvancePx()
+        val localY = (mouseY - getAbsoluteY() - lp.paddingTop - alignmentOffsetY) / finalScale
+        val lines = fullText.split('\n')
+        var lineIndex = (localY / lineAdvance).toInt()
+        lineIndex = lineIndex.coerceIn(0, lines.size - 1)
+
+        var lineStartUnit = 0
+        for (k in 0 until lineIndex) lineStartUnit += lines[k].length + 1
+
         var alignmentOffsetX = 0f
         val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
-        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f
+        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX =
+            (availableWidth - getTextWidth(fullText) * finalScale) / 2.0f
         else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX =
-            availableWidth - visualTextWidth
+            availableWidth - getTextWidth(fullText) * finalScale
+
+        val lineText = lines[lineIndex]
         val localX = mouseX.toFloat() - getAbsoluteX() - lp.paddingLeft - alignmentOffsetX
-        val fullText = stringBuilder.toString()
-        var caretPos = 0
-        val codePointCount = fullText.codePointCount(0, fullText.length)
-        for (i in 1..codePointCount) {
-            val codeUnitIndex = fullText.offsetByCodePoints(0, i)
-            if (getTextWidth(fullText.substring(0, codeUnitIndex)) * finalScale > localX) break
-            caretPos = i
+        var caretInLine = caretCodePointsInLine(lineText, localX / finalScale)
+        val unitOffset = lineStartUnit + lineText.offsetByCodePoints(0, caretInLine)
+        return fullText.codePointCount(0, unitOffset)
+    }
+
+    /**
+     * Finds the caret (code point index within [lineText]) for a local X position.
+     * The caret sits between glyph advance boundaries: for each glyph we compare
+     * the click against the midpoint of the gap to its predecessor.
+     */
+    private fun caretCodePointsInLine(lineText: String, localX: Float): Int {
+        if (lineText.isEmpty()) return 0
+        val result = MsdfTextProcessor.layout(lineText, baseFontSize)
+        var best = 0
+        var bestDist = Float.MAX_VALUE
+        var prevPen = 0f
+        for (instance in result.instances) {
+            val gapMid = (prevPen + instance.penX) / 2f
+            val dist = kotlin.math.abs(localX - gapMid)
+            if (dist < bestDist) {
+                bestDist = dist
+                best = lineText.codePointCount(0, instance.glyphIndex)
+            }
+            prevPen = instance.penX + instance.advance
         }
-        return caretPos
+        val endMid = (prevPen + result.width) / 2f
+        if (kotlin.math.abs(localX - endMid) < bestDist) {
+            best = lineText.codePointCount(0, lineText.length)
+        }
+        return best
+    }
+
+    /** Max advance edge within [line] up to [unit] code units (0-based). */
+    private fun lineXAt(line: String, unit: Int): Float {
+        if (unit <= 0 || line.isEmpty()) return 0f
+        val result = MsdfTextProcessor.layout(line, baseFontSize)
+        var x = 0f
+        for (instance in result.instances) {
+            if (instance.glyphIndex >= unit) break
+            val right = instance.penX + instance.advance
+            if (right > x) x = right
+        }
+        return x
+    }
+
+    private fun lineAdvancePx(): Float {
+        val single = getTextHeight("M", baseFontSize)
+        val double = getTextHeight("M\nM", baseFontSize)
+        return (double - single).coerceAtLeast(baseFontSize * 0.5f)
     }
 
     private fun getCodeUnitIndexForCodePoint(codePointIndex: Int): Int {
@@ -513,12 +630,12 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     private fun copyToClipboard() {
         val selectedText = this.selectedText
         if (!selectedText.isEmpty()) {
-            Minecraft.getInstance().keyboardHandler.clipboard = selectedText
+            UiEnvironment.get().setClipboard(selectedText)
         }
     }
 
     private fun pasteFromClipboard() {
-        val clipboardText = Minecraft.getInstance().keyboardHandler.clipboard
+        val clipboardText = UiEnvironment.get().clipboard()
         if (!clipboardText.isEmpty()) {
             if (hasSelection) {
                 deleteSelectedText()
@@ -564,7 +681,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         if (event.isCanceled()) return
 
         activeTextBox = this
-        Minecraft.getInstance().textInputManager().onTextInputFocusChange(true)
+        UiEnvironment.get().textInputFocusChanged(true)
         showCaret = true
         lastBlinkTime = System.currentTimeMillis()
     }
@@ -576,7 +693,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
 
         clearPreedit()
         if (activeTextBox === this) activeTextBox = null
-        Minecraft.getInstance().textInputManager().onTextInputFocusChange(false)
+        UiEnvironment.get().textInputFocusChanged(false)
         showCaret = false
         if (onFocusLostCallback != null) onFocusLostCallback!!.run()
     }
@@ -621,6 +738,9 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         fun handlePreeditInput(event: PreeditEvent?): Boolean {
             return activeTextBox?.updatePreedit(event) == true
         }
+
+        /** True while any [TextBoxWidget] holds keyboard focus (IME/text editing active). */
+        fun isAnyTextEditing(): Boolean = activeTextBox != null
 
         private fun String.takeCodePoints(count: Int): String {
             if (count <= 0 || isEmpty()) return ""

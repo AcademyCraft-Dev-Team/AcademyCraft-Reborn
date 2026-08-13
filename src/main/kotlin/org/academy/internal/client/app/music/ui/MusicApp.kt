@@ -22,6 +22,7 @@ import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.SeekBarWidget.OnSeekBarChangeListener
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.resources.R
+import org.academy.api.common.util.L10n
 import org.academy.internal.client.app.music.backend.AlbumArtworkCache
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend
 import org.academy.internal.client.app.music.backend.OnlineMusicManager
@@ -819,5 +820,5 @@ object MusicApp : App {
         }
     }
 
-    private fun tr(key: String): String = Language.getInstance().getOrDefault(key)
+    private fun tr(key: String): String = L10n[key]
 }

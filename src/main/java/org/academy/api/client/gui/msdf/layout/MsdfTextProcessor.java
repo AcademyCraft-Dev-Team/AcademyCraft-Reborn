@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.msdf.layout;
 
 import com.mojang.blaze3d.textures.GpuTextureView;
-import org.academy.api.client.gui.msdf.Constants;
 import org.academy.api.client.gui.msdf.atlas.MsdfGlyph;
 import org.academy.api.client.gui.msdf.font.MsdfFont;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
@@ -14,8 +13,8 @@ public final class MsdfTextProcessor {
     private MsdfTextProcessor() {
     }
 
-    public static List<GlyphInstance> layout(String text, float fontSize) {
-        List<LineInfo> lines = new ArrayList<>();
+    public static LayoutResult layout(String text, float fontSize) {
+        var lines = new ArrayList<LineInfo>();
         var currentLine = new LineInfo();
 
         var i = 0;
@@ -44,23 +43,29 @@ public final class MsdfTextProcessor {
             var fontUnitScale = fontSize / unitsPerEM;
 
             var ascender = metrics.ascender() * fontUnitScale;
+            var descender = -metrics.descender() * fontUnitScale;
             var lineHeight = metrics.lineHeight() * fontUnitScale;
 
             if (ascender > currentLine.maxAscender) currentLine.maxAscender = ascender;
+            if (descender > currentLine.maxDescender) currentLine.maxDescender = descender;
             if (lineHeight > currentLine.maxLineHeight) currentLine.maxLineHeight = lineHeight;
 
-            currentLine.characters.add(new CharInfo(c, font, glyph));
+            currentLine.characters.add(new CharInfo(c, font, glyph, i));
             i += Character.charCount(c);
         }
         if (!currentLine.characters.isEmpty()) lines.add(currentLine);
 
-        List<GlyphInstance> rawInstances = new ArrayList<>();
+        var rawInstances = new ArrayList<GlyphInstance>();
         var yOffset = 0f;
         var minY = Float.MAX_VALUE;
         var maxY = -Float.MAX_VALUE;
+        var maxRight = 0f;
+        var lastBaselineRaw = 0f;
+        LineInfo lastLine = lines.isEmpty() ? null : lines.get(lines.size() - 1);
 
         for (var line : lines) {
-            var baselineY = yOffset + line.maxAscender + Constants.DEFAULT_PX_RANGE;
+            var baselineY = yOffset + line.maxAscender;
+            lastBaselineRaw = baselineY;
             var currentX = 0f;
             var prevCode = 0L;
             MsdfFont prevFontForLine = null;
@@ -81,6 +86,7 @@ public final class MsdfTextProcessor {
                     ) * fontUnitScale;
                 }
 
+                var penX = currentX;
                 var page = glyph.page();
                 var quadLeft = currentX + glyph.planeLeft() * fontUnitScale;
                 var quadTop = baselineY - glyph.planeTop() * fontUnitScale;
@@ -90,36 +96,50 @@ public final class MsdfTextProcessor {
 
                 if (quadTop < minY) minY = quadTop;
                 if (quadBottom > maxY) maxY = quadBottom;
+                var quadRight = quadLeft + quadWidth;
+                if (quadRight > maxRight) maxRight = quadRight;
 
+                var advance = glyph.advance() * fontUnitScale;
                 rawInstances.add(new GlyphInstance(
                         page.textureView,
                         quadLeft, quadTop,
                         quadWidth, quadHeight,
-                        glyph.u0(), glyph.v0(), glyph.u1(), glyph.v1()
+                        glyph.u0(), glyph.v0(), glyph.u1(), glyph.v1(),
+                        ch.codeUnitStart, penX, advance
                 ));
 
-                currentX += glyph.advance() * fontUnitScale;
+                currentX += advance;
                 prevCode = ch.codePoint;
                 prevFontForLine = font;
             }
             yOffset += line.maxLineHeight;
         }
 
-        List<GlyphInstance> finalInstances = new ArrayList<>(rawInstances.size());
+        if (rawInstances.isEmpty()) return new LayoutResult(List.of(), 0f, 0f);
+
+        var finalInstances = new ArrayList<GlyphInstance>(rawInstances.size());
         var yShift = -minY;
         for (var inst : rawInstances) {
             finalInstances.add(new GlyphInstance(
                     inst.textureView,
                     inst.x, inst.y + yShift,
                     inst.quadWidth, inst.quadHeight,
-                    inst.u0, inst.v0, inst.u1, inst.v1
+                    inst.u0, inst.v0, inst.u1, inst.v1,
+                    inst.glyphIndex, inst.penX, inst.advance
             ));
         }
-        return finalInstances;
+
+        var shiftedBaseline = lastBaselineRaw + yShift;
+        var blockHeight = shiftedBaseline + lastLine.maxDescender;
+        if (maxY + yShift > blockHeight) blockHeight = maxY + yShift;
+        if (blockHeight < 0) blockHeight = 0f;
+
+        return new LayoutResult(finalInstances, blockHeight, maxRight);
     }
 
     private static class LineInfo {
         float maxAscender = 0f;
+        float maxDescender = 0f;
         float maxLineHeight = 0f;
         List<CharInfo> characters = new ArrayList<>();
     }
@@ -128,15 +148,20 @@ public final class MsdfTextProcessor {
         int codePoint;
         MsdfFont font;
         MsdfGlyph glyph;
+        int codeUnitStart;
 
-        CharInfo(int codePoint, MsdfFont font, MsdfGlyph glyph) {
+        CharInfo(int codePoint, MsdfFont font, MsdfGlyph glyph, int codeUnitStart) {
             this.codePoint = codePoint;
             this.font = font;
             this.glyph = glyph;
+            this.codeUnitStart = codeUnitStart;
         }
     }
 
     public record GlyphInstance(GpuTextureView textureView, float x, float y, float quadWidth, float quadHeight,
-                                float u0, float v0, float u1, float v1) {
+                                float u0, float v0, float u1, float v1, int glyphIndex, float penX, float advance) {
+    }
+
+    public record LayoutResult(List<GlyphInstance> instances, float height, float width) {
     }
 }

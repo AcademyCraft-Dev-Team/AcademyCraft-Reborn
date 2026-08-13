@@ -3,7 +3,6 @@ package org.academy.internal.client.app.settings.ui
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.client.Minecraft
-import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import org.academy.AcademyCraftClient
 import org.academy.api.client.ability.AbilitySystemClient
@@ -21,6 +20,7 @@ import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
 import org.academy.api.common.ability.Skill
+import org.academy.api.common.util.L10n
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.lwjgl.glfw.GLFW
 import org.misaka.MisakaNetworkClient
@@ -38,7 +38,7 @@ object SkillSettingsApp : App {
     }
 
     private fun translate(key: String): String {
-        return Language.getInstance().getOrDefault(key)
+        return L10n[key]
     }
 
     private class Context : WidgetContext {
@@ -394,9 +394,8 @@ object SkillSettingsApp : App {
         }
 
         private fun buildSkillTooltipText(skill: Skill): String {
-            val language = Language.getInstance()
             val descriptionKey = "skill.${skill.key.namespace}.${skill.key.path}.desc"
-            val localizedDescription = language.getOrDefault(descriptionKey)
+            val localizedDescription = L10n[descriptionKey]
             val description = if (localizedDescription == descriptionKey) {
                 translate("app.academy.skill_settings.tooltip.description_missing")
             } else localizedDescription
@@ -414,7 +413,7 @@ object SkillSettingsApp : App {
             } else {
                 bindings.forEach { binding ->
                     val actionKey = "key.academy.${binding.name()}"
-                    val localizedAction = language.getOrDefault(actionKey)
+                    val localizedAction = L10n[actionKey]
                     val actionName = if (localizedAction == actionKey) {
                         binding.name().replace('_', ' ')
                     } else localizedAction
@@ -477,7 +476,7 @@ object SkillSettingsApp : App {
 
             row.addChild(
                 "name", LabelWidget(
-                    Language.getInstance().getOrDefault("key.academy.$bindingName")
+                    L10n["key.academy.$bindingName"]
                 ).apply {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
@@ -744,7 +743,7 @@ object SkillSettingsApp : App {
                     val key = event.keyCode
                     if (key == GLFW.GLFW_KEY_ESCAPE) {
                         val target = capturing ?: return
-                        val current = target.section.config.getKeyBinding(target.bindingName)
+                        val current = target.section.config.getKeyBinding(target.bindingName) ?: return
                         resetCaptureState()
                         applyCapture(InputSystem.unbound(current))
                         return
@@ -786,7 +785,7 @@ object SkillSettingsApp : App {
 
         private fun buildPendingCombo(): InputSystem.KeyCombination? {
             val target = capturing ?: return null
-            val current = target.section.config.getKeyBinding(target.bindingName)
+            val current = target.section.config.getKeyBinding(target.bindingName) ?: return null
             return when (pendingType ?: return null) {
                 InputSystem.InputType.KEYBOARD -> {
                     if (pendingKeys.isEmpty()) return null
