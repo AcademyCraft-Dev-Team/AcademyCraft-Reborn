@@ -225,8 +225,7 @@ public abstract class MixinEntity {
     @Inject(method = "remove", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionRemoval(Entity.RemovalReason reason, CallbackInfo ci) {
         var protectedByReflection = (Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
-                && !VectorReflection.Server.isLegitimateHealthMutation(player);
+                && VectorReflection.Server.isVectorDefenseActive(player);
         var protectedByEntityControl = (Object) this instanceof LivingEntity living
                 && EntityControlApi.shouldPreventRemoval(living);
         if ((protectedByReflection || protectedByEntityControl)
@@ -246,14 +245,15 @@ public abstract class MixinEntity {
     @Inject(method = "setInvisible", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionVisibility(boolean invisible, CallbackInfo ci) {
         if (invisible && (Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)) {
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
             ci.cancel();
         }
     }
 
     @Inject(method = "isInvisible", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionVisibleState(CallbackInfoReturnable<Boolean> cir) {
-        if ((Object) this instanceof ServerPlayer player && VectorReflection.Server.isActive(player)) {
+        if ((Object) this instanceof ServerPlayer player
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
             cir.setReturnValue(false);
         }
     }
@@ -261,7 +261,7 @@ public abstract class MixinEntity {
     @ModifyVariable(method = "setTicksFrozen", at = @At("HEAD"), argsOnly = true)
     private int academy$protectVectorReflectionFrozenTicks(int ticks) {
         if (ticks > 0 && (Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)) {
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
             return 0;
         }
         return ticks;
@@ -270,9 +270,17 @@ public abstract class MixinEntity {
     @Inject(method = "kill", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionKill(ServerLevel level, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
-                && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
             VectorReflection.Server.maintainProtection(player);
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "markHurt", at = @At("HEAD"), cancellable = true)
+    private void academy$protectVectorDamageMarker(CallbackInfo ci) {
+        if ((Object) this instanceof ServerPlayer player
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
+            player.hurtMarked = false;
             ci.cancel();
         }
     }

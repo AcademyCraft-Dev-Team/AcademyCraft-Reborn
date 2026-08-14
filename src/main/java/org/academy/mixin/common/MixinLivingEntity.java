@@ -34,6 +34,8 @@ import org.academy.internal.common.ability.mentalout.control.MentalControlRuntim
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.coremod.ClassPointerProtectionManager;
+import org.academy.internal.coremod.ProtectionBackend;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
@@ -132,9 +134,9 @@ public abstract class MixinLivingEntity {
             health = PlayerAttributeRuntime.modifyHealthWrite(player, health);
         }
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)) {
-            return VectorReflection.Server
-                    .protectHealthWrite(player, health);
+                && VectorReflection.Server.isVectorDefenseActive(player)
+                && !VectorReflection.Server.isImagineBreakerMutation(player)) {
+            return player.getHealth();
         }
         return EntityControlApi.clampHealthWrite(entity, health);
     }
@@ -149,21 +151,20 @@ public abstract class MixinLivingEntity {
             ci.cancel();
             return;
         }
-        if ((Object) this instanceof ServerPlayer player
-                && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
+        if ((Object) this instanceof ServerPlayer player) {
             var reflection = VectorReflection.Server.hurtServer(player, level, source, damage);
             if (reflection.getLeft()) {
                 ci.cancel();
                 var remaining = reflection.getRight();
-                if (remaining > 0.0f && Float.isFinite(remaining)) {
-                    VectorReflection.Server.beginLegitimateHealthMutation(player);
-                    try {
-                        ((LivingEntityDamageInvoker) this)
-                                .academy$actuallyHurt(level, source, remaining);
-                    } finally {
-                        VectorReflection.Server.endLegitimateHealthMutation(player);
-                    }
+                if (!VectorReflection.Server.isVectorDefenseActive(player)
+                        && remaining > 0.0f && Float.isFinite(remaining)) {
+                    ((LivingEntityDamageInvoker) this)
+                            .academy$actuallyHurt(level, source, remaining);
                 }
+                return;
+            }
+            if (VectorReflection.Server.isVectorDefenseActive(player)) {
+                ci.cancel();
                 return;
             }
             if (VectorExternalInterceptionService.tryDirectRefraction(player, source, damage)) {
@@ -185,9 +186,10 @@ public abstract class MixinLivingEntity {
     @Inject(method = "getHealth", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionHealthRead(CallbackInfoReturnable<Float> cir) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)) {
-            cir.setReturnValue(VectorReflection.Server
-                    .protectHealthRead(player, cir.getReturnValue()));
+                && VectorReflection.Server.isVectorDefenseActive(player)
+                && ClassPointerProtectionManager.backend(player)
+                != ProtectionBackend.CLASS_POINTER) {
+            cir.setReturnValue(Math.max(1.0f, cir.getReturnValue()));
             return;
         }
         cir.setReturnValue(EntityControlApi.applyHealthReadGuards(
@@ -226,8 +228,7 @@ public abstract class MixinLivingEntity {
             CallbackInfo ci
     ) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
-                && !VectorReflection.Server.isLegitimateHealthMutation(player)
+                && VectorReflection.Server.isVectorDefenseActive(player)
                 && reason != Entity.RemovalReason.CHANGED_DIMENSION
                 && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
             ci.cancel();
@@ -237,8 +238,7 @@ public abstract class MixinLivingEntity {
     @Inject(method = "kill", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionLivingKill(ServerLevel level, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
-                && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
@@ -247,8 +247,7 @@ public abstract class MixinLivingEntity {
     @Inject(method = "die", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionDeath(DamageSource source, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
-                && !VectorReflection.Server.isLegitimateHealthMutation(player)) {
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
@@ -345,20 +344,25 @@ public abstract class MixinLivingEntity {
             ci.cancel();
             return;
         }
+    }
+
+    @Inject(method = "animateHurt", at = @At("HEAD"), cancellable = true)
+    private void academy$protectVectorHurtAnimation(float direction, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)) {
-            VectorReflection.Server
-                    .beginLegitimateHealthMutation(player);
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
+            player.hurtTime = 0;
+            player.hurtDuration = 0;
+            player.hurtMarked = false;
+            ci.cancel();
         }
     }
 
-    @Inject(method = "heal", at = @At("RETURN"))
-    private void academy$captureVectorReflectionHealing(float amount, CallbackInfo ci) {
+    @Inject(method = "handleDamageEvent", at = @At("HEAD"), cancellable = true)
+    private void academy$protectVectorDamageEvent(DamageSource source, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server
-                .isLegitimateHealthMutation(player)) {
-            VectorReflection.Server
-                    .endLegitimateHealthMutation(player);
+                && VectorReflection.Server.isVectorDefenseActive(player)) {
+            VectorReflection.Server.maintainProtection(player);
+            ci.cancel();
         }
     }
 

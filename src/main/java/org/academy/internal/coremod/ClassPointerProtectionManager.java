@@ -6,6 +6,7 @@ import org.academy.AcademyCraft;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public final class ClassPointerProtectionManager {
     private static final Object LOCK = new Object();
@@ -37,6 +38,7 @@ public final class ClassPointerProtectionManager {
         synchronized (LOCK) {
             var state = STATES.remove(player);
             if (state == null || state.backend != ProtectionBackend.CLASS_POINTER) return false;
+            state.ledger.remove(playerId(player));
             var current = HotSpotClassPointerAccess.read(player);
             if (current == state.originalWord) return false;
             var restored = HotSpotClassPointerAccess.writeAndVerify(player, state.originalWord);
@@ -74,6 +76,14 @@ public final class ClassPointerProtectionManager {
                 fallback(player, side, originalType, 0L, generated.failureReason());
                 return false;
             }
+            try {
+                DispatchSubclassFactory.initializeForUse(generated);
+            } catch (Throwable error) {
+                fallback(player, side, originalType, 0L,
+                        "dispatch state initialization failed: "
+                                + error.getClass().getSimpleName() + ": " + error.getMessage());
+                return false;
+            }
 
             var originalWord = HotSpotClassPointerAccess.read(player);
             var dispatchWord = HotSpotClassPointerAccess.wordFor(generated.dispatchType());
@@ -83,8 +93,9 @@ public final class ClassPointerProtectionManager {
                 return false;
             }
 
+            generated.ledger().remove(playerId(player));
             var state = new ProtectionState(side, ProtectionBackend.CLASS_POINTER, originalType,
-                    generated.dispatchType(), originalWord, dispatchWord, null);
+                    generated.dispatchType(), originalWord, dispatchWord, generated.ledger(), null);
             if (!HotSpotClassPointerAccess.writeAndVerify(player, dispatchWord)
                     || player.getClass() != generated.dispatchType()) {
                 HotSpotClassPointerAccess.writeAndVerify(player, originalWord);
@@ -121,7 +132,7 @@ public final class ClassPointerProtectionManager {
     private static void fallback(Object player, Side side, Class<?> originalType,
                                  long originalWord, String reason) {
         var state = new ProtectionState(side, ProtectionBackend.MIXIN_FALLBACK, originalType,
-                null, originalWord, 0L, reason);
+                null, originalWord, 0L, Map.of(), reason);
         STATES.put(player, state);
         logFailure(player, state, "using Mixin fallback: " + reason);
     }
@@ -154,6 +165,13 @@ public final class ClassPointerProtectionManager {
         return "local player";
     }
 
+    private static UUID playerId(Object player) {
+        if (player instanceof net.minecraft.world.entity.player.Player actual) {
+            return actual.getUUID();
+        }
+        return new UUID(0L, System.identityHashCode(player));
+    }
+
     private enum Side {
         SERVER,
         CLIENT
@@ -165,6 +183,7 @@ public final class ClassPointerProtectionManager {
         private final Class<?> dispatchType;
         private final long originalWord;
         private final long dispatchWord;
+        private final Map<UUID, Integer> ledger;
         private volatile ProtectionBackend backend;
         private volatile String failureReason;
         private volatile boolean failureLogged;
@@ -172,13 +191,14 @@ public final class ClassPointerProtectionManager {
 
         private ProtectionState(Side side, ProtectionBackend backend, Class<?> originalType,
                                 Class<?> dispatchType, long originalWord, long dispatchWord,
-                                String failureReason) {
+                                Map<UUID, Integer> ledger, String failureReason) {
             this.side = side;
             this.backend = backend;
             this.originalType = originalType;
             this.dispatchType = dispatchType;
             this.originalWord = originalWord;
             this.dispatchWord = dispatchWord;
+            this.ledger = ledger;
             this.failureReason = failureReason;
         }
     }

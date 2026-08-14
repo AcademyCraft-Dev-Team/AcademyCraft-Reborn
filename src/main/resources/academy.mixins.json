@@ -35,6 +35,7 @@
     "common.MixinServerLevelVectorDefenseFeedback",
     "common.MixinServerPlayer",
     "common.MixinServerPlayerGameMode",
+    "common.ShulkerBulletVectorAccessor",
     "common.MixinSensing",
     "common.MixinPlayerMentalPerception",
     "common.MixinPlayerMagneticWeaponAttack",

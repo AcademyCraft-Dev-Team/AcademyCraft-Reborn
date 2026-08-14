@@ -8,6 +8,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.chat.ChatAbilities;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.stats.StatsCounter;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
@@ -17,10 +18,19 @@ import net.minecraft.world.entity.player.Input;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
 
+import java.lang.invoke.VarHandle;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /** Field-free bytecode template for generated local-player dispatch subclasses. */
 public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreakerHealthAccess {
+    private static Map<UUID, Integer> academy$a;
+    private static VarHandle academy$b;
+    private static VarHandle academy$c;
+    private static int academy$d;
+    private static int academy$e;
+
     public VrLocalPlayerTemplate(Minecraft minecraft, ClientLevel level, ClientPacketListener connection,
                                  StatsCounter stats, ClientRecipeBook recipeBook, Input lastSentInput,
                                  boolean wasSprinting, ChatAbilities chatAbilities) {
@@ -44,14 +54,126 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
     @Override
     public float getHealth() {
         var original = super.getHealth();
-        return academy$protected()
-                ? VectorReflectionClientRuntime.protectHealthRead(this, original)
-                : original;
+        if (!academy$protected()) return original;
+
+        var uuid = getUUID();
+        var encoded = academy$a.get(uuid);
+        var initial = Float.isFinite(original) ? Math.max(0.0f, original) : 0.0f;
+        float cached;
+        if (encoded == null) {
+            cached = initial;
+            academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        } else {
+            cached = Float.intBitsToFloat(encoded ^ academy$e);
+            if (!Float.isFinite(cached)) {
+                cached = initial;
+                academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+            } else {
+                cached = Math.max(0.0f, cached);
+            }
+        }
+        var maximum = super.getMaxHealth();
+        if (Float.isFinite(original) && Float.isFinite(maximum)
+                && original > cached && original < maximum) {
+            cached = original;
+            academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        }
+        return Math.max(1.0f, cached);
     }
 
     @Override
     public void imaginebreaker(float amount) {
-        VectorReflectionClientRuntime.imaginebreaker(this, amount);
+        if (!academy$protected() || !Float.isFinite(amount) || !(amount > 0.0f)) return;
+
+        var original = super.getHealth();
+        var uuid = getUUID();
+        var encoded = academy$a.get(uuid);
+        var initial = Float.isFinite(original) ? Math.max(0.0f, original) : 0.0f;
+        float cached;
+        if (encoded == null) {
+            cached = initial;
+        } else {
+            cached = Float.intBitsToFloat(encoded ^ academy$e);
+            if (!Float.isFinite(cached)) cached = initial;
+            else cached = Math.max(0.0f, cached);
+        }
+        cached = Math.max(0.0f, cached - amount);
+        academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        var items = (Object[]) academy$b.get(entityData);
+        academy$c.set(items[academy$d], Float.valueOf(cached));
+    }
+
+    @Override
+    public void setHealth(float amount) {
+        if (!academy$protected()) super.setHealth(amount);
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
+        if (!academy$protected() || accessor == null || accessor.id() != academy$d) {
+            super.onSyncedDataUpdated(accessor);
+            return;
+        }
+
+        var items = (Object[]) academy$b.get(entityData);
+        var rawValue = academy$c.get(items[academy$d]);
+        var reported = rawValue instanceof Float value ? value : Float.NaN;
+        var original = Float.isFinite(reported) ? Math.max(0.0f, reported) : 0.0f;
+        var uuid = getUUID();
+        var encoded = academy$a.get(uuid);
+        float cached;
+        if (encoded == null) {
+            cached = original;
+        } else {
+            cached = Float.intBitsToFloat(encoded ^ academy$e);
+            if (!Float.isFinite(cached)) cached = original;
+            else cached = Math.max(0.0f, cached);
+        }
+        var maximum = super.getMaxHealth();
+        if (Float.isFinite(maximum) && original > cached && original < maximum) {
+            cached = original;
+        }
+        academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        if (!Float.isFinite(reported) || reported != cached) {
+            academy$c.set(items[academy$d], Float.valueOf(cached));
+        }
+        super.onSyncedDataUpdated(accessor);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        var uuid = getUUID();
+        if (!academy$protected()) {
+            academy$a.remove(uuid);
+            return;
+        }
+
+        var original = super.getHealth();
+        var encoded = academy$a.get(uuid);
+        var initial = Float.isFinite(original) ? Math.max(0.0f, original) : 0.0f;
+        float cached;
+        if (encoded == null) {
+            cached = initial;
+        } else {
+            cached = Float.intBitsToFloat(encoded ^ academy$e);
+            if (!Float.isFinite(cached)) cached = initial;
+            else cached = Math.max(0.0f, cached);
+        }
+        var maximum = super.getMaxHealth();
+        if (Float.isFinite(original) && Float.isFinite(maximum)
+                && original > cached && original < maximum) {
+            cached = original;
+        }
+        academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        var items = (Object[]) academy$b.get(entityData);
+        academy$c.set(items[academy$d], Float.valueOf(cached));
+        hurtTime = 0;
+        hurtDuration = 0;
+        hurtMarked = false;
+        deathTime = 0;
+        lastHurt = 0.0f;
+        invulnerableTime = 0;
     }
 
     @Override
@@ -130,7 +252,46 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
     public boolean hurtClient(DamageSource source) {
         if (!academy$protected()) return super.hurtClient(source);
         VectorReflectionClientRuntime.sanitize(this);
-        return true;
+        return false;
+    }
+
+    @Override
+    protected void markHurt() {
+        if (!academy$protected()) super.markHurt();
+    }
+
+    @Override
+    public void animateHurt(float direction) {
+        if (!academy$protected()) super.animateHurt(direction);
+    }
+
+    @Override
+    public void indicateDamage(double x, double z) {
+        if (!academy$protected()) super.indicateDamage(x, z);
+    }
+
+    @Override
+    public void handleDamageEvent(DamageSource source) {
+        if (!academy$protected()) {
+            super.handleDamageEvent(source);
+            return;
+        }
+        hurtTime = 0;
+        hurtDuration = 0;
+        hurtMarked = false;
+        deathTime = 0;
+        lastHurt = 0.0f;
+        invulnerableTime = 0;
+        VectorReflectionClientRuntime.sanitize(this);
+    }
+
+    @Override
+    public void handleEntityEvent(byte state) {
+        if (academy$protected() && (state == 2 || state == 3)) {
+            VectorReflectionClientRuntime.sanitize(this);
+            return;
+        }
+        super.handleEntityEvent(state);
     }
 
     @Override
