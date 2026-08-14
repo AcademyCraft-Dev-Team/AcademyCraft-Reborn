@@ -11,11 +11,13 @@ import net.minecraft.world.phys.HitResult;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileTargeting;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Projectile.class)
 public abstract class MixinProjectile {
@@ -24,7 +26,10 @@ public abstract class MixinProjectile {
         var projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide()) return;
         VectorAttackAttributionResolver.captureProjectileOwner(projectile);
-        if (VectorProjectileRedirects.isRedirected(projectile)) return;
+        if (VectorProjectileRedirects.isRedirected(projectile)) {
+            VectorProjectileTargeting.maintainRedirectTarget(projectile);
+            return;
+        }
         var velocity = projectile.getDeltaMovement();
         var path = projectile.getBoundingBox()
                 .minmax(projectile.getBoundingBox().move(velocity))
@@ -46,9 +51,26 @@ public abstract class MixinProjectile {
     private void academy$reflectProtectedPlayerHit(HitResult result, CallbackInfo ci) {
         var projectile = (Projectile) (Object) this;
         if (projectile.level().isClientSide() || !(result instanceof EntityHitResult entityHit)) return;
+        if (VectorProjectileTargeting.blocksVectorDefenderHit(
+                projectile, entityHit.getEntity())) {
+            VectorProjectileTargeting.maintainRedirectTarget(projectile);
+            ci.cancel();
+            return;
+        }
         if (entityHit.getEntity() instanceof ServerPlayer player
                 && VectorProjectileInterceptionService.intercept(player, projectile)) {
             ci.cancel();
+        }
+    }
+
+    @Inject(method = "canHitEntity", at = @At("HEAD"), cancellable = true)
+    private void academy$blockRedirectedVectorDefenderHit(
+            Entity candidate,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        var projectile = (Projectile) (Object) this;
+        if (VectorProjectileTargeting.blocksVectorDefenderHit(projectile, candidate)) {
+            cir.setReturnValue(false);
         }
     }
 

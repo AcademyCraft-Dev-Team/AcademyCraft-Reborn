@@ -32,6 +32,8 @@ public final class VectorReflectionRuntime {
             ClassPointerProtectionManager.restore(previous);
         }
         ClassPointerProtectionManager.ensureServerPlayer(player);
+        // Initialize the generated ledger before any foreign synced-data write can become its seed.
+        player.getHealth();
         anchor.player = new WeakReference<>(player);
 
         EntityControlApi.protectFromExternalRemoval(player);
@@ -42,15 +44,11 @@ public final class VectorReflectionRuntime {
 
     public static void deactivate(ServerPlayer player) {
         if (player == null) return;
-        VectorReflection.Server.restoreRecordedHealth(player);
         restoreOriginalInstance(player);
     }
 
     public static void deactivateForDeath(ServerPlayer player) {
         if (player == null) return;
-        // Death has already won the race. Restoring an older protected snapshot here would leave a
-        // dead entity with positive health, so only discard the snapshot and repair the class.
-        VectorReflection.Server.discardRecordedHealth(player);
         restoreOriginalInstance(player);
     }
 
@@ -73,7 +71,7 @@ public final class VectorReflectionRuntime {
                 else ANCHORS.remove(entry.getKey(), entry.getValue());
                 continue;
             }
-            if (!VectorReflection.Server.isActive(player)) {
+            if (!VectorReflection.Server.isVectorDefenseActive(player)) {
                 deactivate(player);
                 continue;
             }
@@ -85,7 +83,6 @@ public final class VectorReflectionRuntime {
         for (var anchor : ANCHORS.values()) {
             var player = anchor.player.get();
             if (player == null) continue;
-            VectorReflection.Server.restoreRecordedHealth(player);
             EntityControlApi.allowExternalRemoval(player);
             ClassPointerProtectionManager.restore(player);
         }

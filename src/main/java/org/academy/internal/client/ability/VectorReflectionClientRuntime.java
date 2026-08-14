@@ -6,7 +6,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.reflection.ReflectionHealthRecordCodec;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
@@ -18,9 +17,7 @@ import java.util.*;
 
 public final class VectorReflectionClientRuntime {
     private static final Map<Integer, Long> PENDING_HURT_CLEARS = new HashMap<>();
-    private static final Map<UUID, String> HEALTH_RECORDS = new HashMap<>();
     private static final Set<UUID> IMAGINE_BREAKER_MUTATIONS = new HashSet<>();
-    private static final Set<UUID> FORCED_DEACTIVATIONS = new HashSet<>();
     private static WeakReference<LocalPlayer> currentPlayer = new WeakReference<>(null);
 
     private VectorReflectionClientRuntime() {
@@ -31,7 +28,6 @@ public final class VectorReflectionClientRuntime {
         var player = minecraft.player;
         var previous = currentPlayer.get();
         if (previous != null && previous != player) {
-            deactivate(previous);
             ClassPointerProtectionManager.restore(previous);
         }
         currentPlayer = new WeakReference<>(player);
@@ -45,7 +41,6 @@ public final class VectorReflectionClientRuntime {
             ClassPointerProtectionManager.ensureClientPlayer(player);
         }
         if (!isProtected(player)) {
-            deactivate(player);
             return;
         }
 
@@ -60,30 +55,31 @@ public final class VectorReflectionClientRuntime {
 
     public static void shutdown() {
         var player = currentPlayer.get();
-        if (player != null) deactivate(player);
         currentPlayer = new WeakReference<>(null);
         ClassPointerProtectionManager.restoreAllClient();
         PENDING_HURT_CLEARS.clear();
-        HEALTH_RECORDS.clear();
         IMAGINE_BREAKER_MUTATIONS.clear();
-        FORCED_DEACTIVATIONS.clear();
     }
 
     public static boolean isProtected(LocalPlayer player) {
         if (player == null) return false;
-        var enabled = AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
+        var reflection = AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
                 && AbilitySystemClient.getSkillData(Skills.VECTOR_REFLECTION.get())
                 .map(data -> data.isEnabled() && AbilitySystemClient.getAvailableCP() > 0.0f)
                 .orElse(false);
-        if (!enabled) {
-            FORCED_DEACTIVATIONS.remove(player.getUUID());
-            return false;
-        }
-        return !FORCED_DEACTIVATIONS.contains(player.getUUID());
+        return reflection || isVectorDeviationActive(player);
+    }
+
+    public static boolean isReflectionProtected(LocalPlayer player) {
+        return player != null
+                && AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
+                && AbilitySystemClient.getSkillData(Skills.VECTOR_REFLECTION.get())
+                .map(data -> data.isEnabled() && AbilitySystemClient.getAvailableCP() > 0.0f)
+                .orElse(false);
     }
 
     public static boolean shouldReflectEffect(LocalPlayer player, MobEffectInstance effect) {
-        if (!isProtected(player) || effect == null) return false;
+        if (!isReflectionProtected(player) || effect == null) return false;
         var data = AbilitySystemClient
                 .getSkillData(Skills.REFLECTION_FILTER.get(), ReflectionFilter.Data.class)
                 .filter(ReflectionFilter.Data::isEnabled)
@@ -109,58 +105,25 @@ public final class VectorReflectionClientRuntime {
                 || AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get());
     }
 
-    public static float protectHealthRead(LocalPlayer player, float original) {
-        if (player == null) return Math.max(0.0f, original);
-        var uuid = player.getUUID();
-        if (IMAGINE_BREAKER_MUTATIONS.contains(uuid)) {
-            return ReflectionHealthRecordCodec.lockedHealth(0.0f, original);
-        }
-        var encoded = HEALTH_RECORDS.computeIfAbsent(
-                uuid,
-                ignored -> ReflectionHealthRecordCodec.encode(uuid, original)
-        );
-        var recorded = ReflectionHealthRecordCodec.decode(uuid, encoded, original);
-        return ReflectionHealthRecordCodec.lockedHealth(recorded, original);
-    }
-
     public static void imaginebreaker(LocalPlayer player, float amount) {
         if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
-        var reflectionActive = isProtected(player);
-        if (!reflectionActive && !isVectorDeviationActive(player)) return;
+        if (!isProtected(player)) return;
 
         var uuid = player.getUUID();
-        if (reflectionActive) player.getHealth();
         IMAGINE_BREAKER_MUTATIONS.add(uuid);
-        var depleted = false;
         try {
             var original = player.getHealth();
-            var nextOriginal = ReflectionHealthRecordCodec.loweredHealth(original, amount);
-            if (reflectionActive) {
-                var encoded = HEALTH_RECORDS.computeIfAbsent(
-                        uuid,
-                        ignored -> ReflectionHealthRecordCodec.encode(uuid, original)
-                );
-                var recorded = ReflectionHealthRecordCodec.decode(uuid, encoded, original);
-                var nextRecorded = ReflectionHealthRecordCodec.loweredHealth(recorded, amount);
-                HEALTH_RECORDS.put(uuid, ReflectionHealthRecordCodec.encode(uuid, nextRecorded));
-                depleted = ReflectionHealthRecordCodec
-                        .lockedHealth(nextRecorded, nextOriginal) <= 0.0f;
-            } else {
-                depleted = nextOriginal <= 0.0f;
-            }
-            setOriginalHealth(player, nextOriginal);
+            setOriginalHealth(player, Math.max(0.0f, original - amount));
         } finally {
             IMAGINE_BREAKER_MUTATIONS.remove(uuid);
-        }
-
-        if (depleted && reflectionActive) {
-            FORCED_DEACTIVATIONS.add(uuid);
-            deactivate(player);
         }
     }
 
     public static void sanitize(LocalPlayer player) {
         if (player.isRemoved()) player.revive();
+        clearHurtState(player);
+        player.deathTime = 0;
+        player.invulnerableTime = 0;
         player.setTicksFrozen(0);
         player.setInvisible(false);
         player.clearFire();
@@ -209,17 +172,6 @@ public final class VectorReflectionClientRuntime {
         living.hurtDuration = 0;
         living.hurtMarked = false;
         return true;
-    }
-
-    private static void deactivate(LocalPlayer player) {
-        var uuid = player.getUUID();
-        var encoded = HEALTH_RECORDS.get(uuid);
-        if (encoded == null) return;
-        var reported = player.getHealth();
-        var restored = ReflectionHealthRecordCodec.lockedHealth(
-                ReflectionHealthRecordCodec.decode(uuid, encoded, reported), reported);
-        HEALTH_RECORDS.remove(uuid);
-        if (Float.isFinite(restored)) setOriginalHealth(player, Math.max(0.0f, restored));
     }
 
     private static void setOriginalHealth(LocalPlayer player, float health) {

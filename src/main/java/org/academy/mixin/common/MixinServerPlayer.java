@@ -92,28 +92,12 @@ public abstract class MixinServerPlayer extends Player implements ImagineBreaker
     public boolean redirectHurtServer(Player instance, ServerLevel level, DamageSource source, float damage) {
         var pair = VectorReflection.Server.hurtServer(instance, level, source, damage);
         if (!pair.getLeft()) {
-            if (VectorReflection.Server.isActive((ServerPlayer) (Object) this)) {
-                return academy$hurtWithLegitimateHealthMutation(level, source, pair.getRight());
-            }
+            if (VectorReflection.Server.isVectorDefenseActive((ServerPlayer) (Object) this)) return false;
             return super.hurtServer(level, source, pair.getRight());
         }
         var remainingDamage = pair.getRight();
         if (!(remainingDamage > 0.0f) || !Float.isFinite(remainingDamage)) return false;
-        return academy$hurtWithLegitimateHealthMutation(level, source, remainingDamage);
-    }
-
-    @SuppressWarnings("UnnecessarySuperQualifier")
-    private boolean academy$hurtWithLegitimateHealthMutation(
-            ServerLevel level,
-            DamageSource source,
-            float damage
-    ) {
-        var player = (ServerPlayer) (Object) this;
-        VectorReflection.Server.beginLegitimateHealthMutation(player);
-        try {
-            return super.hurtServer(level, source, damage);
-        } finally {
-            VectorReflection.Server.endLegitimateHealthMutation(player);
-        }
+        return VectorReflection.Server.isVectorDefenseActive((ServerPlayer) (Object) this)
+                ? false : super.hurtServer(level, source, remainingDamage);
     }
 }

@@ -30,8 +30,7 @@ public final class VectorIncomingDamageCoordinator {
         if (defender == null || source == null || !(damage > 0.0f) || !Float.isFinite(damage)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
-        if (VectorReflection.Server.isLegitimateHealthMutation(defender)
-                || VectorRedirectedDamageSourceInfo.isRedirected(source)) {
+        if (VectorRedirectedDamageSourceInfo.isRedirected(source)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         if (!VectorReflection.Server.isActive(defender)) {
@@ -65,12 +64,11 @@ public final class VectorIncomingDamageCoordinator {
         if (defender == null || source == null || !(damage > 0.0f) || !Float.isFinite(damage)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
-        if (VectorReflection.Server.isLegitimateHealthMutation(defender)
-                || !VectorDeviation.Server.canRefractSource(defender, source)) {
+        if (!VectorDeviation.Server.canRefractSource(defender, source)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         if (isAnomalousDamage(damage)
-                && VectorDeviation.Server.canMaintain(defender)
+                && VectorDeviation.Server.isActive(defender)
                 && VectorDeviation.Server.absorbAnomalousDamage(defender, source, damage)) {
             return VectorIncomingDamageResult.fullRedirect();
         }

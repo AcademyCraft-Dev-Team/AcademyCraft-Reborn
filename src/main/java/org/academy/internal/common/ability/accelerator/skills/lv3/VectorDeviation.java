@@ -230,7 +230,10 @@ public class VectorDeviation extends Skill {
                 VectorReflection.Server.forceDeactivate(player);
             }
             skill.toggle(player);
-            if (!skill.isEnabled(player)) clearState(player);
+            if (!skill.isEnabled(player)) {
+                clearState(player);
+                VectorReflection.Server.clearProtection(player);
+            }
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -238,7 +241,8 @@ public class VectorDeviation extends Skill {
             return canMaintain(player)
                     && !VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     && (system.isPlayerSkillDebugMode(player.getUUID())
-                    || system.getPlayerAvailableCP(player.getUUID()) > 0.0f);
+                    || !VectorReflection.Server.isComputingPowerDepleted(
+                    system.getPlayerAvailableCP(player.getUUID())));
         }
 
         public static boolean canMaintain(ServerPlayer player) {
@@ -258,6 +262,9 @@ public class VectorDeviation extends Skill {
                 system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             }
             clearState(player);
+            if (!VectorReflection.Server.isActive(player)) {
+                VectorReflection.Server.clearProtection(player);
+            }
         }
 
         private static void clearState(ServerPlayer player) {
@@ -333,6 +340,7 @@ public class VectorDeviation extends Skill {
                     true
             );
             if (!executed) return VectorIncomingDamageResult.passThrough(incomingDamage);
+            VectorReflection.Server.deactivateAfterVectorChargeIfNeeded(player);
             player.invulnerableTime = 0;
             if (result.isFull()) {
                 VectorDefenseFeedbackTickets.commitFull(player, source);
@@ -347,7 +355,7 @@ public class VectorDeviation extends Skill {
                 float incomingDamage
         ) {
             if (!VectorIncomingDamageCoordinator.isAnomalousDamage(incomingDamage)
-                    || !canMaintain(player)
+                    || !isActive(player)
                     || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || !canRefractSource(player, source)) {
                 return false;
@@ -406,7 +414,7 @@ public class VectorDeviation extends Skill {
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (!result.isFull()) return false;
-            return skill.executeContinuous(
+            var executed = skill.executeContinuous(
                     player,
                     _ -> result.baseCpCost(),
                     (_, _) -> {
@@ -419,6 +427,8 @@ public class VectorDeviation extends Skill {
                     },
                     true
             );
+            if (executed) VectorReflection.Server.deactivateAfterVectorChargeIfNeeded(player);
+            return executed;
         }
 
         private static boolean isFiniteVector(Vec3 value) {
@@ -451,19 +461,22 @@ public class VectorDeviation extends Skill {
             var refracted = refractedDirection(player.getLookAngle(), projectile.getDeltaMovement())
                     .scale(Math.max(speed, 1.5) * 1.2);
             if (normalizeOrZero(refracted) == Vec3.ZERO) return false;
+            var previousOwner = projectile.getOwner();
 
             var skill = Skills.VECTOR_DEVIATION.get();
-            return skill.executeContinuous(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
+            var executed = skill.executeContinuous(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
                 VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFRACTION);
                 projectile.setOwner(player);
                 var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
                 projectile.setPos(player.getBoundingBox().getCenter()
                         .add(refracted.normalize().scale(pushDistance)));
-                VectorProjectileStateAdapter.applyRedirect(projectile, refracted);
+                VectorProjectileStateAdapter.applyRedirect(projectile, refracted, previousOwner);
                 VectorReflection.Server.spawnGlowCircle(
                         player, refracted, projectile.position(), VectorRedirectKind.REFRACTION);
                 VectorReflection.Server.playReflectionSound(player);
             }, true);
+            if (executed) VectorReflection.Server.deactivateAfterVectorChargeIfNeeded(player);
+            return executed;
         }
     }
 
@@ -480,7 +493,11 @@ public class VectorDeviation extends Skill {
                 return;
             }
             if (!Server.isActive(player)
-                    || VectorReflection.Server.canMaintainLinearReflectionLease(player)) return;
+                    || VectorReflection.Server.canMaintainLinearReflectionLease(player)) {
+                Server.forceDeactivate(player);
+                return;
+            }
+            VectorReflection.Server.maintainProtection(player);
             var box = player.getBoundingBox().inflate(INTERCEPT_MARGIN);
             for (var projectile : player.level().getEntitiesOfClass(Projectile.class, box, Entity::isAlive)) {
                 if (VectorProjectileInterceptionService.intercept(player, projectile)) break;
