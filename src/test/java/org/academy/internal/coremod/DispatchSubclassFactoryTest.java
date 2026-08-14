@@ -3,16 +3,19 @@ package org.academy.internal.coremod;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Holder;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,6 +29,8 @@ class DispatchSubclassFactoryTest {
         assertTrue(ImagineBreakerHealthAccess.class.isAssignableFrom(result.dispatchType()));
         assertTrue(Modifier.isPublic(result.dispatchType()
                 .getMethod("imaginebreaker", float.class).getModifiers()));
+        assertInlineProtectionBoundary(result.dispatchType());
+        assertDamageStateBoundary(result.dispatchType());
         assertSame(result.dispatchType(),
                 DispatchSubclassFactory.forPlayerType(CustomServerPlayer.class).dispatchType());
     }
@@ -49,6 +54,7 @@ class DispatchSubclassFactoryTest {
         var result = DispatchSubclassFactory.forPlayerType(CustomServerPlayer.class);
         assertTrue(result.successful(), result.failureReason());
         assertEffectBoundary(result.dispatchType());
+        assertDamageStateBoundary(result.dispatchType());
     }
 
     @Test
@@ -57,6 +63,7 @@ class DispatchSubclassFactoryTest {
         assertTrue(result.successful(), result.failureReason());
         assertSame(LocalPlayer.class, result.dispatchType().getSuperclass());
         assertEffectBoundary(result.dispatchType());
+        assertDamageStateBoundary(result.dispatchType());
     }
 
     private static void assertEffectBoundary(Class<?> dispatchType) throws NoSuchMethodException {
@@ -76,6 +83,47 @@ class DispatchSubclassFactoryTest {
                 "hasEffect", Holder.class).getDeclaringClass());
         assertSame(dispatchType, dispatchType.getDeclaredMethod(
                 "getEffect", Holder.class).getDeclaringClass());
+    }
+
+    private static void assertInlineProtectionBoundary(Class<?> dispatchType)
+            throws NoSuchMethodException {
+        assertSame(dispatchType, dispatchType.getDeclaredMethod("getHealth").getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "setHealth", float.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "hurtServer", ServerLevel.class, DamageSource.class, float.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "actuallyHurt", ServerLevel.class, DamageSource.class, float.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod("tick").getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "onSyncedDataUpdated", EntityDataAccessor.class).getDeclaringClass());
+
+        for (var field : dispatchType.getDeclaredFields()) {
+            assertTrue(Modifier.isPrivate(field.getModifiers()));
+            assertTrue(Modifier.isStatic(field.getModifiers()));
+            assertFalse(field.getName().toLowerCase().contains("health"));
+            assertTrue(field.getName().startsWith("f$"));
+        }
+        assertEquals(5, dispatchType.getDeclaredFields().length);
+        assertTrue(Arrays.stream(dispatchType.getDeclaredMethods())
+                .filter(method -> Modifier.isPrivate(method.getModifiers()))
+                .allMatch(method -> method.getName().startsWith("m$")
+                        && !method.getName().toLowerCase().contains("health")));
+        assertFalse(dispatchType.getName().toLowerCase().contains("health"));
+        assertFalse(dispatchType.getName().contains("VectorReflection"));
+    }
+
+    private static void assertDamageStateBoundary(Class<?> dispatchType)
+            throws NoSuchMethodException {
+        assertSame(dispatchType, dispatchType.getDeclaredMethod("markHurt").getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "animateHurt", float.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "indicateDamage", double.class, double.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "handleDamageEvent", DamageSource.class).getDeclaringClass());
+        assertSame(dispatchType, dispatchType.getDeclaredMethod(
+                "onSyncedDataUpdated", EntityDataAccessor.class).getDeclaringClass());
     }
 
     public static class CustomServerPlayer extends ServerPlayer {

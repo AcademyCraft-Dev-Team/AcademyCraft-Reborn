@@ -75,7 +75,16 @@ public abstract class MixinClientEntity {
         if ((Object) this instanceof LocalPlayer player
                 && VectorReflectionClientRuntime.isProtected(player)) {
             VectorReflectionClientRuntime.sanitize(player);
-            cir.setReturnValue(true);
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "markHurt", at = @At("HEAD"), cancellable = true)
+    private void academy$protectVectorDamageMarker(CallbackInfo ci) {
+        if ((Object) this instanceof LocalPlayer player
+                && VectorReflectionClientRuntime.isProtected(player)) {
+            VectorReflectionClientRuntime.sanitize(player);
+            ci.cancel();
         }
     }
 }
