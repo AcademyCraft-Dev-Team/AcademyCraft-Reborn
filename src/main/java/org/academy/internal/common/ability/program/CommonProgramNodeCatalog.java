@@ -46,16 +46,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         registerFilters(result);
         registerEquality(result);
         for (var domain : CollectionDomain.values()) registerCollection(result, domain);
-        put(result, CommonProgramNodeIds.RANDOM_ENTITY, queryType(new ProgramNodeSchema(
-                List.of(ProgramPortDefinition.requiredInput(
-                        "entities",
-                        ProgramValueTypes.ENTITY_SET
-                )),
-                List.of(ProgramPortDefinition.output(
-                        "entity",
-                        ProgramValueTypes.ENTITY_REFERENCE
-                ))
-        )));
+        registerRandomCollectionValues(result);
         types = Map.copyOf(result);
     }
 
@@ -206,6 +197,12 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 _ -> entrySchema(),
                 ProgramNodeRole.ENTRY,
                 ProgramNodePurity.PURE
+        ));
+        put(result, CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD, type(
+                HealthThresholdTriggerConfiguration.CODEC,
+                _ -> entrySchema(),
+                ProgramNodeRole.ENTRY,
+                ProgramNodePurity.STATE
         ));
         put(result, CommonProgramNodeIds.BRANCH, type(
                 unitCodec(),
@@ -443,11 +440,17 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         )));
         for (var id : List.of(
                 CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_LEAST,
-                CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_MOST
+                CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_MOST,
+                CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_LEAST,
+                CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_MOST
         )) put(result, id, queryType(new ProgramNodeSchema(
                 List.of(
                         ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET),
-                        ProgramPortDefinition.requiredInput("percent", ProgramValueTypes.FLOAT)
+                        ProgramPortDefinition.requiredInput(
+                                id.equals(CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_LEAST)
+                                        || id.equals(CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_MOST)
+                                        ? "percent" : "health",
+                                ProgramValueTypes.FLOAT)
                 ),
                 List.of(ProgramPortDefinition.output("entities", ProgramValueTypes.ENTITY_SET))
         )));
@@ -456,6 +459,35 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 _ -> entitySetFilter,
                 ProgramNodeRole.QUERY,
                 ProgramNodePurity.WORLD_QUERY
+        ));
+    }
+
+    private static void registerRandomCollectionValues(
+            Map<Identifier, ProgramNodeType<?>> result
+    ) {
+        put(result, CommonProgramNodeIds.RANDOM_ENTITY, randomCollectionType(
+                "entities", ProgramValueTypes.ENTITY_SET,
+                "entity", ProgramValueTypes.ENTITY_REFERENCE));
+        put(result, CommonProgramNodeIds.RANDOM_WORLD_POSITION, randomCollectionType(
+                "positions", ProgramValueTypes.WORLD_POSITION_SET,
+                "position", ProgramValueTypes.WORLD_POSITION));
+        put(result, CommonProgramNodeIds.RANDOM_BLOCK_POSITION, randomCollectionType(
+                "blocks", ProgramValueTypes.BLOCK_POSITION_SET,
+                "block", ProgramValueTypes.BLOCK_POSITION));
+        put(result, CommonProgramNodeIds.RANDOM_DIRECTION, randomCollectionType(
+                "directions", ProgramValueTypes.DIRECTION_SET,
+                "direction", ProgramValueTypes.DIRECTION));
+    }
+
+    private static ProgramNodeType<?> randomCollectionType(
+            String input,
+            ProgramValueType collectionType,
+            String output,
+            ProgramValueType elementType
+    ) {
+        return queryType(new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput(input, collectionType)),
+                List.of(ProgramPortDefinition.output(output, elementType))
         ));
     }
 
@@ -770,6 +802,51 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
 
         public MovementTriggerConfiguration {
             if (condition == null) throw new IllegalArgumentException("Movement condition is required");
+        }
+    }
+
+    public record HealthThresholdTriggerConfiguration(
+            HealthThresholdMode mode,
+            float threshold
+    ) {
+        public static final Codec<HealthThresholdTriggerConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        HealthThresholdMode.CODEC.optionalFieldOf(
+                                "mode", HealthThresholdMode.BELOW)
+                                .forGetter(HealthThresholdTriggerConfiguration::mode),
+                        Codec.floatRange(0.0f, Float.MAX_VALUE)
+                                .optionalFieldOf("threshold", 10.0f)
+                                .forGetter(HealthThresholdTriggerConfiguration::threshold)
+                ).apply(instance, HealthThresholdTriggerConfiguration::new));
+
+        public HealthThresholdTriggerConfiguration {
+            if (mode == null || !Float.isFinite(threshold)) {
+                throw new IllegalArgumentException("Health threshold configuration is invalid");
+            }
+        }
+    }
+
+    public enum HealthThresholdMode {
+        ABOVE("above"),
+        BELOW("below");
+
+        private static final Codec<HealthThresholdMode> CODEC = Codec.STRING.xmap(
+                HealthThresholdMode::byName,
+                HealthThresholdMode::wireName
+        );
+        private final String wireName;
+
+        HealthThresholdMode(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        private static HealthThresholdMode byName(String value) {
+            for (var mode : values()) if (mode.wireName.equals(value)) return mode;
+            throw new IllegalArgumentException("Unknown health threshold mode " + value);
         }
     }
 
@@ -1103,6 +1180,9 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         LIVING("living"),
         PLAYER("player"),
         MOB("mob"),
+        HOSTILE("hostile"),
+        ANIMAL("animal"),
+        FRIENDLY("friendly"),
         PROJECTILE("projectile"),
         ITEM("item");
 

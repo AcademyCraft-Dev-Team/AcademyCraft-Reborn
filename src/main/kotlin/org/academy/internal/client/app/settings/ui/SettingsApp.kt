@@ -25,6 +25,7 @@ import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
 import org.academy.internal.client.hud.HudLayoutEditorScreen
+import org.academy.internal.client.ability.program.AbilityProgramEditorClient
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
 import org.lwjgl.glfw.GLFW
@@ -395,7 +396,7 @@ object SettingsApp : App {
                 .getConfig<TerminalConfig>(TerminalHud.CONFIG_KEY)
             val abilityConfig = AcademyCraftClient.Config.INSTANCE
                 .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
-            return listOf(
+            val sections = mutableListOf(
                 BindingSection(
                     "general_terminal",
                     L10n["app.academy.settings.keybind.group.terminal"],
@@ -416,6 +417,22 @@ object SettingsApp : App {
                     )
                 }
             )
+            if (AbilityProgramEditorClient.canUsePrecisionOperation()) {
+                val precisionConfig = AcademyCraftClient.Config.INSTANCE
+                    .getConfig<AbilityProgramEditorClient.Config>(AbilityProgramEditorClient.CONFIG_KEY)
+                sections += BindingSection(
+                    "general_precision_operation",
+                    L10n["app.academy.settings.keybind.group.precision_operation"],
+                    AbilitySystemClient.getCategory().developerIcon,
+                    precisionConfig
+                ) { updated ->
+                    AcademyCraftClient.Config.INSTANCE.setConfig(
+                        AbilityProgramEditorClient.CONFIG_KEY,
+                        updated
+                    )
+                }
+            }
+            return sections
         }
 
         private fun createBindingSection(sectionInfo: BindingSection): LinearLayoutWidget {

@@ -4,6 +4,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.program.ProgramLimits;
 import org.academy.api.common.ability.program.ProgramValue;
+import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
@@ -93,14 +94,24 @@ public final class TeleportProgramExecutionBridge {
                 });
         put(result, TeleportProgramNodeIds.ENTITY_TELEPORT,
                 (ProgramVmContext context,
-                 TeleportProgramNodeCatalog.PowerConfiguration configuration,
+                 TeleportProgramNodeCatalog.TargetTeleportConfiguration configuration,
                  ProgramInputView inputs) -> {
                     stage(context, runtime(context).teleportEntity(
-                            entity(inputs, "entity"),
-                            worldPosition(inputs, "destination"),
-                            configuration.power()));
+                            configuration.targetType() == TeleportProgramNodeCatalog.TargetType.ENTITY
+                                    ? entity(inputs, "entity")
+                                    : blockPosition(inputs, "block"),
+                            inputs.requireCompatible(
+                                    "destination", ProgramValueTypes.CONTROL_DESTINATION).value(),
+                            optionalDirection(inputs, "direction"),
+                            configuration.power(),
+                            configuration.targetType()));
                     return ProgramNodeStep.next("flow");
                 });
+        put(result, TeleportProgramNodeIds.SPACE_SAFETY, (context, _, inputs) -> data(
+                "result",
+                ProgramValueTypes.BOOLEAN,
+                runtime(context).isSpaceSafe(
+                        entity(inputs, "entity"), worldPosition(inputs, "position"))));
         return Map.copyOf(result);
     }
 
@@ -127,6 +138,18 @@ public final class TeleportProgramExecutionBridge {
     private static ProgramWorldPosition worldPosition(ProgramInputView inputs, String port) {
         return (ProgramWorldPosition) inputs.requireCompatible(
                 port, ProgramValueTypes.WORLD_POSITION).value();
+    }
+
+    private static org.academy.api.common.ability.program.ProgramBlockPosition blockPosition(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return (org.academy.api.common.ability.program.ProgramBlockPosition)
+                inputs.requireCompatible(port, ProgramValueTypes.BLOCK_POSITION).value();
+    }
+
+    private static ProgramDirection optionalDirection(ProgramInputView inputs, String port) {
+        return inputs.first(port).map(value -> (ProgramDirection) value.value()).orElse(null);
     }
 
     private static <T> ProgramNodeStep data(

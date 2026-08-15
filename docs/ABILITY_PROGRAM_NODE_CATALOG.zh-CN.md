@@ -4,11 +4,11 @@
 
 ## 1. 统计口径
 
-- 已注册的唯一节点类型：218 个。
-- 编辑器当前可见的唯一节点类型：153 个；被合并节点仍注册为隐藏兼容节点。
-- 共享节点：125 个，全部能力分类都可使用。
-- 入口节点：7 个分类手动入口、4 个共享自动入口；每个槽位严格限制为一个入口。Level 0 不再注册程序定义和入口。
-- 非心理系分类专属节点：31 个。
+- 已注册的唯一节点类型：230 个。
+- 编辑器当前可见的唯一节点类型：165 个；被合并节点仍注册为隐藏兼容节点。
+- 共享节点：131 个，全部能力分类都可使用。
+- 入口节点：7 个分类手动入口、5 个共享自动入口；每个槽位严格限制为一个入口。Level 0 不再注册程序定义和入口。
+- 非心理系分类专属节点：37 个。
 - 心理掌握专属节点：入口 1 个、功能节点 55 个；其中 5 个旧精密操作别名已隐藏，但仍可导入和执行。
 - 每个程序最多 128 个节点、256 条边；一次执行燃料上限为 16385 步。
 - 共享世界查询的服务端硬上限通常为 32 格、128 个结果。心理系自己的“服务端视线目标”和“视线位置”可进行 64 格视线检测，但共享查询节点仍受 32 格上限控制。
@@ -16,6 +16,8 @@
 - 检查器中的有限配置统一使用左右按键循环选择，包括数值类型、运算符、比较符、实体大类、变量类型、离散强度、运动条件及心理系有限枚举；`power` 使用拖动滑条；常量实际数值、循环 tick、范围、持续时间、坐标、维度和变量名等自由值继续使用文本输入。
 
 分类定义：`electromaster`、`teleport`、`accelerator`、`meltdowner`、`aeromanip`、`darkmatter`、`mentalout`。
+
+各分类编辑器标题统一显示为“XXX精密操作”。原 `precision_operation` 技能仅保留为 Level 5 占位技能及旧存档数据载体，不再注册 GUI、按键或网络生命周期；心理掌握精密操作由通用入口在分类 Level 5 时直接解锁和路由。
 
 ### 端口类型缩写
 
@@ -44,7 +46,7 @@
 | 矢量操作 | `academy:program/accelerator/entry/on_cast` | 流程 | `— → flow:F` | 执行所选矢量操作程序。 |
 | 原子崩坏 | `academy:program/meltdowner/entry/on_cast` | 流程 | `— → flow:F` | 执行所选原子崩坏程序。 |
 | 气流操纵 | `academy:program/aeromanip/entry/on_cast` | 流程 | `— → flow:F` | 执行所选气流操纵程序。 |
-| 暗物质 | `academy:program/darkmatter/entry/on_cast` | 流程 | `— → flow:F` | 执行所选暗物质程序。 |
+| 未元物质 | `academy:program/darkmatter/entry/on_cast` | 流程 | `— → flow:F` | 执行所选未元物质程序。 |
 | 心理掌握 | `academy:program/entry/on_cast` | 流程 | `— → flow:F` | 精密操作/心理掌握程序入口。ID 格式与其他分类不一致。 |
 
 ### 2.1 共享自动入口节点
@@ -53,20 +55,21 @@
 
 | 完整节点 ID | 配置 | 自动触发时机 | 手动按键 |
 |---|---|---|---|
-| `academy:program/core/flow/trigger/melee` | — | 玩家完成一次近战攻击后触发。 | 不触发 |
-| `academy:program/core/flow/trigger/loop` | `interval=0..1200`，默认 `20` tick | 按固定世界时间间隔触发；`0` 按每 tick 处理。 | 可触发 |
-| `academy:program/core/flow/trigger/movement` | `condition=jump/sneak/sprint/elytra/swim` | 跳跃，或潜行、疾跑、鞘翅飞行、游泳状态发生切换时触发。 | 可触发 |
 | `academy:program/core/flow/trigger/hurt` | — | 入站攻击被接受后、实际伤害结算前触发。 | 不触发 |
+| `academy:program/core/flow/trigger/loop` | `interval=0..1200`，默认 `20` tick | 按固定世界时间间隔触发；`0` 按每 tick 处理。 | 可触发 |
+| `academy:program/core/flow/trigger/melee` | — | 玩家完成一次近战攻击后触发。 | 不触发 |
+| `academy:program/core/flow/trigger/movement` | `condition=jump/sneak/sprint/elytra/swim` | 跳跃，或潜行、疾跑、鞘翅飞行、游泳状态发生切换时触发。 | 可触发 |
+| `academy:program/core/flow/trigger/health_threshold` | `mode=below/above`、`threshold>=0` | 生命值首次进入阈值触发区间时触发；离开区间后重新武装。 | 不触发 |
 
 自动触发完全由服务端判定；自动循环不会逐次发送成功提示。为防止技能造成的伤害递归触发自身，同一玩家正在执行自动入口时不会重入。
 
 ## 2.X 分类调整计划
 `level 0`不需要有进入界面的入口
-所有能力分类进入入口按键统一调整为`\`，矢量操作的过滤网技能的默认按键调整为`=`
+所有能力分类进入入口按键统一调整为`\`，矢量操作的过滤网技能的默认按键为`=`
 
-**已实施**：Level 0 程序定义已移除；非心理系通用编辑器默认键改为 `\`，精密操作保持 `\`，反射过滤网默认键改为 `=`。仅当本地配置仍等于旧默认键时才迁移，不覆盖玩家自定义键位。
+**已实施**：Level 0 程序定义已移除；全部分类在能力达到 Level 5 后解锁精密操作，默认 GUI 键为 `\`，10 个槽位的默认施放键依次为 `Alt+1` 至 `Alt+9`、`Alt+0`；心理掌握沿用同一入口并转发到心理专属程序会话。旧 `=` 默认键会迁移为 `\`，但不覆盖玩家自定义键位；反射过滤网默认键仍为 `=`。统一 GUI/槽位键可在“设置 → 按键设置”中修改，未达到 Level 5 或当前能力不支持精密操作时不显示该组。
 
-## 3. 共享节点（125 个）
+## 3. 共享节点（131 个）
 
 共享节点 ID 前缀均为 `academy:program/core/`，归属为“所有分类”。
 
@@ -121,6 +124,7 @@
 | `flow/trigger/loop` | 流程入口 | `interval=0..1200` | `— → flow:F` | 固定间隔自动触发，也可手动触发。 |
 | `flow/trigger/melee` | 流程入口 | — | `— → flow:F` | 近战攻击目标后自动触发。 |
 | `flow/trigger/movement` | 流程入口 | `condition` | `— → flow:F` | 指定运动事件发生时自动触发，也可手动触发。 |
+| `flow/trigger/health_threshold` | 流程入口 | `mode=below/above`、`threshold` | `— → flow:F` | 生命值首次高于或低于阈值时触发一次；回到阈值另一侧后可再次触发。 |
 | `state/variable_get` | 逻辑 | `name`、`type` | `— → value:T` | 读取当前执行会话中的类型化变量。 |
 | `state/variable_set` | 逻辑 | `name`、`type` | `flow:F, value:T → flow:F` | 写入会话变量；变量使循环具备可变状态。 |
 
@@ -165,7 +169,7 @@
 
 **已实施**：新增两个共享目标节点；各分类原 `target/caster`、`target/look_target` 和心理系 `target/look_living` 隐藏兼容。
 
-### 3.6 共享实体过滤节点（11 个）
+### 3.6 共享实体过滤节点（13 个）
 
 完整 ID 前缀为 `academy:program/core/filter/entity/`，所有节点均为只读世界查询并输出去重且顺序稳定的实体集合。
 
@@ -177,13 +181,15 @@
 | `filter/entity/hostile_to` | — | `entities:ES,reference:E → entities:ES` | 保留会攻击参照实体或最近被其伤害的生物。 |
 | `filter/entity/targeted_by` | — | `entities:ES,target:E → entities:ES` | 保留当前攻击目标为指定实体的生物。 |
 | `filter/entity/last_damaged_by` | — | `entities:ES,attacker:E → entities:ES` | 保留最近被指定攻击者伤害的生物。 |
-| `filter/entity/type` | `type=any/living/player/mob/projectile/item` | `entities:ES → entities:ES` | 按检查器所选实体大类过滤。 |
+| `filter/entity/type` | `type=any/living/player/mob/hostile/animal/friendly/projectile/item` | `entities:ES → entities:ES` | 按检查器所选实体大类过滤；友善生物不包含敌对生物与动物。 |
 | `filter/entity/health_at_least` | — | `entities:ES,percent:N → entities:ES` | 保留生命百分比不低于 0–100 阈值的生物。 |
 | `filter/entity/health_at_most` | — | `entities:ES,percent:N → entities:ES` | 保留生命百分比不高于 0–100 阈值的生物。 |
+| `filter/entity/max_health_at_least` | — | `entities:ES,health:N → entities:ES` | 保留最大生命值不低于输入数值的生物。 |
+| `filter/entity/max_health_at_most` | — | `entities:ES,health:N → entities:ES` | 保留最大生命值不高于输入数值的生物。 |
 | `filter/entity/has_target` | — | `entities:ES → entities:ES` | 保留当前存在攻击目标的生物。 |
 | `filter/entity/visible_from` | — | `entities:ES,observer:E → entities:ES` | 保留与观察者同维度且视线可见的实体。 |
 
-### 3.7 集合节点（37 个）
+### 3.7 集合节点（40 个）
 
 集合域共有 4 种：
 
@@ -208,11 +214,14 @@
 | `get` | 集合 | `values:SET,index:I → value:ELEM` | 获取零基索引元素。 |
 | `foreach` | 集合/流程 | `flow:F,values:SET → body:F,done:F,value:ELEM` | 逐项执行循环体，结束后从 `done` 继续。 |
 
-实体集合额外提供一个通用选择节点：
+四种集合各提供一个服务端随机选择节点：
 
 | ID 后缀 | 类别 | 输入 → 输出 | 效果 |
 |---|---|---|---|
 | `collection/entity/random` | 集合 | `entities:ES → entity:E` | 由服务端从去重后的实体集合中等概率随机选取一个实体；空集合不输出数据。 |
+| `collection/world_position/random` | 集合 | `positions:WPS → position:WP` | 随机选取一个世界坐标；空集合不输出数据。 |
+| `collection/block_position/random` | 集合 | `blocks:BPS → block:BP` | 随机选取一个方块坐标；空集合不输出数据。 |
+| `collection/direction/random` | 集合 | `directions:DS → direction:D` | 随机选取一个方向；空集合不输出数据。 |
 
 `foreach`、会话变量和可循环流程边共同构成当前图灵完备控制核心。
 
@@ -261,29 +270,29 @@ ID 前缀：`academy:program/aeromanip/`；行动配置为连续 `power=0.00–2
 | 风压推动 | 射程 8，速度 0.45，CP 0 | 射程 16，速度 0.85，CP 10 | 射程 24，速度 1.35，CP 40 |
 | 层流切割 | 射程 32，伤害倍率 0，CP 0 | 射程 32，伤害倍率 1，CP 20 | 射程 32，伤害倍率 2，CP 80 |
 
-## 6. 暗物质专属节点（6 个）
+## 6. 未元物质专属节点（6 个）
 
 ID 前缀：`academy:program/darkmatter/`；行动配置为连续 `power=0.00–2.00`。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
-| `target/caster` | 目标 | 暗物质 | `— → entity:E` | 返回施术者。 |
-| `target/look_target` | 目标 | 暗物质 | `— → entity:E` | 返回服务端视线实体。 |
-| `action/disassemble_block` | 行动 | 暗物质分解 | `flow:F,block:BP → flow:F` | 分解一个已加载、允许修改的方块；不继承六翼范围扩张。 |
-| `action/disassemble_entity` | 行动 | 暗物质分解 | `flow:F,entity:E → flow:F` | 对一个存活、非友方、可见生物实体造成分解伤害；不扩散到周围实体。 |
-| `action/darkmatter_cut` | 行动 | 暗物质切割 | `flow:F,direction:D → flow:F` | 沿非垂直方向造成锥形暗物质斩击，保留熟练度二段斩和视觉。 |
-| `action/create_beetle` | 行动 | 暗物质塑造 | `flow:F,position:WP → flow:F` | 在已加载、世界边界内、无碰撞坐标塑造一只甲虫；受八只上限和维护 CP 约束。 |
+| `target/caster` | 目标 | 未元物质 | `— → entity:E` | 返回施术者。 |
+| `target/look_target` | 目标 | 未元物质 | `— → entity:E` | 返回服务端视线实体。 |
+| `action/disassemble_block` | 行动 | 未元物质分解 | `flow:F,block:BP → flow:F` | 分解一个已加载、允许修改的方块；不继承六翼范围扩张。 |
+| `action/disassemble_entity` | 行动 | 未元物质分解 | `flow:F,entity:E → flow:F` | 对一个存活、非友方、可见生物实体造成分解伤害；不扩散到周围实体。 |
+| `action/darkmatter_cut` | 行动 | 未元物质切割 | `flow:F,direction:D → flow:F` | 沿非垂直方向造成锥形未元物质斩击，保留熟练度二段斩和视觉。 |
+| `action/create_beetle` | 行动 | 未元物质塑造 | `flow:F,position:WP → flow:F` | 在已加载、世界边界内、无碰撞坐标塑造一只甲虫；受八只上限和维护 CP 约束。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
 | 分解方块 | 射程 8，CP 0 | 射程 16，CP 10 | 射程 32，CP 40 |
 | 分解实体 | 射程 16，伤害倍率 0，CP 0 | 射程 16，伤害倍率 1，CP 10 | 射程 16，伤害倍率 2，CP 40 |
-| 暗物质切割 | 半径上限 10，伤害倍率 0，CP 0 | 半径上限 10，伤害倍率 1，CP 20 | 半径上限 10，伤害倍率 2，CP 80 |
+| 未元物质切割 | 半径上限 10，伤害倍率 0，CP 0 | 半径上限 10，伤害倍率 1，CP 20 | 半径上限 10，伤害倍率 2，CP 80 |
 | 塑造甲虫 | 射程 8，CP 0 | 射程 16，CP 60 | 射程 32，CP 240 |
 
 每只甲虫额外占用 20 基础维护 CP。
 
-## 7. 电气掌握专属节点（4 个）
+## 7. 电气掌握专属节点（8 个）
 
 ID 前缀：`academy:program/electromaster/`；行动配置为连续 `power=0.00–2.00`。
 
@@ -291,15 +300,20 @@ ID 前缀：`academy:program/electromaster/`；行动配置为连续 `power=0.00
 |---|---|---|---|---|
 | `target/caster` | 目标 | 电气掌握 | `— → entity:E` | 返回施术者。 |
 | `target/look_target` | 目标 | 电气掌握 | `— → entity:E` | 返回服务端视线实体。 |
+| `target/chargeable_blocks` | 目标与方向 | 电流充能 | `center:WP,radius:N → blocks:BPS` | 收集半径最大 32 格内、已加载且具有 FE 能量槽的方块坐标，最多 128 个。 |
+| `logic/energy_detection` | 逻辑 | 电流充能 | `entity:E → result:B` 或 `block:BP → result:B` | `target_type=entity/block`；按 `mode=below/above` 检测目标 FE 总容量百分比是否低于/高于 `percent=0..100`。实体统计本体、双手和护甲的 FE。 |
+| `logic/redstone_detection` | 逻辑 | 电流充能 | `block:BP → result:B` | 按 `mode=below/above` 检测方块最佳邻接红石信号是否低于/高于 `level=0..15`。 |
 | `action/arc_discharge` | 行动 | 电弧激发 | `flow:F,entity:E → flow:F` | 对一个有效生物实体造成电击伤害并生成连接电弧。 |
-| `action/magnetic_move` | 行动 | 磁力操纵 | `flow:F,entity:E,destination:WP → flow:F` | 使经磁性规则允许的实体加速移向坐标。 |
+| `action/current_recharge` | 行动 | 电流充能 | `flow:F,entity:E → flow:F` 或 `flow:F,block:BP → flow:F` | `target_type=entity/block`；持续 10 tick 为目标输入 FE，方块无 FE 槽时改为持续红石充能。 |
+| `action/magnetic_move` | 行动 | 磁力操纵 | `flow:F,entity:E,destination:WP → flow:F` 或 `flow:F,block:BP,destination:WP → flow:F` | `target_type=entity/block`、`mode=pull/launch`。牵引会将目标加入持久清单，并逐 tick 把清单内全部目标移向坐标；发射会沿目标坐标射出、伤害轨迹实体并解除控制。ID 为兼容旧图保持不变，显示名改为“磁力操控”。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
 | 电弧放电 | 射程 12，伤害倍率 0，CP 0 | 射程 12，伤害倍率 1，CP 10 | 射程 12，伤害倍率 2，CP 40 |
-| 磁力移动 | 移动上限 6，速度 0.45，CP 0 | 移动上限 12，速度 0.8，CP 16 | 移动上限 20，速度 1.15，CP 64 |
+| 磁力操控·牵引 | 移动上限 6，速度 0.45，CP 0 | 移动上限 12，速度 0.8，CP 16 | 移动上限 20，速度 1.15，CP 64 |
+| 磁力操控·发射 | 发射速度 0.8，伤害倍率 0，CP 0 | 发射速度 1.4，伤害倍率 1，CP 16 | 发射速度 2.1，伤害倍率 2，CP 64 |
 
-## 8. 原子崩坏专属节点（4 个）
+## 8. 原子崩坏专属节点（5 个）
 
 ID 前缀：`academy:program/meltdowner/`；行动配置为连续 `power=0.00–2.00`。
 
@@ -307,15 +321,17 @@ ID 前缀：`academy:program/meltdowner/`；行动配置为连续 `power=0.00–
 |---|---|---|---|---|
 | `target/caster` | 目标 | 原子崩坏 | `— → entity:E` | 返回施术者。 |
 | `target/look_target` | 目标 | 原子崩坏 | `— → entity:E` | 返回服务端视线实体。 |
-| `action/electron_beam` | 行动 | 单发高速电子束 | `flow:F,direction:D → flow:F` | 沿方向生成具有硬性长度和伤害倍率的电子束。 |
-| `action/mining_beam` | 行动 | 采掘束 | `flow:F,block:BP → flow:F` | 向一个已加载、可破坏、允许交互的方块发射无实体伤害采掘束。 |
+| `action/atomic_jet` | 行动 | 突击喷射 | `flow:F,entity:E,direction:D → flow:F` | 在目标实体中心生成粒机波形高速炮；该目标免疫此束伤害并被向反方向推进，其他目标仍会受伤。配置 `power`、`destroy_blocks`。 |
+| `action/electron_beam` | 行动 | 单发高速电子束 | `flow:F,[origin:WP],direction:D → flow:F` 或 `flow:F,[origin:WP],target_position:WP → flow:F` | 在 `origin`（未接线时兼容为施术者眼部）生成粒机波形高速炮；`aim_mode=direction/target` 切换瞄准端口，`destroy_blocks` 控制是否申请方块破坏。 |
+| `action/mining_beam` | 行动 | 采掘束 | `flow:F,[origin:WP],[direction:D] → flow:F` 或 `flow:F,[origin:WP],target_position:WP → flow:F` | 在 `origin` 生成无实体伤害采掘束并按 `aim_mode` 发射；方向模式保留可选旧 `block:BP` 兼容端口。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
 | 定向电子束 | 长度 32，伤害倍率 0，束宽 1，CP 0 | 长度 32，伤害倍率 1，束宽 1，CP 15 | 长度 32，伤害倍率 2，束宽 1，CP 60 |
 | 定点采掘束 | 射程 12，视觉缩放 0.75，CP 0 | 射程 28，视觉缩放 1.0，CP 20 | 射程 48，视觉缩放 1.25，CP 80 |
+| 原子喷射 | 长度 32，伤害倍率 0，CP 0 | 长度 32，伤害倍率 1，CP 20 | 长度 32，伤害倍率 2，CP 80 |
 
-## 9. 空间移动专属节点（4 个）
+## 9. 空间移动专属节点（5 个）
 
 ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.00`。
 
@@ -323,13 +339,14 @@ ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.
 |---|---|---|---|---|
 | `target/caster` | 目标 | 空间移动 | `— → entity:E` | 返回施术者。 |
 | `target/look_target` | 目标 | 空间移动 | `— → entity:E` | 返回服务端视线实体。 |
-| `action/self_teleport` | 行动 | 自身传送 | `flow:F,destination:WP → flow:F` | 将施术者传送至同维度、已加载、无碰撞目标。 |
-| `action/entity_teleport` | 行动 | 快速定位传送 | `flow:F,entity:E,destination:WP → flow:F` | 将经强制移动权限验证的实体传送至安全目标。 |
+| `logic/space_safety` | 逻辑 | 空间移动通用 | `entity:E,position:WP → result:B` | 精确检测实体包围盒放置到世界坐标后是否位于世界边界内且无碰撞或挤压。 |
+| `action/self_teleport` | 行动 | 自身传送 | `flow:F,destination:WP → flow:F` | “安全传送”；将施术者传送至同维度、已加载、无碰撞目标。ID 为兼容旧图保持不变。 |
+| `action/entity_teleport` | 行动 | 快速定位传送 | `flow:F,entity:E,destination:CD,[direction:D] → flow:F` 或 `flow:F,block:BP,destination:CD,[direction:D] → flow:F` | “目标传送”；`target_type=entity/block` 切换来源端口，目标可为方块或世界坐标；可选方向同步实体朝向或带朝向属性方块的方向。ID 为兼容旧图保持不变。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
-| 自身瞬移 | 距离 8，CP 0 | 距离 16，CP 10 | 距离 32，CP 40 |
-| 实体瞬移 | 目标/移动距离 8，CP 0 | 目标/移动距离 16，CP 30 | 目标/移动距离 32，CP 120 |
+| 安全传送 | 距离 8，CP 0 | 距离 16，CP 10 | 距离 32，CP 40 |
+| 目标传送 | 目标/移动距离 8，CP 0 | 目标/移动距离 16，CP 30 | 目标/移动距离 32，CP 120 |
 
 ## 10. 心理掌握专属节点（55 个，另有入口 1 个）
 
@@ -441,11 +458,11 @@ ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.
 1. **能力枚举本地化错位**：`ControlCapability` 有 7 项，但心理参数文本只有 0–5；代码 5 是“直接控制”，当前 UI 显示成“守卫控制”，代码 6 没有文本。
 2. **行动强度语义有两套**：矢量操作一般节点使用离散 `strength`，其余分类与动能冲击波使用连续 `power`；前者选档，后者按线性伤害和平方 CP 规则缩放。
 3. **基础数值仍分散**：连续 `power` 的缩放公式已集中到 `ProgramPowerScale`，但射程、速度和标准 CP 仍由各 `Server*ProgramRuntime` 提供，尚不能通过一个配置面统一调整。
-4. **重复目标节点**：六个非心理分类都各自定义 `caster` 和 `look_target`，端口与大部分语义相同；心理系视线范围为 64，其他分类通常为 32，合并时必须保留分类策略参数。
+4. **重复目标节点已隐藏兼容**：各分类旧 `caster` 和 `look_target` 仍在注册表中供旧图解码，但节点库只显示共享版本；删除旧 ID 前仍需要正式迁移。
 5. **入口 ID 不一致**：心理系为 `academy:program/entry/on_cast`，其他分类为 `academy:program/<category>/entry/on_cast`。
 6. **隐藏兼容节点仍属于注册表**：心理系的 `entity_to_set`、`union`、`intersection`、`subtract`、`entity_position` 不在节点库显示，但旧程序仍可使用，调整或删除时必须提供迁移。
 7. **端口类型宽于实际要求**：多项行动端口声明为通用 `E`，运行时才限制为生物、弹射物、磁性实体或可移动实体，容易产生“连线合法、执行失败”。应考虑增加显式生物/投射物/磁性目标转换或过滤节点。
-8. **Level 0 仅有编辑面**：它包含入口和全部共享节点，但没有服务端执行适配器，执行会返回不支持。
+8. **统一 Level 5 门槛**：客户端入口、服务端请求/保存/导入/执行和自动触发均校验分类等级达到 5；调整等级规则时必须同时修改两端，避免只隐藏 GUI 但仍可发包执行。
 9. **世界查询与行动射程是两套上限**：共享查询通常固定 32 格，而电子束、采掘束、层流切割可达到 48 格；远距离行动需要由常量坐标或其他来源提供目标，不能完全依赖共享射线节点。
 10. **不可逆行动混入事务**：伤害、方块破坏和冲击波使用空回滚；实体/方块位移和传送可回滚。多行动程序后段失败时，前段不可逆效果不会恢复。
 

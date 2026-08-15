@@ -36,6 +36,14 @@ public final class MeltdownerProgramDefinition {
             if (id.equals(MeltdownerProgramNodeIds.ELECTRON_BEAM)
                     || id.equals(MeltdownerProgramNodeIds.MINING_BEAM)) {
                 configuration.addProperty("power", 1.0f);
+                configuration.addProperty("aim_mode", "direction");
+            }
+            if (id.equals(MeltdownerProgramNodeIds.ELECTRON_BEAM)) {
+                configuration.addProperty("destroy_blocks", true);
+            }
+            if (id.equals(MeltdownerProgramNodeIds.ATOMIC_JET)) {
+                configuration.addProperty("power", 1.0f);
+                configuration.addProperty("destroy_blocks", true);
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
             editor.add(

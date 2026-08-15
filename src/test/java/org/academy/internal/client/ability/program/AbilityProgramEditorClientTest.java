@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AbilityProgramEditorClientTest {
     @Test
-    void nonMentaloutEditorUsesUnmodifiedBackslashKeyByDefault() {
+    void sharedPrecisionOperationEditorUsesUnmodifiedBackslashKeyByDefault() {
         var key = AbilityProgramEditorClient.defaultOpenKey();
 
         assertEquals(InputSystem.InputType.KEYBOARD, key.type());
@@ -46,8 +46,15 @@ class AbilityProgramEditorClientTest {
                 InputConstants.KEY_1,
                 InputConstants.KEY_2,
                 InputConstants.KEY_3,
-                InputConstants.KEY_4
+                InputConstants.KEY_4,
+                InputConstants.KEY_5,
+                InputConstants.KEY_6,
+                InputConstants.KEY_7,
+                InputConstants.KEY_8,
+                InputConstants.KEY_9,
+                InputConstants.KEY_0
         };
+        assertEquals(keys.length, AbilityProgramEditorClient.SLOT_COUNT);
         for (var keyCode : keys) {
             var key = AbilityProgramEditorClient.defaultExecuteKey(keyCode);
             assertEquals(InputSystem.InputType.KEYBOARD, key.type());
@@ -60,12 +67,12 @@ class AbilityProgramEditorClientTest {
     }
 
     @Test
-    void categoryRoutingExcludesPrecisionOperationAndUndevelopedPlayers() {
+    void categoryRoutingIncludesMentaloutButExcludesUndevelopedPlayers() {
         assertTrue(AbilityProgramEditorClient.isSupportedCategoryId(
                 AcademyCraft.academy(AbilityCategoryNames.ACCELERATOR)));
         assertTrue(AbilityProgramEditorClient.isSupportedCategoryId(
                 AcademyCraft.academy(AbilityCategoryNames.TELEPORT)));
-        assertFalse(AbilityProgramEditorClient.isSupportedCategoryId(
+        assertTrue(AbilityProgramEditorClient.isSupportedCategoryId(
                 AcademyCraft.academy(AbilityCategoryNames.MENTALOUT)));
         assertFalse(AbilityProgramEditorClient.isSupportedCategoryId(
                 AcademyCraft.academy(AbilityCategoryNames.LEVEL0)));

@@ -9,6 +9,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.academy.internal.common.world.level.block.Blocks;
+import org.academy.internal.common.util.EnergyChargeHelper;
 
 public final class SolarGenMenu extends AbstractContainerMenu {
     public final ContainerLevelAccess access;
@@ -16,7 +17,12 @@ public final class SolarGenMenu extends AbstractContainerMenu {
     public SolarGenMenu(int containerId, Inventory playerInventory, ContainerLevelAccess pAccess, Container windgenContainer) {
         super(MenuTypes.SOLAR_GEN.get(), containerId);
         access = pAccess;
-        addSlot(new Slot(windgenContainer, 0, 44, 59));
+        addSlot(new Slot(windgenContainer, 0, 44, 59) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return EnergyChargeHelper.hasEnergyStorage(stack);
+            }
+        });
         for (var i = 0; i < 3; ++i) {
             for (var j = 0; j < 9; ++j) {
                 addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));

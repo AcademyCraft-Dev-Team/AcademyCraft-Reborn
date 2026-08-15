@@ -6,6 +6,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import org.academy.api.common.vanilla.OpenScreenPacket;
+import org.academy.api.common.ability.DevelopmentSource;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.level.block.*;
 import org.misaka.MisakaNetworkClient;
@@ -37,8 +38,8 @@ public final class Screens {
                 });
         SCREEN_HANDLERS.put(AbilityDeveloperBlock.ABILITY_DEVELOPER_SCREEN,
                 (_, buf) -> {
-                    var pos = buf.readBlockPos();
-                    Minecraft.getInstance().gui.setScreen(new AbilityDeveloperScreen(pos));
+                    var source = DevelopmentSource.CODEC.decode(buf);
+                    Minecraft.getInstance().gui.setScreen(new AbilityDeveloperScreen(source));
                 });
         SCREEN_HANDLERS.put(WirelessNodeBlock.WIRELESS_NODE_SCREEN,
                 (_, buf) -> {

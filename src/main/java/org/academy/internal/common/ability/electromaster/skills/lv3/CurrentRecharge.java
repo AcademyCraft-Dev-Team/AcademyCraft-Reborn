@@ -53,6 +53,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -187,6 +188,17 @@ public final class CurrentRecharge extends Skill {
         public static void handle(StopPacket packet) {
             var context = ACTIVE.get(packet.getPacketListener().getPlayer());
             if (context != null) context.end();
+        }
+
+        /** Starts the same charge-or-redstone behavior for exactly ten server ticks. */
+        public static ServerContext startProgramCharge(
+                ServerPlayer player,
+                @Nullable LivingEntity entity,
+                @Nullable BlockPos block
+        ) {
+            var context = new ProgramChargeContext(player, entity, block);
+            AbilitySystemServer.registerContext(context);
+            return context;
         }
 
         private static ChargeTarget resolveChargeTarget(ServerLevel level, ServerPlayer player, int milestone) {
@@ -364,6 +376,68 @@ public final class CurrentRecharge extends Skill {
             ended = true;
             clearPoweredBlock();
             Server.ACTIVE.remove(player, this);
+        }
+    }
+
+    private static final class ProgramChargeContext extends ServerContext {
+        private final ServerLevel startedLevel;
+        private final @Nullable LivingEntity entity;
+        private final @Nullable BlockPos block;
+        private boolean artificialSignal;
+        private int ticks;
+
+        private ProgramChargeContext(
+                ServerPlayer player,
+                @Nullable LivingEntity entity,
+                @Nullable BlockPos block
+        ) {
+            super(player);
+            if ((entity == null) == (block == null)) {
+                throw new IllegalArgumentException("Program charge needs exactly one target");
+            }
+            startedLevel = player.level();
+            this.entity = entity;
+            this.block = block == null ? null : block.immutable();
+        }
+
+        @SubscribeEvent
+        public void onTick(ServerTickEvent.Pre event) {
+            if (player.hasDisconnected()
+                    || !player.isAlive()
+                    || player.level() != startedLevel
+                    || !Skills.CURRENT_RECHARGE.get().isEnabled(player)
+                    || ++ticks > 10) {
+                unregister();
+                return;
+            }
+            if (entity != null) {
+                if (!entity.isAlive() || entity.level() != startedLevel) {
+                    unregister();
+                    return;
+                }
+                EnergyChargeHelper.chargeEntity(entity);
+                return;
+            }
+            if (!startedLevel.hasChunkAt(block)) {
+                unregister();
+                return;
+            }
+            var charged = EnergyChargeHelper.chargeBlock(startedLevel, block, null);
+            if (!charged && !artificialSignal) {
+                artificialSignal = true;
+                Server.addArtificialSignal(startedLevel, block);
+            } else if (charged && artificialSignal) {
+                artificialSignal = false;
+                Server.removeArtificialSignal(startedLevel, block);
+            }
+        }
+
+        @Override
+        protected void onUnregistered() {
+            if (artificialSignal) {
+                artificialSignal = false;
+                Server.removeArtificialSignal(startedLevel, block);
+            }
         }
     }
 

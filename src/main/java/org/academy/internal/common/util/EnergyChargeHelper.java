@@ -13,6 +13,8 @@ import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.academy.api.common.wireless.WirelessUser;
 
+import java.util.OptionalDouble;
+
 public final class EnergyChargeHelper {
     private static final EquipmentSlot[] ARMOR_SLOTS = {
             EquipmentSlot.HEAD,
@@ -37,6 +39,23 @@ public final class EnergyChargeHelper {
         if (stack.isEmpty()) return false;
         var access = ItemAccess.forStack(stack);
         return charge(access.getCapability(Capabilities.Energy.ITEM)) > 0;
+    }
+
+    /** Transfers stored machine energy into an item capability in one server-side operation. */
+    public static int transferToItem(WirelessUser source, ItemStack stack, int maxTransfer) {
+        if (source == null || stack.isEmpty() || maxTransfer <= 0) return 0;
+        var handler = ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM);
+        if (handler == null) return 0;
+        var available = source.extractEnergy(maxTransfer, true);
+        if (available <= 0) return 0;
+        try (var transaction = Transaction.openRoot()) {
+            var inserted = handler.insert(available, transaction);
+            if (inserted <= 0 || source.extractEnergy(inserted, true) != inserted) return 0;
+            var extracted = source.extractEnergy(inserted, false);
+            if (extracted != inserted) return 0;
+            transaction.commit();
+            return inserted;
+        }
     }
 
     public static boolean hasEnergyStorage(ItemStack stack) {
@@ -98,5 +117,57 @@ public final class EnergyChargeHelper {
     public static boolean chargeEntity(LivingEntity entity) {
         var charged = charge(entity.getCapability(Capabilities.Energy.ENTITY, null)) > 0;
         return chargeEquipment(entity) || charged;
+    }
+
+    public static boolean hasBlockEnergyStorage(Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof WirelessUser) return true;
+        for (var side : Direction.values()) {
+            if (level.getCapability(Capabilities.Energy.BLOCK, pos, side) != null) return true;
+        }
+        return false;
+    }
+
+    public static OptionalDouble blockEnergyFraction(Level level, BlockPos pos) {
+        long stored = 0L;
+        long capacity = 0L;
+        var seen = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<EnergyHandler, Boolean>());
+        for (var side : Direction.values()) {
+            var handler = level.getCapability(Capabilities.Energy.BLOCK, pos, side);
+            if (handler == null || !seen.add(handler)) continue;
+            stored += Math.max(0, handler.getAmountAsInt());
+            capacity += Math.max(0, handler.getCapacityAsInt());
+        }
+        if (capacity <= 0L && level.getBlockEntity(pos) instanceof WirelessUser user) {
+            stored = Math.max(0, user.getEnergyStored());
+            capacity = Math.max(0, user.getMaxEnergyStorage());
+        }
+        return capacity <= 0L
+                ? OptionalDouble.empty()
+                : OptionalDouble.of(Math.clamp((double) stored / capacity, 0.0, 1.0));
+    }
+
+    public static OptionalDouble entityEnergyFraction(LivingEntity entity) {
+        long stored = 0L;
+        long capacity = 0L;
+        var handlers = new java.util.ArrayList<EnergyHandler>();
+        var entityHandler = entity.getCapability(Capabilities.Energy.ENTITY, null);
+        if (entityHandler != null) handlers.add(entityHandler);
+        var stacks = new java.util.ArrayList<ItemStack>();
+        stacks.add(entity.getMainHandItem());
+        stacks.add(entity.getOffhandItem());
+        for (var slot : ARMOR_SLOTS) stacks.add(entity.getItemBySlot(slot));
+        for (var stack : stacks) {
+            if (stack.isEmpty()) continue;
+            var handler = ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM);
+            if (handler != null) handlers.add(handler);
+        }
+        for (var handler : handlers) {
+            stored += Math.max(0, handler.getAmountAsInt());
+            capacity += Math.max(0, handler.getCapacityAsInt());
+        }
+        return capacity <= 0L
+                ? OptionalDouble.empty()
+                : OptionalDouble.of(Math.clamp((double) stored / capacity, 0.0, 1.0));
     }
 }

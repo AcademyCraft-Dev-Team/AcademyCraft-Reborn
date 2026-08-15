@@ -88,6 +88,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public float length = 50f;
     public boolean fired = false;
     private UUID ownerId;
+    private UUID ignoredTargetId;
     private Skill sourceSkill;
     private float baseDamage;
     private float targetMaxHealthDamageRatio;
@@ -312,7 +313,8 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         var payload = org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload
                 .builder(owner, sourceSkill, source, 0.125f)
                 .targetFilter(target -> target.getType() != getType())
-                .outboundTargetFilter(target -> !owner.isAlliedTo(target))
+                .outboundTargetFilter(target -> !target.getUUID().equals(ignoredTargetId)
+                        && !owner.isAlliedTo(target))
                 .damage(target -> {
                     var living = target instanceof net.minecraft.world.entity.LivingEntity entity ? entity : null;
                     var index = hitIndex.getAndIncrement();
@@ -379,6 +381,11 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
 
     public boolean isCharging() {
         return currentChargerTicks < getAttackDelayTicks();
+    }
+
+    /** Excludes one launch subject from this beam without making its allies immune. */
+    public void setIgnoredTarget(net.minecraft.world.entity.Entity target) {
+        ignoredTargetId = target == null ? null : target.getUUID();
     }
 
     public int getAttackDelayTicks() {

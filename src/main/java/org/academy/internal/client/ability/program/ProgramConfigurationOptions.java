@@ -7,6 +7,9 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
+import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
+import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeIds;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -73,7 +76,8 @@ public final class ProgramConfigurationOptions {
         if (id.equals(CommonProgramNodeIds.FILTER_ENTITY_TYPE) && field.equals("type")) {
             return stringOptions(
                     "screen.academy.program.configuration.entity_type.",
-                    "any", "living", "player", "mob", "projectile", "item"
+                    "any", "living", "player", "mob", "hostile", "animal", "friendly",
+                    "projectile", "item"
             );
         }
         if (id.equals(CommonProgramNodeIds.LOOK_TARGET) && field.equals("target_type")) {
@@ -86,6 +90,50 @@ public final class ProgramConfigurationOptions {
             return stringOptions(
                     "screen.academy.program.configuration.movement.",
                     "jump", "sneak", "sprint", "elytra", "swim"
+            );
+        }
+        if (id.equals(CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD) && field.equals("mode")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.health_threshold.",
+                    "below", "above"
+            );
+        }
+        if ((id.equals(MeltdownerProgramNodeIds.ELECTRON_BEAM)
+                || id.equals(MeltdownerProgramNodeIds.MINING_BEAM))
+                && field.equals("aim_mode")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.aim_mode.",
+                    "direction", "target"
+            );
+        }
+        if ((id.equals(ElectromasterProgramNodeIds.ENERGY_DETECTION)
+                || id.equals(ElectromasterProgramNodeIds.CURRENT_RECHARGE)
+                || id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE))
+                && field.equals("target_type")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.energy_target.",
+                    "entity", "block"
+            );
+        }
+        if ((id.equals(ElectromasterProgramNodeIds.ENERGY_DETECTION)
+                || id.equals(ElectromasterProgramNodeIds.REDSTONE_DETECTION))
+                && field.equals("mode")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.detection_mode.",
+                    "below", "above"
+            );
+        }
+        if (id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE) && field.equals("mode")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.magnetic_mode.",
+                    "pull", "launch"
+            );
+        }
+        if (id.equals(TeleportProgramNodeIds.ENTITY_TELEPORT)
+                && field.equals("target_type")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.teleport_target.",
+                    "entity", "block"
             );
         }
         if ((id.equals(CommonProgramNodeIds.VARIABLE_GET)

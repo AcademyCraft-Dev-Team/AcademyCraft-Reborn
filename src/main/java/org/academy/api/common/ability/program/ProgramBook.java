@@ -56,6 +56,22 @@ public record ProgramBook(
                 : new ProgramBook(schemaVersion, revision, index, slots);
     }
 
+    /** Preserves existing slots while expanding or truncating a book to a new fixed slot count. */
+    public ProgramBook resize(int slotCount) {
+        if (slotCount <= 0) throw new IllegalArgumentException("Program book needs at least one slot");
+        if (slotCount == slots.size()) return this;
+        var resized = new ArrayList<Slot>(slotCount);
+        for (var index = 0; index < slotCount; index++) {
+            resized.add(index < slots.size() ? slots.get(index) : Slot.EMPTY);
+        }
+        return new ProgramBook(
+                schemaVersion,
+                revision,
+                Math.clamp(selectedSlot, 0, slotCount - 1),
+                resized
+        );
+    }
+
     public record Slot(@Nullable AbilityProgram program) {
         public static final Slot EMPTY = new Slot(null);
 
