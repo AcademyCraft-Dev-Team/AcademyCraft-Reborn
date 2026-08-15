@@ -48,6 +48,20 @@ class TeleportProgramExecutionBridgeTest {
                         .find(TeleportProgramNodeIds.ENTITY_TELEPORT)
                         .scope().requiredCapabilities());
 
+        var blockTeleport = new JsonObject();
+        blockTeleport.addProperty("power", 1.0f);
+        blockTeleport.addProperty("target_type", "block");
+        var blockSchema = catalog.schema(
+                TeleportProgramNodeIds.ENTITY_TELEPORT, blockTeleport);
+        assertNotNull(blockSchema);
+        assertEquals(List.of("flow", "block", "destination", "direction"),
+                blockSchema.inputs().stream().map(port -> port.name()).toList());
+        var safetySchema = catalog.schema(
+                TeleportProgramNodeIds.SPACE_SAFETY, new JsonObject());
+        assertNotNull(safetySchema);
+        assertEquals(List.of("entity", "position"),
+                safetySchema.inputs().stream().map(port -> port.name()).toList());
+
         var invalid = new JsonObject();
         invalid.addProperty("power", 3);
         assertNull(catalog.schema(TeleportProgramNodeIds.SELF_TELEPORT, invalid));
@@ -180,11 +194,19 @@ class TeleportProgramExecutionBridgeTest {
 
         @Override
         public ProgramActionTransaction.ProgramAction teleportEntity(
-                Object entity,
-                ProgramWorldPosition destination,
-                float power
+                Object target,
+                Object destination,
+                ProgramDirection direction,
+                float power,
+                TeleportProgramNodeCatalog.TargetType targetType
         ) {
-            return action("entity:" + entity + ":" + position(destination) + ":" + power);
+            return action("entity:" + target + ":"
+                    + position((ProgramWorldPosition) destination) + ":" + power);
+        }
+
+        @Override
+        public boolean isSpaceSafe(Object entity, ProgramWorldPosition position) {
+            return true;
         }
 
         @Override

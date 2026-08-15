@@ -10,6 +10,8 @@ public final class ElectromasterProgramCapabilities {
             AcademyCraft.academy(SkillNames.ARC_GENERATE);
     public static final Identifier MAGNETIC_MOVE =
             AcademyCraft.academy(SkillNames.MAGNET_MANIPULATION);
+    public static final Identifier CURRENT_RECHARGE =
+            AcademyCraft.academy(SkillNames.CURRENT_RECHARGE);
 
     private ElectromasterProgramCapabilities() {
     }

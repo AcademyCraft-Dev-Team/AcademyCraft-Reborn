@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Imports all four Precision Operation slots into the Mentalout program book.
+ * Imports the four legacy Precision Operation slots into the current program book.
  */
 public final class PrecisionProgramBookMigrator {
     private PrecisionProgramBookMigrator() {
@@ -22,7 +22,7 @@ public final class PrecisionProgramBookMigrator {
         if (ownerId == null) throw new IllegalArgumentException("Program book owner cannot be null");
         if (source == null) source = new PrecisionOperation.Data();
         PrecisionOperation.normalizeLegacyData(source);
-        var slots = new ArrayList<ProgramBook.Slot>(4);
+        var slots = new ArrayList<ProgramBook.Slot>(AbilityProgramManager.SLOT_COUNT);
         var failures = new ArrayList<SlotFailure>();
         for (var slot = 0; slot < 4; slot++) {
             var precisionGraph = source.legacySlot(slot);
@@ -37,6 +37,9 @@ public final class PrecisionProgramBookMigrator {
                 continue;
             }
             slots.add(new ProgramBook.Slot(imported.program));
+        }
+        while (slots.size() < AbilityProgramManager.SLOT_COUNT) {
+            slots.add(ProgramBook.Slot.EMPTY);
         }
         return new MigrationResult(
                 new ProgramBook(

@@ -23,6 +23,7 @@ import org.academy.internal.common.ability.program.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.CompiledProgram;
 import org.academy.internal.common.ability.program.PrecisionProgramCompilation;
 import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
 import org.academy.internal.common.ability.program.ProgramBookCodec;
 import org.academy.internal.common.ability.program.ProgramTriggers;
@@ -39,6 +40,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 public final class PrecisionOperationManager {
+    private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     private static final Map<UUID, CachedPrograms> COMPILED = new HashMap<>();
     private static boolean clientInitialized;
     private static boolean serverInitialized;
@@ -139,27 +141,30 @@ public final class PrecisionOperationManager {
             ProgramTriggers.Type trigger,
             CommonProgramNodeCatalog.MovementCondition movement
     ) {
+        if (!unlocked(player)) return;
         var data = getOrCreateData(player);
         var gameTime = player.level().getGameTime();
-        for (var slot = 0; slot < 4; slot++) {
+        for (var slot = 0; slot < SLOT_COUNT; slot++) {
             var abilityProgram = data.program(player.getUUID(), slot);
-            if (abilityProgram == null
-                    || !ProgramTriggers.matches(abilityProgram, trigger, movement, gameTime)) continue;
+            if (abilityProgram == null) continue;
+            var matches = trigger == ProgramTriggers.Type.HEALTH
+                    ? ProgramTriggers.matchesHealth(
+                            abilityProgram, player,
+                            AbilityProgramDefinitions.mentalout().category(), slot)
+                    : ProgramTriggers.matches(abilityProgram, trigger, movement, gameTime);
+            if (!matches) continue;
             var compiled = compiled(player, slot);
-            if (!compiled.valid() || hasLockedBranch(player, compiled.program())) continue;
+            if (!compiled.valid()) continue;
             PrecisionOperationRuntime.execute(player, slot, compiled.program(), false);
         }
     }
 
-    private static boolean hasLockedBranch(ServerPlayer player, CompiledProgram program) {
-        var lockedBranch = program.graph().nodes().stream()
-                .filter(node -> node.type().equals(CommonProgramNodeIds.BRANCH)
-                        || java.util.Optional.ofNullable(PrecisionProgramNodeIds.kind(node.type()))
-                        .map(PrecisionGraph.NodeKind::isConditionalBranch)
-                        .orElse(false))
-                .findFirst().orElse(null);
-        return lockedBranch != null
-                && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3);
+    private static boolean unlocked(ServerPlayer player) {
+        var system = AbilitySystemServer.getSystem(player);
+        var category = system.getPlayerAbilityCategory(player.getUUID());
+        return category != null
+                && category.getKey().equals(AbilityProgramDefinitions.mentalout().category())
+                && system.getPlayerLevel(player.getUUID()) >= 5;
     }
 
     static void runtimeError(
@@ -223,20 +228,20 @@ public final class PrecisionOperationManager {
         @SubscribePacket
         public static void request(RequestPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (!Skills.PRECISION_OPERATION.get().isEnabled(player)) return;
+            if (!unlocked(player)) return;
             sync(player, getOrCreateData(player));
         }
 
         @SubscribePacket
         public static void save(SavePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (!Skills.PRECISION_OPERATION.get().isEnabled(player)) {
+            if (!unlocked(player)) {
                 result(player, packet.slot, FeedbackType.ERROR, 0L,
                         PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE, -1, -1, 0);
                 return;
             }
             var data = getOrCreateData(player);
-            if (packet.slot < 0 || packet.slot >= 4 || packet.expectedRevision != data.revision()) {
+            if (packet.slot < 0 || packet.slot >= SLOT_COUNT || packet.expectedRevision != data.revision()) {
                 result(player, packet.slot, FeedbackType.ERROR, data.revision(),
                         PrecisionGraph.Diagnostic.REVISION_CONFLICT, -1, -1, 0);
                 sync(player, data);
@@ -282,20 +287,6 @@ public final class PrecisionOperationManager {
                         PrecisionGraph.Diagnostic.EMPTY_PROGRAM, -1, -1, 0);
                 return;
             }
-            var lockedBranch = abilityProgram.graph().nodes().stream()
-                    .filter(node -> node.type().equals(CommonProgramNodeIds.BRANCH)
-                            || java.util.Optional.ofNullable(
-                                    PrecisionProgramNodeIds.kind(node.type()))
-                            .map(PrecisionGraph.NodeKind::isConditionalBranch)
-                            .orElse(false))
-                    .findFirst().orElse(null);
-            if (lockedBranch != null
-                    && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3)) {
-                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
-                        PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED,
-                        lockedBranch.id(), -1, 0);
-                return;
-            }
             data.replaceProgram(player.getUUID(), packet.slot, abilityProgram);
             markSaved(player, data, packet.slot);
         }
@@ -321,7 +312,8 @@ public final class PrecisionOperationManager {
                     packet.sequence
             )) return;
             var player = packet.getPacketListener().getPlayer();
-            if (packet.slot < 0 || packet.slot >= 4) return;
+            if (!unlocked(player)) return;
+            if (packet.slot < 0 || packet.slot >= SLOT_COUNT) return;
             var compiled = compiled(player, packet.slot);
             if (!compiled.valid()) {
                 result(
@@ -337,21 +329,6 @@ public final class PrecisionOperationManager {
                 return;
             }
             if (!ProgramTriggers.acceptsManualExecution(compiled.program())) return;
-            var lockedBranch = compiled.program().graph().nodes().stream()
-                    .filter(node -> node.type().equals(CommonProgramNodeIds.BRANCH)
-                            || java.util.Optional.ofNullable(
-                                    PrecisionProgramNodeIds.kind(node.type()))
-                            .map(PrecisionGraph.NodeKind::isConditionalBranch)
-                            .orElse(false))
-                    .findFirst().orElse(null);
-            if (lockedBranch != null
-                    && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3)) {
-                result(player, packet.slot, FeedbackType.ERROR,
-                        getOrCreateData(player).revision(),
-                        PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED,
-                        lockedBranch.id(), -1, 0);
-                return;
-            }
             var execution = PrecisionOperationRuntime.execute(
                     player,
                     packet.slot,
@@ -385,7 +362,7 @@ public final class PrecisionOperationManager {
                 int affectedCount
         ) {
             MisakaNetworkServer.send(player, new ResultPacket(
-                    Mth.clamp(slot, 0, 3),
+                    Mth.clamp(slot, 0, SLOT_COUNT - 1),
                     type,
                     revision,
                     diagnostic,
@@ -603,7 +580,7 @@ public final class PrecisionOperationManager {
     }
 
     private static final class CachedPrograms {
-        private final CompiledProgram[] programs = new CompiledProgram[4];
+        private final CompiledProgram[] programs = new CompiledProgram[SLOT_COUNT];
         private long revision = Long.MIN_VALUE;
     }
 

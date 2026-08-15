@@ -2,7 +2,9 @@ package org.academy.internal.common.ability.meltdowner.program;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
@@ -20,6 +22,8 @@ import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
@@ -55,32 +59,36 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
 
     @Override
     public ProgramActionTransaction.ProgramAction fireElectronBeam(
-            ProgramDirection direction,
-            float power
+            @Nullable ProgramWorldPosition origin,
+            @Nullable ProgramDirection direction,
+            @Nullable ProgramWorldPosition target,
+            float power,
+            boolean destroyBlocks
     ) {
         return new ProgramActionTransaction.ProgramAction() {
-            private Vec3 normalizedDirection;
+            private BeamPlan plan;
 
             @Override
             public void validate() {
                 requireCasterReady(Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get());
-                normalizedDirection = normalize(direction);
+                plan = requireBeamPlan(origin, direction, target, electronBeamLength(power));
             }
 
             @Override
             public ProgramActionTransaction.Undo apply() {
                 var skill = Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get();
                 requireCasterReady(skill);
-                normalizedDirection = normalize(direction);
+                plan = requireBeamPlan(origin, direction, target, electronBeamLength(power));
                 charge(skill, electronBeamCost(power));
                 var beam = spawnBeam(
                         skill,
-                        normalizedDirection,
-                        electronBeamLength(power),
+                        plan.origin(),
+                        plan.direction(),
+                        plan.length(),
                         SingleHighSpeedElectronBeam.BASE_DAMAGE * damageScale(power),
                         SingleHighSpeedElectronBeam.MAX_HEALTH_DAMAGE_RATIO
                                 * damageScale(power),
-                        DestroyBlocksSetting.canDestroyBlocks(player, skill),
+                        destroyBlocks && DestroyBlocksSetting.canDestroyBlocks(player, skill),
                         Skills.RADIATION_INTENSIFY.get().isEnabled(player),
                         electronBeamScale(power)
                 );
@@ -91,7 +99,10 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
 
     @Override
     public ProgramActionTransaction.ProgramAction fireMiningBeam(
-            ProgramBlockPosition block,
+            @Nullable ProgramWorldPosition origin,
+            @Nullable ProgramDirection direction,
+            @Nullable ProgramWorldPosition target,
+            @Nullable ProgramBlockPosition legacyBlock,
             float power
     ) {
         return new ProgramActionTransaction.ProgramAction() {
@@ -100,17 +111,18 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
             @Override
             public void validate() {
                 requireCasterReady(Skills.MINING_BEAM.get());
-                plan = requireMiningPlan(block, miningBeamRange(power));
+                plan = requireMiningPlan(origin, direction, target, legacyBlock, miningBeamRange(power));
             }
 
             @Override
             public ProgramActionTransaction.Undo apply() {
                 var skill = Skills.MINING_BEAM.get();
                 requireCasterReady(skill);
-                plan = requireMiningPlan(block, miningBeamRange(power));
+                plan = requireMiningPlan(origin, direction, target, legacyBlock, miningBeamRange(power));
                 charge(skill, miningBeamCost(power));
                 var beam = spawnBeam(
                         skill,
+                        plan.origin(),
                         plan.direction(),
                         plan.length(),
                         0.0f,
@@ -120,6 +132,57 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                         miningBeamScale(power)
                 );
                 return () -> discard(beam);
+            }
+        };
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction atomicJet(
+            Object entityReference,
+            ProgramDirection direction,
+            float power,
+            boolean destroyBlocks
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private Entity target;
+            private Vec3 launchDirection;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.JET_STRIKE.get());
+                target = requireEntity(entityReference);
+                launchDirection = normalize(direction);
+                if (!EntityMotionGuard.canApplyMotionFrom(player, target)) {
+                    throw new IllegalArgumentException("Atomic Jet target rejected movement");
+                }
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                validate();
+                var skill = Skills.JET_STRIKE.get();
+                charge(skill, ProgramPowerScale.cost(20.0f, power));
+                var previousMotion = target.getDeltaMovement();
+                var origin = target.getBoundingBox().getCenter();
+                var beam = spawnBeam(
+                        skill,
+                        origin,
+                        launchDirection,
+                        electronBeamLength(power),
+                        SingleHighSpeedElectronBeam.BASE_DAMAGE * damageScale(power),
+                        0.0f,
+                        destroyBlocks && DestroyBlocksSetting.canDestroyBlocks(player, skill),
+                        false,
+                        electronBeamScale(power)
+                );
+                beam.setIgnoredTarget(target);
+                setVelocity(player, target, previousMotion.add(launchDirection.scale(-1.1)));
+                return () -> {
+                    discard(beam);
+                    if (targets.sameUsableLevel(target)) {
+                        setVelocity(player, target, previousMotion);
+                    }
+                };
             }
         };
     }
@@ -158,15 +221,25 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
     }
 
     private MiningPlan requireMiningPlan(
-            ProgramBlockPosition target,
+            @Nullable ProgramWorldPosition origin,
+            @Nullable ProgramDirection direction,
+            @Nullable ProgramWorldPosition target,
+            @Nullable ProgramBlockPosition legacyTarget,
             double maximumRange
     ) {
-        Objects.requireNonNull(target, "target");
+        if (legacyTarget == null) {
+            var plan = requireBeamPlan(origin, direction, target, maximumRange);
+            if (!DestroyBlocksSetting.canDestroyBlocks(player, Skills.MINING_BEAM.get())) {
+                throw new IllegalStateException("Mining Beam block destruction is disabled");
+            }
+            return new MiningPlan(plan.origin(), plan.direction(), plan.length());
+        }
+        var targetBlock = legacyTarget;
         var level = targets.level();
-        if (!target.dimension().equals(level.dimension().identifier())) {
+        if (!targetBlock.dimension().equals(level.dimension().identifier())) {
             throw new IllegalArgumentException("Mining target is in another dimension");
         }
-        var position = new BlockPos(target.x(), target.y(), target.z());
+        var position = new BlockPos(targetBlock.x(), targetBlock.y(), targetBlock.z());
         if (position.getY() < level.getMinY()
                 || position.getY() >= level.getMaxY()
                 || !level.hasChunkAt(position)) {
@@ -186,18 +259,44 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                 && !player.canUseGameMasterBlocks()) {
             throw new IllegalArgumentException("Mining target is protected");
         }
-        var eye = player.getEyePosition();
+        var eye = origin == null ? player.getEyePosition() : targets.requireLocalPosition(origin);
         var center = Vec3.atCenterOf(position);
         var offset = center.subtract(eye);
         var distance = offset.length();
         if (!Double.isFinite(distance) || distance < 1.0e-6 || distance > maximumRange) {
             throw new IllegalArgumentException("Mining target is outside program range");
         }
-        return new MiningPlan(offset.scale(1.0 / distance), distance);
+        return new MiningPlan(eye, offset.scale(1.0 / distance), distance);
+    }
+
+    private BeamPlan requireBeamPlan(
+            @Nullable ProgramWorldPosition requestedOrigin,
+            @Nullable ProgramDirection requestedDirection,
+            @Nullable ProgramWorldPosition requestedTarget,
+            double length
+    ) {
+        var origin = requestedOrigin == null
+                ? player.getEyePosition()
+                : targets.requireLocalPosition(requestedOrigin);
+        if (origin.distanceToSqr(player.position()) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+            throw new IllegalArgumentException("Beam origin is outside program range");
+        }
+        Vec3 direction;
+        if (requestedTarget != null) {
+            var target = targets.requireLocalPosition(requestedTarget);
+            direction = target.subtract(origin);
+        } else if (requestedDirection != null) {
+            direction = new Vec3(
+                    requestedDirection.x(), requestedDirection.y(), requestedDirection.z());
+        } else {
+            throw new IllegalArgumentException("Beam direction or target is required");
+        }
+        return new BeamPlan(origin, normalize(direction), length);
     }
 
     private HighSpeedElectronBeam spawnBeam(
             Skill skill,
+            Vec3 origin,
             Vec3 direction,
             double length,
             float baseDamage,
@@ -224,7 +323,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
         beam.setAttackDelayTicks(0);
         beam.setBeamLength((float) length);
         beam.setBeamScale(scale);
-        beam.setPos(player.getEyePosition().add(direction.scale(0.75)));
+        beam.setPos(origin);
         beam.setYRot((float) Math.toDegrees(Math.atan2(-direction.x, direction.z)));
         beam.setXRot((float) Math.toDegrees(-Math.asin(
                 Math.clamp(direction.y, -1.0, 1.0))));
@@ -269,6 +368,37 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
         return value.normalize();
     }
 
+    private static Vec3 normalize(Vec3 value) {
+        if (value == null
+                || !Double.isFinite(value.x)
+                || !Double.isFinite(value.y)
+                || !Double.isFinite(value.z)
+                || value.lengthSqr() < 1.0e-12) {
+            throw new IllegalArgumentException("Beam direction is invalid");
+        }
+        return value.normalize();
+    }
+
+    private Entity requireEntity(Object value) {
+        if (!(value instanceof Entity entity) || !targets.sameUsableLevel(entity)) {
+            throw new IllegalArgumentException("Atomic Jet entity target is invalid");
+        }
+        if (entity.distanceToSqr(player) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+            throw new IllegalArgumentException("Atomic Jet target is outside program range");
+        }
+        return entity;
+    }
+
+    private static void setVelocity(ServerPlayer controller, Entity entity, Vec3 velocity) {
+        EntityMotionGuard.runWithMotionSource(
+                controller, () -> entity.setDeltaMovement(velocity));
+        entity.hurtMarked = true;
+        entity.resetFallDistance();
+        if (entity instanceof ServerPlayer targetPlayer) {
+            targetPlayer.connection.send(new ClientboundSetEntityMotionPacket(targetPlayer));
+        }
+    }
+
     private static void discard(HighSpeedElectronBeam beam) {
         if (beam != null && !beam.isRemoved()) beam.discard();
     }
@@ -303,6 +433,9 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
         return ProgramPowerScale.interpolate(power, 0.75f, 1.0f, 1.25f);
     }
 
-    private record MiningPlan(Vec3 direction, double length) {
+    private record BeamPlan(Vec3 origin, Vec3 direction, double length) {
+    }
+
+    private record MiningPlan(Vec3 origin, Vec3 direction, double length) {
     }
 }

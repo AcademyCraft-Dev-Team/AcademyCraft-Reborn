@@ -33,6 +33,7 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         this.entries = Map.copyOf(entries);
         orderedEntries = entries.values().stream()
                 .sorted(Comparator.comparing(Entry::group)
+                        .thenComparingInt(ProgramEditorNodeCatalog::displayPriority)
                         .thenComparing(entry -> entry.id().toString()))
                 .toList();
     }
@@ -136,6 +137,9 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("interval", 20);
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) {
             configuration.addProperty("condition", "jump");
+        } else if (id.equals(CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD)) {
+            configuration.addProperty("mode", "below");
+            configuration.addProperty("threshold", 10.0f);
         } else if (id.equals(CommonProgramNodeIds.WORLD_POSITION_CONSTANT)) {
             configuration.addProperty("dimension", "minecraft:overworld");
             configuration.addProperty("x", 0.0);
@@ -155,6 +159,30 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("z", 1.0);
         }
         return configuration;
+    }
+
+    private static int displayPriority(Entry entry) {
+        var id = entry.id();
+        var path = id.getPath();
+        if (entry.group() == Group.TARGET) {
+            if (id.equals(CommonProgramNodeIds.CASTER)) return -1000;
+            if (id.equals(CommonProgramNodeIds.LOOK_TARGET)) return -990;
+        }
+        if (entry.group() == Group.COLLECTION) {
+            if (path.contains("/collection/entity/")) return -1000;
+            if (path.contains("/collection/block_position/")) return -700;
+            if (path.contains("/collection/world_position/")) return -600;
+            if (path.contains("/collection/direction/")) return -500;
+        }
+        if (entry.group() == Group.FLOW) {
+            if (id.equals(CommonProgramNodeIds.TRIGGER_HURT)) return -1000;
+            if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) return -990;
+            if (id.equals(CommonProgramNodeIds.TRIGGER_MELEE)) return -980;
+            if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) return -970;
+            if (path.endsWith("/entry/on_cast")) return -960;
+            if (id.equals(CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD)) return -950;
+        }
+        return 0;
     }
 
     private static Group commonGroup(Identifier id, ProgramNodeRole role) {

@@ -1,10 +1,19 @@
 package org.academy.internal.common.ability.program;
 
+import com.mojang.serialization.JsonOps;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramGraph;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 /** Classifies program entry nodes and matches them against server-side trigger events. */
 public final class ProgramTriggers {
+    private static final Map<HealthLatchKey, Boolean> HEALTH_LATCHES = new HashMap<>();
+
     private ProgramTriggers() {
     }
 
@@ -48,7 +57,44 @@ public final class ProgramTriggers {
                 }
             }
             case MELEE, HURT -> true;
+            case HEALTH -> false;
         };
+    }
+
+    public static boolean matchesHealth(
+            AbilityProgram program,
+            ServerPlayer player,
+            Identifier category,
+            int slot
+    ) {
+        var entry = triggerEntry(program);
+        if (entry == null || type(entry.type()) != Type.HEALTH) return false;
+        var decoded = CommonProgramNodeCatalog.HealthThresholdTriggerConfiguration.CODEC
+                .parse(JsonOps.INSTANCE, entry.configuration())
+                .result()
+                .orElse(null);
+        if (decoded == null) return false;
+        var key = new HealthLatchKey(player.getUUID(), category, slot);
+        var matches = switch (decoded.mode()) {
+            case ABOVE -> player.getHealth() > decoded.threshold();
+            case BELOW -> player.getHealth() < decoded.threshold();
+        };
+        var latched = HEALTH_LATCHES.getOrDefault(key, false);
+        if (!matches) {
+            HEALTH_LATCHES.remove(key);
+            return false;
+        }
+        if (latched) return false;
+        HEALTH_LATCHES.put(key, true);
+        return true;
+    }
+
+    public static void clear(UUID playerId) {
+        HEALTH_LATCHES.keySet().removeIf(key -> key.playerId.equals(playerId));
+    }
+
+    public static void clear() {
+        HEALTH_LATCHES.clear();
     }
 
     private static ProgramGraph.Node triggerEntry(AbilityProgram program) {
@@ -63,6 +109,7 @@ public final class ProgramTriggers {
         if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) return Type.LOOP;
         if (id.equals(CommonProgramNodeIds.TRIGGER_MELEE)) return Type.MELEE;
         if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) return Type.MOVEMENT;
+        if (id.equals(CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD)) return Type.HEALTH;
         return null;
     }
 
@@ -70,6 +117,10 @@ public final class ProgramTriggers {
         MELEE,
         LOOP,
         MOVEMENT,
-        HURT
+        HURT,
+        HEALTH
+    }
+
+    private record HealthLatchKey(UUID playerId, Identifier category, int slot) {
     }
 }

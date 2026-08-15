@@ -374,11 +374,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             smallText(graphics, title.getString(), panelX + 12, panelY + 6, TEXT, 84);
             x += 96;
         }
+        var slotWidth = slotTabWidth(x);
         for (var index = 0; index < session.slotCount(); index++) {
-            button(graphics, x, panelY + 2, 38, 16,
+            button(graphics, x, panelY + 2, slotWidth, 16,
                     Component.translatable("screen.academy.precision_operation.slot", index + 1),
                     mouseX, mouseY, index == slot, true);
-            x += 40;
+            x += slotWidth + 2;
         }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
@@ -900,8 +901,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private boolean handleTopBarClick(double mouseX, double mouseY) {
         var x = panelX + 4 + (panelW >= 620 ? 96 : 0);
+        var slotWidth = slotTabWidth(x);
         for (var index = 0; index < session.slotCount(); index++) {
-            if (inside(mouseX, mouseY, x, panelY + 2, 38, 16)) {
+            if (inside(mouseX, mouseY, x, panelY + 2, slotWidth, 16)) {
                 session.updateLocalProgram(slot, document.program());
                 slot = index;
                 session.selectSlot(slot);
@@ -910,7 +912,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 fitCanvas(true);
                 return true;
             }
-            x += 40;
+            x += slotWidth + 2;
         }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
@@ -932,6 +934,13 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             toolsX += TOOL_SIZE + 2;
         }
         return false;
+    }
+
+    private int slotTabWidth(int startX) {
+        var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
+        var count = Math.max(1, session.slotCount());
+        var available = Math.max(1, toolsX - startX - (count - 1) * 2 - 2);
+        return Math.clamp(available / count, 18, 38);
     }
 
     private boolean handleRailClick(double mouseX, double mouseY) {

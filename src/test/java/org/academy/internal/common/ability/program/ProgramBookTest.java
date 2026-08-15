@@ -40,6 +40,27 @@ class ProgramBookTest {
     }
 
     @Test
+    void resizingPreservesProgramsRevisionAndSelectedSlot() {
+        var program = new AbilityProgram(
+                AbilityProgram.CURRENT_SCHEMA_VERSION,
+                UUID.randomUUID(),
+                "Resize",
+                PrecisionProgramNodeCatalog.MENTALOUT,
+                ProgramGraph.EMPTY,
+                ProgramEditorLayout.EMPTY
+        );
+        var original = ProgramBook.empty(4).replaceSlot(3, program).select(3);
+
+        var resized = original.resize(10);
+
+        assertEquals(10, resized.slots().size());
+        assertEquals(original.revision(), resized.revision());
+        assertEquals(3, resized.selectedSlot());
+        assertEquals(program, resized.slot(3).program());
+        assertTrue(resized.slot(9).empty());
+    }
+
+    @Test
     void migratesPrecisionSlotsAndPreservesRevisionAndLayout() {
         var data = new PrecisionOperation.Data();
         data.replaceSlot(1, precisionGraph());
@@ -48,6 +69,7 @@ class ProgramBookTest {
         var migrated = PrecisionProgramBookMigrator.migrate(owner, data);
 
         assertTrue(migrated.complete());
+        assertEquals(10, migrated.book().slots().size());
         assertEquals(data.revision(), migrated.book().revision());
         assertTrue(migrated.book().slot(0).empty());
         var program = migrated.book().slot(1).program();

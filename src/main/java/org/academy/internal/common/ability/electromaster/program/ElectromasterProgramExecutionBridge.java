@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.electromaster.program;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.program.ProgramLimits;
+import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
@@ -83,6 +84,39 @@ public final class ElectromasterProgramExecutionBridge {
                         .map(value -> data(
                                 "entity", ProgramValueTypes.ENTITY_REFERENCE, value))
                         .orElseGet(() -> ProgramNodeStep.data(Map.of())));
+        put(result, ElectromasterProgramNodeIds.CHARGEABLE_BLOCKS,
+                (context, _, inputs) -> data(
+                        "blocks",
+                        ProgramValueTypes.BLOCK_POSITION_SET,
+                        runtime(context).chargeableBlocksAround(
+                                worldPosition(inputs, "center"),
+                                floatValue(inputs, "radius"))));
+        put(result, ElectromasterProgramNodeIds.ENERGY_DETECTION,
+                (ProgramVmContext context,
+                 ElectromasterProgramNodeCatalog.EnergyDetectionConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var fraction = configuration.targetType()
+                            == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY
+                            ? runtime(context).entityEnergyFraction(entity(inputs, "entity"))
+                            : runtime(context).blockEnergyFraction(blockPosition(inputs, "block"));
+                    var threshold = configuration.percent() / 100.0;
+                    var matches = fraction.isPresent() && switch (configuration.mode()) {
+                        case ABOVE -> fraction.getAsDouble() > threshold;
+                        case BELOW -> fraction.getAsDouble() < threshold;
+                    };
+                    return data("result", ProgramValueTypes.BOOLEAN, matches);
+                });
+        put(result, ElectromasterProgramNodeIds.REDSTONE_DETECTION,
+                (ProgramVmContext context,
+                 ElectromasterProgramNodeCatalog.RedstoneDetectionConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var power = runtime(context).redstonePower(blockPosition(inputs, "block"));
+                    var matches = switch (configuration.mode()) {
+                        case ABOVE -> power > configuration.level();
+                        case BELOW -> power < configuration.level();
+                    };
+                    return data("result", ProgramValueTypes.BOOLEAN, matches);
+                });
         put(result, ElectromasterProgramNodeIds.ARC_DISCHARGE,
                 (ProgramVmContext context,
                  ElectromasterProgramNodeCatalog.PowerConfiguration configuration,
@@ -93,12 +127,29 @@ public final class ElectromasterProgramExecutionBridge {
                 });
         put(result, ElectromasterProgramNodeIds.MAGNETIC_MOVE,
                 (ProgramVmContext context,
-                 ElectromasterProgramNodeCatalog.PowerConfiguration configuration,
+                 ElectromasterProgramNodeCatalog.MagneticConfiguration configuration,
                  ProgramInputView inputs) -> {
                     stage(context, runtime(context).magneticMove(
-                            entity(inputs, "entity"),
+                            configuration.targetType()
+                                    == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY
+                                    ? entity(inputs, "entity")
+                                    : blockPosition(inputs, "block"),
                             worldPosition(inputs, "destination"),
-                            configuration.power()));
+                            configuration.power(),
+                            configuration.targetType(),
+                            configuration.mode()));
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, ElectromasterProgramNodeIds.CURRENT_RECHARGE,
+                (ProgramVmContext context,
+                 ElectromasterProgramNodeCatalog.CurrentRechargeConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    stage(context, runtime(context).currentRecharge(
+                            configuration.targetType()
+                                    == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY
+                                    ? entity(inputs, "entity")
+                                    : blockPosition(inputs, "block"),
+                            configuration.targetType()));
                     return ProgramNodeStep.next("flow");
                 });
         return Map.copyOf(result);
@@ -127,6 +178,19 @@ public final class ElectromasterProgramExecutionBridge {
     private static ProgramWorldPosition worldPosition(ProgramInputView inputs, String port) {
         return (ProgramWorldPosition) inputs.requireCompatible(
                 port, ProgramValueTypes.WORLD_POSITION).value();
+    }
+
+    private static ProgramBlockPosition blockPosition(ProgramInputView inputs, String port) {
+        return (ProgramBlockPosition) inputs.requireCompatible(
+                port, ProgramValueTypes.BLOCK_POSITION).value();
+    }
+
+    private static double floatValue(ProgramInputView inputs, String port) {
+        var raw = inputs.requireCompatible(port, ProgramValueTypes.FLOAT).value();
+        if (!(raw instanceof Number number) || !Double.isFinite(number.doubleValue())) {
+            throw new IllegalArgumentException("Program float input is invalid");
+        }
+        return number.doubleValue();
     }
 
     private static <T> ProgramNodeStep data(

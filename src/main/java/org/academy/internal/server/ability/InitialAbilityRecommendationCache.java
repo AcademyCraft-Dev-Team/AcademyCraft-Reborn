@@ -22,10 +22,20 @@ public final class InitialAbilityRecommendationCache {
             BlockPos developerPos,
             long gameTime
     ) {
+        put(playerId, category, dimension, "block:" + developerPos.asLong(), gameTime);
+    }
+
+    public void put(
+            UUID playerId,
+            AbilityCategory category,
+            Identifier dimension,
+            String developerKey,
+            long gameTime
+    ) {
         recommendations.put(playerId, new Recommendation(
                 category,
                 dimension,
-                developerPos.immutable(),
+                developerKey,
                 gameTime + EXPIRATION_TICKS
         ));
     }
@@ -36,11 +46,20 @@ public final class InitialAbilityRecommendationCache {
             BlockPos developerPos,
             long gameTime
     ) {
+        return consume(playerId, dimension, "block:" + developerPos.asLong(), gameTime);
+    }
+
+    public @Nullable AbilityCategory consume(
+            UUID playerId,
+            Identifier dimension,
+            String developerKey,
+            long gameTime
+    ) {
         var recommendation = recommendations.remove(playerId);
         if (recommendation == null
                 || gameTime >= recommendation.expiresAt
                 || !recommendation.dimension.equals(dimension)
-                || !recommendation.developerPos.equals(developerPos)) {
+                || !recommendation.developerKey.equals(developerKey)) {
             return null;
         }
         return recommendation.category;
@@ -57,7 +76,7 @@ public final class InitialAbilityRecommendationCache {
     private record Recommendation(
             AbilityCategory category,
             Identifier dimension,
-            BlockPos developerPos,
+            String developerKey,
             long expiresAt
     ) {
     }

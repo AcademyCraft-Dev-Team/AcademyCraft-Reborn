@@ -446,9 +446,23 @@ class TerminalHud private constructor() {
                 event.scanCode,
                 event.modifiers
             )
-            if (event.key == InputConstants.KEY_ESCAPE
-                || Minecraft.getInstance().options.keyInventory.matches(vanillaEvent)
-            ) {
+            if (event.key == InputConstants.KEY_ESCAPE) {
+                val routed = KeyEvent(
+                    EventType.KEY_PRESSED,
+                    event.key,
+                    event.scanCode,
+                    event.modifiers
+                )
+                context.get().dispatchEvent(routed)
+                if (routed.isConsumed) {
+                    event.setCanceled(true)
+                    return
+                }
+                toggleActive()
+                event.setCanceled(true)
+                return
+            }
+            if (Minecraft.getInstance().options.keyInventory.matches(vanillaEvent)) {
                 toggleActive()
                 event.setCanceled(true)
                 return
