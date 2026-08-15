@@ -28,7 +28,6 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
@@ -350,8 +349,7 @@ public final class MiningBeam extends Skill {
     ) {
         var skill = Skills.MINING_BEAM.get();
         if (!skill.hasProficiencyMilestone(player, 3)
-                || !ProficiencyPolicy.server(player).allowMiningBeamSmelting()
-                || !ProficiencySkillSettings.isEnabled(player, ProficiencySkillSettings.MINING_BEAM_SMELTING)) {
+                || !ProficiencyPolicy.server(player).allowMiningBeamSmelting()) {
             return false;
         }
         var drops = net.minecraft.world.level.block.Block.getDrops(

@@ -136,7 +136,14 @@ public abstract class MixinLivingEntity {
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isVectorDefenseActive(player)
                 && !VectorReflection.Server.isImagineBreakerMutation(player)) {
-            return player.getHealth();
+            var current = player.getHealth();
+            var maximum = player.getMaxHealth();
+            return Float.isFinite(health)
+                    && Float.isFinite(maximum)
+                    && health > current
+                    && health <= maximum
+                    ? health
+                    : current;
         }
         return EntityControlApi.clampHealthWrite(entity, health);
     }
