@@ -23,13 +23,13 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.meltdowner.skills.ContinuousBeam;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -136,9 +136,8 @@ public class Disintegrate extends Skill {
                     (context, _) -> {
                         var level = player.level();
                         cleanup(level.getGameTime());
-                        var start = player.getEyePosition();
-                        var range = LevelUtil.getValidViewDistance(player,
-                                context.milestone() >= 2 ? PRIMARY_RANGE * 1.2 : PRIMARY_RANGE);
+                        var start = ContinuousBeam.mainHandOrigin(player, 0.2f);
+                        var range = context.milestone() >= 2 ? PRIMARY_RANGE * 1.2 : PRIMARY_RANGE;
                         var end = start.add(player.getLookAngle().scale(range));
                         var target = findFirstTarget(level, player, start, end);
                         if (target != null) {
@@ -214,6 +213,9 @@ public class Disintegrate extends Skill {
             beam.setBeamLength((float) delta.length() + 0.8f);
             beam.setBeamScale(stage == 0 ? 1.45f : 1.05f);
             beam.setBetaTrailOnFire(true);
+            if (stage == 0) {
+                beam.setVisualSideOffset(ContinuousBeam.mainHandVisualSideOffset(player));
+            }
             beam.setPos(start);
             beam.setYRot((float) (Mth.atan2(-delta.x, delta.z)) * Mth.RAD_TO_DEG);
             beam.setXRot((float) (Mth.atan2(-delta.y, horizontal)) * Mth.RAD_TO_DEG);

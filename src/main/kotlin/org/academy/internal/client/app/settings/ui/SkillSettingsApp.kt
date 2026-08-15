@@ -298,12 +298,13 @@ object SkillSettingsApp : App {
                         .height(10f)
                         .gravity(Gravity.CENTER_LEFT)
                 })
-            if (DestroyBlocksSetting.supportsSkillBlockDestruction(skill)) {
+            val hasBlockDestructionSetting = DestroyBlocksSetting.supportsSkillBlockDestruction(skill)
+            if (hasBlockDestructionSetting) {
                 section.addChild("block_destruction", createSkillDestroyBlocksRow(skill))
             }
 
             val modules = SkillSettingsRegistry.getModules(skill)
-            if (modules.isEmpty()) {
+            if (modules.isEmpty() && !hasBlockDestructionSetting) {
                 section.addChild("advanced_empty", emptyLabel("app.academy.skill_settings.advanced.empty"))
             } else {
                 modules.forEachIndexed { moduleIndex, module ->
