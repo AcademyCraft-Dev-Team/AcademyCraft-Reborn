@@ -538,14 +538,16 @@ public final class AbilitySystemServer {
         var development = DEVELOP_DATA_MAP.remove(player.getUUID());
         if (development != null) development.abort();
         initialAbilityRecommendations.clear(player.getUUID());
-        syncManager.onPlayerLogout(player);
-        for (var sub : SubsystemRegistry.getSubsystems()) {
-            sub.onPlayerLogout(player);
-        }
+        try {
+            for (var sub : SubsystemRegistry.getSubsystems()) {
+                sub.onPlayerLogout(player);
+            }
 
-        var contexts = activeContexts.get(player.getUUID());
-        if (contexts == null) return;
-        List.copyOf(contexts).forEach(ServerContext::unregister);
+            var contexts = activeContexts.get(player.getUUID());
+            if (contexts != null) List.copyOf(contexts).forEach(ServerContext::unregister);
+        } finally {
+            syncManager.onPlayerLogout(player);
+        }
     }
 
     public SyncManager getSyncManager() {
