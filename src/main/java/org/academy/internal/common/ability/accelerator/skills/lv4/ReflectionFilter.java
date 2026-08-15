@@ -54,6 +54,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import net.minecraft.util.Mth;
@@ -200,16 +201,33 @@ public final class ReflectionFilter extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_OPEN,
-                InputSystem.combo(
-                        InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_BACKSLASH,
-                        InputConstants.PRESS,
-                        0
-                )
-        ), _ -> Client.open());
+        var openKey = Client.CONFIG.getKeyBinding(Client.KEY_NAME_OPEN, defaultOpenKey());
+        if (legacyDefaultOpenKey().equals(openKey)) {
+            openKey = defaultOpenKey();
+            Client.CONFIG.setKeyBinding(Client.KEY_NAME_OPEN, openKey);
+            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
+        InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, openKey, _ -> Client.open());
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+    }
+
+    static InputSystem.KeyCombination defaultOpenKey() {
+        return InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                GLFW.GLFW_KEY_EQUAL,
+                InputConstants.PRESS,
+                0
+        );
+    }
+
+    private static InputSystem.KeyCombination legacyDefaultOpenKey() {
+        return InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_BACKSLASH,
+                InputConstants.PRESS,
+                0
+        );
     }
 
     @Override

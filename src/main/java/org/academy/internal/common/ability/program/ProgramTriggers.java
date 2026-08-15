@@ -1,0 +1,75 @@
+package org.academy.internal.common.ability.program;
+
+import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.ability.program.ProgramGraph;
+
+/** Classifies program entry nodes and matches them against server-side trigger events. */
+public final class ProgramTriggers {
+    private ProgramTriggers() {
+    }
+
+    public static boolean acceptsManualExecution(CompiledProgram program) {
+        var entry = program.nodes().get(program.entryNodeId());
+        if (entry == null) return false;
+        var type = type(entry.typeId());
+        return type == null || type == Type.LOOP || type == Type.MOVEMENT;
+    }
+
+    public static boolean matches(
+            AbilityProgram program,
+            Type expected,
+            CommonProgramNodeCatalog.MovementCondition movement,
+            long gameTime
+    ) {
+        var entry = triggerEntry(program);
+        if (entry == null || type(entry.type()) != expected) return false;
+        var configuration = entry.configuration();
+        return switch (expected) {
+            case LOOP -> {
+                if (!configuration.isJsonObject()
+                        || !configuration.getAsJsonObject().has("interval")) yield false;
+                try {
+                    var interval = configuration.getAsJsonObject().get("interval").getAsInt();
+                    if (interval < 0 || interval > 1200) yield false;
+                    yield Math.floorMod(gameTime, Math.max(1, interval)) == 0;
+                } catch (RuntimeException exception) {
+                    yield false;
+                }
+            }
+            case MOVEMENT -> {
+                if (movement == null || !configuration.isJsonObject()
+                        || !configuration.getAsJsonObject().has("condition")) yield false;
+                try {
+                    yield CommonProgramNodeCatalog.MovementCondition.byName(
+                            configuration.getAsJsonObject().get("condition").getAsString()
+                    ) == movement;
+                } catch (RuntimeException exception) {
+                    yield false;
+                }
+            }
+            case MELEE, HURT -> true;
+        };
+    }
+
+    private static ProgramGraph.Node triggerEntry(AbilityProgram program) {
+        for (var node : program.graph().nodes()) {
+            if (type(node.type()) != null) return node;
+        }
+        return null;
+    }
+
+    private static Type type(net.minecraft.resources.Identifier id) {
+        if (id.equals(CommonProgramNodeIds.TRIGGER_HURT)) return Type.HURT;
+        if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) return Type.LOOP;
+        if (id.equals(CommonProgramNodeIds.TRIGGER_MELEE)) return Type.MELEE;
+        if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) return Type.MOVEMENT;
+        return null;
+    }
+
+    public enum Type {
+        MELEE,
+        LOOP,
+        MOVEMENT,
+        HURT
+    }
+}

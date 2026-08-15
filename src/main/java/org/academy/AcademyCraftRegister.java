@@ -21,6 +21,7 @@ import org.academy.api.common.entitycontrol.PlayerNavigationApi;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.AbilityRegistrationValidator;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.program.AbilityProgramNodeTypes;
 import org.academy.internal.common.ability.mentalout.control.*;
 import org.academy.internal.common.arc.PathModifierTypes;
 import org.academy.internal.common.arc.PathTypes;
@@ -86,6 +87,7 @@ public final class AcademyCraftRegister {
         AbilityCategories.ABILITY_CATEGORIES.register(modEventBus);
         PacketTypes.PACKET_TYPES.register(modEventBus);
         Skills.SKILLS.register(modEventBus);
+        AbilityProgramNodeTypes.REGISTER.register(modEventBus);
 
         DataTypes.SYNC_DATA_TYPES.register(modEventBus);
         SyncKeys.SYNC_KEYS.register(modEventBus);
@@ -101,6 +103,7 @@ public final class AcademyCraftRegister {
     private static void onNewRegistry(NewRegistryEvent event) {
         event.register(ABILITY_CATEGORIES);
         event.register(SKILLS);
+        event.register(PROGRAM_NODE_TYPES);
         event.register(SYNC_KEYS);
         event.register(DATA_TYPES);
         event.register(PATH_TYPES);

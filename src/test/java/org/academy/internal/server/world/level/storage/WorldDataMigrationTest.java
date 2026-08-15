@@ -95,6 +95,22 @@ class WorldDataMigrationTest {
     }
 
     @Test
+    void persistsServerAuthoritativeAbilityProgramBooks() {
+        var worldData = new WorldData();
+        var player = new Player();
+        player.setAbilityProgramBook("academy:accelerator", "encoded-program-book");
+        worldData.getPlayers().put(PLAYER_ID, player);
+
+        var gson = WorldData.createGson();
+        var restored = gson.fromJson(gson.toJson(worldData), WorldData.class)
+                .getPlayers().get(PLAYER_ID);
+
+        assertNotNull(restored);
+        assertEquals("encoded-program-book",
+                restored.getAbilityProgramBook("academy:accelerator"));
+    }
+
+    @Test
     void removesRetiredHellFlareDataAndOccupation() {
         var json = """
                 {

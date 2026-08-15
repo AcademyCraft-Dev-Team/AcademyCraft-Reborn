@@ -144,6 +144,25 @@ public class MagnetManipulation extends Skill {
         return length > maxSpeed ? velocity.scale(maxSpeed / length) : velocity;
     }
 
+    /** Shared homing profile for ability-controlled falling blocks. */
+    public static Vec3 calculateControlledBlockVelocity(
+            Vec3 currentVelocity,
+            Vec3 origin,
+            Vec3 target,
+            Vec3 fallbackDirection,
+            double maxSpeed,
+            double stopDistance
+    ) {
+        return calculatePullVelocity(
+                currentVelocity,
+                origin,
+                target,
+                fallbackDirection,
+                maxSpeed,
+                stopDistance
+        );
+    }
+
     private static boolean isFinite(Vec3 value) {
         return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
@@ -197,7 +216,7 @@ public class MagnetManipulation extends Skill {
                 .anyMatch(tag -> isMagneticTagPath(tag.location().getPath()));
     }
 
-    static boolean isMagnetic(Entity entity) {
+    public static boolean isMagnetic(Entity entity) {
         if (entity instanceof FallingBlockEntity fallingBlock && isMagnetic(fallingBlock.getBlockState())) return true;
         if (entity instanceof ItemEntity itemEntity && isMagnetic(itemEntity.getItem())) return true;
 

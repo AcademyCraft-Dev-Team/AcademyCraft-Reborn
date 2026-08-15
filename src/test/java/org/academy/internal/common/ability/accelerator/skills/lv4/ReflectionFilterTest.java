@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.accelerator.skills.lv4;
 import com.google.gson.Gson;
 import net.minecraft.world.effect.MobEffectCategory;
 import org.junit.jupiter.api.Test;
+import org.lwjgl.glfw.GLFW;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,6 +19,12 @@ class ReflectionFilterTest {
 
     private static boolean accept(ReflectionFilter.Data data, String effectId, MobEffectCategory category) {
         return ReflectionFilter.shouldAcceptNormalizedEffect(data, effectId, category);
+    }
+
+    @Test
+    void opensOnEqualByDefault() {
+        assertEquals(java.util.Set.of(GLFW.GLFW_KEY_EQUAL),
+                ReflectionFilter.defaultOpenKey().keys());
     }
 
     @Test
