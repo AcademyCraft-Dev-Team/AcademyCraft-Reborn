@@ -1564,7 +1564,7 @@
   "skill.academy.mining_beam.desc": "按住以发射最长 48 格的采矿光束，钻穿可破坏方块并伤害路径上的实体。",
   "skill.academy.mining_beam.proficiency.1000": "有效持续消耗 -10%。",
   "skill.academy.mining_beam.proficiency.2000": "射程由 48 增至 56 格，破坏半径 +20%。",
-  "skill.academy.mining_beam.proficiency.3000": "启用“束流精炼”后，带熔炼配方的原矿掉落可直接转为熔炼产物并正常掉落经验；默认可在技能设置中关闭。",
+  "skill.academy.mining_beam.proficiency.3000": "带熔炼配方的原矿掉落可直接转为熔炼产物并正常掉落经验；该效果受服务器熟练度策略控制。",
   "skill.academy.multiple_brain_domain_segmentation": "多重脑域分割",
   "skill.academy.multiple_brain_domain_segmentation.desc": "所有技能的堆栈上限提高熟练度档位对应的数值。",
   "skill.academy.parallel_thought_computation": "思考并列演算",

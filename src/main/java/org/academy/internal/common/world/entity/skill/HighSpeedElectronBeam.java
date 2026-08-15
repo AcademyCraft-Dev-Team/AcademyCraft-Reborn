@@ -103,25 +103,23 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         setNoGravity(false);
     }
 
-    private static double executeBlocks(
+    private static void destroyBlocks(
             ServerLevel level,
             ServerPlayer breaker,
-            LinearSegment segment,
-            boolean destroyBlocks
+            LinearSegment segment
     ) {
-        var result = LevelUtil.destroyBlocksAlongPath(
+        LevelUtil.destroyBlocksAlongPath(
                 level,
                 segment.start(),
                 segment.end(),
                 0.25f,
-                destroyBlocks ? BLOCK_MINING_TIER : -1,
+                BLOCK_MINING_TIER,
                 false,
-                destroyBlocks,
                 true,
-                !destroyBlocks,
+                true,
+                false,
                 breaker
         );
-        return Mth.clamp(result.getValue(), 0.0, segment.length());
     }
 
     private static void spawnBetaTrail(ServerLevel level, ResolvedLinearAttack attack) {
@@ -308,27 +306,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private void fire(ServerLevel level, ServerPlayer owner) {
         var start = position();
         var end = start.add(getLookAngle().scale(length));
-        if (destroysBlocks()) {
-            var simulated = LevelUtil.destroyBlocksAlongPath(
-                    level,
-                    start,
-                    end,
-                    0.25f,
-                    BLOCK_MINING_TIER,
-                    false,
-                    true,
-                    true,
-                    true,
-                    owner
-            );
-            if (simulated.getKey()) {
-                setBeamLength(simulated.getValue().floatValue());
-                end = start.add(getLookAngle().scale(getBeamLength()));
-            }
-        } else {
-            setBeamLength((float) LevelUtil.getValidViewDistance(this, length));
-            end = start.add(getLookAngle().scale(getBeamLength()));
-        }
 
         var hitIndex = new java.util.concurrent.atomic.AtomicInteger();
         var source = org.academy.api.common.damage.SkillDamageSource.of(owner, sourceSkill);
@@ -365,17 +342,14 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 .build();
         var attack = LinearReflectionResolver.resolve(level, new LinearSegment(start, end), payload);
 
-        if (destroysBlocks()) executeBlocks(level, owner, attack.outbound(), true);
+        if (destroysBlocks()) destroyBlocks(level, owner, attack.outbound());
         var outboundResult = LinearAttackExecutor.executeOutbound(level, attack, payload);
-        if (attack.isReflected()) {
-            var returnSegment = attack.returnSegment().orElseThrow();
-            var returnLength = executeBlocks(
+        if (destroysBlocks() && attack.isReflected()) {
+            destroyBlocks(
                     level,
                     attack.reflectionCandidate().orElseThrow().reflector(),
-                    returnSegment,
-                    destroysBlocks()
+                    attack.returnSegment().orElseThrow()
             );
-            attack = attack.limitReturnLength(returnLength);
         }
         if (attack.isReflected()) {
             setReflection(

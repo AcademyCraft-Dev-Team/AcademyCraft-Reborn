@@ -48,14 +48,18 @@ public class LevelUtil {
         if (miningLevel == -1 || blockState.getDestroySpeed(null, null) == -1) {
             return false;
         }
+        if (isUnrestrictedMiningLevel(miningLevel)) return true;
         return switch (miningLevel) {
-            case 3 -> true;
             case 2 -> !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL);
             case 1 -> !blockState.is(BlockTags.NEEDS_IRON_TOOL) && !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL);
             case 0 ->
                     !blockState.is(BlockTags.NEEDS_DIAMOND_TOOL) && !blockState.is(BlockTags.NEEDS_IRON_TOOL) && !blockState.is(BlockTags.NEEDS_STONE_TOOL);
             default -> false;
         };
+    }
+
+    static boolean isUnrestrictedMiningLevel(int miningLevel) {
+        return miningLevel >= 3;
     }
 
     public static Pair<Boolean, Double> destroyBlocksAlongPath(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean dropBlock, boolean spawnParticles, boolean canBlock, boolean simulate) {

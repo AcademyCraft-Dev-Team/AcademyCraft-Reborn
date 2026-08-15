@@ -22,10 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 public final class ProficiencySkillSettings {
-    public static final String MINING_BEAM_SMELTING = "mining_beam.smelting";
     public static final String DARKMATTER_SHAPING_AUTO_REPAIR = "darkmatter_shaping.auto_repair";
     private static final Set<String> ALLOWED_OPTIONS = Set.of(
-            MINING_BEAM_SMELTING,
             DARKMATTER_SHAPING_AUTO_REPAIR
     );
     private static boolean serverInitialized;
@@ -60,12 +58,6 @@ public final class ProficiencySkillSettings {
     public static void initClient() {
         if (clientInitialized) return;
         clientInitialized = true;
-        registerToggle(
-                Skills.MINING_BEAM.get(),
-                "smelting",
-                "app.academy.skill_settings.advanced.mining_beam_smelting",
-                MINING_BEAM_SMELTING
-        );
         registerToggle(
                 Skills.DARKMATTER_SHAPING.get(),
                 "auto_repair",

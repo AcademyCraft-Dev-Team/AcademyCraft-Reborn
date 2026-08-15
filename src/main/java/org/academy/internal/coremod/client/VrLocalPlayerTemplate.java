@@ -74,7 +74,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
         }
         var maximum = super.getMaxHealth();
         if (Float.isFinite(original) && Float.isFinite(maximum)
-                && original > cached && original < maximum) {
+                && original > cached && original <= maximum) {
             cached = original;
             academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
         }
@@ -105,7 +105,16 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
     @Override
     public void setHealth(float amount) {
-        if (!academy$protected()) super.setHealth(amount);
+        if (!academy$protected()) {
+            super.setHealth(amount);
+            return;
+        }
+        var current = getHealth();
+        var maximum = super.getMaxHealth();
+        if (Float.isFinite(amount) && Float.isFinite(maximum)
+                && amount > current && amount <= maximum) {
+            super.setHealth(amount);
+        }
     }
 
     @Override
@@ -130,7 +139,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
             else cached = Math.max(0.0f, cached);
         }
         var maximum = super.getMaxHealth();
-        if (Float.isFinite(maximum) && original > cached && original < maximum) {
+        if (Float.isFinite(maximum) && original > cached && original <= maximum) {
             cached = original;
         }
         academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
@@ -162,7 +171,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
         }
         var maximum = super.getMaxHealth();
         if (Float.isFinite(original) && Float.isFinite(maximum)
-                && original > cached && original < maximum) {
+                && original > cached && original <= maximum) {
             cached = original;
         }
         academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);

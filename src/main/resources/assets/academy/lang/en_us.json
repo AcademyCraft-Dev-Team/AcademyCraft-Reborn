@@ -1564,7 +1564,7 @@
   "skill.academy.mining_beam.desc": "Hold to bore through breakable blocks and damage entities along a 48-block beam.",
   "skill.academy.mining_beam.proficiency.1000": "Effective continuous cost -10%.",
   "skill.academy.mining_beam.proficiency.2000": "Range increases from 48 to 56 blocks and breaking radius +20%.",
-  "skill.academy.mining_beam.proficiency.3000": "When Beam Refining is enabled, ores with smelting recipes drop smelted products and normal experience; this can be disabled in skill settings.",
+  "skill.academy.mining_beam.proficiency.3000": "Ores with smelting recipes drop smelted products and normal experience; this effect is controlled by the server proficiency policy.",
   "skill.academy.multiple_brain_domain_segmentation": "Multiple Brain Domain Segmentation",
   "skill.academy.multiple_brain_domain_segmentation.desc": "Increase every skill's stack limit by the current proficiency tier.",
   "skill.academy.parallel_thought_computation": "Parallel Thought Computation",

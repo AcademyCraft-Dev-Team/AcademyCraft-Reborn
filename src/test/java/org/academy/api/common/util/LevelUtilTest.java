@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LevelUtilTest {
     @Test
@@ -14,5 +15,13 @@ class LevelUtilTest {
 
         assertFalse(selected.isEmpty());
         assertEquals(0.125, selected.bounds().maxY, 1.0E-8);
+    }
+
+    @Test
+    void miningLevelsAtOrAboveDiamondAreUnrestricted() {
+        assertTrue(LevelUtil.isUnrestrictedMiningLevel(3));
+        assertTrue(LevelUtil.isUnrestrictedMiningLevel(4));
+        assertFalse(LevelUtil.isUnrestrictedMiningLevel(2));
+        assertFalse(LevelUtil.isUnrestrictedMiningLevel(-1));
     }
 }
