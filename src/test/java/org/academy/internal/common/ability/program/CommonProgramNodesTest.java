@@ -48,6 +48,54 @@ class CommonProgramNodesTest {
                 assertNotNull(executors.find(domain.id(operation)), domain + "/" + operation);
             }
         }
+        for (var id : List.of(
+                CommonProgramNodeIds.RANDOM_ENTITY,
+                CommonProgramNodeIds.RANDOM_WORLD_POSITION,
+                CommonProgramNodeIds.RANDOM_BLOCK_POSITION,
+                CommonProgramNodeIds.RANDOM_DIRECTION,
+                CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_LEAST,
+                CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_MOST,
+                CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD
+        )) {
+            assertNotNull(catalog.find(id), id.toString());
+            assertNotNull(executors.find(id), id.toString());
+        }
+    }
+
+    @Test
+    void editorOrdersPriorityTargetsCollectionsAndTriggersDeterministically() {
+        var entries = AbilityProgramDefinitions.mentalout().editorCatalog().entries().stream()
+                .filter(ProgramEditorNodeCatalog.Entry::visible)
+                .toList();
+        var targets = entries.stream()
+                .filter(entry -> entry.group() == ProgramEditorNodeCatalog.Group.TARGET)
+                .toList();
+        assertEquals(CommonProgramNodeIds.CASTER, targets.get(0).id());
+        assertEquals(CommonProgramNodeIds.LOOK_TARGET, targets.get(1).id());
+
+        var collections = entries.stream()
+                .filter(entry -> entry.group() == ProgramEditorNodeCatalog.Group.COLLECTION)
+                .toList();
+        var firstNonEntity = 0;
+        while (firstNonEntity < collections.size()
+                && collections.get(firstNonEntity).id().getPath()
+                .contains("/collection/entity/")) firstNonEntity++;
+        assertTrue(firstNonEntity > 0);
+        assertTrue(collections.subList(firstNonEntity, collections.size()).stream()
+                .noneMatch(entry -> entry.id().getPath().contains("/collection/entity/")));
+
+        var flows = entries.stream()
+                .filter(entry -> entry.group() == ProgramEditorNodeCatalog.Group.FLOW)
+                .map(ProgramEditorNodeCatalog.Entry::id)
+                .toList();
+        assertEquals(List.of(
+                CommonProgramNodeIds.TRIGGER_HURT,
+                CommonProgramNodeIds.TRIGGER_LOOP,
+                CommonProgramNodeIds.TRIGGER_MELEE,
+                CommonProgramNodeIds.TRIGGER_MOVEMENT,
+                PrecisionProgramNodeIds.ON_CAST,
+                CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD
+        ), flows.subList(0, 6));
     }
 
     @Test
@@ -323,6 +371,33 @@ class CommonProgramNodesTest {
         );
 
         assertEquals("only", run(graph, resolver).variables().get("selected").value());
+    }
+
+    @Test
+    void randomSpatialNodesSelectTheOnlyValueInEachSet() {
+        var world = new ProgramWorldPosition(OVERWORLD, 1.25, 70.0, -2.5);
+        assertEquals(world, randomSingle(
+                worldPositionNode(2, OVERWORLD, world.x(), world.y(), world.z()),
+                CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION.id("singleton"),
+                CommonProgramNodeIds.RANDOM_WORLD_POSITION,
+                "position", "positions", "position",
+                ProgramValueTypes.WORLD_POSITION.id()));
+
+        var block = new ProgramBlockPosition(OVERWORLD, 4, 71, -3);
+        assertEquals(block, randomSingle(
+                blockPositionNode(2, OVERWORLD, block.x(), block.y(), block.z()),
+                CommonProgramNodeCatalog.CollectionDomain.BLOCK_POSITION.id("singleton"),
+                CommonProgramNodeIds.RANDOM_BLOCK_POSITION,
+                "position", "blocks", "block",
+                ProgramValueTypes.BLOCK_POSITION.id()));
+
+        var direction = new ProgramDirection(0.0, 1.0, 0.0);
+        assertEquals(direction, randomSingle(
+                directionNode(2, direction.x(), direction.y(), direction.z()),
+                CommonProgramNodeCatalog.CollectionDomain.DIRECTION.id("singleton"),
+                CommonProgramNodeIds.RANDOM_DIRECTION,
+                "direction", "directions", "direction",
+                ProgramValueTypes.DIRECTION.id()));
     }
 
     @Test
@@ -699,6 +774,52 @@ class CommonProgramNodesTest {
         configuration.addProperty("y", y);
         configuration.addProperty("z", z);
         return new ProgramGraph.Node(id, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, 1, configuration);
+    }
+
+    private static ProgramGraph.Node blockPositionNode(
+            int id,
+            Identifier dimension,
+            int x,
+            int y,
+            int z
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("dimension", dimension.toString());
+        configuration.addProperty("x", x);
+        configuration.addProperty("y", y);
+        configuration.addProperty("z", z);
+        return new ProgramGraph.Node(id, CommonProgramNodeIds.BLOCK_POSITION_CONSTANT, 1,
+                configuration);
+    }
+
+    private static Object randomSingle(
+            ProgramGraph.Node valueNode,
+            Identifier singletonType,
+            Identifier randomType,
+            String valueOutput,
+            String randomInput,
+            String randomOutput,
+            Identifier valueType
+    ) {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        valueNode,
+                        node(3, singletonType),
+                        node(4, randomType),
+                        variableNode(5, CommonProgramNodeIds.VARIABLE_SET,
+                                "selected", valueType),
+                        node(6, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 5, "flow"),
+                        edge(2, valueOutput, 3, "value"),
+                        edge(3, "values", 4, randomInput),
+                        edge(4, randomOutput, 5, "value"),
+                        edge(5, "flow", 6, "flow")
+                )
+        );
+        return run(graph, null).variables().get("selected").value();
     }
 
     private static ProgramGraph.Node directionNode(int id, double x, double y, double z) {

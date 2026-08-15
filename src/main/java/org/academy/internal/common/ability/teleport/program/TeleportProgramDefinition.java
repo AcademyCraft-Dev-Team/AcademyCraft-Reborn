@@ -37,14 +37,20 @@ public final class TeleportProgramDefinition {
                     || id.equals(TeleportProgramNodeIds.ENTITY_TELEPORT)) {
                 configuration.addProperty("power", 1.0f);
             }
+            if (id.equals(TeleportProgramNodeIds.ENTITY_TELEPORT)) {
+                configuration.addProperty("target_type", "entity");
+            }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
+            var group = id.getPath().contains("/target/")
+                    ? ProgramEditorNodeCatalog.Group.TARGET
+                    : id.getPath().contains("/logic/")
+                    ? ProgramEditorNodeCatalog.Group.LOGIC
+                    : ProgramEditorNodeCatalog.Group.ACTION;
             editor.add(
                     id,
                     type,
                     configuration,
-                    id.getPath().contains("/target/")
-                            ? ProgramEditorNodeCatalog.Group.TARGET
-                            : ProgramEditorNodeCatalog.Group.ACTION,
+                    group,
                     "screen.academy.program.teleport.node." + suffix,
                     "screen.academy.program.port.",
                     null

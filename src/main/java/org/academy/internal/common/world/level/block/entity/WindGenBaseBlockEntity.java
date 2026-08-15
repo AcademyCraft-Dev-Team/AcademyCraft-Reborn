@@ -20,6 +20,7 @@ import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.internal.client.gui.world.WindGenWorldGui;
 import org.academy.internal.common.world.level.block.Blocks;
+import org.academy.internal.common.util.EnergyChargeHelper;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
@@ -27,6 +28,7 @@ import net.minecraft.util.Mth;
 
 public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
     private static final String NBT_COMPLETENESS = "Completeness";
+    private static final int OUTPUT_TRANSFER_RATE = 1_000;
     public final AnimationState setupState = new AnimationState();
     public final AnimationState shutdownState = new AnimationState();
     public int ticks;
@@ -76,6 +78,9 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         updateState();
         if (level != null && completeness == Completeness.COMPLETE && topBlockEntity != null && topBlockEntity.hasFan) {
             setEnergyStorage(energyStored + 10);
+        }
+        if (EnergyChargeHelper.transferToItem(this, items.getFirst(), OUTPUT_TRANSFER_RATE) > 0) {
+            setChanged();
         }
     }
 

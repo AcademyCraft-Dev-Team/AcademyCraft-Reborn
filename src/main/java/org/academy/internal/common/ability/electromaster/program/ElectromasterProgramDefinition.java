@@ -37,14 +37,30 @@ public final class ElectromasterProgramDefinition {
                     || id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE)) {
                 configuration.addProperty("power", 1.0f);
             }
+            if (id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE)) {
+                configuration.addProperty("target_type", "entity");
+                configuration.addProperty("mode", "pull");
+            } else if (id.equals(ElectromasterProgramNodeIds.ENERGY_DETECTION)) {
+                configuration.addProperty("target_type", "entity");
+                configuration.addProperty("mode", "below");
+                configuration.addProperty("percent", 50.0f);
+            } else if (id.equals(ElectromasterProgramNodeIds.REDSTONE_DETECTION)) {
+                configuration.addProperty("mode", "below");
+                configuration.addProperty("level", 8);
+            } else if (id.equals(ElectromasterProgramNodeIds.CURRENT_RECHARGE)) {
+                configuration.addProperty("target_type", "entity");
+            }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
+            var group = id.getPath().contains("/target/")
+                    ? ProgramEditorNodeCatalog.Group.TARGET
+                    : id.getPath().contains("/logic/")
+                    ? ProgramEditorNodeCatalog.Group.LOGIC
+                    : ProgramEditorNodeCatalog.Group.ACTION;
             editor.add(
                     id,
                     type,
                     configuration,
-                    id.getPath().contains("/target/")
-                            ? ProgramEditorNodeCatalog.Group.TARGET
-                            : ProgramEditorNodeCatalog.Group.ACTION,
+                    group,
                     "screen.academy.program.electromaster.node." + suffix,
                     "screen.academy.program.port.",
                     null

@@ -10,6 +10,9 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.transfer.energy.ItemAccessEnergyHandler;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
@@ -37,6 +40,8 @@ import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.item.Items;
+import org.academy.internal.common.world.item.AbilityControlTabletItem;
+import org.academy.internal.common.world.item.ItemDataComponents;
 import org.academy.internal.common.world.item.crafting.RecipeSerializers;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
@@ -69,6 +74,7 @@ public final class AcademyCraftRegister {
         Fluids.FLUID_TYPES.register(modEventBus);
         Fluids.FLUIDS.register(modEventBus);
         Blocks.BLOCKS.register(modEventBus);
+        ItemDataComponents.DATA_COMPONENTS.register(modEventBus);
         Items.ITEMS.register(modEventBus);
         RecipeSerializers.RECIPE_SERIALIZERS.register(modEventBus);
         BlockEntityTypes.BLOCK_ENTITY_TYPES.register(modEventBus);
@@ -98,6 +104,7 @@ public final class AcademyCraftRegister {
         modEventBus.addListener(AcademyCraftRegister::onCommonSetup);
         modEventBus.addListener(AcademyCraftRegister::onEntityAttributes);
         modEventBus.addListener(AcademyCraftRegister::onEntityAttributeModification);
+        modEventBus.addListener(AcademyCraftRegister::onRegisterCapabilities);
     }
 
     private static void onNewRegistry(NewRegistryEvent event) {
@@ -159,5 +166,19 @@ public final class AcademyCraftRegister {
         event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.PERCEPTION);
         event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.NEURAL_ACTIVITY);
         event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.TRUE_RESISTANCE);
+    }
+
+    private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerItem(
+                Capabilities.Energy.ITEM,
+                (_, access) -> new ItemAccessEnergyHandler(
+                        access,
+                        ItemDataComponents.ENERGY.get(),
+                        AbilityControlTabletItem.ENERGY_CAPACITY,
+                        AbilityControlTabletItem.ENERGY_CAPACITY,
+                        AbilityControlTabletItem.ENERGY_CAPACITY
+                ),
+                Items.ABILITY_CONTROL_TABLET.get()
+        );
     }
 }

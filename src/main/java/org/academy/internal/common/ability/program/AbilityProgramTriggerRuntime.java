@@ -80,6 +80,7 @@ public final class AbilityProgramTriggerRuntime {
             dispatch(player, ProgramTriggers.Type.MELEE, null);
         }
         dispatch(player, ProgramTriggers.Type.LOOP, null);
+        dispatch(player, ProgramTriggers.Type.HEALTH, null);
     }
 
     @SubscribeEvent
@@ -88,6 +89,7 @@ public final class AbilityProgramTriggerRuntime {
         MOVEMENT.remove(id);
         PENDING_MELEE.remove(id);
         EXECUTING.remove(id);
+        ProgramTriggers.clear(id);
     }
 
     private static void dispatch(

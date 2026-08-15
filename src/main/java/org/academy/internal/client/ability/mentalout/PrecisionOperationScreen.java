@@ -22,6 +22,7 @@ import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.PrecisionProgramExporter;
 import org.academy.internal.common.ability.program.PrecisionProgramImporter;
 import org.academy.internal.common.ability.program.ProgramEditorDocument;
@@ -138,7 +139,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     PrecisionOperationScreen(int slot, AbilityProgram program, long revision) {
         super(Component.translatable("screen.academy.precision_operation.title"));
-        this.slot = Math.clamp(slot, 0, 3);
+        this.slot = Math.clamp(slot, 0, AbilityProgramManager.SLOT_COUNT - 1);
         this.program = program;
         document = new ProgramEditorDocument(
                 program, AbilityProgramDefinitions.mentalout(), Set.of());
@@ -355,10 +356,11 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             smallText(graphics, title.getString(), panelX + 12, panelY + 6, TEXT, 84);
             x += 96;
         }
-        for (var index = 0; index < 4; index++) {
+        var tabWidth = slotTabWidth();
+        for (var index = 0; index < AbilityProgramManager.SLOT_COUNT; index++) {
             var label = Component.translatable("screen.academy.precision_operation.slot", index + 1);
-            button(graphics, x, panelY + 2, 38, 16, label, mouseX, mouseY, index == slot, true);
-            x += 40;
+            button(graphics, x, panelY + 2, tabWidth, 16, label, mouseX, mouseY, index == slot, true);
+            x += tabWidth + 2;
         }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
@@ -825,8 +827,9 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private boolean handleTopBarClick(double mouseX, double mouseY) {
         var x = panelX + 4 + (panelW >= 620 ? 96 : 0);
-        for (var index = 0; index < 4; index++) {
-            if (inside(mouseX, mouseY, x, panelY + 2, 38, 16)) {
+        var tabWidth = slotTabWidth();
+        for (var index = 0; index < AbilityProgramManager.SLOT_COUNT; index++) {
+            if (inside(mouseX, mouseY, x, panelY + 2, tabWidth, 16)) {
                 PrecisionOperationClient.updateLocal(slot, graph);
                 slot = index;
                 PrecisionOperationClient.selectSlot(slot);
@@ -835,7 +838,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 fitCanvas(true);
                 return true;
             }
-            x += 40;
+            x += tabWidth + 2;
         }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
@@ -857,6 +860,13 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             toolsX += TOOL_SIZE + 2;
         }
         return false;
+    }
+
+    private int slotTabWidth() {
+        var startX = panelX + 4 + (panelW >= 620 ? 96 : 0);
+        var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
+        var available = Math.max(0, toolsX - startX - 4);
+        return Math.clamp(available / AbilityProgramManager.SLOT_COUNT - 2, 14, 38);
     }
 
     private boolean handleRailClick(double mouseX, double mouseY) {

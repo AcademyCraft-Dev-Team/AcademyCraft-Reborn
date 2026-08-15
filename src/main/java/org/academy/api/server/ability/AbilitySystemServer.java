@@ -1,6 +1,5 @@
 package org.academy.api.server.ability;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -27,7 +26,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.skilldata.SkillData;
-import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.server.ability.*;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
@@ -109,13 +107,14 @@ public final class AbilitySystemServer {
     @SubscribePacket
     public static void handleStopDev(StopDevPacket packet) {
         var player = packet.getPacketListener().getPlayer();
-        var devPos = packet.getUserPos();
-        if (player.position().distanceToSqr(Vec3.atCenterOf(devPos)) > 64.0) {
+        var source = packet.getSource();
+        if (!source.portable()
+                && player.position().distanceToSqr(Vec3.atCenterOf(source.blockPos())) > 64.0) {
             return;
         }
 
         var data = DEVELOP_DATA_MAP.get(player.getUUID());
-        if (data != null && devPos.equals(data.getDeveloperPos())) {
+        if (data != null && source.equals(data.getDeveloperSource())) {
             data.abort();
         }
     }
@@ -129,16 +128,12 @@ public final class AbilitySystemServer {
     @HandleFuture
     public static StartSkillDevPacket.Response handleStartSkillDev(StartSkillDevPacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var devPos = BlockPos.of(payload.getUserPos());
-        if (player.position().distanceToSqr(Vec3.atCenterOf(devPos)) > 64.0) {
-            return new StartSkillDevPacket.Response(false, "Too far away");
-        }
-
-        var level = player.level();
-        var be = level.getBlockEntity(devPos);
-        if (!(be instanceof AbilityDeveloperBlockEntity developer) || !developer.isMain()) {
+        var source = payload.getSource();
+        var developer = AbilityDeveloperSources.resolve(player, source);
+        if (developer == null) {
             return new StartSkillDevPacket.Response(false, "Invalid developer");
         }
+        var level = player.level();
 
         var skillKey = payload.getSkillName();
         var skillId = Identifier.tryParse(skillKey);
@@ -211,15 +206,14 @@ public final class AbilitySystemServer {
 
             @Override
             public boolean validate(ServerPlayer sp, WirelessUser dev) {
-                return dev instanceof AbilityDeveloperBlockEntity currentDeveloper
-                        && canDevelopSkill(sp, currentDeveloper, skill);
+                return canDevelopSkill(sp, dev, skill);
             }
 
             @Override
             public void onComplete(ServerPlayer sp, WirelessUser dev) {
                 instance.addPlayerSkill(sp, skillKey);
             }
-        }, devPos, player.level().dimension());
+        }, source, player.level().dimension());
 
         return new StartSkillDevPacket.Response(started, started ? "Started" : "Already developing");
     }
@@ -227,16 +221,12 @@ public final class AbilitySystemServer {
     @HandleFuture
     public static StartLevelDevPacket.Response handleStartLevelDev(StartLevelDevPacket payload) {
         var player = payload.getPacketListener().getPlayer();
-        var devPos = BlockPos.of(payload.getUserPos());
-        if (player.position().distanceToSqr(Vec3.atCenterOf(devPos)) > 64.0) {
-            return new StartLevelDevPacket.Response(false, "Too far away");
-        }
-
-        var level = player.level();
-        var be = level.getBlockEntity(devPos);
-        if (!(be instanceof AbilityDeveloperBlockEntity developer) || !developer.isMain()) {
+        var source = payload.getSource();
+        var developer = AbilityDeveloperSources.resolve(player, source);
+        if (developer == null) {
             return new StartLevelDevPacket.Response(false, "Invalid developer");
         }
+        var level = player.level();
 
         var server = level.getServer();
         var instance = server.getAcademyCraftServer().getAbilitySystemServer();
@@ -291,11 +281,11 @@ public final class AbilitySystemServer {
                 );
                 if (recommendation != null) {
                     instance.initialAbilityRecommendations.put(
-                            player.getUUID(),
-                            recommendation,
-                            player.level().dimension().identifier(),
-                            devPos,
-                            player.level().getGameTime()
+                        player.getUUID(),
+                        recommendation,
+                        player.level().dimension().identifier(),
+                        source.cacheKey(),
+                        player.level().getGameTime()
                     );
                     return new StartLevelDevPacket.Response(
                             StartLevelDevPacket.Response.Status.CONFIRMATION_REQUIRED,
@@ -311,7 +301,7 @@ public final class AbilitySystemServer {
                 var recommendation = instance.initialAbilityRecommendations.consume(
                         player.getUUID(),
                         player.level().dimension().identifier(),
-                        devPos,
+                        source.cacheKey(),
                         player.level().getGameTime()
                 );
                 if (recommendation == null || !propsData.isStarted()) {
@@ -348,10 +338,8 @@ public final class AbilitySystemServer {
 
             @Override
             public boolean validate(ServerPlayer sp, WirelessUser dev) {
-                return dev instanceof AbilityDeveloperBlockEntity currentDeveloper
-                        && canDevelopLevel(
-                        sp,
-                        currentDeveloper,
+                return canDevelopLevel(
+                        sp, dev,
                         currentCategory,
                         currentLevel,
                         initialDevelopment,
@@ -373,19 +361,16 @@ public final class AbilitySystemServer {
                     }
                 }
             }
-        }, devPos, player.level().dimension());
+        }, source, player.level().dimension());
 
         return new StartLevelDevPacket.Response(started, started ? "Started" : "Already developing");
     }
 
     private static boolean canDevelopSkill(
             ServerPlayer player,
-            AbilityDeveloperBlockEntity developer,
+            WirelessUser developer,
             Skill skill
     ) {
-        if (!developer.isMain() || player.position().distanceToSqr(Vec3.atCenterOf(developer.getBlockPos())) > 64.0) {
-            return false;
-        }
         if (!isPlayerReadyForDevelopment(player)) return false;
         var instance = getSystem(player);
         var playerData = instance.getPlayerData(player.getUUID());
@@ -405,15 +390,12 @@ public final class AbilitySystemServer {
 
     private static boolean canDevelopLevel(
             ServerPlayer player,
-            AbilityDeveloperBlockEntity developer,
+            WirelessUser developer,
             AbilityCategory expectedCategory,
             int expectedLevel,
             boolean initialDevelopment,
             int expectedCost
     ) {
-        if (!developer.isMain() || player.position().distanceToSqr(Vec3.atCenterOf(developer.getBlockPos())) > 64.0) {
-            return false;
-        }
         if (!isPlayerReadyForDevelopment(player)) return false;
         var instance = getSystem(player);
         var currentCategory = instance.getPlayerAbilityCategory(player.getUUID());

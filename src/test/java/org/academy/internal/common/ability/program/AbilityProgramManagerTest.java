@@ -41,7 +41,8 @@ class AbilityProgramManagerTest {
         var encoded = AbilityProgramManager.encodeStoredBook(book);
         var decoded = AbilityProgramManager.decodeStoredBook(accelerator, encoded);
 
-        assertEquals(book, decoded);
+        assertEquals(book.resize(AbilityProgramManager.SLOT_COUNT), decoded);
+        assertEquals(AbilityProgramManager.SLOT_COUNT, decoded.slots().size());
         assertTrue(AbilityProgramManager.validBook(accelerator, decoded));
         var wrongCategory = AbilityProgramManager.decodeStoredBook(
                 AcademyCraft.academy(AbilityCategoryNames.TELEPORT), encoded);

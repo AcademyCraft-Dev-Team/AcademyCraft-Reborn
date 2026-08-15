@@ -3,12 +3,12 @@ package org.academy.internal.server.ability;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.DevState;
 import org.academy.api.common.ability.DevelopAction;
-import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import org.academy.api.common.ability.DevelopmentSource;
+import org.academy.api.common.wireless.WirelessUser;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -18,7 +18,7 @@ public class DevelopData {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     private final UUID playerId;
     private @Nullable DevelopAction action;
-    private @Nullable BlockPos developerPos;
+    private @Nullable DevelopmentSource developerSource;
     private @Nullable ResourceKey<Level> developerDimension;
     private DevState state = DevState.IDLE;
     private float progress;
@@ -52,7 +52,11 @@ public class DevelopData {
     }
 
     public @Nullable BlockPos getDeveloperPos() {
-        return developerPos;
+        return developerSource == null ? null : developerSource.blockPos();
+    }
+
+    public @Nullable DevelopmentSource getDeveloperSource() {
+        return developerSource;
     }
 
     public boolean isDeveloping() {
@@ -60,13 +64,21 @@ public class DevelopData {
     }
 
     public boolean start(DevelopAction action, BlockPos developerPos, ResourceKey<Level> developerDimension) {
-        if (isDeveloping() || action == null || developerPos == null
+        return start(action, DevelopmentSource.block(developerPos), developerDimension);
+    }
+
+    public boolean start(
+            DevelopAction action,
+            DevelopmentSource developerSource,
+            ResourceKey<Level> developerDimension
+    ) {
+        if (isDeveloping() || action == null || developerSource == null
                 || developerDimension == null
                 || action.getTotalTicks() <= 0 || action.getEnergyCost() < 0) {
             return false;
         }
         this.action = action;
-        this.developerPos = developerPos.immutable();
+        this.developerSource = developerSource;
         this.developerDimension = developerDimension;
         state = DevState.DEVELOPING;
         progress = 0.0f;
@@ -78,18 +90,15 @@ public class DevelopData {
     }
 
     public void tick(ServerPlayer player) {
-        if (!isDeveloping() || action == null || developerPos == null) return;
-        if (developerDimension == null || !developerDimension.equals(player.level().dimension())) {
+        if (!isDeveloping() || action == null || developerSource == null) return;
+        if (!developerSource.portable()
+                && (developerDimension == null || !developerDimension.equals(player.level().dimension()))) {
             fail("Wrong dimension");
             return;
         }
         var developer = resolveDeveloper(player);
         if (developer == null) {
             fail("Developer unavailable");
-            return;
-        }
-        if (player.position().distanceToSqr(Vec3.atCenterOf(developerPos)) > 64.0) {
-            fail("Too far away");
             return;
         }
         if (!action.validate(player, developer)) {
@@ -145,16 +154,13 @@ public class DevelopData {
         return targetId == null ? "" : targetId;
     }
 
-    private @Nullable AbilityDeveloperBlockEntity resolveDeveloper(ServerPlayer player) {
-        if (developerPos == null || !player.level().hasChunkAt(developerPos)) return null;
-        var be = player.level().getBlockEntity(developerPos);
-        if (be instanceof AbilityDeveloperBlockEntity developer && developer.isMain()) return developer;
-        return null;
+    private @Nullable WirelessUser resolveDeveloper(ServerPlayer player) {
+        return developerSource == null ? null : AbilityDeveloperSources.resolve(player, developerSource);
     }
 
     public void reset() {
         action = null;
-        developerPos = null;
+        developerSource = null;
         developerDimension = null;
         state = DevState.IDLE;
         progress = 0.0f;

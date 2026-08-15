@@ -160,6 +160,14 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
 
     @Override
     public int receiveEnergy(int maxReceive, boolean simulate) {
+        if (maxReceive <= 0) return 0;
+        if (!isMain() && level != null) {
+            var mainBE = getMain();
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDeveloper) {
+                return mainDeveloper.receiveEnergy(maxReceive, simulate);
+            }
+            return 0;
+        }
         var maxEnergyCanStore = getMaxEnergyStorage();
         var energyStoredDouble = getEnergyStored();
         var maxCanReceive = Math.max(0, maxEnergyCanStore - energyStoredDouble);
@@ -171,6 +179,12 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
 
     @Override
     public int getEnergyStored() {
+        if (!isMain() && level != null) {
+            var mainBE = getMain();
+            if (mainBE instanceof AbilityDeveloperBlockEntity mainDeveloper) {
+                return mainDeveloper.getEnergyStored();
+            }
+        }
         return energyStored;
     }
 

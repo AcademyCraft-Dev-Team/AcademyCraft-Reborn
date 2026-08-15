@@ -1,10 +1,19 @@
 package org.academy.internal.common.ability.teleport.program;
 
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.GameMasterBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
@@ -22,6 +31,7 @@ import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 /** Authoritative Minecraft-server adapter for Teleport programs. */
 public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime {
@@ -63,23 +73,29 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 Skills.SELF_TELEPORT.get(),
                 selfRange(power),
                 selfCost(power),
-                false
+                false,
+                null
         );
     }
 
     @Override
     public ProgramActionTransaction.ProgramAction teleportEntity(
-            Object entityReference,
-            ProgramWorldPosition destination,
-            float power
+            Object targetReference,
+            Object destinationReference,
+            @Nullable ProgramDirection direction,
+            float power,
+            TeleportProgramNodeCatalog.TargetType targetType
     ) {
+        if (targetType == TeleportProgramNodeCatalog.TargetType.BLOCK) {
+            return teleportBlockAction(targetReference, destinationReference, direction, power);
+        }
         return new ProgramActionTransaction.ProgramAction() {
             private Entity target;
             private ProgramActionTransaction.ProgramAction action;
 
             @Override
             public void validate() throws Exception {
-                target = requireEntityTarget(entityReference);
+                target = requireEntityTarget(targetReference);
                 if (target == player) {
                     throw new IllegalArgumentException(
                             "Entity Teleport cannot replace the Self Teleport capability");
@@ -88,12 +104,13 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 requireMovementAllowed(target);
                 action = teleportAction(
                         target,
-                        destination,
+                        destinationPosition(destinationReference),
                         power,
                         Skills.QUICK_LOCATION_TELEPORT.get(),
                         entityMoveRange(power),
                         entityCost(power),
-                        true
+                        true,
+                        direction
                 );
                 action.validate();
             }
@@ -104,6 +121,90 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                     throw new IllegalStateException("Entity Teleport was not validated");
                 }
                 return action.apply();
+            }
+        };
+    }
+
+    @Override
+    public boolean isSpaceSafe(Object entityReference, ProgramWorldPosition position) {
+        var entity = requireEntityTarget(entityReference);
+        var destination = targets.requireLocalPosition(position);
+        var block = BlockPos.containing(destination);
+        if (!targets.level().hasChunkAt(block)
+                || block.getY() < targets.level().getMinY()
+                || block.getY() >= targets.level().getMaxY()) return false;
+        var moved = entity.getBoundingBox().move(destination.subtract(entity.position()));
+        return targets.level().getWorldBorder().isWithinBounds(moved)
+                && targets.level().noCollision(entity, moved);
+    }
+
+    private ProgramActionTransaction.ProgramAction teleportBlockAction(
+            Object sourceReference,
+            Object destinationReference,
+            @Nullable ProgramDirection direction,
+            float power
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private BlockPos source;
+            private BlockPos destination;
+            private BlockState state;
+            private CompoundTag blockEntityTag;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.QUICK_LOCATION_TELEPORT.get());
+                source = requireLocalBlock(sourceReference);
+                destination = destinationBlock(destinationReference);
+                if (source.equals(destination)) {
+                    throw new IllegalArgumentException("Teleport block source equals destination");
+                }
+                if (Math.sqrt(source.distSqr(destination)) > entityMoveRange(power)) {
+                    throw new IllegalArgumentException("Block teleport exceeds its power limit");
+                }
+                requireEditableBlock(source);
+                requireEditableBlock(destination);
+                state = targets.level().getBlockState(source);
+                if (state.isAir()
+                        || state.getDestroySpeed(targets.level(), source) < 0.0f
+                        || state.getBlock() instanceof GameMasterBlock
+                        && !player.canUseGameMasterBlocks()
+                        || !targets.level().getBlockState(destination).isAir()) {
+                    throw new IllegalArgumentException("Block teleport target is invalid");
+                }
+                var rotated = orient(state, direction);
+                if (!rotated.canSurvive(targets.level(), destination)) {
+                    throw new IllegalArgumentException("Teleported block cannot survive at destination");
+                }
+                var blockEntity = targets.level().getBlockEntity(source);
+                blockEntityTag = blockEntity == null ? null
+                        : blockEntity.saveWithFullMetadata(targets.level().registryAccess());
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                validate();
+                var movedState = orient(state, direction);
+                charge(Skills.QUICK_LOCATION_TELEPORT.get(), entityCost(power));
+                targets.level().setBlock(source, Blocks.AIR.defaultBlockState(),
+                        Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                if (!targets.level().setBlock(destination, movedState,
+                        Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
+                    targets.level().setBlock(source, state,
+                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                    throw new IllegalStateException("Unable to place teleported block");
+                }
+                restoreBlockEntity(destination, movedState, blockEntityTag);
+                return () -> {
+                    if (targets.level().getBlockState(destination).equals(movedState)) {
+                        targets.level().setBlock(destination, Blocks.AIR.defaultBlockState(),
+                                Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                    }
+                    if (targets.level().getBlockState(source).isAir()) {
+                        targets.level().setBlock(source, state,
+                                Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                        restoreBlockEntity(source, state, blockEntityTag);
+                    }
+                };
             }
         };
     }
@@ -148,7 +249,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             Skill skill,
             double maximumDisplacement,
             float cost,
-            boolean externallyMoved
+            boolean externallyMoved,
+            @Nullable ProgramDirection direction
     ) {
         Objects.requireNonNull(destination, "destination");
         ProgramPowerScale.require(power);
@@ -174,13 +276,17 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                         target, requested, maximumDisplacement);
                 var origin = target.position();
                 var previousMotion = target.getDeltaMovement();
+                var previousYaw = target.getYRot();
+                var previousPitch = target.getXRot();
                 charge(skill, cost);
                 if (!teleport(target, safeDestination)) {
                     throw new IllegalStateException("Target rejected program teleport");
                 }
                 setMotion(target, Vec3.ZERO);
+                applyRotation(target, direction);
                 target.resetFallDistance();
-                return () -> restore(target, origin, previousMotion);
+                return () -> restore(
+                        target, origin, previousMotion, previousYaw, previousPitch);
             }
         };
     }
@@ -267,7 +373,13 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         syncMotion(entity);
     }
 
-    private static void restore(Entity entity, Vec3 position, Vec3 motion) {
+    private static void restore(
+            Entity entity,
+            Vec3 position,
+            Vec3 motion,
+            float yaw,
+            float pitch
+    ) {
         if (!(entity.level() instanceof net.minecraft.server.level.ServerLevel)
                 || entity.isRemoved()) {
             return;
@@ -277,6 +389,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 throw new IllegalStateException("Unable to restore teleported entity");
             }
             entity.setDeltaMovement(motion);
+            entity.setYRot(yaw);
+            entity.setXRot(pitch);
         });
         entity.hurtMarked = true;
         syncMotion(entity);
@@ -286,6 +400,104 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         if (entity instanceof ServerPlayer targetPlayer) {
             targetPlayer.connection.send(new ClientboundSetEntityMotionPacket(targetPlayer));
         }
+    }
+
+    private ProgramWorldPosition destinationPosition(Object value) {
+        if (value instanceof ProgramWorldPosition world) return world;
+        if (value instanceof ProgramBlockPosition block) {
+            return new ProgramWorldPosition(
+                    block.dimension(), block.x() + 0.5, block.y(), block.z() + 0.5);
+        }
+        throw new IllegalArgumentException("Teleport destination must be a block or world position");
+    }
+
+    private BlockPos destinationBlock(Object value) {
+        if (value instanceof ProgramBlockPosition block) return requireLocalBlock(block);
+        if (value instanceof ProgramWorldPosition world) {
+            return requireLocalBlock(ProgramBlockPosition.containing(world));
+        }
+        throw new IllegalArgumentException("Block teleport destination is invalid");
+    }
+
+    private BlockPos requireLocalBlock(Object value) {
+        if (!(value instanceof ProgramBlockPosition block)
+                || !block.dimension().equals(targets.level().dimension().identifier())) {
+            throw new IllegalArgumentException("Teleport block is in another dimension");
+        }
+        var position = new BlockPos(block.x(), block.y(), block.z());
+        if (!targets.level().hasChunkAt(position)
+                || position.getY() < targets.level().getMinY()
+                || position.getY() >= targets.level().getMaxY()
+                || Vec3.atCenterOf(position).distanceToSqr(player.position())
+                > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+            throw new IllegalArgumentException("Teleport block is outside program range");
+        }
+        return position;
+    }
+
+    private void requireEditableBlock(BlockPos position) {
+        if (!targets.level().mayInteract(player, position)
+                || player.blockActionRestricted(
+                        targets.level(), position, player.gameMode.getGameModeForPlayer())) {
+            throw new IllegalArgumentException("Teleport block is protected");
+        }
+    }
+
+    private static BlockState orient(
+            BlockState state,
+            @Nullable ProgramDirection direction
+    ) {
+        if (direction == null) return state;
+        var facing = nearestDirection(direction);
+        if (state.hasProperty(BlockStateProperties.FACING)) {
+            return state.setValue(BlockStateProperties.FACING, facing);
+        }
+        if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+            if (facing.getAxis().isVertical()) {
+                facing = Math.abs(direction.x()) >= Math.abs(direction.z())
+                        ? direction.x() >= 0.0 ? Direction.EAST : Direction.WEST
+                        : direction.z() >= 0.0 ? Direction.SOUTH : Direction.NORTH;
+            }
+            return state.setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
+        }
+        return state;
+    }
+
+    private static Direction nearestDirection(ProgramDirection direction) {
+        var x = direction.x();
+        var y = direction.y();
+        var z = direction.z();
+        if (Math.abs(y) >= Math.abs(x) && Math.abs(y) >= Math.abs(z)) {
+            return y >= 0.0 ? Direction.UP : Direction.DOWN;
+        }
+        return Math.abs(x) >= Math.abs(z)
+                ? x >= 0.0 ? Direction.EAST : Direction.WEST
+                : z >= 0.0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    private void restoreBlockEntity(
+            BlockPos position,
+            BlockState state,
+            @Nullable CompoundTag tag
+    ) {
+        if (tag == null) return;
+        var blockEntity = BlockEntity.loadStatic(
+                position.immutable(), state, tag, targets.level().registryAccess());
+        if (blockEntity != null) {
+            targets.level().setBlockEntity(blockEntity);
+            blockEntity.setChanged();
+        }
+    }
+
+    private static void applyRotation(
+            Entity entity,
+            @Nullable ProgramDirection direction
+    ) {
+        if (direction == null) return;
+        entity.setYRot((float) Math.toDegrees(Math.atan2(-direction.x(), direction.z())));
+        entity.setXRot((float) Math.toDegrees(-Math.asin(
+                Math.clamp(direction.y(), -1.0, 1.0))));
+        if (entity instanceof LivingEntity living) living.setYHeadRot(entity.getYRot());
     }
 
     private static double selfRange(float power) {

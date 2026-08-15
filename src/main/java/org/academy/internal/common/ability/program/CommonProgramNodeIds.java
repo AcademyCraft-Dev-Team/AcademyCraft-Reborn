@@ -56,6 +56,8 @@ public final class CommonProgramNodeIds {
     public static final Identifier TRIGGER_LOOP = id("flow/trigger/loop");
     public static final Identifier TRIGGER_MELEE = id("flow/trigger/melee");
     public static final Identifier TRIGGER_MOVEMENT = id("flow/trigger/movement");
+    public static final Identifier TRIGGER_HEALTH_THRESHOLD =
+            id("flow/trigger/health_threshold");
     public static final Identifier VARIABLE_GET = id("state/variable_get");
     public static final Identifier VARIABLE_SET = id("state/variable_set");
 
@@ -97,6 +99,10 @@ public final class CommonProgramNodeIds {
             id("filter/entity/health_at_least");
     public static final Identifier FILTER_ENTITY_HEALTH_AT_MOST =
             id("filter/entity/health_at_most");
+    public static final Identifier FILTER_ENTITY_MAX_HEALTH_AT_LEAST =
+            id("filter/entity/max_health_at_least");
+    public static final Identifier FILTER_ENTITY_MAX_HEALTH_AT_MOST =
+            id("filter/entity/max_health_at_most");
     public static final Identifier FILTER_ENTITY_HAS_TARGET = id("filter/entity/has_target");
     public static final Identifier FILTER_ENTITY_VISIBLE_FROM = id("filter/entity/visible_from");
 
@@ -105,6 +111,11 @@ public final class CommonProgramNodeIds {
     public static final Identifier BLOCK_POSITION_EQUAL = id("logic/block_position/equal");
     public static final Identifier DIRECTION_EQUAL = id("logic/direction/equal");
     public static final Identifier RANDOM_ENTITY = id("collection/entity/random");
+    public static final Identifier RANDOM_WORLD_POSITION =
+            id("collection/world_position/random");
+    public static final Identifier RANDOM_BLOCK_POSITION =
+            id("collection/block_position/random");
+    public static final Identifier RANDOM_DIRECTION = id("collection/direction/random");
 
     private CommonProgramNodeIds() {
     }

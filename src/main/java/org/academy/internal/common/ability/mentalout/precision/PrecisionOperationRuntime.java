@@ -43,6 +43,7 @@ import org.academy.internal.common.ability.program.ProgramInputView;
 import org.academy.internal.common.ability.program.ProgramNodeStep;
 import org.academy.internal.common.ability.program.ProgramVmContext;
 import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
+import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.jspecify.annotations.Nullable;
 
@@ -58,6 +59,7 @@ import java.util.UUID;
 
 public final class PrecisionOperationRuntime {
     public static final int PRIORITY = 200;
+    private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     private static final Map<UUID, ActiveContext[]> ACTIVE = new HashMap<>();
     private static long nextContextSequence;
 
@@ -78,16 +80,16 @@ public final class PrecisionOperationRuntime {
             CompiledProgram program,
             boolean feedback
     ) {
-        if (player == null || slot < 0 || slot >= 4 || program == null) {
+        if (player == null || slot < 0 || slot >= SLOT_COUNT || program == null) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
         }
-        var slots = ACTIVE.computeIfAbsent(player.getUUID(), _ -> new ActiveContext[4]);
+        var slots = ACTIVE.computeIfAbsent(player.getUUID(), _ -> new ActiveContext[SLOT_COUNT]);
         var previous = slots[slot];
         var skill = Skills.PRECISION_OPERATION.get();
-        if (!skill.isEnabled(player)) {
+        if (AbilitySystemServer.getSystem(player).getPlayerLevel(player.getUUID()) < 5) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
         }
-        var level = Math.clamp(skill.getLevel(player), 0, 2);
+        var level = 2;
         var targetLimit = actionSubjectLimit(level);
         var now = player.level().getGameTime();
         var activeActions = new ArrayList<ActiveAction>();

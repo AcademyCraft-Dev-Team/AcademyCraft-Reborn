@@ -191,7 +191,7 @@ public class MagnetManipulation extends Skill {
         return hasMagneticKeyword(normalized);
     }
 
-    static boolean isMagnetic(BlockState state) {
+    public static boolean isMagnetic(BlockState state) {
         var block = state.getBlock();
         var blockPath = BuiltInRegistries.BLOCK.getKey(block).getPath();
         if (blockPath.equals("obsidian") || blockPath.equals("crying_obsidian")) return false;

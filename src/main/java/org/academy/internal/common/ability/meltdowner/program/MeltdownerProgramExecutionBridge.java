@@ -7,6 +7,7 @@ import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramLimits;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.CompiledProgram;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
@@ -86,18 +87,41 @@ public final class MeltdownerProgramExecutionBridge {
                         .orElseGet(() -> ProgramNodeStep.data(Map.of())));
         put(result, MeltdownerProgramNodeIds.ELECTRON_BEAM,
                 (ProgramVmContext context,
-                 MeltdownerProgramNodeCatalog.PowerConfiguration configuration,
+                 MeltdownerProgramNodeCatalog.BeamConfiguration configuration,
                  ProgramInputView inputs) -> {
                     stage(context, runtime(context).fireElectronBeam(
-                            direction(inputs, "direction"), configuration.power()));
+                            optionalWorldPosition(inputs, "origin"),
+                            configuration.aimMode() == MeltdownerProgramNodeCatalog.AimMode.DIRECTION
+                                    ? optionalDirection(inputs, "direction") : null,
+                            configuration.aimMode() == MeltdownerProgramNodeCatalog.AimMode.TARGET
+                                    ? optionalWorldPosition(inputs, "target_position") : null,
+                            configuration.power(),
+                            configuration.destroyBlocks()));
                     return ProgramNodeStep.next("flow");
                 });
         put(result, MeltdownerProgramNodeIds.MINING_BEAM,
                 (ProgramVmContext context,
-                 MeltdownerProgramNodeCatalog.PowerConfiguration configuration,
+                 MeltdownerProgramNodeCatalog.MiningBeamConfiguration configuration,
                  ProgramInputView inputs) -> {
                     stage(context, runtime(context).fireMiningBeam(
-                            blockPosition(inputs, "block"), configuration.power()));
+                            optionalWorldPosition(inputs, "origin"),
+                            configuration.aimMode() == MeltdownerProgramNodeCatalog.AimMode.DIRECTION
+                                    ? optionalDirection(inputs, "direction") : null,
+                            configuration.aimMode() == MeltdownerProgramNodeCatalog.AimMode.TARGET
+                                    ? optionalWorldPosition(inputs, "target_position") : null,
+                            optionalBlockPosition(inputs, "block"),
+                            configuration.power()));
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, MeltdownerProgramNodeIds.ATOMIC_JET,
+                (ProgramVmContext context,
+                 MeltdownerProgramNodeCatalog.AtomicJetConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    stage(context, runtime(context).atomicJet(
+                            entity(inputs, "entity"),
+                            direction(inputs, "direction"),
+                            configuration.power(),
+                            configuration.destroyBlocks()));
                     return ProgramNodeStep.next("flow");
                 });
         return Map.copyOf(result);
@@ -122,6 +146,34 @@ public final class MeltdownerProgramExecutionBridge {
     private static ProgramDirection direction(ProgramInputView inputs, String port) {
         return (ProgramDirection) inputs.requireCompatible(
                 port, ProgramValueTypes.DIRECTION).value();
+    }
+
+    private static ProgramDirection optionalDirection(ProgramInputView inputs, String port) {
+        return inputs.first(port)
+                .map(value -> (ProgramDirection) value.value())
+                .orElse(null);
+    }
+
+    private static ProgramWorldPosition optionalWorldPosition(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .map(value -> (ProgramWorldPosition) value.value())
+                .orElse(null);
+    }
+
+    private static ProgramBlockPosition optionalBlockPosition(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .map(value -> (ProgramBlockPosition) value.value())
+                .orElse(null);
+    }
+
+    private static Object entity(ProgramInputView inputs, String port) {
+        return inputs.requireCompatible(port, ProgramValueTypes.ENTITY_REFERENCE).value();
     }
 
     private static ProgramBlockPosition blockPosition(ProgramInputView inputs, String port) {

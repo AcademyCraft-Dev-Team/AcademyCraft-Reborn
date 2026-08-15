@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.teleport.program;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramNodePurity;
@@ -36,8 +37,16 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
                 categoryScope()));
         put(result, TeleportProgramNodeIds.SELF_TELEPORT, powerType(
                 selfTeleportSchema(), TeleportProgramCapabilities.SELF_TELEPORT));
-        put(result, TeleportProgramNodeIds.ENTITY_TELEPORT, powerType(
-                entityTeleportSchema(), TeleportProgramCapabilities.ENTITY_TELEPORT));
+        put(result, TeleportProgramNodeIds.ENTITY_TELEPORT, new DynamicNodeType<>(
+                TargetTeleportConfiguration.CODEC,
+                TeleportProgramNodeCatalog::targetTeleportSchema,
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(TeleportProgramCapabilities.ENTITY_TELEPORT)
+        ));
+        put(result, TeleportProgramNodeIds.SPACE_SAFETY, unitType(
+                spaceSafetySchema(), ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY,
+                categoryScope()));
         types = Map.copyOf(result);
     }
 
@@ -79,6 +88,34 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
                                 "destination", ProgramValueTypes.WORLD_POSITION)
                 ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
+    private static ProgramNodeSchema targetTeleportSchema(
+            TargetTeleportConfiguration configuration
+    ) {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                configuration.targetType().port(),
+                                configuration.targetType().valueType()),
+                        ProgramPortDefinition.requiredInput(
+                                "destination", ProgramValueTypes.CONTROL_DESTINATION),
+                        ProgramPortDefinition.optionalInput(
+                                "direction", ProgramValueTypes.DIRECTION)
+                ),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
+    private static ProgramNodeSchema spaceSafetySchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("entity", ProgramValueTypes.ENTITY_REFERENCE),
+                        ProgramPortDefinition.requiredInput("position", ProgramValueTypes.WORLD_POSITION)
+                ),
+                List.of(ProgramPortDefinition.output("result", ProgramValueTypes.BOOLEAN))
         );
     }
 
@@ -135,6 +172,43 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
                 .codec();
     }
 
+    public record TargetTeleportConfiguration(float power, TargetType targetType) {
+        public static final Codec<TargetTeleportConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(TargetTeleportConfiguration::power),
+                        TargetType.CODEC.optionalFieldOf("target_type", TargetType.ENTITY)
+                                .forGetter(TargetTeleportConfiguration::targetType)
+                ).apply(instance, TargetTeleportConfiguration::new));
+    }
+
+    public enum TargetType {
+        ENTITY("entity", "entity", ProgramValueTypes.ENTITY_REFERENCE),
+        BLOCK("block", "block", ProgramValueTypes.BLOCK_POSITION);
+
+        private static final Codec<TargetType> CODEC = Codec.STRING.xmap(
+                TargetType::byName, TargetType::wireName);
+        private final String wireName;
+        private final String port;
+        private final org.academy.api.common.ability.program.ProgramValueType valueType;
+
+        TargetType(String wireName, String port,
+                   org.academy.api.common.ability.program.ProgramValueType valueType) {
+            this.wireName = wireName;
+            this.port = port;
+            this.valueType = valueType;
+        }
+
+        public String wireName() { return wireName; }
+        public String port() { return port; }
+        public org.academy.api.common.ability.program.ProgramValueType valueType() { return valueType; }
+
+        private static TargetType byName(String value) {
+            for (var type : values()) if (type.wireName.equals(value)) return type;
+            throw new IllegalArgumentException("Unknown teleport target type " + value);
+        }
+    }
+
     private enum EmptyConfiguration {
         INSTANCE
     }
@@ -154,6 +228,24 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
         @Override
         public ProgramNodeSchema schema(C configuration) {
             return schema;
+        }
+    }
+
+    private record DynamicNodeType<C>(
+            Codec<C> configurationCodec,
+            java.util.function.Function<C, ProgramNodeSchema> schemaFactory,
+            ProgramNodeRole role,
+            ProgramNodePurity purity,
+            ProgramNodeScope scope
+    ) implements ProgramNodeType<C> {
+        @Override
+        public int schemaVersion() {
+            return 1;
+        }
+
+        @Override
+        public ProgramNodeSchema schema(C configuration) {
+            return schemaFactory.apply(configuration);
         }
     }
 }

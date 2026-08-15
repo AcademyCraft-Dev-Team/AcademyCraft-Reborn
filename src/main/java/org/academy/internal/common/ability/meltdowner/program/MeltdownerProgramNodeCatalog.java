@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.meltdowner.program;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramNodePurity;
@@ -36,10 +37,15 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
         put(result, MeltdownerProgramNodeIds.LOOK_TARGET, unitType(
                 querySchema(), ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY,
                 categoryScope()));
-        put(result, MeltdownerProgramNodeIds.ELECTRON_BEAM, powerType(
-                electronBeamSchema(), MeltdownerProgramCapabilities.ELECTRON_BEAM));
-        put(result, MeltdownerProgramNodeIds.MINING_BEAM, powerType(
-                miningBeamSchema(), MeltdownerProgramCapabilities.MINING_BEAM));
+        put(result, MeltdownerProgramNodeIds.ELECTRON_BEAM, beamType(
+                BeamConfiguration.CODEC, MeltdownerProgramNodeCatalog::electronBeamSchema,
+                MeltdownerProgramCapabilities.ELECTRON_BEAM));
+        put(result, MeltdownerProgramNodeIds.MINING_BEAM, beamType(
+                MiningBeamConfiguration.CODEC, MeltdownerProgramNodeCatalog::miningBeamSchema,
+                MeltdownerProgramCapabilities.MINING_BEAM));
+        put(result, MeltdownerProgramNodeIds.ATOMIC_JET, beamType(
+                AtomicJetConfiguration.CODEC, _ -> atomicJetSchema(),
+                MeltdownerProgramCapabilities.ATOMIC_JET));
         types = Map.copyOf(result);
     }
 
@@ -60,23 +66,45 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
         );
     }
 
-    private static ProgramNodeSchema electronBeamSchema() {
+    private static ProgramNodeSchema electronBeamSchema(BeamConfiguration configuration) {
+        var aim = configuration.aimMode() == AimMode.DIRECTION
+                ? ProgramPortDefinition.requiredInput("direction", ProgramValueTypes.DIRECTION)
+                : ProgramPortDefinition.requiredInput(
+                        "target_position", ProgramValueTypes.WORLD_POSITION);
         return new ProgramNodeSchema(
                 List.of(
                         ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
-                        ProgramPortDefinition.requiredInput(
-                                "direction", ProgramValueTypes.DIRECTION)
+                        ProgramPortDefinition.optionalInput("origin", ProgramValueTypes.WORLD_POSITION),
+                        aim
                 ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
     }
 
-    private static ProgramNodeSchema miningBeamSchema() {
+    private static ProgramNodeSchema miningBeamSchema(MiningBeamConfiguration configuration) {
+        var inputs = new java.util.ArrayList<ProgramPortDefinition>();
+        inputs.add(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW));
+        inputs.add(ProgramPortDefinition.optionalInput("origin", ProgramValueTypes.WORLD_POSITION));
+        if (configuration.aimMode() == AimMode.DIRECTION) {
+            inputs.add(ProgramPortDefinition.optionalInput("direction", ProgramValueTypes.DIRECTION));
+            // Legacy targeted-mining programs are decoded through this optional compatibility port.
+            inputs.add(ProgramPortDefinition.optionalInput("block", ProgramValueTypes.BLOCK_POSITION));
+        } else {
+            inputs.add(ProgramPortDefinition.requiredInput(
+                    "target_position", ProgramValueTypes.WORLD_POSITION));
+        }
+        return new ProgramNodeSchema(
+                List.copyOf(inputs),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
+    private static ProgramNodeSchema atomicJetSchema() {
         return new ProgramNodeSchema(
                 List.of(
                         ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
-                        ProgramPortDefinition.requiredInput(
-                                "block", ProgramValueTypes.BLOCK_POSITION)
+                        ProgramPortDefinition.requiredInput("entity", ProgramValueTypes.ENTITY_REFERENCE),
+                        ProgramPortDefinition.requiredInput("direction", ProgramValueTypes.DIRECTION)
                 ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
@@ -88,6 +116,20 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
     ) {
         return new FixedNodeType<>(
                 PowerConfiguration.CODEC,
+                _ -> schema,
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(capability)
+        );
+    }
+
+    private static <C> ProgramNodeType<C> beamType(
+            Codec<C> codec,
+            java.util.function.Function<C, ProgramNodeSchema> schema,
+            Identifier capability
+    ) {
+        return new FixedNodeType<>(
+                codec,
                 schema,
                 ProgramNodeRole.ACTION,
                 ProgramNodePurity.ACTION,
@@ -103,7 +145,7 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
     ) {
         return new FixedNodeType<>(
                 MapCodec.unit(EmptyConfiguration.INSTANCE).codec(),
-                schema,
+                _ -> schema,
                 role,
                 purity,
                 scope
@@ -135,13 +177,67 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
                 .codec();
     }
 
+    public record BeamConfiguration(float power, AimMode aimMode, boolean destroyBlocks) {
+        public static final Codec<BeamConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(BeamConfiguration::power),
+                        AimMode.CODEC.optionalFieldOf("aim_mode", AimMode.DIRECTION)
+                                .forGetter(BeamConfiguration::aimMode),
+                        Codec.BOOL.optionalFieldOf("destroy_blocks", true)
+                                .forGetter(BeamConfiguration::destroyBlocks)
+                ).apply(instance, BeamConfiguration::new));
+    }
+
+    public record MiningBeamConfiguration(float power, AimMode aimMode) {
+        public static final Codec<MiningBeamConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(MiningBeamConfiguration::power),
+                        AimMode.CODEC.optionalFieldOf("aim_mode", AimMode.DIRECTION)
+                                .forGetter(MiningBeamConfiguration::aimMode)
+                ).apply(instance, MiningBeamConfiguration::new));
+    }
+
+    public record AtomicJetConfiguration(float power, boolean destroyBlocks) {
+        public static final Codec<AtomicJetConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(AtomicJetConfiguration::power),
+                        Codec.BOOL.optionalFieldOf("destroy_blocks", true)
+                                .forGetter(AtomicJetConfiguration::destroyBlocks)
+                ).apply(instance, AtomicJetConfiguration::new));
+    }
+
+    public enum AimMode {
+        DIRECTION("direction"),
+        TARGET("target");
+
+        private static final Codec<AimMode> CODEC = Codec.STRING.xmap(
+                AimMode::byName, AimMode::wireName);
+        private final String wireName;
+
+        AimMode(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        private static AimMode byName(String value) {
+            for (var mode : values()) if (mode.wireName.equals(value)) return mode;
+            throw new IllegalArgumentException("Unknown beam aim mode " + value);
+        }
+    }
+
     private enum EmptyConfiguration {
         INSTANCE
     }
 
     private record FixedNodeType<C>(
             Codec<C> configurationCodec,
-            ProgramNodeSchema schema,
+            java.util.function.Function<C, ProgramNodeSchema> schemaFactory,
             ProgramNodeRole role,
             ProgramNodePurity purity,
             ProgramNodeScope scope
@@ -153,7 +249,7 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
 
         @Override
         public ProgramNodeSchema schema(C configuration) {
-            return schema;
+            return schemaFactory.apply(configuration);
         }
     }
 }

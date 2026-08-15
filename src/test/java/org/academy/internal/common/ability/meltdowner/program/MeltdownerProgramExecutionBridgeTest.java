@@ -47,6 +47,27 @@ class MeltdownerProgramExecutionBridgeTest {
                 MeltdownerProgramNodeCatalog.INSTANCE
                         .find(MeltdownerProgramNodeIds.MINING_BEAM)
                         .scope().requiredCapabilities());
+        assertEquals(Set.of(MeltdownerProgramCapabilities.ATOMIC_JET),
+                MeltdownerProgramNodeCatalog.INSTANCE
+                        .find(MeltdownerProgramNodeIds.ATOMIC_JET)
+                        .scope().requiredCapabilities());
+
+        var targetAim = new JsonObject();
+        targetAim.addProperty("power", 1.0f);
+        targetAim.addProperty("aim_mode", "target");
+        targetAim.addProperty("destroy_blocks", false);
+        var targetSchema = catalog.schema(MeltdownerProgramNodeIds.ELECTRON_BEAM, targetAim);
+        assertNotNull(targetSchema);
+        assertEquals(List.of("flow", "origin", "target_position"),
+                targetSchema.inputs().stream().map(port -> port.name()).toList());
+
+        var jet = new JsonObject();
+        jet.addProperty("power", 1.0f);
+        jet.addProperty("destroy_blocks", true);
+        var jetSchema = catalog.schema(MeltdownerProgramNodeIds.ATOMIC_JET, jet);
+        assertNotNull(jetSchema);
+        assertEquals(List.of("flow", "entity", "direction"),
+                jetSchema.inputs().stream().map(port -> port.name()).toList());
 
         var invalid = new JsonObject();
         invalid.addProperty("power", 3);
@@ -182,8 +203,11 @@ class MeltdownerProgramExecutionBridgeTest {
 
         @Override
         public ProgramActionTransaction.ProgramAction fireElectronBeam(
+                ProgramWorldPosition origin,
                 ProgramDirection direction,
-                float power
+                ProgramWorldPosition target,
+                float power,
+                boolean destroyBlocks
         ) {
             return action("electron:" + direction.x() + "," + direction.y() + ","
                     + direction.z() + ":" + power);
@@ -191,11 +215,24 @@ class MeltdownerProgramExecutionBridgeTest {
 
         @Override
         public ProgramActionTransaction.ProgramAction fireMiningBeam(
-                ProgramBlockPosition block,
+                ProgramWorldPosition origin,
+                ProgramDirection direction,
+                ProgramWorldPosition target,
+                ProgramBlockPosition legacyBlock,
                 float power
         ) {
-            return action("mining:" + block.dimension() + ":" + block.x() + ","
-                    + block.y() + "," + block.z() + ":" + power);
+            return action("mining:" + legacyBlock.dimension() + ":" + legacyBlock.x()
+                    + "," + legacyBlock.y() + "," + legacyBlock.z() + ":" + power);
+        }
+
+        @Override
+        public ProgramActionTransaction.ProgramAction atomicJet(
+                Object entity,
+                ProgramDirection direction,
+                float power,
+                boolean destroyBlocks
+        ) {
+            return action("jet:" + entity + ":" + power + ":" + destroyBlocks);
         }
 
         @Override

@@ -32,11 +32,13 @@ import org.academy.internal.common.ability.program.PrecisionProgramBookMigrator;
 import org.academy.internal.common.ability.program.PrecisionProgramExporter;
 import org.academy.internal.common.ability.program.PrecisionProgramAliases;
 import org.academy.internal.common.ability.program.ProgramBookCodec;
+import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.skilldata.SkillData;
 
 public final class PrecisionOperation extends Skill {
+    private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     public PrecisionOperation() {
         super(Builder
                 .of(AbilityCategories.MENTALOUT.get())
@@ -66,7 +68,7 @@ public final class PrecisionOperation extends Skill {
             try {
                 var decoded = ProgramBookCodec.decode(Base64.getDecoder().decode(data.encodedBook));
                 if (decoded.valid() && validBook(decoded.book())) {
-                    data.installBook(decoded.book());
+                    data.installBook(decoded.book().resize(SLOT_COUNT));
                     return data;
                 }
             } catch (IllegalArgumentException ignored) {
@@ -104,7 +106,9 @@ public final class PrecisionOperation extends Skill {
     }
 
     private static boolean validBook(ProgramBook book) {
-        if (book.schemaVersion() != ProgramBook.CURRENT_SCHEMA_VERSION || book.slots().size() != 4) {
+        if (book.schemaVersion() != ProgramBook.CURRENT_SCHEMA_VERSION
+                || book.slots().isEmpty()
+                || book.slots().size() > SLOT_COUNT) {
             return false;
         }
         return book.slots().stream().allMatch(slot -> slot.empty()
@@ -114,65 +118,16 @@ public final class PrecisionOperation extends Skill {
 
     @Override
     public void initClient() {
-        PrecisionOperationManager.initClient();
-        var key = getKey();
-        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-
-        var selectedTemplate = InputSystem.combo(
-                InputSystem.InputType.KEYBOARD,
-                InputConstants.KEY_G,
-                InputConstants.PRESS,
-                0
-        );
-        var editorTemplate = InputSystem.combo(
-                InputSystem.InputType.KEYBOARD,
-                InputConstants.KEY_BACKSLASH,
-                InputConstants.PRESS,
-                0
-        );
-        InputSystem.addKeyBinding(
-                Client.KEY_NAME_EXECUTE_SELECTED,
-                Client.CONFIG.getKeyBinding(
-                        Client.KEY_NAME_EXECUTE_SELECTED,
-                        selectedTemplate
-                ),
-                context -> {
-                    if (context.action() == InputConstants.PRESS) PrecisionOperationClient.executeSelected();
-                }
-        );
-        InputSystem.addKeyBinding(Client.KEY_NAME_EDIT, Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_EDIT,
-                editorTemplate
-        ), _ -> PrecisionOperationClient.openEditor());
-        var keys = new int[]{
-                InputConstants.KEY_1,
-                InputConstants.KEY_2,
-                InputConstants.KEY_3,
-                InputConstants.KEY_4
-        };
-        for (var slot = 0; slot < 4; slot++) {
-            var currentSlot = slot;
-            var keyName = Client.KEY_NAME_SLOT_PREFIX + (slot + 1);
-            InputSystem.addKeyBinding(keyName, Client.CONFIG.getKeyBinding(
-                    keyName,
-                    InputSystem.combo(
-                            InputSystem.InputType.KEYBOARD,
-                            keys[slot],
-                            InputConstants.PRESS,
-                            InputConstants.MOD_ALT
-                    )
-            ), _ -> PrecisionOperationClient.execute(currentSlot));
-        }
+        // Placeholder skill: the category-wide precision editor owns GUI and key bindings.
     }
 
     @Override
     public void initServer(MinecraftServerContext context) {
-        PrecisionOperationManager.initServer();
+        // Placeholder skill: the global program runtime owns network initialization.
     }
 
     public static final class Data extends SkillData {
-        public static final int SCHEMA_VERSION = 4;
+        public static final int SCHEMA_VERSION = 5;
         public static final Identifier ID = AcademyCraft.academy("precision_operation");
 
         @SerializedName("schemaVersion")
@@ -204,11 +159,12 @@ public final class PrecisionOperation extends Skill {
         }
 
         public AbilityProgram program(UUID ownerId, int slot) {
-            return programBook(ownerId).slot(Mth.clamp(slot, 0, 3)).program();
+            return programBook(ownerId).slot(Mth.clamp(slot, 0, SLOT_COUNT - 1)).program();
         }
 
         public void replaceProgram(UUID ownerId, int slot, AbilityProgram program) {
-            var changed = programBook(ownerId).replaceSlot(Mth.clamp(slot, 0, 3), program);
+            var changed = programBook(ownerId).replaceSlot(
+                    Mth.clamp(slot, 0, SLOT_COUNT - 1), program);
             installBook(changed);
         }
 
@@ -251,7 +207,7 @@ public final class PrecisionOperation extends Skill {
         }
 
         private void installBook(ProgramBook book) {
-            book = PrecisionProgramAliases.canonicalize(book);
+            book = PrecisionProgramAliases.canonicalize(book.resize(SLOT_COUNT));
             cachedBook = book;
             encodedBook = Base64.getEncoder().encodeToString(ProgramBookCodec.encode(book));
             revision = book.revision();

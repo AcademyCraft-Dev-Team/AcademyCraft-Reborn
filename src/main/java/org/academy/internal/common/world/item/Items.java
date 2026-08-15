@@ -43,8 +43,8 @@ public final class Items {
                     properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.BOOTS)));
     public static final DeferredHolder<Item, DataTerminalItem> DATA_TERMINAL =
             ITEMS.registerItem("data_terminal", DataTerminalItem::new);
-    public static final DeferredHolder<Item, Item> ABILITY_CONTROL_TABLET =
-            ITEMS.registerItem("ability_control_tablet", properties -> new Item(properties.stacksTo(1)));
+    public static final DeferredHolder<Item, AbilityControlTabletItem> ABILITY_CONTROL_TABLET =
+            ITEMS.registerItem("ability_control_tablet", AbilityControlTabletItem::new);
     public static final DeferredHolder<Item, CoinItem> COIN =
             ITEMS.registerItem("coin", CoinItem::new);
     public static final DeferredHolder<Item, BlockItem> WIRELESS_NODE =

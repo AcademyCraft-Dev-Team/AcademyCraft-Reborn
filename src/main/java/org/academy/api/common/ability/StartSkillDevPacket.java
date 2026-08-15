@@ -5,6 +5,8 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.api.common.network.future.packet.RequestPacket;
 import org.misaka.api.common.network.future.packet.ResponsePacket;
@@ -14,17 +16,25 @@ public class StartSkillDevPacket extends RequestPacket<ServerGamePacketListenerI
     public static final StreamCodec<ByteBuf, StartSkillDevPacket> CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8,
             StartSkillDevPacket::getSkillName,
-            ByteBufCodecs.LONG,
-            StartSkillDevPacket::getUserPos,
+            DevelopmentSource.CODEC,
+            StartSkillDevPacket::getSource,
             StartSkillDevPacket::new
     );
 
     private final String skillName;
-    private final long userPos;
+    private final DevelopmentSource source;
 
     public StartSkillDevPacket(String skillName, long userPos) {
+        this(skillName, DevelopmentSource.block(BlockPos.of(userPos)));
+    }
+
+    public StartSkillDevPacket(String skillName, InteractionHand hand) {
+        this(skillName, DevelopmentSource.tablet(hand));
+    }
+
+    public StartSkillDevPacket(String skillName, DevelopmentSource source) {
         this.skillName = skillName;
-        this.userPos = userPos;
+        this.source = source;
     }
 
     public String getSkillName() {
@@ -32,7 +42,11 @@ public class StartSkillDevPacket extends RequestPacket<ServerGamePacketListenerI
     }
 
     public long getUserPos() {
-        return userPos;
+        return source.blockPos() == null ? 0L : source.blockPos().asLong();
+    }
+
+    public DevelopmentSource getSource() {
+        return source;
     }
 
     @Override

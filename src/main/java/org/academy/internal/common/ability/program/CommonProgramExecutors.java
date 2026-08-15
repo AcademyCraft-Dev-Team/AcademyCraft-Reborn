@@ -5,6 +5,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
@@ -48,19 +50,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         for (var domain : CommonProgramNodeCatalog.CollectionDomain.values()) {
             registerCollection(result, domain);
         }
-        put(result, CommonProgramNodeIds.RANDOM_ENTITY, (_, _, inputs) -> {
-            var entities = collection(
-                    inputs,
-                    "entities",
-                    CommonProgramNodeCatalog.CollectionDomain.ENTITY
-            );
-            if (entities.isEmpty()) return emptyData();
-            return data(
-                    "entity",
-                    ProgramValueTypes.ENTITY_REFERENCE,
-                    entities.get(ThreadLocalRandom.current().nextInt(entities.size()))
-            );
-        });
+        registerRandomCollectionValues(result);
         executors = Map.copyOf(result);
     }
 
@@ -185,7 +175,8 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 CommonProgramNodeIds.TRIGGER_HURT,
                 CommonProgramNodeIds.TRIGGER_LOOP,
                 CommonProgramNodeIds.TRIGGER_MELEE,
-                CommonProgramNodeIds.TRIGGER_MOVEMENT
+                CommonProgramNodeIds.TRIGGER_MOVEMENT,
+                CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD
         )) {
             put(result, id, (_, _, _) -> ProgramNodeStep.next("flow"));
         }
@@ -463,6 +454,16 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             var percent = healthPercentThreshold(inputs);
             return filterEntities(inputs, entity -> healthPercent(entity) <= percent);
         });
+        put(result, CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_LEAST, (_, _, inputs) -> {
+            var health = nonNegative(floatValue(inputs, "health"), "health");
+            return filterEntities(inputs, entity -> entity instanceof LivingEntity living
+                    && living.getMaxHealth() >= health);
+        });
+        put(result, CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_MOST, (_, _, inputs) -> {
+            var health = nonNegative(floatValue(inputs, "health"), "health");
+            return filterEntities(inputs, entity -> entity instanceof LivingEntity living
+                    && living.getMaxHealth() <= health);
+        });
         put(result, CommonProgramNodeIds.FILTER_ENTITY_HAS_TARGET, (_, _, inputs) ->
                 filterEntities(inputs, entity -> entity instanceof Mob mob
                         && mob.getTarget() != null));
@@ -506,9 +507,42 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             case LIVING -> entity instanceof LivingEntity;
             case PLAYER -> entity instanceof Player;
             case MOB -> entity instanceof Mob;
+            case HOSTILE -> entity instanceof Enemy;
+            case ANIMAL -> entity instanceof Animal;
+            case FRIENDLY -> entity instanceof Mob
+                    && !(entity instanceof Enemy)
+                    && !(entity instanceof Animal);
             case PROJECTILE -> entity instanceof Projectile;
             case ITEM -> entity instanceof ItemEntity;
         };
+    }
+
+    private static void registerRandomCollectionValues(
+            Map<Identifier, ProgramNodeExecutor<?>> result
+    ) {
+        randomCollectionValue(result, CommonProgramNodeIds.RANDOM_ENTITY,
+                CommonProgramNodeCatalog.CollectionDomain.ENTITY, "entities", "entity");
+        randomCollectionValue(result, CommonProgramNodeIds.RANDOM_WORLD_POSITION,
+                CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION, "positions", "position");
+        randomCollectionValue(result, CommonProgramNodeIds.RANDOM_BLOCK_POSITION,
+                CommonProgramNodeCatalog.CollectionDomain.BLOCK_POSITION, "blocks", "block");
+        randomCollectionValue(result, CommonProgramNodeIds.RANDOM_DIRECTION,
+                CommonProgramNodeCatalog.CollectionDomain.DIRECTION, "directions", "direction");
+    }
+
+    private static void randomCollectionValue(
+            Map<Identifier, ProgramNodeExecutor<?>> result,
+            Identifier id,
+            CommonProgramNodeCatalog.CollectionDomain domain,
+            String input,
+            String output
+    ) {
+        put(result, id, (_, _, inputs) -> {
+            var values = collection(inputs, input, domain);
+            if (values.isEmpty()) return emptyData();
+            return data(output, domain.elementType(),
+                    values.get(ThreadLocalRandom.current().nextInt(values.size())));
+        });
     }
 
     private static double healthPercentThreshold(ProgramInputView inputs) {

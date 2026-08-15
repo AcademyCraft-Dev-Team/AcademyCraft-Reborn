@@ -31,6 +31,8 @@ import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.ProgramBookCodec;
 import org.academy.internal.common.ability.program.ProgramEditorDocument;
 import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
+import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
@@ -45,13 +47,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Shared client entry and server-synchronized cache for non-mentalout ability programs. */
+/** Shared precision-operation entry and category program cache, including Mentalout routing. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class AbilityProgramEditorClient {
     public static final String CONFIG_KEY = "ability_program_editor";
     public static final String KEY_NAME_OPEN = "ability_program_editor_open";
     public static final String KEY_NAME_SLOT_PREFIX = "ability_program_slot_";
-    public static final int SLOT_COUNT = 4;
+    public static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     private static final Map<String, State> STATES = new HashMap<>();
 
     private static Config config;
@@ -63,6 +65,7 @@ public final class AbilityProgramEditorClient {
 
     public static void init() {
         AbilityProgramManager.initClient();
+        PrecisionOperationManager.initClient();
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, Config.Action.INSTANCE);
         config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY);
         var openKey = config.getKeyBinding(KEY_NAME_OPEN, defaultOpenKey());
@@ -83,7 +86,13 @@ public final class AbilityProgramEditorClient {
                 InputConstants.KEY_1,
                 InputConstants.KEY_2,
                 InputConstants.KEY_3,
-                InputConstants.KEY_4
+                InputConstants.KEY_4,
+                InputConstants.KEY_5,
+                InputConstants.KEY_6,
+                InputConstants.KEY_7,
+                InputConstants.KEY_8,
+                InputConstants.KEY_9,
+                InputConstants.KEY_0
         };
         for (var slot = 0; slot < SLOT_COUNT; slot++) {
             var selectedSlot = slot;
@@ -109,6 +118,11 @@ public final class AbilityProgramEditorClient {
                 || !isSupportedCategory(category)) {
             return;
         }
+        if (AbilitySystemClient.getLevel().getLevelCode() < 5) return;
+        if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
+            PrecisionOperationClient.openEditor();
+            return;
+        }
         var state = state(player.getUUID(), category.getKey());
         screen = new ModularProgramScreen(new Session(category, state));
         minecraft.gui.setScreen(screen);
@@ -122,8 +136,13 @@ public final class AbilityProgramEditorClient {
     public static boolean isSupportedCategoryId(@Nullable Identifier category) {
         return category != null
                 && !category.equals(AcademyCraft.academy(AbilityCategoryNames.LEVEL0))
-                && !category.equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))
                 && AbilityProgramDefinitions.find(category) != null;
+    }
+
+    public static boolean canUsePrecisionOperation() {
+        return Minecraft.getInstance().player != null
+                && AbilitySystemClient.getLevel().getLevelCode() >= 5
+                && isSupportedCategory(AbilitySystemClient.category);
     }
 
     public static InputSystem.KeyCombination defaultOpenKey() {
@@ -157,6 +176,10 @@ public final class AbilityProgramEditorClient {
         var player = Minecraft.getInstance().player;
         var category = AbilitySystemClient.category;
         if (player == null || category == null || !isSupportedCategory(category)) return;
+        if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
+            PrecisionOperationClient.executeSelected();
+            return;
+        }
         var state = state(player.getUUID(), category.getKey());
         execute(state.saved.selectedSlot());
     }
@@ -167,6 +190,11 @@ public final class AbilityProgramEditorClient {
         if (minecraft.player == null
                 || minecraft.gui.screen() != null
                 || !isSupportedCategory(category)) {
+            return;
+        }
+        if (AbilitySystemClient.getLevel().getLevelCode() < 5) return;
+        if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
+            PrecisionOperationClient.execute(slot);
             return;
         }
         MisakaNetworkClient.send(new AbilityProgramManager.ExecutePacket(
@@ -201,7 +229,17 @@ public final class AbilityProgramEditorClient {
         if (encoded == null || encoded.isBlank()) return ProgramBook.empty(SLOT_COUNT);
         try {
             var decoded = ProgramBookCodec.decode(Base64.getDecoder().decode(encoded));
-            if (decoded.valid() && validBook(category, decoded.book())) return decoded.book();
+            if (decoded.valid()) {
+                var book = decoded.book();
+                if (book.schemaVersion() == ProgramBook.CURRENT_SCHEMA_VERSION
+                        && book.slots().size() > 0
+                        && book.slots().size() <= SLOT_COUNT
+                        && book.slots().stream().allMatch(slot -> slot.empty()
+                        || slot.program().schemaVersion() == AbilityProgram.CURRENT_SCHEMA_VERSION
+                        && slot.program().category().equals(category))) {
+                    return book.resize(SLOT_COUNT);
+                }
+            }
         } catch (IllegalArgumentException ignored) {
             // Invalid local configuration is isolated to this category and replaced with an empty book.
         }

@@ -19,6 +19,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.internal.common.util.EnergyChargeHelper;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
@@ -26,6 +27,7 @@ import java.util.Objects;
 public final class SolarGenBlockEntity extends BlockEntity implements WirelessUser, Container {
     private static final int MAX_ENERGY_STORAGE = 100_000;
     private static final int GENERATION_RATE = 50;
+    private static final int OUTPUT_TRANSFER_RATE = 1_000;
     public final AnimationState foldingState = new AnimationState();
     public final AnimationState unfoldingState = new AnimationState();
     public int ticks;
@@ -55,6 +57,11 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         blockEntity.foldingState.animateWhen(!hasBrightness, blockEntity.ticks);
         blockEntity.unfoldingState.animateWhen(hasBrightness, blockEntity.ticks);
         blockEntity.setEnergyStored(blockEntity.energyStored + brightness * GENERATION_RATE);
+        if (!level.isClientSide()
+                && EnergyChargeHelper.transferToItem(
+                blockEntity, blockEntity.items.getFirst(), OUTPUT_TRANSFER_RATE) > 0) {
+            blockEntity.setChanged();
+        }
 
         if (level.isRainingAt(pos) || level.isRainingAt(pos.above())) {
             blockEntity.state = State.RAINY;

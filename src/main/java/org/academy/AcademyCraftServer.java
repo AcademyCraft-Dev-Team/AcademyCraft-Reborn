@@ -25,6 +25,7 @@ import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;
 import org.academy.internal.common.ability.program.AbilityProgramManager;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.network.MusicSyncPackets;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.jetbrains.annotations.Nullable;
@@ -83,6 +84,7 @@ public final class AcademyCraftServer {
         ProficiencySkillSettings.initServer();
         MusicSyncPackets.initServer();
         AbilityProgramManager.initServer();
+        PrecisionOperationManager.initServer();
 
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
     }
@@ -99,6 +101,7 @@ public final class AcademyCraftServer {
         var instance = context.getAcademyCraftServer();
         ServerProgramScheduler.clear(event.getServer());
         AbilityProgramManager.clear();
+        PrecisionOperationManager.clear(event.getServer());
         instance.abilitySystemServer.onServerStopping();
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();

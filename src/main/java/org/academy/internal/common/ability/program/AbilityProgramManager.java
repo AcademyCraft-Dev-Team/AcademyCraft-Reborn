@@ -28,6 +28,7 @@ import org.academy.internal.common.ability.darkmatter.program.DarkmatterProgramE
 import org.academy.internal.common.ability.darkmatter.program.DarkmatterProgramNodeCatalog;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramExecutionBridge;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeCatalog;
+import org.academy.internal.common.ability.electromaster.program.ServerElectromasterProgramRuntime;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramExecutionBridge;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramExecutionBridge;
@@ -54,7 +55,7 @@ import java.util.UUID;
 /** Server-authoritative program books and execution gateway for non-mentalout categories. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AbilityProgramManager {
-    public static final int SLOT_COUNT = 4;
+    public static final int SLOT_COUNT = 10;
     private static final int MAX_CATEGORY_LENGTH = 128;
     private static final int MAX_BOOK_BASE64_LENGTH =
             (ProgramBookCodec.MAX_BOOK_ENCODED_BYTES + 2) / 3 * 4;
@@ -115,7 +116,17 @@ public final class AbilityProgramManager {
         }
         try {
             var decoded = ProgramBookCodec.decode(Base64.getDecoder().decode(encoded));
-            if (decoded.valid() && validBook(category, decoded.book())) return decoded.book();
+            if (decoded.valid()) {
+                var book = decoded.book();
+                if (book.schemaVersion() == ProgramBook.CURRENT_SCHEMA_VERSION
+                        && book.slots().size() > 0
+                        && book.slots().size() <= SLOT_COUNT
+                        && book.slots().stream().allMatch(slot -> slot.empty()
+                        || slot.program().schemaVersion() == AbilityProgram.CURRENT_SCHEMA_VERSION
+                        && slot.program().category().equals(category))) {
+                    return book.resize(SLOT_COUNT);
+                }
+            }
         } catch (IllegalArgumentException ignored) {
             // A corrupt category book is isolated and replaced when the player next saves it.
         }
@@ -141,6 +152,7 @@ public final class AbilityProgramManager {
             ProgramTriggers.Type trigger,
             CommonProgramNodeCatalog.MovementCondition movement
     ) {
+        if (!unlocked(player)) return;
         var currentCategory = AbilitySystemServer.getSystem(player)
                 .getPlayerAbilityCategory(player.getUUID());
         if (currentCategory == null || !isSupportedCategory(currentCategory.getKey())) return;
@@ -155,8 +167,11 @@ public final class AbilityProgramManager {
         var capabilities = learnedCapabilities(playerData);
         for (var slot = 0; slot < SLOT_COUNT; slot++) {
             var program = current.slot(slot).program();
-            if (program == null
-                    || !ProgramTriggers.matches(program, trigger, movement, gameTime)) continue;
+            if (program == null) continue;
+            var matches = trigger == ProgramTriggers.Type.HEALTH
+                    ? ProgramTriggers.matchesHealth(program, player, category, slot)
+                    : ProgramTriggers.matches(program, trigger, movement, gameTime);
+            if (!matches) continue;
             var compiled = definition.compile(program, capabilities);
             if (compiled.valid()) adapter.execute(compiled.program(), player);
         }
@@ -169,6 +184,9 @@ public final class AbilityProgramManager {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         LAST_EXECUTION_SEQUENCE.remove(event.getEntity().getUUID());
+        if (event.getEntity() instanceof ServerPlayer player) {
+            ServerElectromasterProgramRuntime.releaseControlled(player);
+        }
     }
 
     private static ProgramBook book(Player playerData, Identifier category) {
@@ -192,6 +210,10 @@ public final class AbilityProgramManager {
         var current = AbilitySystemServer.getSystem(player)
                 .getPlayerAbilityCategory(player.getUUID());
         return current != null && current.getKey().equals(category);
+    }
+
+    private static boolean unlocked(ServerPlayer player) {
+        return AbilitySystemServer.getSystem(player).getPlayerLevel(player.getUUID()) >= 5;
     }
 
     private static boolean acceptSequence(ServerPlayer player, long sequence) {
@@ -371,6 +393,7 @@ public final class AbilityProgramManager {
         @SubscribePacket
         public static void request(RequestPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            if (!unlocked(player)) return;
             var category = parseCategory(packet.category);
             if (!isSupportedCategory(category) || !ownsCategory(player, category)) return;
             var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
@@ -380,6 +403,7 @@ public final class AbilityProgramManager {
         @SubscribePacket
         public static void importBook(ImportPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            if (!unlocked(player)) return;
             var category = parseCategory(packet.category);
             if (!isSupportedCategory(category) || !ownsCategory(player, category)) {
                 result(player, packet.category, 0, FeedbackType.ERROR, 0L,
@@ -434,6 +458,7 @@ public final class AbilityProgramManager {
         @SubscribePacket
         public static void save(SavePacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            if (!unlocked(player)) return;
             var category = parseCategory(packet.category);
             if (!isSupportedCategory(category) || !ownsCategory(player, category)) {
                 result(player, packet.category, packet.slot, FeedbackType.ERROR, 0L,
@@ -489,6 +514,7 @@ public final class AbilityProgramManager {
         @SubscribePacket
         public static void execute(ExecutePacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            if (!unlocked(player)) return;
             var category = parseCategory(packet.category);
             if (!isSupportedCategory(category) || !ownsCategory(player, category)) {
                 result(player, packet.category, packet.slot, FeedbackType.ERROR, 0L,

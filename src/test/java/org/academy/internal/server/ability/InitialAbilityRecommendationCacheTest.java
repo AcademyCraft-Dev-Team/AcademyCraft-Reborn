@@ -65,6 +65,18 @@ class InitialAbilityRecommendationCacheTest {
         assertEquals(0, cache.size());
     }
 
+    @Test
+    void portableDeveloperContextIsMatchedIndependentlyFromBlockPositions() {
+        var cache = new InitialAbilityRecommendationCache();
+        var playerId = UUID.randomUUID();
+        var category = new TestCategory();
+        cache.put(playerId, category, OVERWORLD, "tablet:MAIN_HAND", 20L);
+
+        assertNull(cache.consume(playerId, OVERWORLD, "tablet:OFF_HAND", 21L));
+        cache.put(playerId, category, OVERWORLD, "tablet:MAIN_HAND", 22L);
+        assertSame(category, cache.consume(playerId, OVERWORLD, "tablet:MAIN_HAND", 23L));
+    }
+
     private static final class TestCategory extends AbilityCategory {
         private TestCategory() {
             super(0.1f, AbilityDevelopmentProfiles.ACCELERATOR);

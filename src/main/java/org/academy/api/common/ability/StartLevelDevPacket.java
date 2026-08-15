@@ -6,6 +6,8 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
 import org.academy.internal.common.network.PacketTypes;
 import org.jspecify.annotations.Nullable;
 import org.misaka.api.common.network.future.packet.RequestPacket;
@@ -15,29 +17,49 @@ import org.misaka.api.common.network.packet.PacketType;
 public class StartLevelDevPacket extends RequestPacket<ServerGamePacketListenerImpl, StartLevelDevPacket, ClientPacketListener, StartLevelDevPacket.Response> {
     public static final StreamCodec<ByteBuf, StartLevelDevPacket> CODEC = StreamCodec.of(
             (buf, packet) -> {
-                ByteBufCodecs.LONG.encode(buf, packet.userPos);
+                DevelopmentSource.CODEC.encode(buf, packet.source);
                 ByteBufCodecs.VAR_INT.encode(buf, packet.mode.ordinal());
             },
             buf -> new StartLevelDevPacket(
-                    ByteBufCodecs.LONG.decode(buf),
+                    DevelopmentSource.CODEC.decode(buf),
                     Mode.byOrdinal(ByteBufCodecs.VAR_INT.decode(buf))
             )
     );
 
-    private final long userPos;
+    private final DevelopmentSource source;
     private final Mode mode;
 
     public StartLevelDevPacket(long userPos) {
-        this(userPos, Mode.DIRECT);
+        this(DevelopmentSource.block(BlockPos.of(userPos)), Mode.DIRECT);
     }
 
     public StartLevelDevPacket(long userPos, Mode mode) {
-        this.userPos = userPos;
+        this(DevelopmentSource.block(BlockPos.of(userPos)), mode);
+    }
+
+    public StartLevelDevPacket(InteractionHand hand) {
+        this(DevelopmentSource.tablet(hand), Mode.DIRECT);
+    }
+
+    public StartLevelDevPacket(InteractionHand hand, Mode mode) {
+        this(DevelopmentSource.tablet(hand), mode);
+    }
+
+    public StartLevelDevPacket(DevelopmentSource source) {
+        this(source, Mode.DIRECT);
+    }
+
+    public StartLevelDevPacket(DevelopmentSource source, Mode mode) {
+        this.source = source;
         this.mode = mode == null ? Mode.DIRECT : mode;
     }
 
     public long getUserPos() {
-        return userPos;
+        return source.blockPos() == null ? 0L : source.blockPos().asLong();
+    }
+
+    public DevelopmentSource getSource() {
+        return source;
     }
 
     public Mode getMode() {

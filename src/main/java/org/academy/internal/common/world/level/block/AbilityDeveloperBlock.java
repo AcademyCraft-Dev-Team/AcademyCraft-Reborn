@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import org.academy.api.common.vanilla.OpenScreenPacket;
+import org.academy.api.common.ability.DevelopmentSource;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
 import org.misaka.api.common.network.packet.S2CPacket;
@@ -79,21 +80,23 @@ public final class AbilityDeveloperBlock extends MultiBlock {
                 abilityDeveloper.startOpening();
             }
 
-            if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+            if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
                 if (mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
-                    var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
-                    payloadBuffer.writeBlockPos(abilityDeveloper.getBlockPos());
-
-                    var dataPayload = new byte[payloadBuffer.readableBytes()];
-                    payloadBuffer.readBytes(dataPayload);
-
-                    serverPlayer.connection.send(new S2CPacket(
-                            new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN, dataPayload)
-                    ));
+                    openScreen(serverPlayer, DevelopmentSource.block(abilityDeveloper.getBlockPos()));
                 }
             }
         }
         return InteractionResult.CONSUME;
+    }
+
+    public static void openScreen(ServerPlayer player, DevelopmentSource source) {
+        var payloadBuffer = new FriendlyByteBuf(Unpooled.buffer());
+        DevelopmentSource.CODEC.encode(payloadBuffer, source);
+        var dataPayload = new byte[payloadBuffer.readableBytes()];
+        payloadBuffer.readBytes(dataPayload);
+        player.connection.send(new S2CPacket(
+                new OpenScreenPacket(ABILITY_DEVELOPER_SCREEN, dataPayload)
+        ));
     }
 
     @Override

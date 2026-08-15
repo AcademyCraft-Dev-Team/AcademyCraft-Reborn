@@ -47,6 +47,30 @@ class ElectromasterProgramExecutionBridgeTest {
                 ElectromasterProgramNodeCatalog.INSTANCE
                         .find(ElectromasterProgramNodeIds.MAGNETIC_MOVE)
                         .scope().requiredCapabilities());
+        assertEquals(Set.of(ElectromasterProgramCapabilities.CURRENT_RECHARGE),
+                ElectromasterProgramNodeCatalog.INSTANCE
+                        .find(ElectromasterProgramNodeIds.CURRENT_RECHARGE)
+                        .scope().requiredCapabilities());
+
+        var magneticBlock = new JsonObject();
+        magneticBlock.addProperty("power", 1.0f);
+        magneticBlock.addProperty("target_type", "block");
+        magneticBlock.addProperty("mode", "launch");
+        var magneticSchema = catalog.schema(
+                ElectromasterProgramNodeIds.MAGNETIC_MOVE, magneticBlock);
+        assertNotNull(magneticSchema);
+        assertEquals(List.of("flow", "block", "destination"),
+                magneticSchema.inputs().stream().map(port -> port.name()).toList());
+
+        var energyBlock = new JsonObject();
+        energyBlock.addProperty("target_type", "block");
+        energyBlock.addProperty("mode", "below");
+        energyBlock.addProperty("percent", 50.0f);
+        var energySchema = catalog.schema(
+                ElectromasterProgramNodeIds.ENERGY_DETECTION, energyBlock);
+        assertNotNull(energySchema);
+        assertEquals(List.of("block"),
+                energySchema.inputs().stream().map(port -> port.name()).toList());
 
         var invalid = new JsonObject();
         invalid.addProperty("power", 3);
@@ -180,12 +204,45 @@ class ElectromasterProgramExecutionBridgeTest {
 
         @Override
         public ProgramActionTransaction.ProgramAction magneticMove(
-                Object entity,
+                Object target,
                 ProgramWorldPosition destination,
-                float power
+                float power,
+                ElectromasterProgramNodeCatalog.EnergyTargetType targetType,
+                ElectromasterProgramNodeCatalog.MagneticMode mode
         ) {
-            return action("magnetic:" + entity + ":" + destination.x() + ","
+            return action("magnetic:" + target + ":" + destination.x() + ","
                     + destination.y() + "," + destination.z() + ":" + power);
+        }
+
+        @Override
+        public List<ProgramBlockPosition> chargeableBlocksAround(
+                ProgramWorldPosition center,
+                double radius
+        ) {
+            return List.of();
+        }
+
+        @Override
+        public java.util.OptionalDouble entityEnergyFraction(Object entity) {
+            return java.util.OptionalDouble.of(0.5);
+        }
+
+        @Override
+        public java.util.OptionalDouble blockEnergyFraction(ProgramBlockPosition block) {
+            return java.util.OptionalDouble.of(0.5);
+        }
+
+        @Override
+        public int redstonePower(ProgramBlockPosition block) {
+            return 0;
+        }
+
+        @Override
+        public ProgramActionTransaction.ProgramAction currentRecharge(
+                Object target,
+                ElectromasterProgramNodeCatalog.EnergyTargetType targetType
+        ) {
+            return action("recharge:" + target + ":" + targetType);
         }
 
         @Override

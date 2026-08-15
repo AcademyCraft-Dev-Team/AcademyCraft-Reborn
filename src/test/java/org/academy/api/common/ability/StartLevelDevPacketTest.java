@@ -2,6 +2,7 @@ package org.academy.api.common.ability;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionHand;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,6 +25,20 @@ class StartLevelDevPacketTest {
     @Test
     void legacyConstructorDefaultsToDirectMode() {
         assertEquals(StartLevelDevPacket.Mode.DIRECT, new StartLevelDevPacket(1L).getMode());
+    }
+
+    @Test
+    void portableDevelopmentSourceRoundTripsHandAndMode() {
+        var packet = new StartLevelDevPacket(InteractionHand.OFF_HAND, StartLevelDevPacket.Mode.PREVIEW);
+        var buffer = Unpooled.buffer();
+
+        StartLevelDevPacket.CODEC.encode(buffer, packet);
+        var decoded = StartLevelDevPacket.CODEC.decode(buffer);
+
+        assertTrue(decoded.getSource().portable());
+        assertEquals(InteractionHand.OFF_HAND, decoded.getSource().hand());
+        assertNull(decoded.getSource().blockPos());
+        assertEquals(StartLevelDevPacket.Mode.PREVIEW, decoded.getMode());
     }
 
     @Test

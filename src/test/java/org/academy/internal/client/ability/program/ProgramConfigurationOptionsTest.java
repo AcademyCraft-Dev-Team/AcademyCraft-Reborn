@@ -3,10 +3,16 @@ package org.academy.internal.client.ability.program;
 import com.google.gson.JsonPrimitive;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramNodeCatalog;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramNodeIds;
+import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeCatalog;
+import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
+import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
+import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
+import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
+import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -56,6 +62,10 @@ class ProgramConfigurationOptionsTest {
         var loop = mentalout.entry(CommonProgramNodeIds.TRIGGER_LOOP);
         assertTrue(ProgramConfigurationOptions.options(
                 loop, "interval", new JsonPrimitive(20)).isEmpty());
+        assertEquals(List.of("below", "above"), values(
+                ProgramConfigurationOptions.options(
+                        mentalout.entry(CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD),
+                        "mode", new JsonPrimitive("below"))));
 
         assertEquals(
                 List.of("entity", "block"),
@@ -71,7 +81,7 @@ class ProgramConfigurationOptionsTest {
                 "type",
                 new JsonPrimitive("academy:program_type/boolean")
         ).size());
-        assertEquals(6, ProgramConfigurationOptions.options(
+        assertEquals(9, ProgramConfigurationOptions.options(
                 mentalout.entry(CommonProgramNodeIds.FILTER_ENTITY_TYPE),
                 "type",
                 new JsonPrimitive("living")
@@ -100,6 +110,35 @@ class ProgramConfigurationOptionsTest {
                 "power", new JsonPrimitive(1.0f)));
         assertTrue(ProgramConfigurationOptions.options(
                 shockwave, "radius", new JsonPrimitive(11)).isEmpty());
+
+        var meltdowner = AbilityProgramDefinitions.require(
+                MeltdownerProgramNodeCatalog.MELTDOWNER).editorCatalog();
+        assertEquals(List.of("direction", "target"), values(
+                ProgramConfigurationOptions.options(
+                        meltdowner.entry(MeltdownerProgramNodeIds.ELECTRON_BEAM),
+                        "aim_mode", new JsonPrimitive("direction"))));
+
+        var electromaster = AbilityProgramDefinitions.require(
+                ElectromasterProgramNodeCatalog.ELECTROMASTER).editorCatalog();
+        assertEquals(List.of("entity", "block"), values(
+                ProgramConfigurationOptions.options(
+                        electromaster.entry(ElectromasterProgramNodeIds.MAGNETIC_MOVE),
+                        "target_type", new JsonPrimitive("entity"))));
+        assertEquals(List.of("pull", "launch"), values(
+                ProgramConfigurationOptions.options(
+                        electromaster.entry(ElectromasterProgramNodeIds.MAGNETIC_MOVE),
+                        "mode", new JsonPrimitive("pull"))));
+        assertEquals(List.of("below", "above"), values(
+                ProgramConfigurationOptions.options(
+                        electromaster.entry(ElectromasterProgramNodeIds.ENERGY_DETECTION),
+                        "mode", new JsonPrimitive("below"))));
+
+        var teleport = AbilityProgramDefinitions.require(
+                TeleportProgramNodeCatalog.TELEPORT).editorCatalog();
+        assertEquals(List.of("entity", "block"), values(
+                ProgramConfigurationOptions.options(
+                        teleport.entry(TeleportProgramNodeIds.ENTITY_TELEPORT),
+                        "target_type", new JsonPrimitive("entity"))));
     }
 
     @Test

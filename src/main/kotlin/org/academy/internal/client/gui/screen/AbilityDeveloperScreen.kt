@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
+import net.minecraft.world.InteractionHand
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
@@ -34,13 +35,15 @@ import org.academy.internal.common.ability.AbilityCategories
 import org.academy.internal.common.ability.ProficiencyPolicy
 import org.academy.internal.common.ability.level0.Level0
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity
+import org.academy.internal.common.world.item.AbilityControlTabletItem
+import org.academy.internal.common.world.item.Items
 import org.apache.commons.lang3.RandomStringUtils
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
 import net.minecraft.util.Mth
 
-class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()) {
-    private val blockEntity: AbilityDeveloperBlockEntity
+class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScreen(Component.empty()) {
+    private val blockEntity: AbilityDeveloperBlockEntity?
     private lateinit var area: FrameLayoutWidget
     private lateinit var mainWidget: FrameLayoutWidget
     private var isConsoleMode: Boolean = false
@@ -54,23 +57,44 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private val maxDuSkills = 10f
 
     init {
-        val level = minecraft.level ?: throw RuntimeException("Level is null")
-        val entity = level.getBlockEntity(mainPos)
-        if (entity is AbilityDeveloperBlockEntity) {
-            blockEntity = entity
-            entity.setOpen(true)
+        if (developmentSource.portable()) {
+            val player = minecraft.player ?: throw RuntimeException("Player is null")
+            if (!player.getItemInHand(developmentSource.hand()!!).`is`(Items.ABILITY_CONTROL_TABLET.get())) {
+                throw RuntimeException("Ability control tablet is no longer held")
+            }
+            blockEntity = null
         } else {
-            throw RuntimeException("Invalid block entity at $mainPos")
+            val level = minecraft.level ?: throw RuntimeException("Level is null")
+            val entity = level.getBlockEntity(developmentSource.blockPos()!!)
+            if (entity is AbilityDeveloperBlockEntity) {
+                blockEntity = entity
+                entity.setOpen(true)
+            } else {
+                throw RuntimeException("Invalid block entity at ${developmentSource.blockPos()}")
+            }
         }
     }
+
+    constructor(mainPos: BlockPos) : this(DevelopmentSource.block(mainPos))
+
+    constructor(hand: InteractionHand) : this(DevelopmentSource.tablet(hand))
+
+    private fun currentEnergy(): Int {
+        val developer = blockEntity
+        if (developer != null) return developer.energyStored
+        val player = minecraft.player ?: return 0
+        return AbilityControlTabletItem.getEnergyStored(player.getItemInHand(developmentSource.hand()!!))
+    }
+
+    private fun maxEnergy(): Int = blockEntity?.maxEnergyStorage ?: AbilityControlTabletItem.ENERGY_CAPACITY
 
     override fun isPauseScreen(): Boolean = false
 
     override fun onClose() {
         super.onClose()
-        blockEntity.setOpen(false)
+        blockEntity?.setOpen(false)
         NeoForge.EVENT_BUS.unregister(this)
-        MisakaNetworkClient.send(StopDevPacket(mainPos))
+        MisakaNetworkClient.send(StopDevPacket(developmentSource))
         AbilitySystemClient.resetDevState()
     }
 
@@ -292,49 +316,66 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         machineBg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         panel.addChild("machine_bg", machineBg)
 
-        val wirelessLabel = LabelWidget("Current Node:")
-        wirelessLabel.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-            .margin(4.25f, 34f, 0f, 0f)
-            .size(100f, 12f)
-        panel.addChild("text_wireless", wirelessLabel)
+        val developer = blockEntity
+        if (developer != null) {
+            val wirelessLabel = LabelWidget("Current Node:")
+            wirelessLabel.layoutParams = WidgetContainer.LayoutParams()
+                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                .margin(4.25f, 34f, 0f, 0f)
+                .size(100f, 12f)
+            panel.addChild("text_wireless", wirelessLabel)
 
-        val nodeBtn = ButtonWidget()
-        nodeBtn.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-            .margin(4.25f, 58f, 0f, 0f)
-            .size(100f, 16f)
-        nodeBtn.onClickListener = {
-            val cover = createCover()
-            run {
-                val wirelessPage = WirelessPanelUtil.create(blockEntity.blockPos, true)
-                wirelessPage.layoutParams.gravity(Gravity.CENTER)
-                cover.addChild("wireless_page", wirelessPage)
+            val nodeBtn = ButtonWidget()
+            nodeBtn.layoutParams = WidgetContainer.LayoutParams()
+                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                .margin(4.25f, 58f, 0f, 0f)
+                .size(100f, 16f)
+            nodeBtn.onClickListener = {
+                val cover = createCover()
+                run {
+                    val wirelessPage = WirelessPanelUtil.create(developer.blockPos, true)
+                    wirelessPage.layoutParams.gravity(Gravity.CENTER)
+                    cover.addChild("wireless_page", wirelessPage)
+                }
+                addCover(cover)
             }
-            addCover(cover)
-        }
-        panel.addChild("button_wireless", nodeBtn) {
-            val bar = ImageWidget(AcademyCraft.academy("textures/gui/element/element_background300x32.png"))
-            bar.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            nodeBtn.addChild("bar", bar)
+            panel.addChild("button_wireless", nodeBtn) {
+                val bar = ImageWidget(AcademyCraft.academy("textures/gui/element/element_background300x32.png"))
+                bar.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+                nodeBtn.addChild("bar", bar)
 
-            val nodeName = LabelWidget("N/A")
-            nodeName.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER_LEFT)
-                .margin(26f, 0f, 0f, 0f)
-                .size(70f, 12f)
-            nodeBtn.addChild("text_nodename", nodeName)
+                val nodeName = LabelWidget("N/A")
+                nodeName.layoutParams = WidgetContainer.LayoutParams()
+                    .gravity(Gravity.CENTER_LEFT)
+                    .margin(26f, 0f, 0f, 0f)
+                    .size(70f, 12f)
+                nodeBtn.addChild("text_nodename", nodeName)
 
-            val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
-            nodeIcon.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.TOP_LEFT)
-                .margin(7f, 2f, 0f, 0f)
-                .size(12f, 12f)
-            nodeBtn.addChild("logo_node", nodeIcon)
+                val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
+                nodeIcon.layoutParams = WidgetContainer.LayoutParams()
+                    .gravity(Gravity.TOP_LEFT)
+                    .margin(7f, 2f, 0f, 0f)
+                    .size(12f, 12f)
+                nodeBtn.addChild("logo_node", nodeIcon)
 
-            MisakaNetworkClient.FUTURE_MANAGER.send(GetCurrentNodePacket(blockEntity.blockPos)) {
-                if (it != null) nodeName.text = it.nodeName
+                MisakaNetworkClient.FUTURE_MANAGER.send(GetCurrentNodePacket(developer.blockPos)) {
+                    if (it != null) nodeName.text = it.nodeName
+                }
             }
+        } else {
+            val sourceLabel = LabelWidget(L10n["academy.ability_developer.energy_source"])
+            sourceLabel.layoutParams = WidgetContainer.LayoutParams()
+                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                .margin(4.25f, 34f, 0f, 0f)
+                .size(100f, 12f)
+            panel.addChild("text_energy_source", sourceLabel)
+
+            val tabletLabel = LabelWidget(L10n["academy.ability_developer.energy_source.tablet"])
+            tabletLabel.layoutParams = WidgetContainer.LayoutParams()
+                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                .margin(4.25f, 58f, 0f, 0f)
+                .size(100f, 16f)
+            panel.addChild("text_tablet", tabletLabel)
         }
 
         val powerLabel = LabelWidget("Power:")
@@ -347,9 +388,10 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
         val powerBar = object : ProgressBarWidget() {
             override fun tick() {
                 super.tick()
+                val capacity = maxEnergy()
                 setProgress(
-                    if (blockEntity.maxEnergyStorage > 0)
-                        blockEntity.energyStored.toFloat() / blockEntity.maxEnergyStorage * 100f
+                    if (capacity > 0)
+                        currentEnergy().toFloat() / capacity * 100f
                     else 0f
                 )
             }
@@ -506,7 +548,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                     "learn" -> {
                         addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
                         AbilitySystemClient.resetDevState()
-                        MisakaNetworkClient.FUTURE_MANAGER.send(StartLevelDevPacket(mainPos.asLong())) { response ->
+                        MisakaNetworkClient.FUTURE_MANAGER.send(StartLevelDevPacket(developmentSource)) { response ->
                             if (response != null && response.isSuccess) {
                                 val progressLabel = LabelWidget(
                                     L10n["academy.ability_developer.progress"] + " 0%"
@@ -1042,7 +1084,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
     private fun removeCover(rebuild: Boolean = false) {
         val cover = activeCover ?: return
         if (AbilitySystemClient.getDevState() == DevState.DEVELOPING) {
-            MisakaNetworkClient.send(StopDevPacket(mainPos))
+            MisakaNetworkClient.send(StopDevPacket(developmentSource))
             AbilitySystemClient.resetDevState()
         }
         mainWidget.startAnimation(
@@ -1518,7 +1560,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                             ) {
                                 AbilitySystemClient.resetDevState()
                             }
-                            if (blockEntity.energyStored < LearningHelper.getEstimatedSkillConsumption(skill)) {
+                            if (currentEnergy() < LearningHelper.getEstimatedSkillConsumption(skill)) {
                                 messageLabel.text = L10n["academy.ability_developer.noenergy"]
                             } else if (skill.recommendedLevel.levelCode > AbilitySystemClient.getLevel().levelCode) {
                                 messageLabel.text =
@@ -1533,7 +1575,7 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                                 learnBtn.isEnabled = false
                                 AbilitySystemClient.beginDevelopmentRequest(skillId)
                                 MisakaNetworkClient.FUTURE_MANAGER.send(
-                                    StartSkillDevPacket(skillId, mainPos.asLong())
+                                    StartSkillDevPacket(skillId, developmentSource)
                                 ) { response ->
                                     if (response != null && response.isSuccess) {
                                         textArea.removeChild("learn_btn")
@@ -1701,13 +1743,13 @@ class AbilityDeveloperScreen(val mainPos: BlockPos) : UiScreen(Component.empty()
                 val upgBtn = createDevButton()
                 upgBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
                 upgBtn.onClickListener = {
-                    if (blockEntity.energyStored < cost) {
+                    if (currentEnergy() < cost) {
                         hintLabel.text = L10n["academy.ability_developer.noenergy"]
                     } else {
                         AbilitySystemClient.resetDevState()
 
                         MisakaNetworkClient.FUTURE_MANAGER.send(
-                            StartLevelDevPacket(mainPos.asLong())
+                            StartLevelDevPacket(developmentSource)
                         ) {
                             if (it != null && it.isSuccess) {
                                 fun poll() {

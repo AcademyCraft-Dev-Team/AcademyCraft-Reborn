@@ -9,6 +9,7 @@ public final class MeltdownerProgramNodeIds {
     public static final Identifier LOOK_TARGET = id("target/look_target");
     public static final Identifier ELECTRON_BEAM = id("action/electron_beam");
     public static final Identifier MINING_BEAM = id("action/mining_beam");
+    public static final Identifier ATOMIC_JET = id("action/atomic_jet");
 
     private MeltdownerProgramNodeIds() {
     }
