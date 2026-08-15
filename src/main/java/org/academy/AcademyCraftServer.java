@@ -23,6 +23,8 @@ import org.academy.internal.server.world.level.storage.WorldData;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
+import org.academy.internal.common.ability.program.ServerProgramScheduler;
+import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.network.MusicSyncPackets;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.jetbrains.annotations.Nullable;
@@ -80,6 +82,7 @@ public final class AcademyCraftServer {
         DestroyBlocksSetting.initServer();
         ProficiencySkillSettings.initServer();
         MusicSyncPackets.initServer();
+        AbilityProgramManager.initServer();
 
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
     }
@@ -94,6 +97,8 @@ public final class AcademyCraftServer {
     public static void onServerStopping(ServerStoppingEvent event) {
         var context = event.getServer();
         var instance = context.getAcademyCraftServer();
+        ServerProgramScheduler.clear(event.getServer());
+        AbilityProgramManager.clear();
         instance.abilitySystemServer.onServerStopping();
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();
@@ -116,6 +121,7 @@ public final class AcademyCraftServer {
     }
 
     public void onServerTick(ServerTickEvent.Post event) {
+        ServerProgramScheduler.tick(server);
         long currentTick = server.getTickCount();
         if (currentTick - lastSaveTick >= SAVE_INTERVAL_TICKS) {
             lastSaveTick = currentTick;

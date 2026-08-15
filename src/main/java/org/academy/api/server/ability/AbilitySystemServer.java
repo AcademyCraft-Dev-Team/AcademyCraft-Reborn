@@ -888,6 +888,27 @@ public final class AbilitySystemServer {
         );
     }
 
+    /** Atomically reserves every timed charge, or reserves none of them. */
+    public boolean tryTimedOccupations(
+            UUID uuid,
+            Skill skill,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        if (skill == null || timedCharges == null) return false;
+        var intensity = playerCPManager.getCalculationIntensity(uuid);
+        var actual = new ArrayList<PlayerCPManager.TimedOccupationCharge>(timedCharges.size());
+        for (var charge : timedCharges) {
+            if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) {
+                return false;
+            }
+            actual.add(new PlayerCPManager.TimedOccupationCharge(
+                    Math.max(0.0f, charge.amount() * intensity),
+                    resolveIterationPoints(charge.iterationPoints(), charge.amount())
+            ));
+        }
+        return playerCPManager.tryTimedOccupations(uuid, skill, actual);
+    }
+
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
         var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));

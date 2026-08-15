@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.darkmatter.skills.lv4;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,6 +13,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -49,6 +52,7 @@ import org.misaka.api.common.network.packet.PacketType;
 public final class DarkmatterCreation extends Skill {
     public static final int MAX_BEETLES = 8;
     public static final float RESERVED_CP_PER_BEETLE = 20.0f;
+    private static final double MAX_PROGRAM_RANGE = 32.0;
 
     public DarkmatterCreation() {
         super(Builder
@@ -187,10 +191,119 @@ public final class DarkmatterCreation extends Skill {
                     .orElseGet(List::of);
         }
 
+        public static boolean canProgramCreate(
+                ServerPlayer player,
+                Vec3 position,
+                double maximumRange
+        ) {
+            if (player == null
+                    || !validProgramPosition(player, position, maximumRange)
+                    || owned(player).size() >= MAX_BEETLES
+                    || !(player.level() instanceof ServerLevel level)) {
+                return false;
+            }
+            var beetle = createBeetle(level, player, position);
+            return beetle != null && level.noCollision(beetle);
+        }
+
+        public static Optional<UUID> tryProgramCreate(
+                ServerPlayer player,
+                Vec3 position,
+                double maximumRange,
+                float baseCost
+        ) {
+            if (!Float.isFinite(baseCost)
+                    || baseCost < 0.0f
+                    || !canProgramCreate(player, position, maximumRange)
+                    || !(player.level() instanceof ServerLevel level)) {
+                return Optional.empty();
+            }
+            var skill = Skills.DARKMATTER_CREATION.get();
+            var system = AbilitySystemServer.getSystem(player);
+            var proficiencyCost = skill.adjustProficiencyCost(
+                    player, SkillProficiencyProfile.CostKind.CAST, baseCost);
+            var cast = DarkmatterSixWings.Server.adjustCategoryCost(
+                    player, skill, baseCost, proficiencyCost);
+            var maintenance = adjustedMaintenance(player, 1);
+            var required = (cast + maintenance)
+                    * system.getPlayerCalculationIntensity(player.getUUID());
+            if (system.getPlayerAvailableCP(player.getUUID()) + 1.0e-5f < required) {
+                return Optional.empty();
+            }
+
+            var created = new UUID[1];
+            var executed = skill.executeActive(player, _ -> baseCost, (_, _) -> {
+                if (!canProgramCreate(player, position, maximumRange)) return;
+                var beetle = createBeetle(level, player, position);
+                if (beetle == null
+                        || !level.noCollision(beetle)
+                        || !level.addFreshEntity(beetle)) {
+                    return;
+                }
+                addOwned(player, beetle.getUUID());
+                if (!syncReservation(player)) {
+                    beetle.discard();
+                    return;
+                }
+                created[0] = beetle.getUUID();
+            });
+            return executed ? Optional.ofNullable(created[0]) : Optional.empty();
+        }
+
+        public static void discardProgramCreated(ServerPlayer player, UUID uuid) {
+            if (player == null || uuid == null) return;
+            var server = player.level().getServer();
+            if (server == null) return;
+            for (var level : server.getAllLevels()) {
+                if (level.getEntity(uuid) instanceof DarkmatterBeetle beetle
+                        && beetle.isOwnedBy(player)) {
+                    beetle.discard();
+                    return;
+                }
+            }
+        }
+
         private static void addOwned(ServerPlayer player, UUID uuid) {
             AbilitySystemServer.getSystem(player).updatePlayerSkillData(
                     player.getUUID(), Skills.DARKMATTER_CREATION.get(),
                     DarkmatterCreationData.class, data -> data.add(uuid));
+        }
+
+        private static boolean validProgramPosition(
+                ServerPlayer player,
+                Vec3 position,
+                double maximumRange
+        ) {
+            if (!(player.level() instanceof ServerLevel level)
+                    || position == null
+                    || !Double.isFinite(position.x)
+                    || !Double.isFinite(position.y)
+                    || !Double.isFinite(position.z)
+                    || !Double.isFinite(maximumRange)
+                    || maximumRange <= 0.0
+                    || maximumRange > MAX_PROGRAM_RANGE
+                    || player.getEyePosition().distanceToSqr(position)
+                    > maximumRange * maximumRange) {
+                return false;
+            }
+            var block = BlockPos.containing(position);
+            return level.hasChunkAt(block)
+                    && level.getWorldBorder().isWithinBounds(block)
+                    && block.getY() >= level.getMinY()
+                    && block.getY() < level.getMaxY();
+        }
+
+        private static DarkmatterBeetle createBeetle(
+                ServerLevel level,
+                ServerPlayer player,
+                Vec3 position
+        ) {
+            var beetle = EntityTypes.DARKMATTER_BEETLE.get().create(
+                    level, EntitySpawnReason.MOB_SUMMONED);
+            if (beetle == null) return null;
+            beetle.setOwnerUUID(player.getUUID());
+            beetle.snapTo(position.x, position.y, position.z, player.getYRot(), 0);
+            return beetle;
         }
 
         public static void removeOwned(ServerPlayer player, UUID uuid) {

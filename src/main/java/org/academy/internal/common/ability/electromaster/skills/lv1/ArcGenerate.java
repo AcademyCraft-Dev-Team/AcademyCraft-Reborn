@@ -74,6 +74,11 @@ public final class ArcGenerate extends Skill {
         return BASE_DAMAGE * Math.max(0, abilityPower) * Math.max(0, playerDamageMultiplier);
     }
 
+    /** Server-scaled base damage shared with bounded Electromaster program actions. */
+    public static float programDamage(float abilityPower, float playerDamageMultiplier) {
+        return getDamage(abilityPower, playerDamageMultiplier);
+    }
+
     static long deriveReturnSeed(long seed) {
         return seed ^ RETURN_SEED_MASK;
     }

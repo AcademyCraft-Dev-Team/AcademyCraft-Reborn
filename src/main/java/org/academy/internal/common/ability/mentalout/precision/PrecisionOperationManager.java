@@ -18,6 +18,14 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.program.CommonProgramNodeCatalog;
+import org.academy.internal.common.ability.program.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.CompiledProgram;
+import org.academy.internal.common.ability.program.PrecisionProgramCompilation;
+import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
+import org.academy.internal.common.ability.program.ProgramBookCodec;
+import org.academy.internal.common.ability.program.ProgramTriggers;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
 import org.academy.internal.common.network.PacketTypes;
@@ -60,7 +68,7 @@ public final class PrecisionOperationManager {
         var raw = map.get(skill.getKeyString());
         if (raw instanceof PrecisionOperation.Data data) {
             var schemaVersion = data.schemaVersion();
-            var normalized = PrecisionOperation.normalizeData(data);
+            var normalized = PrecisionOperation.normalizeData(player.getUUID(), data);
             if (schemaVersion != normalized.schemaVersion()) playerData.markDirty();
             return normalized;
         }
@@ -93,12 +101,11 @@ public final class PrecisionOperationManager {
     }
 
     private static void sync(ServerPlayer player, PrecisionOperation.Data data) {
-        var encoded = new byte[4][];
-        for (var slot = 0; slot < 4; slot++) encoded[slot] = PrecisionGraphCodec.encode(data.slot(slot));
-        MisakaNetworkServer.send(player, new SyncPacket(data.revision(), encoded));
+        var book = data.programBook(player.getUUID());
+        MisakaNetworkServer.send(player, new SyncPacket(ProgramBookCodec.encode(book)));
     }
 
-    private static CompiledPrecisionProgram.CompileResult compiled(ServerPlayer player, int slot) {
+    private static CompiledSlotResult compiled(ServerPlayer player, int slot) {
         var data = getOrCreateData(player);
         var cache = COMPILED.computeIfAbsent(player.getUUID(), _ -> new CachedPrograms());
         if (cache.revision != data.revision()) {
@@ -107,13 +114,52 @@ public final class PrecisionOperationManager {
         }
         var program = cache.programs[slot];
         if (program != null) {
-            return new CompiledPrecisionProgram.CompileResult(
-                    program, PrecisionGraph.Diagnostic.OK, -1, -1);
+            return CompiledSlotResult.success(program);
         }
-        var result = CompiledPrecisionProgram.compile(data.slot(slot));
-        if (!result.valid()) return result;
-        cache.programs[slot] = result.program();
-        return result;
+        var abilityProgram = data.program(player.getUUID(), slot);
+        if (abilityProgram == null || abilityProgram.graph().nodes().isEmpty()) {
+            return CompiledSlotResult.failure(PrecisionGraph.Diagnostic.EMPTY_PROGRAM, -1);
+        }
+        var definition = AbilityProgramDefinitions.mentalout();
+        if (!abilityProgram.category().equals(definition.category())) {
+            return CompiledSlotResult.failure(PrecisionGraph.Diagnostic.MALFORMED, -1);
+        }
+        var generic = PrecisionProgramCompilation.compile(abilityProgram);
+        if (!generic.valid()) {
+            var diagnostic = generic.diagnostics().getFirst();
+            return CompiledSlotResult.failure(
+                    PrecisionGraph.Diagnostic.MALFORMED, diagnostic.nodeId());
+        }
+        cache.programs[slot] = generic.program();
+        return CompiledSlotResult.success(generic.program());
+    }
+
+    public static void executeTriggered(
+            ServerPlayer player,
+            ProgramTriggers.Type trigger,
+            CommonProgramNodeCatalog.MovementCondition movement
+    ) {
+        var data = getOrCreateData(player);
+        var gameTime = player.level().getGameTime();
+        for (var slot = 0; slot < 4; slot++) {
+            var abilityProgram = data.program(player.getUUID(), slot);
+            if (abilityProgram == null
+                    || !ProgramTriggers.matches(abilityProgram, trigger, movement, gameTime)) continue;
+            var compiled = compiled(player, slot);
+            if (!compiled.valid() || hasLockedBranch(player, compiled.program())) continue;
+            PrecisionOperationRuntime.execute(player, slot, compiled.program(), false);
+        }
+    }
+
+    private static boolean hasLockedBranch(ServerPlayer player, CompiledProgram program) {
+        var lockedBranch = program.graph().nodes().stream()
+                .filter(node -> node.type().equals(CommonProgramNodeIds.BRANCH)
+                        || java.util.Optional.ofNullable(PrecisionProgramNodeIds.kind(node.type()))
+                        .map(PrecisionGraph.NodeKind::isConditionalBranch)
+                        .orElse(false))
+                .findFirst().orElse(null);
+        return lockedBranch != null
+                && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3);
     }
 
     static void runtimeError(
@@ -132,18 +178,18 @@ public final class PrecisionOperationManager {
                 PrecisionGraph.Diagnostic.OK, -1, -1, 0);
     }
 
-    private static void writeBytes(ByteBuf buf, byte[] bytes) {
-        if (bytes == null || bytes.length > PrecisionGraph.MAX_ENCODED_BYTES) {
-            throw new EncoderException("Precision program exceeds 16 KiB");
+    private static void writeBytes(ByteBuf buf, byte[] bytes, int maximum) {
+        if (bytes == null || bytes.length > maximum) {
+            throw new EncoderException("Ability program payload exceeds its limit");
         }
         ByteBufCodecs.VAR_INT.encode(buf, bytes.length);
         buf.writeBytes(bytes);
     }
 
-    private static byte[] readBytes(ByteBuf buf) {
+    private static byte[] readBytes(ByteBuf buf, int maximum) {
         var length = ByteBufCodecs.VAR_INT.decode(buf);
-        if (length < 0 || length > PrecisionGraph.MAX_ENCODED_BYTES || length > buf.readableBytes()) {
-            throw new DecoderException("Invalid precision program length");
+        if (length < 0 || length > maximum || length > buf.readableBytes()) {
+            throw new DecoderException("Invalid ability program length");
         }
         var bytes = new byte[length];
         buf.readBytes(bytes);
@@ -196,14 +242,52 @@ public final class PrecisionOperationManager {
                 sync(player, data);
                 return;
             }
-            var decoded = PrecisionGraphCodec.decode(packet.graph);
+            var decoded = ProgramBookCodec.decodeProgram(packet.program);
             if (!decoded.valid()) {
                 result(player, packet.slot, FeedbackType.ERROR, data.revision(),
-                        decoded.diagnostic(), -1, -1, 0);
+                        decoded.diagnostic() == ProgramBookCodec.Diagnostic.TOO_LARGE
+                                ? PrecisionGraph.Diagnostic.TOO_LARGE
+                                : PrecisionGraph.Diagnostic.MALFORMED,
+                        -1, -1, 0);
                 return;
             }
-            var lockedBranch = decoded.graph().nodes().stream()
-                    .filter(node -> node.kind().isConditionalBranch())
+            var abilityProgram = decoded.program();
+            if (abilityProgram == null) {
+                data.replaceProgram(player.getUUID(), packet.slot, null);
+                markSaved(player, data, packet.slot);
+                return;
+            }
+            var definition = AbilityProgramDefinitions.mentalout();
+            if (!abilityProgram.category().equals(definition.category())) {
+                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
+                        PrecisionGraph.Diagnostic.MALFORMED, -1, -1, 0);
+                return;
+            }
+            var generic = PrecisionProgramCompilation.compile(abilityProgram);
+            if (!generic.valid()) {
+                var diagnostic = generic.diagnostics().getFirst();
+                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
+                        PrecisionGraph.Diagnostic.MALFORMED,
+                        diagnostic.nodeId(), -1, 0);
+                return;
+            }
+            var actionNode = abilityProgram.graph().nodes().stream()
+                    .filter(node -> {
+                        var kind = PrecisionProgramNodeIds.kind(node.type());
+                        return kind != null && kind.isAction() && !kind.isConditionalBranch();
+                    })
+                    .findFirst().orElse(null);
+            if (actionNode == null) {
+                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
+                        PrecisionGraph.Diagnostic.EMPTY_PROGRAM, -1, -1, 0);
+                return;
+            }
+            var lockedBranch = abilityProgram.graph().nodes().stream()
+                    .filter(node -> node.type().equals(CommonProgramNodeIds.BRANCH)
+                            || java.util.Optional.ofNullable(
+                                    PrecisionProgramNodeIds.kind(node.type()))
+                            .map(PrecisionGraph.NodeKind::isConditionalBranch)
+                            .orElse(false))
                     .findFirst().orElse(null);
             if (lockedBranch != null
                     && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3)) {
@@ -212,17 +296,19 @@ public final class PrecisionOperationManager {
                         lockedBranch.id(), -1, 0);
                 return;
             }
-            var compiled = CompiledPrecisionProgram.compile(decoded.graph());
-            if (!decoded.graph().nodes().isEmpty() && !compiled.valid()) {
-                result(player, packet.slot, FeedbackType.ERROR, data.revision(),
-                        compiled.diagnostic(), compiled.nodeId(), compiled.port(), 0);
-                return;
-            }
-            data.replaceSlot(packet.slot, decoded.graph());
+            data.replaceProgram(player.getUUID(), packet.slot, abilityProgram);
+            markSaved(player, data, packet.slot);
+        }
+
+        private static void markSaved(
+                ServerPlayer player,
+                PrecisionOperation.Data data,
+                int slot
+        ) {
             var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
             if (playerData != null) playerData.markDirty();
             COMPILED.remove(player.getUUID());
-            result(player, packet.slot, FeedbackType.SAVE, data.revision(),
+            result(player, slot, FeedbackType.SAVE, data.revision(),
                     PrecisionGraph.Diagnostic.OK, -1, -1, 0);
             sync(player, data);
         }
@@ -250,8 +336,13 @@ public final class PrecisionOperationManager {
                 );
                 return;
             }
+            if (!ProgramTriggers.acceptsManualExecution(compiled.program())) return;
             var lockedBranch = compiled.program().graph().nodes().stream()
-                    .filter(node -> node.kind().isConditionalBranch())
+                    .filter(node -> node.type().equals(CommonProgramNodeIds.BRANCH)
+                            || java.util.Optional.ofNullable(
+                                    PrecisionProgramNodeIds.kind(node.type()))
+                            .map(PrecisionGraph.NodeKind::isConditionalBranch)
+                            .orElse(false))
                     .findFirst().orElse(null);
             if (lockedBranch != null
                     && !Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 3)) {
@@ -261,7 +352,11 @@ public final class PrecisionOperationManager {
                         lockedBranch.id(), -1, 0);
                 return;
             }
-            var execution = PrecisionOperationRuntime.execute(player, packet.slot, compiled.program());
+            var execution = PrecisionOperationRuntime.execute(
+                    player,
+                    packet.slot,
+                    compiled.program()
+            );
             result(
                     player,
                     packet.slot,
@@ -307,7 +402,7 @@ public final class PrecisionOperationManager {
 
         @SubscribePacket
         public static void sync(SyncPacket packet) {
-            PrecisionOperationClient.handleSync(packet.revision, packet.graphs);
+            PrecisionOperationClient.handleSync(packet.book);
         }
 
         @SubscribePacket
@@ -344,22 +439,34 @@ public final class PrecisionOperationManager {
                 (buf, packet) -> {
                     ByteBufCodecs.VAR_INT.encode(buf, packet.slot);
                     buf.writeLong(packet.expectedRevision);
-                    writeBytes(buf, packet.graph);
+                    writeBytes(buf, packet.program, ProgramBookCodec.MAX_PROGRAM_ENCODED_BYTES);
                 },
                 buf -> new SavePacket(
                         ByteBufCodecs.VAR_INT.decode(buf),
                         buf.readLong(),
-                        readBytes(buf)
+                        readBytes(buf, ProgramBookCodec.MAX_PROGRAM_ENCODED_BYTES)
                 )
         );
         private final int slot;
         private final long expectedRevision;
-        private final byte[] graph;
+        private final byte[] program;
 
-        public SavePacket(int slot, long expectedRevision, byte[] graph) {
+        public SavePacket(int slot, long expectedRevision, byte[] program) {
             this.slot = slot;
             this.expectedRevision = expectedRevision;
-            this.graph = graph == null ? new byte[0] : graph.clone();
+            this.program = program == null ? new byte[0] : program.clone();
+        }
+
+        int slot() {
+            return slot;
+        }
+
+        long expectedRevision() {
+            return expectedRevision;
+        }
+
+        byte[] program() {
+            return program.clone();
         }
 
         @Override
@@ -394,26 +501,17 @@ public final class PrecisionOperationManager {
     @PacketTarget(ThreadType.CLIENT)
     public static final class SyncPacket extends Packet<ClientPacketListener, SyncPacket> {
         public static final StreamCodec<ByteBuf, SyncPacket> CODEC = StreamCodec.of(
-                (buf, packet) -> {
-                    buf.writeLong(packet.revision);
-                    for (var slot = 0; slot < 4; slot++) writeBytes(buf, packet.graphs[slot]);
-                },
-                buf -> new SyncPacket(
-                        buf.readLong(),
-                        new byte[][]{readBytes(buf), readBytes(buf), readBytes(buf), readBytes(buf)}
-                )
+                (buf, packet) -> writeBytes(buf, packet.book, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES),
+                buf -> new SyncPacket(readBytes(buf, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES))
         );
-        private final long revision;
-        private final byte[][] graphs;
+        private final byte[] book;
 
-        public SyncPacket(long revision, byte[][] graphs) {
-            this.revision = revision;
-            this.graphs = new byte[4][];
-            for (var slot = 0; slot < 4; slot++) {
-                this.graphs[slot] = graphs != null && slot < graphs.length && graphs[slot] != null
-                        ? graphs[slot].clone()
-                        : new byte[0];
-            }
+        public SyncPacket(byte[] book) {
+            this.book = book == null ? new byte[0] : book.clone();
+        }
+
+        byte[] book() {
+            return book.clone();
         }
 
         @Override
@@ -505,7 +603,30 @@ public final class PrecisionOperationManager {
     }
 
     private static final class CachedPrograms {
-        private final CompiledPrecisionProgram[] programs = new CompiledPrecisionProgram[4];
+        private final CompiledProgram[] programs = new CompiledProgram[4];
         private long revision = Long.MIN_VALUE;
+    }
+
+    private record CompiledSlotResult(
+            CompiledProgram program,
+            PrecisionGraph.Diagnostic diagnostic,
+            int nodeId,
+            int port
+    ) {
+        private static CompiledSlotResult success(CompiledProgram program) {
+            return new CompiledSlotResult(
+                    program, PrecisionGraph.Diagnostic.OK, -1, -1);
+        }
+
+        private static CompiledSlotResult failure(
+                PrecisionGraph.Diagnostic diagnostic,
+                int nodeId
+        ) {
+            return new CompiledSlotResult(null, diagnostic, nodeId, -1);
+        }
+
+        private boolean valid() {
+            return program != null && diagnostic == PrecisionGraph.Diagnostic.OK;
+        }
     }
 }

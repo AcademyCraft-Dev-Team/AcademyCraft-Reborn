@@ -3,21 +3,33 @@ package org.academy.internal.client.ability.mentalout;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.ability.program.ProgramEditorLayout;
+import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
-import org.academy.internal.common.ability.mentalout.precision.PrecisionGraphCodec;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.program.PrecisionProgramExporter;
+import org.academy.internal.common.ability.program.PrecisionProgramAliases;
+import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.ProgramBookCodec;
+import org.academy.internal.common.ability.program.ProgramEditorDocument;
 import org.misaka.MisakaNetworkClient;
 
 import java.util.Arrays;
-import java.util.Locale;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
+import java.util.UUID;
 import net.minecraft.util.Mth;
 
 public final class PrecisionOperationClient {
+    private static final AbilityProgram[] PROGRAMS = new AbilityProgram[4];
+    private static final AbilityProgram[] SERVER_PROGRAMS = new AbilityProgram[4];
     private static final PrecisionGraph[] GRAPHS = new PrecisionGraph[]{
             PrecisionGraph.EMPTY,
             PrecisionGraph.EMPTY,
@@ -37,7 +49,93 @@ public final class PrecisionOperationClient {
     private static final boolean[] ACTIVE_FAILURES = new boolean[4];
     private static long revision;
     private static int selectedSlot;
-    private static PrecisionOperationScreen screen;
+    private static ModularProgramScreen screen;
+    private static final ModularProgramEditorSession EDITOR_SESSION =
+            new ModularProgramEditorSession() {
+                @Override
+                public Component title() {
+                    return Component.translatable("screen.academy.precision_operation.title");
+                }
+
+                @Override
+                public int slotCount() {
+                    return 4;
+                }
+
+                @Override
+                public int selectedSlot() {
+                    return selectedSlot;
+                }
+
+                @Override
+                public long revision() {
+                    return revision;
+                }
+
+                @Override
+                public AbilityProgram editableProgram(int slot) {
+                    return PrecisionOperationClient.editableProgram(slot);
+                }
+
+                @Override
+                public AbilityProgram emptyProgram(int slot) {
+                    return PrecisionOperationClient.emptyProgram(slot);
+                }
+
+                @Override
+                public AbilityProgram restoredProgram(int slot) {
+                    return PrecisionOperationClient.serverProgram(slot);
+                }
+
+                @Override
+                public Set<Identifier> capabilities() {
+                    return Set.of();
+                }
+
+                @Override
+                public void updateLocalProgram(int slot, AbilityProgram program) {
+                    PrecisionOperationClient.updateLocalProgram(slot, program);
+                }
+
+                @Override
+                public void selectSlot(int slot) {
+                    PrecisionOperationClient.selectSlot(slot);
+                }
+
+                @Override
+                public void saveProgram(
+                        int slot,
+                        AbilityProgram program,
+                        long expectedRevision
+                ) {
+                    PrecisionOperationClient.saveProgram(slot, program, expectedRevision);
+                }
+
+                @Override
+                public void closed(ModularProgramScreen screen) {
+                    PrecisionOperationClient.closed(screen);
+                }
+
+                @Override
+                public boolean precisionRules() {
+                    return true;
+                }
+
+                @Override
+                public PrecisionGraph.Diagnostic diagnostic(int slot) {
+                    return PrecisionOperationClient.diagnostic(slot);
+                }
+
+                @Override
+                public int diagnosticNode(int slot) {
+                    return PrecisionOperationClient.diagnosticNode(slot);
+                }
+
+                @Override
+                public void clearDiagnostic(int slot) {
+                    PrecisionOperationClient.clearDiagnostic(slot);
+                }
+            };
 
     private PrecisionOperationClient() {
     }
@@ -46,7 +144,7 @@ public final class PrecisionOperationClient {
         var minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.gui.screen() != null
                 || !AbilitySystemClient.canUseSkill(Skills.PRECISION_OPERATION.get())) return;
-        screen = new PrecisionOperationScreen(selectedSlot, GRAPHS[selectedSlot], revision);
+        screen = new ModularProgramScreen(EDITOR_SESSION);
         if (LAST_DIAGNOSTICS[selectedSlot] != PrecisionGraph.Diagnostic.OK) {
             screen.applyResult(
                     selectedSlot,
@@ -75,21 +173,25 @@ public final class PrecisionOperationClient {
         ));
     }
 
-    public static void handleSync(long serverRevision, byte[][] encoded) {
-        if (serverRevision < revision || encoded == null || encoded.length != 4) return;
+    public static void handleSync(byte[] encoded) {
+        var result = ProgramBookCodec.decode(encoded);
+        if (!result.valid() || result.book().slots().size() != 4
+                || result.book().revision() < revision) return;
+        var book = PrecisionProgramAliases.canonicalize(result.book());
         var decoded = new PrecisionGraph[4];
         for (var slot = 0; slot < 4; slot++) {
-            var result = PrecisionGraphCodec.decode(encoded[slot]);
-            if (!result.valid()) return;
-            decoded[slot] = result.graph();
+            var exported = PrecisionProgramExporter.export(book.slot(slot).program());
+            decoded[slot] = exported.valid() ? exported.graph() : PrecisionGraph.EMPTY;
         }
-        revision = serverRevision;
+        revision = book.revision();
         for (var slot = 0; slot < 4; slot++) {
+            PROGRAMS[slot] = book.slot(slot).program();
+            SERVER_PROGRAMS[slot] = PROGRAMS[slot];
             GRAPHS[slot] = decoded[slot];
             SERVER_GRAPHS[slot] = decoded[slot];
         }
         if (screen != null && Minecraft.getInstance().gui.screen() == screen) {
-            screen.applyServerState(selectedSlot, GRAPHS[selectedSlot], revision);
+            screen.applyServerState(selectedSlot, editableProgram(selectedSlot), revision);
         }
     }
 
@@ -136,6 +238,8 @@ public final class PrecisionOperationClient {
     static void resetSession() {
         Arrays.fill(GRAPHS, PrecisionGraph.EMPTY);
         Arrays.fill(SERVER_GRAPHS, PrecisionGraph.EMPTY);
+        Arrays.fill(PROGRAMS, null);
+        Arrays.fill(SERVER_PROGRAMS, null);
         Arrays.fill(LAST_DIAGNOSTICS, PrecisionGraph.Diagnostic.OK);
         Arrays.fill(LAST_NODES, -1);
         Arrays.fill(LAST_PORTS, -1);
@@ -154,6 +258,14 @@ public final class PrecisionOperationClient {
         return SERVER_GRAPHS[Mth.clamp(slot, 0, 3)];
     }
 
+    static AbilityProgram program(int slot) {
+        return PROGRAMS[Mth.clamp(slot, 0, 3)];
+    }
+
+    static AbilityProgram serverProgram(int slot) {
+        return SERVER_PROGRAMS[Mth.clamp(slot, 0, 3)];
+    }
+
     static long revision() {
         return revision;
     }
@@ -166,29 +278,96 @@ public final class PrecisionOperationClient {
         GRAPHS[Mth.clamp(slot, 0, 3)] = graph;
     }
 
-    static void save(int slot, PrecisionGraph graph, long expectedRevision) {
-        var validation = graph.validate();
-        if (!validation.valid()) {
+    static void updateLocalProgram(int slot, AbilityProgram program) {
+        slot = Mth.clamp(slot, 0, 3);
+        PROGRAMS[slot] = program;
+        var exported = PrecisionProgramExporter.export(program);
+        GRAPHS[slot] = exported.valid() ? exported.graph() : PrecisionGraph.EMPTY;
+    }
+
+    static void saveProgram(int slot, AbilityProgram program, long expectedRevision) {
+        slot = Mth.clamp(slot, 0, 3);
+        var definition = AbilityProgramDefinitions.mentalout();
+        if (program != null && !program.category().equals(definition.category())) {
             handleResult(
                     slot,
                     PrecisionOperationManager.FeedbackType.ERROR,
                     revision,
-                    validation.diagnostic(),
-                    validation.nodeId(),
-                    validation.port(),
+                    PrecisionGraph.Diagnostic.MALFORMED,
+                    -1,
+                    -1,
                     0
             );
             return;
         }
-        updateLocal(slot, validation.normalized());
+        if (program != null) {
+            var validation = new ProgramEditorDocument(
+                    program,
+                    definition,
+                    java.util.Set.of()
+            ).validation();
+            if (!validation.valid()) {
+                var diagnostic = validation.diagnostics().getFirst();
+                handleResult(
+                        slot,
+                        PrecisionOperationManager.FeedbackType.ERROR,
+                        revision,
+                        PrecisionGraph.Diagnostic.MALFORMED,
+                        diagnostic.nodeId(),
+                        -1,
+                        0
+                );
+                return;
+            }
+        }
+        final byte[] encoded;
+        try {
+            encoded = ProgramBookCodec.encodeProgram(program);
+        } catch (IllegalArgumentException exception) {
+            handleResult(
+                    slot,
+                    PrecisionOperationManager.FeedbackType.ERROR,
+                    revision,
+                    PrecisionGraph.Diagnostic.TOO_LARGE,
+                    -1,
+                    -1,
+                    0
+            );
+            return;
+        }
+        PROGRAMS[slot] = program;
         MisakaNetworkClient.send(new PrecisionOperationManager.SavePacket(
                 slot,
                 expectedRevision,
-                PrecisionGraphCodec.encode(validation.normalized())
+                encoded
         ));
     }
 
-    static void closed(PrecisionOperationScreen closed) {
+    static AbilityProgram editableProgram(int slot) {
+        slot = Mth.clamp(slot, 0, 3);
+        var existing = PROGRAMS[slot];
+        if (existing != null) return existing;
+        return emptyProgram(slot);
+    }
+
+    static AbilityProgram emptyProgram(int slot) {
+        slot = Mth.clamp(slot, 0, 3);
+        var player = Minecraft.getInstance().player;
+        var ownerId = player == null ? new UUID(0L, 0L) : player.getUUID();
+        var programId = UUID.nameUUIDFromBytes((
+                "academy:precision_operation:" + ownerId + ":" + slot
+        ).getBytes(StandardCharsets.UTF_8));
+        return new AbilityProgram(
+                AbilityProgram.CURRENT_SCHEMA_VERSION,
+                programId,
+                "Precision " + (slot + 1),
+                AbilityProgramDefinitions.mentalout().category(),
+                ProgramGraph.EMPTY,
+                ProgramEditorLayout.EMPTY
+        );
+    }
+
+    static void closed(Object closed) {
         if (screen == closed) screen = null;
     }
 
@@ -230,14 +409,13 @@ public final class PrecisionOperationClient {
                 Component.translatable(diagnostic.translationKey())
         );
         if (nodeId >= 0) {
-            var node = GRAPHS[slot].nodes().stream()
-                    .filter(candidate -> candidate.id() == nodeId)
-                    .findFirst()
-                    .orElse(null);
-            var label = node == null
-                    ? Component.literal("#" + nodeId)
-                    : Component.translatable("screen.academy.precision_operation.node."
-                    + node.kind().name().toLowerCase(Locale.ROOT));
+            var programNode = PROGRAMS[slot] == null ? null
+                    : PROGRAMS[slot].graph().nodes().stream()
+                    .filter(candidate -> candidate.id() == nodeId).findFirst().orElse(null);
+            var entry = programNode == null ? null
+                    : AbilityProgramDefinitions.mentalout().editorCatalog().entry(programNode.type());
+            var label = entry == null ? Component.literal("#" + nodeId)
+                    : Component.translatable(entry.translationKey());
             message.append(Component.translatable(
                     "message.academy.precision_operation.feedback.node", label, nodeId));
         }

@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.mentalout.skills.lv5;
 import com.google.gson.annotations.SerializedName;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
@@ -16,6 +18,8 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
@@ -24,6 +28,10 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.program.PrecisionProgramBookMigrator;
+import org.academy.internal.common.ability.program.PrecisionProgramExporter;
+import org.academy.internal.common.ability.program.PrecisionProgramAliases;
+import org.academy.internal.common.ability.program.ProgramBookCodec;
 import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.skilldata.SkillData;
@@ -48,9 +56,32 @@ public final class PrecisionOperation extends Skill {
     }
 
     public static Data normalizeData(Data data) {
+        return normalizeData(new UUID(0L, 0L), data);
+    }
+
+    public static Data normalizeData(UUID ownerId, Data data) {
+        if (data == null) data = new Data();
+        if (data.cachedBook != null) return data;
+        if (data.encodedBook != null && !data.encodedBook.isBlank()) {
+            try {
+                var decoded = ProgramBookCodec.decode(Base64.getDecoder().decode(data.encodedBook));
+                if (decoded.valid() && validBook(decoded.book())) {
+                    data.installBook(decoded.book());
+                    return data;
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Fall through to the legacy slots. Corrupt program-book data never reaches the VM.
+            }
+        }
+        var migration = PrecisionProgramBookMigrator.migrate(ownerId, data);
+        data.installBook(migration.book());
+        return data;
+    }
+
+    public static Data normalizeLegacyData(Data data) {
         if (data == null) data = new Data();
         var migrateFlow = data.schemaVersion == 1;
-        var legacy = data.schemaVersion > 0 && data.schemaVersion < Data.SCHEMA_VERSION;
+        var legacy = data.schemaVersion > 0 && data.schemaVersion < 3;
         data.revision = Math.max(0L, data.revision);
         var normalized = new ArrayList<PrecisionGraph>(4);
         var source = data.slots == null ? List.<PrecisionGraph>of() : data.slots;
@@ -68,8 +99,17 @@ public final class PrecisionOperation extends Skill {
         }
         data.slots = normalized;
         if (legacy) data.revision++;
-        data.schemaVersion = Data.SCHEMA_VERSION;
+        if (data.schemaVersion < Data.SCHEMA_VERSION) data.schemaVersion = 3;
         return data;
+    }
+
+    private static boolean validBook(ProgramBook book) {
+        if (book.schemaVersion() != ProgramBook.CURRENT_SCHEMA_VERSION || book.slots().size() != 4) {
+            return false;
+        }
+        return book.slots().stream().allMatch(slot -> slot.empty()
+                || slot.program().schemaVersion() == AbilityProgram.CURRENT_SCHEMA_VERSION
+                && slot.program().category().equals(AbilityCategories.MENTALOUT.get().getKey()));
     }
 
     @Override
@@ -132,7 +172,7 @@ public final class PrecisionOperation extends Skill {
     }
 
     public static final class Data extends SkillData {
-        public static final int SCHEMA_VERSION = 3;
+        public static final int SCHEMA_VERSION = 4;
         public static final Identifier ID = AcademyCraft.academy("precision_operation");
 
         @SerializedName("schemaVersion")
@@ -146,6 +186,9 @@ public final class PrecisionOperation extends Skill {
                 PrecisionGraph.EMPTY,
                 PrecisionGraph.EMPTY
         ));
+        @SerializedName("programBook")
+        private String encodedBook = "";
+        private transient ProgramBook cachedBook;
 
         public long revision() {
             return revision;
@@ -155,26 +198,82 @@ public final class PrecisionOperation extends Skill {
             return schemaVersion;
         }
 
+        public ProgramBook programBook(UUID ownerId) {
+            normalizeData(ownerId, this);
+            return cachedBook;
+        }
+
+        public AbilityProgram program(UUID ownerId, int slot) {
+            return programBook(ownerId).slot(Mth.clamp(slot, 0, 3)).program();
+        }
+
+        public void replaceProgram(UUID ownerId, int slot, AbilityProgram program) {
+            var changed = programBook(ownerId).replaceSlot(Mth.clamp(slot, 0, 3), program);
+            installBook(changed);
+        }
+
+        /** Legacy editor adapter. New runtime code should consume {@link #programBook(UUID)}. */
         public PrecisionGraph slot(int slot) {
             normalizeData(this);
+            var exported = PrecisionProgramExporter.export(cachedBook.slot(Mth.clamp(slot, 0, 3)).program());
+            return exported.valid() ? exported.graph() : PrecisionGraph.EMPTY;
+        }
+
+        public PrecisionGraph legacySlot(int slot) {
+            normalizeLegacyData(this);
             return slots.get(Mth.clamp(slot, 0, 3));
         }
 
+        /** Legacy editor adapter. The next owner-aware read migrates all four slots as one book. */
         public void replaceSlot(int slot, PrecisionGraph graph) {
-            normalizeData(this);
-            slots.set(Mth.clamp(slot, 0, 3), graph);
+            var validation = graph == null ? PrecisionGraph.EMPTY.validate() : graph.validate();
+            if (!validation.valid()) throw new IllegalArgumentException(validation.diagnostic().name());
+            var legacy = legacySnapshot();
+            var index = Mth.clamp(slot, 0, 3);
+            legacy.set(index, validation.normalized());
+            slots = legacy;
             revision++;
+            schemaVersion = 3;
+            encodedBook = "";
+            cachedBook = null;
         }
 
         public Data copy() {
-            normalizeData(this);
             var copy = new Data();
             copy.setProficiency(getProficiency());
             copy.setEnabled(isEnabled());
             copy.schemaVersion = schemaVersion;
             copy.revision = revision;
-            copy.slots = new ArrayList<>(slots);
+            copy.slots = slots == null ? null : new ArrayList<>(slots);
+            copy.encodedBook = encodedBook;
+            copy.cachedBook = cachedBook;
             return copy;
+        }
+
+        private void installBook(ProgramBook book) {
+            book = PrecisionProgramAliases.canonicalize(book);
+            cachedBook = book;
+            encodedBook = Base64.getEncoder().encodeToString(ProgramBookCodec.encode(book));
+            revision = book.revision();
+            schemaVersion = SCHEMA_VERSION;
+            slots = null;
+        }
+
+        private ArrayList<PrecisionGraph> legacySnapshot() {
+            if (cachedBook != null || encodedBook != null && !encodedBook.isBlank()) {
+                normalizeData(this);
+                var legacy = new ArrayList<PrecisionGraph>(4);
+                for (var slot = 0; slot < 4; slot++) {
+                    var exported = PrecisionProgramExporter.export(cachedBook.slot(slot).program());
+                    if (!exported.valid()) {
+                        throw new IllegalStateException("Program cannot be represented by the legacy editor");
+                    }
+                    legacy.add(exported.graph());
+                }
+                return legacy;
+            }
+            normalizeLegacyData(this);
+            return new ArrayList<>(slots);
         }
 
         @Override

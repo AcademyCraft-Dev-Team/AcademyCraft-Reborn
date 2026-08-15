@@ -79,6 +79,7 @@ import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntervention;
 import org.academy.internal.common.ability.mentalout.skills.lv1.TargetMisidentification;
 import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
@@ -728,6 +729,30 @@ public final class PacketTypes {
             MENTAL_TAKEOVER_END = PACKET_TYPES.register("mental_takeover_end",
             () -> new PacketType<>(PlayerControlSessionManager.EndPacket.class,
                     PlayerControlSessionManager.EndPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.RequestPacket>>
+            ABILITY_PROGRAM_REQUEST = PACKET_TYPES.register("ability_program_request",
+            () -> new PacketType<>(AbilityProgramManager.RequestPacket.class,
+                    AbilityProgramManager.RequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.ImportPacket>>
+            ABILITY_PROGRAM_IMPORT = PACKET_TYPES.register("ability_program_import",
+            () -> new PacketType<>(AbilityProgramManager.ImportPacket.class,
+                    AbilityProgramManager.ImportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.SavePacket>>
+            ABILITY_PROGRAM_SAVE = PACKET_TYPES.register("ability_program_save",
+            () -> new PacketType<>(AbilityProgramManager.SavePacket.class,
+                    AbilityProgramManager.SavePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.ExecutePacket>>
+            ABILITY_PROGRAM_EXECUTE = PACKET_TYPES.register("ability_program_execute",
+            () -> new PacketType<>(AbilityProgramManager.ExecutePacket.class,
+                    AbilityProgramManager.ExecutePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AbilityProgramManager.SyncPacket>>
+            ABILITY_PROGRAM_SYNC = PACKET_TYPES.register("ability_program_sync",
+            () -> new PacketType<>(AbilityProgramManager.SyncPacket.class,
+                    AbilityProgramManager.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AbilityProgramManager.ResultPacket>>
+            ABILITY_PROGRAM_RESULT = PACKET_TYPES.register("ability_program_result",
+            () -> new PacketType<>(AbilityProgramManager.ResultPacket.class,
+                    AbilityProgramManager.ResultPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.RequestPacket>>
             PRECISION_OPERATION_REQUEST = PACKET_TYPES.register("precision_operation_request",
             () -> new PacketType<>(PrecisionOperationManager.RequestPacket.class,

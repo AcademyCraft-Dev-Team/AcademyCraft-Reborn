@@ -585,6 +585,24 @@ public class PlayerCPManager implements AbilitySubsystem {
         return true;
     }
 
+    /** Atomically adds a group of timed charges without changing the skill's permanent charge. */
+    public boolean tryTimedOccupations(
+            UUID uuid,
+            Skill skill,
+            List<TimedOccupationCharge> timedCharges
+    ) {
+        var playerData = playerDataManager.getData(uuid);
+        if (playerData == null || skill == null || timedCharges == null) return false;
+        var permanentAmount = playerData.getCpOccupations().stream()
+                .filter(AbilityData.CpOccupationData::isPermanent)
+                .filter(occupation -> skill.getKeyString().equals(occupation.getSkillId()))
+                .mapToDouble(AbilityData.CpOccupationData::getAmount)
+                .sum();
+        if (!Double.isFinite(permanentAmount) || permanentAmount > Float.MAX_VALUE) return false;
+        return replacePermanentOccupationAndTryTimedOccupations(
+                uuid, skill, (float) permanentAmount, timedCharges);
+    }
+
     public boolean canReplacePermanentOccupationAndTryTimedOccupations(
             UUID uuid,
             Skill skill,
