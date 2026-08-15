@@ -69,6 +69,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
+import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -80,6 +81,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
+import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
@@ -104,6 +106,11 @@ public class KineticEnergyApplied extends Skill {
     public static final int MIN_IMPACT_LEVEL = 1;
     public static final int MAX_IMPACT_LEVEL = 5;
     public static final int DEFAULT_IMPACT_LEVEL = 1;
+    public static final int PROGRAM_IMPACT_LEVEL = 3;
+    public static final float BASE_PROGRAM_DAMAGE = 13.0f;
+    public static final int MIN_PROGRAM_RADIUS = 0;
+    public static final int MAX_PROGRAM_RADIUS = 32;
+    public static final int DEFAULT_PROGRAM_RADIUS = 11;
     private static final float BASE_IMPACT_DAMAGE = 4.0f;
     private static final double SERVER_AIR_VERIFY_REACH = 6.0;
     private static final float MAX_VISUAL_RADIUS = 24.0f;
@@ -151,6 +158,15 @@ public class KineticEnergyApplied extends Skill {
         return (BASE_IMPACT_DAMAGE + level * level)
                 * Math.max(0.0f, abilityPower)
                 * Math.max(0.0f, damageMultiplier);
+    }
+
+    public static float getProgramImpactDamage(
+            float power,
+            float abilityPower,
+            float damageMultiplier
+    ) {
+        return getImpactDamage(PROGRAM_IMPACT_LEVEL, abilityPower, damageMultiplier)
+                * ProgramPowerScale.damageMultiplier(power);
     }
 
     static boolean isDistinctImpactTrigger(long previousTick, long currentTick) {
@@ -380,6 +396,16 @@ public class KineticEnergyApplied extends Skill {
                     && Skills.KINETIC_ENERGY_APPLIED.get().isEnabled(player);
         }
 
+        private static boolean canCreateProgramShockwave(ServerPlayer player) {
+            if (player == null || !player.isAlive() || player.hasDisconnected()) return false;
+            var skill = Skills.KINETIC_ENERGY_APPLIED.get();
+            var system = AbilitySystemServer.getSystem(player);
+            var category = system.getPlayerAbilityCategory(player.getUUID());
+            return category != null
+                    && LearningHelper.isSkillAvailableForCategory(category, skill)
+                    && skill.getRuntimeData(player).isPresent();
+        }
+
         private static void attackAir(ServerPlayer player) {
             if (!(player.level() instanceof ServerLevel level)) return;
             if (!serverSeesAir(player, level)) return;
@@ -399,15 +425,28 @@ public class KineticEnergyApplied extends Skill {
             return true;
         }
 
-        private static void executeImpact(ServerLevel level, ServerPlayer player, Vec3 center,
-                                          Vec3 direction, int impactLevel, BlockPos priorityBlock) {
+        private static boolean executeImpact(ServerLevel level, ServerPlayer player, Vec3 center,
+                                             Vec3 direction, int impactLevel, BlockPos priorityBlock) {
             var system = AbilitySystemServer.getSystem(player);
             if (!system.tryTimedOccupation(
                     player.getUUID(),
                     impactLevel * 10.0f,
                     Skills.KINETIC_ENERGY_APPLIED.get(),
                     5
-            )) return;
+            )) return false;
+            applyImpactEffects(level, player, center, direction, impactLevel, priorityBlock, system);
+            return true;
+        }
+
+        private static void applyImpactEffects(
+                ServerLevel level,
+                ServerPlayer player,
+                Vec3 center,
+                Vec3 direction,
+                int impactLevel,
+                BlockPos priorityBlock,
+                AbilitySystemServer system
+        ) {
             var blockRadius = getImpactRadius(impactLevel);
             var radius = Skills.KINETIC_ENERGY_APPLIED.get().hasProficiencyMilestone(player, 2)
                     ? blockRadius * 1.15f
@@ -422,6 +461,154 @@ public class KineticEnergyApplied extends Skill {
             if (canDestroyBlocks(player)) {
                 enqueueBreakTask(level, player, center, blockRadius, direction, impactLevel, priorityBlock);
             }
+        }
+
+        /** Atomically reserves every custom-program impact before any shockwave is emitted. */
+        public static boolean tryReserveProgramImpacts(ServerPlayer player, java.util.List<Integer> levels) {
+            if (!canCreateProgramShockwave(player) || levels == null || levels.isEmpty()) return false;
+            var costs = new java.util.ArrayList<Float>(levels.size());
+            for (var level : levels) {
+                if (level == null || level < 1 || level > 5) return false;
+                costs.add(level * 10.0f);
+            }
+            return tryReserveProgramImpactCosts(player, costs);
+        }
+
+        /** Atomically reserves explicit custom-program impact costs. */
+        public static boolean tryReserveProgramImpactCosts(
+                ServerPlayer player,
+                java.util.List<Float> costs
+        ) {
+            if (!canCreateProgramShockwave(player) || costs == null || costs.isEmpty()) return false;
+            var charges = new java.util.ArrayList<AbilitySystemServer.TimedOccupationCharge>(costs.size());
+            for (var cost : costs) {
+                if (cost == null || !Float.isFinite(cost) || cost < 0.0f) return false;
+                charges.add(new AbilitySystemServer.TimedOccupationCharge(cost, 5));
+            }
+            return AbilitySystemServer.getSystem(player).tryTimedOccupations(
+                    player.getUUID(), Skills.KINETIC_ENERGY_APPLIED.get(), charges);
+        }
+
+        /** Executes an impact whose CP charge was already reserved by its program transaction. */
+        public static boolean executeReservedProgramImpact(
+                ServerPlayer player,
+                Vec3 center,
+                Vec3 direction,
+                int impactLevel
+        ) {
+            if (!validProgramImpact(player, center, direction)) return false;
+            var level = (ServerLevel) player.level();
+            var clampedLevel = clampImpactLevel(impactLevel);
+            applyImpactEffects(
+                    level,
+                    player,
+                    center,
+                    normalizeOrDefault(direction),
+                    clampedLevel,
+                    null,
+                    AbilitySystemServer.getSystem(player)
+            );
+            return true;
+        }
+
+        /** Executes the independently configured shockwave node without requiring the toggle state. */
+        public static boolean executeConfiguredProgramImpact(
+                ServerPlayer player,
+                Vec3 center,
+                Vec3 direction,
+                float power,
+                boolean destroyBlocks,
+                int radius
+        ) {
+            if (!validConfiguredProgramImpact(player, center, direction)
+                    || !Float.isFinite(power)
+                    || power < ProgramPowerScale.MIN
+                    || power > ProgramPowerScale.MAX
+                    || radius < MIN_PROGRAM_RADIUS
+                    || radius > MAX_PROGRAM_RADIUS) {
+                return false;
+            }
+            var level = (ServerLevel) player.level();
+            var system = AbilitySystemServer.getSystem(player);
+            var damage = getProgramImpactDamage(
+                    power,
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID())
+            );
+            var normalized = normalizeOrDefault(direction);
+            if (damage > 0.0f) {
+                applyAreaDamage(
+                        level, player, center, normalized, radius, damage, PROGRAM_IMPACT_LEVEL);
+            }
+            spawnShockwave(level, player, center, normalized, radius, PROGRAM_IMPACT_LEVEL);
+            if (destroyBlocks && DestroyBlocksSetting.canDestroyBlocks(
+                    player, Skills.KINETIC_ENERGY_APPLIED.get())) {
+                enqueueBreakTask(
+                        level,
+                        player,
+                        center,
+                        radius,
+                        normalized,
+                        PROGRAM_IMPACT_LEVEL,
+                        null
+                );
+            }
+            return true;
+        }
+
+        /**
+         * Reuses the authoritative Kinetic Energy Applied impact path for custom programs.
+         * Range and program ownership are validated by the caller; skill state and CP remain
+         * authoritative here so a graph cannot bypass normal ability rules.
+         */
+        public static boolean tryExecuteProgramImpact(
+                ServerPlayer player,
+                Vec3 center,
+                Vec3 direction,
+                int impactLevel
+        ) {
+            if (!validProgramImpact(player, center, direction)) {
+                return false;
+            }
+            return executeImpact(
+                    (ServerLevel) player.level(),
+                    player,
+                    center,
+                    normalizeOrDefault(direction),
+                    clampImpactLevel(impactLevel),
+                    null
+            );
+        }
+
+        private static boolean validProgramImpact(ServerPlayer player, Vec3 center, Vec3 direction) {
+            return canCreateShockwave(player) && validProgramImpactGeometry(player, center, direction);
+        }
+
+        private static boolean validConfiguredProgramImpact(
+                ServerPlayer player,
+                Vec3 center,
+                Vec3 direction
+        ) {
+            return canCreateProgramShockwave(player)
+                    && validProgramImpactGeometry(player, center, direction);
+        }
+
+        private static boolean validProgramImpactGeometry(
+                ServerPlayer player,
+                Vec3 center,
+                Vec3 direction
+        ) {
+            return player != null
+                    && player.level() instanceof ServerLevel
+                    && center != null
+                    && direction != null
+                    && Double.isFinite(center.x)
+                    && Double.isFinite(center.y)
+                    && Double.isFinite(center.z)
+                    && Double.isFinite(direction.x)
+                    && Double.isFinite(direction.y)
+                    && Double.isFinite(direction.z)
+                    && direction.lengthSqr() > 1.0E-12;
         }
 
         private static void applyAreaDamage(ServerLevel level, ServerPlayer player, Vec3 center,
@@ -713,6 +900,19 @@ public class KineticEnergyApplied extends Skill {
         return List.copyOf(offsets);
     }
 
+    static boolean isWithinProgramBreakRadius(
+            Vec3 center,
+            BlockPos origin,
+            double radiusSquared,
+            BlockPos position
+    ) {
+        if (radiusSquared == 0.0) return position.equals(origin);
+        var x = position.getX() + 0.5 - center.x;
+        var y = position.getY() + 0.5 - center.y;
+        var z = position.getZ() + 0.5 - center.z;
+        return x * x + y * y + z * z <= radiusSquared;
+    }
+
     private static final class BreakTask {
         private final ResourceKey<Level> dimension;
         private final Vec3 center;
@@ -757,10 +957,7 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private boolean tryMutate(ServerLevel level, ServerPlayer player, BlockPos pos) {
-            var x = pos.getX() + 0.5 - center.x;
-            var y = pos.getY() + 0.5 - center.y;
-            var z = pos.getZ() + 0.5 - center.z;
-            if (x * x + y * y + z * z > radiusSquared) return false;
+            if (!isWithinProgramBreakRadius(center, origin, radiusSquared, pos)) return false;
             if (!level.hasChunkAt(pos) || !level.mayInteract(player, pos)) return false;
 
             var state = level.getBlockState(pos);

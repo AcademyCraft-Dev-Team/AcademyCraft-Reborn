@@ -45,6 +45,21 @@ class MagnetManipulationTest {
     }
 
     @Test
+    void controlledBlocksReuseTheMagnetHomingProfile() {
+        var current = new Vec3(0.2, 0.1, 0.0);
+        var origin = new Vec3(1.0, 2.0, 3.0);
+        var target = new Vec3(4.0, 2.5, 3.0);
+        var fallback = new Vec3(1.0, 0.0, 0.0);
+
+        assertEquals(
+                MagnetManipulation.calculatePullVelocity(
+                        current, origin, target, fallback, 0.9, 0.45),
+                MagnetManipulation.calculateControlledBlockVelocity(
+                        current, origin, target, fallback, 0.9, 0.45)
+        );
+    }
+
+    @Test
     void ironPathDetectionDoesNotTreatEveryMetalAsIron() {
         assertTrue(MagnetManipulation.isIronRelatedPath("iron_ore"));
         assertTrue(MagnetManipulation.isIronRelatedPath("raw_iron_block"));

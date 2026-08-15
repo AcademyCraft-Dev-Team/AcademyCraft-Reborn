@@ -132,7 +132,45 @@ public final class DarkmatterCut extends Skill {
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (!(player.level() instanceof ServerLevel level)) return;
+            tryCast(player, player.getLookAngle(), -1.0, 1.0f, -1.0f);
+        }
+
+        public static boolean tryProgramCast(
+                ServerPlayer player,
+                Vec3 direction,
+                double maximumRadius,
+                float damageScale,
+                float baseCost
+        ) {
+            return tryCast(player, direction, maximumRadius, damageScale, baseCost);
+        }
+
+        private static boolean tryCast(
+                ServerPlayer player,
+                Vec3 direction,
+                double maximumRadius,
+                float damageScale,
+                float baseCost
+        ) {
+            if (player == null
+                    || direction == null
+                    || !Double.isFinite(direction.x)
+                    || !Double.isFinite(direction.y)
+                    || !Double.isFinite(direction.z)
+                    || direction.lengthSqr() < 1.0E-12
+                    || !Double.isFinite(maximumRadius)
+                    || (maximumRadius != -1.0
+                    && (maximumRadius <= 0.0 || maximumRadius > SIX_WINGS_RADIUS))
+                    || !Float.isFinite(damageScale)
+                    || damageScale < 0.0f
+                    || damageScale > 2.0f
+                    || !Float.isFinite(baseCost)
+                    || baseCost < -1.0f
+                    || !(player.level() instanceof ServerLevel level)) {
+                return false;
+            }
+            var horizontal = new Vec3(direction.x, 0.0, direction.z);
+            if (maximumRadius > 0.0 && horizontal.lengthSqr() < 1.0E-8) return false;
             var skill = Skills.DARKMATTER_CUT.get();
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var enhanced = DarkmatterSixWings.Server.isActive(player);
@@ -140,11 +178,13 @@ public final class DarkmatterCut extends Skill {
             if (enhanced && Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(player, 2)) {
                 calculatedRadius *= 1.1;
             }
+            if (maximumRadius > 0.0) calculatedRadius = Math.min(calculatedRadius, maximumRadius);
             var radius = calculatedRadius;
             var minimumDot = milestone >= 2
                     ? Math.cos(Math.acos(MIN_DOT) * 1.2) : MIN_DOT;
             var origin = player.position().add(0, player.getBbHeight() * 0.5, 0);
-            var look = horizontalLook(player.getLookAngle(), player.getYRot());
+            var visualDirection = direction.normalize();
+            var look = horizontalLook(visualDirection, player.getYRot());
             var targets = level.getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(radius), target ->
                             target != player && target.isAlive() && !target.isRemoved()
@@ -153,38 +193,52 @@ public final class DarkmatterCut extends Skill {
                                     radius, minimumDot));
             var finalRadius = radius;
             var finalMinimumDot = minimumDot;
-            skill.executeActive(player, (context, actualCost) -> {
-                spawnSlash(level, player, enhanced ? 3.0f : 1.0f);
-                level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
-                        SoundSource.PLAYERS, 1.0f, 1.0f);
-                var system = AbilitySystemServer.getSystem(player);
-                var damage = (enhanced ? SIX_WINGS_DAMAGE : BASE_DAMAGE)
-                        * system.getPlayerAbilityPowerMultiplier(player.getUUID())
-                        * system.getPlayerDamageMultiplier(player.getUUID());
-                var source = SkillDamageSource.of(player, skill);
-                for (var target : targets) {
-                    if (!target.hurtServer(level, source, damage)) continue;
-                    level.sendParticles(ParticleTypes.SWEEP_ATTACK,
-                            target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
-                            6, 0.25, 0.25, 0.25, 0.01);
-                }
-                if (context.milestone() >= 3) {
-                    TimedSkillEffectRuntime.schedule(player, 8, () -> {
-                        if (!player.isAlive() || player.level() != level) return;
-                        spawnSlash(level, player, enhanced ? 2.0f : 0.75f);
-                        var delayedTargets = level.getEntitiesOfClass(LivingEntity.class,
-                                new AABB(origin, origin).inflate(finalRadius), target ->
-                                        target != player && target.isAlive() && !target.isRemoved()
+            return skill.executeActive(
+                    player,
+                    context -> baseCost < 0.0f
+                            ? skill.getCpCost(context.level()) : baseCost,
+                    (context, actualCost) -> {
+                        spawnSlash(level, player, visualDirection, enhanced ? 3.0f : 1.0f);
+                        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
+                                SoundSource.PLAYERS, 1.0f, 1.0f);
+                        var system = AbilitySystemServer.getSystem(player);
+                        var damage = (enhanced ? SIX_WINGS_DAMAGE : BASE_DAMAGE)
+                                * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                                * system.getPlayerDamageMultiplier(player.getUUID())
+                                * damageScale;
+                        var source = SkillDamageSource.of(player, skill);
+                        for (var target : targets) {
+                            if (!target.hurtServer(level, source, damage)) continue;
+                            level.sendParticles(ParticleTypes.SWEEP_ATTACK,
+                                    target.getX(), target.getY() + target.getBbHeight() * 0.5,
+                                    target.getZ(), 6, 0.25, 0.25, 0.25, 0.01);
+                        }
+                        if (context.milestone() >= 3) {
+                            TimedSkillEffectRuntime.schedule(player, 8, () -> {
+                                if (!player.isAlive() || player.level() != level) return;
+                                spawnSlash(level, player, visualDirection,
+                                        enhanced ? 2.0f : 0.75f);
+                                var delayedTargets = level.getEntitiesOfClass(
+                                        LivingEntity.class,
+                                        new AABB(origin, origin).inflate(finalRadius),
+                                        target -> target != player
+                                                && target.isAlive()
+                                                && !target.isRemoved()
                                                 && !player.isAlliedTo(target)
-                                                && insideCone(origin, look, target.getBoundingBox().getCenter(),
-                                                finalRadius, finalMinimumDot));
-                        for (var target : delayedTargets) {
-                            target.invulnerableTime = 0;
-                            target.hurtServer(level, source, damage * 0.5f);
+                                                && insideCone(
+                                                origin,
+                                                look,
+                                                target.getBoundingBox().getCenter(),
+                                                finalRadius,
+                                                finalMinimumDot
+                                        ));
+                                for (var target : delayedTargets) {
+                                    target.invulnerableTime = 0;
+                                    target.hurtServer(level, source, damage * 0.5f);
+                                }
+                            });
                         }
                     });
-                }
-            });
         }
 
         static Vec3 horizontalLook(Vec3 look, float yaw) {
@@ -202,14 +256,19 @@ public final class DarkmatterCut extends Skill {
                     && look.dot(horizontal.normalize()) >= minimumDot;
         }
 
-        private static void spawnSlash(ServerLevel level, ServerPlayer player,
-                                       float scale) {
+        private static void spawnSlash(
+                ServerLevel level,
+                ServerPlayer player,
+                Vec3 direction,
+                float scale
+        ) {
             var slash = new DarkmatterCutSlash(EntityTypes.DARKMATTER_CUT_SLASH.get(), level);
             var position = player.position().add(0, player.getBbHeight() * 0.3, 0)
-                    .add(player.getLookAngle().normalize().scale(1.85));
+                    .add(direction.scale(1.85));
             slash.setPos(position);
-            slash.setYRot(player.getYRot());
-            slash.setXRot(player.getXRot() + player.getRandom().nextFloat() * 60 - 30);
+            slash.setYRot((float) Math.toDegrees(Math.atan2(-direction.x, direction.z)));
+            slash.setXRot((float) Math.toDegrees(-Math.asin(Math.clamp(direction.y, -1.0, 1.0)))
+                    + player.getRandom().nextFloat() * 60 - 30);
             slash.setScale(scale);
             slash.setDuration(4);
             slash.setSwingDirection(player.getRandom().nextBoolean() ? 1 : -1);

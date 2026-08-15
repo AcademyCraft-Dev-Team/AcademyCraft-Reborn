@@ -15,12 +15,17 @@ import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.program.PrecisionProgramExporter;
+import org.academy.internal.common.ability.program.PrecisionProgramImporter;
+import org.academy.internal.common.ability.program.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -81,6 +86,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private final ArrayDeque<PrecisionGraph> undo = new ArrayDeque<>();
     private final ArrayDeque<PrecisionGraph> redo = new ArrayDeque<>();
+    private AbilityProgram program;
+    private ProgramEditorDocument document;
     private PrecisionGraph graph;
     private long revision;
     private int slot;
@@ -129,10 +136,14 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private FrameLayoutWidget serializedLayout;
     private String serializedLayoutId;
 
-    PrecisionOperationScreen(int slot, PrecisionGraph graph, long revision) {
+    PrecisionOperationScreen(int slot, AbilityProgram program, long revision) {
         super(Component.translatable("screen.academy.precision_operation.title"));
         this.slot = Math.clamp(slot, 0, 3);
-        this.graph = graph == null ? PrecisionGraph.EMPTY : graph;
+        this.program = program;
+        document = new ProgramEditorDocument(
+                program, AbilityProgramDefinitions.mentalout(), Set.of());
+        var exported = PrecisionProgramExporter.export(program);
+        graph = exported.valid() ? exported.graph() : PrecisionGraph.EMPTY;
         this.revision = revision;
     }
 
@@ -252,9 +263,14 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         updateSearchBounds();
     }
 
-    void applyServerState(int selectedSlot, PrecisionGraph serverGraph, long serverRevision) {
+    void applyServerState(int selectedSlot, AbilityProgram serverProgram, long serverRevision) {
         revision = serverRevision;
-        if (slot == selectedSlot) setGraph(serverGraph, false);
+        if (slot != selectedSlot) return;
+        program = serverProgram;
+        document = new ProgramEditorDocument(
+                program, AbilityProgramDefinitions.mentalout(), Set.of());
+        var exported = PrecisionProgramExporter.export(program);
+        setGraph(exported.valid() ? exported.graph() : PrecisionGraph.EMPTY, false);
     }
 
     void applyResult(
@@ -1237,7 +1253,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             showTransient(PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED);
             return;
         }
-        PrecisionOperationClient.save(slot, graph, revision);
+        PrecisionOperationClient.saveProgram(slot, graph.nodes().isEmpty() ? null : document.program(), revision);
     }
 
     private void pushUndo() {
@@ -1249,6 +1265,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private void setGraph(PrecisionGraph next, boolean recordUndo) {
         if (recordUndo) pushUndo();
         graph = next == null ? PrecisionGraph.EMPTY : next;
+        syncDocument();
         selectedNode = -1;
         connection = null;
         quickInsert = null;
@@ -1283,6 +1300,27 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         diagnosticPort = validation.port();
         PrecisionOperationClient.clearDiagnostic(slot);
         PrecisionOperationClient.updateLocal(slot, graph);
+        syncDocument();
+    }
+
+    private void syncDocument() {
+        var imported = PrecisionProgramImporter.importEditableGraph(graph);
+        if (!imported.valid()) return;
+        program = new AbilityProgram(
+                program.schemaVersion(),
+                program.id(),
+                program.name(),
+                program.category(),
+                imported.graph(),
+                imported.editorLayout()
+        );
+        document = new ProgramEditorDocument(
+                program, AbilityProgramDefinitions.mentalout(), Set.of());
+        PrecisionOperationClient.updateLocalProgram(slot, program);
+    }
+
+    ProgramEditorDocument document() {
+        return document;
     }
 
     private List<PrecisionGraph.NodeKind> visibleKinds() {

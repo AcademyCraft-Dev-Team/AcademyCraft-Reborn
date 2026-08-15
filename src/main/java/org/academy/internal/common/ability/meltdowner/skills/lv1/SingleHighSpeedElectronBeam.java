@@ -40,8 +40,8 @@ import net.minecraft.util.Mth;
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
     public static final int DEFAULT_ATTACK_DELAY_TICKS = 10;
-    static final float BASE_DAMAGE = 16.0f;
-    static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
+    public static final float BASE_DAMAGE = 16.0f;
+    public static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
 
     public SingleHighSpeedElectronBeam() {
         super(Builder

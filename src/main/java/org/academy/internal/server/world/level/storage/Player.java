@@ -46,6 +46,8 @@ public final class Player {
     private final Map<String, SkillData> skillDataMap = new HashMap<>();
     @SerializedName("retainedSkillProficiencies")
     private final Map<String, Float> retainedSkillProficiencies = new HashMap<>();
+    @SerializedName("abilityProgramBooks")
+    private Map<String, String> abilityProgramBooks = new HashMap<>();
     @SerializedName("skills")
     private Set<String> legacySkills;
     @SerializedName("abilityCategory")
@@ -149,6 +151,25 @@ public final class Player {
         return retainedSkillProficiencies;
     }
 
+    public String getAbilityProgramBook(String category) {
+        return abilityProgramBooks().get(category);
+    }
+
+    public Map<String, String> getAbilityProgramBooks() {
+        return Map.copyOf(abilityProgramBooks());
+    }
+
+    public void setAbilityProgramBook(String category, String encodedBook) {
+        Objects.requireNonNull(category, "category");
+        Objects.requireNonNull(encodedBook, "encodedBook");
+        var previous = abilityProgramBooks().put(category, encodedBook);
+        if (!Objects.equals(previous, encodedBook)) markDirty();
+    }
+
+    public void removeAbilityProgramBook(String category) {
+        if (category != null && abilityProgramBooks().remove(category) != null) markDirty();
+    }
+
     public AbilityData getCpData() {
         return cpData;
     }
@@ -214,12 +235,29 @@ public final class Player {
         changed |= migrateSkillData();
         changed |= migrateLegacySkillSet();
         changed |= migrateRetainedSkillProficiencies();
+        changed |= repairAbilityProgramBooks();
         changed |= removeRetiredSkills();
         changed |= migrateOccupations();
         changed |= migrateLegacyAbilityData();
         changed |= getPropsData().repair();
         if (changed) markDirty();
         return changed;
+    }
+
+    private Map<String, String> abilityProgramBooks() {
+        if (abilityProgramBooks == null) abilityProgramBooks = new HashMap<>();
+        return abilityProgramBooks;
+    }
+
+    private boolean repairAbilityProgramBooks() {
+        if (abilityProgramBooks == null) {
+            abilityProgramBooks = new HashMap<>();
+            return true;
+        }
+        return abilityProgramBooks.entrySet().removeIf(entry ->
+                Identifier.tryParse(entry.getKey()) == null
+                        || entry.getValue() == null
+                        || entry.getValue().isBlank());
     }
 
     private boolean migrateAbilityCategory() {

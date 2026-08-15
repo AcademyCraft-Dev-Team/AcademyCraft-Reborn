@@ -112,52 +112,105 @@ public final class LaminarCutter extends Skill {
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            tryCast(player, player.getLookAngle(), -1.0f, 1.0f, -1.0f);
+        }
+
+        public static boolean tryProgramCast(
+                ServerPlayer player,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                float baseCost
+        ) {
+            return tryCast(player, direction, maximumRange, damageScale, baseCost);
+        }
+
+        private static boolean tryCast(
+                ServerPlayer player,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                float baseCost
+        ) {
+            if (player == null || direction == null
+                    || !Double.isFinite(direction.x)
+                    || !Double.isFinite(direction.y)
+                    || !Double.isFinite(direction.z)
+                    || direction.lengthSqr() < 1.0E-12
+                    || !Float.isFinite(maximumRange)
+                    || !Float.isFinite(damageScale)
+                    || !Float.isFinite(baseCost)
+                    || (maximumRange != -1.0f
+                    && (maximumRange <= 0.0f || maximumRange > 64.0f))
+                    || damageScale < 0.0f
+                    || damageScale > 2.0f) {
+                return false;
+            }
             var skill = Skills.LAMINAR_CUTTER.get();
-            skill.executeActive(player, context -> skill.getCpCost(context.level())
-                    * AeromanipConfig.cpMultiplier(player, SkillNames.LAMINAR_CUTTER), (context, _) -> {
-                if (!(player.level() instanceof ServerLevel level)) return;
-                var eye = player.getEyePosition();
-                var direction = player.getLookAngle().normalize();
-                var cutterLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
-                var length = (24.0 + cutterLevel * 4.0) * AeromanipFieldManager.rangeMultiplier(player)
-                        * AeromanipConfig.rangeMultiplier(player, SkillNames.LAMINAR_CUTTER);
-                if (context.milestone() >= 2) length *= 1.2;
-                var resolvedLength = length;
-                var end = eye.add(direction.scale(length));
-                var bladeRight = new Vec3(-direction.z, 0.0, direction.x);
-                if (bladeRight.lengthSqr() < 1.0E-8) bladeRight = new Vec3(1.0, 0.0, 0.0);
-                bladeRight = bladeRight.normalize();
-                var bladeNormal = direction.cross(bladeRight).normalize();
-                var box = new AABB(eye, end).inflate(BLADE_HALF_WIDTH, 1.5, BLADE_HALF_WIDTH);
-                var source = SkillDamageSource.of(player, Skills.LAMINAR_CUTTER.get());
-                level.playSound(null, player.blockPosition(),
-                        SoundEvents.AIRFLOW_IMPACT.get(),
-                        SoundSource.PLAYERS, 0.65f, 1.15f);
-                var damage = 4.0f * AeromanipConfig.damageMultiplier(player, SkillNames.LAMINAR_CUTTER)
-                        * context.system().getPlayerAbilityPowerMultiplier(player.getUUID())
-                        * context.system().getPlayerDamageMultiplier(player.getUUID());
-                var finalBladeRight = bladeRight;
-                var finalBladeNormal = bladeNormal;
-                for (var target : level.getEntitiesOfClass(LivingEntity.class, box,
-                        living -> living != player
-                                && living.isAlive()
-                                && player.hasLineOfSight(living)
-                                && intersectsBlade(
-                                living,
-                                eye,
-                                direction,
-                                finalBladeRight,
-                                finalBladeNormal,
-                                resolvedLength
-                        ))) {
-                    if (target.hurtServer(level, source, damage)) {
-                        Skills.LAMINAR_CUTTER.get().onHurt(player, target, damage);
-                        if (context.milestone() >= 3) applyFracture(player, target);
-                    }
+            var normalizedDirection = direction.normalize();
+            return skill.executeActive(player, context -> (baseCost < 0.0f
+                            ? skill.getCpCost(context.level()) : baseCost)
+                    * AeromanipConfig.cpMultiplier(player, SkillNames.LAMINAR_CUTTER),
+                    (context, _) -> executeCut(
+                            player,
+                            normalizedDirection,
+                            maximumRange,
+                            damageScale,
+                            context
+                    ));
+        }
+
+        private static void executeCut(
+                ServerPlayer player,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                Skill.SkillContext context
+        ) {
+            if (!(player.level() instanceof ServerLevel level)) return;
+            var skill = Skills.LAMINAR_CUTTER.get();
+            var eye = player.getEyePosition();
+            var cutterLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
+            var length = (24.0 + cutterLevel * 4.0) * AeromanipFieldManager.rangeMultiplier(player)
+                    * AeromanipConfig.rangeMultiplier(player, SkillNames.LAMINAR_CUTTER);
+            if (context.milestone() >= 2) length *= 1.2;
+            if (maximumRange > 0.0f) length = Math.min(length, maximumRange);
+            var resolvedLength = length;
+            var end = eye.add(direction.scale(length));
+            var bladeRight = new Vec3(-direction.z, 0.0, direction.x);
+            if (bladeRight.lengthSqr() < 1.0E-8) bladeRight = new Vec3(1.0, 0.0, 0.0);
+            bladeRight = bladeRight.normalize();
+            var bladeNormal = direction.cross(bladeRight).normalize();
+            var box = new AABB(eye, end).inflate(BLADE_HALF_WIDTH, 1.5, BLADE_HALF_WIDTH);
+            var source = SkillDamageSource.of(player, Skills.LAMINAR_CUTTER.get());
+            level.playSound(null, player.blockPosition(),
+                    SoundEvents.AIRFLOW_IMPACT.get(),
+                    SoundSource.PLAYERS, 0.65f, 1.15f);
+            var damage = 4.0f * AeromanipConfig.damageMultiplier(player, SkillNames.LAMINAR_CUTTER)
+                    * context.system().getPlayerAbilityPowerMultiplier(player.getUUID())
+                    * context.system().getPlayerDamageMultiplier(player.getUUID())
+                    * damageScale;
+            var finalBladeRight = bladeRight;
+            var finalBladeNormal = bladeNormal;
+            for (var target : level.getEntitiesOfClass(LivingEntity.class, box,
+                    living -> living != player
+                            && living.isAlive()
+                            && player.hasLineOfSight(living)
+                            && intersectsBlade(
+                            living,
+                            eye,
+                            direction,
+                            finalBladeRight,
+                            finalBladeNormal,
+                            resolvedLength
+                    ))) {
+                if (target.hurtServer(level, source, damage)) {
+                    Skills.LAMINAR_CUTTER.get().onHurt(player, target, damage);
+                    if (context.milestone() >= 3) applyFracture(player, target);
                 }
-                clearSoftBlocks(player, level, eye, end, direction, bladeRight, bladeNormal, context.milestone());
-                spawnBladeVisual(level, eye, direction, bladeRight, length);
-            });
+            }
+            clearSoftBlocks(player, level, eye, end, direction, bladeRight, bladeNormal, context.milestone());
+            spawnBladeVisual(level, eye, direction, bladeRight, length);
         }
 
         private static boolean intersectsBlade(LivingEntity target, Vec3 start, Vec3 direction,

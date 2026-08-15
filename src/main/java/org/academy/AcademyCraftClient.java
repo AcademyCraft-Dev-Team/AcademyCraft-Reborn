@@ -55,6 +55,7 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
+import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.props.PropsApp;
@@ -121,6 +122,7 @@ public final class AcademyCraftClient {
         Screens.register();
         HudManager.INSTANCE.initMain();
         AbilitySystemClient.init();
+        AbilityProgramEditorClient.init();
         ProficiencyPolicy.initClient();
         ProficiencySkillSettings.initClient();
         ClientSyncManager.init();

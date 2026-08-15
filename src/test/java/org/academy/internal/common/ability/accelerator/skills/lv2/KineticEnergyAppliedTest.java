@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.accelerator.skills.lv2;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,6 +21,8 @@ class KineticEnergyAppliedTest {
         assertEquals(27.0f, KineticEnergyApplied.getImpactRadius(5));
         assertEquals(5.0f, KineticEnergyApplied.getImpactDamage(1, 1.0f, 1.0f));
         assertEquals(58.0f, KineticEnergyApplied.getImpactDamage(5, 2.0f, 1.0f));
+        assertEquals(26.0f, KineticEnergyApplied.getProgramImpactDamage(2.0f, 1.0f, 1.0f));
+        assertEquals(0.0f, KineticEnergyApplied.getProgramImpactDamage(1.0f, 0.0f, 0.0f));
     }
 
     @Test
@@ -26,5 +30,16 @@ class KineticEnergyAppliedTest {
         assertEquals(false, KineticEnergyApplied.isDistinctImpactTrigger(100, 100));
         assertEquals(false, KineticEnergyApplied.isDistinctImpactTrigger(100, 101));
         assertEquals(true, KineticEnergyApplied.isDistinctImpactTrigger(100, 102));
+    }
+
+    @Test
+    void zeroProgramRadiusSelectsOnlyTheCoordinateBlock() {
+        var center = new Vec3(4.1, 64.9, -2.2);
+        var origin = BlockPos.containing(center);
+
+        assertEquals(true, KineticEnergyApplied.isWithinProgramBreakRadius(
+                center, origin, 0.0, origin));
+        assertEquals(false, KineticEnergyApplied.isWithinProgramBreakRadius(
+                center, origin, 0.0, origin.offset(1, 0, 0)));
     }
 }

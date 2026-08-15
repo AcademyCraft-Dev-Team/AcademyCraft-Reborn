@@ -151,6 +151,56 @@ public final class DarkmatterDisassemble extends Skill {
             }
         }
 
+        public static boolean canProgramDestroyBlock(
+                ServerPlayer player,
+                BlockPos position,
+                double maximumRange
+        ) {
+            if (player == null
+                    || position == null
+                    || !Double.isFinite(maximumRange)
+                    || maximumRange <= 0.0
+                    || maximumRange > RANGE
+                    || !(player.level() instanceof ServerLevel level)
+                    || Vec3.atCenterOf(position).distanceToSqr(player.getEyePosition())
+                    > maximumRange * maximumRange
+                    || !DestroyBlocksSetting.canDestroyBlocks(
+                    player, Skills.DARKMATTER_DISASSEMBLE.get())) {
+                return false;
+            }
+            return canDestroy(level, player, position);
+        }
+
+        public static boolean tryProgramDestroyBlock(
+                ServerPlayer player,
+                BlockPos position,
+                double maximumRange,
+                float baseCost
+        ) {
+            if (!Float.isFinite(baseCost)
+                    || baseCost < 0.0f
+                    || !canProgramDestroyBlock(player, position, maximumRange)) {
+                return false;
+            }
+            var skill = Skills.DARKMATTER_DISASSEMBLE.get();
+            var destroyed = new boolean[1];
+            var executed = skill.executeActive(player, _ -> baseCost, (_, _) -> {
+                if (!canProgramDestroyBlock(player, position, maximumRange)) return;
+                destroyed[0] = player.level().destroyBlock(position.immutable(), true, player);
+                if (destroyed[0]) {
+                    player.level().playSound(
+                            null,
+                            position,
+                            SoundEvents.GRAVEL_BREAK,
+                            SoundSource.PLAYERS,
+                            1.0f,
+                            0.9f
+                    );
+                }
+            });
+            return executed && destroyed[0];
+        }
+
         private static Hit pick(ServerLevel level, ServerPlayer player) {
             var range = Skills.DARKMATTER_DISASSEMBLE.get().hasProficiencyMilestone(player, 2)
                     ? 40.0 : RANGE;
@@ -216,6 +266,75 @@ public final class DarkmatterDisassemble extends Skill {
             });
         }
 
+        public static boolean tryProgramAttack(
+                ServerPlayer player,
+                LivingEntity target,
+                double maximumRange,
+                float damageScale,
+                float baseCost
+        ) {
+            if (!Float.isFinite(damageScale)
+                    || damageScale < 0.0f
+                    || damageScale > 2.0f
+                    || !Float.isFinite(baseCost)
+                    || baseCost < 0.0f
+                    || !canProgramAttack(player, target, maximumRange)
+                    || !(player.level() instanceof ServerLevel level)) {
+                return false;
+            }
+            var skill = Skills.DARKMATTER_DISASSEMBLE.get();
+            var attacked = new boolean[1];
+            return skill.executeActive(player, _ -> baseCost, (context, actualCost) -> {
+                if (!canProgramAttack(player, target, maximumRange)) return;
+                attacked[0] = true;
+                var system = AbilitySystemServer.getSystem(player);
+                var damage = BASE_DAMAGE
+                        * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                        * system.getPlayerDamageMultiplier(player.getUUID())
+                        * damageScale;
+                var source = SkillDamageSource.of(player, skill);
+                var hurt = context.milestone() >= 3
+                        ? hurtWithArmorPenetration(target, level, source, damage)
+                        : target.hurtServer(level, source, damage);
+                if (hurt) {
+                    level.sendParticles(
+                            ParticleTypes.CLOUD,
+                            target.getX(),
+                            target.getY() + target.getBbHeight() * 0.5,
+                            target.getZ(),
+                            16,
+                            0.45, 0.45, 0.45,
+                            0.03
+                    );
+                }
+                level.playSound(
+                        null,
+                        target.blockPosition(),
+                        SoundEvents.GRAVEL_BREAK,
+                        SoundSource.PLAYERS,
+                        1.0f,
+                        0.95f
+                );
+            }) && attacked[0];
+        }
+
+        public static boolean canProgramAttack(
+                ServerPlayer player,
+                LivingEntity target,
+                double maximumRange
+        ) {
+            return player != null
+                    && target != null
+                    && Double.isFinite(maximumRange)
+                    && maximumRange > 0.0
+                    && maximumRange <= RANGE
+                    && player.level() instanceof ServerLevel level
+                    && target.level() == level
+                    && validTarget(player, target)
+                    && player.distanceToSqr(target) <= maximumRange * maximumRange
+                    && player.hasLineOfSight(target);
+        }
+
         private static double maximumRange(ServerPlayer player) {
             return Skills.DARKMATTER_DISASSEMBLE.get().hasProficiencyMilestone(player, 2) ? 40.0 : RANGE;
         }
@@ -241,7 +360,8 @@ public final class DarkmatterDisassemble extends Skill {
 
         private static boolean canDestroy(ServerLevel level, ServerPlayer player, BlockPos pos) {
             if (!level.hasChunkAt(pos) || !level.getWorldBorder().isWithinBounds(pos)
-                    || pos.getY() < level.getMinY() || pos.getY() >= level.getMaxY()) return false;
+                    || pos.getY() < level.getMinY() || pos.getY() >= level.getMaxY()
+                    || !level.mayInteract(player, pos)) return false;
             var state = level.getBlockState(pos);
             if (state.isAir() || state.getDestroySpeed(level, pos) < 0) return false;
             var restricted = player.blockActionRestricted(level, pos, player.gameMode.getGameModeForPlayer())
