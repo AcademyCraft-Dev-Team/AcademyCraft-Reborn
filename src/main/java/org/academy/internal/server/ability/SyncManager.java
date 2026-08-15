@@ -32,17 +32,32 @@ public class SyncManager {
     }
 
     public void onPlayerLogin(ServerPlayer player) {
-        var uuid = player.getUUID();
-        playerSyncQueueMap.put(uuid, ConcurrentHashMap.newKeySet());
+        registerPlayer(player.getUUID());
     }
 
     public void onPlayerLogout(ServerPlayer player) {
-        var uuid = player.getUUID();
-        playerSyncQueueMap.remove(uuid);
+        unregisterPlayer(player.getUUID());
     }
 
-    public void schedulePlayerSync(UUID uuid, Identifier syncType) {
-        playerSyncQueueMap.get(uuid).add(syncType);
+    /**
+     * Queues a sync only while the player is registered with this manager. Ability cleanup may
+     * still mutate persistent data after the logout hook has removed that registration; those
+     * late writes must remain valid without recreating an offline network queue.
+     */
+    public boolean schedulePlayerSync(UUID uuid, Identifier syncType) {
+        if (uuid == null || syncType == null) return false;
+        return playerSyncQueueMap.computeIfPresent(uuid, (_, syncQueue) -> {
+            syncQueue.add(syncType);
+            return syncQueue;
+        }) != null;
+    }
+
+    void registerPlayer(UUID uuid) {
+        if (uuid != null) playerSyncQueueMap.put(uuid, ConcurrentHashMap.newKeySet());
+    }
+
+    void unregisterPlayer(UUID uuid) {
+        if (uuid != null) playerSyncQueueMap.remove(uuid);
     }
 
     @Nullable ServerPlayer getOnlinePlayer(UUID uuid) {
