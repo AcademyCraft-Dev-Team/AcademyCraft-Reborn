@@ -2,8 +2,10 @@ package org.academy.internal.common.world.level.block;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -46,6 +48,22 @@ public final class Blocks {
                             .liquid()
                             .sound(SoundType.EMPTY)
             );
+    public static final DeferredHolder<Block, Block> IMAG_PHASE_VEGETATION =
+            BLOCKS.registerSimpleBlock("imag_phase_vegetation", BlockBehaviour.Properties::of);
+    public static final DeferredHolder<Block, ImagPhaseLeavesBlock> IMAG_PHASE_LEAVES =
+            BLOCKS.registerBlock("imag_phase_leaves", ImagPhaseLeavesBlock::new);
+    public static final DeferredHolder<Block, RotatedPillarBlock> IMAG_PHASE_LOG =
+            BLOCKS.registerBlock(
+                    "imag_phase_log",
+                    RotatedPillarBlock::new,
+                    () -> BlockBehaviour.Properties.of()
+                            .instrument(NoteBlockInstrument.BASS)
+                            .strength(3.0F, 6.0F)
+                            .sound(SoundType.DEEPSLATE)
+                            .ignitedByLava()
+            );
+    public static final DeferredHolder<Block, ImagPhaseLichenBlock> IMAG_PHASE_LICHEN =
+            BLOCKS.registerBlock("imag_phase_lichen", ImagPhaseLichenBlock::new);
 
     private Blocks() {
     }

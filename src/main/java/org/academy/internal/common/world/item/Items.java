@@ -73,6 +73,14 @@ public final class Items {
             ITEMS.registerSimpleBlockItem("cat_engine", Blocks.CAT_ENGINE);
     public static final DeferredHolder<Item, BlockItem> SOLAR_GEN =
             ITEMS.registerSimpleBlockItem("solar_gen", Blocks.SOLAR_GEN);
+    public static final DeferredHolder<Item, BlockItem> IMAG_PHASE_VEGETATION =
+            ITEMS.registerSimpleBlockItem("imag_phase_vegetation", Blocks.IMAG_PHASE_VEGETATION);
+    public static final DeferredHolder<Item, BlockItem> IMAG_PHASE_LEAVES =
+            ITEMS.registerSimpleBlockItem("imag_phase_leaves", Blocks.IMAG_PHASE_LEAVES);
+    public static final DeferredHolder<Item, BlockItem> IMAG_PHASE_LOG =
+            ITEMS.registerSimpleBlockItem("imag_phase_log", Blocks.IMAG_PHASE_LOG);
+    public static final DeferredHolder<Item, BlockItem> IMAG_PHASE_LICHEN =
+            ITEMS.registerSimpleBlockItem("imag_phase_lichen", Blocks.IMAG_PHASE_LICHEN);
     public static final DeferredHolder<Item, EmptyUnitItem> EMPTY_UNIT =
             ITEMS.registerItem("empty_unit", EmptyUnitItem::new);
     public static final DeferredHolder<Item, ImagPhaseUnitItem> IMAG_PHASE_UNIT =

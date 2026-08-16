@@ -35,15 +35,12 @@ public final class ProgramTriggers {
         var configuration = entry.configuration();
         return switch (expected) {
             case LOOP -> {
-                if (!configuration.isJsonObject()
-                        || !configuration.getAsJsonObject().has("interval")) yield false;
-                try {
-                    var interval = configuration.getAsJsonObject().get("interval").getAsInt();
-                    if (interval < 0 || interval > 1200) yield false;
-                    yield Math.floorMod(gameTime, Math.max(1, interval)) == 0;
-                } catch (RuntimeException exception) {
-                    yield false;
-                }
+                var decoded = CommonProgramNodeCatalog.LoopTriggerConfiguration.CODEC
+                        .parse(JsonOps.INSTANCE, configuration)
+                        .result()
+                        .orElse(null);
+                yield decoded != null && decoded.enabled()
+                        && Math.floorMod(gameTime, Math.max(1, decoded.interval())) == 0;
             }
             case MOVEMENT -> {
                 if (movement == null || !configuration.isJsonObject()

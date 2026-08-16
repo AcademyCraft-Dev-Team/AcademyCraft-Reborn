@@ -75,6 +75,7 @@ import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.particle.BloodSplashParticle;
 import org.academy.internal.client.particle.BloodSprayParticle;
 import org.academy.internal.client.particle.ImagPhaseFluidParticle;
+import org.academy.internal.client.particle.ImagPhaseLeavesParticle;
 import org.academy.internal.client.particle.VectorBlastParticle;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.render.vfx.*;
@@ -415,9 +416,12 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
+        event.registerSpriteSet(ParticleTypes.IMAG_PHASE_LEAVES.get(), ImagPhaseLeavesParticle.Provider::new);
         event.registerSpriteSet(ParticleTypes.IMAG_PHASE_FLUID.get(), sprites ->
                 (type, level, x, y, z, xSpeed, ySpeed, zSpeed, random) -> {
-                    var particle = new ImagPhaseFluidParticle(level, sprites, x, y, z, random);
+                    var particle = new ImagPhaseFluidParticle(
+                            level, sprites, x, y, z, xSpeed, ySpeed, zSpeed, random
+                    );
                     particle.scale(0.5F + random.nextFloat() * 0.25F);
                     int[][] colors = {
                             {245, 144, 144}, {178, 232, 243}, {209, 170, 225},

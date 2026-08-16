@@ -60,6 +60,11 @@ class ProgramConfigurationOptionsTest {
                         movement, "condition", new JsonPrimitive("jump")))
         );
         var loop = mentalout.entry(CommonProgramNodeIds.TRIGGER_LOOP);
+        assertEquals(List.of("false", "true"), values(
+                ProgramConfigurationOptions.options(
+                        loop, "enabled", new JsonPrimitive(true))));
+        assertTrue(ProgramConfigurationOptions.isToggle(
+                "enabled", new JsonPrimitive(true)));
         assertTrue(ProgramConfigurationOptions.options(
                 loop, "interval", new JsonPrimitive(20)).isEmpty());
         assertEquals(List.of("below", "above"), values(
