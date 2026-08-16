@@ -47,6 +47,10 @@ class ProgramTriggersTest {
         assertTrue(ProgramTriggers.matches(
                 program(CommonProgramNodeIds.TRIGGER_LOOP, loop),
                 ProgramTriggers.Type.LOOP, null, 37));
+        loop.addProperty("enabled", false);
+        assertFalse(ProgramTriggers.matches(
+                program(CommonProgramNodeIds.TRIGGER_LOOP, loop),
+                ProgramTriggers.Type.LOOP, null, 37));
 
         var movement = configuration("condition", "sprint");
         var movementProgram = program(CommonProgramNodeIds.TRIGGER_MOVEMENT, movement);
@@ -77,6 +81,10 @@ class ProgramTriggersTest {
     @Test
     void triggerConfigurationIsBoundedAndOnlyOneEntryIsAllowed() {
         var catalog = AbilityProgramDefinitions.mentalout().editorCatalog();
+        var loopDefaults = catalog.entry(CommonProgramNodeIds.TRIGGER_LOOP)
+                .defaultConfiguration().getAsJsonObject();
+        assertTrue(loopDefaults.get("enabled").getAsBoolean());
+        assertEquals(20, loopDefaults.get("interval").getAsInt());
         assertNull(catalog.schema(
                 CommonProgramNodeIds.TRIGGER_LOOP,
                 configuration("interval", -1)

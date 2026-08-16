@@ -656,7 +656,22 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                     x, rowY, TEXT, width);
             var currentValue = node.source.configuration().getAsJsonObject().get(field);
             var options = ProgramConfigurationOptions.options(node.entry, field, currentValue);
-            if (ProgramConfigurationOptions.isPowerSlider(field, currentValue)) {
+            if (ProgramConfigurationOptions.isToggle(field, currentValue)) {
+                var valueY = rowY + 11;
+                var checked = currentValue.getAsBoolean();
+                var hovered = inside(mouseX, mouseY, x, valueY, width, TOOL_SIZE);
+                var trackWidth = 20;
+                var trackHeight = 10;
+                var trackY = valueY + 2;
+                graphics.fill(x, trackY, x + trackWidth, trackY + trackHeight,
+                        hovered || checked ? TEXT : BORDER_MUTED);
+                var thumbX = checked ? x + trackWidth - 9 : x + 1;
+                graphics.fill(thumbX, trackY + 1, thumbX + 8, trackY + trackHeight - 1,
+                        checked ? 0xFF000000 : TEXT);
+                var selected = ProgramConfigurationOptions.selected(options, currentValue);
+                smallText(graphics, selected.label().getString(), x + trackWidth + 5,
+                        valueY + 4, checked ? TEXT : DIM, width - trackWidth - 5);
+            } else if (ProgramConfigurationOptions.isPowerSlider(field, currentValue)) {
                 var valueY = rowY + 11;
                 var valueWidth = 32;
                 var trackWidth = Math.max(16, width - valueWidth - 4);
@@ -1006,6 +1021,10 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             var currentValue = selected.source.configuration().getAsJsonObject().get(field);
             var options = ProgramConfigurationOptions.options(selected.entry, field, currentValue);
             var valueY = y + index * CONFIGURATION_ROW_H + 11;
+            if (ProgramConfigurationOptions.isToggle(field, currentValue)
+                    && inside(mouseX, mouseY, x, valueY, width, TOOL_SIZE)) {
+                return toggleConfiguration(selected, field, currentValue);
+            }
             if (ProgramConfigurationOptions.isPowerSlider(field, currentValue)) {
                 var trackWidth = Math.max(16, width - 36);
                 if (inside(mouseX, mouseY, x, valueY, trackWidth, TOOL_SIZE)) {
@@ -1025,6 +1044,25 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             }
         }
         return false;
+    }
+
+    private boolean toggleConfiguration(
+            NodeView selected,
+            String field,
+            JsonElement currentValue
+    ) {
+        var object = selected.source.configuration().getAsJsonObject().deepCopy();
+        object.addProperty(field, !currentValue.getAsBoolean());
+        var result = document.configureNode(selected.id(), object);
+        if (!result.successful()) {
+            showTransient(PrecisionGraph.Diagnostic.INVALID_PARAMETER);
+            return true;
+        }
+        pushUndo();
+        configurationInputValidity.clear();
+        install(result.document(), true);
+        configurationNode = -1;
+        return true;
     }
 
     private void updatePowerSlider(NodeView selected, String field, double mouseX) {

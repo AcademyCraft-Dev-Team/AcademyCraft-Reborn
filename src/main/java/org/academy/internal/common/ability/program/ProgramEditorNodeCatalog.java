@@ -136,6 +136,7 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         } else if (id.equals(CommonProgramNodeIds.BLOCK_NORMAL)) {
             configuration.addProperty("mode", "view");
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) {
+            configuration.addProperty("enabled", true);
             configuration.addProperty("interval", 20);
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) {
             configuration.addProperty("condition", "jump");

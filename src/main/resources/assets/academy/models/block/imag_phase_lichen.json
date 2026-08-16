@@ -1,0 +1,24 @@
+{
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "academy:block/imag_phase_lichen",
+    "imag_phase_lichen": "academy:block/imag_phase_lichen"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0.1],
+      "to": [16, 16, 0.1],
+      "faces": {
+        "north": {
+          "uv": [16, 0, 0, 16],
+          "texture": "#imag_phase_lichen"
+        },
+        "south": {
+          "uv": [0, 0, 16, 16],
+          "texture": "#imag_phase_lichen"
+        }
+      }
+    }
+  ]
+}

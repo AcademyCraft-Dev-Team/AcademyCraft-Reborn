@@ -14,7 +14,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.render.Render;
 import org.academy.api.client.resources.R;
 import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
 import org.academy.internal.common.world.item.Items;
@@ -152,7 +151,7 @@ public final class ImagPhaseDowsingRodSpecialRenderer
 
         collector.submitCustomGeometry(
                 mapPose,
-                Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE,
+                RenderTypes.debugFilledBox(),
                 (pose, consumer) -> renderMap(consumer, pose.pose(), targets, playerPosition)
         );
     }

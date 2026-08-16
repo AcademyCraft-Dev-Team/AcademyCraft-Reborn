@@ -46,6 +46,12 @@ public final class ProgramConfigurationOptions {
         if (currentValue != null
                 && currentValue.isJsonPrimitive()
                 && currentValue.getAsJsonPrimitive().isBoolean()) {
+            if (field.equals("enabled")) {
+                return List.of(
+                        option(false, "screen.academy.program.configuration.enabled.off"),
+                        option(true, "screen.academy.program.configuration.enabled.on")
+                );
+            }
             return List.of(
                     option(false, "screen.academy.program.configuration.boolean.false"),
                     option(true, "screen.academy.program.configuration.boolean.true")
@@ -170,6 +176,13 @@ public final class ProgramConfigurationOptions {
                 && currentValue != null
                 && currentValue.isJsonPrimitive()
                 && currentValue.getAsJsonPrimitive().isNumber();
+    }
+
+    public static boolean isToggle(String field, JsonElement currentValue) {
+        return field.equals("enabled")
+                && currentValue != null
+                && currentValue.isJsonPrimitive()
+                && currentValue.getAsJsonPrimitive().isBoolean();
     }
 
     /** Returns the adjacent option, wrapping in both directions. */

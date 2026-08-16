@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -42,18 +43,32 @@ public final class ImagPhaseDowsingRodItem extends Item {
         var stack = player.getItemInHand(hand);
         if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
             if (player.getCooldowns().isOnCooldown(stack)) return InteractionResult.SUCCESS;
-            MisakaNetworkServer.send(serverPlayer, new SyncPacket(findImagPhaseSections(serverLevel, serverPlayer)));
+            var scan = scanImagPhase(serverLevel, serverPlayer);
+            MisakaNetworkServer.send(serverPlayer, new SyncPacket(scan.sections()));
+            if (scan.nearestFluid() == null) {
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "item.academy.imag_phase_dowsing_rod.no_target"
+                ));
+            } else {
+                var target = scan.nearestFluid();
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "item.academy.imag_phase_dowsing_rod.nearest",
+                        target.getX(), target.getY(), target.getZ()
+                ));
+            }
             player.getCooldowns().addCooldown(stack, USE_COOLDOWN_TICKS);
         }
         return InteractionResult.SUCCESS;
     }
 
-    private static List<BlockPos> findImagPhaseSections(ServerLevel level, ServerPlayer player) {
+    private static ScanResult scanImagPhase(ServerLevel level, ServerPlayer player) {
         var center = player.chunkPosition();
         var serverViewDistance = level.getServer().getPlayerList().getViewDistance();
         var radius = Math.min(MAX_SCAN_RADIUS_CHUNKS, Math.max(0, serverViewDistance));
         var targets = new ArrayList<BlockPos>();
         var chunkSource = level.getChunkSource();
+        BlockPos nearestFluid = null;
+        var nearestDistance = Double.MAX_VALUE;
 
         for (var chunkX = center.x() - radius; chunkX <= center.x() + radius; chunkX++) {
             for (var chunkZ = center.z() - radius; chunkZ <= center.z() + radius; chunkZ++) {
@@ -69,16 +84,39 @@ public final class ImagPhaseDowsingRodItem extends Item {
                     )) continue;
 
                     var sectionY = chunk.getSectionYFromSectionIndex(sectionIndex);
-                    targets.add(new BlockPos(
-                            chunkPos.getMinBlockX(),
-                            SectionPos.sectionToBlockCoord(sectionY),
-                            chunkPos.getMinBlockZ()
-                    ));
-                    if (targets.size() >= MAX_TARGET_SECTIONS) return List.copyOf(targets);
+                    var sectionMinY = SectionPos.sectionToBlockCoord(sectionY);
+                    if (targets.size() < MAX_TARGET_SECTIONS) {
+                        targets.add(new BlockPos(
+                                chunkPos.getMinBlockX(),
+                                sectionMinY,
+                                chunkPos.getMinBlockZ()
+                        ));
+                    }
+                    for (var localY = 0; localY < 16; localY++) {
+                        for (var localZ = 0; localZ < 16; localZ++) {
+                            for (var localX = 0; localX < 16; localX++) {
+                                if (!section.getBlockState(localX, localY, localZ)
+                                        .getFluidState().is(Fluids.IMAG_PHASE.get())) continue;
+                                var blockX = chunkPos.getMinBlockX() + localX;
+                                var blockY = sectionMinY + localY;
+                                var blockZ = chunkPos.getMinBlockZ() + localZ;
+                                var distance = player.distanceToSqr(
+                                        blockX + 0.5, blockY + 0.5, blockZ + 0.5
+                                );
+                                if (distance < nearestDistance) {
+                                    nearestDistance = distance;
+                                    nearestFluid = new BlockPos(blockX, blockY, blockZ);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-        return List.copyOf(targets);
+        return new ScanResult(List.copyOf(targets), nearestFluid);
+    }
+
+    private record ScanResult(List<BlockPos> sections, BlockPos nearestFluid) {
     }
 
     @PacketTarget(ThreadType.CLIENT)

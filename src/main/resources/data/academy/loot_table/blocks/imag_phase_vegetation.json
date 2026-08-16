@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "academy:imag_phase_vegetation"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "academy:blocks/imag_phase_vegetation"
+}

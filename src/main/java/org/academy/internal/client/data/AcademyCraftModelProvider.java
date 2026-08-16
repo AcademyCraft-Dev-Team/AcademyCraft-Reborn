@@ -40,6 +40,62 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         new TextureMapping().put(
                                 TextureSlot.ALL, new Material(academy("black").withPrefix("block/"))
                         ), ModelTemplates.CUBE_ALL);
+        var imagPhaseVegetation = createDefault(
+                _ -> new TextureMapping()
+                        .put(
+                                TextureSlot.PARTICLE,
+                                new Material(academy("imag_phase_vegetation_side").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.NORTH,
+                                new Material(academy("imag_phase_vegetation_side").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.SOUTH,
+                                new Material(academy("imag_phase_vegetation_side").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.EAST,
+                                new Material(academy("imag_phase_vegetation_side").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.WEST,
+                                new Material(academy("imag_phase_vegetation_side").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.UP,
+                                new Material(academy("imag_phase_vegetation_top").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.DOWN,
+                                new Material(AcademyCraft.vanilla("deepslate_top").withPrefix("block/"))
+                        ),
+                ModelTemplates.CUBE
+        );
+        var imagPhaseLog = createDefault(
+                _ -> new TextureMapping()
+                        .put(
+                                TextureSlot.END,
+                                new Material(academy("imag_phase_log_top").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.SIDE,
+                                new Material(academy("imag_phase_log").withPrefix("block/"))
+                        ),
+                ModelTemplates.CUBE_COLUMN
+        );
+        var imagPhaseLogHorizontal = createDefault(
+                _ -> new TextureMapping()
+                        .put(
+                                TextureSlot.END,
+                                new Material(academy("imag_phase_log_top").withPrefix("block/"))
+                        )
+                        .put(
+                                TextureSlot.SIDE,
+                                new Material(academy("imag_phase_log").withPrefix("block/"))
+                        ),
+                ModelTemplates.CUBE_COLUMN_HORIZONTAL
+        );
 
 
         blockModels.createTrivialBlock(Blocks.WIRELESS_NODE.get(), providerW);
@@ -50,6 +106,26 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.SOLAR_GEN.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.IMAG_PHASE.get(), providerBlack);
+
+        var vegetationBlock = Blocks.IMAG_PHASE_VEGETATION.get();
+        blockModels.createTrivialBlock(vegetationBlock, imagPhaseVegetation);
+        blockModels.registerSimpleItemModel(vegetationBlock, ModelLocationUtils.getModelLocation(vegetationBlock));
+
+        var leavesBlock = Blocks.IMAG_PHASE_LEAVES.get();
+        blockModels.createTrivialBlock(leavesBlock, TexturedModel.LEAVES);
+        blockModels.registerSimpleItemModel(leavesBlock, ModelLocationUtils.getModelLocation(leavesBlock));
+
+        var logBlock = Blocks.IMAG_PHASE_LOG.get();
+        blockModels.createRotatedPillarWithHorizontalVariant(
+                logBlock,
+                imagPhaseLog,
+                imagPhaseLogHorizontal
+        );
+        blockModels.registerSimpleItemModel(logBlock, ModelLocationUtils.getModelLocation(logBlock));
+
+        var lichenBlock = Blocks.IMAG_PHASE_LICHEN.get();
+        blockModels.createMultifaceBlockStates(lichenBlock);
+        blockModels.registerSimpleFlatItemModel(lichenBlock);
 
         blockModels.createTrivialBlock(Blocks.CAT_ENGINE.get(), createDefault(
                 _ ->
