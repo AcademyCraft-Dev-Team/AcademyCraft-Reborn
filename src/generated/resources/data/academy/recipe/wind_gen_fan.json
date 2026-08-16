@@ -1,13 +1,13 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "C": "minecraft:copper_ingot",
-    "I": "minecraft:iron_ingot"
+    "I": "academy:imag_phase_ingot",
+    "P": "academy:imag_phase_plate"
   },
   "pattern": [
+    " P ",
     " I ",
-    "ICI",
-    " I "
+    "P P"
   ],
   "result": {
     "id": "academy:wind_gen_fan"

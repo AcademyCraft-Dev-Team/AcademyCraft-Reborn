@@ -86,6 +86,12 @@ public final class ProgramConfigurationOptions {
                     "entity", "block"
             );
         }
+        if (id.equals(CommonProgramNodeIds.BLOCK_NORMAL) && field.equals("mode")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.block_normal.",
+                    "view", "position_direction"
+            );
+        }
         if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT) && field.equals("condition")) {
             return stringOptions(
                     "screen.academy.program.configuration.movement.",

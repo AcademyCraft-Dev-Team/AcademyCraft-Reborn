@@ -35,6 +35,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
@@ -124,7 +125,7 @@ public final class SelfTeleport extends Skill {
 
             skill.executeActive(serverPlayer, ctx -> returning ? 5.0f : 10.0f, (ctx, actualCost) -> {
                 SpatialSynergy.Server.teleportNearbyTeam(serverPlayer, serverPlayer.level(), destination);
-                serverPlayer.teleportTo(destination.x, destination.y, destination.z);
+                TeleportSync.teleportInstantly(serverPlayer, destination);
                 serverPlayer.resetFallDistance();
                 serverPlayer.setDeltaMovement(0, 0.25, 0);
                 serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(serverPlayer));

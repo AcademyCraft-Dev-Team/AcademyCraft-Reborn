@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_echo_shard": {
+    "has_imag_phase_plate": {
       "conditions": {
         "items": [
           {
-            "items": "minecraft:echo_shard"
+            "items": "academy:imag_phase_plate"
           }
         ]
       },
@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "academy:darkmatter"
+        "recipe": "academy:imag_phase_circuit"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -21,12 +21,12 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_echo_shard"
+      "has_imag_phase_plate"
     ]
   ],
   "rewards": {
     "recipes": [
-      "academy:darkmatter"
+      "academy:imag_phase_circuit"
     ]
   }
 }

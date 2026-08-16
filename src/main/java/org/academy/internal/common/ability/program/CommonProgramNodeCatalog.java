@@ -386,6 +386,25 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ),
                 List.of(ProgramPortDefinition.output("entity", ProgramValueTypes.ENTITY_REFERENCE))
         )));
+        put(result, CommonProgramNodeIds.BLOCK_NORMAL, type(
+                BlockNormalConfiguration.CODEC,
+                configuration -> new ProgramNodeSchema(
+                        switch (configuration.mode()) {
+                            case VIEW -> List.of(ProgramPortDefinition.requiredInput(
+                                    "entity", ProgramValueTypes.ENTITY_REFERENCE));
+                            case POSITION_DIRECTION -> List.of(
+                                    ProgramPortDefinition.requiredInput(
+                                            "origin", ProgramValueTypes.WORLD_POSITION),
+                                    ProgramPortDefinition.requiredInput(
+                                            "direction", ProgramValueTypes.DIRECTION)
+                            );
+                        },
+                        List.of(ProgramPortDefinition.output(
+                                "normal", ProgramValueTypes.DIRECTION))
+                ),
+                ProgramNodeRole.QUERY,
+                ProgramNodePurity.WORLD_QUERY
+        ));
     }
 
     private static void registerEquality(Map<Identifier, ProgramNodeType<?>> result) {
@@ -468,6 +487,18 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         put(result, CommonProgramNodeIds.RANDOM_ENTITY, randomCollectionType(
                 "entities", ProgramValueTypes.ENTITY_SET,
                 "entity", ProgramValueTypes.ENTITY_REFERENCE));
+        put(result, CommonProgramNodeIds.NEAREST_ENTITY_TO_POSITION, queryType(
+                new ProgramNodeSchema(
+                        List.of(
+                                ProgramPortDefinition.requiredInput(
+                                        "position", ProgramValueTypes.WORLD_POSITION),
+                                ProgramPortDefinition.requiredInput(
+                                        "entities", ProgramValueTypes.ENTITY_SET)
+                        ),
+                        List.of(ProgramPortDefinition.output(
+                                "entity", ProgramValueTypes.ENTITY_REFERENCE))
+                )
+        ));
         put(result, CommonProgramNodeIds.RANDOM_WORLD_POSITION, randomCollectionType(
                 "positions", ProgramValueTypes.WORLD_POSITION_SET,
                 "position", ProgramValueTypes.WORLD_POSITION));
@@ -861,6 +892,40 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
 
         public LookTargetConfiguration {
             if (targetType == null) throw new IllegalArgumentException("Look target type is required");
+        }
+    }
+
+    public record BlockNormalConfiguration(BlockNormalMode mode) {
+        public static final Codec<BlockNormalConfiguration> CODEC = Codec.STRING
+                .optionalFieldOf("mode", BlockNormalMode.VIEW.wireName())
+                .xmap(
+                        value -> new BlockNormalConfiguration(BlockNormalMode.byName(value)),
+                        configuration -> configuration.mode().wireName()
+                )
+                .codec();
+
+        public BlockNormalConfiguration {
+            if (mode == null) throw new IllegalArgumentException("Block normal mode is required");
+        }
+    }
+
+    public enum BlockNormalMode {
+        VIEW("view"),
+        POSITION_DIRECTION("position_direction");
+
+        private final String wireName;
+
+        BlockNormalMode(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        private static BlockNormalMode byName(String name) {
+            for (var mode : values()) if (mode.wireName.equals(name)) return mode;
+            throw new IllegalArgumentException("Unknown block normal mode " + name);
         }
     }
 

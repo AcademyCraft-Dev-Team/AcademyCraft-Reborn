@@ -36,6 +36,7 @@ import org.academy.internal.client.render.vfx.DistortionVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv2.SelfTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
@@ -233,7 +234,7 @@ public final class PiercingTeleportation extends Skill {
                 var direction = player.getLookAngle().normalize();
                 var destination = new Vec3(center.x, center.y - dimensions.height() / 2.0, center.z);
                 SpatialSynergy.Server.teleportNearbyTeam(player, player.level(), destination);
-                player.teleportTo(destination.x, destination.y, destination.z);
+                TeleportSync.teleportInstantly(player, destination);
                 player.resetFallDistance();
                 if (ctx.milestone() >= 3) {
                     player.setDeltaMovement(previousMovement.x * 0.5, 0.1, previousMovement.z * 0.5);

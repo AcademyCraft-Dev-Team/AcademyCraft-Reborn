@@ -133,6 +133,8 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("type", "living");
         } else if (id.equals(CommonProgramNodeIds.LOOK_TARGET)) {
             configuration.addProperty("target_type", "entity");
+        } else if (id.equals(CommonProgramNodeIds.BLOCK_NORMAL)) {
+            configuration.addProperty("mode", "view");
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) {
             configuration.addProperty("interval", 20);
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) {

@@ -15,7 +15,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.TheEndPortalRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.level.block.Blocks;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.resources.R;
 import org.academy.internal.client.renderer.blockentity.state.WirelessNodeRenderState;
 
@@ -220,7 +220,7 @@ public class WirelessNodeModel extends Model<WirelessNodeRenderState> {
                 core_li, poseStack, renderType(R.textures.model.wireless_node), lightCoords, overlayCoords, null
         );
 
-        if (IrisCompat.isShaderPackInUse()) {
+        if (IrisIntegration.isShaderPackInUse()) {
             var blockStateIds = WorldRenderingSettings.INSTANCE.getBlockStateIds();
 
             if (blockStateIds != null) {

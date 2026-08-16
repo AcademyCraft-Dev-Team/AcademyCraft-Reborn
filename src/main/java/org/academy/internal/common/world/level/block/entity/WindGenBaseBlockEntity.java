@@ -79,7 +79,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         if (level != null && completeness == Completeness.COMPLETE && topBlockEntity != null && topBlockEntity.hasFan) {
             setEnergyStorage(energyStored + 10);
         }
-        if (EnergyChargeHelper.transferToItem(this, items.getFirst(), OUTPUT_TRANSFER_RATE) > 0) {
+        if (EnergyChargeHelper.transferToItem(this, this, 0, OUTPUT_TRANSFER_RATE) > 0) {
             setChanged();
         }
     }

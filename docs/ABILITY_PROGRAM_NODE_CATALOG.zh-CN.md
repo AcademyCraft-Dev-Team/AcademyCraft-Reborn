@@ -4,9 +4,9 @@
 
 ## 1. 统计口径
 
-- 已注册的唯一节点类型：230 个。
-- 编辑器当前可见的唯一节点类型：165 个；被合并节点仍注册为隐藏兼容节点。
-- 共享节点：131 个，全部能力分类都可使用。
+- 已注册的唯一节点类型：231 个。
+- 编辑器当前可见的唯一节点类型：166 个；被合并节点仍注册为隐藏兼容节点。
+- 共享节点：132 个，全部能力分类都可使用。
 - 入口节点：7 个分类手动入口、5 个共享自动入口；每个槽位严格限制为一个入口。Level 0 不再注册程序定义和入口。
 - 非心理系分类专属节点：37 个。
 - 心理掌握专属节点：入口 1 个、功能节点 55 个；其中 5 个旧精密操作别名已隐藏，但仍可导入和执行。
@@ -219,6 +219,7 @@
 | ID 后缀 | 类别 | 输入 → 输出 | 效果 |
 |---|---|---|---|
 | `collection/entity/random` | 集合 | `entities:ES → entity:E` | 由服务端从去重后的实体集合中等概率随机选取一个实体；空集合不输出数据。 |
+| `collection/entity/nearest_to_position` | 集合 | `position:WP,entities:ES → entity:E` | 返回同维度有效实体中距离输入世界坐标最近者；空集合或没有有效候选时不输出数据。 |
 | `collection/world_position/random` | 集合 | `positions:WPS → position:WP` | 随机选取一个世界坐标；空集合不输出数据。 |
 | `collection/block_position/random` | 集合 | `blocks:BPS → block:BP` | 随机选取一个方块坐标；空集合不输出数据。 |
 | `collection/direction/random` | 集合 | `directions:DS → direction:D` | 随机选取一个方向；空集合不输出数据。 |
@@ -340,12 +341,12 @@ ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.
 | `target/caster` | 目标 | 空间移动 | `— → entity:E` | 返回施术者。 |
 | `target/look_target` | 目标 | 空间移动 | `— → entity:E` | 返回服务端视线实体。 |
 | `logic/space_safety` | 逻辑 | 空间移动通用 | `entity:E,position:WP → result:B` | 精确检测实体包围盒放置到世界坐标后是否位于世界边界内且无碰撞或挤压。 |
-| `action/self_teleport` | 行动 | 自身传送 | `flow:F,destination:WP → flow:F` | “安全传送”；将施术者传送至同维度、已加载、无碰撞目标。ID 为兼容旧图保持不变。 |
-| `action/entity_teleport` | 行动 | 快速定位传送 | `flow:F,entity:E,destination:CD,[direction:D] → flow:F` 或 `flow:F,block:BP,destination:CD,[direction:D] → flow:F` | “目标传送”；`target_type=entity/block` 切换来源端口，目标可为方块或世界坐标；可选方向同步实体朝向或带朝向属性方块的方向。ID 为兼容旧图保持不变。 |
+| `action/self_teleport` | 行动 | 自身传送 | `flow:F,destination:WP → flow:F` | “安全传送”；将施术者安全传送至任意距离、任意可用维度中的无碰撞目标，目标区块会按需加载。ID 为兼容旧图保持不变。 |
+| `action/entity_teleport` | 行动 | 快速定位传送 | `flow:F,entity:E,destination:CD,[direction:D] → flow:F` 或 `flow:F,block:BP,destination:CD,[direction:D] → flow:F` | “目标传送”；实体目标允许为施术者且允许进入方块内部；方块目标可覆盖可破坏方块；`target_type=entity/block` 切换来源端口，可选方向同步目标朝向。ID 为兼容旧图保持不变。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
-| 安全传送 | 距离 8，CP 0 | 距离 16，CP 10 | 距离 32，CP 40 |
+| 安全传送 | 距离/维度不限，CP 0 | 距离/维度不限，CP 10 | 距离/维度不限，CP 40 |
 | 目标传送 | 目标/移动距离 8，CP 0 | 目标/移动距离 16，CP 30 | 目标/移动距离 32，CP 120 |
 
 ## 10. 心理掌握专属节点（55 个，另有入口 1 个）

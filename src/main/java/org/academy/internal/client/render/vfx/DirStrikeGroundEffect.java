@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.quad.BakedNormals;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
@@ -138,7 +138,7 @@ public final class DirStrikeGroundEffect implements Vfx {
         if (requiredVertices == 0) return;
         ensureCapacity(requiredVertices);
         vertexData.clear();
-        var shaderPackInUse = IrisCompat.isShaderPackInUse();
+        var shaderPackInUse = IrisIntegration.isShaderPackInUse();
         for (var layer : ChunkSectionLayer.values()) {
             var start = vertexData.position();
             var vertexCount = renderLayer(vertexData, timelines, now, layer, shaderPackInUse);

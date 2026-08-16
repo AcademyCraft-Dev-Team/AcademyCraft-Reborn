@@ -1,13 +1,11 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "I": "minecraft:iron_ingot",
     "P": "academy:imag_phase_polymer"
   },
   "pattern": [
-    "I",
-    "P",
-    "I"
+    "PP",
+    "PP"
   ],
   "result": {
     "id": "academy:imag_phase_plate"

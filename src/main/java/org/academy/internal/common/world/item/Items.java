@@ -17,6 +17,8 @@ public final class Items {
             ITEMS.registerItem("darkmatter", Item::new);
     public static final DeferredHolder<Item, Item> IMAG_PHASE_INGOT =
             ITEMS.registerItem("imag_phase_ingot", Item::new);
+    public static final DeferredHolder<Item, Item> IMAG_PHASE_CRYSTAL =
+            ITEMS.registerItem("imag_phase_crystal", Item::new);
     public static final DeferredHolder<Item, Item> IMAG_PHASE_POLYMER =
             ITEMS.registerItem("imag_phase_polymer", Item::new);
     public static final DeferredHolder<Item, Item> IMAG_PHASE_PLATE =

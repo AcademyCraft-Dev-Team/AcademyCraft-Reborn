@@ -132,12 +132,7 @@ public class SpatialSynergy extends Skill {
                 var desired = ownerDestination.add(teammate.position().subtract(origin));
                 var safe = TeleportSafety.findSafe(teammate, destinationLevel, desired);
                 if (safe == null) continue;
-                if (teammate.level() == destinationLevel) {
-                    TeleportSync.teleportInstantly(teammate, safe);
-                } else {
-                    teammate.teleportTo(destinationLevel, safe.x, safe.y, safe.z,
-                            Set.of(), teammate.getYRot(), teammate.getXRot(), false);
-                }
+                TeleportSync.teleportInstantly(teammate, destinationLevel, safe);
                 teammate.resetFallDistance();
             }
             if (milestone < 3) return;
@@ -166,12 +161,7 @@ public class SpatialSynergy extends Skill {
         }
 
         private static void teleportEntity(Entity entity, ServerLevel destinationLevel, Vec3 safe) {
-            if (entity.level() == destinationLevel) {
-                TeleportSync.teleportInstantly(entity, safe);
-            } else {
-                entity.teleportTo(destinationLevel, safe.x, safe.y, safe.z,
-                        java.util.Set.of(), entity.getYRot(), entity.getXRot(), false);
-            }
+            TeleportSync.teleportInstantly(entity, destinationLevel, safe);
         }
     }
 
