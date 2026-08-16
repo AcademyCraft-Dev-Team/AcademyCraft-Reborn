@@ -1,15 +1,11 @@
 package org.academy.internal.client.data;
 
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
-import net.minecraft.resources.ResourceKey;
-import org.academy.AcademyCraft;
 import org.academy.internal.common.world.item.Items;
-import org.academy.internal.common.world.item.crafting.DarkmatterDuplicationRecipe;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -22,19 +18,6 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
 
     @Override
     protected void buildRecipes() {
-        output.accept(
-                ResourceKey.create(Registries.RECIPE, AcademyCraft.academy("darkmatter_duplication")),
-                new DarkmatterDuplicationRecipe(),
-                null
-        );
-
-        buildTemporaryVanillaRecipes();
-    }
-
-    /**
-     * Temporary recipes using only vanilla ingredients until the AcademyCraft material chain is restored.
-     */
-    private void buildTemporaryVanillaRecipes() {
         shaped(RecipeCategory.MISC, Items.ICON.get())
                 .define('A', AMETHYST_SHARD)
                 .define('P', PAPER)
@@ -45,18 +28,8 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .unlockedBy("has_amethyst_shard", has(AMETHYST_SHARD))
                 .save(output);
 
-        shaped(RecipeCategory.MISC, Items.DARKMATTER.get())
-                .define('E', ECHO_SHARD)
-                .define('N', NETHERITE_SCRAP)
-                .define('O', OBSIDIAN)
-                .pattern("OEO")
-                .pattern("ENE")
-                .pattern("OEO")
-                .unlockedBy("has_echo_shard", has(ECHO_SHARD))
-                .save(output);
-
         shaped(RecipeCategory.COMBAT, Items.DARK_MATTER_HELMET.get())
-                .define('D', ECHO_SHARD)
+                .define('D', Items.DARKMATTER.get())
                 .define('N', NETHERITE_HELMET)
                 .pattern("DDD")
                 .pattern("DND")
@@ -64,7 +37,7 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .save(output);
 
         shaped(RecipeCategory.COMBAT, Items.DARK_MATTER_CHESTPLATE.get())
-                .define('D', ECHO_SHARD)
+                .define('D', Items.DARKMATTER.get())
                 .define('N', NETHERITE_CHESTPLATE)
                 .pattern("DND")
                 .pattern("DDD")
@@ -73,7 +46,7 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .save(output);
 
         shaped(RecipeCategory.COMBAT, Items.DARK_MATTER_LEGGINGS.get())
-                .define('D', ECHO_SHARD)
+                .define('D', Items.DARKMATTER.get())
                 .define('N', NETHERITE_LEGGINGS)
                 .pattern("DDD")
                 .pattern("DND")
@@ -82,7 +55,7 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .save(output);
 
         shaped(RecipeCategory.COMBAT, Items.DARK_MATTER_BOOTS.get())
-                .define('D', ECHO_SHARD)
+                .define('D', Items.DARKMATTER.get())
                 .define('N', NETHERITE_BOOTS)
                 .pattern("DND")
                 .pattern("D D")
@@ -99,82 +72,87 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .unlockedBy("has_redstone", has(REDSTONE))
                 .save(output);
 
-        shapeless(RecipeCategory.MISC, Items.COIN.get(), 4)
-                .requires(GOLD_NUGGET)
-                .unlockedBy("has_gold_nugget", has(GOLD_NUGGET))
+        shaped(RecipeCategory.MISC, Items.IMAG_PHASE_DOWSING_ROD.get())
+                .define('Q', COMPARATOR)
+                .define('L', LIGHTNING_ROD.weathering().unaffected())
+                .define('C', COMPASS)
+                .define('I', IRON_INGOT)
+                .pattern(" Q ")
+                .pattern("LCI")
+                .pattern("  I")
+                .unlockedBy("has_compass", has(COMPASS))
+                .save(output);
+
+        shaped(RecipeCategory.MISC, Items.COIN.get())
+                .define('N', IRON_NUGGET)
+                .pattern("NN")
+                .pattern("NN")
+                .unlockedBy("has_iron_nugget", has(IRON_NUGGET))
                 .save(output);
 
         shaped(RecipeCategory.REDSTONE, Items.WIRELESS_NODE.get())
                 .define('E', ENDER_PEARL)
-                .define('I', IRON_INGOT)
-                .define('R', REDSTONE)
-                .pattern("IRI")
-                .pattern("RER")
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .define('C', Items.IMAG_PHASE_CRYSTAL.get())
+                .define('R', Items.IMAG_PHASE_CIRCUIT.get())
+                .pattern("IEI")
+                .pattern("ECE")
                 .pattern("IRI")
                 .unlockedBy("has_ender_pearl", has(ENDER_PEARL))
                 .save(output);
 
         shaped(RecipeCategory.REDSTONE, Items.WIND_GEN_BASE.get())
-                .define('C', COPPER_INGOT)
-                .define('F', FURNACE)
-                .define('I', IRON_INGOT)
-                .define('R', REDSTONE)
-                .pattern("CIC")
-                .pattern("RFR")
+                .define('S', Items.WIND_GEN_BASE_SCREEN.get())
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .define('C', Items.IMAG_PHASE_CIRCUIT.get())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .pattern(" S ")
+                .pattern("PCP")
                 .pattern("III")
-                .unlockedBy("has_copper_ingot", has(COPPER_INGOT))
+                .unlockedBy("has_academy_display", has(Items.WIND_GEN_BASE_SCREEN.get()))
                 .save(output);
 
         shaped(RecipeCategory.REDSTONE, Items.WIND_GEN_TOP.get())
-                .define('C', COPPER_INGOT)
-                .define('I', IRON_INGOT)
-                .define('P', PISTON)
-                .define('R', REDSTONE)
-                .pattern(" C ")
-                .pattern("IPI")
-                .pattern(" R ")
-                .unlockedBy("has_piston", has(PISTON))
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .define('C', Items.IMAG_PHASE_CIRCUIT.get())
+                .pattern("PP ")
+                .pattern("ICP")
+                .pattern("PP ")
+                .unlockedBy("has_imag_phase_circuit", has(Items.IMAG_PHASE_CIRCUIT.get()))
                 .save(output);
 
-        shaped(RecipeCategory.MISC, Items.WIND_GEN_PILLAR.get(), 4)
-                .define('I', IRON_INGOT)
-                .pattern("I")
-                .pattern("I")
-                .pattern("I")
-                .unlockedBy("has_iron_ingot", has(IRON_INGOT))
-                .save(output);
-
-        shaped(RecipeCategory.REDSTONE, Items.ABILITY_DEVELOPER.get())
-                .define('A', AMETHYST_SHARD)
-                .define('C', COMPARATOR)
-                .define('G', GOLD_INGOT)
-                .define('I', IRON_INGOT)
-                .define('R', REDSTONE)
-                .pattern("GAG")
-                .pattern("RCR")
-                .pattern("III")
-                .unlockedBy("has_comparator", has(COMPARATOR))
+        shaped(RecipeCategory.MISC, Items.WIND_GEN_PILLAR.get(), 2)
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .pattern("PIP")
+                .pattern("PIP")
+                .pattern("PIP")
+                .unlockedBy("has_imag_phase_plate", has(Items.IMAG_PHASE_PLATE.get()))
                 .save(output);
 
         shaped(RecipeCategory.MISC, Items.WIND_GEN_FAN_ITEM.get())
-                .define('C', COPPER_INGOT)
-                .define('I', IRON_INGOT)
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .pattern(" P ")
                 .pattern(" I ")
-                .pattern("ICI")
-                .pattern(" I ")
-                .unlockedBy("has_copper_ingot", has(COPPER_INGOT))
+                .pattern("P P")
+                .unlockedBy("has_imag_phase_plate", has(Items.IMAG_PHASE_PLATE.get()))
                 .save(output);
 
         shaped(RecipeCategory.MISC, Items.OMNI_CRAFTING_TABLE.get())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .define('S', Items.WIND_GEN_BASE_SCREEN.get())
+                .define('R', Items.IMAG_PHASE_CIRCUIT.get())
+                .define('U', Items.EMPTY_UNIT.get())
+                .define('O', OBSERVER)
                 .define('C', CRAFTING_TABLE)
                 .define('F', FURNACE)
-                .define('I', IRON_INGOT)
-                .define('R', REDSTONE)
-                .define('S', STONECUTTER)
-                .pattern("SCF")
+                .pattern("UPS")
+                .pattern("OCF")
                 .pattern("IRI")
-                .pattern("III")
-                .unlockedBy("has_crafting_table", has(CRAFTING_TABLE))
+                .unlockedBy("has_imag_phase_circuit", has(Items.IMAG_PHASE_CIRCUIT.get()))
                 .save(output);
 
         shaped(RecipeCategory.REDSTONE, Items.CAT_ENGINE.get())
@@ -189,33 +167,71 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .save(output);
 
         shaped(RecipeCategory.REDSTONE, Items.SOLAR_GEN.get())
-                .define('C', COPPER_INGOT)
+                .define('G', STAINED_GLASS_PANE.gray())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
                 .define('D', DAYLIGHT_DETECTOR)
-                .define('G', GLASS_PANE)
-                .define('I', IRON_INGOT)
+                .define('P', Items.IMAG_PHASE_POLYMER.get())
                 .define('R', REDSTONE)
                 .pattern("GGG")
-                .pattern("CDC")
-                .pattern("IRI")
+                .pattern("IDI")
+                .pattern("PRP")
                 .unlockedBy("has_daylight_detector", has(DAYLIGHT_DETECTOR))
                 .save(output);
 
         shaped(RecipeCategory.MISC, Items.IMAG_PHASE_PLATE.get())
-                .define('I', IRON_INGOT)
                 .define('P', Items.IMAG_PHASE_POLYMER.get())
-                .pattern("I")
-                .pattern("P")
-                .pattern("I")
+                .pattern("PP")
+                .pattern("PP")
                 .unlockedBy("has_imag_phase_polymer", has(Items.IMAG_PHASE_POLYMER.get()))
                 .save(output);
 
         shaped(RecipeCategory.MISC, Items.WIND_GEN_BASE_SCREEN.get())
-                .define('G', GLASS)
+                .define('G', STAINED_GLASS_PANE.gray())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .define('P', Items.IMAG_PHASE_POLYMER.get())
+                .define('R', REDSTONE)
+                .pattern("GGG")
+                .pattern("III")
+                .pattern("PRP")
+                .unlockedBy("has_imag_phase_ingot", has(Items.IMAG_PHASE_INGOT.get()))
+                .save(output);
+
+        shaped(RecipeCategory.REDSTONE, Items.IMAG_PHASE_CIRCUIT.get())
+                .define('G', GLOWSTONE_DUST)
+                .define('R', REDSTONE)
                 .define('P', Items.IMAG_PHASE_PLATE.get())
-                .pattern("GPG")
-                .pattern("PGP")
-                .pattern("GPG")
+                .pattern("GRG")
+                .pattern("PPP")
                 .unlockedBy("has_imag_phase_plate", has(Items.IMAG_PHASE_PLATE.get()))
+                .save(output);
+
+        shaped(RecipeCategory.MISC, Items.ABILITY_CONTROL_TABLET.get())
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .define('S', Items.WIND_GEN_BASE_SCREEN.get())
+                .define('C', Items.IMAG_PHASE_CIRCUIT.get())
+                .define('I', Items.IMAG_PHASE_INGOT.get())
+                .define('Q', COMPARATOR)
+                .pattern("PQS")
+                .pattern("PCQ")
+                .pattern("IPP")
+                .unlockedBy("has_academy_display", has(Items.WIND_GEN_BASE_SCREEN.get()))
+                .save(output);
+
+        shaped(RecipeCategory.COMBAT, Items.NEEDLE.get())
+                .define('N', IRON_NUGGET)
+                .pattern("N")
+                .pattern("N")
+                .pattern("N")
+                .unlockedBy("has_iron_nugget", has(IRON_NUGGET))
+                .save(output);
+
+        shaped(RecipeCategory.MISC, Items.EMPTY_UNIT.get())
+                .define('I', IRON_INGOT)
+                .define('G', GLASS)
+                .pattern(" I ")
+                .pattern("IGI")
+                .pattern(" I ")
+                .unlockedBy("has_iron_ingot", has(IRON_INGOT))
                 .save(output);
     }
 

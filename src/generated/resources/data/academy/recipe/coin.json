@@ -1,10 +1,13 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    "minecraft:gold_nugget"
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "N": "minecraft:iron_nugget"
+  },
+  "pattern": [
+    "NN",
+    "NN"
   ],
   "result": {
-    "count": 4,
     "id": "academy:coin"
   }
 }

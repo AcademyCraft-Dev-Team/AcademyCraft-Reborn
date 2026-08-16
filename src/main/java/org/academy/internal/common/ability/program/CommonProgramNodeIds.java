@@ -86,6 +86,7 @@ public final class CommonProgramNodeIds {
     public static final Identifier ENTITIES_AROUND = id("query/entities_around");
     public static final Identifier RAYCAST_BLOCK = id("query/raycast_block");
     public static final Identifier RAYCAST_ENTITY = id("query/raycast_entity");
+    public static final Identifier BLOCK_NORMAL = id("query/block_normal");
 
     public static final Identifier FILTER_ENTITY_ALIVE = id("filter/entity/alive");
     public static final Identifier FILTER_ENTITY_DISTANCE = id("filter/entity/distance");
@@ -111,6 +112,8 @@ public final class CommonProgramNodeIds {
     public static final Identifier BLOCK_POSITION_EQUAL = id("logic/block_position/equal");
     public static final Identifier DIRECTION_EQUAL = id("logic/direction/equal");
     public static final Identifier RANDOM_ENTITY = id("collection/entity/random");
+    public static final Identifier NEAREST_ENTITY_TO_POSITION =
+            id("collection/entity/nearest_to_position");
     public static final Identifier RANDOM_WORLD_POSITION =
             id("collection/world_position/random");
     public static final Identifier RANDOM_BLOCK_POSITION =

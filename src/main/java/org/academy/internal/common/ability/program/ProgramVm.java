@@ -6,6 +6,7 @@ import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +24,7 @@ public final class ProgramVm {
         private final Map<CompiledProgram.OutputKey, ProgramValue<?>> latchedOutputs = new HashMap<>();
         private final Map<String, ProgramValue<?>> variables = new HashMap<>();
         private final Map<String, Object> executorState = new HashMap<>();
+        private final ArrayDeque<Integer> returnNodes = new ArrayDeque<>();
         private int currentNodeId;
         private long wakeAt;
         private boolean completed;
@@ -65,6 +67,11 @@ public final class ProgramVm {
             var budget = new Fuel(fuel);
             var context = new ProgramVmContext(gameTime, variables, executorState, attachment);
             while (true) {
+                // Existing graphs sometimes wire the end of a foreach body back explicitly.
+                // Treat that edge as the structured return instead of retaining a stale frame.
+                while (!returnNodes.isEmpty() && returnNodes.peek() == currentNodeId) {
+                    returnNodes.pop();
+                }
                 var node = program.nodes().get(currentNodeId);
                 if (node == null) return fail(ProgramVmDiagnostic.INVALID_FLOW_OUTPUT);
                 if (!budget.tryConsume()) {
@@ -106,10 +113,23 @@ public final class ProgramVm {
                         case STOP -> {
                             return complete();
                         }
+                        case CALL -> {
+                            var target = program.flowTarget(node.id(), step.flowOutput());
+                            if (target == null) {
+                                currentNodeId = node.id();
+                            } else {
+                                returnNodes.push(node.id());
+                                currentNodeId = target;
+                            }
+                        }
                         case CONTINUE, YIELD -> {
                             var target = program.flowTarget(node.id(), step.flowOutput());
-                            if (target == null) return complete();
-                            currentNodeId = target;
+                            if (target == null) {
+                                if (returnNodes.isEmpty()) return complete();
+                                currentNodeId = returnNodes.pop();
+                            } else {
+                                currentNodeId = target;
+                            }
                             if (step.directive() == ProgramNodeStep.Directive.YIELD) {
                                 wakeAt = gameTime + step.delayTicks();
                                 return new ProgramVmResult(
@@ -237,6 +257,7 @@ public final class ProgramVm {
                 }
             }
             if (step.directive() == ProgramNodeStep.Directive.CONTINUE
+                    || step.directive() == ProgramNodeStep.Directive.CALL
                     || step.directive() == ProgramNodeStep.Directive.YIELD) {
                 var flow = step.flowOutput();
                 var port = flow == null ? null : node.schema().output(flow).orElse(null);

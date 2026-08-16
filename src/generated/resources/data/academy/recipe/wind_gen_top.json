@@ -2,15 +2,14 @@
   "type": "minecraft:crafting_shaped",
   "category": "redstone",
   "key": {
-    "C": "minecraft:copper_ingot",
-    "I": "minecraft:iron_ingot",
-    "P": "minecraft:piston",
-    "R": "minecraft:redstone"
+    "C": "academy:imag_phase_circuit",
+    "I": "academy:imag_phase_ingot",
+    "P": "academy:imag_phase_plate"
   },
   "pattern": [
-    " C ",
-    "IPI",
-    " R "
+    "PP ",
+    "ICP",
+    "PP "
   ],
   "result": {
     "id": "academy:wind_gen_top"

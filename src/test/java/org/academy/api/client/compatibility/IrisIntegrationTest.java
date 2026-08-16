@@ -7,16 +7,18 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class IrisCompatTest {
+class IrisIntegrationTest {
     private Field hasIrisField;
     private boolean originalHasIris;
     private boolean originalBypass;
 
     @BeforeEach
     void setUp() throws ReflectiveOperationException {
-        hasIrisField = IrisCompat.class.getDeclaredField("hasIris");
+        hasIrisField = IrisIntegration.class.getDeclaredField("hasIris");
         hasIrisField.setAccessible(true);
         originalHasIris = hasIrisField.getBoolean(null);
         originalBypass = ImmediateState.bypass;
@@ -32,38 +34,33 @@ class IrisCompatTest {
 
     @Test
     void restoresBypassAfterNormalCall() {
-        IrisCompat.runWithBypass(() -> assertTrue(ImmediateState.bypass));
-
+        IrisIntegration.runWithBypass(() -> assertTrue(ImmediateState.bypass));
         assertFalse(ImmediateState.bypass);
     }
 
     @Test
     void restoresBypassAfterException() {
-        assertThrows(IllegalStateException.class, () -> IrisCompat.runWithBypass(() -> {
+        assertThrows(IllegalStateException.class, () -> IrisIntegration.runWithBypass(() -> {
             assertTrue(ImmediateState.bypass);
             throw new IllegalStateException("test");
         }));
-
         assertFalse(ImmediateState.bypass);
     }
 
     @Test
     void nestedCallsRestoreTheEnteringState() {
-        IrisCompat.runWithBypass(() -> {
+        IrisIntegration.runWithBypass(() -> {
             assertTrue(ImmediateState.bypass);
-            IrisCompat.runWithBypass(() -> assertTrue(ImmediateState.bypass));
+            IrisIntegration.runWithBypass(() -> assertTrue(ImmediateState.bypass));
             assertTrue(ImmediateState.bypass);
         });
-
         assertFalse(ImmediateState.bypass);
     }
 
     @Test
     void preservesAnAlreadyEnabledBypass() {
         ImmediateState.bypass = true;
-
-        IrisCompat.runWithBypass(() -> assertTrue(ImmediateState.bypass));
-
+        IrisIntegration.runWithBypass(() -> assertTrue(ImmediateState.bypass));
         assertTrue(ImmediateState.bypass);
     }
 }

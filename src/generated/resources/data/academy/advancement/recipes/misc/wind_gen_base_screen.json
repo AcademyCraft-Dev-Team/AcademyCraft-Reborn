@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_imag_phase_plate": {
+    "has_imag_phase_ingot": {
       "conditions": {
         "items": [
           {
-            "items": "academy:imag_phase_plate"
+            "items": "academy:imag_phase_ingot"
           }
         ]
       },
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_imag_phase_plate"
+      "has_imag_phase_ingot"
     ]
   ],
   "rewards": {

@@ -72,8 +72,15 @@ public final class OmniCraftingTableBlock extends MultiBlock {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             var menuProvider = getMenuProvider(state, level, pos);
+            if (menuProvider == null) return InteractionResult.FAIL;
+            var screenPos = pos;
+            if (level.getBlockEntity(pos) instanceof OmniCraftingTableBlockEntity container
+                    && container.getMain() instanceof OmniCraftingTableBlockEntity main) {
+                screenPos = main.getBlockPos();
+            }
+            var finalScreenPos = screenPos;
             ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, OMNI_CRAFTING_TABLE_SCREEN,
-                    buf -> buf.writeBlockPos(pos));
+                    buf -> buf.writeBlockPos(finalScreenPos));
             return InteractionResult.CONSUME;
         } else {
             return InteractionResult.SUCCESS;
@@ -97,12 +104,14 @@ public final class OmniCraftingTableBlock extends MultiBlock {
     @Override
     public @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof OmniCraftingTableBlockEntity container) {
+            var mainContainer = container.getMain() instanceof OmniCraftingTableBlockEntity main
+                    ? main : container;
             return new SimpleMenuProvider((containerId, playerInventory, player)
                     -> new OmniCraftingMenu(
                     containerId,
                     playerInventory,
-                    ContainerLevelAccess.create(level, pos),
-                    container
+                    ContainerLevelAccess.create(level, mainContainer.getBlockPos()),
+                    mainContainer
             ),
                     Component.empty()
             );

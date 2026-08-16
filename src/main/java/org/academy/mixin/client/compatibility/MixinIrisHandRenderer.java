@@ -5,7 +5,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.internal.client.render.vfx.PlatinumCosmosPass;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
@@ -39,7 +39,7 @@ public abstract class MixinIrisHandRenderer {
             WorldRenderingPipeline pipeline,
             CallbackInfo ci
     ) {
-        IrisCompat.markHandBridgeMounted();
+        IrisIntegration.markHandBridgeMounted();
         PlatinumCosmosPass.renderFirstPersonHand(featureRenderDispatcher, partialTick);
     }
 }

@@ -50,6 +50,7 @@ class CommonProgramNodesTest {
         }
         for (var id : List.of(
                 CommonProgramNodeIds.RANDOM_ENTITY,
+                CommonProgramNodeIds.NEAREST_ENTITY_TO_POSITION,
                 CommonProgramNodeIds.RANDOM_WORLD_POSITION,
                 CommonProgramNodeIds.RANDOM_BLOCK_POSITION,
                 CommonProgramNodeIds.RANDOM_DIRECTION,
@@ -371,6 +372,80 @@ class CommonProgramNodesTest {
         );
 
         assertEquals("only", run(graph, resolver).variables().get("selected").value());
+    }
+
+    @Test
+    void nearestEntityToPositionSelectsTheClosestValidEntity() {
+        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+            @Override
+            public Object caster() {
+                return "far";
+            }
+
+            @Override
+            public Optional<Object> lookTarget() {
+                return Optional.of("near");
+            }
+
+            @Override
+            public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
+                return switch (entityReference.toString()) {
+                    case "near" -> Optional.of(new ProgramWorldPosition(
+                            OVERWORLD, 2.0, 64.0, 0.0));
+                    case "far" -> Optional.of(new ProgramWorldPosition(
+                            OVERWORLD, 9.0, 64.0, 0.0));
+                    default -> Optional.empty();
+                };
+            }
+
+            @Override
+            public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
+                return Optional.empty();
+            }
+
+            @Override
+            public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
+                return List.of();
+            }
+
+            @Override
+            public Optional<ProgramBlockPosition> raycastBlock(
+                    ProgramWorldPosition origin,
+                    ProgramDirection direction,
+                    double maximumDistance
+            ) {
+                return Optional.empty();
+            }
+        };
+        var entityDomain = CommonProgramNodeCatalog.CollectionDomain.ENTITY;
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        node(2, CommonProgramNodeIds.CASTER),
+                        node(3, CommonProgramNodeIds.LOOK_TARGET),
+                        node(4, entityDomain.id("singleton")),
+                        node(5, entityDomain.id("singleton")),
+                        node(6, entityDomain.id("union")),
+                        worldPositionNode(7, OVERWORLD, 0.0, 64.0, 0.0),
+                        node(8, CommonProgramNodeIds.NEAREST_ENTITY_TO_POSITION),
+                        variableNode(9, CommonProgramNodeIds.VARIABLE_SET, "nearest",
+                                ProgramValueTypes.ENTITY_REFERENCE.id()),
+                        node(10, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 9, "flow"),
+                        edge(2, "entity", 4, "value"),
+                        edge(3, "entity", 5, "value"),
+                        edge(4, "values", 6, "left"),
+                        edge(5, "values", 6, "right"),
+                        edge(7, "position", 8, "position"),
+                        edge(6, "values", 8, "entities"),
+                        edge(8, "entity", 9, "value"),
+                        edge(9, "flow", 10, "flow")
+                )
+        );
+
+        assertEquals("near", run(graph, resolver).variables().get("nearest").value());
     }
 
     @Test

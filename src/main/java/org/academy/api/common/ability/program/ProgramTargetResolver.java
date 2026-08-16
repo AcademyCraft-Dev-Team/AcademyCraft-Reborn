@@ -32,6 +32,21 @@ public interface ProgramTargetResolver {
             double maximumDistance
     );
 
+    default Optional<ProgramDirection> blockNormalFromView(
+            Object entityReference,
+            double maximumDistance
+    ) {
+        return Optional.empty();
+    }
+
+    default Optional<ProgramDirection> raycastBlockNormal(
+            ProgramWorldPosition origin,
+            ProgramDirection direction,
+            double maximumDistance
+    ) {
+        return Optional.empty();
+    }
+
     default Optional<Object> raycastEntity(
             ProgramWorldPosition origin,
             ProgramDirection direction,

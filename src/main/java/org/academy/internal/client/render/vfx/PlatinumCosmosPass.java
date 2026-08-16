@@ -7,7 +7,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import org.academy.AcademyCraft;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.joml.Matrix4fc;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,18 +37,18 @@ public final class PlatinumCosmosPass {
     }
 
     public static PlatinumCosmosRenderMode worldMode() {
-        return PlatinumCosmosRenderMode.select(IrisCompat.isShaderPackInUse(), worldPassAvailable);
+        return PlatinumCosmosRenderMode.select(IrisIntegration.isShaderPackInUse(), worldPassAvailable);
     }
 
     public static PlatinumCosmosRenderMode handMode() {
         return PlatinumCosmosRenderMode.select(
-                IrisCompat.isShaderPackInUse(), IrisCompat.isHandBridgeMounted()
+                IrisIntegration.isShaderPackInUse(), IrisIntegration.isHandBridgeMounted()
         );
     }
 
     static PlatinumCosmosRenderMode hiddenHudMode() {
         return PlatinumCosmosRenderMode.select(
-                IrisCompat.isShaderPackInUse(), hiddenHudPassAvailable
+                IrisIntegration.isShaderPackInUse(), hiddenHudPassAvailable
         );
     }
 
@@ -71,7 +71,7 @@ public final class PlatinumCosmosPass {
                 );
             }
             withModelView(modelViewMatrix,
-                    () -> IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(WORLD_STORAGE)));
+                    () -> IrisIntegration.runWithBypass(() -> dispatcher.renderAllFeatures(WORLD_STORAGE)));
         } catch (Throwable throwable) {
             worldPassAvailable = false;
             if (WORLD_FAILURE_LOGGED.compareAndSet(false, true)) {
@@ -86,7 +86,7 @@ public final class PlatinumCosmosPass {
     }
 
     public static void renderFirstPersonHand(FeatureRenderDispatcher dispatcher, float partialTick) {
-        if (!IrisCompat.isShaderPackInUse()) return;
+        if (!IrisIntegration.isShaderPackInUse()) return;
         var minecraft = Minecraft.getInstance();
         var player = minecraft.player;
         if (player == null) return;
@@ -98,10 +98,10 @@ public final class PlatinumCosmosPass {
                     partialTick
             );
             if (submitted) {
-                IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(HAND_STORAGE));
+                IrisIntegration.runWithBypass(() -> dispatcher.renderAllFeatures(HAND_STORAGE));
             }
         } catch (Throwable throwable) {
-            IrisCompat.markHandBridgeFailed(throwable);
+            IrisIntegration.markHandBridgeFailed(throwable);
         } finally {
             drain(HAND_STORAGE);
         }
@@ -127,7 +127,7 @@ public final class PlatinumCosmosPass {
             );
             if (submitted) {
                 if (mode == PlatinumCosmosRenderMode.EXACT) {
-                    IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE));
+                    IrisIntegration.runWithBypass(() -> dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE));
                 } else {
                     dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE);
                 }

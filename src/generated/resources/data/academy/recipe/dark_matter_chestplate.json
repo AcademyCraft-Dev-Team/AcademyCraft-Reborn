@@ -2,7 +2,7 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "D": "minecraft:echo_shard",
+    "D": "academy:darkmatter",
     "N": "minecraft:netherite_chestplate"
   },
   "pattern": [

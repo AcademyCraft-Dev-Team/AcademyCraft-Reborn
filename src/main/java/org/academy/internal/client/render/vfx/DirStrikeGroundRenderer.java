@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.TextureAtlas;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.vfx.VfxPipelines;
 import org.academy.api.client.render.vfx.VfxRenderContext;
 import org.academy.api.client.render.vfx.VfxRenderer;
@@ -45,7 +45,7 @@ public final class DirStrikeGroundRenderer implements VfxRenderer<DirStrikeGroun
 
     @Override
     public void render(VfxRenderContext ctx, List<? extends DirStrikeGroundData> data) {
-        if (IrisCompat.isShaderPackInUse() || data.isEmpty() || vertexBuffer == null) return;
+        if (IrisIntegration.isShaderPackInUse() || data.isEmpty() || vertexBuffer == null) return;
         var color = ctx.mainColor();
         var depth = ctx.mainDepth();
         if (color == null || depth == null) return;
@@ -119,7 +119,7 @@ public final class DirStrikeGroundRenderer implements VfxRenderer<DirStrikeGroun
     public void submitWorldGeometry(VfxRenderContext ctx, PoseStack poseStack,
                                     SubmitNodeCollector output,
                                     List<? extends DirStrikeGroundData> data) {
-        if (!IrisCompat.isShaderPackInUse() || data.isEmpty()) return;
+        if (!IrisIntegration.isShaderPackInUse() || data.isEmpty()) return;
 
         var camera = ctx.cameraPos();
         var worldPose = new PoseStack();

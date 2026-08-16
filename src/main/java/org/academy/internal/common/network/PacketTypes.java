@@ -86,6 +86,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
+import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
 import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
 import org.academy.internal.common.ability.teleport.skills.lv2.SelfTeleport;
@@ -165,6 +166,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, OpenScreenPacket>>
             OPEN_SCREEN = PACKET_TYPES.register("open_screen",
             () -> new PacketType<>(OpenScreenPacket.class, OpenScreenPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, InstantTeleportSyncPacket>>
+            INSTANT_TELEPORT_SYNC = PACKET_TYPES.register("instant_teleport_sync",
+            () -> new PacketType<>(InstantTeleportSyncPacket.class, InstantTeleportSyncPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicSyncPackets.SharePacket>>
             MUSIC_SHARE = PACKET_TYPES.register("music_share",

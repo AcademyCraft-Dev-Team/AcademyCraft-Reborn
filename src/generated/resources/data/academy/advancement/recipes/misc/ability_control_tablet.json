@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_academy_display": {
+      "conditions": {
+        "items": [
+          {
+            "items": "academy:wind_gen_base_screen"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "academy:ability_control_tablet"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_academy_display"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "academy:ability_control_tablet"
+    ]
+  }
+}

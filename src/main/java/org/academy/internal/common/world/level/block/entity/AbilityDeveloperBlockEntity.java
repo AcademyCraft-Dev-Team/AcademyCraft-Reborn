@@ -20,6 +20,7 @@ import net.minecraft.util.Mth;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
     public static final int CLOSE_DELAY_TICKS = 20;
+    public static final int MAX_ENERGY_STORAGE = 1_440_000;
 
     public final AnimationState openingState = new AnimationState();
     public final AnimationState closingState = new AnimationState();
@@ -201,7 +202,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
 
     @Override
     public int getMaxEnergyStorage() {
-        return 1440_000;
+        return MAX_ENERGY_STORAGE;
     }
 
     @Override

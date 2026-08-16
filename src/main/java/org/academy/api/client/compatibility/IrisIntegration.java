@@ -1,7 +1,6 @@
 package org.academy.api.client.compatibility;
 
 import net.irisshaders.iris.api.v0.IrisApi;
-import net.irisshaders.iris.shadows.ShadowRenderer;
 import net.irisshaders.iris.vertices.ImmediateState;
 import net.neoforged.fml.loading.FMLLoader;
 import org.academy.AcademyCraft;
@@ -10,14 +9,15 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public final class IrisCompat {
+/** Centralized Iris render integration. */
+public final class IrisIntegration {
     private static final ThreadLocal<ArrayDeque<Boolean>> BYPASS_STATES =
             ThreadLocal.withInitial(ArrayDeque::new);
     private static final AtomicBoolean HAND_BRIDGE_WARNING_LOGGED = new AtomicBoolean();
-    private static boolean hasIris = false;
+    private static boolean hasIris;
     private static volatile boolean handBridgeMounted;
 
-    private IrisCompat() {
+    private IrisIntegration() {
     }
 
     public static void init() {
@@ -33,22 +33,7 @@ public final class IrisCompat {
     }
 
     public static boolean isShadowRendererActive() {
-        return hasIris() && ShadowRenderer.ACTIVE;
-    }
-
-    public static void enableBypass() {
-        if (hasIris()) {
-            BYPASS_STATES.get().push(ImmediateState.bypass);
-            ImmediateState.bypass = true;
-        }
-    }
-
-    public static void resetBypass() {
-        if (!hasIris()) return;
-        var states = BYPASS_STATES.get();
-        if (states.isEmpty()) return;
-        ImmediateState.bypass = states.pop();
-        if (states.isEmpty()) BYPASS_STATES.remove();
+        return hasIris() && IrisApi.getInstance().isRenderingShadowPass();
     }
 
     public static void runWithBypass(Runnable action) {
@@ -56,11 +41,14 @@ public final class IrisCompat {
             action.run();
             return;
         }
-        enableBypass();
+        var states = BYPASS_STATES.get();
+        states.push(ImmediateState.bypass);
+        ImmediateState.bypass = true;
         try {
             action.run();
         } finally {
-            resetBypass();
+            ImmediateState.bypass = states.pop();
+            if (states.isEmpty()) BYPASS_STATES.remove();
         }
     }
 

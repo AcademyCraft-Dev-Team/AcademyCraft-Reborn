@@ -3,14 +3,17 @@
   "key": {
     "C": "minecraft:crafting_table",
     "F": "minecraft:furnace",
-    "I": "minecraft:iron_ingot",
-    "R": "minecraft:redstone",
-    "S": "minecraft:stonecutter"
+    "I": "academy:imag_phase_ingot",
+    "O": "minecraft:observer",
+    "P": "academy:imag_phase_plate",
+    "R": "academy:imag_phase_circuit",
+    "S": "academy:wind_gen_base_screen",
+    "U": "academy:empty_unit"
   },
   "pattern": [
-    "SCF",
-    "IRI",
-    "III"
+    "UPS",
+    "OCF",
+    "IRI"
   ],
   "result": {
     "id": "academy:omni_crafting_table"

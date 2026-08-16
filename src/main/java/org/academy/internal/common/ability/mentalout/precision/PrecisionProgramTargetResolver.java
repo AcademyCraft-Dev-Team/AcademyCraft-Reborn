@@ -134,6 +134,41 @@ final class PrecisionProgramTargetResolver implements ProgramTargetResolver {
     }
 
     @Override
+    public Optional<ProgramDirection> blockNormalFromView(
+            Object entityReference,
+            double maximumDistance
+    ) {
+        if (!(entityReference instanceof Entity entity)
+                || entity.level() != player.level()
+                || entity.isRemoved()) {
+            return Optional.empty();
+        }
+        var look = entity.getViewVector(1.0f);
+        if (look.lengthSqr() <= 1.0E-12) return Optional.empty();
+        var start = requireLocalOrigin(new ProgramWorldPosition(
+                player.level().dimension().identifier(),
+                entity.getEyePosition().x,
+                entity.getEyePosition().y,
+                entity.getEyePosition().z
+        ));
+        return clipNormal(entity, start, look, requireRange(maximumDistance));
+    }
+
+    @Override
+    public Optional<ProgramDirection> raycastBlockNormal(
+            ProgramWorldPosition origin,
+            ProgramDirection direction,
+            double maximumDistance
+    ) {
+        return clipNormal(
+                player,
+                requireLocalOrigin(origin),
+                vector(direction),
+                requireRange(maximumDistance)
+        );
+    }
+
+    @Override
     public Optional<Object> raycastEntity(
             ProgramWorldPosition origin,
             ProgramDirection direction,
@@ -188,5 +223,24 @@ final class PrecisionProgramTargetResolver implements ProgramTargetResolver {
 
     private static Vec3 vector(ProgramDirection direction) {
         return new Vec3(direction.x(), direction.y(), direction.z());
+    }
+
+    private Optional<ProgramDirection> clipNormal(
+            Entity source,
+            Vec3 start,
+            Vec3 direction,
+            double distance
+    ) {
+        if (direction.lengthSqr() <= 1.0E-12) return Optional.empty();
+        var hit = player.level().clip(new ClipContext(
+                start,
+                start.add(direction.normalize().scale(distance)),
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                source
+        ));
+        if (hit.getType() != HitResult.Type.BLOCK) return Optional.empty();
+        var face = hit.getDirection();
+        return Optional.of(new ProgramDirection(face.getStepX(), face.getStepY(), face.getStepZ()));
     }
 }

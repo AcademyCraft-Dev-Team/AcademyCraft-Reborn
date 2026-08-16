@@ -36,7 +36,7 @@ import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.resources.R;
@@ -122,7 +122,7 @@ public final class Render {
                                 clearDepth ? OptionalDouble.of(1) : OptionalDouble.empty()
                         )
         ) {
-            IrisCompat.runWithBypass(() -> {
+            IrisIntegration.runWithBypass(() -> {
                 renderPass.setPipeline(pipeline);
 
                 for (var texture : textures) {

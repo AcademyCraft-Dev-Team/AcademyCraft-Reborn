@@ -251,12 +251,7 @@ public final class DefensiveTeleport extends Skill {
                     var desired = destination.add(offsetX * 0.55, 0, offsetZ * 0.55);
                     var safe = TeleportSafety.findSafe(entity, destinationLevel, desired);
                     if (safe == null) continue;
-                    if (entity.level() == destinationLevel) {
-                        TeleportSync.teleportInstantly(entity, safe);
-                    } else {
-                        entity.teleportTo(destinationLevel, safe.x, safe.y, safe.z,
-                                Set.of(), entity.getYRot(), entity.getXRot(), false);
-                    }
+                    TeleportSync.teleportInstantly(entity, destinationLevel, safe);
                     entity.resetFallDistance();
                     if (ctx.milestone() >= 3) {
                         if (entity instanceof Projectile projectile) {

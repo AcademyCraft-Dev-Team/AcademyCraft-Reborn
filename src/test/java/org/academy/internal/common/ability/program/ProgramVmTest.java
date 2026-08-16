@@ -30,6 +30,7 @@ class ProgramVmTest {
     private static final Identifier CATEGORY = AcademyCraft.academy("mentalout");
     private static final Identifier ENTRY = AcademyCraft.academy("test/entry");
     private static final Identifier LOOP = AcademyCraft.academy("test/loop");
+    private static final Identifier CALL_LOOP = AcademyCraft.academy("test/call_loop");
     private static final Identifier INCREMENT = AcademyCraft.academy("test/increment");
     private static final Identifier YIELD = AcademyCraft.academy("test/yield");
     private static final Identifier STOP = AcademyCraft.academy("test/stop");
@@ -119,6 +120,30 @@ class ProgramVmTest {
         assertEquals(1, session.variables().get("counter").value());
     }
 
+    @Test
+    void structuredLoopReturnsFromAnUnconnectedBodyAndContinuesAfterAllMembers() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, ENTRY),
+                        node(2, CALL_LOOP),
+                        node(3, INCREMENT),
+                        node(4, STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 2, "flow"),
+                        edge(2, "body", 3, "flow"),
+                        edge(2, "done", 4, "flow")
+                )
+        );
+        var session = new ProgramVm.Session(compile(graph));
+
+        var result = session.run(0, 20, executors()::get, null);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(3, session.variables().get("counter").value());
+        assertTrue((Boolean) session.variables().get("stopped").value());
+    }
+
     private static CompiledProgram compile(ProgramGraph graph) {
         var types = nodeTypes();
         var result = ProgramCompiler.compile(
@@ -140,6 +165,13 @@ class ProgramVmTest {
                 )
         ));
         result.put(LOOP, type(
+                ProgramNodeRole.CONTROL,
+                new ProgramNodeSchema(
+                        List.of(new ProgramPortDefinition("flow", ProgramValueTypes.FLOW, true, 2)),
+                        List.of(flowOutput("body"), flowOutput("done"))
+                )
+        ));
+        result.put(CALL_LOOP, type(
                 ProgramNodeRole.CONTROL,
                 new ProgramNodeSchema(
                         List.of(new ProgramPortDefinition("flow", ProgramValueTypes.FLOW, true, 2)),
@@ -177,6 +209,14 @@ class ProgramVmTest {
                     .map(value -> (Integer) value.value())
                     .orElse(0);
             return ProgramNodeStep.next(counter < 3 ? "body" : "done");
+        });
+        result.put(CALL_LOOP, (context, _, _) -> {
+            var counter = context.variable("counter")
+                    .map(value -> (Integer) value.value())
+                    .orElse(0);
+            return counter < 3
+                    ? ProgramNodeStep.call("body", Map.of())
+                    : ProgramNodeStep.next("done");
         });
         result.put(INCREMENT, (context, _, _) -> {
             var counter = context.variable("counter")

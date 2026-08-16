@@ -1,15 +1,16 @@
 {
   "type": "minecraft:crafting_shaped",
   "key": {
-    "I": "minecraft:iron_ingot"
+    "I": "academy:imag_phase_ingot",
+    "P": "academy:imag_phase_plate"
   },
   "pattern": [
-    "I",
-    "I",
-    "I"
+    "PIP",
+    "PIP",
+    "PIP"
   ],
   "result": {
-    "count": 4,
+    "count": 2,
     "id": "academy:wind_gen_pillar"
   }
 }

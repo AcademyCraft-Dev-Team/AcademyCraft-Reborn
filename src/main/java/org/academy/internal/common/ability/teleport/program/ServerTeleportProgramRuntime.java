@@ -3,7 +3,10 @@ package org.academy.internal.common.ability.teleport.program;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -74,6 +77,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 selfRange(power),
                 selfCost(power),
                 false,
+                false,
+                true,
                 null
         );
     }
@@ -96,12 +101,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             @Override
             public void validate() throws Exception {
                 target = requireEntityTarget(targetReference);
-                if (target == player) {
-                    throw new IllegalArgumentException(
-                            "Entity Teleport cannot replace the Self Teleport capability");
-                }
                 requireEntityInRange(target, entityTargetRange(power));
-                requireMovementAllowed(target);
+                if (target != player) requireMovementAllowed(target);
                 action = teleportAction(
                         target,
                         destinationPosition(destinationReference),
@@ -109,7 +110,9 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                         Skills.QUICK_LOCATION_TELEPORT.get(),
                         entityMoveRange(power),
                         entityCost(power),
+                        target != player,
                         true,
+                        false,
                         direction
                 );
                 action.validate();
@@ -149,6 +152,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             private BlockPos destination;
             private BlockState state;
             private CompoundTag blockEntityTag;
+            private BlockState replacedState;
+            private CompoundTag replacedBlockEntityTag;
 
             @Override
             public void validate() {
@@ -163,44 +168,68 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 }
                 requireEditableBlock(source);
                 requireEditableBlock(destination);
-                state = targets.level().getBlockState(source);
+                var level = targets.level();
+                state = level.getBlockState(source);
                 if (state.isAir()
-                        || state.getDestroySpeed(targets.level(), source) < 0.0f
+                        || state.getDestroySpeed(level, source) < 0.0f
                         || state.getBlock() instanceof GameMasterBlock
-                        && !player.canUseGameMasterBlocks()
-                        || !targets.level().getBlockState(destination).isAir()) {
+                        && !player.canUseGameMasterBlocks()) {
                     throw new IllegalArgumentException("Block teleport target is invalid");
                 }
+                replacedState = level.getBlockState(destination);
+                if (!replacedState.isAir()
+                        && (replacedState.getDestroySpeed(level, destination) < 0.0f
+                        || replacedState.getBlock() instanceof GameMasterBlock
+                        && !player.canUseGameMasterBlocks())) {
+                    throw new IllegalArgumentException(
+                            "Block teleport destination cannot be replaced");
+                }
                 var rotated = orient(state, direction);
-                if (!rotated.canSurvive(targets.level(), destination)) {
+                if (!rotated.canSurvive(level, destination)) {
                     throw new IllegalArgumentException("Teleported block cannot survive at destination");
                 }
-                var blockEntity = targets.level().getBlockEntity(source);
+                var blockEntity = level.getBlockEntity(source);
                 blockEntityTag = blockEntity == null ? null
-                        : blockEntity.saveWithFullMetadata(targets.level().registryAccess());
+                        : blockEntity.saveWithFullMetadata(level.registryAccess());
+                var replacedBlockEntity = level.getBlockEntity(destination);
+                replacedBlockEntityTag = replacedBlockEntity == null ? null
+                        : replacedBlockEntity.saveWithFullMetadata(level.registryAccess());
             }
 
             @Override
             public ProgramActionTransaction.Undo apply() {
                 validate();
                 var movedState = orient(state, direction);
+                var level = targets.level();
                 charge(Skills.QUICK_LOCATION_TELEPORT.get(), entityCost(power));
-                targets.level().setBlock(source, Blocks.AIR.defaultBlockState(),
+                if (!replacedState.isAir() && !level.setBlock(
+                        destination,
+                        Blocks.AIR.defaultBlockState(),
+                        Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS
+                )) {
+                    throw new IllegalStateException("Unable to clear teleport destination");
+                }
+                level.setBlock(source, Blocks.AIR.defaultBlockState(),
                         Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
-                if (!targets.level().setBlock(destination, movedState,
+                if (!level.setBlock(destination, movedState,
                         Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
-                    targets.level().setBlock(source, state,
+                    level.setBlock(source, state,
                             Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                    restoreBlockEntity(source, state, blockEntityTag);
+                    level.setBlock(destination, replacedState,
+                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                    restoreBlockEntity(destination, replacedState, replacedBlockEntityTag);
                     throw new IllegalStateException("Unable to place teleported block");
                 }
                 restoreBlockEntity(destination, movedState, blockEntityTag);
                 return () -> {
-                    if (targets.level().getBlockState(destination).equals(movedState)) {
-                        targets.level().setBlock(destination, Blocks.AIR.defaultBlockState(),
+                    if (level.getBlockState(destination).equals(movedState)) {
+                        level.setBlock(destination, replacedState,
                                 Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                        restoreBlockEntity(destination, replacedState, replacedBlockEntityTag);
                     }
-                    if (targets.level().getBlockState(source).isAir()) {
-                        targets.level().setBlock(source, state,
+                    if (level.getBlockState(source).isAir()) {
+                        level.setBlock(source, state,
                                 Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
                         restoreBlockEntity(source, state, blockEntityTag);
                     }
@@ -250,43 +279,69 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             double maximumDisplacement,
             float cost,
             boolean externallyMoved,
+            boolean allowCollision,
+            boolean unrestricted,
             @Nullable ProgramDirection direction
     ) {
         Objects.requireNonNull(destination, "destination");
         ProgramPowerScale.require(power);
         return new ProgramActionTransaction.ProgramAction() {
             private Vec3 requested;
-            private Vec3 safeDestination;
+            private Vec3 resolvedDestination;
+            private ServerLevel destinationLevel;
 
             @Override
             public void validate() {
                 requireCasterReady(skill);
                 requireTeleportable(target, externallyMoved);
-                requested = targets.requireLocalPosition(destination);
-                requirePositionInRange(requested, MAX_QUERY_RANGE);
-                safeDestination = requireSafeDestination(
-                        target, requested, maximumDisplacement);
+                destinationLevel = unrestricted
+                        ? requireDestinationLevel(destination)
+                        : targets.level();
+                requested = unrestricted
+                        ? new Vec3(destination.x(), destination.y(), destination.z())
+                        : targets.requireLocalPosition(destination);
+                if (unrestricted) {
+                    var block = BlockPos.containing(requested);
+                    destinationLevel.getChunk(block.getX() >> 4, block.getZ() >> 4);
+                } else {
+                    requirePositionInRange(requested, MAX_QUERY_RANGE);
+                }
+                resolvedDestination = requireDestination(
+                        target,
+                        destinationLevel,
+                        requested,
+                        maximumDisplacement,
+                        allowCollision,
+                        !unrestricted
+                );
             }
 
             @Override
             public ProgramActionTransaction.Undo apply() {
                 requireCasterReady(skill);
                 requireTeleportable(target, externallyMoved);
-                safeDestination = requireSafeDestination(
-                        target, requested, maximumDisplacement);
+                resolvedDestination = requireDestination(
+                        target,
+                        destinationLevel,
+                        requested,
+                        maximumDisplacement,
+                        allowCollision,
+                        !unrestricted
+                );
                 var origin = target.position();
+                var originLevel = (ServerLevel) target.level();
                 var previousMotion = target.getDeltaMovement();
                 var previousYaw = target.getYRot();
                 var previousPitch = target.getXRot();
                 charge(skill, cost);
-                if (!teleport(target, safeDestination)) {
+                if (!teleport(target, destinationLevel, resolvedDestination)) {
                     throw new IllegalStateException("Target rejected program teleport");
                 }
                 setMotion(target, Vec3.ZERO);
                 applyRotation(target, direction);
                 target.resetFallDistance();
                 return () -> restore(
-                        target, origin, previousMotion, previousYaw, previousPitch);
+                        target, originLevel, origin, previousMotion, previousYaw, previousPitch);
             }
         };
     }
@@ -328,18 +383,49 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
 
     private Vec3 requireSafeDestination(
             Entity target,
+            ServerLevel level,
             Vec3 requested,
-            double maximumDisplacement
+            double maximumDisplacement,
+            boolean limitDistance
     ) {
-        var safe = TeleportSafety.findSafe(target, targets.level(), requested);
+        var safe = TeleportSafety.findSafe(target, level, requested);
         if (safe == null) {
             throw new IllegalArgumentException("Teleport destination is not safe and loaded");
         }
-        if (safe.distanceToSqr(target.position())
+        if (limitDistance && safe.distanceToSqr(target.position())
                 > maximumDisplacement * maximumDisplacement) {
             throw new IllegalArgumentException("Teleport exceeds its power limit");
         }
         return safe;
+    }
+
+    private Vec3 requireDestination(
+            Entity target,
+            ServerLevel level,
+            Vec3 requested,
+            double maximumDisplacement,
+            boolean allowCollision,
+            boolean limitDistance
+    ) {
+        if (!allowCollision) {
+            return requireSafeDestination(
+                    target, level, requested, maximumDisplacement, limitDistance);
+        }
+        var block = BlockPos.containing(requested);
+        if (!level.hasChunkAt(block)
+                || block.getY() < level.getMinY()
+                || block.getY() >= level.getMaxY()) {
+            throw new IllegalArgumentException("Teleport destination is not loaded");
+        }
+        if (limitDistance && requested.distanceToSqr(target.position())
+                > maximumDisplacement * maximumDisplacement) {
+            throw new IllegalArgumentException("Teleport exceeds its power limit");
+        }
+        var moved = target.getBoundingBox().move(requested.subtract(target.position()));
+        if (!level.getWorldBorder().isWithinBounds(moved)) {
+            throw new IllegalArgumentException("Teleport destination is outside the world border");
+        }
+        return requested;
     }
 
     private void requireEntityInRange(Entity entity, double range) {
@@ -360,10 +446,10 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         }
     }
 
-    private boolean teleport(Entity entity, Vec3 destination) {
+    private boolean teleport(Entity entity, ServerLevel level, Vec3 destination) {
         return Boolean.TRUE.equals(EntityMotionGuard.callWithMotionSource(
                 player,
-                () -> TeleportSync.teleportInstantly(entity, destination)
+                () -> TeleportSync.teleportInstantly(entity, level, destination)
         ));
     }
 
@@ -375,6 +461,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
 
     private static void restore(
             Entity entity,
+            ServerLevel level,
             Vec3 position,
             Vec3 motion,
             float yaw,
@@ -385,7 +472,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             return;
         }
         EntityMotionGuard.runInternalCorrection(entity, () -> {
-            if (!TeleportSync.teleportInstantly(entity, position)) {
+            if (!TeleportSync.teleportInstantly(entity, level, position)) {
                 throw new IllegalStateException("Unable to restore teleported entity");
             }
             entity.setDeltaMovement(motion);
@@ -409,6 +496,15 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                     block.dimension(), block.x() + 0.5, block.y(), block.z() + 0.5);
         }
         throw new IllegalArgumentException("Teleport destination must be a block or world position");
+    }
+
+    private ServerLevel requireDestinationLevel(ProgramWorldPosition destination) {
+        var key = ResourceKey.create(Registries.DIMENSION, destination.dimension());
+        var level = player.level().getServer().getLevel(key);
+        if (level == null) {
+            throw new IllegalArgumentException("Teleport destination dimension is unavailable");
+        }
+        return level;
     }
 
     private BlockPos destinationBlock(Object value) {

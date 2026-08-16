@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "G": "minecraft:glowstone_dust",
+    "P": "academy:imag_phase_plate",
+    "R": "minecraft:redstone"
+  },
+  "pattern": [
+    "GRG",
+    "PPP"
+  ],
+  "result": {
+    "id": "academy:imag_phase_circuit"
+  }
+}
