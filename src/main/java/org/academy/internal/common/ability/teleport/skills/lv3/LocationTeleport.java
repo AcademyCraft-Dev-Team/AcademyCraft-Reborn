@@ -48,6 +48,7 @@ import org.academy.internal.client.gui.screen.LocationTeleportScreen;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
 import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
@@ -290,8 +291,7 @@ public final class LocationTeleport extends Skill {
                     level.getChunk(mark.x() >> 4, mark.z() >> 4);
                 }
                 SpatialSynergy.Server.teleportNearbyTeam(player, level, destination);
-                player.teleportTo(level, destination.x, destination.y, destination.z,
-                        Set.of(), player.getYRot(), player.getXRot(), false);
+                TeleportSync.teleportInstantly(player, level, destination);
                 player.resetFallDistance();
                 if (returning) {
                     RETURN_ANCHORS.remove(player.getUUID());

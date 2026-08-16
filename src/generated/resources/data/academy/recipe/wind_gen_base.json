@@ -2,14 +2,14 @@
   "type": "minecraft:crafting_shaped",
   "category": "redstone",
   "key": {
-    "C": "minecraft:copper_ingot",
-    "F": "minecraft:furnace",
-    "I": "minecraft:iron_ingot",
-    "R": "minecraft:redstone"
+    "C": "academy:imag_phase_circuit",
+    "I": "academy:imag_phase_ingot",
+    "P": "academy:imag_phase_plate",
+    "S": "academy:wind_gen_base_screen"
   },
   "pattern": [
-    "CIC",
-    "RFR",
+    " S ",
+    "PCP",
     "III"
   ],
   "result": {

@@ -90,7 +90,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                                 * damageScale(power),
                         destroyBlocks && DestroyBlocksSetting.canDestroyBlocks(player, skill),
                         Skills.RADIATION_INTENSIFY.get().isEnabled(player),
-                        electronBeamScale(power)
+                        electronBeamScale(power),
+                        configuredBeamAttackDelayTicks()
                 );
                 return () -> discard(beam);
             }
@@ -129,7 +130,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                         0.0f,
                         true,
                         false,
-                        miningBeamScale(power)
+                        miningBeamScale(power),
+                        configuredBeamAttackDelayTicks()
                 );
                 return () -> discard(beam);
             }
@@ -173,7 +175,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                         0.0f,
                         destroyBlocks && DestroyBlocksSetting.canDestroyBlocks(player, skill),
                         false,
-                        electronBeamScale(power)
+                        electronBeamScale(power),
+                        0
                 );
                 beam.setIgnoredTarget(target);
                 setVelocity(player, target, previousMotion.add(launchDirection.scale(-1.1)));
@@ -303,7 +306,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
             float maximumHealthRatio,
             boolean destroysBlocks,
             boolean radiationEnabled,
-            float scale
+            float scale,
+            int attackDelayTicks
     ) {
         var level = targets.level();
         var system = AbilitySystemServer.getSystem(player);
@@ -320,7 +324,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                 destroysBlocks,
                 skill.getEffectiveProficiencyMilestone(player)
         );
-        beam.setAttackDelayTicks(0);
+        beam.setAttackDelayTicks(attackDelayTicks);
         beam.setBeamLength((float) length);
         beam.setBeamScale(scale);
         beam.setPos(origin);
@@ -431,6 +435,15 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
 
     private static float miningBeamScale(float power) {
         return ProgramPowerScale.interpolate(power, 0.75f, 1.0f, 1.25f);
+    }
+
+    private int configuredBeamAttackDelayTicks() {
+        var delay = SingleHighSpeedElectronBeam.getConfiguredAttackDelayTicks(player);
+        if (Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()
+                .getEffectiveProficiencyMilestone(player) >= 2) {
+            delay = Math.max(0, Math.round(delay * 0.75f));
+        }
+        return delay;
     }
 
     private record BeamPlan(Vec3 origin, Vec3 direction, double length) {

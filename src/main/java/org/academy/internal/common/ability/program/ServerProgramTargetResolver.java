@@ -117,6 +117,34 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
     }
 
     @Override
+    public Optional<ProgramDirection> blockNormalFromView(
+            Object entityReference,
+            double maximumDistance
+    ) {
+        if (!(entityReference instanceof Entity entity) || !sameUsableLevel(entity)) {
+            return Optional.empty();
+        }
+        var look = entity.getViewVector(1.0f);
+        if (!finiteNonZero(look)) return Optional.empty();
+        var distance = requireRange(maximumDistance);
+        return clipNormal(entity, entity.getEyePosition(), look, distance);
+    }
+
+    @Override
+    public Optional<ProgramDirection> raycastBlockNormal(
+            ProgramWorldPosition origin,
+            ProgramDirection direction,
+            double maximumDistance
+    ) {
+        return clipNormal(
+                player,
+                requireLocalPosition(origin),
+                normalized(direction),
+                requireRange(maximumDistance)
+        );
+    }
+
+    @Override
     public Optional<Object> raycastEntity(
             ProgramWorldPosition origin,
             ProgramDirection direction,
@@ -191,6 +219,24 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         var value = new Vec3(direction.x(), direction.y(), direction.z());
         if (!finiteNonZero(value)) throw new IllegalArgumentException("Direction is invalid");
         return value.normalize();
+    }
+
+    private Optional<ProgramDirection> clipNormal(
+            Entity source,
+            Vec3 start,
+            Vec3 direction,
+            double distance
+    ) {
+        var hit = level().clip(new ClipContext(
+                start,
+                start.add(direction.normalize().scale(distance)),
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                source
+        ));
+        if (hit.getType() != HitResult.Type.BLOCK) return Optional.empty();
+        var face = hit.getDirection();
+        return Optional.of(new ProgramDirection(face.getStepX(), face.getStepY(), face.getStepZ()));
     }
 
     private static boolean finite(Vec3 value) {

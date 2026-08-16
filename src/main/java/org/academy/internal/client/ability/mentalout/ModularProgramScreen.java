@@ -31,6 +31,7 @@ import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
 import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
@@ -79,7 +80,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private static final int DIVIDER = 0x80FFFFFF;
     private static final int GRID_MINOR = 0x0FFFFFFF;
     private static final int GRID_MAJOR = 0x20FFFFFF;
-    private static final int ACCENT = 0xFF1177D6;
+    private static final int DEFAULT_ACCENT = 0xFF1177D6;
     private static final int TEXT = 0xFFFFFFFF;
     private static final int DIM = 0xBFFFFFFF;
     private static final int DISABLED = 0x33FFFFFF;
@@ -105,6 +106,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private final ProgramEditorNodeCatalog catalog;
     private final ModularProgramEditorSession session;
     private final Set<Identifier> capabilities;
+    private final int accentColor;
     private ProgramEditorDocument document;
     private long revision;
     private int slot;
@@ -162,6 +164,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
         this.slot = Math.clamp(session.selectedSlot(), 0, session.slotCount() - 1);
         var program = session.editableProgram(this.slot);
+        accentColor = categoryAccent(program.category());
         definition = AbilityProgramDefinitions.require(program.category());
         catalog = definition.editorCatalog();
         capabilities = Set.copyOf(session.capabilities());
@@ -352,7 +355,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL_BACKGROUND);
         renderInstrumentFrame(graphics, panelX, panelY, panelW, panelH);
         graphics.fill(panelX + 7, panelY + TOP_H, panelX + panelW - 7, panelY + TOP_H + 1, DIVIDER);
-        graphics.fill(panelX + 7, panelY + TOP_H, panelX + 31, panelY + TOP_H + 1, ACCENT);
+        graphics.fill(panelX + 7, panelY + TOP_H, panelX + 31, panelY + TOP_H + 1, accentColor);
         graphics.fill(canvasX, canvasY, canvasX + canvasW, canvasY + canvasH, CANVAS_BACKGROUND);
         border(graphics, canvasX, canvasY, canvasW, canvasH, BORDER_MUTED);
         if (!compactLeft) renderSection(graphics, paletteX(), canvasY, paletteWidth(), canvasH);
@@ -442,7 +445,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             if (categoryRestricted) {
                 graphics.fill(x + width - 17, y + 2, x + width - 16, y + ROW_H - 3, DIVIDER);
                 smallText(graphics, categoryGlyph(entry), x + width - 13, y + 3,
-                        ACCENT, 8);
+                        accentColor, 8);
             }
             if (hover) {
                 graphics.setComponentTooltipForNextFrame(
@@ -504,7 +507,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         graphics.fill(x, y, x + NODE_W, y + height,
                 hasError ? ERROR_BACKGROUND : selected ? NODE_SELECTED_BACKGROUND : NODE_BACKGROUND);
         border(graphics, x, y, NODE_W, height,
-                hasError ? ERROR : selected ? ACCENT : BORDER_MUTED);
+                hasError ? ERROR : selected ? accentColor : BORDER_MUTED);
         graphics.fill(x, y, x + NODE_W, y + NODE_HEADER_H, hasError ? ERROR : NODE_HEADER);
         if (!hasError) graphics.fill(x, y, x + 2, y + NODE_HEADER_H, groupColor(node.entry.group()));
         smallText(graphics, groupGlyph(node.entry.group()), x + 3, y + 2, TEXT, 8);
@@ -513,7 +516,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (categoryRestricted) {
             var badgeX = x + NODE_W - rightInset - 8;
             graphics.fill(badgeX - 2, y + 2, badgeX - 1, y + NODE_HEADER_H - 2, DIVIDER);
-            smallText(graphics, categoryGlyph(node.entry), badgeX + 1, y + 2, ACCENT, 7);
+            smallText(graphics, categoryGlyph(node.entry), badgeX + 1, y + 2, accentColor, 7);
             rightInset += 11;
         }
         smallText(graphics, nodeLabel(node.entry).getString(), x + 12, y + 2, TEXT,
@@ -610,7 +613,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         smallText(graphics, nodeLabel(selected.entry).getString(), x + 5, canvasY + 22, TEXT, width - 10);
         if (selected.entry.categoryRestricted()) {
             smallText(graphics, categoryScopeLabel(selected.entry).getString(),
-                    x + 5, canvasY + 33, ACCENT, width - 10);
+                    x + 5, canvasY + 33, accentColor, width - 10);
         }
         var descriptionOffset = inspectorDescriptionOffset(selected.entry);
         var descriptionHeight = smallWrappedText(graphics, nodeDescription(selected.entry),
@@ -660,7 +663,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 var power = Math.clamp(currentValue.getAsFloat(), 0.0f, 2.0f);
                 var fillWidth = Math.round(trackWidth * power / 2.0f);
                 graphics.fill(x, valueY + 6, x + trackWidth, valueY + 8, BORDER_MUTED);
-                graphics.fill(x, valueY + 6, x + fillWidth, valueY + 8, ACCENT);
+                graphics.fill(x, valueY + 6, x + fillWidth, valueY + 8, accentColor);
                 var thumbX = x + fillWidth;
                 graphics.fill(thumbX - 1, valueY + 3, thumbX + 1, valueY + 11, TEXT);
                 smallText(graphics, String.format(Locale.ROOT, "%.2f", power),
@@ -1835,7 +1838,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var lines = new ArrayList<Component>();
         lines.add(nodeLabel(entry));
         if (entry.categoryRestricted()) {
-            lines.add(categoryScopeLabel(entry).copy().withColor(ACCENT));
+            lines.add(categoryScopeLabel(entry).copy().withColor(accentColor));
         }
         lines.add(nodeDescription(entry).copy().withColor(DIM));
         return lines;
@@ -1907,18 +1910,40 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         };
     }
 
-    private static int portColor(ProgramValueType type) {
-        if (type.equals(ProgramValueTypes.FLOW)) return ACCENT;
+    static int portColor(ProgramValueType type) {
+        if (type.equals(ProgramValueTypes.FLOW)) return 0xFF4A9FE8;
+        if (type.equals(ProgramValueTypes.BOOLEAN)) return 0xFF8D8FF0;
+        if (type.equals(ProgramValueTypes.INTEGER)) return 0xFF62C7E8;
+        if (type.equals(ProgramValueTypes.BIG_INTEGER)) return 0xFF56AFD5;
+        if (type.equals(ProgramValueTypes.FLOAT)) return 0xFF5DD6C5;
+        if (type.equals(ProgramValueTypes.IDENTIFIER)) return 0xFF8FB9D2;
+        if (type.equals(ProgramValueTypes.DURATION)) return 0xFF78B7D5;
         if (type.equals(ProgramValueTypes.ENTITY_REFERENCE)
-                || type.equals(ProgramValueTypes.LIVING_ENTITY_REFERENCE)) return 0xE6FFFFFF;
+                || type.equals(ProgramValueTypes.LIVING_ENTITY_REFERENCE)) return 0xFFB6D8F2;
         if (type.equals(ProgramValueTypes.ENTITY_SET)
-                || type.equals(ProgramValueTypes.LIVING_ENTITY_SET)) return 0xCFFFFFFF;
-        if (type.equals(ProgramValueTypes.WORLD_POSITION)
-                || type.equals(ProgramValueTypes.BLOCK_POSITION)
-                || type.equals(ProgramValueTypes.CONTROL_DESTINATION)) return 0xB8FFFFFF;
-        if (type.equals(ProgramValueTypes.DIRECTION)) return 0xA6FFFFFF;
-        if (type.equals(ProgramValueTypes.BOOLEAN)) return 0xF2FFFFFF;
-        return 0x99FFFFFF;
+                || type.equals(ProgramValueTypes.LIVING_ENTITY_SET)) return 0xFF8CAFCB;
+        if (type.equals(ProgramValueTypes.WORLD_POSITION)) return 0xFF73A7F2;
+        if (type.equals(ProgramValueTypes.WORLD_POSITION_SET)) return 0xFF5E8BCB;
+        if (type.equals(ProgramValueTypes.BLOCK_POSITION)) return 0xFF7F91D8;
+        if (type.equals(ProgramValueTypes.BLOCK_POSITION_SET)) return 0xFF6879B7;
+        if (type.equals(ProgramValueTypes.CONTROL_DESTINATION)) return 0xFF8886DC;
+        if (type.equals(ProgramValueTypes.DIRECTION)) return 0xFF72D0E4;
+        if (type.equals(ProgramValueTypes.DIRECTION_SET)) return 0xFF5CAABD;
+        if (type.equals(ProgramValueTypes.ACTION_RESULT)) return 0xFF9AACE0;
+        return 0xFF8298AA;
+    }
+
+    static int categoryAccent(Identifier category) {
+        return switch (category.getPath()) {
+            case AbilityCategoryNames.ACCELERATOR -> 0xFFD4DCE2;
+            case AbilityCategoryNames.MELTDOWNER -> 0xFF59D68A;
+            case AbilityCategoryNames.DARKMATTER -> 0xFFF4F6F7;
+            case AbilityCategoryNames.AEROMANIP -> 0xFF8EDCF3;
+            case AbilityCategoryNames.ELECTROMASTER -> 0xFF328EE8;
+            case AbilityCategoryNames.MENTALOUT -> 0xFFFFB83D;
+            case AbilityCategoryNames.TELEPORT -> 0xFFA17BE8;
+            default -> DEFAULT_ACCENT;
+        };
     }
 
     private void renderCanvasGrid(GuiGraphicsExtractor graphics) {
@@ -2037,7 +2062,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         graphics.fill(x, y + height - 1, x + width, y + height, BORDER_MUTED);
     }
 
-    private static void renderInput(
+    private void renderInput(
             GuiGraphicsExtractor graphics,
             int x,
             int y,
@@ -2047,11 +2072,11 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     ) {
         graphics.fill(x, y, x + width, y + height, INPUT_BACKGROUND);
         graphics.fill(x, y + height - 1, x + width, y + height,
-                focused ? ACCENT : BORDER_MUTED);
-        if (focused) graphics.fill(x, y, x + 2, y + height, ACCENT);
+                focused ? accentColor : BORDER_MUTED);
+        if (focused) graphics.fill(x, y, x + 2, y + height, accentColor);
     }
 
-    private static void renderControl(
+    private void renderControl(
             GuiGraphicsExtractor graphics,
             int x,
             int y,
@@ -2065,8 +2090,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 : selected ? SELECTED_BACKGROUND : hovered ? HOVER_BACKGROUND : CONTROL_BACKGROUND;
         graphics.fill(x, y, x + width, y + height, background);
         if (selected) {
-            graphics.fill(x, y, x + 2, y + height, ACCENT);
-            graphics.fill(x + 2, y + height - 1, x + width, y + height, ACCENT);
+            graphics.fill(x, y, x + 2, y + height, accentColor);
+            graphics.fill(x + 2, y + height - 1, x + width, y + height, accentColor);
         } else if (hovered) {
             graphics.fill(x, y + height - 1, x + width, y + height, TEXT);
         } else {

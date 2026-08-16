@@ -59,7 +59,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         blockEntity.setEnergyStored(blockEntity.energyStored + brightness * GENERATION_RATE);
         if (!level.isClientSide()
                 && EnergyChargeHelper.transferToItem(
-                blockEntity, blockEntity.items.getFirst(), OUTPUT_TRANSFER_RATE) > 0) {
+                blockEntity, blockEntity, 0, OUTPUT_TRANSFER_RATE) > 0) {
             blockEntity.setChanged();
         }
 

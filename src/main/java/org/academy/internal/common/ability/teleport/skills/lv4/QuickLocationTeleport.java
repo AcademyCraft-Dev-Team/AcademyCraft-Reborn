@@ -141,8 +141,7 @@ public final class QuickLocationTeleport extends Skill {
             var finalDestination = destination;
             skill.executeActive(player, (ctx, actualCost) -> {
                 if (finalTarget == player) {
-                    player.teleportTo(level, finalDestination.x, finalDestination.y, finalDestination.z,
-                            Set.of(), player.getYRot(), player.getXRot(), false);
+                    TeleportSync.teleportInstantly(player, level, finalDestination);
                 } else {
                     var hierarchyRoot = ctx.milestone() >= 3 ? finalTarget.getRootVehicle() : finalTarget;
                     var offset = finalDestination.subtract(finalTarget.position());

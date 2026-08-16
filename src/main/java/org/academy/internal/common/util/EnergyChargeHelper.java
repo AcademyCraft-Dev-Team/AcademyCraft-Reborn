@@ -2,6 +2,7 @@ package org.academy.internal.common.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -10,7 +11,9 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.access.ItemAccess;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.item.VanillaContainerWrapper;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
+import org.academy.api.common.energy.AcademyEnergyItem;
 import org.academy.api.common.wireless.WirelessUser;
 
 import java.util.OptionalDouble;
@@ -37,6 +40,9 @@ public final class EnergyChargeHelper {
 
     public static boolean chargeItem(ItemStack stack) {
         if (stack.isEmpty()) return false;
+        if (stack.getItem() instanceof AcademyEnergyItem energyItem) {
+            return energyItem.receiveEnergy(stack, Integer.MAX_VALUE, false) > 0;
+        }
         var access = ItemAccess.forStack(stack);
         return charge(access.getCapability(Capabilities.Energy.ITEM)) > 0;
     }
@@ -44,7 +50,63 @@ public final class EnergyChargeHelper {
     /** Transfers stored machine energy into an item capability in one server-side operation. */
     public static int transferToItem(WirelessUser source, ItemStack stack, int maxTransfer) {
         if (source == null || stack.isEmpty() || maxTransfer <= 0) return 0;
-        var handler = ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM);
+        if (stack.getItem() instanceof AcademyEnergyItem energyItem) {
+            return transferToAcademyItem(source, stack, energyItem, maxTransfer);
+        }
+        return transferToEnergyHandler(
+                source,
+                ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM),
+                maxTransfer
+        );
+    }
+
+    /**
+     * Transfers into an actual container slot, preserving item replacements made by NeoForge
+     * energy handlers when their data components change.
+     */
+    public static int transferToItem(
+            WirelessUser source,
+            Container container,
+            int slot,
+            int maxTransfer
+    ) {
+        if (source == null || container == null || slot < 0
+                || slot >= container.getContainerSize() || maxTransfer <= 0) return 0;
+        var stack = container.getItem(slot);
+        if (stack.isEmpty()) return 0;
+        if (stack.getItem() instanceof AcademyEnergyItem energyItem) {
+            var transferred = transferToAcademyItem(source, stack, energyItem, maxTransfer);
+            if (transferred > 0) container.setChanged();
+            return transferred;
+        }
+        var access = ItemAccess.forHandlerIndex(VanillaContainerWrapper.of(container), slot);
+        return transferToEnergyHandler(
+                source,
+                access.getCapability(Capabilities.Energy.ITEM),
+                maxTransfer
+        );
+    }
+
+    static int transferToAcademyItem(
+            WirelessUser source,
+            ItemStack stack,
+            AcademyEnergyItem target,
+            int maxTransfer
+    ) {
+        var available = source.extractEnergy(maxTransfer, true);
+        if (available <= 0) return 0;
+        var accepted = target.receiveEnergy(stack, available, true);
+        if (accepted <= 0) return 0;
+        var extracted = source.extractEnergy(accepted, false);
+        if (extracted <= 0) return 0;
+        return target.receiveEnergy(stack, extracted, false);
+    }
+
+    private static int transferToEnergyHandler(
+            WirelessUser source,
+            EnergyHandler handler,
+            int maxTransfer
+    ) {
         if (handler == null) return 0;
         var available = source.extractEnergy(maxTransfer, true);
         if (available <= 0) return 0;
@@ -59,12 +121,15 @@ public final class EnergyChargeHelper {
     }
 
     public static boolean hasEnergyStorage(ItemStack stack) {
-        return !stack.isEmpty()
-                && ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM) != null;
+        return !stack.isEmpty() && (stack.getItem() instanceof AcademyEnergyItem
+                || ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM) != null);
     }
 
     public static boolean isEnergyItemFull(ItemStack stack) {
         if (stack.isEmpty()) return true;
+        if (stack.getItem() instanceof AcademyEnergyItem energyItem) {
+            return energyItem.receiveEnergy(stack, 1, true) <= 0;
+        }
         var handler = ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM);
         if (handler == null) return true;
         try (var transaction = Transaction.openRoot()) {
@@ -159,6 +224,11 @@ public final class EnergyChargeHelper {
         for (var slot : ARMOR_SLOTS) stacks.add(entity.getItemBySlot(slot));
         for (var stack : stacks) {
             if (stack.isEmpty()) continue;
+            if (stack.getItem() instanceof AcademyEnergyItem energyItem) {
+                stored += Math.max(0, energyItem.getEnergyStored(stack));
+                capacity += Math.max(0, energyItem.getMaxEnergyStored(stack));
+                continue;
+            }
             var handler = ItemAccess.forStack(stack).getCapability(Capabilities.Energy.ITEM);
             if (handler != null) handlers.add(handler);
         }

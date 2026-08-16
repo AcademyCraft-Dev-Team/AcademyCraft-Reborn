@@ -34,6 +34,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportSafety;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -224,7 +225,7 @@ public final class Flashing extends Skill {
             if (destination == null) return;
 
             if (skill.executeActive(player, (context, actualCost) -> {
-                player.teleportTo(destination.x, destination.y, destination.z);
+                TeleportSync.teleportInstantly(player, destination);
                 player.resetFallDistance();
                 player.setDeltaMovement(0, 0.15, 0);
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));

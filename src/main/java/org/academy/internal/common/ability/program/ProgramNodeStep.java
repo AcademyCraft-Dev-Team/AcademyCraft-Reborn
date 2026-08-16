@@ -38,6 +38,16 @@ public record ProgramNodeStep(
         return new ProgramNodeStep(Directive.YIELD, Map.of(), flowOutput, delayTicks);
     }
 
+    /**
+     * Enters a structured flow branch and resumes this node when that branch reaches its end.
+     */
+    public static ProgramNodeStep call(
+            String flowOutput,
+            Map<String, ProgramValue<?>> outputs
+    ) {
+        return new ProgramNodeStep(Directive.CALL, outputs, flowOutput, 0);
+    }
+
     public static ProgramNodeStep stop() {
         return new ProgramNodeStep(Directive.STOP, Map.of(), null, 0);
     }
@@ -45,6 +55,7 @@ public record ProgramNodeStep(
     public enum Directive {
         DATA,
         CONTINUE,
+        CALL,
         YIELD,
         STOP
     }

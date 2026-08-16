@@ -82,7 +82,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val developer = blockEntity
         if (developer != null) return developer.energyStored
         val player = minecraft.player ?: return 0
-        return AbilityControlTabletItem.getEnergyStored(player.getItemInHand(developmentSource.hand()!!))
+        return AbilityControlTabletItem.storedEnergy(player.getItemInHand(developmentSource.hand()!!))
     }
 
     private fun maxEnergy(): Int = blockEntity?.maxEnergyStorage ?: AbilityControlTabletItem.ENERGY_CAPACITY

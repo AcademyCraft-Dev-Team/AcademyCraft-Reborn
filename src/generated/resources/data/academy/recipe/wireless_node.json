@@ -2,13 +2,14 @@
   "type": "minecraft:crafting_shaped",
   "category": "redstone",
   "key": {
+    "C": "academy:imag_phase_crystal",
     "E": "minecraft:ender_pearl",
-    "I": "minecraft:iron_ingot",
-    "R": "minecraft:redstone"
+    "I": "academy:imag_phase_ingot",
+    "R": "academy:imag_phase_circuit"
   },
   "pattern": [
-    "IRI",
-    "RER",
+    "IEI",
+    "ECE",
     "IRI"
   ],
   "result": {

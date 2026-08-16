@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_piston": {
+    "has_imag_phase_circuit": {
       "conditions": {
         "items": [
           {
-            "items": "minecraft:piston"
+            "items": "academy:imag_phase_circuit"
           }
         ]
       },
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_piston"
+      "has_imag_phase_circuit"
     ]
   ],
   "rewards": {

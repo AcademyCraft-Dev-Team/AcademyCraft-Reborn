@@ -13,7 +13,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.compatibility.IrisCompat;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxPipelines;
@@ -84,8 +84,8 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
                 .rotateX(baseRotationX + spin * 0.7F)
                 .rotateY(baseRotationY + spin);
 
-        if (IrisCompat.isShaderPackInUse()) {
-            if (!IrisCompat.isShadowRendererActive()) {
+        if (IrisIntegration.isShaderPackInUse()) {
+            if (!IrisIntegration.isShadowRendererActive()) {
                 VertexConsumer postBuffer = PostEffect.getPost()
                         .getBuffer(Render.RenderTypes.IMAG_PHASE_PARTICLE_POST);
                 extractPostQuad(postBuffer, rotation, renderX, renderY, renderZ, partialTick);

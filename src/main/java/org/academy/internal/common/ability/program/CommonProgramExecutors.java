@@ -395,6 +395,25 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                     ).map(entity -> data("entity", ProgramValueTypes.ENTITY_REFERENCE, entity))
                     .orElseGet(CommonProgramExecutors::emptyData);
         });
+        put(result, CommonProgramNodeIds.BLOCK_NORMAL,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.BlockNormalConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var normal = switch (configuration.mode()) {
+                        case VIEW -> resolver(context).blockNormalFromView(
+                                raw(inputs, "entity", ProgramValueTypes.ENTITY_REFERENCE),
+                                32.0
+                        );
+                        case POSITION_DIRECTION -> resolver(context).raycastBlockNormal(
+                                worldPosition(inputs, "origin"),
+                                direction(inputs, "direction"),
+                                32.0
+                        );
+                    };
+                    return normal.map(value -> data(
+                                    "normal", ProgramValueTypes.DIRECTION, value))
+                            .orElseGet(CommonProgramExecutors::emptyData);
+                });
     }
 
     private static void registerEquality(Map<Identifier, ProgramNodeExecutor<?>> result) {
@@ -522,6 +541,24 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
     ) {
         randomCollectionValue(result, CommonProgramNodeIds.RANDOM_ENTITY,
                 CommonProgramNodeCatalog.CollectionDomain.ENTITY, "entities", "entity");
+        put(result, CommonProgramNodeIds.NEAREST_ENTITY_TO_POSITION, (context, _, inputs) -> {
+            var origin = worldPosition(inputs, "position");
+            Object nearest = null;
+            var nearestDistance = Double.POSITIVE_INFINITY;
+            for (var entity : collection(
+                    inputs, "entities", CommonProgramNodeCatalog.CollectionDomain.ENTITY)) {
+                var position = resolver(context).positionOf(entity).orElse(null);
+                if (position == null || !origin.dimension().equals(position.dimension())) continue;
+                var distance = squaredDistance(origin, position);
+                if (distance < nearestDistance) {
+                    nearest = entity;
+                    nearestDistance = distance;
+                }
+            }
+            return nearest == null
+                    ? emptyData()
+                    : data("entity", ProgramValueTypes.ENTITY_REFERENCE, nearest);
+        });
         randomCollectionValue(result, CommonProgramNodeIds.RANDOM_WORLD_POSITION,
                 CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION, "positions", "position");
         randomCollectionValue(result, CommonProgramNodeIds.RANDOM_BLOCK_POSITION,
@@ -629,7 +666,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 return ProgramNodeStep.next("done");
             }
             context.setExecutorState(key, new IterationState(state.values, state.index + 1));
-            return ProgramNodeStep.next("body", Map.of(
+            return ProgramNodeStep.call("body", Map.of(
                     "value",
                     value(domain.elementType(), state.values.get(state.index))
             ));
@@ -912,6 +949,16 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
     private static double finite(double value) {
         if (!Double.isFinite(value)) throw new ArithmeticException("Program float result is not finite");
         return value;
+    }
+
+    private static double squaredDistance(
+            ProgramWorldPosition left,
+            ProgramWorldPosition right
+    ) {
+        var x = left.x() - right.x();
+        var y = left.y() - right.y();
+        var z = left.z() - right.z();
+        return x * x + y * y + z * z;
     }
 
     private static double nonNegative(double value, String name) {
