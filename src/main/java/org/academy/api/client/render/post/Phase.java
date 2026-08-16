@@ -31,19 +31,22 @@ public class Phase {
     }
 
     public void draw() {
-        stagedVertexBuffer.upload();
-        for (var phaseDraw : draws) {
-            var info = stagedVertexBuffer.getExecuteInfo(phaseDraw.draw);
-            if (info == null) continue;
+        try {
+            stagedVertexBuffer.upload();
+            for (var phaseDraw : draws) {
+                var info = stagedVertexBuffer.getExecuteInfo(phaseDraw.draw);
+                if (info == null) continue;
 
-            var prepared = phaseDraw.renderType.prepare();
+                var prepared = phaseDraw.renderType.prepare();
 
-            prepared.drawFromBuffer(info);
+                prepared.drawFromBuffer(info);
+            }
+        } finally {
+            draws.clear();
+            lastRenderType = null;
+            lastPhaseDraw = null;
+            stagedVertexBuffer.endFrame();
         }
-        draws.clear();
-        lastRenderType = null;
-        lastPhaseDraw = null;
-        stagedVertexBuffer.endDraw();
     }
 
     public void close() {
