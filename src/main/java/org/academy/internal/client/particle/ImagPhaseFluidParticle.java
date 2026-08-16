@@ -31,6 +31,7 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
     private final float baseRotationX;
     private final float baseRotationY;
     private final float rotationSpeed;
+    private final boolean dripping;
     private final Vector3f vertexScratch = new Vector3f();
 
     public ImagPhaseFluidParticle(
@@ -39,6 +40,9 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
             double x,
             double y,
             double z,
+            double xSpeed,
+            double ySpeed,
+            double zSpeed,
             RandomSource random
     ) {
         super(level, x, y, z, sprites.get(random));
@@ -47,13 +51,24 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
         // applies the original additional 0.5-0.75 scale and pastel color variation.
         quadSize = 0.1F * (random.nextFloat() * 0.5F + 0.5F) * 2.0F;
         quadSize *= random.nextFloat() * 0.6F + 0.2F;
-        lifetime = (int) (16.0 / (random.nextFloat() * 0.8 + 0.2));
-        hasPhysics = false;
-        friction = 1.0F;
-        gravity = 0.0F;
-        xd = 0.0;
-        yd = 0.0;
-        zd = 0.0;
+        dripping = ySpeed < 0.0;
+        if (dripping) {
+            lifetime = 80 + random.nextInt(41);
+            hasPhysics = true;
+            friction = 0.98F;
+            gravity = 0.35F;
+            xd = xSpeed;
+            yd = ySpeed;
+            zd = zSpeed;
+        } else {
+            lifetime = (int) (16.0 / (random.nextFloat() * 0.8 + 0.2));
+            hasPhysics = false;
+            friction = 1.0F;
+            gravity = 0.0F;
+            xd = 0.0;
+            yd = 0.0;
+            zd = 0.0;
+        }
         baseRotationX = random.nextFloat() * Mth.TWO_PI;
         baseRotationY = random.nextFloat() * Mth.TWO_PI;
         rotationSpeed = (random.nextFloat() - 0.5F) * 0.025F;
@@ -62,7 +77,9 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
     @Override
     public void tick() {
         super.tick();
-        if (removed) {
+        if (removed) return;
+        if (dripping) {
+            if (onGround) remove();
             return;
         }
 

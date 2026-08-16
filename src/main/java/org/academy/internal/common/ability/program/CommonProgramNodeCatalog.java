@@ -818,11 +818,13 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         }
     }
 
-    public record LoopTriggerConfiguration(int interval) {
-        public static final Codec<LoopTriggerConfiguration> CODEC = Codec.intRange(0, 1200)
-                .fieldOf("interval")
-                .xmap(LoopTriggerConfiguration::new, LoopTriggerConfiguration::interval)
-                .codec();
+    public record LoopTriggerConfiguration(boolean enabled, int interval) {
+        public static final Codec<LoopTriggerConfiguration> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.BOOL.optionalFieldOf("enabled", true)
+                        .forGetter(LoopTriggerConfiguration::enabled),
+                Codec.intRange(0, 1200).fieldOf("interval")
+                        .forGetter(LoopTriggerConfiguration::interval)
+        ).apply(instance, LoopTriggerConfiguration::new));
     }
 
     public record MovementTriggerConfiguration(MovementCondition condition) {
