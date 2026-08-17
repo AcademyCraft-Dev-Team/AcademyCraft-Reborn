@@ -4,7 +4,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -85,8 +84,6 @@ public final class AcademyCraftServer {
         MusicSyncPackets.initServer();
         AbilityProgramManager.initServer();
         PrecisionOperationManager.initServer();
-
-        NeoForge.EVENT_BUS.addListener(this::onServerTick);
     }
 
     @SubscribeEvent
@@ -123,14 +120,17 @@ public final class AcademyCraftServer {
         return abilityConfig;
     }
 
-    public void onServerTick(ServerTickEvent.Post event) {
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        var server = event.getServer();
+        var instance = server.getAcademyCraftServer();
         ServerProgramScheduler.tick(server);
         long currentTick = server.getTickCount();
-        if (currentTick - lastSaveTick >= SAVE_INTERVAL_TICKS) {
-            lastSaveTick = currentTick;
-            var snapshot = createSnapshotAndClean();
+        if (currentTick - instance.lastSaveTick >= SAVE_INTERVAL_TICKS) {
+            instance.lastSaveTick = currentTick;
+            var snapshot = instance.createSnapshotAndClean();
             if (snapshot == null) return;
-            writeToFile(snapshot);
+            instance.writeToFile(snapshot);
         }
     }
 
