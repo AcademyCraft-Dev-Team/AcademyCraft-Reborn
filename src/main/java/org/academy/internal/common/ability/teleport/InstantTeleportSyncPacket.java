@@ -81,8 +81,11 @@ public final class InstantTeleportSyncPacket
             if (level == null || packet.position == null || !finite(packet.position)) return;
             var entity = level.getEntity(packet.entityId);
             if (entity == null) return;
+            var localPlayer = entity == minecraft.player;
+            var yRot = resolveRotation(localPlayer, entity.getYRot(), packet.yRot);
+            var xRot = resolveRotation(localPlayer, entity.getXRot(), packet.xRot);
             entity.getPositionCodec().setBase(packet.position);
-            entity.snapTo(packet.position, packet.yRot, packet.xRot);
+            entity.snapTo(packet.position, yRot, xRot);
             entity.setOldPosAndRot();
         }
 
@@ -91,5 +94,13 @@ public final class InstantTeleportSyncPacket
                     && Double.isFinite(value.y)
                     && Double.isFinite(value.z);
         }
+    }
+
+    static float resolveRotation(
+            boolean localPlayer,
+            float clientRotation,
+            float synchronizedRotation
+    ) {
+        return localPlayer ? clientRotation : synchronizedRotation;
     }
 }

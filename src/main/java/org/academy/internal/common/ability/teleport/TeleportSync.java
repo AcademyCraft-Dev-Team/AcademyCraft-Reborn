@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.teleport;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.misaka.MisakaNetworkServer;
@@ -15,6 +16,8 @@ import java.util.WeakHashMap;
  */
 public final class TeleportSync {
     private static final double CLIENT_SNAP_RANGE_SQUARED = 256.0 * 256.0;
+    static final Set<Relative> PRESERVED_VIEW_ROTATION =
+            Set.of(Relative.Y_ROT, Relative.X_ROT);
     private static final Set<Entity> PENDING_ABSOLUTE_SYNCS =
             Collections.newSetFromMap(new WeakHashMap<>());
 
@@ -48,9 +51,9 @@ public final class TeleportSync {
                 destination.x,
                 destination.y,
                 destination.z,
-                Set.of(),
-                entity.getYRot(),
-                entity.getXRot(),
+                PRESERVED_VIEW_ROTATION,
+                0.0f,
+                0.0f,
                 false
         )) {
             synchronized (PENDING_ABSOLUTE_SYNCS) {
