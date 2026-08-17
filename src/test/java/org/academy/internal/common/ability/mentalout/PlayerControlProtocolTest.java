@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.mentalout;
 
 import io.netty.buffer.Unpooled;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import org.academy.api.common.entitycontrol.*;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -169,6 +171,7 @@ class PlayerControlProtocolTest {
 
     @Test
     void targetViewCodecRoundTripsHotbarAndCombatState() {
+        var registries = HolderLookup.Provider.create(Stream.empty());
         var hotbar = new ArrayList<ItemStack>();
         for (var slot = 0; slot < 9; slot++) hotbar.add(ItemStack.EMPTY);
         var state = new PlayerControlSessionManager.TargetViewState(
@@ -178,20 +181,21 @@ class PlayerControlProtocolTest {
                 true, InteractionHand.OFF_HAND, 23
         );
         var packet = new PlayerControlSessionManager.TargetViewStatePacket(
-                UUID.randomUUID(), 4L, 9L, state
+                UUID.randomUUID(), 4L, 9L, state, registries
         );
         var buffer = Unpooled.buffer();
         try {
             PlayerControlSessionManager.TargetViewStatePacket.CODEC.encode(buffer, packet);
             var decoded = PlayerControlSessionManager.TargetViewStatePacket.CODEC.decode(buffer);
+            var decodedState = decoded.decodeState(registries);
             assertEquals(packet.sessionId(), decoded.sessionId());
             assertEquals(4L, decoded.revision());
             assertEquals(9L, decoded.sequence());
-            assertEquals(2, decoded.state().selectedSlot());
-            assertTrue(decoded.state().selectedItem().isEmpty());
-            assertTrue(decoded.state().offhand().isEmpty());
-            assertEquals(13.5f, decoded.state().health());
-            assertEquals(InteractionHand.OFF_HAND, decoded.state().useHand());
+            assertEquals(2, decodedState.selectedSlot());
+            assertTrue(decodedState.selectedItem().isEmpty());
+            assertTrue(decodedState.offhand().isEmpty());
+            assertEquals(13.5f, decodedState.health());
+            assertEquals(InteractionHand.OFF_HAND, decodedState.useHand());
         } finally {
             buffer.release();
         }
