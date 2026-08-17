@@ -2,14 +2,17 @@ package org.academy.internal.common.ability.mentalout;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,6 +28,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.common.ability.SkillProficiencyProfile;
@@ -42,20 +46,20 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.slf4j.Logger;
 
 import java.util.*;
 
 public final class PlayerControlSessionManager {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     public static final int DIRECT_CONTROL_PRIORITY = 300;
     private static final int READY_TIMEOUT_TICKS = 20;
     private static final int NEUTRAL_AFTER_TICKS = 5;
     private static final int CLIENT_TIMEOUT_TICKS = 20;
     private static final int STRUGGLE_MAX = 100;
     private static final int STRUGGLE_DECAY_DELAY = 10;
-    private static final StreamCodec<ByteBuf, ItemStack> ITEM_STACK_CODEC = ByteBufCodecs.fromCodec(
-            ItemStack.OPTIONAL_CODEC,
-            () -> NbtAccounter.create(1024L * 1024L)
-    );
+    private static final StreamCodec<ByteBuf, Tag> ITEM_STACK_TAG_CODEC = ByteBufCodecs.tagCodec(
+            () -> NbtAccounter.create(1024L * 1024L));
     private static final Map<UUID, Session> BY_CONTROLLER = new HashMap<>();
     private static final Map<UUID, Session> BY_SUBJECT = new HashMap<>();
     private static final Map<UUID, MobSession> MOB_BY_CONTROLLER = new HashMap<>();
@@ -912,9 +916,23 @@ public final class PlayerControlSessionManager {
                 subject.getUseItemRemainingTicks()
         );
         session.lastViewSnapshotTick = now;
-        MisakaNetworkServer.send(session.controller, new TargetViewStatePacket(
-                session.id, session.revision, ++session.viewSnapshotSequence, state
-        ));
+        try {
+            MisakaNetworkServer.send(session.controller, new TargetViewStatePacket(
+                    session.id,
+                    session.revision,
+                    ++session.viewSnapshotSequence,
+                    state,
+                    subject.registryAccess()
+            ));
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                    "Failed to send controlled-player view snapshot from {} to {}",
+                    subject.getGameProfile().name(),
+                    session.controller.getGameProfile().name(),
+                    exception
+            );
+            stop(session, EndReason.LIFECYCLE, true);
+        }
     }
 
     private static Session findSession(ServerPlayer player) {
@@ -981,10 +999,10 @@ public final class PlayerControlSessionManager {
         );
     }
 
-    private static void writeTargetViewState(ByteBuf buf, TargetViewState state) {
-        for (var stack : state.hotbar) ITEM_STACK_CODEC.encode(buf, stack);
+    private static void writeTargetViewState(ByteBuf buf, SerializedTargetViewState state) {
+        for (var stack : state.hotbar) writeItemStackSnapshot(buf, stack);
         buf.writeByte(state.selectedSlot);
-        ITEM_STACK_CODEC.encode(buf, state.offhand);
+        writeItemStackSnapshot(buf, state.offhand);
         buf.writeFloat(state.health);
         buf.writeFloat(state.maxHealth);
         buf.writeFloat(state.absorption);
@@ -1001,11 +1019,11 @@ public final class PlayerControlSessionManager {
         ByteBufCodecs.VAR_INT.encode(buf, state.useRemainingTicks);
     }
 
-    private static TargetViewState readTargetViewState(ByteBuf buf) {
-        var hotbar = new ArrayList<ItemStack>(9);
-        for (var slot = 0; slot < 9; slot++) hotbar.add(ITEM_STACK_CODEC.decode(buf));
+    private static SerializedTargetViewState readTargetViewState(ByteBuf buf) {
+        var hotbar = new ArrayList<SerializedItemStack>(9);
+        for (var slot = 0; slot < 9; slot++) hotbar.add(readItemStackSnapshot(buf));
         var selectedSlot = buf.readUnsignedByte();
-        var offhand = ITEM_STACK_CODEC.decode(buf);
+        var offhand = readItemStackSnapshot(buf);
         var health = buf.readFloat();
         var maxHealth = buf.readFloat();
         var absorption = buf.readFloat();
@@ -1021,11 +1039,52 @@ public final class PlayerControlSessionManager {
         var hands = InteractionHand.values();
         var useHand = hands[Mth.clamp(buf.readUnsignedByte(), 0, hands.length - 1)];
         var useRemainingTicks = ByteBufCodecs.VAR_INT.decode(buf);
-        return new TargetViewState(
+        return new SerializedTargetViewState(
                 hotbar, selectedSlot, offhand, health, maxHealth, absorption,
                 armor, food, saturation, air, maxAir, experienceProgress,
                 experienceLevel, attackStrength, usingItem, useHand, useRemainingTicks
         );
+    }
+
+    private static void writeItemStackSnapshot(ByteBuf buf, SerializedItemStack snapshot) {
+        buf.writeBoolean(snapshot.tag != null);
+        if (snapshot.tag != null) ITEM_STACK_TAG_CODEC.encode(buf, snapshot.tag);
+    }
+
+    private static SerializedItemStack readItemStackSnapshot(ByteBuf buf) {
+        return buf.readBoolean()
+                ? new SerializedItemStack(ITEM_STACK_TAG_CODEC.decode(buf))
+                : SerializedItemStack.EMPTY;
+    }
+
+    private static SerializedItemStack serializeItemStack(
+            ItemStack stack,
+            HolderLookup.Provider registries
+    ) {
+        if (stack.isEmpty()) return SerializedItemStack.EMPTY;
+        try {
+            var ops = RegistryOps.create(NbtOps.INSTANCE, registries);
+            return new SerializedItemStack(ItemStack.CODEC.encodeStart(ops, stack)
+                    .getOrThrow(IllegalArgumentException::new));
+        } catch (RuntimeException exception) {
+            LOGGER.error("Failed to serialize controlled-player item {}", stack.getItem(), exception);
+            return SerializedItemStack.EMPTY;
+        }
+    }
+
+    private static ItemStack deserializeItemStack(
+            SerializedItemStack snapshot,
+            HolderLookup.Provider registries
+    ) {
+        if (snapshot.tag == null) return ItemStack.EMPTY;
+        try {
+            var ops = RegistryOps.create(NbtOps.INSTANCE, registries);
+            return ItemStack.CODEC.parse(ops, snapshot.tag)
+                    .getOrThrow(IllegalArgumentException::new);
+        } catch (RuntimeException exception) {
+            LOGGER.error("Failed to deserialize controlled-player item snapshot", exception);
+            return ItemStack.EMPTY;
+        }
     }
 
     private static void writeUuid(ByteBuf buf, UUID uuid) {
@@ -1178,7 +1237,10 @@ public final class PlayerControlSessionManager {
         @SubscribePacket
         public static void targetView(TargetViewStatePacket packet) {
             PlayerControlClientState.targetViewState(
-                    packet.sessionId, packet.revision, packet.sequence, packet.state
+                    packet.sessionId,
+                    packet.revision,
+                    packet.sequence,
+                    packet.decodeState(packet.getPacketListener().registryAccess())
             );
         }
 
@@ -1554,13 +1616,23 @@ public final class PlayerControlSessionManager {
         private final UUID sessionId;
         private final long revision;
         private final long sequence;
-        private final TargetViewState state;
+        private final SerializedTargetViewState state;
 
         public TargetViewStatePacket(
                 UUID sessionId,
                 long revision,
                 long sequence,
-                TargetViewState state
+                TargetViewState state,
+                HolderLookup.Provider registries
+        ) {
+            this(sessionId, revision, sequence, SerializedTargetViewState.from(state, registries));
+        }
+
+        private TargetViewStatePacket(
+                UUID sessionId,
+                long revision,
+                long sequence,
+                SerializedTargetViewState state
         ) {
             this.sessionId = sessionId;
             this.revision = revision;
@@ -1580,8 +1652,8 @@ public final class PlayerControlSessionManager {
             return sequence;
         }
 
-        public TargetViewState state() {
-            return state;
+        public TargetViewState decodeState(HolderLookup.Provider registries) {
+            return state.decode(registries);
         }
 
         @Override
@@ -1623,6 +1695,88 @@ public final class PlayerControlSessionManager {
     }
 
     private record AcknowledgedFrame(long sequence, PlayerControlFrame frame, long appliedTick) {
+    }
+
+    private record SerializedItemStack(Tag tag) {
+        private static final SerializedItemStack EMPTY = new SerializedItemStack(null);
+    }
+
+    private record SerializedTargetViewState(
+            List<SerializedItemStack> hotbar,
+            int selectedSlot,
+            SerializedItemStack offhand,
+            float health,
+            float maxHealth,
+            float absorption,
+            int armor,
+            int food,
+            float saturation,
+            int air,
+            int maxAir,
+            float experienceProgress,
+            int experienceLevel,
+            float attackStrength,
+            boolean usingItem,
+            InteractionHand useHand,
+            int useRemainingTicks
+    ) {
+        private SerializedTargetViewState {
+            if (hotbar.size() != 9) {
+                throw new IllegalArgumentException("Serialized target hotbar must have nine slots");
+            }
+            hotbar = List.copyOf(hotbar);
+        }
+
+        private static SerializedTargetViewState from(
+                TargetViewState state,
+                HolderLookup.Provider registries
+        ) {
+            return new SerializedTargetViewState(
+                    state.hotbar.stream()
+                            .map(stack -> serializeItemStack(stack, registries))
+                            .toList(),
+                    state.selectedSlot,
+                    serializeItemStack(state.offhand, registries),
+                    state.health,
+                    state.maxHealth,
+                    state.absorption,
+                    state.armor,
+                    state.food,
+                    state.saturation,
+                    state.air,
+                    state.maxAir,
+                    state.experienceProgress,
+                    state.experienceLevel,
+                    state.attackStrength,
+                    state.usingItem,
+                    state.useHand,
+                    state.useRemainingTicks
+            );
+        }
+
+        private TargetViewState decode(HolderLookup.Provider registries) {
+            return new TargetViewState(
+                    hotbar.stream()
+                            .map(stack -> deserializeItemStack(stack, registries))
+                            .toList(),
+                    selectedSlot,
+                    deserializeItemStack(offhand, registries),
+                    health,
+                    maxHealth,
+                    absorption,
+                    armor,
+                    food,
+                    saturation,
+                    air,
+                    maxAir,
+                    experienceProgress,
+                    experienceLevel,
+                    attackStrength,
+                    usingItem,
+                    useHand,
+                    useRemainingTicks
+            );
+        }
     }
 
     public record TargetViewState(
