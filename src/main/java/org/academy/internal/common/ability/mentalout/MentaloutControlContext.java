@@ -678,12 +678,7 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     private float costWeight(LivingEntity subject) {
-        if (subject instanceof ServerPlayer) {
-            return MentaloutConfig.playerControlCostMultiplier(player);
-        }
-        return MentalControlApi.isBossCost(subject)
-                ? MentaloutConfig.bossCostMultiplier(player)
-                : 1.0f;
+        return MentaloutControlCost.multiplier(player, subject);
     }
 
     private ControlHandle applyPermanent(

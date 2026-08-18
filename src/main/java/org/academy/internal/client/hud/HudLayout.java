@@ -9,8 +9,8 @@ public final class HudLayout {
 
     private static final float TOGGLE_STATUS_WIDTH = 140.0f;
     private static final float TOGGLE_STATUS_HEIGHT = 75.0f;
-    private static final float MENTAL_CONTROL_WIDTH = 168.0f;
-    private static final float MENTAL_CONTROL_HEIGHT = 184.0f;
+    private static final float MENTAL_CONTROL_WIDTH = 142.0f;
+    private static final float MENTAL_CONTROL_HEIGHT = 146.0f;
     private static final float CP_WIDTH = 240.0f;
     private static final float CP_HEIGHT = 27.0f;
     private static final float SKILL_WHEEL_WIDTH = 104.0f;

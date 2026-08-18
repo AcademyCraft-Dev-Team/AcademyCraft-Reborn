@@ -86,7 +86,7 @@ class ControlledTargetsHud private constructor() {
             fallbackPanel.visibility = Widget.Visibility.GONE
             fallbackPanel.origin = 0f
             fallbackPanel.layoutParams = FrameLayoutWidget.LayoutParams().size(PANEL_WIDTH, PANEL_HEIGHT)
-            fallbackPanel.addChild("background", FillWidget(PANEL_BACKGROUND).also {
+            fallbackPanel.addChild("background", FillWidget(TRANSPARENT).also {
                 it.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             })
             val fallbackContent = LinearLayoutWidget()
@@ -94,7 +94,7 @@ class ControlledTargetsHud private constructor() {
             fallbackContent.spacing = 1f
             fallbackContent.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(5f, 4f, 5f, 4f)
+                .padding(4f, 3f, 4f, 3f)
             fallbackPanel.addChild("content", fallbackContent)
             layout.addChild("mental_control", fallbackPanel)
             return layout
@@ -139,7 +139,7 @@ class ControlledTargetsHud private constructor() {
 
             content.addChild("header", createHeader(state.entries().size))
             nearest.forEachIndexed { index, entry ->
-                content.addChild("target_$index", createTargetRow(entry, index))
+                content.addChild("target_$index", createTargetRow(entry))
             }
             repeat(MAX_VISIBLE_TARGETS - nearest.size) { index ->
                 content.addChild("spacer_$index", createSpacer())
@@ -182,32 +182,32 @@ class ControlledTargetsHud private constructor() {
             header.layoutParams = LinearLayoutWidget.LayoutParams().size(CONTENT_WIDTH, HEADER_HEIGHT)
             header.addChild("status", FillWidget(ACCENT).also {
                 it.layoutParams = LinearLayoutWidget.LayoutParams()
-                    .size(2f, 8f)
+                    .size(2f, 7f)
                     .gravity(Gravity.CENTER_VERTICAL)
             })
             header.addChild(
                 "title",
                 label(
                     text("hud.academy.mental_control.title"),
-                    8f,
-                    CONTENT_WIDTH - 37f,
+                    7f,
+                    CONTENT_WIDTH - 35f,
                     HEADER_HEIGHT,
                     TEXT_PRIMARY
                 )
             )
             header.addChild(
                 "count",
-                label(total.toString(), 8f, 32f, HEADER_HEIGHT, ACCENT).also {
+                label(total.toString(), 7f, 27f, HEADER_HEIGHT, ACCENT).also {
                     it.layoutParams.gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
                 }
             )
             return header
         }
 
-        private fun createTargetRow(entry: Entry, index: Int): Widget {
+        private fun createTargetRow(entry: Entry): Widget {
             val row = FrameLayoutWidget()
             row.layoutParams = LinearLayoutWidget.LayoutParams().size(CONTENT_WIDTH, TARGET_ROW_HEIGHT)
-            row.addChild("background", FillWidget(if (index % 2 == 0) ROW_EVEN else ROW_ODD).also {
+            row.addChild("background", FillWidget(TRANSPARENT).also {
                 it.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             })
             row.addChild("support_signal", FillWidget(supportColor(entry.support())).also {
@@ -221,28 +221,28 @@ class ControlledTargetsHud private constructor() {
             body.spacing = 0f
             body.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(4f, 1f, 3f, 1f)
+                .padding(3f, 1f, 2f, 1f)
             row.addChild("body", body)
 
             val top = LinearLayoutWidget()
             top.orientation = Orientation.HORIZONTAL
             top.spacing = 2f
-            top.layoutParams = LinearLayoutWidget.LayoutParams().size(INNER_WIDTH, 6.5f)
-            top.addChild("name", label(entry.displayName(), 6.5f, 78f, 6.5f, TEXT_PRIMARY))
-            top.addChild("distance", label(distance(entry.distance()), 6f, 30f, 6.5f, TEXT_SECONDARY))
+            top.layoutParams = LinearLayoutWidget.LayoutParams().size(INNER_WIDTH, 5.5f)
+            top.addChild("name", label(entry.displayName(), 5.8f, 62f, 5.5f, TEXT_PRIMARY))
+            top.addChild("distance", label(distance(entry.distance()), 5.2f, 26f, 5.5f, TEXT_SECONDARY))
             top.addChild(
                 "support",
-                label(support(entry.support()), 5.8f, 38f, 6.5f, supportColor(entry.support()))
+                label(support(entry.support()), 5.0f, 32f, 5.5f, supportColor(entry.support()))
             )
             body.addChild("top", top)
 
             val details = LinearLayoutWidget()
             details.orientation = Orientation.HORIZONTAL
             details.spacing = 2f
-            details.layoutParams = LinearLayoutWidget.LayoutParams().size(INNER_WIDTH, 6f)
-            details.addChild("type", label(entityType(entry.entityTypeId()), 5.5f, 67f, 6f, TEXT_MUTED))
-            details.addChild("health", label(health(entry), 5.5f, 40f, 6f, healthColor(entry)))
-            details.addChild("effects", label(effects(entry), 5.5f, 39f, 6f, ACCENT))
+            details.layoutParams = LinearLayoutWidget.LayoutParams().size(INNER_WIDTH, 5f)
+            details.addChild("type", label(entityType(entry.entityTypeId()), 5f, 54f, 5f, TEXT_MUTED))
+            details.addChild("health", label(health(entry), 5f, 36f, 5f, healthColor(entry)))
+            details.addChild("effects", label(effects(entry), 5f, 34f, 5f, ACCENT))
             body.addChild("details", details)
 
             val healthBar = ProgressBarWidget()
@@ -250,13 +250,13 @@ class ControlledTargetsHud private constructor() {
                 .setProgress(entry.health())
                 .setBackgroundColor(HEALTH_BACKGROUND)
                 .setProgressColor(healthColor(entry))
-            healthBar.layoutParams = LinearLayoutWidget.LayoutParams().size(INNER_WIDTH, 2f)
+            healthBar.layoutParams = LinearLayoutWidget.LayoutParams().size(INNER_WIDTH, 1.5f)
             body.addChild("health_bar", healthBar)
             return row
         }
 
         private fun createSpacer(): Widget {
-            return FillWidget(ROW_EMPTY).also {
+            return FillWidget(TRANSPARENT).also {
                 it.layoutParams = LinearLayoutWidget.LayoutParams().size(CONTENT_WIDTH, TARGET_ROW_HEIGHT)
             }
         }
@@ -269,28 +269,25 @@ class ControlledTargetsHud private constructor() {
                 stuporCp,
                 impressionCp
             )
-            return label(value, 6f, CONTENT_WIDTH, FOOTER_HEIGHT, TEXT_SECONDARY)
+            return label(value, 5.3f, CONTENT_WIDTH, FOOTER_HEIGHT, TEXT_SECONDARY)
         }
     }
 
     companion object {
-        const val PANEL_WIDTH = 168f
-        const val PANEL_HEIGHT = 184f
-        private const val CONTENT_WIDTH = 158f
-        private const val INNER_WIDTH = 150f
-        private const val HEADER_HEIGHT = 12f
-        private const val TARGET_ROW_HEIGHT = 18f
-        private const val FOOTER_HEIGHT = 11f
+        const val PANEL_WIDTH = 142f
+        const val PANEL_HEIGHT = 146f
+        private const val CONTENT_WIDTH = 134f
+        private const val INNER_WIDTH = 128f
+        private const val HEADER_HEIGHT = 10f
+        private const val TARGET_ROW_HEIGHT = 14f
+        private const val FOOTER_HEIGHT = 9f
         private const val MAX_VISIBLE_TARGETS = 8
 
         private val NEAREST_COMPARATOR = compareBy<Entry> { it.distance() }
             .thenBy(String.CASE_INSENSITIVE_ORDER) { it.displayName() }
             .thenBy { it.targetUuid().toString() }
 
-        private const val PANEL_BACKGROUND = DataTerminalTheme.PANEL_BACKGROUND
-        private const val ROW_EVEN = DataTerminalTheme.ROW_BACKGROUND
-        private const val ROW_ODD = DataTerminalTheme.ROW_ALTERNATE
-        private const val ROW_EMPTY = DataTerminalTheme.EMPTY_BACKGROUND
+        private const val TRANSPARENT = 0x00000000
         private const val HEALTH_BACKGROUND = DataTerminalTheme.HEALTH_BACKGROUND
         private const val TEXT_PRIMARY = DataTerminalTheme.TEXT
         private const val TEXT_SECONDARY = DataTerminalTheme.TEXT_DIM

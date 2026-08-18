@@ -16,6 +16,7 @@ import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxContexts;
 import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -58,6 +59,9 @@ public abstract class MixinLevelRenderer {
             SubmitNodeCollector output,
             CallbackInfo ci
     ) {
+        if (MentaloutRosterClientState.hasControlledTargets()) {
+            levelRenderState.shouldShowEntityOutlines = true;
+        }
         VfxContexts.submit(
                 Minecraft.getInstance().getDeltaTracker(),
                 levelRenderState.cameraRenderState
