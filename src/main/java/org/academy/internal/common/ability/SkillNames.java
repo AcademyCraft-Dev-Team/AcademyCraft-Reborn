@@ -48,8 +48,6 @@ public final class SkillNames {
     public static final String LOCATION_TELEPORT = "location_teleport";
     public static final String QUICK_LOCATION_TELEPORT = "quick_location_teleport";
     public static final String AREA_TELEPORT_SELECT = "area_teleport_select";
-    public static final String AREA_TELEPORT_SETUP = "area_teleport_setup";
-    public static final String AREA_TELEPORT_START = "area_teleport_start";
     public static final String FLASHING = "flashing";
     public static final String DEFENSIVE_TELEPORT = "defensive_teleport";
     public static final String DARKMATTER_SHAPING = "darkmatter_shaping";

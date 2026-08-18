@@ -134,7 +134,7 @@ function Escape-Cell([string]$value) {
 $out = [Collections.Generic.List[string]]::new()
 $out.Add('# 技能实现与调控总表')
 $out.Add('')
-$out.Add('本文档由当前 `Skills` 注册表、全技能效果总表和前置关系清单汇总，共 94 个已注册技能。运行 `powershell -NoProfile -ExecutionPolicy Bypass -File tools/docs/sync_skill_control_matrix.ps1` 可在基础文档变更后重新生成本表。按键是源码默认值或“见源码”提示；玩家实时覆盖值以 `config/academy-client.json` 为准。')
+$out.Add('本文档由当前 `Skills` 注册表、全技能效果总表和前置关系清单汇总，共 92 个已注册技能。运行 `powershell -NoProfile -ExecutionPolicy Bypass -File tools/docs/sync_skill_control_matrix.ps1` 可在基础文档变更后重新生成本表。按键是源码默认值或“见源码”提示；玩家实时覆盖值以 `config/academy-client.json` 为准。')
 $out.Add('')
 $out.Add('## 标记说明')
 $out.Add('')

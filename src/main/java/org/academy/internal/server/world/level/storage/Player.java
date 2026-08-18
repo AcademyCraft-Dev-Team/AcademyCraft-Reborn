@@ -20,6 +20,8 @@ public final class Player {
             Map.entry("thunder_clap", "thunderclap"),
             Map.entry("penetrate_teleport", "piercing_teleportation"),
             Map.entry("cut_through", "piercing_teleportation"),
+            Map.entry("area_teleport_setup", "area_teleport_select"),
+            Map.entry("area_teleport_start", "area_teleport_select"),
             Map.entry("assault_jet", "jet_strike"),
             Map.entry("brain_development_lv1", "brain_domain_development"),
             Map.entry("brain_development_lv2", "multiple_brain_domain_segmentation"),

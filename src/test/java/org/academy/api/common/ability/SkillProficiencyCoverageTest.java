@@ -42,7 +42,7 @@ class SkillProficiencyCoverageTest {
 
     @Test
     void allNonCommonSkillsDeclareAProficiencyPlan() {
-        assertEquals(87, SkillProficiencyProfiles.declaredSkillPaths().size());
+        assertEquals(85, SkillProficiencyProfiles.declaredSkillPaths().size());
         for (var path : SkillProficiencyProfiles.declaredSkillPaths()) {
             var id = "academy:" + path;
             assertTrue(SkillProficiencyProfiles.isDeclared(id), path);
@@ -69,6 +69,40 @@ class SkillProficiencyCoverageTest {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    void areaTeleportUsesOneLocalizedSkillAndFiveUnifiedBindings() {
+        assertTrue(SkillProficiencyProfiles.declaredSkillPaths().contains("area_teleport_select"));
+        assertFalse(SkillProficiencyProfiles.declaredSkillPaths().contains("area_teleport_setup"));
+        assertFalse(SkillProficiencyProfiles.declaredSkillPaths().contains("area_teleport_start"));
+        for (var language : new String[]{"en_us", "zh_cn"}) {
+            var translations = loadLanguage(language);
+            assertTrue(translations.has("skill.academy.area_teleport_select"));
+            assertFalse(translations.has("skill.academy.area_teleport_setup"));
+            assertFalse(translations.has("skill.academy.area_teleport_start"));
+            for (var action : new String[]{"mark", "run", "setup", "swap", "transform"}) {
+                assertTrue(translations.has("key.academy.area_teleport_select_" + action),
+                        language + " missing unified area teleport binding " + action);
+            }
+        }
+    }
+
+    @Test
+    void knownUnimplementedMilestonesAreExplicitlyMarked() {
+        var keys = new String[]{
+                "skill.academy.atmospheric_dominion.proficiency.3000",
+                "skill.academy.magnet_manipulation.proficiency.3000",
+                "skill.academy.mine_detect.proficiency.3000",
+                "skill.academy.current_recharge.proficiency.3000"
+        };
+        var chinese = loadLanguage("zh_cn");
+        var english = loadLanguage("en_us");
+        for (var key : keys) {
+            assertTrue(chinese.get(key).getAsString().contains("（暂未完成）"), "zh_cn marker missing: " + key);
+            assertTrue(english.get(key).getAsString().contains("(Not yet implemented)"),
+                    "en_us marker missing: " + key);
         }
     }
 
