@@ -26,7 +26,6 @@ import java.util.Objects;
 
 public final class SolarGenBlockEntity extends BlockEntity implements WirelessUser, Container {
     private static final int MAX_ENERGY_STORAGE = 100_000;
-    private static final int GENERATION_RATE = 50;
     private static final int OUTPUT_TRANSFER_RATE = 1_000;
     public final AnimationState foldingState = new AnimationState();
     public final AnimationState unfoldingState = new AnimationState();
@@ -56,7 +55,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
         var hasBrightness = brightness != 0;
         blockEntity.foldingState.animateWhen(!hasBrightness, blockEntity.ticks);
         blockEntity.unfoldingState.animateWhen(hasBrightness, blockEntity.ticks);
-        blockEntity.setEnergyStored(blockEntity.energyStored + brightness * GENERATION_RATE);
+        blockEntity.setEnergyStored(blockEntity.energyStored + GeneratorOutput.solar(brightness));
         if (!level.isClientSide()
                 && EnergyChargeHelper.transferToItem(
                 blockEntity, blockEntity, 0, OUTPUT_TRANSFER_RATE) > 0) {
