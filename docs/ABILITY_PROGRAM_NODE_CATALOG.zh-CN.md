@@ -342,12 +342,12 @@ ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.
 | `target/look_target` | 目标 | 空间移动 | `— → entity:E` | 返回服务端视线实体。 |
 | `logic/space_safety` | 逻辑 | 空间移动通用 | `entity:E,position:WP → result:B` | 精确检测实体包围盒放置到世界坐标后是否位于世界边界内且无碰撞或挤压。 |
 | `action/self_teleport` | 行动 | 自身传送 | `flow:F,destination:WP → flow:F` | “安全传送”；将施术者安全传送至任意距离、任意可用维度中的无碰撞目标，目标区块会按需加载。ID 为兼容旧图保持不变。 |
-| `action/entity_teleport` | 行动 | 快速定位传送 | `flow:F,entity:E,destination:CD,[direction:D] → flow:F` 或 `flow:F,block:BP,destination:CD,[direction:D] → flow:F` | “目标传送”；实体目标允许为施术者且允许进入方块内部；方块目标可覆盖可破坏方块；`target_type=entity/block` 切换来源端口，可选方向同步目标朝向。ID 为兼容旧图保持不变。 |
+| `action/entity_teleport` | 行动 | 快速定位传送 | `flow:F,entity:E,destination:CD,[direction:D] → flow:F` 或 `flow:F,block:BP,destination:CD,[direction:D] → flow:F` | “目标传送”；实体目标允许为施术者且允许进入方块内部；方块目标可覆盖可破坏方块；`target_type=entity/block` 切换来源端口，可选方向同步目标朝向。CP 按实际移动距离分段：≤16 格 ×0.25、≤32 格 ×0.5、>32 格 ×1。ID 为兼容旧图保持不变。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
 | 安全传送 | 距离/维度不限，CP 0 | 距离/维度不限，CP 10 | 距离/维度不限，CP 40 |
-| 目标传送 | 目标/移动距离 8，CP 0 | 目标/移动距离 16，CP 30 | 目标/移动距离 32，CP 120 |
+| 目标传送 | 目标/移动距离 8，CP 0 | 目标/移动距离 64，基础 CP 30 | 目标/移动距离 128，基础 CP 120 |
 
 ## 10. 心理掌握专属节点（55 个，另有入口 1 个）
 

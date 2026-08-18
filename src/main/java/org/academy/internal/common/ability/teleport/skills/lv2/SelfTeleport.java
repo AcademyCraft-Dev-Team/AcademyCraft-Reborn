@@ -4,10 +4,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.BlockPos;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityDimensions;
@@ -36,6 +35,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportSync;
+import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
@@ -55,7 +55,8 @@ import java.util.UUID;
 import java.util.WeakHashMap;
 
 public final class SelfTeleport extends Skill {
-    private static final double MAX_DISTANCE = 32.0;
+    private static final double MAX_DISTANCE = 64.0;
+    private static final double DEFAULT_DISTANCE = 40.0;
     public static InputSystem.@Nullable KeyCombination KEY_START;
     public static InputSystem.@Nullable KeyCombination KEY_END;
     public static Client.@Nullable Config CONFIG;
@@ -71,7 +72,7 @@ public final class SelfTeleport extends Skill {
                 .dependsOn(Skills.THREATENING_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
                 .devCondition(new DevCondition.DependencyCondition(
-                        "Threatening Teleport",
+                        "Dangerous Teleport",
                         "academy:threatening_teleport"
                 ))
         );
@@ -104,7 +105,6 @@ public final class SelfTeleport extends Skill {
         public static void handleTeleport(SelfTeleportPacket packet) {
             var serverPlayer = packet.getPacketListener().getPlayer();
             var skill = Skills.SELF_TELEPORT.get();
-            var maxDistance = skill.hasProficiencyMilestone(serverPlayer, 2) ? 24.0 : MAX_DISTANCE;
             var now = serverPlayer.level().getGameTime();
             var anchor = skill.hasProficiencyMilestone(serverPlayer, 3)
                     ? RETURN_ANCHORS.get(serverPlayer.getUUID()) : null;
@@ -114,7 +114,9 @@ public final class SelfTeleport extends Skill {
                 destination = org.academy.internal.common.ability.teleport.TeleportSafety.findSafe(
                         serverPlayer, serverPlayer.level(), anchor.position);
             } else {
-                var targetCenter = resolveTargetCenter(serverPlayer, packet.getPosition(), maxDistance);
+                var distance = packet.getDistance();
+                if (!Double.isFinite(distance) || distance < 0.0 || distance > MAX_DISTANCE) return;
+                var targetCenter = TeleportTargeting.findSelfTeleportCenter(serverPlayer, distance);
                 if (targetCenter == null) return;
                 var dimensions = serverPlayer.getDimensions(Pose.STANDING);
                 destination = new Vec3(targetCenter.x(), targetCenter.y() - dimensions.height() / 2.0,
@@ -137,35 +139,6 @@ public final class SelfTeleport extends Skill {
                     RETURN_ANCHORS.put(serverPlayer.getUUID(), new ReturnAnchor(origin, now + 60));
                 }
             });
-        }
-
-        private static @Nullable Vec3 resolveTargetCenter(ServerPlayer player,
-                                                          Vec3 requested,
-                                                          double maxDistance) {
-            if (!Double.isFinite(requested.x()) || !Double.isFinite(requested.y())
-                    || !Double.isFinite(requested.z())) {
-                return null;
-            }
-            var eye = player.getEyePosition();
-            var offset = requested.subtract(eye);
-            var requestedDistance = offset.length();
-            if (!Double.isFinite(requestedDistance)) return null;
-            var distance = Math.min(maxDistance, requestedDistance);
-            var direction = requestedDistance < 1.0e-6 ? player.getLookAngle() : offset.scale(1.0 / requestedDistance);
-            var dimensions = player.getDimensions(Pose.STANDING);
-            var halfWidth = dimensions.width() / 2.0;
-            var halfHeight = dimensions.height() / 2.0;
-
-            for (var d = distance; d >= 0.0; d -= 1.0) {
-                var center = eye.add(direction.scale(d));
-                if (!player.level().hasChunkAt(BlockPos.containing(center))) continue;
-                var box = new AABB(
-                        center.x - halfWidth, center.y - halfHeight, center.z - halfWidth,
-                        center.x + halfWidth, center.y + halfHeight, center.z + halfWidth
-                );
-                if (player.level().noCollision(player, box)) return center;
-            }
-            return null;
         }
 
         private record ReturnAnchor(Vec3 position, long expiresAt) {
@@ -201,21 +174,18 @@ public final class SelfTeleport extends Skill {
 
         private static void end() {
             if (currentContext != null) {
-                var finalTargetPos = currentContext.currentRenderPos;
+                var selectedDistance = currentContext.distance;
                 currentContext.cleanup();
                 if (ClientUtil.hasScreen()) return;
-                MisakaNetworkClient.send(new SelfTeleportPacket(finalTargetPos));
+                MisakaNetworkClient.send(new SelfTeleportPacket(selectedDistance));
             }
         }
 
         public static class TeleportRenderContext extends ClientContext {
-            private static final float STEP_HEIGHT = 0.125f;
-            private static final int MAX_UPWARD_CHECKS = 16;
-            private static final float RAY_TRACE_STEP = 1;
             private final LocalPlayer player;
             private final EntityDimensions playerDimensions;
             public Vec3 currentRenderPos;
-            private double distance = 10;
+            private double distance = DEFAULT_DISTANCE;
             private Vec3 visualRenderPos;
             private AABB previewBoxWorld;
 
@@ -230,7 +200,8 @@ public final class SelfTeleport extends Skill {
             private Vec3 calculateIdealTargetCenterPosFromEyes() {
                 var eyePos = player.getEyePosition();
                 var lookVec = player.getViewVector(1.0f);
-                return eyePos.add(lookVec.scale(distance));
+                var target = TeleportTargeting.findSelfTeleportCenter(player, eyePos, lookVec, distance);
+                return target == null ? eyePos : target;
             }
 
             private AABB calculateAABBFromCenter(Vec3 centerPos) {
@@ -247,9 +218,7 @@ public final class SelfTeleport extends Skill {
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
                 distance += event.yOffset;
-                var maxDistance = AbilitySystemClient.getSkillProficiencyMilestone(Skills.SELF_TELEPORT.get()) >= 2
-                        ? 24.0 : MAX_DISTANCE;
-                distance = Math.clamp(distance, 0, maxDistance);
+                distance = Math.clamp(distance, 0, MAX_DISTANCE);
                 event.setCanceled(true);
             }
 
@@ -260,45 +229,12 @@ public final class SelfTeleport extends Skill {
                     return;
                 }
 
-                var level = player.level();
                 var eyePos = player.getEyePosition(event.getPartialTick());
                 var lookVec = player.getViewVector(event.getPartialTick());
 
-                var logicalTargetPos = currentRenderPos;
-                var foundSafeSpotThisFrame = false;
-
-                for (var d = distance; d >= 0; d -= RAY_TRACE_STEP) {
-                    var testCenterPos = eyePos.add(lookVec.scale(d));
-                    var testAABB = calculateAABBFromCenter(testCenterPos);
-
-                    if (level.noCollision(null, testAABB)) {
-                        logicalTargetPos = testCenterPos;
-                        foundSafeSpotThisFrame = true;
-                        break;
-                    }
-                }
-
-                if (!foundSafeSpotThisFrame) {
-                    logicalTargetPos = eyePos.add(lookVec.scale(0.1));
-                }
-
-                var currentAABB = calculateAABBFromCenter(logicalTargetPos);
-                if (!level.noCollision(player, currentAABB)) {
-                    var upwardAdjustedPos = logicalTargetPos;
-                    var foundUpwardSpot = false;
-                    for (var i = 0; i < MAX_UPWARD_CHECKS; i++) {
-                        upwardAdjustedPos = upwardAdjustedPos.add(0, STEP_HEIGHT, 0);
-                        var upwardAABB = calculateAABBFromCenter(upwardAdjustedPos);
-                        if (level.noCollision(player, upwardAABB)) {
-                            logicalTargetPos = upwardAdjustedPos;
-                            foundUpwardSpot = true;
-                            break;
-                        }
-                    }
-                    if (!foundUpwardSpot) {
-                        logicalTargetPos = currentRenderPos;
-                    }
-                }
+                var resolvedTarget = TeleportTargeting.findSelfTeleportCenter(
+                        player, eyePos, lookVec, distance);
+                var logicalTargetPos = resolvedTarget == null ? eyePos : resolvedTarget;
 
                 var factor = ClientUtil.animationFactor(1.25);
                 currentRenderPos = logicalTargetPos;
@@ -348,17 +284,17 @@ public final class SelfTeleport extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class SelfTeleportPacket extends Packet<ServerGamePacketListenerImpl, SelfTeleportPacket> {
-        public static final StreamCodec<ByteBuf, SelfTeleportPacket> CODEC = Vec3.STREAM_CODEC
-                .map(SelfTeleportPacket::new, SelfTeleportPacket::getPosition);
+        public static final StreamCodec<ByteBuf, SelfTeleportPacket> CODEC = ByteBufCodecs.DOUBLE
+                .map(SelfTeleportPacket::new, SelfTeleportPacket::getDistance);
 
-        private final Vec3 position;
+        private final double distance;
 
-        public SelfTeleportPacket(Vec3 position) {
-            this.position = position;
+        public SelfTeleportPacket(double distance) {
+            this.distance = distance;
         }
 
-        public Vec3 getPosition() {
-            return position;
+        public double getDistance() {
+            return distance;
         }
 
         @Override

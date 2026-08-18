@@ -54,7 +54,8 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 public final class FleshRipping extends Skill {
-    private static final double MAX_RANGE = 32.0;
+    private static final double MAX_RANGE = 64.0;
+    private static final int PROFICIENT_LOCK_GRACE_TICKS = 10;
     private static final float BASE_DAMAGE = 12.0f;
     private static final Identifier FLESH_RIPPING_ARMOR_ID = AcademyCraft.academy("flesh_ripping_armor");
 
@@ -132,6 +133,7 @@ public final class FleshRipping extends Skill {
         public static final class RippingContext extends ClientContext {
             private final LocalPlayer player;
             private int targetEntityId = -1;
+            private int lastTargetSeenTick = -PROFICIENT_LOCK_GRACE_TICKS - 1;
 
             private RippingContext(LocalPlayer player) {
                 this.player = player;
@@ -149,11 +151,20 @@ public final class FleshRipping extends Skill {
                 var living = findTarget(player);
                 if (living != null) {
                     targetEntityId = living.getId();
+                    lastTargetSeenTick = player.tickCount;
+                } else if (AbilitySystemClient.getSkillProficiencyMilestone(Skills.FLESH_RIPPING.get()) >= 2
+                        && player.tickCount - lastTargetSeenTick <= PROFICIENT_LOCK_GRACE_TICKS
+                        && player.level().getEntity(targetEntityId) instanceof LivingEntity retained
+                        && retained.isAlive()
+                        && player.distanceToSqr(retained) <= MAX_RANGE * MAX_RANGE) {
+                    living = retained;
+                }
+                if (living != null) {
                     preview = living.getBoundingBox().inflate(0.2);
                 } else {
                     targetEntityId = -1;
                     var point = player.getEyePosition(event.getPartialTick())
-                            .add(player.getViewVector(event.getPartialTick()).scale(range(player)));
+                            .add(player.getViewVector(event.getPartialTick()).scale(MAX_RANGE));
                     preview = new AABB(point.x - 0.5, point.y - 0.5, point.z - 0.5,
                             point.x + 0.5, point.y + 0.5, point.z + 0.5);
                 }
@@ -173,12 +184,7 @@ public final class FleshRipping extends Skill {
             }
 
             private static LivingEntity findTarget(LocalPlayer player) {
-                return TeleportTargeting.findFirstLivingEntity(player, range(player));
-            }
-
-            private static double range(LocalPlayer player) {
-                return AbilitySystemClient.getSkillProficiencyMilestone(Skills.FLESH_RIPPING.get()) >= 2
-                        ? MAX_RANGE * 1.2 : MAX_RANGE;
+                return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
             }
 
             private void cleanup() {
@@ -212,15 +218,14 @@ public final class FleshRipping extends Skill {
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.FLESH_RIPPING.get();
-            var maxRange = skill.hasProficiencyMilestone(player, 2) ? MAX_RANGE * 1.2 : MAX_RANGE;
             if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
                     || target == player || !target.isAlive()
                     || CtaFriendlyFireWhitelist.shouldProtect(player, target)
-                    || player.distanceToSqr(target) > maxRange * maxRange) return;
+                    || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
 
             skill.executeActive(player, (ctx, actualCost) -> {
                 if (!target.isAlive() || target.level() != player.level()
-                        || player.distanceToSqr(target) > maxRange * maxRange) return;
+                        || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
                 var damage = TeleportDamage.fleshRipping(
                         BASE_DAMAGE,
                         target.getMaxHealth(),

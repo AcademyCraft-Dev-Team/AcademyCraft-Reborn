@@ -82,8 +82,6 @@ import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv3.Shackle;
 import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSelect;
-import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSetup;
-import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportStart;
 import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv5.DefensiveTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
@@ -159,8 +157,6 @@ public final class Skills {
     public static final DeferredHolder<Skill, LocationTeleport> LOCATION_TELEPORT = SKILLS.register(SkillNames.LOCATION_TELEPORT, LocationTeleport::new);
     public static final DeferredHolder<Skill, QuickLocationTeleport> QUICK_LOCATION_TELEPORT = SKILLS.register(SkillNames.QUICK_LOCATION_TELEPORT, QuickLocationTeleport::new);
     public static final DeferredHolder<Skill, AreaTeleportSelect> AREA_TELEPORT_SELECT = SKILLS.register(SkillNames.AREA_TELEPORT_SELECT, AreaTeleportSelect::new);
-    public static final DeferredHolder<Skill, AreaTeleportSetup> AREA_TELEPORT_SETUP = SKILLS.register(SkillNames.AREA_TELEPORT_SETUP, AreaTeleportSetup::new);
-    public static final DeferredHolder<Skill, AreaTeleportStart> AREA_TELEPORT_START = SKILLS.register(SkillNames.AREA_TELEPORT_START, AreaTeleportStart::new);
     public static final DeferredHolder<Skill, Flashing> FLASHING = SKILLS.register(SkillNames.FLASHING, Flashing::new);
     public static final DeferredHolder<Skill, DefensiveTeleport> DEFENSIVE_TELEPORT = SKILLS.register(SkillNames.DEFENSIVE_TELEPORT, DefensiveTeleport::new);
     /**

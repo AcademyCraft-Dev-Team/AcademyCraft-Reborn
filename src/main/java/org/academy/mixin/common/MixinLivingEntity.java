@@ -63,7 +63,7 @@ public abstract class MixinLivingEntity {
         if (source.is(DamageTypeTags.IS_FALL)
                 && TimedSkillEffectRuntime.maxValueForTarget(
                 victim.getUUID(),
-                Skills.AREA_TELEPORT_START.get(),
+                Skills.AREA_TELEPORT_SELECT.get(),
                 "fall_protection",
                 level.getGameTime()) > 0.0f) {
             victim.resetFallDistance();

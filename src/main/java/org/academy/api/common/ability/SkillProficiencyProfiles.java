@@ -25,7 +25,7 @@ public final class SkillProficiencyProfiles {
             "auto_cruise_beam_cannon",
             "threatening_teleport", "space_folding_theorem", "self_teleport", "spatial_synergy",
             "piercing_teleportation", "flesh_ripping", "location_teleport", "quick_location_teleport",
-            "area_teleport_select", "area_teleport_setup", "area_teleport_start", "flashing",
+            "area_teleport_select", "flashing",
             "defensive_teleport", "spacial_excision", "disarm", "shackle",
             "darkmatter_shaping", "darkmatter_disassemble", "darkmatter_cut", "darkmatter_radiation",
             "darkmatter_repair", "darkmatter_creation", "darkmatter_six_wings",
@@ -34,8 +34,6 @@ public final class SkillProficiencyProfiles {
             "precision_operation"
     );
     private static final Map<String, String> CUSTOM_PROFILE_REASONS = Map.of(
-            "area_teleport_select", "axis and ray limits are validated by the area transaction",
-            "area_teleport_setup", "transform availability is validated by the area transaction",
             "flow_sense", "range, cadence and synchronization budgets are resolved together",
             "pneumatic_grasp", "continuous costs depend on the selected entity class",
             "radiation_intensify", "mark duration and damage segments are resolved by the mark runtime",
@@ -85,7 +83,7 @@ public final class SkillProficiencyProfiles {
                 "arc_generate", "thunder_lance", "railgun", "ball_lightning", "lightning_nova",
                 "lightning_storm", "thunderclap", "single_high_speed_electron_beam", "scatter_bomb",
                 "jet_strike", "disintegrate", "threatening_teleport", "self_teleport", "piercing_teleportation",
-                "flesh_ripping", "location_teleport", "quick_location_teleport", "area_teleport_start",
+                "flesh_ripping", "location_teleport", "quick_location_teleport", "area_teleport_select",
                 "disarm", "shackle", "darkmatter_shaping", "darkmatter_disassemble", "darkmatter_cut",
                 "mental_intervention", "target_misidentification");
         put(profiles, costs(Map.of(MAINTENANCE, 0.9f, CONTINUOUS, 0.9f)),
