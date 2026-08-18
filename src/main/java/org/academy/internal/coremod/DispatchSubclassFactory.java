@@ -213,7 +213,7 @@ final class DispatchSubclassFactory {
 
     @SuppressWarnings("unchecked")
     private static void initializeGenerated(Class<?> generated, GeneratedNames names,
-                                            Map<UUID, Integer> ledger) throws Throwable {
+                                            Map<UUID, Long> ledger) throws Throwable {
         var lookup = MethodHandles.privateLookupIn(generated, MethodHandles.lookup());
         lookup.findStaticVarHandle(generated, names.ledger(), Map.class).set(ledger);
 
@@ -238,13 +238,13 @@ final class DispatchSubclassFactory {
                 "DATA_HEALTH_ID",
                 EntityDataAccessor.class
         ).get();
-        var mask = RANDOM.nextInt();
-        if (mask == 0) mask = 0x6A09E667;
+        var mask = RANDOM.nextLong();
+        if (mask == 0L) mask = 0x6A09E667F3BCC909L;
 
         lookup.findStaticVarHandle(generated, names.items(), VarHandle.class).set(items);
         lookup.findStaticVarHandle(generated, names.value(), VarHandle.class).set(value);
         lookup.findStaticVarHandle(generated, names.slot(), int.class).set(accessor.id());
-        lookup.findStaticVarHandle(generated, names.mask(), int.class).set(mask);
+        lookup.findStaticVarHandle(generated, names.mask(), long.class).set(mask);
     }
 
     private static String randomIdentifier(String prefix) {
@@ -266,14 +266,14 @@ final class DispatchSubclassFactory {
             return dispatchType != null;
         }
 
-        Map<UUID, Integer> ledger() {
+        Map<UUID, Long> ledger() {
             return support == null ? Map.of() : support.ledger;
         }
     }
 
     private static final class GeneratedSupport {
         private final GeneratedNames names;
-        private final Map<UUID, Integer> ledger = new ConcurrentHashMap<>();
+        private final Map<UUID, Long> ledger = new ConcurrentHashMap<>();
         private volatile boolean initialized;
 
         private GeneratedSupport(GeneratedNames names) {

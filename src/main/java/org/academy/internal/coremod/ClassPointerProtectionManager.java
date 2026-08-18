@@ -183,7 +183,7 @@ public final class ClassPointerProtectionManager {
         private final Class<?> dispatchType;
         private final long originalWord;
         private final long dispatchWord;
-        private final Map<UUID, Integer> ledger;
+        private final Map<UUID, Long> ledger;
         private volatile ProtectionBackend backend;
         private volatile String failureReason;
         private volatile boolean failureLogged;
@@ -191,7 +191,7 @@ public final class ClassPointerProtectionManager {
 
         private ProtectionState(Side side, ProtectionBackend backend, Class<?> originalType,
                                 Class<?> dispatchType, long originalWord, long dispatchWord,
-                                Map<UUID, Integer> ledger, String failureReason) {
+                                Map<UUID, Long> ledger, String failureReason) {
             this.side = side;
             this.backend = backend;
             this.originalType = originalType;

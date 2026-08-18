@@ -105,6 +105,9 @@ class DispatchSubclassFactoryTest {
             assertTrue(field.getName().startsWith("f$"));
         }
         assertEquals(5, dispatchType.getDeclaredFields().length);
+        assertEquals(1, Arrays.stream(dispatchType.getDeclaredFields())
+                .filter(field -> field.getType() == long.class)
+                .count());
         assertTrue(Arrays.stream(dispatchType.getDeclaredMethods())
                 .filter(method -> Modifier.isPrivate(method.getModifiers()))
                 .allMatch(method -> method.getName().startsWith("m$")
