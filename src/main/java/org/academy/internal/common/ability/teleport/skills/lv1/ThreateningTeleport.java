@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -11,6 +12,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
@@ -50,6 +53,7 @@ import java.util.List;
 
 public final class ThreateningTeleport extends Skill {
     static final double MAX_RANGE = 32.0;
+    static final double UNTARGETED_RANGE = 16.0;
     static final float BASE_DAMAGE = 4.0f;
 
     public ThreateningTeleport() {
@@ -62,6 +66,12 @@ public final class ThreateningTeleport extends Skill {
                 .maxStacks(10)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
+    }
+
+    static Vec3 untargetedDestination(Vec3 eyePosition, Vec3 viewDirection) {
+        var direction = viewDirection.normalize();
+        if (direction.lengthSqr() < 1.0e-6) return eyePosition;
+        return eyePosition.add(direction.scale(UNTARGETED_RANGE));
     }
 
     @Override
@@ -108,17 +118,31 @@ public final class ThreateningTeleport extends Skill {
                 return;
             }
             var target = findTarget(player);
-            if (target == null) return;
+            AABB preview;
+            if (target != null) {
+                preview = target.getBoundingBox().inflate(0.2);
+            } else {
+                var point = ThreateningTeleport.untargetedDestination(
+                        player.getEyePosition(event.getPartialTick()),
+                        player.getViewVector(event.getPartialTick())
+                );
+                preview = new AABB(
+                        point.x - 0.5, point.y - 0.5, point.z - 0.5,
+                        point.x + 0.5, point.y + 0.5, point.z + 0.5
+                );
+            }
 
             var camera = minecraft.gameRenderer.mainCamera().position();
-            var bounds = target.getBoundingBox().inflate(0.05);
             var matrices = event.getMatrixStack();
             matrices.pushPose();
             matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
             event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) ->
                     LineBoxRenderer.renderWireframeBox(
-                            snapshot, consumer, bounds,
-                            0.75f, 0.35f, 1.0f, 1.0f
+                            snapshot, consumer, preview,
+                            target != null ? 0.6f : 1.0f,
+                            target != null ? 0.2f : 0.1f,
+                            target != null ? 1.0f : 0.1f,
+                            1.0f
                     ));
             matrices.popPose();
         }
@@ -135,8 +159,7 @@ public final class ThreateningTeleport extends Skill {
             var minecraft = Minecraft.getInstance();
             if (minecraft.player == null) return;
             var target = findTarget(minecraft.player);
-            if (target == null) return;
-            MisakaNetworkClient.send(new CastPacket(target.getId()));
+            MisakaNetworkClient.send(new CastPacket(target == null ? -1 : target.getId()));
         }
 
         private static LivingEntity findTarget(LocalPlayer player) {
@@ -170,16 +193,22 @@ public final class ThreateningTeleport extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.THREATENING_TELEPORT.get();
             var maxRange = skill.hasProficiencyMilestone(player, 2) ? 40.0 : MAX_RANGE;
-            if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
-                    || target == player || !target.isAlive()
-                    || player.distanceToSqr(target) > maxRange * maxRange
-                    || player.getMainHandItem().isEmpty()) {
-                return;
+            LivingEntity target = null;
+            if (packet.getTargetEntityId() >= 0) {
+                if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity living)
+                        || living == player || !living.isAlive()
+                        || player.distanceToSqr(living) > maxRange * maxRange) {
+                    return;
+                }
+                target = living;
             }
+            if (player.getMainHandItem().isEmpty()) return;
+            var lockedTarget = target;
 
             skill.executeActive(player, (ctx, actualCost) -> {
-                if (!target.isAlive() || target.level() != player.level()
-                        || player.distanceToSqr(target) > maxRange * maxRange) {
+                if (lockedTarget != null && (!lockedTarget.isAlive()
+                        || lockedTarget.level() != player.level()
+                        || player.distanceToSqr(lockedTarget) > maxRange * maxRange)) {
                     return;
                 }
                 var mainHand = player.getMainHandItem();
@@ -188,14 +217,19 @@ public final class ThreateningTeleport extends Skill {
                 }
 
                 var teleported = mainHand.copyWithCount(1);
-                if (!player.isCreative()) {
-                    mainHand.shrink(1);
-                    var item = new ItemEntity(player.level(), target.getX(),
-                            target.getY() + target.getBbHeight() * 0.5, target.getZ(), teleported);
+                var destination = lockedTarget == null
+                        ? ThreateningTeleport.untargetedDestination(
+                        player.getEyePosition(), player.getLookAngle())
+                        : new Vec3(lockedTarget.getX(),
+                        lockedTarget.getY() + lockedTarget.getBbHeight() * 0.5, lockedTarget.getZ());
+                if (!player.isCreative() || lockedTarget == null) {
+                    if (!player.isCreative()) mainHand.shrink(1);
+                    var item = new ItemEntity(
+                            player.level(), destination.x, destination.y, destination.z, teleported);
                     item.setDeltaMovement(0.0, 0.0, 0.0);
                     item.setDefaultPickUpDelay();
                     player.level().addFreshEntity(item);
-                    if (ctx.milestone() >= 3) {
+                    if (!player.isCreative() && ctx.milestone() >= 3) {
                         TimedSkillEffectRuntime.schedule(player, 60, () -> {
                             if (!item.isAlive() || item.isRemoved() || item.getItem().isEmpty()) return;
                             var returning = item.getItem().copy();
@@ -206,6 +240,18 @@ public final class ThreateningTeleport extends Skill {
                             }
                         });
                     }
+                }
+
+                if (lockedTarget == null) {
+                    player.level().playSound(
+                            null,
+                            BlockPos.containing(destination),
+                            SoundEvents.THREATENING_TELEPORT.get(),
+                            SoundSource.PLAYERS,
+                            1.0f,
+                            1.0f
+                    );
+                    return;
                 }
 
                 var attackDamage = player.getAttribute(Attributes.ATTACK_DAMAGE);
@@ -221,11 +267,11 @@ public final class ThreateningTeleport extends Skill {
                         SpaceFoldingTheorem.damageMultiplier(player)
                 );
 
-                player.level().playSound(null, target.blockPosition(), SoundEvents.THREATENING_TELEPORT.get(),
+                player.level().playSound(null, lockedTarget.blockPosition(), SoundEvents.THREATENING_TELEPORT.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
-                var wasAlive = target.isAlive();
-                target.hurtServer(player.level(), SkillDamageSource.of(player, skill), damage);
-                if (wasAlive && !target.isAlive()) {
+                var wasAlive = lockedTarget.isAlive();
+                lockedTarget.hurtServer(player.level(), SkillDamageSource.of(player, skill), damage);
+                if (wasAlive && !lockedTarget.isAlive()) {
                     SpaceFoldingTheorem.refundKillCost(player, actualCost);
                 }
             });

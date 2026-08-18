@@ -37,6 +37,18 @@ public final class MentaloutRosterClientState {
         return snapshot;
     }
 
+    public static boolean hasControlledTargets() {
+        return !snapshot.entries().isEmpty();
+    }
+
+    public static boolean isControlledTarget(UUID targetUuid) {
+        if (targetUuid == null) return false;
+        for (var entry : snapshot.entries()) {
+            if (targetUuid.equals(entry.targetUuid())) return true;
+        }
+        return false;
+    }
+
     public static synchronized void setResyncRequester(@Nullable LongConsumer requester) {
         resyncRequester = requester;
         if (requester != null && resyncRequested) sendResyncRequest();

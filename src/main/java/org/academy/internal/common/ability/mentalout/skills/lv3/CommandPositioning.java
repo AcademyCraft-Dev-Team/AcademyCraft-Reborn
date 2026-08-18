@@ -33,6 +33,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.mentalout.MentaloutConfig;
+import org.academy.internal.common.ability.mentalout.MentaloutControlCost;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
@@ -196,9 +197,7 @@ public final class CommandPositioning extends Skill {
             var baseCost = MentaloutConfig.commandPositioningCost(player);
             var cost = 0.0f;
             for (var subject : subjects) {
-                cost += baseCost * (MentalControlRuntime.isBossCost(subject)
-                        ? MentaloutConfig.bossCostMultiplier(player)
-                        : 1.0f);
+                cost += baseCost * MentaloutControlCost.multiplier(player, subject);
             }
             cost = skill.adjustProficiencyCost(
                     player, SkillProficiencyProfile.CostKind.DYNAMIC, cost);

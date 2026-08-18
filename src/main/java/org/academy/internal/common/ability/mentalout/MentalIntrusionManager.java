@@ -227,11 +227,7 @@ public final class MentalIntrusionManager {
                 SkillProficiencyProfile.CostKind.MAINTENANCE,
                 MentaloutConfig.sensoryDistortionCost(player, level)
         );
-        if (session.target instanceof ServerPlayer) {
-            cost *= MentaloutConfig.playerControlCostMultiplier(player);
-        } else if (MentalControlRuntime.isBossCost(session.target)) {
-            cost *= MentaloutConfig.bossCostMultiplier(player);
-        }
+        cost *= MentaloutControlCost.multiplier(player, session.target);
         if (!AbilitySystemServer.getSystem(player).replacePermanentOccupation(
                 player.getUUID(),
                 cost,
