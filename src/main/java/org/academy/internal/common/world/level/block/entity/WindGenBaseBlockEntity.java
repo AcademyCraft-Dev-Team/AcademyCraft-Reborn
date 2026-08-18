@@ -77,7 +77,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
         if (!isMain()) return;
         updateState();
         if (level != null && completeness == Completeness.COMPLETE && topBlockEntity != null && topBlockEntity.hasFan) {
-            setEnergyStorage(energyStored + 10);
+            setEnergyStorage(energyStored + GeneratorOutput.WIND_PER_TICK);
         }
         if (EnergyChargeHelper.transferToItem(this, this, 0, OUTPUT_TRANSFER_RATE) > 0) {
             setChanged();
