@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -16,8 +17,12 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -52,6 +57,9 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class ThreateningTeleport extends Skill {
     static final double MAX_RANGE = 64.0;
@@ -193,6 +201,8 @@ public final class ThreateningTeleport extends Skill {
     }
 
     public static final class Server {
+        private static final Map<UUID, PendingKillDrop> PENDING_KILL_DROPS = new ConcurrentHashMap<>();
+
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
@@ -261,13 +271,24 @@ public final class ThreateningTeleport extends Skill {
                 player.level().playSound(null, lockedTarget.blockPosition(), SoundEvents.THREATENING_TELEPORT.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
                 var wasAlive = lockedTarget.isAlive();
-                lockedTarget.hurtServer(player.level(), SkillDamageSource.of(player, skill), damage);
-                var targetKilled = wasAlive && !lockedTarget.isAlive();
-                if (!player.isCreative() && shouldDropTeleportedItem(true, targetKilled)) {
-                    dropTeleportedItem(
-                            player, destination, teleported,
-                            ctx.milestone() >= 3);
+                PendingKillDrop pendingDrop = null;
+                if (!player.isCreative()) {
+                    pendingDrop = new PendingKillDrop(
+                            player, teleported.copy(), ctx.milestone() >= 3);
+                    PENDING_KILL_DROPS.put(lockedTarget.getUUID(), pendingDrop);
                 }
+                try {
+                    lockedTarget.hurtServer(player.level(), SkillDamageSource.of(player, skill), damage);
+                } finally {
+                    if (pendingDrop != null
+                            && PENDING_KILL_DROPS.remove(lockedTarget.getUUID(), pendingDrop)
+                            && !lockedTarget.isAlive()) {
+                        dropTeleportedItem(
+                                player, lockedTarget.position(), pendingDrop.stack(),
+                                pendingDrop.returnToCaster());
+                    }
+                }
+                var targetKilled = wasAlive && !lockedTarget.isAlive();
                 if (targetKilled) {
                     SpaceFoldingTheorem.refundKillCost(player, actualCost);
                 }
@@ -280,13 +301,10 @@ public final class ThreateningTeleport extends Skill {
                 ItemStack teleported,
                 boolean returnToCaster
         ) {
-            var item = new ItemEntity(
-                    player.level(), destination.x, destination.y, destination.z, teleported.copy());
-            item.setDeltaMovement(0.0, 0.0, 0.0);
-            item.setDefaultPickUpDelay();
-            ItemEntity dropped = item;
-            if (!player.level().addFreshEntity(item)) {
-                dropped = player.drop(teleported.copy(), false);
+            var dropped = spawnDroppedItem(player, destination, teleported);
+            if (dropped == null) {
+                returnToCaster(player, teleported.copy());
+                return;
             }
             if (!returnToCaster || dropped == null) return;
 
@@ -298,11 +316,76 @@ public final class ThreateningTeleport extends Skill {
                 }
                 var returning = returningItem.getItem().copy();
                 returningItem.discard();
-                if (!player.isAlive() || player.hasDisconnected()
-                        || !player.getInventory().add(returning)) {
-                    player.drop(returning, false);
-                }
+                returnToCaster(player, returning);
             });
+        }
+
+        private static ItemEntity spawnDroppedItem(
+                ServerPlayer player,
+                Vec3 destination,
+                ItemStack stack
+        ) {
+            if (stack.isEmpty()) return null;
+            var level = player.level();
+            var spawnPosition = validDropPosition(level, destination)
+                    ? destination
+                    : player.position().add(0.0, 0.5, 0.0);
+            var block = BlockPos.containing(spawnPosition);
+            level.getChunk(block.getX() >> 4, block.getZ() >> 4);
+
+            var item = new ItemEntity(
+                    level, spawnPosition.x, spawnPosition.y, spawnPosition.z, stack.copy());
+            item.setDeltaMovement(0.0, 0.0, 0.0);
+            item.setDefaultPickUpDelay();
+            item.setThrower(player);
+            return level.addFreshEntity(item) ? item : null;
+        }
+
+        private static boolean validDropPosition(ServerLevel level, Vec3 position) {
+            if (position == null
+                    || !Double.isFinite(position.x)
+                    || !Double.isFinite(position.y)
+                    || !Double.isFinite(position.z)) {
+                return false;
+            }
+            var block = BlockPos.containing(position);
+            return block.getY() >= level.getMinY()
+                    && block.getY() < level.getMaxY()
+                    && level.getWorldBorder().isWithinBounds(block);
+        }
+
+        private static void returnToCaster(ServerPlayer player, ItemStack stack) {
+            if (stack.isEmpty()) return;
+            if (player.isAlive() && !player.hasDisconnected()
+                    && player.getInventory().add(stack)) {
+                return;
+            }
+            var fallback = player.drop(stack, false);
+            if (fallback == null && !stack.isEmpty()) {
+                player.getInventory().placeItemBackInInventory(stack);
+            }
+        }
+
+        private record PendingKillDrop(
+                ServerPlayer player,
+                ItemStack stack,
+                boolean returnToCaster
+        ) {
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
+        public static void onLivingDrops(LivingDropsEvent event) {
+            var pending = Server.PENDING_KILL_DROPS.remove(event.getEntity().getUUID());
+            if (pending == null) return;
+            Server.dropTeleportedItem(
+                    pending.player(), event.getEntity().position(), pending.stack(),
+                    pending.returnToCaster());
         }
     }
 
