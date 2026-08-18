@@ -15,7 +15,7 @@ import org.academy.internal.client.app.music.netease.NeteaseMusicService
 import org.academy.internal.client.app.music.qq.QqCredentialManager
 import org.academy.internal.client.app.music.qq.QqLoginService
 import org.academy.internal.client.app.music.qq.QqMusicService
-import org.academy.internal.client.app.music.qq.QqOggCache
+import org.academy.internal.client.app.music.qq.QqAudioCache
 import org.academy.internal.common.network.MusicSyncPackets
 import org.misaka.MisakaNetworkClient
 import org.misaka.api.common.network.annotation.SubscribePacket
@@ -331,7 +331,7 @@ object OnlineMusicManager {
     }
 
     private fun cache(provider: Provider, id: String): CompletableFuture<ByteBuffer> = when (provider) {
-        Provider.QQ -> QqOggCache.ensureCachedAsync(id)
+        Provider.QQ -> QqAudioCache.ensureCachedAsync(id)
         Provider.NETEASE -> NeteaseAudioCache.ensureCachedAsync(id)
     }
 
