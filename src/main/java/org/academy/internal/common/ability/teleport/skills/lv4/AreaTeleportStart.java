@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.teleport.skills.lv4;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -26,20 +25,6 @@ import net.minecraft.world.ticks.TickPriority;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraft;
-import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftConfig;
-import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.KeyBindingConfig;
-import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.resources.R;
-import org.academy.api.client.util.ClientUtil;
-import org.academy.api.common.ability.AbilityLevel;
-import org.academy.api.common.ability.DevCondition;
-import org.academy.api.common.ability.Skill;
-import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
@@ -49,8 +34,6 @@ import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.mixin.common.LevelTicksAccessor;
-import org.misaka.MisakaNetworkClient;
-import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
@@ -61,67 +44,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-public final class AreaTeleportStart extends Skill {
+public final class AreaTeleportStart {
     private static final int BLOCK_FLAGS = Block.UPDATE_CLIENTS;
 
-    public AreaTeleportStart() {
-        super(Builder.of(AbilityCategories.TELEPORT.get())
-                .level(AbilityLevel.LEVEL4)
-                .energyCost(60_000)
-                .cpCost(50)
-                .iterationTicks(20)
-                .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.AREA_TELEPORT_SETUP)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
-                .devCondition(new DevCondition.DependencyCondition("Area Teleport Setup", "academy:area_teleport_setup")));
-    }
-
-    @Override
-    public void initClient() {
-        var key = getKey();
-        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_RUN, Client.CONFIG.getKeyBinding(Client.KEY_NAME_RUN,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
-                        InputConstants.PRESS, InputConstants.MOD_SHIFT)), ctx -> Client.run());
-    }
-
-    @Override
-    public void initServer(MinecraftServerContext context) {
-        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    public static final class Client {
-        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
-                AbilityCategories.TELEPORT.get(), new AbilitySystemClient.SkillInfo(
-                        Skills.AREA_TELEPORT_START.get(), List.of(AreaTeleportSetup.Client.SKILL_INFO),
-                        R.textures.area_teleport_start_icon, 146, 112));
-        public static final String KEY_NAME_RUN = SkillNames.AREA_TELEPORT_START + "_run";
-        public static Config CONFIG = new Config();
-
-        private static void run() {
-            if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_START.get())) return;
-            MisakaNetworkClient.send(RunPacket.INSTANCE);
-        }
-
-        public static class Config extends KeyBindingConfig {
-            public static final class Action implements TypeHandler<Config> {
-                public static final TypeHandler<Config> INSTANCE = new Action();
-
-                private Action() {
-                }
-
-                @Override
-                public Config getDefault() {
-                    return new Config();
-                }
-
-                @Override
-                public Class<Config> getTypeClass() {
-                    return Config.class;
-                }
-            }
-        }
+    private AreaTeleportStart() {
     }
 
     public static final class Server {
@@ -133,22 +59,21 @@ public final class AreaTeleportStart extends Skill {
             var policy = ProficiencyPolicy.server(player);
             var transform = AreaTeleportState.transform(player.getUUID());
             var swapSelected = AreaTeleportState.swap(player.getUUID());
-            var setupMilestone = Skills.AREA_TELEPORT_SETUP.get()
-                    .getEffectiveProficiencyMilestone(player);
+            var skill = Skills.AREA_TELEPORT_SELECT.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
             var transformed = transform != AreaTeleportState.Transform.IDENTITY;
             var mirrored = transform == AreaTeleportState.Transform.MIRROR_X
                     || transform == AreaTeleportState.Transform.MIRROR_Z;
             if (transformed && (!policy.allowAreaTeleportTransforms()
-                    || setupMilestone < 2 || mirrored && setupMilestone < 3)
+                    || milestone < 2 || mirrored && milestone < 3)
                     || swapSelected && (!policy.allowAreaTeleportSwap()
-                    || !Skills.AREA_TELEPORT_START.get().hasProficiencyMilestone(player, 3))) {
+                    || milestone < 3)) {
                 return;
             }
             var swap = swapSelected
-                    && Skills.AREA_TELEPORT_START.get().hasProficiencyMilestone(player, 3)
+                    && milestone >= 3
                     && policy.allowAreaTeleportSwap();
-            var selectMilestone = Skills.AREA_TELEPORT_SELECT.get().getEffectiveProficiencyMilestone(player);
-            var designedAxis = selectMilestone >= 3 ? 40 : selectMilestone >= 2 ? 36 : 32;
+            var designedAxis = milestone >= 3 ? 40 : milestone >= 2 ? 36 : 32;
             var maxAxis = Math.min(designedAxis, policy.maxAreaTeleportAxis());
             if (source == null || destination == null || !source.withinLimit(maxAxis) || !destination.withinLimit(maxAxis)
                     || source.volume() != destination.volume()
@@ -157,7 +82,7 @@ public final class AreaTeleportStart extends Skill {
                     || !(player.level() instanceof ServerLevel level)
                     || !validate(level, player, source, destination, transform, swap)) return;
 
-            Skills.AREA_TELEPORT_START.get().executeActive(player, (ctx, actualCost) -> {
+            skill.executeAreaTeleport(player, (ctx, actualCost) -> {
                 if (move(level, player, source, destination, transform, swap,
                         ctx.milestone() >= 2)) {
                     AreaTeleportState.clear(player.getUUID());
@@ -637,7 +562,7 @@ public final class AreaTeleportStart extends Skill {
                 TimedSkillEffectRuntime.put(
                         player,
                         entity.getUUID(),
-                        Skills.AREA_TELEPORT_START.get(),
+                        Skills.AREA_TELEPORT_SELECT.get(),
                         "fall_protection",
                         40,
                         1.0f

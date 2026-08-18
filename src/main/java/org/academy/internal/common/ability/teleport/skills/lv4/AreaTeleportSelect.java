@@ -47,14 +47,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class AreaTeleportSelect extends Skill {
-    static final double PICK_REACH = 96.0;
+    private static final double BASE_PICK_REACH = 80.0;
+    private static final double PROFICIENT_PICK_REACH = BASE_PICK_REACH * 1.2;
 
     public AreaTeleportSelect() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
-                .iterationTicks(40)
+                .cpCost(50)
+                .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.LOCATION_TELEPORT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
@@ -73,11 +75,37 @@ public final class AreaTeleportSelect extends Skill {
                 Client.KEY_NAME_MARK,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y, InputConstants.PRESS, 0)
         ), ctx -> Client.mark());
+        InputSystem.addKeyBinding(Client.KEY_NAME_SETUP, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_SETUP,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
+                        InputConstants.PRESS, InputConstants.MOD_ALT)
+        ), ctx -> Client.setup());
+        InputSystem.addKeyBinding(Client.KEY_NAME_TRANSFORM, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_TRANSFORM,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
+                        InputConstants.PRESS, InputConstants.MOD_SHIFT | InputConstants.MOD_ALT)
+        ), ctx -> Client.transform());
+        InputSystem.addKeyBinding(Client.KEY_NAME_SWAP, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_SWAP,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
+                        InputConstants.PRESS, InputConstants.MOD_CONTROL | InputConstants.MOD_ALT)
+        ), ctx -> Client.toggleSwap());
+        InputSystem.addKeyBinding(Client.KEY_NAME_RUN, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_RUN,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
+                        InputConstants.PRESS, InputConstants.MOD_SHIFT)
+        ), ctx -> Client.run());
     }
 
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(AreaTeleportSetup.Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(AreaTeleportStart.Server.class);
+    }
+
+    public boolean executeAreaTeleport(ServerPlayer player, SkillAction action) {
+        return executeActive(player, action);
     }
 
     public static final class Client {
@@ -88,12 +116,36 @@ public final class AreaTeleportSelect extends Skill {
                         R.textures.area_teleport_select_icon, 146, 60)
         );
         public static final String KEY_NAME_MARK = SkillNames.AREA_TELEPORT_SELECT + "_mark";
+        public static final String KEY_NAME_SETUP = SkillNames.AREA_TELEPORT_SELECT + "_setup";
+        public static final String KEY_NAME_TRANSFORM = SkillNames.AREA_TELEPORT_SELECT + "_transform";
+        public static final String KEY_NAME_SWAP = SkillNames.AREA_TELEPORT_SELECT + "_swap";
+        public static final String KEY_NAME_RUN = SkillNames.AREA_TELEPORT_SELECT + "_run";
         public static Config CONFIG = new Config();
         private static List<Preview> previews = List.of();
 
         private static void mark() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SELECT.get())) return;
             MisakaNetworkClient.send(MarkPacket.INSTANCE);
+        }
+
+        private static void setup() {
+            if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SELECT.get())) return;
+            MisakaNetworkClient.send(AreaTeleportSetup.MarkPacket.MARK);
+        }
+
+        private static void toggleSwap() {
+            if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SELECT.get())) return;
+            MisakaNetworkClient.send(AreaTeleportSetup.MarkPacket.TOGGLE_SWAP);
+        }
+
+        private static void transform() {
+            if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SELECT.get())) return;
+            MisakaNetworkClient.send(AreaTeleportSetup.MarkPacket.TRANSFORM);
+        }
+
+        private static void run() {
+            if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.AREA_TELEPORT_SELECT.get())) return;
+            MisakaNetworkClient.send(AreaTeleportStart.RunPacket.INSTANCE);
         }
 
         @SubscribePacket
@@ -172,7 +224,9 @@ public final class AreaTeleportSelect extends Skill {
         }
 
         static BlockPos pickBlock(ServerPlayer player) {
-            var hit = player.pick(PICK_REACH, 1.0f, false);
+            var reach = Skills.AREA_TELEPORT_SELECT.get().hasProficiencyMilestone(player, 1)
+                    ? PROFICIENT_PICK_REACH : BASE_PICK_REACH;
+            var hit = player.pick(reach, 1.0f, false);
             return hit instanceof BlockHitResult blockHit ? blockHit.getBlockPos().immutable() : null;
         }
 

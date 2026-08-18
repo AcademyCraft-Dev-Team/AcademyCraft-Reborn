@@ -131,9 +131,7 @@ academy:target_misidentification=116.0,17.5
 
 [academy:teleport]
 academy:absolute_self_control=180.0,115.0
-academy:area_teleport_select=130.5,112.5
-academy:area_teleport_setup=189.5,113.5
-academy:area_teleport_start=173.0,83.0
+academy:area_teleport_select=173.0,83.0
 academy:brain_domain_development=13.5,114.5
 academy:complete_consciousness_analysis=136.5,114.5
 academy:defensive_teleport=231.5,20.5

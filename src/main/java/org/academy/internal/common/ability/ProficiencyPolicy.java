@@ -48,8 +48,8 @@ public final class ProficiencyPolicy {
         if (!policy.enabled()) return true;
         return switch (skill.getKey().getPath()) {
             case SkillNames.MINING_BEAM -> !policy.allowMiningBeamSmelting();
-            case SkillNames.AREA_TELEPORT_SETUP -> !policy.allowAreaTeleportTransforms();
-            case SkillNames.AREA_TELEPORT_START -> !policy.allowAreaTeleportSwap();
+            case SkillNames.AREA_TELEPORT_SELECT -> !policy.allowAreaTeleportTransforms()
+                    || !policy.allowAreaTeleportSwap();
             case SkillNames.MENTAL_TAKEOVER -> !policy.allowMentalTakeoverExtendedControls();
             default -> false;
         };

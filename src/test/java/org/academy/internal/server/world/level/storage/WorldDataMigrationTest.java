@@ -71,8 +71,74 @@ class WorldDataMigrationTest {
         assertEquals("academy:current_recharge", Player.canonicalizeSkillId("academy:pulse_charge"));
         assertEquals("academy:vector_deviation", Player.canonicalizeSkillId("academy:vector_reduction"));
         assertEquals("academy:piercing_teleportation", Player.canonicalizeSkillId("academy:cut_through"));
+        assertEquals("academy:area_teleport_select",
+                Player.canonicalizeSkillId("academy:area_teleport_setup"));
+        assertEquals("academy:area_teleport_select",
+                Player.canonicalizeSkillId("academy:area_teleport_start"));
         assertEquals("academy:parallel_thought_computation",
                 Player.canonicalizeSkillId("academy:level0_passive_lv3"));
+    }
+
+    @Test
+    void mergesLegacyAreaTeleportSkillsAndOccupations() {
+        var json = """
+                {
+                  "players": {
+                    "d96a465b-b8ca-4f14-a047-65289d9ae91c": {
+                      "skillData": {
+                        "academy:area_teleport_select": {"proficiency": 1200.0, "enabled": false},
+                        "academy:area_teleport_setup": {"proficiency": 2100.0, "enabled": false},
+                        "academy:area_teleport_start": {"proficiency": 1800.0, "enabled": true}
+                      },
+                      "retainedSkillProficiencies": {
+                        "academy:area_teleport_select": 900.0,
+                        "academy:area_teleport_setup": 2300.0,
+                        "academy:area_teleport_start": 1700.0
+                      },
+                      "cpOccupations": [
+                        {
+                          "amount": 10.0,
+                          "iterationTicks": 20,
+                          "skillId": "academy:area_teleport_setup",
+                          "isPermanent": false,
+                          "stackGroup": "academy:area_teleport_setup"
+                        },
+                        {
+                          "amount": 12.0,
+                          "iterationTicks": 30,
+                          "skillId": "academy:area_teleport_start",
+                          "isPermanent": false,
+                          "stackGroup": "academy:area_teleport_start"
+                        }
+                      ]
+                    }
+                  }
+                }
+                """;
+
+        var worldData = WorldData.createGson().fromJson(json, WorldData.class);
+        assertTrue(worldData.migrateLegacyData());
+
+        var player = worldData.getPlayers().get(PLAYER_ID);
+        assertNotNull(player);
+        var skills = player.getSkillDataMap();
+        assertEquals(1, skills.size());
+        assertFalse(skills.containsKey("academy:area_teleport_setup"));
+        assertFalse(skills.containsKey("academy:area_teleport_start"));
+        var merged = skills.get("academy:area_teleport_select");
+        assertNotNull(merged);
+        assertEquals(2100.0f, merged.getProficiency());
+        assertTrue(merged.isEnabled());
+
+        assertEquals(1, player.getRetainedSkillProficiencies().size());
+        assertEquals(2300.0f,
+                player.getRetainedSkillProficiencies().get("academy:area_teleport_select"));
+        assertEquals(2, player.getCpOccupations().size());
+        for (var occupation : player.getCpOccupations()) {
+            assertEquals("academy:area_teleport_select", occupation.getSkillId());
+            assertEquals("academy:area_teleport_select", occupation.getStackGroup());
+        }
+        assertTrue(player.isDirty());
     }
 
     @Test

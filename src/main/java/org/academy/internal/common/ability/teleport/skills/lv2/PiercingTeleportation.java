@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
@@ -37,7 +36,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportSync;
-import org.academy.internal.common.ability.teleport.skills.lv2.SelfTeleport;
+import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -51,13 +50,13 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import net.minecraft.util.Mth;
 
 /**
  * The 26.2 target for the reference Penetrate Teleport skill.
  */
 public final class PiercingTeleportation extends Skill {
     private static final double MAX_DISTANCE = 64.0;
+    private static final double DEFAULT_DISTANCE = 40.0;
 
     public PiercingTeleportation() {
         super(Builder
@@ -125,10 +124,11 @@ public final class PiercingTeleportation extends Skill {
             var context = currentContext;
             if (context == null) return;
             var distance = context.distance;
+            var useDefaultTarget = context.useDefaultTarget;
             var valid = context.validDestination;
             context.cleanup();
             if (!ClientUtil.hasScreen() && valid) {
-                MisakaNetworkClient.send(new TeleportPacket(distance));
+                MisakaNetworkClient.send(new TeleportPacket(distance, useDefaultTarget));
                 var player = Minecraft.getInstance().player;
                 if (player != null) {
                     DistortionVfx.INSTANCE.trigger(
@@ -142,7 +142,8 @@ public final class PiercingTeleportation extends Skill {
 
         public static final class PreviewContext extends ClientContext {
             private final LocalPlayer player;
-            private double distance = 10.0;
+            private double distance = DEFAULT_DISTANCE;
+            private boolean useDefaultTarget = true;
             private boolean validDestination;
 
             private PreviewContext(LocalPlayer player) {
@@ -151,9 +152,18 @@ public final class PiercingTeleportation extends Skill {
 
             @SubscribeEvent
             public void onScroll(MouseScrollEvent event) {
-                var maximum = AbilitySystemClient.getSkillProficiencyMilestone(Skills.PIERCING_TELEPORTATION.get()) >= 2
-                        ? 42.0 : MAX_DISTANCE;
-                distance = Math.clamp(distance + event.yOffset, 0.0, maximum);
+                var defaultDestinationDistance = Double.NaN;
+                if (useDefaultTarget) {
+                    var eyePosition = player.getEyePosition();
+                    var defaultCenter = TeleportTargeting.findDefaultPiercingTeleportCenter(
+                            player, eyePosition, player.getLookAngle(), DEFAULT_DISTANCE);
+                    if (defaultCenter != null) {
+                        defaultDestinationDistance = eyePosition.distanceTo(defaultCenter);
+                    }
+                }
+                distance = resolveScrolledDistance(
+                        distance, defaultDestinationDistance, useDefaultTarget, event.yOffset);
+                useDefaultTarget = false;
                 event.setCanceled(true);
             }
 
@@ -164,8 +174,16 @@ public final class PiercingTeleportation extends Skill {
                     cleanup();
                     return;
                 }
-                var center = player.getEyePosition(event.getPartialTick())
-                        .add(player.getViewVector(event.getPartialTick()).scale(distance));
+                var eyePosition = player.getEyePosition(event.getPartialTick());
+                var viewDirection = player.getViewVector(event.getPartialTick());
+                var resolvedCenter = useDefaultTarget
+                        ? TeleportTargeting.findDefaultPiercingTeleportCenter(
+                        player, eyePosition, viewDirection, distance)
+                        : TeleportTargeting.findPiercingTeleportCenter(
+                        player, eyePosition, viewDirection, distance);
+                var center = resolvedCenter == null
+                        ? eyePosition.add(viewDirection.scale(distance))
+                        : resolvedCenter;
                 var dimensions = player.getDimensions(Pose.STANDING);
                 var halfWidth = dimensions.width() / 2.0;
                 var halfHeight = dimensions.height() / 2.0;
@@ -173,8 +191,8 @@ public final class PiercingTeleportation extends Skill {
                         center.x - halfWidth, center.y - halfHeight, center.z - halfWidth,
                         center.x + halfWidth, center.y + halfHeight, center.z + halfWidth
                 );
-                validDestination = player.level().hasChunkAt(BlockPos.containing(center));
-                var safeDestination = validDestination && player.level().noCollision(player, preview);
+                validDestination = resolvedCenter != null;
+                var safeDestination = validDestination;
 
                 var minecraft = Minecraft.getInstance();
                 var renderType = Render.RenderTypes.MINE_DETECT_LINES;
@@ -217,17 +235,30 @@ public final class PiercingTeleportation extends Skill {
         }
     }
 
+    static double resolveScrolledDistance(
+            double currentDistance,
+            double defaultDestinationDistance,
+            boolean useDefaultTarget,
+            double scrollOffset
+    ) {
+        var baseDistance = useDefaultTarget && Double.isFinite(defaultDestinationDistance)
+                ? defaultDestinationDistance
+                : currentDistance;
+        return Math.clamp(baseDistance + scrollOffset, 0.0, MAX_DISTANCE);
+    }
+
     public static final class Server {
         @SubscribePacket
         public static void handle(TeleportPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var distance = packet.getDistance();
             var skill = Skills.PIERCING_TELEPORTATION.get();
-            var maximum = skill.hasProficiencyMilestone(player, 2) ? 42.0 : MAX_DISTANCE;
-            if (!Double.isFinite(distance) || distance < 0.0 || distance > maximum) return;
+            if (!Double.isFinite(distance) || distance < 0.0 || distance > MAX_DISTANCE) return;
 
-            var center = player.getEyePosition().add(player.getLookAngle().normalize().scale(distance));
-            if (!player.level().hasChunkAt(BlockPos.containing(center))) return;
+            var center = packet.useDefaultTarget
+                    ? TeleportTargeting.findDefaultPiercingTeleportCenter(player, distance)
+                    : TeleportTargeting.findPiercingTeleportCenter(player, distance);
+            if (center == null) return;
             var dimensions = player.getDimensions(Pose.STANDING);
             skill.executeActive(player, (ctx, actualCost) -> {
                 var previousMovement = player.getDeltaMovement();
@@ -255,16 +286,27 @@ public final class PiercingTeleportation extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class TeleportPacket extends Packet<ServerGamePacketListenerImpl, TeleportPacket> {
-        public static final StreamCodec<ByteBuf, TeleportPacket> CODEC = ByteBufCodecs.DOUBLE
-                .map(TeleportPacket::new, TeleportPacket::getDistance);
+        public static final StreamCodec<ByteBuf, TeleportPacket> CODEC = StreamCodec.composite(
+                ByteBufCodecs.DOUBLE,
+                TeleportPacket::getDistance,
+                ByteBufCodecs.BOOL,
+                TeleportPacket::useDefaultTarget,
+                TeleportPacket::new
+        );
         private final double distance;
+        private final boolean useDefaultTarget;
 
-        public TeleportPacket(double distance) {
+        public TeleportPacket(double distance, boolean useDefaultTarget) {
             this.distance = distance;
+            this.useDefaultTarget = useDefaultTarget;
         }
 
         public double getDistance() {
             return distance;
+        }
+
+        public boolean useDefaultTarget() {
+            return useDefaultTarget;
         }
 
         @Override

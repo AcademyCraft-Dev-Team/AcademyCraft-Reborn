@@ -1,6 +1,6 @@
 # 技能实现与调控总表
 
-本文档由当前 `Skills` 注册表、全技能效果总表和前置关系清单汇总，共 94 个已注册技能。运行 `powershell -NoProfile -ExecutionPolicy Bypass -File tools/docs/sync_skill_control_matrix.ps1` 可在基础文档变更后重新生成本表。按键是源码默认值或“见源码”提示；玩家实时覆盖值以 `config/academy-client.json` 为准。
+本文档由当前 `Skills` 注册表、全技能效果总表和前置关系清单汇总，共 92 个已注册技能。运行 `powershell -NoProfile -ExecutionPolicy Bypass -File tools/docs/sync_skill_control_matrix.ps1` 可在基础文档变更后重新生成本表。按键是源码默认值或“见源码”提示；玩家实时覆盖值以 `config/academy-client.json` 为准。
 
 ## 标记说明
 
@@ -96,22 +96,20 @@
 
 | 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `threatening_teleport` 威胁传送 | 现行 | L1 / 5k / 10 + 1 个主手物品 | 将 1 个主手物品传入 32 格内目标，伤害 `(4+武器攻击加成)AD`，再受空间折叠倍率影响。 | `Alt+鼠标左键↓` | 无 | `ThreateningTeleport` |
+| `threatening_teleport` 危险传送 | 现行 | L1 / 5k / 10 + 1 个主手物品 | 将 1 个主手物品传入 64 格内目标，伤害 `(4+武器攻击加成)AD`；空放时物品在前方 64 格掉落，击杀时随死亡掉落返还。 | `Alt+鼠标左键↓` | 无 | `ThreateningTeleport` |
 | `space_folding_theorem` 空间折叠理论 | 现行 | L1 / 5k / 0 | 被动：适用传送伤害 ×1.25；熟练度档位提高到 1.30/1.35/1.40，满熟练度击杀可返还 20% 实际施放 CP（60 tick 冷却）。 | 无 | `academy:threatening_teleport` | `SpaceFoldingTheorem` |
-| `self_teleport` 自身传送 | 现行 | L2 / 10k / 去程 10；返程 5 | 按住预览 32 格内安全落点，松开传送；可返回上次起点。 | `R↓ / R↑` | `academy:threatening_teleport` | `SelfTeleport` |
+| `self_teleport` 自我传送 | 现行 | L2 / 10k / 去程 10；返程 5 | 默认 40 格、最大 64 格，选择首个方块阻挡前或更近的安全落点；可返回上次起点。 | `R↓` + 滚轮 / `R↑` | `academy:threatening_teleport` | `SelfTeleport` |
 | `spatial_synergy` 空间协同 | 现行 | L2 / 10k / 维持 20；每名被携带玩家 10 | 自我/穿透/定位传送时携带半径 4 内同队玩家。 | `X↓` | `academy:self_teleport` | `SpatialSynergy` |
-| `piercing_teleportation` 穿透传送 | 现行 | L2 / 10k / 15 | 在 64 格内选择安全落点，可穿过中间方块。 | `Alt+R↓ / Alt+R↑` | `academy:self_teleport` | `PiercingTeleportation` |
+| `piercing_teleportation` 穿透传送 | 现行 | L2 / 10k / 15 | 默认显示 40 格内第一处阻挡后的安全落点；滚轮从显示位置切换为 64 格内自由调距，可选择未穿墙落点。 | `Alt+R↓` + 滚轮 / `Alt+R↑` | `academy:self_teleport` | `PiercingTeleportation` |
 | `disarm` 缴械传送 | 现行 | L2 / 10k / 单手 20；双手 40 | 16 格内缴械目标并造成 1 点技能伤害；高熟练度可同时取走双手物品。 | `Alt+D↓` | `academy:self_teleport` | `Disarm` |
-| `flesh_ripping` 肉体撕裂 | 现行 | L3 / 30k / 20 | 锁定 32 格内目标，造成 `(12A+5%Hmax)D`，再受空间折叠倍率影响。 | `Alt+鼠标右键↓ / Alt+鼠标右键↑` | `academy:piercing_teleportation` | `FleshRipping` |
+| `flesh_ripping` 肌体撕裂 | 现行 | L3 / 30k / 20 | 锁定 64 格内目标，造成 `(12A+5%Hmax)D`，再受空间折叠倍率影响。 | `Alt+鼠标右键↓ / Alt+鼠标右键↑` | `academy:piercing_teleportation` | `FleshRipping` |
 | `shackle` 禁锢传送 | 现行 | L3 / 30k / 30 | 禁锢 32 格内目标 160 tick 并造成 3 点技能伤害；高熟练度非玩家目标持续 200 tick。 | `Alt+Shift+S↓` | `academy:self_teleport` | `Shackle` |
 | `location_teleport` 位置传送 | 现行 | L3 / 30k / 去程 40；返程 20 | 保存最多 32 个命名位置并跨维度传送；可返回上次起点。 | `L↓` | `academy:piercing_teleportation` | `LocationTeleport` |
 | `quick_location_teleport` 快速位置传送 | 现行 | L4 / 60k / 30 | 将准星 32 格内实体或自身送往当前已保存位置。 | `C↓` | `academy:location_teleport` | `QuickLocationTeleport` |
-| `area_teleport_select` 区域传送·选择 | 现行 | L4 / 60k / 0 | 96 格服务端射线选择源区域两角，每轴最多 32 格。 | `U↓` | `academy:location_teleport` | `AreaTeleportSelect` |
-| `area_teleport_setup` 区域传送·设置 | 现行 | L4 / 60k / 0 | 为已选区域设置同尺寸目的锚点，可切换交换模式。 | `Alt+U↓` | `academy:area_teleport_select` | `AreaTeleportSetup` |
-| `area_teleport_start` 区域传送·启动 | 现行 | L4 / 60k / 50 | 事务式搬移最多 `32³` 个方块、方块实体和非玩家实体；失败回滚。 | `Shift+U↓` | `academy:area_teleport_setup` | `AreaTeleportStart` |
+| `area_teleport_select` 区域传送 | 现行 | L4 / 60k / 50 | 80 格服务端射线选择源区与目标，每轴基础上限 32 格；事务搬移方块、方块实体和非玩家实体，失败回滚。 | `Y↓` 标角；`Alt+Y↓` 设目标；`Shift+Y↓` 启动；高熟练度 `Shift+Alt+Y↓` 变换、`Ctrl+Alt+Y↓` 交换 | `academy:location_teleport` | `AreaTeleportSelect` + 动作处理类 |
 | `flashing` 高速闪现 | 现行 | L5 / 100k / 维持 50；每次 5 | 启用后沿移动方向安全闪现 8 格，客户端每 6 tick 可重复。 | `H↓` | `academy:location_teleport` | `Flashing` |
 | `defensive_teleport` 防御传送 | 现行 | L5 / 100k / 每次 20 | 按住框选前方 5×5×5 区域，松开后把其中敌对生物/投射物传送到位置传送当前坐标。 | `Alt+G↑` | `academy:quick_location_teleport` | `DefensiveTeleport` |
-| `spacial_excision` 空间切除 | 现行 | L5 / 100k / `最大CP`；1000 熟练度后 `0.9×最大CP` | 蓄力 40 tick 后每 10 tick 造成 `20D` 并切除获准方块；半径从 2 按每 tick +0.05 增长，最多持续 200 tick。 | `Alt+Shift+Ctrl+O↓` | `academy:area_teleport_start` | `SpacialExcision` |
+| `spacial_excision` 空间切除 | 现行 | L5 / 100k / `最大CP`；1000 熟练度后 `0.9×最大CP` | 蓄力 40 tick 后每 10 tick 造成 `20D` 并切除获准方块；半径从 2 按每 tick +0.05 增长，最多持续 200 tick。 | `Alt+Shift+Ctrl+O↓` | `academy:area_teleport_select` | `SpacialExcision` |
 
 ## Darkmatter 未元物质
 

@@ -1,6 +1,6 @@
 # 能力技能前置关系清单
 
-本清单按当前源码中的 `Skill.Builder.dependsOn(...)` 整理，共 94 个技能，其中 86 个技能具有直接前置。
+本清单按当前源码中的 `Skill.Builder.dependsOn(...)` 整理，共 92 个技能，其中 84 个技能具有直接前置。
 
 - “等级”是技能的推荐能力等级，不是熟练度推导出的技能效果等级。
 - 表中只列直接前置；学习时会通过前置技能继续形成完整依赖链。
@@ -46,21 +46,19 @@
 | 等级 | 技能 | 直接前置 |
 |---:|---|---|
 | 1 | 空间折叠理论 (`academy:space_folding_theorem`) | `academy:threatening_teleport` |
-| 1 | 威胁传送 (`academy:threatening_teleport`) | 无 |
+| 1 | 危险传送 (`academy:threatening_teleport`) | 无 |
 | 2 | 穿透传送 (`academy:piercing_teleportation`) | `academy:self_teleport` |
 | 2 | 缴械传送 (`academy:disarm`) | `academy:self_teleport` |
-| 2 | 自身传送 (`academy:self_teleport`) | `academy:threatening_teleport` |
+| 2 | 自我传送 (`academy:self_teleport`) | `academy:threatening_teleport` |
 | 2 | 空间协同 (`academy:spatial_synergy`) | `academy:self_teleport` |
 | 3 | 肉体撕裂 (`academy:flesh_ripping`) | `academy:piercing_teleportation` |
 | 3 | 位置传送 (`academy:location_teleport`) | `academy:piercing_teleportation` |
 | 3 | 禁锢传送 (`academy:shackle`) | `academy:self_teleport` |
-| 4 | 区域传送·选择 (`academy:area_teleport_select`) | `academy:location_teleport` |
-| 4 | 区域传送·设置 (`academy:area_teleport_setup`) | `academy:area_teleport_select` |
-| 4 | 区域传送·启动 (`academy:area_teleport_start`) | `academy:area_teleport_setup` |
+| 4 | 区域传送 (`academy:area_teleport_select`) | `academy:location_teleport` |
 | 4 | 快速位置传送 (`academy:quick_location_teleport`) | `academy:location_teleport` |
 | 5 | 防御传送 (`academy:defensive_teleport`) | `academy:quick_location_teleport` |
 | 5 | 高速闪现 (`academy:flashing`) | `academy:location_teleport` |
-| 5 | 空间切除（未完成） (`academy:spacial_excision`) | `academy:area_teleport_start` |
+| 5 | 空间切除 (`academy:spacial_excision`) | `academy:area_teleport_select` |
 
 ## 矢量操控 (`academy:accelerator`)
 

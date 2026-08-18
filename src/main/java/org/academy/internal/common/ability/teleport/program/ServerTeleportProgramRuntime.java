@@ -38,7 +38,7 @@ import org.jspecify.annotations.Nullable;
 
 /** Authoritative Minecraft-server adapter for Teleport programs. */
 public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime {
-    public static final double MAX_QUERY_RANGE = 32.0;
+    public static final double MAX_QUERY_RANGE = 128.0;
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
@@ -78,6 +78,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 selfCost(power),
                 false,
                 false,
+                false,
                 true,
                 null
         );
@@ -109,7 +110,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                         power,
                         Skills.QUICK_LOCATION_TELEPORT.get(),
                         entityMoveRange(power),
-                        entityCost(power),
+                        entityBaseCost(power),
+                        true,
                         target != player,
                         true,
                         false,
@@ -201,7 +203,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 validate();
                 var movedState = orient(state, direction);
                 var level = targets.level();
-                charge(Skills.QUICK_LOCATION_TELEPORT.get(), entityCost(power));
+                charge(Skills.QUICK_LOCATION_TELEPORT.get(), entityCost(
+                        power, Math.sqrt(source.distSqr(destination))));
                 if (!replacedState.isAir() && !level.setBlock(
                         destination,
                         Blocks.AIR.defaultBlockState(),
@@ -278,6 +281,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             Skill skill,
             double maximumDisplacement,
             float cost,
+            boolean distanceScaledCost,
             boolean externallyMoved,
             boolean allowCollision,
             boolean unrestricted,
@@ -303,8 +307,6 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 if (unrestricted) {
                     var block = BlockPos.containing(requested);
                     destinationLevel.getChunk(block.getX() >> 4, block.getZ() >> 4);
-                } else {
-                    requirePositionInRange(requested, MAX_QUERY_RANGE);
                 }
                 resolvedDestination = requireDestination(
                         target,
@@ -333,7 +335,10 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 var previousMotion = target.getDeltaMovement();
                 var previousYaw = target.getYRot();
                 var previousPitch = target.getXRot();
-                charge(skill, cost);
+                var actualCost = distanceScaledCost
+                        ? distanceAdjustedCost(cost, origin.distanceTo(resolvedDestination))
+                        : cost;
+                charge(skill, actualCost);
                 if (!teleport(target, destinationLevel, resolvedDestination)) {
                     throw new IllegalStateException("Target rejected program teleport");
                 }
@@ -431,12 +436,6 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     private void requireEntityInRange(Entity entity, double range) {
         if (entity.distanceToSqr(player) > range * range) {
             throw new IllegalArgumentException("Entity target is outside program range");
-        }
-    }
-
-    private void requirePositionInRange(Vec3 position, double range) {
-        if (position.distanceToSqr(player.position()) > range * range) {
-            throw new IllegalArgumentException("Position is outside program range");
         }
     }
 
@@ -604,15 +603,28 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         return ProgramPowerScale.cost(10.0f, power);
     }
 
-    private static double entityTargetRange(float power) {
-        return ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0);
+    static double entityTargetRange(float power) {
+        return ProgramPowerScale.interpolate(power, 8.0, 64.0, 128.0);
     }
 
-    private static double entityMoveRange(float power) {
-        return ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0);
+    static double entityMoveRange(float power) {
+        return ProgramPowerScale.interpolate(power, 8.0, 64.0, 128.0);
     }
 
-    private static float entityCost(float power) {
+    private static float entityBaseCost(float power) {
         return ProgramPowerScale.cost(30.0f, power);
+    }
+
+    static float entityCost(float power, double actualDistance) {
+        return distanceAdjustedCost(entityBaseCost(power), actualDistance);
+    }
+
+    private static float distanceAdjustedCost(float baseCost, double actualDistance) {
+        if (!Double.isFinite(actualDistance) || actualDistance < 0.0) {
+            throw new IllegalArgumentException("Teleport distance must be finite and non-negative");
+        }
+        if (actualDistance <= 16.0) return baseCost * 0.25f;
+        if (actualDistance <= 32.0) return baseCost * 0.5f;
+        return baseCost;
     }
 }

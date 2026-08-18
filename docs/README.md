@@ -2,7 +2,7 @@
 
 本目录只保留当前版本仍需维护的玩家参考、开发契约和进行中计划。历史阶段审计、一次性实现报告和已经完成的合并记录由 Git 历史保存，不再作为现行文档维护。
 
-当前源码基线：8 个能力类别、94 个已注册技能；其中 Level0 7 个，非通用技能 87 个。
+当前源码基线：8 个能力类别、92 个已注册技能；其中 Level0 7 个，非通用技能 85 个。
 
 ## 玩家与服主参考
 
@@ -13,10 +13,10 @@
 
 ## 技能与实现基线
 
-- [全技能效果、消耗、迭代与堆栈总表](SKILL_EFFECT_COST_ITERATION_STACK_MATRIX.md)：94 个技能的现行数值基线。
+- [全技能效果、消耗、迭代与堆栈总表](SKILL_EFFECT_COST_ITERATION_STACK_MATRIX.md)：92 个技能的现行数值基线。
 - [技能实现与调控总表](SKILL_IMPLEMENTATION_CONTROL_MATRIX.md)：实现状态、输入、依赖与实现类索引。
-- [能力技能前置关系清单](ability_skill_dependencies.md)：94 个技能的直接前置关系。
-- [非通用技能熟练度里程碑方案](NON_COMMON_SKILL_PROFICIENCY_PLAN.md)：87 个非通用技能的熟练度规则，也是本地化同步脚本的输入。
+- [能力技能前置关系清单](ability_skill_dependencies.md)：92 个技能的直接前置关系。
+- [非通用技能熟练度里程碑方案](NON_COMMON_SKILL_PROFICIENCY_PLAN.md)：85 个非通用技能的熟练度规则，也是本地化同步脚本的输入。
 - [Mentalout 开发记录](MENTALOUT_DEVELOPMENT.md)：心理掌握架构、安全边界、限制与验收记录。
 
 ## UI 契约
