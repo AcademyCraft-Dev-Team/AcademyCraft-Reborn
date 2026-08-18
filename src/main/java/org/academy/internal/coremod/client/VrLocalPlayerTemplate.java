@@ -17,6 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Input;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
+import org.academy.internal.coremod.ProtectedHealthCache;
 
 import java.lang.invoke.VarHandle;
 import java.util.List;
@@ -25,11 +26,11 @@ import java.util.UUID;
 
 /** Field-free bytecode template for generated local-player dispatch subclasses. */
 public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreakerHealthAccess {
-    private static Map<UUID, Integer> academy$a;
+    private static Map<UUID, Long> academy$a;
     private static VarHandle academy$b;
     private static VarHandle academy$c;
     private static int academy$d;
-    private static int academy$e;
+    private static long academy$e;
 
     public VrLocalPlayerTemplate(Minecraft minecraft, ClientLevel level, ClientPacketListener connection,
                                  StatsCounter stats, ClientRecipeBook recipeBook, Input lastSentInput,
@@ -58,27 +59,14 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
         var uuid = getUUID();
         var encoded = academy$a.get(uuid);
-        var initial = Float.isFinite(original) ? Math.max(0.0f, original) : 0.0f;
-        float cached;
-        if (encoded == null) {
-            cached = initial;
-            academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
-        } else {
-            cached = Float.intBitsToFloat(encoded ^ academy$e);
-            if (!Float.isFinite(cached)) {
-                cached = initial;
-                academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
-            } else {
-                cached = Math.max(0.0f, cached);
-            }
-        }
-        var maximum = super.getMaxHealth();
-        if (Float.isFinite(original) && Float.isFinite(maximum)
-                && original > cached && original <= maximum) {
-            cached = original;
-            academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
-        }
-        return Math.max(1.0f, cached);
+        var state = ProtectedHealthCache.reconcile(
+                encoded == null ? 0L : encoded ^ academy$e,
+                encoded != null,
+                original,
+                super.getMaxHealth()
+        );
+        academy$a.put(uuid, state ^ academy$e);
+        return Math.max(1.0f, ProtectedHealthCache.health(state));
     }
 
     @Override
@@ -88,17 +76,15 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
         var original = super.getHealth();
         var uuid = getUUID();
         var encoded = academy$a.get(uuid);
-        var initial = Float.isFinite(original) ? Math.max(0.0f, original) : 0.0f;
-        float cached;
-        if (encoded == null) {
-            cached = initial;
-        } else {
-            cached = Float.intBitsToFloat(encoded ^ academy$e);
-            if (!Float.isFinite(cached)) cached = initial;
-            else cached = Math.max(0.0f, cached);
-        }
-        cached = Math.max(0.0f, cached - amount);
-        academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        var state = ProtectedHealthCache.reconcile(
+                encoded == null ? 0L : encoded ^ academy$e,
+                encoded != null,
+                original,
+                super.getMaxHealth()
+        );
+        state = ProtectedHealthCache.subtract(state, amount);
+        academy$a.put(uuid, state ^ academy$e);
+        var cached = ProtectedHealthCache.health(state);
         var items = (Object[]) academy$b.get(entityData);
         academy$c.set(items[academy$d], Float.valueOf(cached));
     }
@@ -130,19 +116,14 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
         var original = Float.isFinite(reported) ? Math.max(0.0f, reported) : 0.0f;
         var uuid = getUUID();
         var encoded = academy$a.get(uuid);
-        float cached;
-        if (encoded == null) {
-            cached = original;
-        } else {
-            cached = Float.intBitsToFloat(encoded ^ academy$e);
-            if (!Float.isFinite(cached)) cached = original;
-            else cached = Math.max(0.0f, cached);
-        }
-        var maximum = super.getMaxHealth();
-        if (Float.isFinite(maximum) && original > cached && original <= maximum) {
-            cached = original;
-        }
-        academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        var state = ProtectedHealthCache.reconcile(
+                encoded == null ? 0L : encoded ^ academy$e,
+                encoded != null,
+                original,
+                super.getMaxHealth()
+        );
+        academy$a.put(uuid, state ^ academy$e);
+        var cached = ProtectedHealthCache.health(state);
         if (!Float.isFinite(reported) || reported != cached) {
             academy$c.set(items[academy$d], Float.valueOf(cached));
         }
@@ -160,21 +141,14 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
         var original = super.getHealth();
         var encoded = academy$a.get(uuid);
-        var initial = Float.isFinite(original) ? Math.max(0.0f, original) : 0.0f;
-        float cached;
-        if (encoded == null) {
-            cached = initial;
-        } else {
-            cached = Float.intBitsToFloat(encoded ^ academy$e);
-            if (!Float.isFinite(cached)) cached = initial;
-            else cached = Math.max(0.0f, cached);
-        }
-        var maximum = super.getMaxHealth();
-        if (Float.isFinite(original) && Float.isFinite(maximum)
-                && original > cached && original <= maximum) {
-            cached = original;
-        }
-        academy$a.put(uuid, Float.floatToRawIntBits(cached) ^ academy$e);
+        var state = ProtectedHealthCache.reconcile(
+                encoded == null ? 0L : encoded ^ academy$e,
+                encoded != null,
+                original,
+                super.getMaxHealth()
+        );
+        academy$a.put(uuid, state ^ academy$e);
+        var cached = ProtectedHealthCache.health(state);
         var items = (Object[]) academy$b.get(entityData);
         academy$c.set(items[academy$d], Float.valueOf(cached));
         hurtTime = 0;
