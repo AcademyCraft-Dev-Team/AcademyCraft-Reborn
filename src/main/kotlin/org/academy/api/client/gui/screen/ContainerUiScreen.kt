@@ -30,6 +30,7 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.render.Render
 import org.academy.api.client.resources.R
+import kotlin.math.ceil
 
 abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructor(
     menu: T,
@@ -181,17 +182,27 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
 
         if (this.isRenderInventory) {
             val originHeight = 187f
-            val currentHeight = invHeightSupplier()
-            val scaleY = currentHeight / originHeight
+            val currentHeight = invHeightSupplier().coerceIn(0f, originHeight)
+            val translationY = invTranslationYSupplier()
             graphics.pose().pushMatrix()
-            graphics.pose().translate(0f, topPos.toFloat())
-            graphics.pose().scale(1f, scaleY)
-            graphics.pose().translate(0f, -topPos + invTranslationYSupplier())
+            graphics.pose().translate(0f, translationY)
+
+            // Reveal the inventory at its animated height without deforming item atlas blits.
+            // Non-uniform scaling makes special 3D item models flicker or disappear in the GUI.
+            graphics.enableScissor(
+                leftPos,
+                topPos,
+                leftPos + imageWidth,
+                topPos + ceil(currentHeight.toDouble()).toInt()
+            )
 
             extractContents(graphics, mouseX, mouseY, a)
-            extractCarriedItem(graphics, mouseX, mouseY)
 
+            graphics.disableScissor()
             graphics.pose().popMatrix()
+
+            // The carried stack follows the cursor and must not inherit the inventory animation.
+            extractCarriedItem(graphics, mouseX, mouseY)
         }
         extractTooltip(graphics, mouseX, mouseY)
     }
