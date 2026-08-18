@@ -32,6 +32,7 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentaloutConfig;
+import org.academy.internal.common.ability.mentalout.MentaloutControlCost;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
@@ -1439,9 +1440,7 @@ public final class PrecisionOperationRuntime {
     }
 
     private static double controlledCost(ServerPlayer player, LivingEntity entity, float base) {
-        return base * (MentalControlRuntime.isBossCost(entity)
-                ? MentaloutConfig.bossCostMultiplier(player)
-                : 1.0f);
+        return base * MentaloutControlCost.multiplier(player, entity);
     }
 
     private static void addSubjects(Set<UUID> subjectIds, List<LivingEntity> entities) {

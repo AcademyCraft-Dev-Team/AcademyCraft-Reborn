@@ -114,6 +114,14 @@ public class BloodflowReverse extends Skill {
         public static Config CONFIG = new Config();
 
         public static void reverseBloodflow() {
+            var minecraft = Minecraft.getInstance();
+            var player = minecraft.player;
+            if (player == null || findTarget(
+                    player,
+                    minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)
+            ) == null) {
+                return;
+            }
             MisakaNetworkClient.send(ReverseBloodflowPacket.INSTANCE);
         }
 
@@ -208,6 +216,8 @@ public class BloodflowReverse extends Skill {
         @SubscribePacket
         public static void onAction(ReverseBloodflowPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var target = findTarget(player);
+            if (target == null) return;
             Skills.BLOODFLOW_REVERSE.get().executeActive(
                     player,
                     context -> Math.max(
@@ -217,8 +227,7 @@ public class BloodflowReverse extends Skill {
                     (ctx, actualCost) -> {
                 var serverLevel = player.level();
                 if (!(serverLevel instanceof ServerLevel)) return;
-                var target = findTarget(player);
-                if (target == null) return;
+                if (!target.isAlive() || target.isRemoved() || target.level() != serverLevel) return;
 
                 var currentStacks = getBloodflowStacks(target);
                 var newStacks = currentStacks + 1;

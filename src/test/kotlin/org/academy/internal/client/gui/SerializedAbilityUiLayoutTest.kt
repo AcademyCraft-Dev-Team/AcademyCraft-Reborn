@@ -28,6 +28,20 @@ class SerializedAbilityUiLayoutTest {
     }
 
     @Test
+    fun `mental control hud is compact and has a transparent panel background`() {
+        val root = load("mental_control_hud")
+        val panel = SerializedUiLayout.require(root, "mental_control")
+        val background = SerializedUiLayout.require(root, "background")
+        panel.visibility = Widget.Visibility.VISIBLE
+        layout(root, 854f, 480f)
+
+        assertEquals(142f, panel.width)
+        assertEquals(146f, panel.height)
+        assertTrue(background is FillWidget)
+        assertEquals(0, (background as FillWidget).color)
+    }
+
+    @Test
     fun `precision variants preserve responsive canvas rails`() {
         val wide = load("precision_operation_wide")
         layout(wide, 854f, 480f)
