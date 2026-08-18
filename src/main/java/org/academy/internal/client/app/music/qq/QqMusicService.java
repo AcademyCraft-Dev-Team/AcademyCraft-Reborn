@@ -3,6 +3,7 @@ package org.academy.internal.client.app.music.qq;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.academy.internal.client.app.music.decoder.AudioFormatDetector;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,10 +17,6 @@ import java.util.*;
 public final class QqMusicService {
     private static final String MUSICU_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg";
     private static final String DEFAULT_SIP = "http://ws.stream.qqmusic.qq.com/";
-    private static final FileCandidate[] OGG_CANDIDATES = new FileCandidate[]{
-            new FileCandidate("O600", "ogg"),
-            new FileCandidate("O670", "ogg")
-    };
 
     private QqMusicService() {
     }
@@ -71,26 +68,74 @@ public final class QqMusicService {
         return results;
     }
 
-    public static QqResolvedTrack resolveOggTrack(String mid) throws IOException {
+    public static List<QqResolvedTrack> resolveTrackCandidates(String mid) throws IOException {
         if (mid == null || mid.isBlank()) {
             throw new IOException("Missing QQ music track id");
         }
         var trackInfo = getTrackInfo(mid);
         var mediaMid = trackInfo.mediaMid().isBlank() ? mid : trackInfo.mediaMid();
-        var data = requestVkeyData(mid, mediaMid);
-        var purl = selectBestPurl(data.getAsJsonArray("midurlinfo"));
-        if (purl.isBlank()) {
-            throw new IOException("QQ music track has no playable ogg source");
+        var filenames = buildSupportedFilenames(
+                mediaMid,
+                trackInfo.size128Mp3(),
+                trackInfo.size320Mp3(),
+                trackInfo.sizeFlac()
+        );
+        var data = requestVkeyData(mid, filenames);
+        var streamUrls = resolveStreamUrls(data);
+        if (streamUrls.isEmpty()) {
+            throw new IOException("QQ music track has no playable supported source");
         }
-        return new QqResolvedTrack(mid, trackInfo.title(), trackInfo.artist(), trackInfo.interval(), trackInfo.vip(), resolveBaseUrl(data) + purl);
+        return streamUrls.stream()
+                .map(url -> new QqResolvedTrack(
+                        mid,
+                        trackInfo.title(),
+                        trackInfo.artist(),
+                        trackInfo.interval(),
+                        trackInfo.vip(),
+                        url
+                ))
+                .toList();
     }
 
-    public static byte[] downloadOggBytes(String mid) throws IOException {
-        var track = resolveOggTrack(mid);
-        var connection = (HttpURLConnection) URI.create(track.streamUrl()).toURL().openConnection();
+    public static byte[] downloadAudioBytes(String mid) throws IOException {
+        var streamUrls = resolveTrackCandidates(mid).stream()
+                .map(QqResolvedTrack::streamUrl)
+                .toList();
+        return downloadFirstSupported(streamUrls, QqMusicService::downloadUrlBytes);
+    }
+
+    static byte[] downloadFirstSupported(
+            List<String> streamUrls,
+            AudioDownloader downloader
+    ) throws IOException {
+        var failure = new IOException("QQ music track has no downloadable supported source");
+        for (var streamUrl : streamUrls) {
+            try {
+                var bytes = downloader.download(streamUrl);
+                var format = AudioFormatDetector.detect(bytes);
+                if (!format.isSupported()) {
+                    throw new IOException("QQ music source returned unsupported audio format " + format);
+                }
+                return bytes;
+            } catch (IOException exception) {
+                failure.addSuppressed(exception);
+            }
+        }
+        throw failure;
+    }
+
+    private static byte[] downloadUrlBytes(String streamUrl) throws IOException {
+        var connection = (HttpURLConnection) URI.create(streamUrl).toURL().openConnection();
         connection.setRequestProperty("User-Agent", defaultUserAgent());
+        connection.setRequestProperty("Referer", "https://y.qq.com/");
+        connection.setRequestProperty("Accept-Encoding", "identity");
         connection.setConnectTimeout(15000);
         connection.setReadTimeout(30000);
+        var responseCode = connection.getResponseCode();
+        if (responseCode < 200 || responseCode >= 300) {
+            connection.disconnect();
+            throw new IOException("QQ music CDN returned HTTP " + responseCode);
+        }
         try (var stream = connection.getInputStream()) {
             return stream.readAllBytes();
         } finally {
@@ -99,6 +144,7 @@ public final class QqMusicService {
     }
 
     private static TrackInfo getTrackInfo(String mid) throws IOException {
+        var uin = effectiveUin();
         var param = new JsonObject();
         param.addProperty("song_mid", mid);
         param.addProperty("song_id", 0);
@@ -107,10 +153,10 @@ public final class QqMusicService {
         req.addProperty("module", "music.pf_song_detail_svr");
         req.addProperty("method", "get_song_detail");
         req.add("param", param);
-        req.addProperty("loginUin", "0");
+        req.addProperty("loginUin", uin);
 
         var comm = new JsonObject();
-        comm.addProperty("uin", "0");
+        comm.addProperty("uin", uin);
         comm.addProperty("format", "json");
         comm.addProperty("ct", 24);
         comm.addProperty("cv", 0);
@@ -131,6 +177,7 @@ public final class QqMusicService {
         if (trackInfo.has("file") && trackInfo.getAsJsonObject("file").has("media_mid")) {
             mediaMid = getString(trackInfo.getAsJsonObject("file"), "media_mid");
         }
+        var file = trackInfo.has("file") ? trackInfo.getAsJsonObject("file") : new JsonObject();
         var albumMid = "";
         if (trackInfo.has("album") && trackInfo.getAsJsonObject("album").has("mid")) {
             albumMid = getString(trackInfo.getAsJsonObject("album"), "mid");
@@ -141,25 +188,40 @@ public final class QqMusicService {
                 singers.add(getString(singerElement.getAsJsonObject(), "name"));
             }
         }
-        return new TrackInfo(title, String.join("/", singers), interval, mediaMid, albumMid, vip);
+        return new TrackInfo(
+                title,
+                String.join("/", singers),
+                interval,
+                mediaMid,
+                albumMid,
+                vip,
+                getLong(file, "size_128mp3"),
+                getLong(file, "size_320mp3"),
+                getLong(file, "size_flac")
+        );
     }
 
-    private static JsonObject requestVkeyData(String songMid, String mediaMid) throws IOException {
+    private static JsonObject requestVkeyData(
+            String songMid,
+            List<String> filenames
+    ) throws IOException {
         var filenameList = new JsonArray();
         var songMidList = new JsonArray();
         var songTypeList = new JsonArray();
-        for (var candidate : OGG_CANDIDATES) {
-            filenameList.add(candidate.buildFilename(mediaMid));
+        for (var filename : filenames) {
+            filenameList.add(filename);
             songMidList.add(songMid);
             songTypeList.add(0);
         }
+
+        var uin = effectiveUin();
 
         var param = new JsonObject();
         param.add("filename", filenameList);
         param.addProperty("guid", "10000");
         param.add("songmid", songMidList);
         param.add("songtype", songTypeList);
-        param.addProperty("uin", "0");
+        param.addProperty("uin", uin);
         param.addProperty("loginflag", 1);
         param.addProperty("platform", "20");
 
@@ -169,14 +231,14 @@ public final class QqMusicService {
         req.add("param", param);
 
         var comm = new JsonObject();
-        comm.addProperty("uin", "0");
+        comm.addProperty("uin", uin);
         comm.addProperty("format", "json");
         comm.addProperty("ct", 24);
         comm.addProperty("cv", 0);
 
         var body = new JsonObject();
         body.add("req_1", req);
-        body.addProperty("loginUin", "0");
+        body.addProperty("loginUin", uin);
         body.add("comm", comm);
 
         var root = postJson(body.toString(), defaultHeaders(true));
@@ -223,33 +285,69 @@ public final class QqMusicService {
         return headers;
     }
 
-    private static String resolveBaseUrl(JsonObject data) {
+    private static List<String> resolveBaseUrls(JsonObject data) {
+        var result = new LinkedHashSet<String>();
         if (data != null && data.has("sip")) {
             var sip = data.getAsJsonArray("sip");
-            if (sip != null && !sip.isEmpty()) {
-                var value = sip.get(0).getAsString();
-                if (value != null && !value.isBlank()) {
-                    return value.endsWith("/") ? value : value + "/";
+            if (sip != null) {
+                for (var element : sip) {
+                    var value = element.getAsString();
+                    if (value == null || value.isBlank()) continue;
+                    var normalized = value.endsWith("/") ? value : value + "/";
+                    result.add(normalized);
+                    if (normalized.startsWith("http://")) {
+                        result.add("https://" + normalized.substring("http://".length()));
+                    }
                 }
             }
         }
-        return DEFAULT_SIP;
+        if (result.isEmpty()) result.add(DEFAULT_SIP);
+        return List.copyOf(result);
     }
 
-    private static String selectBestPurl(JsonArray midurlinfo) {
-        if (midurlinfo == null) {
-            return "";
+    private static List<String> resolveStreamUrls(JsonObject data) {
+        if (data == null || !data.has("midurlinfo")) return Collections.emptyList();
+        var baseUrls = resolveBaseUrls(data);
+        var result = new LinkedHashSet<String>();
+        for (var element : data.getAsJsonArray("midurlinfo")) {
+            var info = element.getAsJsonObject();
+            if (info == null || !info.has("purl")) continue;
+            var purl = info.get("purl").getAsString();
+            if (purl == null || purl.isBlank()) continue;
+            for (var baseUrl : baseUrls) result.add(baseUrl + purl);
         }
-        for (var i = 0; i < midurlinfo.size(); i++) {
-            var info = midurlinfo.get(i).getAsJsonObject();
-            if (info != null && info.has("purl")) {
-                var purl = info.get("purl").getAsString();
-                if (purl != null && !purl.isBlank()) {
-                    return purl;
-                }
-            }
+        return List.copyOf(result);
+    }
+
+    static List<String> buildSupportedFilenames(
+            String mediaMid,
+            long size128Mp3,
+            long size320Mp3,
+            long sizeFlac
+    ) {
+        if (mediaMid == null || mediaMid.isBlank()) return Collections.emptyList();
+        var filenames = new ArrayList<String>();
+        if (size320Mp3 > 0) filenames.add("M800" + mediaMid + ".mp3");
+        if (size128Mp3 > 0) filenames.add("M500" + mediaMid + ".mp3");
+        if (sizeFlac > 0) filenames.add("F000" + mediaMid + ".flac");
+        if (filenames.isEmpty()) filenames.add("M500" + mediaMid + ".mp3");
+        return List.copyOf(filenames);
+    }
+
+    private static String effectiveUin() {
+        var credential = QqCredentialManager.getCredential();
+        return credential != null && credential.isValid()
+                ? credential.getMusicId()
+                : "0";
+    }
+
+    private static long getLong(JsonObject object, String key) {
+        if (object == null || !object.has(key) || object.get(key).isJsonNull()) return 0L;
+        try {
+            return object.get(key).getAsLong();
+        } catch (RuntimeException ignored) {
+            return 0L;
         }
-        return "";
     }
 
     private static String getString(JsonObject object, String key) {
@@ -282,12 +380,21 @@ public final class QqMusicService {
         return info.albumMid();
     }
 
-    private record FileCandidate(String prefix, String extension) {
-        private String buildFilename(String mediaMid) {
-            return prefix + mediaMid + "." + extension;
-        }
+    private record TrackInfo(
+            String title,
+            String artist,
+            int interval,
+            String mediaMid,
+            String albumMid,
+            boolean vip,
+            long size128Mp3,
+            long size320Mp3,
+            long sizeFlac
+    ) {
     }
 
-    private record TrackInfo(String title, String artist, int interval, String mediaMid, String albumMid, boolean vip) {
+    @FunctionalInterface
+    interface AudioDownloader {
+        byte[] download(String streamUrl) throws IOException;
     }
 }
