@@ -20,12 +20,12 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.LevelRenderEvent;
@@ -93,12 +93,16 @@ public final class ThreateningTeleport extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_CAST,
+        InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_START,
                 InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_LEFT,
                         InputConstants.PRESS, InputConstants.MOD_ALT)
-        ), ctx -> Client.cast());
-        NeoForge.EVENT_BUS.register(Client.class);
+        ), ctx -> Client.start());
+        InputSystem.addKeyBinding(Client.KEY_NAME_END, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_END,
+                InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_LEFT,
+                        InputConstants.RELEASE, InputConstants.MOD_ALT)
+        ), ctx -> Client.end());
     }
 
     @Override
@@ -117,67 +121,90 @@ public final class ThreateningTeleport extends Skill {
                         50
                 )
         );
-        public static final String KEY_NAME_CAST = SkillNames.THREATENING_TELEPORT + "_cast";
+        public static final String KEY_NAME_START = SkillNames.THREATENING_TELEPORT + "_start";
+        public static final String KEY_NAME_END = SkillNames.THREATENING_TELEPORT + "_end";
         public static Config CONFIG = new Config();
+        private static TargetContext currentContext;
 
-        @SubscribeEvent
-        public static void onLevelRender(LevelRenderEvent event) {
-            var minecraft = Minecraft.getInstance();
-            var player = minecraft.player;
-            if (player == null
-                    || minecraft.gui.screen() != null
-                    || !AbilitySystemClient.canUseSkill(Skills.THREATENING_TELEPORT.get())
-                    || player.getMainHandItem().isEmpty()
-                    || !isPreviewing()) {
-                return;
-            }
-            var target = findTarget(player);
-            AABB preview;
-            if (target != null) {
-                preview = target.getBoundingBox().inflate(0.2);
-            } else {
-                var point = ThreateningTeleport.untargetedDestination(
-                        player.getEyePosition(event.getPartialTick()),
-                        player.getViewVector(event.getPartialTick())
-                );
-                preview = new AABB(
-                        point.x - 0.5, point.y - 0.5, point.z - 0.5,
-                        point.x + 0.5, point.y + 0.5, point.z + 0.5
-                );
-            }
-
-            var camera = minecraft.gameRenderer.mainCamera().position();
-            var matrices = event.getMatrixStack();
-            matrices.pushPose();
-            matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
-            event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) ->
-                    LineBoxRenderer.renderWireframeBox(
-                            snapshot, consumer, preview,
-                            target != null ? 0.6f : 1.0f,
-                            target != null ? 0.2f : 0.1f,
-                            target != null ? 1.0f : 0.1f,
-                            1.0f
-                    ));
-            matrices.popPose();
-        }
-
-        private static boolean isPreviewing() {
-            return InputSystem.isDown(InputSystem.InputType.KEYBOARD, InputConstants.KEY_LALT)
-                    || InputSystem.isDown(InputSystem.InputType.KEYBOARD, InputConstants.KEY_RALT);
-        }
-
-        private static void cast() {
+        private static void start() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.THREATENING_TELEPORT.get())) {
                 return;
             }
             var minecraft = Minecraft.getInstance();
-            if (minecraft.player == null) return;
-            var target = findTarget(minecraft.player);
-            MisakaNetworkClient.send(new CastPacket(target == null ? -1 : target.getId()));
+            var player = minecraft.player;
+            if (player == null || player.getMainHandItem().isEmpty() || currentContext != null) return;
+            currentContext = new TargetContext(player);
+            AbilitySystemClient.registerContext(currentContext);
         }
 
-        private static LivingEntity findTarget(LocalPlayer player) {
-            return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
+        private static void end() {
+            var context = currentContext;
+            if (context == null) return;
+            var targetId = context.targetEntityId;
+            context.cleanup();
+            if (!ClientUtil.hasScreen()) {
+                MisakaNetworkClient.send(new CastPacket(targetId));
+            }
+        }
+
+        private static final class TargetContext extends ClientContext {
+            private final LocalPlayer player;
+            private int targetEntityId;
+
+            private TargetContext(LocalPlayer player) {
+                this.player = player;
+                updateTarget();
+            }
+
+            @SubscribeEvent
+            public void onLevelRender(LevelRenderEvent event) {
+                if (currentContext != this || player.isRemoved()
+                        || !AbilitySystemClient.canUseSkill(Skills.THREATENING_TELEPORT.get())
+                        || player.getMainHandItem().isEmpty()) {
+                    cleanup();
+                    return;
+                }
+                var target = updateTarget();
+                AABB preview;
+                if (target != null) {
+                    preview = target.getBoundingBox().inflate(0.2);
+                } else {
+                    var point = ThreateningTeleport.untargetedDestination(
+                            player.getEyePosition(event.getPartialTick()),
+                            player.getViewVector(event.getPartialTick())
+                    );
+                    preview = new AABB(
+                            point.x - 0.5, point.y - 0.5, point.z - 0.5,
+                            point.x + 0.5, point.y + 0.5, point.z + 0.5
+                    );
+                }
+
+                var minecraft = Minecraft.getInstance();
+                var camera = minecraft.gameRenderer.mainCamera().position();
+                var matrices = event.getMatrixStack();
+                matrices.pushPose();
+                matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
+                event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) ->
+                        LineBoxRenderer.renderWireframeBox(
+                                snapshot, consumer, preview,
+                                target != null ? 0.6f : 1.0f,
+                                target != null ? 0.2f : 0.1f,
+                                target != null ? 1.0f : 0.1f,
+                                1.0f
+                        ));
+                matrices.popPose();
+            }
+
+            private LivingEntity updateTarget() {
+                var target = TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
+                targetEntityId = target == null ? -1 : target.getId();
+                return target;
+            }
+
+            private void cleanup() {
+                AbilitySystemClient.unregisterContext(this);
+                if (currentContext == this) currentContext = null;
+            }
         }
 
         public static class Config extends KeyBindingConfig {
