@@ -9,14 +9,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ThreateningTeleportTest {
     @Test
-    void untargetedDestinationIsExactlySixtyFourBlocksAlongView() {
+    void untargetedDestinationIsExactlySixteenBlocksAlongView() {
         var eye = new Vec3(3.0, 5.0, 7.0);
         var destination = ThreateningTeleport.untargetedDestination(eye, new Vec3(3.0, 0.0, 4.0));
 
-        assertEquals(64.0, destination.distanceTo(eye), 0.0001);
-        assertEquals(41.4, destination.x, 0.0001);
+        assertEquals(16.0, destination.distanceTo(eye), 0.0001);
+        assertEquals(12.6, destination.x, 0.0001);
         assertEquals(5.0, destination.y, 0.0001);
-        assertEquals(58.2, destination.z, 0.0001);
+        assertEquals(19.8, destination.z, 0.0001);
     }
 
     @Test
