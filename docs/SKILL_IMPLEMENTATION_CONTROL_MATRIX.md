@@ -96,7 +96,7 @@
 
 | 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `threatening_teleport` 危险传送 | 现行 | L1 / 5k / 10 + 1 个主手物品 | 将 1 个主手物品传入 64 格内目标，伤害 `(4+武器攻击加成)AD`；空放时物品在前方 16 格掉落，击杀时随死亡掉落返还。 | `Alt+鼠标左键↓` | 无 | `ThreateningTeleport` |
+| `threatening_teleport` 危险传送 | 现行 | L1 / 5k / 10 + 1 个主手物品 | 将 1 个主手物品传入 64 格内目标，伤害 `(4+武器攻击加成)AD`；空放时物品在前方 16 格掉落，击杀时随死亡掉落返还。 | `Alt+鼠标左键↓` 预览 / `Alt+鼠标左键↑` 施放；HUD 选中后 `C↓ / C↑` | 无 | `ThreateningTeleport` |
 | `space_folding_theorem` 空间折叠理论 | 现行 | L1 / 5k / 0 | 被动：适用传送伤害 ×1.25；熟练度档位提高到 1.30/1.35/1.40，满熟练度击杀可返还 20% 实际施放 CP（60 tick 冷却）。 | 无 | `academy:threatening_teleport` | `SpaceFoldingTheorem` |
 | `self_teleport` 自我传送 | 现行 | L2 / 10k / 去程 10；返程 5 | 默认 40 格、最大 64 格，选择首个方块阻挡前或更近的安全落点；可返回上次起点。 | `R↓` + 滚轮 / `R↑` | `academy:threatening_teleport` | `SelfTeleport` |
 | `spatial_synergy` 空间协同 | 现行 | L2 / 10k / 维持 20；每名被携带玩家 10 | 自我/穿透/定位传送时携带半径 4 内同队玩家。 | `X↓` | `academy:self_teleport` | `SpatialSynergy` |
