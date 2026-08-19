@@ -63,7 +63,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class ThreateningTeleport extends Skill {
     static final double MAX_RANGE = 64.0;
-    static final double UNTARGETED_RANGE = 64.0;
+    static final double UNTARGETED_RANGE = 16.0;
     static final float BASE_DAMAGE = 4.0f;
 
     public ThreateningTeleport() {
