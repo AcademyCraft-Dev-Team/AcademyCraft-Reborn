@@ -95,9 +95,10 @@ class FlacAudioStream(audioData: ByteBuffer) : AudioStream {
     private fun updateStagingBuffer(byteData: ByteData) {
         val bytes = byteData.data
         val len = byteData.len
-        val samplesCount = len / 2
+        val bytesPerSample = (streamInfo.bitsPerSample + 7) / 8
+        val samplesCount = len / bytesPerSample
         prepareStagingArray(samplesCount)
-        convertBytesToSamples(bytes, samplesCount)
+        convertBytesToSamples(bytes, samplesCount, bytesPerSample)
     }
 
     private fun prepareStagingArray(samplesCount: Int) {
@@ -108,12 +109,23 @@ class FlacAudioStream(audioData: ByteBuffer) : AudioStream {
         stagingBufferWriteOffset = samplesCount
     }
 
-    private fun convertBytesToSamples(bytes: ByteArray, samplesCount: Int) {
+    private fun convertBytesToSamples(bytes: ByteArray, samplesCount: Int, bytesPerSample: Int) {
         val buffer = stagingBuffer ?: return
+        val bitsPerSample = streamInfo.bitsPerSample
         for (i in 0 until samplesCount) {
-            val low = bytes[i * 2].toInt() and 0xFF
-            val high = bytes[i * 2 + 1].toInt()
-            buffer[i] = ((high shl 8) or low).toShort()
+            var sample = 0L
+            val byteOffset = i * bytesPerSample
+            for (byteIndex in 0 until bytesPerSample) {
+                sample = sample or ((bytes[byteOffset + byteIndex].toLong() and 0xFF) shl (byteIndex * 8))
+            }
+            val signBit = 1L shl (bitsPerSample - 1)
+            if (sample and signBit != 0L) sample -= 1L shl bitsPerSample
+            val pcm16 = if (bitsPerSample > 16) {
+                sample shr (bitsPerSample - 16)
+            } else {
+                sample shl (16 - bitsPerSample)
+            }
+            buffer[i] = pcm16.coerceIn(Short.MIN_VALUE.toLong(), Short.MAX_VALUE.toLong()).toShort()
         }
     }
 

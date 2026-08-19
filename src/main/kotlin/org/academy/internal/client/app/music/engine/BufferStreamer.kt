@@ -43,7 +43,11 @@ internal class BufferStreamer(
             val bufferId = alPlayer.bufferIds[nextBufferIndex]
             if (feedBuffer(bufferId)) nextBufferIndex++ else break
         }
-        if (nextBufferIndex == alPlayer.bufferIds.size) isPrimed = true
+        if (nextBufferIndex == alPlayer.bufferIds.size ||
+            (streamReadFinished && nextBufferIndex > 0)
+        ) {
+            isPrimed = true
+        }
     }
 
     private fun streamNextBuffers() {

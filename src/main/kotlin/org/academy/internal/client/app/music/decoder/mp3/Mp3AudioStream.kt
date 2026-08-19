@@ -43,10 +43,12 @@ class Mp3AudioStream(audioData: ByteBuffer) : AudioStream {
         val decoder = decoder
         if (stream == null || decoder == null) return -1
         val startPos = pcmBuffer.position()
-        val buffer = currentBuffer
-        while (pcmBuffer.hasRemaining() && buffer != null &&
-            (bufferOffset < buffer.bufferLength || decodeNextFrame(stream, decoder))
-        ) {
+        while (pcmBuffer.hasRemaining()) {
+            var buffer = currentBuffer
+            if (buffer == null || bufferOffset >= buffer.bufferLength) {
+                if (!decodeNextFrame(stream, decoder)) break
+                buffer = currentBuffer ?: break
+            }
             transferTo(pcmBuffer, buffer)
         }
         val totalWritten = pcmBuffer.position() - startPos
@@ -56,9 +58,12 @@ class Mp3AudioStream(audioData: ByteBuffer) : AudioStream {
     private fun decodeNextFrame(bitstream: Bitstream, decoder: Decoder): Boolean {
         try {
             val header = bitstream.readFrame() ?: return false
-            currentBuffer = decoder.decodeFrame(header, bitstream) as SampleBuffer
-            bufferOffset = 0
-            bitstream.closeFrame()
+            try {
+                currentBuffer = decoder.decodeFrame(header, bitstream) as SampleBuffer
+                bufferOffset = 0
+            } finally {
+                bitstream.closeFrame()
+            }
             return true
         } catch (e: Exception) {
             logger.error("MP3 decode error", e)
@@ -92,14 +97,17 @@ class Mp3AudioStream(audioData: ByteBuffer) : AudioStream {
         while (currentSample < targetSample) {
             val header = bs.readFrame() ?: break
             val frameLen = getFrameSampleCount(header).toLong()
-            if (currentSample + frameLen > targetSample) {
-                currentBuffer = dec.decodeFrame(header, bs) as SampleBuffer
-                bufferOffset = (targetSample - currentSample).toInt()
+            try {
+                val decoded = dec.decodeFrame(header, bs) as SampleBuffer
+                if (currentSample + frameLen > targetSample) {
+                    currentBuffer = decoded
+                    bufferOffset = ((targetSample - currentSample) * channels).toInt()
+                    return
+                }
+            } finally {
                 bs.closeFrame()
-                break
             }
             currentSample += frameLen
-            bs.closeFrame()
         }
     }
 
