@@ -19,10 +19,9 @@ class StreamingPlaybackSession private constructor(
     private val bufferStreamer: BufferStreamer,
     val sampleRate: Int,
     val totalSamples: Long,
-    private val desiredState: AtomicReference<PlaybackState>
+    private val desiredState: AtomicReference<PlaybackState>,
+    private val shutdownDecoder: AtomicBoolean
 ) {
-    private val shutdownDecoder = AtomicBoolean(false)
-
     val currentTime: Float get() = bufferStreamer.getCurrentTime(sampleRate)
     val totalDuration: Float get() = if (sampleRate > 0) totalSamples.toFloat() / sampleRate else 0f
     val isFinished: Boolean get() = bufferStreamer.isFinished
@@ -80,7 +79,8 @@ class StreamingPlaybackSession private constructor(
 
             val decodedDataQueue: BlockingQueue<Any> = ArrayBlockingQueue(QUEUE_CAPACITY)
             val bufferStreamer = BufferStreamer(alPlayer, decodedDataQueue, stream.channels, startFrame, sampleRate)
-            val decoderRunnable = DecoderThread(stream, decodedDataQueue, AtomicBoolean(false), startFrame)
+            val shutdownDecoder = AtomicBoolean(false)
+            val decoderRunnable = DecoderThread(stream, decodedDataQueue, shutdownDecoder, startFrame)
             val decoderThread = Thread(decoderRunnable, "AC-Music-Decoder").apply {
                 isDaemon = true
                 start()
@@ -88,7 +88,7 @@ class StreamingPlaybackSession private constructor(
 
             return StreamingPlaybackSession(
                 alPlayer, decoderRunnable, decoderThread, decodedDataQueue,
-                bufferStreamer, sampleRate, totalSamples, desiredState
+                bufferStreamer, sampleRate, totalSamples, desiredState, shutdownDecoder
             )
         }
     }
