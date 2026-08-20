@@ -33,7 +33,7 @@ class ProgramConfigurationOptionsTest {
                         arithmetic, "type", new JsonPrimitive("integer")))
         );
         assertEquals(
-                List.of("add", "subtract", "multiply", "divide", "modulo"),
+                List.of("add", "subtract", "multiply", "divide", "modulo", "absolute"),
                 values(ProgramConfigurationOptions.options(
                         arithmetic, "operator", new JsonPrimitive("add")))
         );
@@ -42,6 +42,18 @@ class ProgramConfigurationOptionsTest {
                 values(ProgramConfigurationOptions.options(
                         comparison, "operator", new JsonPrimitive("equal")))
         );
+        assertEquals(List.of("direction", "world_position"), values(
+                ProgramConfigurationOptions.options(
+                        catalog.entry(CommonProgramNodeIds.VEC3_OPERATION),
+                        "type", new JsonPrimitive("direction"))));
+        assertEquals(List.of("dot", "cross", "add"), values(
+                ProgramConfigurationOptions.options(
+                        catalog.entry(CommonProgramNodeIds.VEC3_OPERATION),
+                        "operator", new JsonPrimitive("add"))));
+        assertEquals(List.of("entity", "world_position", "block_position"), values(
+                ProgramConfigurationOptions.options(
+                        catalog.entry(CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE),
+                        "type", new JsonPrimitive("entity"))));
     }
 
     @Test
@@ -144,6 +156,10 @@ class ProgramConfigurationOptionsTest {
                 ProgramConfigurationOptions.options(
                         teleport.entry(TeleportProgramNodeIds.ENTITY_TELEPORT),
                         "target_type", new JsonPrimitive("entity"))));
+        assertEquals(List.of("place", "collect"), values(
+                ProgramConfigurationOptions.options(
+                        teleport.entry(TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT),
+                        "mode", new JsonPrimitive("place"))));
     }
 
     @Test

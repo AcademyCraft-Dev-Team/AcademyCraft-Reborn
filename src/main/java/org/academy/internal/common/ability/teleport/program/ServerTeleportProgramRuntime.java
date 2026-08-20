@@ -9,10 +9,16 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,9 +35,11 @@ import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -42,10 +50,16 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
+    private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
 
     public ServerTeleportProgramRuntime(ServerPlayer player) {
+        this(player, 1.0f);
+    }
+
+    public ServerTeleportProgramRuntime(ServerPlayer player, float costMultiplier) {
         this.player = Objects.requireNonNull(player, "player");
+        this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
     }
 
@@ -404,6 +418,170 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         return safe;
     }
 
+    @Override
+    public ProgramActionTransaction.ProgramAction teleportBlockOrItem(
+            ProgramBlockPosition position,
+            int hotbarSlot,
+            TeleportProgramNodeCatalog.BlockItemTeleportMode mode
+    ) {
+        Objects.requireNonNull(mode, "mode");
+        return mode == TeleportProgramNodeCatalog.BlockItemTeleportMode.PLACE
+                ? placeBlockOrItem(position, hotbarSlot)
+                : collectBlockAndItems(position);
+    }
+
+    private ProgramActionTransaction.ProgramAction placeBlockOrItem(
+            ProgramBlockPosition position,
+            int hotbarSlot
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private BlockPos target;
+            private int inventorySlot;
+            private BlockState replacedState;
+            private CompoundTag replacedBlockEntityTag;
+            private ItemStack transmitted;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.SELF_TELEPORT.get());
+                target = requireLocalBlock(position);
+                requireEditableBlock(target);
+                inventorySlot = resolveHotbarSlot(hotbarSlot);
+                transmitted = player.getInventory().getItem(inventorySlot).copyWithCount(1);
+                if (transmitted.isEmpty()) {
+                    throw new IllegalArgumentException("Teleport item slot is empty");
+                }
+                var level = targets.level();
+                replacedState = level.getBlockState(target);
+                requireBreakable(target, replacedState);
+                var replacedBlockEntity = level.getBlockEntity(target);
+                replacedBlockEntityTag = replacedBlockEntity == null ? null
+                        : replacedBlockEntity.saveWithFullMetadata(level.registryAccess());
+                if (transmitted.getItem() instanceof BlockItem blockItem
+                        && !blockItem.getBlock().defaultBlockState().canSurvive(level, target)) {
+                    throw new IllegalArgumentException("Teleported block cannot survive at target");
+                }
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                validate();
+                var level = targets.level();
+                var inventory = snapshotInventory();
+                var spawned = new ArrayList<ItemEntity>();
+                try {
+                    charge(Skills.SELF_TELEPORT.get(), 10.0f);
+                    var drops = blockDrops(target, replacedState, transmitted);
+                    if (!replacedState.isAir() && !level.setBlock(
+                            target, Blocks.AIR.defaultBlockState(),
+                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
+                        throw new IllegalStateException("Unable to break target block");
+                    }
+                    for (var drop : drops) spawned.add(spawnItem(target, drop));
+                    var source = player.getInventory().getItem(inventorySlot);
+                    if (!player.isCreative()) source.shrink(1);
+                    if (transmitted.getItem() instanceof BlockItem blockItem) {
+                        if (!level.setBlock(target, blockItem.getBlock().defaultBlockState(),
+                                Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
+                            throw new IllegalStateException("Unable to place teleported block");
+                        }
+                    } else {
+                        spawned.add(spawnItem(target, transmitted));
+                    }
+                    damageAtTarget(target, transmitted);
+                    player.getInventory().setChanged();
+                    return () -> {
+                        spawned.forEach(Entity::discard);
+                        level.setBlock(target, replacedState,
+                                Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                        restoreBlockEntity(target, replacedState, replacedBlockEntityTag);
+                        restoreInventory(inventory);
+                    };
+                } catch (RuntimeException exception) {
+                    spawned.forEach(Entity::discard);
+                    level.setBlock(target, replacedState,
+                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                    restoreBlockEntity(target, replacedState, replacedBlockEntityTag);
+                    restoreInventory(inventory);
+                    throw exception;
+                }
+            }
+        };
+    }
+
+    private ProgramActionTransaction.ProgramAction collectBlockAndItems(
+            ProgramBlockPosition position
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private BlockPos target;
+            private BlockState state;
+            private CompoundTag blockEntityTag;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.SELF_TELEPORT.get());
+                target = requireLocalBlock(position);
+                requireEditableBlock(target);
+                var level = targets.level();
+                state = level.getBlockState(target);
+                requireBreakable(target, state);
+                var blockEntity = level.getBlockEntity(target);
+                blockEntityTag = blockEntity == null ? null
+                        : blockEntity.saveWithFullMetadata(level.registryAccess());
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                validate();
+                var level = targets.level();
+                var inventory = snapshotInventory();
+                var nearby = level.getEntitiesOfClass(
+                        ItemEntity.class, new AABB(target), Entity::isAlive);
+                var removed = nearby.stream()
+                        .map(item -> new RemovedItem(item.getItem().copy(), item.position()))
+                        .toList();
+                try {
+                    charge(Skills.SELF_TELEPORT.get(), 10.0f);
+                    var collected = new ArrayList<ItemStack>(blockDrops(
+                            target, state, player.getMainHandItem()));
+                    removed.forEach(item -> collected.add(item.stack.copy()));
+                    if (!state.isAir() && !level.setBlock(
+                            target, Blocks.AIR.defaultBlockState(),
+                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
+                        throw new IllegalStateException("Unable to break collected block");
+                    }
+                    for (var stack : collected) addToInventory(stack);
+                    nearby.forEach(Entity::discard);
+                    player.getInventory().setChanged();
+                    return () -> {
+                        restoreInventory(inventory);
+                        level.setBlock(target, state,
+                                Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                        restoreBlockEntity(target, state, blockEntityTag);
+                        removed.forEach(this::respawn);
+                    };
+                } catch (RuntimeException exception) {
+                    restoreInventory(inventory);
+                    level.setBlock(target, state,
+                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                    restoreBlockEntity(target, state, blockEntityTag);
+                    for (var index = 0; index < nearby.size(); index++) {
+                        if (!nearby.get(index).isAlive()) respawn(removed.get(index));
+                    }
+                    throw exception;
+                }
+            }
+
+            private void respawn(RemovedItem item) {
+                var restored = new ItemEntity(
+                        targets.level(), item.position.x, item.position.y, item.position.z,
+                        item.stack.copy());
+                restored.setDeltaMovement(Vec3.ZERO);
+                targets.level().addFreshEntity(restored);
+            }
+        };
+    }
+
     private Vec3 requireDestination(
             Entity target,
             ServerLevel level,
@@ -440,7 +618,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     }
 
     private void charge(Skill skill, float cost) {
-        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player, cost, skill)) {
+        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                player, cost * costMultiplier, skill)) {
             throw new IllegalStateException("Insufficient CP for Teleport program action");
         }
     }
@@ -450,6 +629,13 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 player,
                 () -> TeleportSync.teleportInstantly(entity, level, destination)
         ));
+    }
+
+    private static float requireCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+            throw new IllegalArgumentException("Program cost multiplier must be positive");
+        }
+        return multiplier;
     }
 
     private void setMotion(Entity entity, Vec3 motion) {
@@ -535,6 +721,105 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 || player.blockActionRestricted(
                         targets.level(), position, player.gameMode.getGameModeForPlayer())) {
             throw new IllegalArgumentException("Teleport block is protected");
+        }
+    }
+
+    private int resolveHotbarSlot(int configuredSlot) {
+        if (configuredSlot == 0) return player.getInventory().getSelectedSlot();
+        if (configuredSlot < 1 || configuredSlot > 9) {
+            throw new IllegalArgumentException("Teleport hotbar slot must be between 1 and 9");
+        }
+        return configuredSlot - 1;
+    }
+
+    private void requireBreakable(BlockPos position, BlockState state) {
+        if (state.isAir()) return;
+        if (state.getDestroySpeed(targets.level(), position) < 0.0f
+                || state.getBlock() instanceof GameMasterBlock
+                && !player.canUseGameMasterBlocks()) {
+            throw new IllegalArgumentException("Teleport target block cannot be broken");
+        }
+    }
+
+    private List<ItemStack> blockDrops(
+            BlockPos position,
+            BlockState state,
+            ItemStack tool
+    ) {
+        if (state.isAir()) return List.of();
+        return Block.getDrops(
+                state,
+                targets.level(),
+                position,
+                targets.level().getBlockEntity(position),
+                player,
+                tool
+        );
+    }
+
+    private ItemEntity spawnItem(BlockPos position, ItemStack stack) {
+        if (stack.isEmpty()) {
+            throw new IllegalArgumentException("Cannot teleport an empty item stack");
+        }
+        var center = Vec3.atCenterOf(position);
+        var item = new ItemEntity(
+                targets.level(), center.x, center.y, center.z, stack.copy());
+        item.setDeltaMovement(Vec3.ZERO);
+        item.setDefaultPickUpDelay();
+        item.setThrower(player);
+        if (!targets.level().addFreshEntity(item)) {
+            throw new IllegalStateException("Unable to spawn teleported item");
+        }
+        return item;
+    }
+
+    private List<ItemStack> snapshotInventory() {
+        var inventory = player.getInventory();
+        var snapshot = new ArrayList<ItemStack>(inventory.getContainerSize());
+        for (var slot = 0; slot < inventory.getContainerSize(); slot++) {
+            snapshot.add(inventory.getItem(slot).copy());
+        }
+        return List.copyOf(snapshot);
+    }
+
+    private void restoreInventory(List<ItemStack> snapshot) {
+        var inventory = player.getInventory();
+        for (var slot = 0; slot < Math.min(snapshot.size(), inventory.getContainerSize()); slot++) {
+            inventory.setItem(slot, snapshot.get(slot).copy());
+        }
+        inventory.setChanged();
+    }
+
+    private void addToInventory(ItemStack value) {
+        if (value.isEmpty()) return;
+        var remaining = value.copy();
+        player.getInventory().add(remaining);
+        if (!remaining.isEmpty()) {
+            throw new IllegalStateException("Player inventory cannot hold all collected items");
+        }
+    }
+
+    private void damageAtTarget(
+            BlockPos target,
+            ItemStack transmitted
+    ) {
+        var damage = transmitted.getItem() instanceof BlockItem blockItem
+                ? Math.max(0.0f, blockItem.getBlock().defaultBlockState()
+                .getDestroySpeed(targets.level(), target)) * 10.0f
+                : (float) Math.max(0.0, transmitted.getAttributeModifiers().compute(
+                Attributes.ATTACK_DAMAGE,
+                player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE),
+                EquipmentSlot.MAINHAND
+        ));
+        if (!(damage > 0.0f)) return;
+        var box = new AABB(target);
+        var source = SkillDamageSource.of(player, Skills.SELF_TELEPORT.get());
+        for (var entity : targets.level().getEntities(
+                player, box,
+                entity -> entity.isAlive() && entity.getBoundingBox().intersects(box))) {
+            if (entity instanceof LivingEntity living
+                    && CtaFriendlyFireWhitelist.shouldProtect(player, living)) continue;
+            entity.hurtServer(targets.level(), source, damage);
         }
     }
 
@@ -626,5 +911,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         if (actualDistance <= 16.0) return baseCost * 0.25f;
         if (actualDistance <= 32.0) return baseCost * 0.5f;
         return baseCost;
+    }
+
+    private record RemovedItem(ItemStack stack, Vec3 position) {
     }
 }

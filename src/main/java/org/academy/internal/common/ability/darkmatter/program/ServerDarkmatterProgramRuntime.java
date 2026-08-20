@@ -26,10 +26,16 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
+    private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
 
     public ServerDarkmatterProgramRuntime(ServerPlayer player) {
+        this(player, 1.0f);
+    }
+
+    public ServerDarkmatterProgramRuntime(ServerPlayer player, float costMultiplier) {
         this.player = Objects.requireNonNull(player, "player");
+        this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
     }
 
@@ -75,7 +81,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
                         player,
                         target,
                         disassembleBlockRange(power),
-                        disassembleCost(power)
+                        disassembleCost(power) * costMultiplier
                 )) {
                     throw new IllegalStateException(
                             "Darkmatter block disassembly was rejected");
@@ -108,7 +114,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
                         normalizedDirection,
                         cutRadius(power),
                         cutDamageScale(power),
-                        cutCost(power)
+                        cutCost(power) * costMultiplier
                 )) {
                     throw new IllegalStateException("Darkmatter Cut program cast was rejected");
                 }
@@ -140,7 +146,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
                         target,
                         disassembleEntityRange(power),
                         disassembleDamageScale(power),
-                        disassembleCost(power)
+                        disassembleCost(power) * costMultiplier
                 )) {
                     throw new IllegalStateException(
                             "Darkmatter entity disassembly was rejected");
@@ -177,7 +183,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
                         player,
                         spawn,
                         creationRange(power),
-                        creationCost(power)
+                        creationCost(power) * costMultiplier
                 ).orElseThrow(() -> new IllegalStateException(
                         "Darkmatter beetle creation was rejected"));
                 return () -> DarkmatterCreation.Server.discardProgramCreated(player, created);
@@ -247,6 +253,13 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
                 || !skill.isEnabled(player)) {
             throw new IllegalStateException("Required Darkmatter skill is unavailable");
         }
+    }
+
+    private static float requireCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+            throw new IllegalArgumentException("Program cost multiplier must be positive");
+        }
+        return multiplier;
     }
 
     private static Vec3 requireHorizontalDirection(ProgramDirection direction) {

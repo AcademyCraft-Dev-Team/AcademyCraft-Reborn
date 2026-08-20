@@ -56,7 +56,13 @@ class CommonProgramNodesTest {
                 CommonProgramNodeIds.RANDOM_DIRECTION,
                 CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_LEAST,
                 CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_MOST,
-                CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD
+                CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD,
+                CommonProgramNodeIds.RANDOM_NUMBER,
+                CommonProgramNodeIds.VEC3_OPERATION,
+                CommonProgramNodeIds.BLOCK_VOLUME,
+                CommonProgramNodeIds.FILTER_ENTITY_EXACT,
+                CommonProgramNodeIds.FILTER_BLOCK_EXACT,
+                CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE
         )) {
             assertNotNull(catalog.find(id), id.toString());
             assertNotNull(executors.find(id), id.toString());
@@ -182,6 +188,104 @@ class CommonProgramNodesTest {
         );
 
         assertEquals(35, run(graph, null).variables().get("result").value());
+    }
+
+    @Test
+    void advancedCommonNodesExecuteTypedBoundsVolumesAndDistanceSorting() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        scalarNode(2, "integer", "-7"),
+                        numericArithmeticNode(3, "integer", "absolute"),
+                        variableNode(4, CommonProgramNodeIds.VARIABLE_SET, "absolute",
+                                ProgramValueTypes.INTEGER.id()),
+                        blockPositionNode(5, OVERWORLD, 0, 64, 0),
+                        blockPositionNode(6, OVERWORLD, 1, 65, 1),
+                        node(7, CommonProgramNodeIds.BLOCK_VOLUME),
+                        variableNode(8, CommonProgramNodeIds.VARIABLE_SET, "volume",
+                                ProgramValueTypes.BLOCK_POSITION_SET.id()),
+                        randomNumberNode(9, "integer", "4", "4"),
+                        variableNode(10, CommonProgramNodeIds.VARIABLE_SET, "random",
+                                ProgramValueTypes.INTEGER.id()),
+                        directionNode(20, 1.0, 0.0, 0.0),
+                        directionNode(21, 0.0, 1.0, 0.0),
+                        vec3OperationNode(22, "direction", "cross"),
+                        variableNode(23, CommonProgramNodeIds.VARIABLE_SET, "cross",
+                                ProgramValueTypes.DIRECTION.id()),
+                        worldPositionNode(11, OVERWORLD, 10.0, 64.0, 0.0),
+                        worldPositionNode(12, OVERWORLD, 2.0, 64.0, 0.0),
+                        node(13, CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION.id("singleton")),
+                        node(14, CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION.id("singleton")),
+                        node(15, CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION.id("union")),
+                        worldPositionNode(16, OVERWORLD, 0.0, 64.0, 0.0),
+                        distanceSortNode(17, "world_position", "ascending"),
+                        variableNode(18, CommonProgramNodeIds.VARIABLE_SET, "sorted",
+                                ProgramValueTypes.WORLD_POSITION_SET.id()),
+                        node(19, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 4, "flow"),
+                        edge(2, "value", 3, "value"),
+                        edge(3, "result", 4, "value"),
+                        edge(4, "flow", 8, "flow"),
+                        edge(5, "position", 7, "first"),
+                        edge(6, "position", 7, "second"),
+                        edge(7, "blocks", 8, "value"),
+                        edge(8, "flow", 10, "flow"),
+                        edge(9, "value", 10, "value"),
+                        edge(10, "flow", 23, "flow"),
+                        edge(20, "direction", 22, "left"),
+                        edge(21, "direction", 22, "right"),
+                        edge(22, "result", 23, "value"),
+                        edge(23, "flow", 18, "flow"),
+                        edge(11, "position", 13, "value"),
+                        edge(12, "position", 14, "value"),
+                        edge(13, "values", 15, "left"),
+                        edge(14, "values", 15, "right"),
+                        edge(15, "values", 17, "values"),
+                        edge(16, "position", 17, "origin"),
+                        edge(17, "values", 18, "value"),
+                        edge(18, "flow", 19, "flow")
+                )
+        );
+
+        var variables = run(graph, null).variables();
+        assertEquals(7, variables.get("absolute").value());
+        assertEquals(8, ((List<?>) variables.get("volume").value()).size());
+        assertEquals(4, variables.get("random").value());
+        assertEquals(new ProgramDirection(0.0, 0.0, 1.0),
+                variables.get("cross").value());
+        assertEquals(List.of(
+                new ProgramWorldPosition(OVERWORLD, 2.0, 64.0, 0.0),
+                new ProgramWorldPosition(OVERWORLD, 10.0, 64.0, 0.0)
+        ), variables.get("sorted").value());
+    }
+
+    @Test
+    void blockVolumeHandlesMaximumIntegerCoordinatesWithoutOverflow() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        blockPositionNode(2, OVERWORLD, Integer.MAX_VALUE - 1, 64, 0),
+                        blockPositionNode(3, OVERWORLD, Integer.MAX_VALUE, 64, 0),
+                        node(4, CommonProgramNodeIds.BLOCK_VOLUME),
+                        variableNode(5, CommonProgramNodeIds.VARIABLE_SET, "volume",
+                                ProgramValueTypes.BLOCK_POSITION_SET.id()),
+                        node(6, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 5, "flow"),
+                        edge(2, "position", 4, "first"),
+                        edge(3, "position", 4, "second"),
+                        edge(4, "blocks", 5, "value"),
+                        edge(5, "flow", 6, "flow")
+                )
+        );
+
+        assertEquals(List.of(
+                new ProgramBlockPosition(OVERWORLD, Integer.MAX_VALUE - 1, 64, 0),
+                new ProgramBlockPosition(OVERWORLD, Integer.MAX_VALUE, 64, 0)
+        ), run(graph, null).variables().get("volume").value());
     }
 
     @Test
@@ -597,7 +701,7 @@ class CommonProgramNodesTest {
                         floatNode(5, 8.0),
                         node(6, CommonProgramNodeIds.ENTITIES_AROUND),
                         node(7, CommonProgramNodeCatalog.CollectionDomain.ENTITY.id("foreach")),
-                        integerNode(8, 1),
+                        integerNode(8, 2),
                         node(9, CommonProgramNodeCatalog.CollectionDomain.ENTITY.id("get")),
                         node(10, CommonProgramNodeIds.ENTITY_EQUAL),
                         node(11, CommonProgramNodeIds.BRANCH),
@@ -865,6 +969,44 @@ class CommonProgramNodesTest {
         configuration.addProperty("z", z);
         return new ProgramGraph.Node(id, CommonProgramNodeIds.BLOCK_POSITION_CONSTANT, 1,
                 configuration);
+    }
+
+    private static ProgramGraph.Node randomNumberNode(
+            int id,
+            String type,
+            String lower,
+            String upper
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("type", type);
+        configuration.addProperty("lower", lower);
+        configuration.addProperty("upper", upper);
+        return new ProgramGraph.Node(
+                id, CommonProgramNodeIds.RANDOM_NUMBER, 1, configuration);
+    }
+
+    private static ProgramGraph.Node distanceSortNode(
+            int id,
+            String type,
+            String order
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("type", type);
+        configuration.addProperty("order", order);
+        return new ProgramGraph.Node(
+                id, CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE, 1, configuration);
+    }
+
+    private static ProgramGraph.Node vec3OperationNode(
+            int id,
+            String type,
+            String operator
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("type", type);
+        configuration.addProperty("operator", operator);
+        return new ProgramGraph.Node(
+                id, CommonProgramNodeIds.VEC3_OPERATION, 1, configuration);
     }
 
     private static Object randomSingle(

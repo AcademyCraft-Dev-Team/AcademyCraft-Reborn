@@ -1,6 +1,11 @@
 package org.academy.internal.common.ability.program;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -25,6 +30,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Comparator;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.DoubleBinaryOperator;
@@ -51,6 +57,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             registerCollection(result, domain);
         }
         registerRandomCollectionValues(result);
+        registerAdvancedValues(result);
         executors = Map.copyOf(result);
     }
 
@@ -326,6 +333,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 ProgramValueTypes.FLOAT,
                 direction(inputs, "left").dot(direction(inputs, "right"))
         ));
+        put(result, CommonProgramNodeIds.VEC3_OPERATION,
+                (ProgramVmContext _, CommonProgramNodeCatalog.Vec3OperationConfiguration configuration,
+                 ProgramInputView inputs) -> vec3Operation(inputs, configuration));
     }
 
     private static void registerQueries(Map<Identifier, ProgramNodeExecutor<?>> result) {
@@ -414,6 +424,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                                     "normal", ProgramValueTypes.DIRECTION, value))
                             .orElseGet(CommonProgramExecutors::emptyData);
                 });
+        put(result, CommonProgramNodeIds.BLOCK_VOLUME, (_, _, inputs) -> blockVolume(inputs));
     }
 
     private static void registerEquality(Map<Identifier, ProgramNodeExecutor<?>> result) {
@@ -465,6 +476,10 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         inputs,
                         entity -> matchesEntityKind(entity, configuration.type())
                 ));
+        put(result, CommonProgramNodeIds.FILTER_ENTITY_EXACT,
+                (ProgramVmContext _, CommonProgramNodeCatalog.ExactFilterConfiguration configuration,
+                 ProgramInputView inputs) -> filterEntities(
+                        inputs, entity -> matchesEntitySelector(entity, configuration.values())));
         put(result, CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_LEAST, (_, _, inputs) -> {
             var percent = healthPercentThreshold(inputs);
             return filterEntities(inputs, entity -> healthPercent(entity) >= percent);
@@ -493,6 +508,10 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                     && living.level() == target.level()
                     && living.hasLineOfSight(target));
         });
+        put(result, CommonProgramNodeIds.FILTER_BLOCK_EXACT,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.ExactFilterConfiguration configuration,
+                 ProgramInputView inputs) -> exactBlockFilter(context, inputs, configuration));
     }
 
     private static ProgramNodeStep filterEntities(
@@ -582,6 +601,207 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         });
     }
 
+    private static void registerAdvancedValues(
+            Map<Identifier, ProgramNodeExecutor<?>> result
+    ) {
+        put(result, CommonProgramNodeIds.RANDOM_NUMBER,
+                (ProgramVmContext _, CommonProgramNodeCatalog.RandomNumberConfiguration configuration,
+                 ProgramInputView _) -> data(
+                        "value", configuration.kind().type(), randomNumber(configuration)));
+        put(result, CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.DistanceSortConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var origin = worldPosition(inputs, "origin");
+                    var domain = switch (configuration.kind()) {
+                        case ENTITY -> CommonProgramNodeCatalog.CollectionDomain.ENTITY;
+                        case WORLD_POSITION -> CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION;
+                        case BLOCK_POSITION -> CommonProgramNodeCatalog.CollectionDomain.BLOCK_POSITION;
+                    };
+                    var values = new java.util.ArrayList<>(collection(inputs, "values", domain));
+                    Comparator<Object> comparator = Comparator.comparingDouble(
+                            value -> pointDistanceSquared(context, origin, value));
+                    if (configuration.order().reversed()) comparator = comparator.reversed();
+                    values.sort(comparator);
+                    return data("values", configuration.kind().collectionType(), List.copyOf(values));
+                });
+    }
+
+    private static ProgramNodeStep blockVolume(ProgramInputView inputs) {
+        var first = blockPosition(inputs, "first");
+        var second = blockPosition(inputs, "second");
+        if (!first.dimension().equals(second.dimension())) {
+            throw new IllegalArgumentException("Block-volume corners are in different dimensions");
+        }
+        var minX = Math.min(first.x(), second.x());
+        var minY = Math.min(first.y(), second.y());
+        var minZ = Math.min(first.z(), second.z());
+        var maxX = Math.max(first.x(), second.x());
+        var maxY = Math.max(first.y(), second.y());
+        var maxZ = Math.max(first.z(), second.z());
+        var sizeX = (long) maxX - minX + 1L;
+        var sizeY = (long) maxY - minY + 1L;
+        var sizeZ = (long) maxZ - minZ + 1L;
+        if (sizeX > 32_768L || sizeY > 32_768L || sizeZ > 32_768L
+                || sizeX * sizeY > 32_768L || sizeX * sizeY * sizeZ > 32_768L) {
+            throw new IllegalArgumentException("Block volume exceeds 32768 positions");
+        }
+        var blocks = new java.util.ArrayList<ProgramBlockPosition>((int) (sizeX * sizeY * sizeZ));
+        for (long x = minX; x <= maxX; x++) {
+            for (long y = minY; y <= maxY; y++) {
+                for (long z = minZ; z <= maxZ; z++) {
+                    blocks.add(new ProgramBlockPosition(
+                            first.dimension(), (int) x, (int) y, (int) z));
+                }
+            }
+        }
+        return data("blocks", ProgramValueTypes.BLOCK_POSITION_SET, List.copyOf(blocks));
+    }
+
+    private static ProgramNodeStep exactBlockFilter(
+            ProgramVmContext context,
+            ProgramInputView inputs,
+            CommonProgramNodeCatalog.ExactFilterConfiguration configuration
+    ) {
+        var caster = resolver(context).caster();
+        if (!(caster instanceof ServerPlayer player)) {
+            throw new IllegalStateException("Exact block filtering requires a server player");
+        }
+        var blocks = collection(inputs, "blocks",
+                CommonProgramNodeCatalog.CollectionDomain.BLOCK_POSITION).stream()
+                .map(ProgramBlockPosition.class::cast)
+                .filter(position -> matchesBlockSelector(player, position, configuration.values()))
+                .toList();
+        return data("blocks", ProgramValueTypes.BLOCK_POSITION_SET, blocks);
+    }
+
+    private static ProgramNodeStep vec3Operation(
+            ProgramInputView inputs,
+            CommonProgramNodeCatalog.Vec3OperationConfiguration configuration
+    ) {
+        if (configuration.kind() == CommonProgramNodeCatalog.Vec3Kind.DIRECTION) {
+            var left = direction(inputs, "left");
+            var right = direction(inputs, "right");
+            return switch (configuration.operator()) {
+                case DOT -> data("result", ProgramValueTypes.FLOAT, left.dot(right));
+                case CROSS -> data("result", ProgramValueTypes.DIRECTION, new ProgramDirection(
+                        left.y() * right.z() - left.z() * right.y(),
+                        left.z() * right.x() - left.x() * right.z(),
+                        left.x() * right.y() - left.y() * right.x()));
+                case ADD -> data("result", ProgramValueTypes.DIRECTION, new ProgramDirection(
+                        left.x() + right.x(), left.y() + right.y(), left.z() + right.z()));
+            };
+        }
+        var left = worldPosition(inputs, "left");
+        var right = worldPosition(inputs, "right");
+        if (!left.dimension().equals(right.dimension())) {
+            throw new IllegalArgumentException("Vec3 positions are in different dimensions");
+        }
+        return switch (configuration.operator()) {
+            case DOT -> data("result", ProgramValueTypes.FLOAT,
+                    left.x() * right.x() + left.y() * right.y() + left.z() * right.z());
+            case CROSS -> data("result", ProgramValueTypes.WORLD_POSITION,
+                    new ProgramWorldPosition(left.dimension(),
+                            left.y() * right.z() - left.z() * right.y(),
+                            left.z() * right.x() - left.x() * right.z(),
+                            left.x() * right.y() - left.y() * right.x()));
+            case ADD -> data("result", ProgramValueTypes.WORLD_POSITION,
+                    new ProgramWorldPosition(left.dimension(),
+                            left.x() + right.x(), left.y() + right.y(), left.z() + right.z()));
+        };
+    }
+
+    private static Object randomNumber(
+            CommonProgramNodeCatalog.RandomNumberConfiguration configuration
+    ) {
+        return switch (configuration.kind()) {
+            case INTEGER -> {
+                var lower = Integer.parseInt(configuration.lower());
+                var upper = Integer.parseInt(configuration.upper());
+                yield lower == upper ? lower
+                        : (int) ThreadLocalRandom.current().nextLong(lower, (long) upper + 1L);
+            }
+            case BIG_INTEGER -> randomBigInteger(
+                    new BigInteger(configuration.lower()), new BigInteger(configuration.upper()));
+            case FLOAT -> {
+                var lower = Double.parseDouble(configuration.lower());
+                var upper = Double.parseDouble(configuration.upper());
+                yield lower == upper ? lower : ThreadLocalRandom.current().nextDouble(lower, upper);
+            }
+        };
+    }
+
+    private static BigInteger randomBigInteger(BigInteger lower, BigInteger upper) {
+        var range = upper.subtract(lower).add(BigInteger.ONE);
+        if (range.equals(BigInteger.ONE)) return lower;
+        BigInteger offset;
+        do {
+            offset = new BigInteger(range.bitLength(), ThreadLocalRandom.current());
+        } while (offset.compareTo(range) >= 0);
+        return lower.add(offset);
+    }
+
+    private static double pointDistanceSquared(
+            ProgramVmContext context,
+            ProgramWorldPosition origin,
+            Object value
+    ) {
+        ProgramWorldPosition position;
+        if (value instanceof ProgramWorldPosition world) {
+            position = world;
+        } else if (value instanceof ProgramBlockPosition block) {
+            position = block.center();
+        } else {
+            position = resolver(context).positionOf(value).orElseThrow(() ->
+                    new IllegalArgumentException("Entity position is unavailable"));
+        }
+        if (!origin.dimension().equals(position.dimension())) {
+            throw new IllegalArgumentException("Distance-sort point is in another dimension");
+        }
+        return squaredDistance(origin, position);
+    }
+
+    private static boolean matchesEntitySelector(Object value, List<String> selectors) {
+        if (!(value instanceof Entity entity)) return false;
+        var typeId = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        for (var selector : selectors) {
+            if (selector.startsWith("#")) {
+                var id = Identifier.tryParse(selector.substring(1));
+                if (id != null && BuiltInRegistries.ENTITY_TYPE
+                        .wrapAsHolder(entity.getType())
+                        .is(TagKey.create(Registries.ENTITY_TYPE, id))) return true;
+                continue;
+            }
+            var id = Identifier.tryParse(selector);
+            if (id != null && id.equals(typeId)) return true;
+            if (selector.equals(entity.getName().getString())) return true;
+        }
+        return false;
+    }
+
+    private static boolean matchesBlockSelector(
+            ServerPlayer player,
+            ProgramBlockPosition position,
+            List<String> selectors
+    ) {
+        if (!position.dimension().equals(player.level().dimension().identifier())) return false;
+        var blockPosition = new BlockPos(position.x(), position.y(), position.z());
+        if (!player.level().hasChunkAt(blockPosition)) return false;
+        var state = player.level().getBlockState(blockPosition);
+        var blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        for (var selector : selectors) {
+            if (selector.startsWith("#")) {
+                var id = Identifier.tryParse(selector.substring(1));
+                if (id != null && state.is(TagKey.create(Registries.BLOCK, id))) return true;
+                continue;
+            }
+            var id = Identifier.tryParse(selector);
+            if (id != null && id.equals(blockId)) return true;
+            if (selector.equals(state.getBlock().getName().getString())) return true;
+        }
+        return false;
+    }
+
     private static double healthPercentThreshold(ProgramInputView inputs) {
         var percent = floatValue(inputs, "percent");
         if (percent < 0.0 || percent > 100.0) {
@@ -647,9 +867,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         ));
         put(result, domain.id("get"), (_, _, inputs) -> {
             var values = collection(inputs, "values", domain);
-            var index = integer(inputs, "index");
+            var index = integer(inputs, "index") - 1;
             if (index < 0 || index >= values.size()) {
-                throw new IllegalArgumentException("Collection index is out of bounds");
+                throw new IllegalArgumentException("Collection position is out of bounds");
             }
             return data("value", domain.elementType(), values.get(index));
         });
@@ -817,6 +1037,13 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                                 integer(inputs, "left"), integer(inputs, "right"));
                         case DIVIDE -> integer(inputs, "left") / integer(inputs, "right");
                         case MODULO -> integer(inputs, "left") % integer(inputs, "right");
+                        case ABSOLUTE -> {
+                            var value = integer(inputs, "value");
+                            if (value == Integer.MIN_VALUE) {
+                                throw new ArithmeticException("Integer absolute overflow");
+                            }
+                            yield Math.abs(value);
+                        }
                     }
             );
             case BIG_INTEGER -> data(
@@ -828,6 +1055,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case MULTIPLY -> bigInteger(inputs, "left").multiply(bigInteger(inputs, "right"));
                         case DIVIDE -> bigInteger(inputs, "left").divide(bigInteger(inputs, "right"));
                         case MODULO -> bigInteger(inputs, "left").remainder(bigInteger(inputs, "right"));
+                        case ABSOLUTE -> bigInteger(inputs, "value").abs();
                     }
             );
             case FLOAT -> data(
@@ -839,6 +1067,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case MULTIPLY -> floatValue(inputs, "left") * floatValue(inputs, "right");
                         case DIVIDE -> floatValue(inputs, "left") / floatValue(inputs, "right");
                         case MODULO -> floatValue(inputs, "left") % floatValue(inputs, "right");
+                        case ABSOLUTE -> Math.abs(floatValue(inputs, "value"));
                     })
             );
         };

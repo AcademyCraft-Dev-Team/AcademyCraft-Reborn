@@ -41,10 +41,16 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     private static final double PROJECTILE_QUERY_RANGE = 16.0;
 
     private final ServerPlayer player;
+    private final float costMultiplier;
     private final ImpactBatch impactBatch = new ImpactBatch();
 
     public ServerAcceleratorProgramRuntime(ServerPlayer player) {
+        this(player, 1.0f);
+    }
+
+    public ServerAcceleratorProgramRuntime(ServerPlayer player, float costMultiplier) {
         this.player = Objects.requireNonNull(player, "player");
+        this.costMultiplier = requireCostMultiplier(costMultiplier);
     }
 
     @Override
@@ -404,7 +410,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         if (configuredShockwave != null) {
             cost = ProgramPowerScale.cost(cost, configuredShockwave.power());
         }
-        impactBatch.add(cost);
+        impactBatch.add(cost * costMultiplier);
         return new ProgramActionTransaction.ProgramAction() {
             private Vec3 center;
 
@@ -520,9 +526,17 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     }
 
     private void charge(Skill skill, float cost) {
-        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player, cost, skill)) {
+        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                player, cost * costMultiplier, skill)) {
             throw new IllegalStateException("Insufficient CP for accelerator program action");
         }
+    }
+
+    private static float requireCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+            throw new IllegalArgumentException("Program cost multiplier must be positive");
+        }
+        return multiplier;
     }
 
     private void setVelocity(Entity entity, Vec3 velocity) {

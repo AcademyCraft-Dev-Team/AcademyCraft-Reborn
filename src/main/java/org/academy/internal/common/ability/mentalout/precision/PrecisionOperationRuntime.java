@@ -81,7 +81,20 @@ public final class PrecisionOperationRuntime {
             CompiledProgram program,
             boolean feedback
     ) {
+        return execute(player, slot, program, feedback, 1.0f);
+    }
+
+    public static ExecutionResult execute(
+            ServerPlayer player,
+            int slot,
+            CompiledProgram program,
+            boolean feedback,
+            float costMultiplier
+    ) {
         if (player == null || slot < 0 || slot >= SLOT_COUNT || program == null) {
+            return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
+        }
+        if (!Float.isFinite(costMultiplier) || costMultiplier <= 0.0f) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
         }
         var slots = ACTIVE.computeIfAbsent(player.getUUID(), _ -> new ActiveContext[SLOT_COUNT]);
@@ -96,7 +109,7 @@ public final class PrecisionOperationRuntime {
         var activeActions = new ArrayList<ActiveAction>();
         var transaction = new ProgramActionTransaction();
         var planner = new NativePlanner(
-                player, targetLimit, now, transaction, activeActions);
+                player, targetLimit, now, transaction, activeActions, costMultiplier);
         var nativeResult = PrecisionProgramExecutionBridge.executeNative(
                 program,
                 now,
@@ -117,7 +130,7 @@ public final class PrecisionOperationRuntime {
 
         var removedSubjects = removedSubjects(evaluated.actions);
         var occupationPlan = projectedOccupationPlan(
-                player, slots, slot, evaluated, removedSubjects, now);
+                player, slots, slot, evaluated, removedSubjects, now, costMultiplier);
         var system = AbilitySystemServer.getSystem(player);
         if (!system.canReplacePermanentOccupationAndAddTimedOccupations(
                 player.getUUID(),
@@ -303,7 +316,8 @@ public final class PrecisionOperationRuntime {
 
     private static @Nullable ActiveAction applyPendingAction(
             ServerPlayer player,
-            PendingAction action
+            PendingAction action,
+            float costMultiplier
     ) {
         var subjectHandles = new HashMap<UUID, List<AutoCloseable>>();
         var subjectCosts = new HashMap<UUID, Float>();
@@ -362,6 +376,8 @@ public final class PrecisionOperationRuntime {
             throw exception;
         }
         if (subjectHandles.isEmpty() && fixedCost <= 0.0f && intrusionSession == null) return null;
+        subjectCosts.replaceAll((_, cost) -> cost * costMultiplier);
+        fixedCost *= costMultiplier;
         return new ActiveAction(
                 action.nodeId,
                 action.kind,
@@ -483,6 +499,7 @@ public final class PrecisionOperationRuntime {
         private final long now;
         private final ProgramActionTransaction transaction;
         private final List<ActiveAction> activeActions;
+        private final float costMultiplier;
         private final List<PendingAction> actions = new ArrayList<>();
         private final Set<UUID> uniqueSubjects = new HashSet<>();
         private boolean endIntrusion;
@@ -494,13 +511,15 @@ public final class PrecisionOperationRuntime {
                 int targetLimit,
                 long now,
                 ProgramActionTransaction transaction,
-                List<ActiveAction> activeActions
+                List<ActiveAction> activeActions,
+                float costMultiplier
         ) {
             this.player = player;
             this.targetLimit = targetLimit;
             this.now = now;
             this.transaction = transaction;
             this.activeActions = activeActions;
+            this.costMultiplier = costMultiplier;
         }
 
         @Override
@@ -763,7 +782,7 @@ public final class PrecisionOperationRuntime {
             }
             actions.add(action);
             context.attachment(ProgramExecutionFrame.class).orElseThrow().stage(context, () -> {
-                var active = applyPendingAction(player, action);
+                var active = applyPendingAction(player, action, costMultiplier);
                 if (active == null) return ProgramActionTransaction.Undo.NONE;
                 activeActions.add(active);
                 return () -> {
@@ -1805,7 +1824,8 @@ public final class PrecisionOperationRuntime {
             int replacedSlot,
             Evaluation evaluated,
             Set<UUID> removedSubjects,
-            long now
+            long now,
+            float costMultiplier
     ) {
         var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
         var sharedPermanent = new HashSet<SharedCostKey>();
@@ -1841,6 +1861,7 @@ public final class PrecisionOperationRuntime {
                     cost += actionCost(player, subject, action.kind);
                 }
             }
+            cost *= costMultiplier;
             if (!(cost > 0.0f)) continue;
             if (permanent) {
                 permanentCost += cost;

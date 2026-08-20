@@ -66,8 +66,35 @@ public final class ProgramConfigurationOptions {
             if (field.equals("operator")) {
                 return stringOptions(
                         "screen.academy.program.configuration.arithmetic.",
-                        "add", "subtract", "multiply", "divide", "modulo"
+                        "add", "subtract", "multiply", "divide", "modulo", "absolute"
                 );
+            }
+        }
+        if (id.equals(CommonProgramNodeIds.RANDOM_NUMBER) && field.equals("type")) {
+            return scalarTypes(false);
+        }
+        if (id.equals(CommonProgramNodeIds.VEC3_OPERATION)) {
+            if (field.equals("type")) {
+                return stringOptions(
+                        "screen.academy.program.configuration.vec3_type.",
+                        "direction", "world_position");
+            }
+            if (field.equals("operator")) {
+                return stringOptions(
+                        "screen.academy.program.configuration.vec3_operator.",
+                        "dot", "cross", "add");
+            }
+        }
+        if (id.equals(CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE)) {
+            if (field.equals("type")) {
+                return stringOptions(
+                        "screen.academy.program.configuration.point_type.",
+                        "entity", "world_position", "block_position");
+            }
+            if (field.equals("order")) {
+                return stringOptions(
+                        "screen.academy.program.configuration.sort_order.",
+                        "ascending", "descending");
             }
         }
         if (id.equals(CommonProgramNodeIds.NUMERIC_COMPARE)) {
@@ -146,6 +173,13 @@ public final class ProgramConfigurationOptions {
             return stringOptions(
                     "screen.academy.program.configuration.teleport_target.",
                     "entity", "block"
+            );
+        }
+        if (id.equals(TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT)
+                && field.equals("mode")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.block_item_teleport.",
+                    "place", "collect"
             );
         }
         if ((id.equals(CommonProgramNodeIds.VARIABLE_GET)

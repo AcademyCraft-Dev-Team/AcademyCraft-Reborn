@@ -21,10 +21,10 @@ public final class ProgramPowerScale {
         return require(power);
     }
 
-    /** CP varies quadratically; power 1 preserves the original skill cost. */
+    /** CP follows the programmable-action cubic curve; power 1 preserves the original skill cost. */
     public static float cost(float baseCost, float power) {
         var checked = require(power);
-        return baseCost * checked * checked;
+        return baseCost * (0.5f + checked * checked * checked * 0.5f);
     }
 
     /** Continuously interpolates non-damage effects through the former three power tiers. */

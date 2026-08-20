@@ -12,6 +12,7 @@ import java.util.UUID;
 
 /** Classifies program entry nodes and matches them against server-side trigger events. */
 public final class ProgramTriggers {
+    public static final int DEFAULT_LOOP_INTERVAL = 40;
     private static final Map<HealthLatchKey, Boolean> HEALTH_LATCHES = new HashMap<>();
 
     private ProgramTriggers() {
@@ -56,6 +57,22 @@ public final class ProgramTriggers {
             case MELEE, HURT -> true;
             case HEALTH -> false;
         };
+    }
+
+    public static float costMultiplier(AbilityProgram program) {
+        var entry = triggerEntry(program);
+        if (entry == null || type(entry.type()) != Type.LOOP) return 1.0f;
+        var decoded = CommonProgramNodeCatalog.LoopTriggerConfiguration.CODEC
+                .parse(JsonOps.INSTANCE, entry.configuration())
+                .result()
+                .orElse(null);
+        return decoded == null ? 1.0f : loopCostMultiplier(decoded.interval());
+    }
+
+    public static float loopCostMultiplier(int interval) {
+        var checked = Math.max(1, interval);
+        return checked >= DEFAULT_LOOP_INTERVAL
+                ? 1.0f : Math.max(2.0f, 10.0f / checked);
     }
 
     public static boolean matchesHealth(

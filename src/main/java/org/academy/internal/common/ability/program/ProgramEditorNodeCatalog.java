@@ -118,6 +118,16 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         } else if (id.equals(CommonProgramNodeIds.NUMERIC_COMPARE)) {
             configuration.addProperty("type", "integer");
             configuration.addProperty("operator", "equal");
+        } else if (id.equals(CommonProgramNodeIds.RANDOM_NUMBER)) {
+            configuration.addProperty("type", "integer");
+            configuration.addProperty("lower", "0");
+            configuration.addProperty("upper", "100");
+        } else if (id.equals(CommonProgramNodeIds.VEC3_OPERATION)) {
+            configuration.addProperty("type", "direction");
+            configuration.addProperty("operator", "add");
+        } else if (id.equals(CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE)) {
+            configuration.addProperty("type", "entity");
+            configuration.addProperty("order", "ascending");
         } else if (id.equals(CommonProgramNodeIds.BOOLEAN_CONSTANT)) {
             configuration.addProperty("value", false);
         } else if (id.equals(CommonProgramNodeIds.INTEGER_CONSTANT)
@@ -131,13 +141,17 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("type", ProgramValueTypes.BOOLEAN.id().toString());
         } else if (id.equals(CommonProgramNodeIds.FILTER_ENTITY_TYPE)) {
             configuration.addProperty("type", "living");
+        } else if (id.equals(CommonProgramNodeIds.FILTER_ENTITY_EXACT)) {
+            configuration.addProperty("selectors", "minecraft:player");
+        } else if (id.equals(CommonProgramNodeIds.FILTER_BLOCK_EXACT)) {
+            configuration.addProperty("selectors", "minecraft:stone");
         } else if (id.equals(CommonProgramNodeIds.LOOK_TARGET)) {
             configuration.addProperty("target_type", "entity");
         } else if (id.equals(CommonProgramNodeIds.BLOCK_NORMAL)) {
             configuration.addProperty("mode", "view");
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) {
             configuration.addProperty("enabled", true);
-            configuration.addProperty("interval", 20);
+            configuration.addProperty("interval", ProgramTriggers.DEFAULT_LOOP_INTERVAL);
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) {
             configuration.addProperty("condition", "jump");
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD)) {

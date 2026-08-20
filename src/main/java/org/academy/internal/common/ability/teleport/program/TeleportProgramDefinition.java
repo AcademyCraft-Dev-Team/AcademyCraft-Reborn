@@ -40,6 +40,9 @@ public final class TeleportProgramDefinition {
             if (id.equals(TeleportProgramNodeIds.ENTITY_TELEPORT)) {
                 configuration.addProperty("target_type", "entity");
             }
+            if (id.equals(TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT)) {
+                configuration.addProperty("mode", "place");
+            }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
             var group = id.getPath().contains("/target/")
                     ? ProgramEditorNodeCatalog.Group.TARGET
