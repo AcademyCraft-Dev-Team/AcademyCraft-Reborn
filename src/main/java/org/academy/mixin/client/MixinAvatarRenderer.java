@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
+import org.academy.internal.client.animation.WingFlightAnimationClient;
 import org.academy.internal.client.render.vfx.WingAvatarRegistry;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
@@ -48,13 +49,9 @@ public abstract class MixinAvatarRenderer {
             method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V",
             at = @At("RETURN")
     )
-    private void applyWingBoostPose(
+    private void extractWingFlightAnimation(
             Avatar avatar, AvatarRenderState state, float partialTick, CallbackInfo ci
     ) {
-        if (!avatar.getData(AttachmentTypes.WING_BOOST_POSE.get())) return;
-        // Keep the Elytra-like pose entirely inside the render state. Writing vanilla shared flag
-        // 7 makes collision/ground checks race the skill tick and destabilizes entity tracking.
-        state.isFallFlying = true;
-        state.fallFlyingTimeInTicks = Math.max(state.fallFlyingTimeInTicks, 10.0f);
+        WingFlightAnimationClient.prepareRenderState(avatar, state, partialTick);
     }
 }
