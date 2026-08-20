@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.teleport;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public final class TeleportSafety {
@@ -17,11 +18,14 @@ public final class TeleportSafety {
      * Finds a nearby loaded, collision-free position without generating chunks.
      */
     public static Vec3 findSafe(Entity entity, Vec3 desired) {
-        if (!(entity.level() instanceof ServerLevel level)) return null;
-        return findSafe(entity, level, desired);
+        return findSafeInLevel(entity, entity.level(), desired);
     }
 
     public static Vec3 findSafe(Entity entity, ServerLevel level, Vec3 desired) {
+        return findSafeInLevel(entity, level, desired);
+    }
+
+    private static Vec3 findSafeInLevel(Entity entity, Level level, Vec3 desired) {
         if (!isFinite(desired)) return null;
 
         var origin = entity.getBoundingBox();

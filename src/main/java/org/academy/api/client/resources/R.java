@@ -152,6 +152,7 @@ public final class R {
         public static final Identifier area_teleport_start_icon = academy("textures/ability/teleport/skill/area_teleport_start/icon.png");
         public static final Identifier flashing_icon = academy("textures/ability/teleport/skill/flashing/icon.png");
         public static final Identifier defensive_teleport_icon = academy("textures/ability/teleport/skill/defensive_teleport/icon.png");
+        public static final Identifier teleport_cursor = academy("textures/ability/teleport/effect/teleport_cursor.png");
         public static final Identifier darkmatter_shaping_icon = academy("textures/ability/darkmatter/skill/darkmatter_shaping/icon.png");
         public static final Identifier darkmatter_disassemble_icon = academy("textures/ability/darkmatter/skill/darkmatter_disassemble/icon.png");
         public static final Identifier darkmatter_cut_icon = academy("textures/ability/darkmatter/skill/darkmatter_cut/icon.png");

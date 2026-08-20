@@ -11,7 +11,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
@@ -22,8 +21,6 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -31,6 +28,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -187,14 +185,12 @@ public final class SelfTeleport extends Skill {
             public Vec3 currentRenderPos;
             private double distance = DEFAULT_DISTANCE;
             private Vec3 visualRenderPos;
-            private AABB previewBoxWorld;
 
             public TeleportRenderContext(LocalPlayer player) {
                 this.player = player;
                 playerDimensions = player.getDimensions(Pose.STANDING);
                 currentRenderPos = calculateIdealTargetCenterPosFromEyes();
                 visualRenderPos = currentRenderPos;
-                previewBoxWorld = calculateAABBFromCenter(visualRenderPos);
             }
 
             private Vec3 calculateIdealTargetCenterPosFromEyes() {
@@ -202,17 +198,6 @@ public final class SelfTeleport extends Skill {
                 var lookVec = player.getViewVector(1.0f);
                 var target = TeleportTargeting.findSelfTeleportCenter(player, eyePos, lookVec, distance);
                 return target == null ? eyePos : target;
-            }
-
-            private AABB calculateAABBFromCenter(Vec3 centerPos) {
-                var halfWidth = playerDimensions.width() / 2.0f;
-                var halfHeight = playerDimensions.height() / 2.0f;
-                return new AABB(centerPos.x - halfWidth,
-                        centerPos.y - halfHeight,
-                        centerPos.z - halfWidth,
-                        centerPos.x + halfWidth,
-                        centerPos.y + halfHeight,
-                        centerPos.z + halfWidth);
             }
 
             @SubscribeEvent
@@ -239,19 +224,8 @@ public final class SelfTeleport extends Skill {
                 var factor = ClientUtil.animationFactor(1.25);
                 currentRenderPos = logicalTargetPos;
                 visualRenderPos = visualRenderPos.lerp(currentRenderPos, factor);
-                previewBoxWorld = calculateAABBFromCenter(visualRenderPos);
-
-                var matrixStack = event.getMatrixStack();
-                var camera = Minecraft.getInstance().gameRenderer.mainCamera();
-                var camPos = camera.position();
-
-                matrixStack.pushPose();
-                matrixStack.translate((float) -camPos.x, (float) -camPos.y, (float) -camPos.z);
-                event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
-                        (matrices, consumer) -> LineBoxRenderer.renderWireframeBox(
-                                matrices, consumer, previewBoxWorld, 1f, 1f, 1f, 1f
-                        ));
-                matrixStack.popPose();
+                var feetPosition = visualRenderPos.add(0, -playerDimensions.height() / 2.0, 0);
+                TeleportCursorRenderer.render(event, feetPosition, true);
             }
 
             public void cleanup() {

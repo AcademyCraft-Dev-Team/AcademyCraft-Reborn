@@ -118,6 +118,7 @@
   "app.academy.skill_settings.advanced.block_destruction": "Block Destruction (obeys global setting)",
   "app.academy.skill_settings.advanced.block_destruction_independent": "Block Destruction (independent of global setting)",
   "app.academy.skill_settings.advanced.empty": "No additional skill-specific settings are registered.",
+  "app.academy.skill_settings.advanced.flashing_auto_escape": "Automatically flash to safety when attacked",
   "app.academy.skill_settings.advanced.kinetic_block_drops": "Drop items from shockwave-broken blocks",
   "app.academy.skill_settings.advanced.sky_strike_feedback": "Lightning Feedback",
   "app.academy.skill_settings.advanced.sky_strike_flash": "Screen Flash Intensity",
