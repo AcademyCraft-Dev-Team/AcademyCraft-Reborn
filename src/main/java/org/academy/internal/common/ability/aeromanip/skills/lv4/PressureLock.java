@@ -179,7 +179,6 @@ public final class PressureLock extends Skill {
                         box,
                         living -> living != player
                                 && living.isAlive()
-                                && !AeromanipTargeting.isBoss(living)
                                 && player.hasLineOfSight(living)
                                 && AeromanipTargeting.canAffectNegatively(player, living)
                 ).stream().min((a, b) -> Double.compare(

@@ -43,6 +43,7 @@ import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTeleport;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -155,7 +156,13 @@ public final class DefensiveTeleport extends Skill {
                         center.x + half, center.y + half, center.z + half);
                 var selected = minecraft.level == null ? List.<Entity>of()
                         : minecraft.level.getEntities(player, box,
-                        entity -> isPreviewThreat(player, entity));
+                                entity -> isPreviewThreat(
+                                        player, MultipartEntityTargeting.resolve(entity)))
+                        .stream()
+                        .map(MultipartEntityTargeting::resolve)
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList();
                 var camera = minecraft.gameRenderer.mainCamera().position();
                 var matrices = event.getMatrixStack();
                 matrices.pushPose();
@@ -239,7 +246,13 @@ public final class DefensiveTeleport extends Skill {
             var selection = new AABB(center.x - half, center.y - half, center.z - half,
                     center.x + half, center.y + half, center.z + half);
             var selected = player.level().getEntities(player, selection,
-                    entity -> isSelectedThreat(player, entity));
+                            entity -> isSelectedThreat(
+                                    player, MultipartEntityTargeting.resolve(entity)))
+                    .stream()
+                    .map(MultipartEntityTargeting::resolve)
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .toList();
             if (selected.isEmpty()) return;
 
             skill.executeActive(player, (ctx, _) -> {
