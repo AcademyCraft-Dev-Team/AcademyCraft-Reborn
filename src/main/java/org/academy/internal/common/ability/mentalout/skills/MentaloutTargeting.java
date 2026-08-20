@@ -9,6 +9,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.ControlDestination;
+import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
 import org.jspecify.annotations.Nullable;
 
 public final class MentaloutTargeting {
@@ -59,14 +60,13 @@ public final class MentaloutTargeting {
                 eye,
                 entityRayEnd,
                 new AABB(eye, entityRayEnd).inflate(1.0),
-                entity -> entity instanceof LivingEntity living
-                        && living != player
-                        && living.isAlive()
-                        && living.isPickable()
-                        && !living.isSpectator(),
+                entity -> isTargetableHitEntity(player, entity),
                 0.3f
         );
-        if (entityHit == null || !(entityHit.getEntity() instanceof LivingEntity living)) return null;
+        var living = entityHit == null
+                ? null
+                : MultipartEntityTargeting.resolveLiving(entityHit.getEntity());
+        if (living == null) return null;
         return isValidTarget(player, living, range, maximumRange) ? living : null;
     }
 
@@ -101,7 +101,10 @@ public final class MentaloutTargeting {
                 entity -> isSightTarget(observer, entity),
                 0.3f
         );
-        if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {
+        var living = entityHit == null
+                ? null
+                : MultipartEntityTargeting.resolveLiving(entityHit.getEntity());
+        if (living != null) {
             return new ControlDestination.Entity(living.getUUID());
         }
         return blockHit.getType() == HitResult.Type.BLOCK
@@ -113,10 +116,16 @@ public final class MentaloutTargeting {
     }
 
     private static boolean isSightTarget(LivingEntity observer, Entity entity) {
-        return entity instanceof LivingEntity living
+        return isTargetableHitEntity(observer, entity);
+    }
+
+    private static boolean isTargetableHitEntity(LivingEntity observer, Entity hitEntity) {
+        var living = MultipartEntityTargeting.resolveLiving(hitEntity);
+        return living != null
                 && living != observer
                 && living.isAlive()
-                && living.isPickable()
+                && !living.isRemoved()
+                && hitEntity.isPickable()
                 && !living.isSpectator();
     }
 

@@ -79,7 +79,7 @@ public class Shackle extends Skill {
             var player = minecraft.player;
             if (player == null || minecraft.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.SHACKLE.get())) return;
-            var target = findTarget(player);
+            var target = TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
             if (target != null) {
                 MisakaNetworkClient.send(new UsePacket(target.getId()));
             }
@@ -96,7 +96,7 @@ public class Shackle extends Skill {
                 return;
             }
 
-            var target = findTarget(player);
+            var target = TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
             AABB preview;
             if (target != null) {
                 preview = target.getBoundingBox().inflate(0.2);
@@ -113,19 +113,13 @@ public class Shackle extends Skill {
             matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
             event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
                     (snapshot, consumer) -> LineBoxRenderer.renderWireframeBox(
-                            snapshot,
-                            consumer,
-                            preview,
-                            target == null ? 1.0f : 0.6f,
-                            target == null ? 0.1f : 0.2f,
-                            target == null ? 0.1f : 1.0f,
+                            snapshot, consumer, preview,
+                            target != null ? 0.6f : 1.0f,
+                            target != null ? 0.2f : 0.1f,
+                            target != null ? 1.0f : 0.1f,
                             1.0f
                     ));
             matrices.popPose();
-        }
-
-        private static LivingEntity findTarget(LocalPlayer player) {
-            return TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
         }
 
         private static boolean isPreviewing() {

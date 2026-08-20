@@ -64,73 +64,7 @@ public class Disarm extends Skill {
         );
     }
 
-    private static ItemEntity disarmTarget(LivingEntity target, boolean delayedPickup) {
-        var level = target.level();
-        var rng = new Random();
 
-        // Priority 1: offhand
-        var offHand = target.getOffhandItem();
-        if (!offHand.isEmpty()) {
-            var dropped = dropItem(level, target, offHand, rng, delayedPickup);
-            target.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
-            return dropped;
-        }
-
-        // Priority 2: main hand
-        var mainHand = target.getMainHandItem();
-        if (!mainHand.isEmpty()) {
-            var dropped = dropItem(level, target, mainHand, rng, delayedPickup);
-            target.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-            return dropped;
-        }
-
-        // Priority 3: armor (random piece)
-        var armorSlots = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
-        var armorItems = new ArrayList<EquipmentSlot>();
-        for (var slot : armorSlots) {
-            if (!target.getItemBySlot(slot).isEmpty()) armorItems.add(slot);
-        }
-        if (!armorItems.isEmpty()) {
-            var slot = armorItems.get(rng.nextInt(armorItems.size()));
-            var dropped = dropItem(level, target, target.getItemBySlot(slot), rng, delayedPickup);
-            target.setItemSlot(slot, ItemStack.EMPTY);
-            return dropped;
-        }
-
-        // Priority 4: hotbar and inventory (Player only)
-        if (target instanceof Player playerTarget) {
-            var inv = playerTarget.getInventory();
-            for (var i = 0; i < 9; i++) {
-                var stack = inv.getItem(i);
-                if (!stack.isEmpty()) {
-                    var dropped = dropItem(level, target, stack, rng, delayedPickup);
-                    inv.setItem(i, ItemStack.EMPTY);
-                    return dropped;
-                }
-            }
-            for (var i = 9; i < inv.getContainerSize(); i++) {
-                var stack = inv.getItem(i);
-                if (!stack.isEmpty()) {
-                    var dropped = dropItem(level, target, stack, rng, delayedPickup);
-                    inv.setItem(i, ItemStack.EMPTY);
-                    return dropped;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static ItemEntity dropItem(Level level, LivingEntity target, ItemStack stack, Random rng,
-                                       boolean delayedPickup) {
-        var item = new ItemEntity(level, target.getX(), target.getY() + 1, target.getZ(), stack.copy());
-        level.addFreshEntity(item);
-        // Mobs evaluate nearby-item pickup on the same tick. Piglin brutes otherwise reclaim
-        // their own golden axe before the disarm impulse has moved it away.
-        if (delayedPickup || !(target instanceof Player)) item.setPickUpDelay(100);
-        item.setDeltaMovement(new Vec3(
-                rng.nextDouble() * 4 - 2, rng.nextDouble() * 2, rng.nextDouble() * 4 - 2));
-        return item;
-    }
 
     @Override
     public void initClient() {
@@ -217,9 +151,9 @@ public class Disarm extends Skill {
                 event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
                         (snapshot, consumer) -> LineBoxRenderer.renderWireframeBox(
                                 snapshot, consumer, preview,
-                                1.0f,
-                                targetEntityId >= 0 ? 0.85f : 0.1f,
-                                0.1f,
+                                target != null ? 0.6f : 1.0f,
+                                target != null ? 0.2f : 0.1f,
+                                target != null ? 1.0f : 0.1f,
                                 1.0f));
                 matrices.popPose();
             }
@@ -248,6 +182,73 @@ public class Disarm extends Skill {
                 }
             }
         }
+    }
+    private static ItemEntity disarmTarget(LivingEntity target, boolean delayedPickup) {
+        var level = target.level();
+        var rng = new Random();
+
+        // Priority 1: offhand
+        var offHand = target.getOffhandItem();
+        if (!offHand.isEmpty()) {
+            var dropped = dropItem(level, target, offHand, rng, delayedPickup);
+            target.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            return dropped;
+        }
+
+        // Priority 2: main hand
+        var mainHand = target.getMainHandItem();
+        if (!mainHand.isEmpty()) {
+            var dropped = dropItem(level, target, mainHand, rng, delayedPickup);
+            target.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            return dropped;
+        }
+
+        // Priority 3: armor (random piece)
+        var armorSlots = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+        var armorItems = new ArrayList<EquipmentSlot>();
+        for (var slot : armorSlots) {
+            if (!target.getItemBySlot(slot).isEmpty()) armorItems.add(slot);
+        }
+        if (!armorItems.isEmpty()) {
+            var slot = armorItems.get(rng.nextInt(armorItems.size()));
+            var dropped = dropItem(level, target, target.getItemBySlot(slot), rng, delayedPickup);
+            target.setItemSlot(slot, ItemStack.EMPTY);
+            return dropped;
+        }
+
+        // Priority 4: hotbar and inventory (Player only)
+        if (target instanceof Player playerTarget) {
+            var inv = playerTarget.getInventory();
+            for (var i = 0; i < 9; i++) {
+                var stack = inv.getItem(i);
+                if (!stack.isEmpty()) {
+                    var dropped = dropItem(level, target, stack, rng, delayedPickup);
+                    inv.setItem(i, ItemStack.EMPTY);
+                    return dropped;
+                }
+            }
+            for (var i = 9; i < inv.getContainerSize(); i++) {
+                var stack = inv.getItem(i);
+                if (!stack.isEmpty()) {
+                    var dropped = dropItem(level, target, stack, rng, delayedPickup);
+                    inv.setItem(i, ItemStack.EMPTY);
+                    return dropped;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static ItemEntity dropItem(Level level, LivingEntity target, ItemStack stack, Random rng,
+                                       boolean delayedPickup) {
+        var item = new ItemEntity(level, target.getX(), target.getY() + 1, target.getZ(), stack.copy());
+        level.addFreshEntity(item);
+        // Mobs evaluate nearby-item pickup on the same tick. Piglin brutes otherwise reclaim
+        // their own golden axe before the disarm impulse has moved it away.
+        if (delayedPickup || !(target instanceof Player)) item.setPickUpDelay(100);
+        item.setDeltaMovement(new Vec3(
+                rng.nextDouble() * 4 - 2, rng.nextDouble() * 2, rng.nextDouble() * 4 - 2));
+        return item;
     }
 
     public static final class Server {

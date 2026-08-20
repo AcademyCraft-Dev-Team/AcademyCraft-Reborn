@@ -280,8 +280,6 @@ public final class PlatinumWing extends Skill {
             );
             EXECUTIONS.put(target.getUUID(), tombstone);
             currentServer = level.getServer();
-            broadcastExecutionVisual(player, executionId, target);
-
             var trueMaxHealth = EntityControlApi.getTrueMaxHealth(living);
             if (!Float.isFinite(trueMaxHealth) || trueMaxHealth <= 0.0f) {
                 trueMaxHealth = living.getMaxHealth();

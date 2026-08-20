@@ -152,7 +152,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
     protected fun createButton(textureLocation: Identifier): RadioButtonWidget {
         val widget = RadioButtonWidget()
         val defaultDrawable = TextureDrawable(textureLocation)
-        defaultDrawable.tintColor = -0x444445
+        defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
 
         val hoveredDrawable = TextureDrawable(textureLocation)
         hoveredDrawable.tintColor = -0x1

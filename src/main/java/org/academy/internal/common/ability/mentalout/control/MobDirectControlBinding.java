@@ -1,10 +1,15 @@
 package org.academy.internal.common.ability.mentalout.control;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.animal.allay.Allay;
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.monster.Vex;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -12,6 +17,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.ControlBinding;
 import org.academy.api.common.entitycontrol.PlayerControlFrame;
@@ -21,6 +27,9 @@ import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager
  * Applies controller input to a Mob without trusting a client-provided attack target.
  */
 final class MobDirectControlBinding implements ControlBinding {
+    private static final Identifier HORSE_SPRINT_SPEED_ID =
+            AcademyCraft.academy("mental_control_horse_sprint");
+    private static final double HORSE_SPRINT_SPEED_BONUS = 0.30;
     private final Mob mob;
     private long lastActionSequence = Long.MIN_VALUE;
     private PlayerControlFrame frame = PlayerControlFrame.NEUTRAL;
@@ -78,6 +87,7 @@ final class MobDirectControlBinding implements ControlBinding {
     private void applyMovement() {
         mob.getNavigation().stop();
         var movementInput = movementInput();
+        updateHorseSprint(movementInput);
         if (mob instanceof DirectMobMovementAccess directMovement) {
             if (movementInput.lengthSqr() <= 1.0E-6) {
                 directMovement.academy$stopDirectMovement();
@@ -116,6 +126,16 @@ final class MobDirectControlBinding implements ControlBinding {
             mob.setAggressive(frame.attack());
             return;
         }
+        if (mob instanceof Allay) {
+            var destination = movementInput.lengthSqr() <= 1.0E-6
+                    ? mob.position()
+                    : mob.position().add(movementInput.scale(4.0));
+            mob.getMoveControl().setWantedPosition(
+                    destination.x, destination.y, destination.z,
+                    movementInput.lengthSqr() <= 1.0E-6 ? 0.0 : frame.sprint() ? 1.3 : 1.0
+            );
+            return;
+        }
         mob.getMoveControl().strafe(frame.forward(), frame.strafe());
         if (frame.jump()) mob.getJumpControl().jump();
         var vertical = aquaticVerticalInput(mob.isInWater(), frame.jump(), frame.sneak());
@@ -125,6 +145,29 @@ final class MobDirectControlBinding implements ControlBinding {
             mob.hurtMarked = true;
         }
         mob.setAggressive(frame.attack());
+    }
+
+    private void updateHorseSprint(Vec3 movementInput) {
+        if (!(mob instanceof AbstractHorse)) return;
+        var sprinting = shouldSprint(frame.sprint(), movementInput);
+        mob.setSprinting(sprinting);
+        var movementSpeed = mob.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (movementSpeed == null) return;
+        var current = movementSpeed.getModifier(HORSE_SPRINT_SPEED_ID);
+        if (sprinting && current == null) {
+            movementSpeed.addTransientModifier(new AttributeModifier(
+                    HORSE_SPRINT_SPEED_ID,
+                    HORSE_SPRINT_SPEED_BONUS,
+                    AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+            ));
+        } else if (!sprinting && current != null) {
+            movementSpeed.removeModifier(HORSE_SPRINT_SPEED_ID);
+        }
+    }
+
+    static boolean shouldSprint(boolean requested, Vec3 movementInput) {
+        return requested
+                && movementInput.x * movementInput.x + movementInput.z * movementInput.z > 1.0E-6;
     }
 
     private Vec3 movementInput() {
@@ -184,6 +227,9 @@ final class MobDirectControlBinding implements ControlBinding {
         }
         mob.setXxa(0.0f);
         mob.setZza(0.0f);
+        mob.setSprinting(false);
+        var movementSpeed = mob.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (movementSpeed != null) movementSpeed.removeModifier(HORSE_SPRINT_SPEED_ID);
         mob.setAggressive(false);
     }
 }
