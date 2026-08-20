@@ -23,8 +23,10 @@ import java.util.Set;
 
 public final class ProficiencySkillSettings {
     public static final String DARKMATTER_SHAPING_AUTO_REPAIR = "darkmatter_shaping.auto_repair";
+    public static final String FLASHING_AUTO_ESCAPE = "flashing.auto_escape";
     private static final Set<String> ALLOWED_OPTIONS = Set.of(
-            DARKMATTER_SHAPING_AUTO_REPAIR
+            DARKMATTER_SHAPING_AUTO_REPAIR,
+            FLASHING_AUTO_ESCAPE
     );
     private static boolean serverInitialized;
     private static boolean clientInitialized;
@@ -63,6 +65,12 @@ public final class ProficiencySkillSettings {
                 "auto_repair",
                 "app.academy.skill_settings.advanced.darkmatter_auto_repair",
                 DARKMATTER_SHAPING_AUTO_REPAIR
+        );
+        registerToggle(
+                Skills.FLASHING.get(),
+                "auto_escape",
+                "app.academy.skill_settings.advanced.flashing_auto_escape",
+                FLASHING_AUTO_ESCAPE
         );
     }
 

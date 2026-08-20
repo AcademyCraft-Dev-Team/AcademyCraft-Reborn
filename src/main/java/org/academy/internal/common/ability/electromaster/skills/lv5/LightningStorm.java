@@ -33,6 +33,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
+import org.academy.internal.common.ability.electromaster.VanillaLightningEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
@@ -247,6 +248,7 @@ public class LightningStorm extends Skill {
                 var topPos = serverLevel.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, strikePos);
                 var impact = Vec3.atBottomCenterOf(topPos);
                 ElectromasterArcEffects.spawnSkyStrike(serverLevel, impact, SkyStrikeProfile.LIGHTNING_STORM);
+                VanillaLightningEffects.trigger(serverLevel, impact, player);
 
                 var box = new AABB(topPos).inflate(3);
                 var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
