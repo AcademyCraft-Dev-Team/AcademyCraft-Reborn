@@ -84,7 +84,7 @@ class ProgramTriggersTest {
         var loopDefaults = catalog.entry(CommonProgramNodeIds.TRIGGER_LOOP)
                 .defaultConfiguration().getAsJsonObject();
         assertTrue(loopDefaults.get("enabled").getAsBoolean());
-        assertEquals(20, loopDefaults.get("interval").getAsInt());
+        assertEquals(40, loopDefaults.get("interval").getAsInt());
         assertNull(catalog.schema(
                 CommonProgramNodeIds.TRIGGER_LOOP,
                 configuration("interval", -1)
@@ -120,6 +120,16 @@ class ProgramTriggersTest {
         var duplicate = document.addNode(CommonProgramNodeIds.TRIGGER_HURT, 80, 0);
         assertFalse(duplicate.successful());
         assertEquals(ProgramDiagnosticCode.MULTIPLE_ENTRIES, duplicate.diagnostic().code());
+    }
+
+    @Test
+    void loopCostMultiplierUsesTheFortyTickBaseline() {
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(40));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(80));
+        assertEquals(2.0f, ProgramTriggers.loopCostMultiplier(39));
+        assertEquals(2.0f, ProgramTriggers.loopCostMultiplier(5));
+        assertEquals(10.0f, ProgramTriggers.loopCostMultiplier(1));
+        assertEquals(10.0f, ProgramTriggers.loopCostMultiplier(0));
     }
 
     private static CompiledProgram compiled(

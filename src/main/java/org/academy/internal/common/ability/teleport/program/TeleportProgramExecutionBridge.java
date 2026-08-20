@@ -41,12 +41,20 @@ public final class TeleportProgramExecutionBridge {
             CompiledProgram program,
             ServerPlayer player
     ) {
+        return executeServer(program, player, 1.0f);
+    }
+
+    public static ServerExecutionResult executeServer(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier
+    ) {
         Objects.requireNonNull(player, "player");
         var transaction = new ProgramActionTransaction();
         var vmResult = execute(
                 program,
                 player.level().getGameTime(),
-                new ServerTeleportProgramRuntime(player),
+                new ServerTeleportProgramRuntime(player, costMultiplier),
                 transaction
         );
         if (vmResult.status() != ProgramVmResult.Status.COMPLETED) {
@@ -105,6 +113,17 @@ public final class TeleportProgramExecutionBridge {
                             optionalDirection(inputs, "direction"),
                             configuration.power(),
                             configuration.targetType()));
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT,
+                (ProgramVmContext context,
+                 TeleportProgramNodeCatalog.BlockItemTeleportConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var slot = inputs.first("slot")
+                            .map(value -> (Integer) value.value())
+                            .orElse(0);
+                    stage(context, runtime(context).teleportBlockOrItem(
+                            blockPosition(inputs, "position"), slot, configuration.mode()));
                     return ProgramNodeStep.next("flow");
                 });
         put(result, TeleportProgramNodeIds.SPACE_SAFETY, (context, _, inputs) -> data(

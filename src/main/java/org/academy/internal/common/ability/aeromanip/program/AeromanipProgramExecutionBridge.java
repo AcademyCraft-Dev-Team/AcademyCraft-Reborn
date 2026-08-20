@@ -40,12 +40,20 @@ public final class AeromanipProgramExecutionBridge {
             CompiledProgram program,
             ServerPlayer player
     ) {
+        return executeServer(program, player, 1.0f);
+    }
+
+    public static ServerExecutionResult executeServer(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier
+    ) {
         Objects.requireNonNull(player, "player");
         var transaction = new ProgramActionTransaction();
         var vmResult = execute(
                 program,
                 player.level().getGameTime(),
-                new ServerAeromanipProgramRuntime(player),
+                new ServerAeromanipProgramRuntime(player, costMultiplier),
                 transaction
         );
         if (vmResult.status() != ProgramVmResult.Status.COMPLETED) {

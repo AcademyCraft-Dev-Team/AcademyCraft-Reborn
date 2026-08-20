@@ -45,6 +45,7 @@ public final class CommonProgramNodeIds {
     public static final Identifier FLOAT_GREATER_EQUAL = id("logic/float/greater_equal");
     public static final Identifier NUMERIC_ARITHMETIC = id("logic/numeric/arithmetic");
     public static final Identifier NUMERIC_COMPARE = id("logic/numeric/compare");
+    public static final Identifier RANDOM_NUMBER = id("value/random_number");
 
     public static final Identifier BOOLEAN_NOT = id("logic/boolean/not");
     public static final Identifier BOOLEAN_AND = id("logic/boolean/and");
@@ -78,6 +79,8 @@ public final class CommonProgramNodeIds {
     public static final Identifier DIRECTION_BETWEEN = id("spatial/direction_between");
     public static final Identifier DIRECTION_OPPOSITE = id("spatial/direction_opposite");
     public static final Identifier DIRECTION_DOT = id("spatial/direction_dot");
+    public static final Identifier VEC3_OPERATION = id("spatial/vec3_operation");
+    public static final Identifier BLOCK_VOLUME = id("query/block_volume");
 
     public static final Identifier ENTITY_POSITION = id("query/entity_position");
     public static final Identifier ENTITY_LOOK_DIRECTION = id("query/entity_look_direction");
@@ -106,6 +109,8 @@ public final class CommonProgramNodeIds {
             id("filter/entity/max_health_at_most");
     public static final Identifier FILTER_ENTITY_HAS_TARGET = id("filter/entity/has_target");
     public static final Identifier FILTER_ENTITY_VISIBLE_FROM = id("filter/entity/visible_from");
+    public static final Identifier FILTER_ENTITY_EXACT = id("filter/entity/exact");
+    public static final Identifier FILTER_BLOCK_EXACT = id("filter/block/exact");
 
     public static final Identifier ENTITY_EQUAL = id("logic/entity/equal");
     public static final Identifier WORLD_POSITION_EQUAL = id("logic/world_position/equal");
@@ -119,6 +124,7 @@ public final class CommonProgramNodeIds {
     public static final Identifier RANDOM_BLOCK_POSITION =
             id("collection/block_position/random");
     public static final Identifier RANDOM_DIRECTION = id("collection/direction/random");
+    public static final Identifier SORT_POINTS_BY_DISTANCE = id("collection/point/distance_sort");
 
     private CommonProgramNodeIds() {
     }

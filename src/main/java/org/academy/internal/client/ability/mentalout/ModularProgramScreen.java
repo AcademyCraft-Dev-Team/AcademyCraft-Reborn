@@ -1703,7 +1703,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private EditBox createConfigurationInput(String field) {
         var input = new EditBox(font, 0, 0, 80, 15, Component.empty());
-        input.setMaxLength(128);
+        input.setMaxLength(field.equals("selectors") ? 512 : 128);
         input.setBordered(false);
         input.setTextColor(TEXT);
         input.setResponder(value -> configurationInputChanged(field, value));

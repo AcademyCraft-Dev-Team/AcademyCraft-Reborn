@@ -35,10 +35,16 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
+    private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
 
     public ServerMeltdownerProgramRuntime(ServerPlayer player) {
+        this(player, 1.0f);
+    }
+
+    public ServerMeltdownerProgramRuntime(ServerPlayer player, float costMultiplier) {
         this.player = Objects.requireNonNull(player, "player");
+        this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
     }
 
@@ -355,7 +361,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
     }
 
     private void charge(Skill skill, float cost) {
-        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player, cost, skill)) {
+        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                player, cost * costMultiplier, skill)) {
             throw new IllegalStateException("Insufficient CP for Meltdowner program action");
         }
     }
@@ -435,6 +442,13 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
 
     private static float miningBeamScale(float power) {
         return ProgramPowerScale.interpolate(power, 0.75f, 1.0f, 1.25f);
+    }
+
+    private static float requireCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+            throw new IllegalArgumentException("Program cost multiplier must be positive");
+        }
+        return multiplier;
     }
 
     private int configuredBeamAttackDelayTicks() {

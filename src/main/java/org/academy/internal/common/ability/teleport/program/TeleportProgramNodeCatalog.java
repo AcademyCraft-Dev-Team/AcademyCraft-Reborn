@@ -44,6 +44,13 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodePurity.ACTION,
                 capabilityScope(TeleportProgramCapabilities.ENTITY_TELEPORT)
         ));
+        put(result, TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT, new DynamicNodeType<>(
+                BlockItemTeleportConfiguration.CODEC,
+                TeleportProgramNodeCatalog::blockItemTeleportSchema,
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(TeleportProgramCapabilities.SELF_TELEPORT)
+        ));
         put(result, TeleportProgramNodeIds.SPACE_SAFETY, unitType(
                 spaceSafetySchema(), ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY,
                 categoryScope()));
@@ -119,6 +126,22 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
         );
     }
 
+    private static ProgramNodeSchema blockItemTeleportSchema(
+            BlockItemTeleportConfiguration configuration
+    ) {
+        var inputs = new java.util.ArrayList<ProgramPortDefinition>();
+        inputs.add(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW));
+        inputs.add(ProgramPortDefinition.requiredInput(
+                "position", ProgramValueTypes.BLOCK_POSITION));
+        if (configuration.mode() == BlockItemTeleportMode.PLACE) {
+            inputs.add(ProgramPortDefinition.optionalInput("slot", ProgramValueTypes.INTEGER));
+        }
+        return new ProgramNodeSchema(
+                List.copyOf(inputs),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
     private static ProgramNodeType<PowerConfiguration> powerType(
             ProgramNodeSchema schema,
             Identifier capability
@@ -180,6 +203,37 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
                         TargetType.CODEC.optionalFieldOf("target_type", TargetType.ENTITY)
                                 .forGetter(TargetTeleportConfiguration::targetType)
                 ).apply(instance, TargetTeleportConfiguration::new));
+    }
+
+    public record BlockItemTeleportConfiguration(BlockItemTeleportMode mode) {
+        public static final Codec<BlockItemTeleportConfiguration> CODEC =
+                BlockItemTeleportMode.CODEC.optionalFieldOf(
+                        "mode", BlockItemTeleportMode.PLACE)
+                        .xmap(BlockItemTeleportConfiguration::new,
+                                BlockItemTeleportConfiguration::mode)
+                        .codec();
+    }
+
+    public enum BlockItemTeleportMode {
+        PLACE("place"),
+        COLLECT("collect");
+
+        private static final Codec<BlockItemTeleportMode> CODEC = Codec.STRING.xmap(
+                BlockItemTeleportMode::byName, BlockItemTeleportMode::wireName);
+        private final String wireName;
+
+        BlockItemTeleportMode(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        private static BlockItemTeleportMode byName(String value) {
+            for (var mode : values()) if (mode.wireName.equals(value)) return mode;
+            throw new IllegalArgumentException("Unknown block-item teleport mode " + value);
+        }
     }
 
     public enum TargetType {

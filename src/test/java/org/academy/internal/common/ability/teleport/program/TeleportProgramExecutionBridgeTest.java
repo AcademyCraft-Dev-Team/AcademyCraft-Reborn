@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -47,6 +48,10 @@ class TeleportProgramExecutionBridgeTest {
                 TeleportProgramNodeCatalog.INSTANCE
                         .find(TeleportProgramNodeIds.ENTITY_TELEPORT)
                         .scope().requiredCapabilities());
+        assertEquals(Set.of(TeleportProgramCapabilities.SELF_TELEPORT),
+                TeleportProgramNodeCatalog.INSTANCE
+                        .find(TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT)
+                        .scope().requiredCapabilities());
 
         var blockTeleport = new JsonObject();
         blockTeleport.addProperty("power", 1.0f);
@@ -61,6 +66,23 @@ class TeleportProgramExecutionBridgeTest {
         assertNotNull(safetySchema);
         assertEquals(List.of("entity", "position"),
                 safetySchema.inputs().stream().map(port -> port.name()).toList());
+
+        var place = new JsonObject();
+        place.addProperty("mode", "place");
+        var placeSchema = catalog.schema(
+                TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT, place);
+        assertNotNull(placeSchema);
+        assertEquals(List.of("flow", "position", "slot"),
+                placeSchema.inputs().stream().map(port -> port.name()).toList());
+        assertFalse(placeSchema.inputs().get(2).required());
+
+        var collect = new JsonObject();
+        collect.addProperty("mode", "collect");
+        var collectSchema = catalog.schema(
+                TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT, collect);
+        assertNotNull(collectSchema);
+        assertEquals(List.of("flow", "position"),
+                collectSchema.inputs().stream().map(port -> port.name()).toList());
 
         var invalid = new JsonObject();
         invalid.addProperty("power", 3);
@@ -124,6 +146,44 @@ class TeleportProgramExecutionBridgeTest {
         transaction.release();
     }
 
+    @Test
+    void blockItemTeleportReceivesPositionSlotAndMode() {
+        var trigger = new JsonObject();
+        trigger.addProperty("enabled", true);
+        trigger.addProperty("interval", 40);
+        var blockTeleport = new JsonObject();
+        blockTeleport.addProperty("mode", "place");
+        var integer = new JsonObject();
+        integer.addProperty("value", 3);
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, CommonProgramNodeIds.TRIGGER_LOOP, trigger),
+                        blockPositionNode(2, 4, 65, -2),
+                        node(3, CommonProgramNodeIds.INTEGER_CONSTANT, integer),
+                        node(4, TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT, blockTeleport)
+                ),
+                List.of(
+                        edge(1, "flow", 4, "flow"),
+                        edge(2, "position", 4, "position"),
+                        edge(3, "value", 4, "slot")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        TeleportProgramNodeCatalog.TELEPORT)
+                .compile(graph, Set.of(TeleportProgramCapabilities.SELF_TELEPORT));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var runtime = new FakeRuntime();
+        var transaction = new ProgramActionTransaction();
+
+        var result = TeleportProgramExecutionBridge.execute(
+                compiled.program(), 40L, runtime, transaction);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertTrue(transaction.commit().successful());
+        assertEquals(List.of("block_item:4,65,-2:3:PLACE"), runtime.applied);
+        transaction.release();
+    }
+
     private static ProgramGraph.Node node(
             int id,
             net.minecraft.resources.Identifier type,
@@ -157,6 +217,20 @@ class TeleportProgramExecutionBridgeTest {
         configuration.addProperty("y", y);
         configuration.addProperty("z", z);
         return node(id, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, configuration);
+    }
+
+    private static ProgramGraph.Node blockPositionNode(
+            int id,
+            int x,
+            int y,
+            int z
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("dimension", "minecraft:overworld");
+        configuration.addProperty("x", x);
+        configuration.addProperty("y", y);
+        configuration.addProperty("z", z);
+        return node(id, CommonProgramNodeIds.BLOCK_POSITION_CONSTANT, configuration);
     }
 
     private static ProgramGraph.Edge edge(
@@ -207,6 +281,16 @@ class TeleportProgramExecutionBridgeTest {
         @Override
         public boolean isSpaceSafe(Object entity, ProgramWorldPosition position) {
             return true;
+        }
+
+        @Override
+        public ProgramActionTransaction.ProgramAction teleportBlockOrItem(
+                ProgramBlockPosition position,
+                int hotbarSlot,
+                TeleportProgramNodeCatalog.BlockItemTeleportMode mode
+        ) {
+            return action("block_item:" + position.x() + "," + position.y() + ","
+                    + position.z() + ":" + hotbarSlot + ":" + mode);
         }
 
         @Override
