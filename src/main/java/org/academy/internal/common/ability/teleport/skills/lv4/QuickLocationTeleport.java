@@ -26,6 +26,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -164,8 +165,11 @@ public final class QuickLocationTeleport extends Skill {
                 if (hit.isEmpty()) continue;
                 var distance = eye.distanceToSqr(hit.get());
                 if (distance < closest) {
+                    var resolved = MultipartEntityTargeting.resolve(entity);
+                    if (resolved == null || resolved == player
+                            || !resolved.isAlive() || resolved.isRemoved()) continue;
                     closest = distance;
-                    best = entity;
+                    best = resolved;
                 }
             }
             return best;

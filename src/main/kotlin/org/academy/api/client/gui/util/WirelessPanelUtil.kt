@@ -213,7 +213,7 @@ object WirelessPanelUtil {
                     itemContent.addChild("button", connectButton) {
                         val content = ImageWidget()
                         val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
-                        defaultDrawable.tintColor = -0x444445
+                        defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
 
                         val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
                         hoveredDrawable.tintColor = -0x1
@@ -239,7 +239,7 @@ object WirelessPanelUtil {
                     itemContent.addChild("button", disconnectButton) {
                         val content = ImageWidget()
                         val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
-                        defaultDrawable.tintColor = -0x444445
+                        defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
 
                         val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
                         hoveredDrawable.tintColor = -0x1

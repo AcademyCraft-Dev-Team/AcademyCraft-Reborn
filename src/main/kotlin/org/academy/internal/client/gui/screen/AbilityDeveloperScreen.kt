@@ -41,6 +41,18 @@ import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
 import net.minecraft.util.Mth
 
+internal enum class PropsConfirmationAnswer {
+    ACCEPT,
+    RANDOM,
+    INVALID
+}
+
+internal fun parsePropsConfirmation(input: String): PropsConfirmationAnswer = when (input.trim().lowercase()) {
+    "y" -> PropsConfirmationAnswer.ACCEPT
+    "n" -> PropsConfirmationAnswer.RANDOM
+    else -> PropsConfirmationAnswer.INVALID
+}
+
 class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScreen(Component.empty()) {
     private val blockEntity: AbilityDeveloperBlockEntity?
     private lateinit var area: FrameLayoutWidget
@@ -48,6 +60,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     private var isConsoleMode: Boolean = false
     private lateinit var consoleOutputs: LinearLayoutWidget
     private lateinit var consoleScrollPanel: ScrollPanelWidget
+    private var pendingPropsRecommendation: Identifier? = null
     private var activeCover: FrameLayoutWidget? = null
     private val skillLineBindings = mutableListOf<SkillLineBinding>()
     private var coursePage = CoursePage.ABILITY
@@ -117,6 +130,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     override fun onInit() {
         activeCover = null
         isConsoleMode = false
+        pendingPropsRecommendation = null
         skillLineBindings.clear()
         viewedSkillInfo = null
 
@@ -330,7 +344,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 .margin(4.25f, 58f, 0f, 0f)
                 .size(100f, 16f)
             nodeBtn.onClickListener = {
-                val cover = createCover()
+                // The wireless page is already a complete machine-style panel. Fading the
+                // whole cover multiplies every label/icon alpha and makes this page visibly
+                // darker than the same WirelessPanelUtil page on a wireless node screen.
+                val cover = createCover(fadeIn = false)
                 run {
                     val wirelessPage = WirelessPanelUtil.create(developer.blockPos, true)
                     wirelessPage.layoutParams.gravity(Gravity.CENTER)
@@ -400,7 +417,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             .margin(5.75f, 111f, 0f, 0f)
             .size(97f, 8f)
         powerBar.backgroundColor = 0x40000000
-        powerBar.setProgressColor(0xFFFCC532.toInt())
+        powerBar.setProgressColor(0xFFFFD45A.toInt())
         panel.addChild("progress_power", powerBar)
 
         val syncLabel = LabelWidget("Sync Rate:")
@@ -416,7 +433,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             .margin(5.75f, 155f, 0f, 0f)
             .size(97f, 8f)
         syncBar.backgroundColor = 0x40000000
-        syncBar.setProgressColor(0xFF32A4FC.toInt())
+        syncBar.setProgressColor(0xFF64C0FF.toInt())
         syncBar.setProgress(100f)
         panel.addChild("progress_syncrate", syncBar)
     }
@@ -543,48 +560,35 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     outputs,
                     "${L10n["academy.ability_developer.console.prompt"]} $input"
                 )
-                when (input.trim().lowercase()) {
+                val normalizedInput = input.trim().lowercase()
+                if (pendingPropsRecommendation != null) {
+                    when (parsePropsConfirmation(normalizedInput)) {
+                        PropsConfirmationAnswer.ACCEPT -> {
+                            pendingPropsRecommendation = null
+                            requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.ACCEPT_PROPS)
+                        }
+
+                        PropsConfirmationAnswer.RANDOM -> {
+                            pendingPropsRecommendation = null
+                            requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.RANDOM)
+                        }
+
+                        PropsConfirmationAnswer.INVALID -> {
+                            addOutputLine(
+                                outputs,
+                                L10n["academy.ability_developer.console.props_invalid_answer"]
+                            )
+                            attachCommandInput(outputs)
+                        }
+                    }
+                    return@setWhenEnter
+                }
+
+                when (normalizedInput) {
                     "learn" -> {
                         addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
                         AbilitySystemClient.resetDevState()
-                        MisakaNetworkClient.FUTURE_MANAGER.send(StartLevelDevPacket(developmentSource)) { response ->
-                            if (response != null && response.isSuccess) {
-                                val progressLabel = LabelWidget(
-                                    L10n["academy.ability_developer.progress"] + " 0%"
-                                )
-                                progressLabel.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
-                                outputs.addChild("dev_progress", progressLabel)
-                                consoleScrollPanel.scrollToEnd()
-
-                                fun poll() {
-                                    when (AbilitySystemClient.getDevState()) {
-                                        DevState.DEVELOPING -> {
-                                            progressLabel.text =
-                                                L10n["academy.ability_developer.progress"] + " " + (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
-                                            consoleScrollPanel.pollNextFrame { poll() }
-                                        }
-
-                                        DevState.DONE -> {
-                                            progressLabel.text = L10n["academy.ability_developer.dev_successful"]
-                                            rebuildAfterCategoryLearned()
-                                        }
-
-                                        DevState.FAILED -> {
-                                            progressLabel.text = developmentFailureMessage()
-                                            attachCommandInput(outputs)
-                                        }
-
-                                        else -> {
-                                            consoleScrollPanel.pollNextFrame { poll() }
-                                        }
-                                    }
-                                }
-                                poll()
-                            } else {
-                                addOutputLine(outputs, response?.message ?: "Unknown error")
-                                attachCommandInput(outputs)
-                            }
-                        }
+                        requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.DIRECT)
                     }
 
                     "exit" -> {
@@ -600,6 +604,90 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             inputArea.addChild("text_box", textBox)
         }
         return inputArea
+    }
+
+    private fun requestInitialDevelopment(
+        outputs: LinearLayoutWidget,
+        mode: StartLevelDevPacket.Mode
+    ) {
+        MisakaNetworkClient.FUTURE_MANAGER.send(StartLevelDevPacket(developmentSource, mode)) { response ->
+            when {
+                response == null -> {
+                    addOutputLine(outputs, "Unknown error")
+                    attachCommandInput(outputs)
+                }
+
+                response.isSuccess -> startInitialDevelopmentProgress(outputs)
+
+                response.requiresConfirmation() -> {
+                    val recommendation = response.recommendedCategory
+                    if (recommendation == null) {
+                        addOutputLine(outputs, response.message)
+                        attachCommandInput(outputs)
+                        return@send
+                    }
+                    pendingPropsRecommendation = recommendation
+                    addOutputLine(
+                        outputs,
+                        L10n["academy.ability_developer.console.props_expected"].format(
+                            localizedAbilityCategoryName(recommendation)
+                        )
+                    )
+                    addOutputLine(outputs, L10n["academy.ability_developer.console.props_confirm"])
+                    attachCommandInput(outputs)
+                }
+
+                response.message == "P.R.O.P.S recommendation expired" -> {
+                    pendingPropsRecommendation = null
+                    addOutputLine(outputs, L10n["academy.ability_developer.console.props_expired"])
+                    attachCommandInput(outputs)
+                }
+
+                else -> {
+                    pendingPropsRecommendation = null
+                    addOutputLine(outputs, response.message)
+                    attachCommandInput(outputs)
+                }
+            }
+        }
+    }
+
+    private fun startInitialDevelopmentProgress(outputs: LinearLayoutWidget) {
+        pendingPropsRecommendation = null
+        val progressLabel = LabelWidget(L10n["academy.ability_developer.progress"] + " 0%")
+        progressLabel.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
+        outputs.addChild("dev_progress", progressLabel)
+        consoleScrollPanel.scrollToEnd()
+
+        fun poll() {
+            when (AbilitySystemClient.getDevState()) {
+                DevState.DEVELOPING -> {
+                    progressLabel.text =
+                        L10n["academy.ability_developer.progress"] + " " +
+                            (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
+                    consoleScrollPanel.pollNextFrame { poll() }
+                }
+
+                DevState.DONE -> {
+                    progressLabel.text = L10n["academy.ability_developer.dev_successful"]
+                    rebuildAfterCategoryLearned()
+                }
+
+                DevState.FAILED -> {
+                    progressLabel.text = developmentFailureMessage()
+                    attachCommandInput(outputs)
+                }
+
+                else -> consoleScrollPanel.pollNextFrame { poll() }
+            }
+        }
+        poll()
+    }
+
+    private fun localizedAbilityCategoryName(category: Identifier): String {
+        val key = "ability_category.${category.namespace}.${category.path}"
+        return Language.getInstance().getOrDefault(key).takeUnless { it == key }
+            ?: category.path
     }
 
     private fun attachCommandInput(outputs: LinearLayoutWidget) {
@@ -1101,7 +1189,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         )
     }
 
-    private fun createCover(onClick: () -> Unit = { removeCover() }): FrameLayoutWidget {
+    private fun createCover(
+        onClick: () -> Unit = { removeCover() },
+        fadeIn: Boolean = true
+    ): FrameLayoutWidget {
         val cover = FrameLayoutWidget()
         cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         run {
@@ -1110,10 +1201,14 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             bg.onClickListener = OnClickListener { onClick() }
             cover.addChild("bg", bg)
         }
-        cover.startAnimation(
-            ObjectAnimator.ofFloat({ cover.alpha = it }, 0f, 1f).setDuration(500)
-                .setInterpolator(EasingFunctions.EASE_OUT_SINE)
-        )
+        if (fadeIn) {
+            cover.startAnimation(
+                ObjectAnimator.ofFloat({ cover.alpha = it }, 0f, 1f).setDuration(500)
+                    .setInterpolator(EasingFunctions.EASE_OUT_SINE)
+            )
+        } else {
+            cover.alpha = 1f
+        }
         return cover
     }
 
@@ -1188,11 +1283,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         return button
     }
 
-    private fun createDevButton(brightnessRef: AtomicReference<Float> = AtomicReference(0.6f)): ButtonWidget {
+    private fun createDevButton(brightnessRef: AtomicReference<Float> = AtomicReference(0.85f)): ButtonWidget {
         val btnTex = ImageWidget(AcademyCraft.academy("textures/gui/developer/button.png"))
         val btnWid = object : ButtonWidget() {
             override fun render(context: RenderContext) {
-                val target = if (isHovered) 1.0f else 0.6f
+                val target = if (isHovered || isFocused || isPressed) 1.1f else 0.85f
                 if (btnTex.brightness != target) {
                     brightnessRef.set(target)
                     btnTex.setBrightness(target)
@@ -1203,7 +1298,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         btnWid.layoutParams = WidgetContainer.LayoutParams().size(32f, 16f)
         run {
             btnTex.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            btnTex.setBrightness(0.6f)
+            btnTex.setBrightness(0.85f)
             btnWid.addChild("tex", btnTex)
         }
         return btnWid

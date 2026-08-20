@@ -5,6 +5,7 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -21,44 +22,34 @@ public final class TeleportTargeting {
     private TeleportTargeting() {
     }
 
+    private static double distanceToBoxSqr(Vec3 point, AABB box) {
+        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
+        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
+        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     public static LivingEntity findFirstLivingEntity(LivingEntity source, double maxRange) {
         if (source == null || maxRange <= 0.0) return null;
         var start = source.getEyePosition();
         var direction = source.getLookAngle().normalize();
         if (direction.lengthSqr() < MIN_DIRECTION_LENGTH_SQUARED) return null;
-
         var fullEnd = start.add(direction.scale(maxRange));
-        var blockHit = source.level().clip(new ClipContext(
-                start,
-                fullEnd,
-                ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE,
-                source
-        ));
-        var end = blockHit.getType() == HitResult.Type.MISS
-                ? fullEnd
-                : blockHit.getLocation();
-        var scanBounds = new AABB(start, end).inflate(HALF_SCAN_WIDTH);
-
         LivingEntity firstTarget = null;
-        var firstHitDistanceSquared = Double.POSITIVE_INFINITY;
-        for (var candidate : source.level().getEntitiesOfClass(
-                LivingEntity.class,
-                scanBounds,
-                entity -> entity != source && entity.isAlive() && entity.isPickable()
-        )) {
-            var targetBounds = candidate.getBoundingBox().inflate(HALF_SCAN_WIDTH);
-            double hitDistanceSquared;
-            if (targetBounds.contains(start)) {
-                hitDistanceSquared = 0.0;
-            } else {
-                var intersection = targetBounds.clip(start, end);
-                if (intersection.isEmpty()) continue;
-                hitDistanceSquared = start.distanceToSqr(intersection.get());
-            }
-            if (hitDistanceSquared < firstHitDistanceSquared) {
+        var searchBox = new AABB(start, fullEnd)
+                .inflate(0.85, 1.15, 0.85);
+        var targetProjection = Double.MAX_VALUE;
+        for (var candidate : source.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+                entity -> entity != source && entity.isAlive() && !entity.isSpectator())) {
+            var candidateBox = candidate.getBoundingBox().inflate(0.2);
+            var projection = candidateBox.getCenter().subtract(start).dot(direction);
+            if (projection < 0.0 || projection > maxRange || !source.hasLineOfSight(candidate)) continue;
+            var closestPoint = start.add(direction.scale(projection));
+            if (distanceToBoxSqr(closestPoint, candidateBox)
+                    > 0.2 * 0.2) continue;
+            if (projection < targetProjection) {
+                targetProjection = projection;
                 firstTarget = candidate;
-                firstHitDistanceSquared = hitDistanceSquared;
             }
         }
         return firstTarget;
@@ -84,6 +75,12 @@ public final class TeleportTargeting {
                 ClipContext.Fluid.NONE,
                 source
         ));
+        if (blockHit instanceof BlockHitResult hit) {
+            var dimensions = source.getDimensions(Pose.STANDING);
+            var block = hit.getBlockPos();
+            var standingCenter = standingCenterAbove(block, dimensions.height());
+            if (isSafeCenter(source, standingCenter)) return standingCenter;
+        }
         var searchDistance = blockHit.getType() == HitResult.Type.MISS
                 ? selectedDistance
                 : Math.min(selectedDistance, eyePosition.distanceTo(blockHit.getLocation()));
@@ -159,6 +156,14 @@ public final class TeleportTargeting {
                 && Double.isFinite(eyePosition.z())
                 && Double.isFinite(selectedDistance)
                 && selectedDistance >= 0.0;
+    }
+
+    static Vec3 standingCenterAbove(BlockPos block, double entityHeight) {
+        return new Vec3(
+                block.getX() + 0.5,
+                block.getY() + 1.0 + entityHeight / 2.0,
+                block.getZ() + 0.5
+        );
     }
 
     private static @Nullable Vec3 normalizedDirection(Vec3 direction) {
