@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
+import org.academy.internal.common.ability.electromaster.VanillaLightningEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -247,6 +248,7 @@ public class Thunderclap extends Skill {
 
         private static void strike(ServerPlayer player, ServerLevel level, Vec3 targetPos, int milestone) {
             ElectromasterArcEffects.spawnSkyStrike(level, targetPos, SkyStrikeProfile.THUNDERCLAP);
+            VanillaLightningEffects.trigger(level, targetPos, player);
 
             var system = AbilitySystemServer.getSystem(player);
             var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());

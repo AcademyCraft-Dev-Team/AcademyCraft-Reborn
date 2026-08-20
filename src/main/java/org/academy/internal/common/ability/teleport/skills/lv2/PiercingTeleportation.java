@@ -10,7 +10,6 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
@@ -21,8 +20,6 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -32,6 +29,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfx.DistortionVfx;
 import org.academy.internal.client.render.vfx.DistortionVfxClient;
+import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -185,28 +183,9 @@ public final class PiercingTeleportation extends Skill {
                         ? eyePosition.add(viewDirection.scale(distance))
                         : resolvedCenter;
                 var dimensions = player.getDimensions(Pose.STANDING);
-                var halfWidth = dimensions.width() / 2.0;
-                var halfHeight = dimensions.height() / 2.0;
-                var preview = new AABB(
-                        center.x - halfWidth, center.y - halfHeight, center.z - halfWidth,
-                        center.x + halfWidth, center.y + halfHeight, center.z + halfWidth
-                );
                 validDestination = resolvedCenter != null;
-                var safeDestination = validDestination;
-
-                var minecraft = Minecraft.getInstance();
-                var renderType = Render.RenderTypes.MINE_DETECT_LINES;
-                var camera = minecraft.gameRenderer.mainCamera().position();
-                var matrices = event.getMatrixStack();
-                matrices.pushPose();
-                matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
-                event.submitCustomGeometry(renderType, (snapshot, consumer) ->
-                        LineBoxRenderer.renderWireframeBox(snapshot, consumer, preview,
-                                1.0f,
-                                safeDestination ? 1.0f : 0.0f,
-                                safeDestination ? 1.0f : 0.0f,
-                                1.0f));
-                matrices.popPose();
+                var feetPosition = center.add(0, -dimensions.height() / 2.0, 0);
+                TeleportCursorRenderer.render(event, feetPosition, validDestination);
             }
 
             private void cleanup() {

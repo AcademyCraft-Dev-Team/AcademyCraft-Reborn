@@ -32,6 +32,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeap
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
+import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
@@ -60,6 +61,10 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         var victim = (LivingEntity) (Object) this;
+        if (victim instanceof ServerPlayer player && Flashing.Server.isDashInvulnerable(player)) {
+            cir.setReturnValue(false);
+            return;
+        }
         if (source.is(DamageTypeTags.IS_FALL)
                 && TimedSkillEffectRuntime.maxValueForTarget(
                 victim.getUUID(),
@@ -341,6 +346,14 @@ public abstract class MixinLivingEntity {
         QuantumUtil.quantumHealthFluctuation(entity);
         EntityControlApi.tick(entity);
         CrossingTheAbyss.Server.onLivingTick(entity);
+    }
+
+    @Inject(method = "setHealth", at = @At("HEAD"), cancellable = true)
+    private void academy$protectFlashingHealth(float amount, CallbackInfo ci) {
+        if ((Object) this instanceof ServerPlayer player
+                && Flashing.Server.blocksNegativeHealthWrite(player, amount)) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "heal", at = @At("HEAD"), cancellable = true)

@@ -843,6 +843,18 @@ public final class Render {
                 .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
+        public static final RenderPipeline TELEPORT_CURSOR = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/teleport_cursor"))
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.position_tex_color)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                .withCull(true)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+                .build();
+
         public static final RenderPipeline LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_tex_color_no_depth_write"))
                 .withVertexShader(R.shaders.position_tex_color)
@@ -1001,6 +1013,17 @@ public final class Render {
         public static final RenderType MINE_DETECT_LINES = create(
                 "mine_detect_lines",
                 RenderSetup.builder(RenderPipelines.MINE_DETECT_LINES)
+                        .createRenderSetup()
+        );
+
+        public static final RenderType TELEPORT_CURSOR = create(
+                "teleport_cursor",
+                RenderSetup.builder(RenderPipelines.TELEPORT_CURSOR)
+                        .withTexture(
+                                "Sampler0", R.textures.teleport_cursor,
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+                        )
+                        .sortOnUpload()
                         .createRenderSetup()
         );
 
