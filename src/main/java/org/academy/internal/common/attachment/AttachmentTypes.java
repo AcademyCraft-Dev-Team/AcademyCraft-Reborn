@@ -11,6 +11,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumData;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirectData;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
@@ -79,8 +80,10 @@ public final class AttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> ACTIVATED_PLATINUM_WING = REGISTER.register("activated_platinum_wing",
             () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()
     );
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WING_BOOST_POSE = REGISTER.register("wing_boost_pose",
-            () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<WingFlightPose.Pose>> WING_FLIGHT_POSE = REGISTER.register("wing_flight_pose",
+            () -> AttachmentType.builder(() -> WingFlightPose.Pose.IDLE)
+                    .sync(WingFlightPose.Pose.STREAM_CODEC)
+                    .build()
     );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> CROSSING_THE_ABYSS_ACTIVE = REGISTER.register("crossing_the_abyss_active",
             () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()

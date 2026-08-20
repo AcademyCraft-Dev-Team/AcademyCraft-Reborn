@@ -23,6 +23,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorP
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightDirection;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
@@ -85,6 +86,11 @@ final class WingFlightSupport {
         if (state == StormWing.State.BOOST) {
             lastBoostTick.put(player.getUUID(), player.level().getGameTime());
         }
+        WingFlightPose.sync(player, switch (state) {
+            case BOOST -> WingFlightPose.Pose.FAST;
+            case KEEP -> WingFlightPose.coastingPose(player);
+            default -> WingFlightPose.Pose.SLOW;
+        });
         var look = WingFlightDirection.resolve(player.getLookAngle(), yRot, xRot);
         EntityMotionGuard.runWithMotionSource(player, () -> {
             switch (state) {
@@ -166,14 +172,14 @@ final class WingFlightSupport {
             // All wing skills call this every player tick. Shared pose cleanup must remain
             // transition-only so an inactive sibling wing cannot clear the active wing's pose.
             lastBoostTick.remove(player.getUUID());
-            if (wasActive) WingFlightPose.sync(player, false);
+            if (wasActive) WingFlightPose.sync(player, WingFlightPose.Pose.IDLE);
             return;
         }
         var boostTick = lastBoostTick.get(player.getUUID());
-        WingFlightPose.sync(
-                player,
-                WingFlightPose.isBoosting(player.level().getGameTime(), boostTick)
-        );
+        if (player.getData(AttachmentTypes.WING_FLIGHT_POSE.get()) == WingFlightPose.Pose.FAST
+                && !WingFlightPose.isBoosting(player.level().getGameTime(), boostTick)) {
+            WingFlightPose.sync(player, WingFlightPose.coastingPose(player));
+        }
     }
 
     static int fanAttack(ServerPlayer player, Skill skill) {

@@ -228,6 +228,11 @@ public final class StormWing extends Skill {
                 if (state == State.BOOST) {
                     LAST_BOOST_TICK.put(player.getUUID(), player.level().getGameTime());
                 }
+                WingFlightPose.sync(player, switch (state) {
+                    case BOOST -> WingFlightPose.Pose.FAST;
+                    case KEEP -> WingFlightPose.coastingPose(player);
+                    default -> WingFlightPose.Pose.SLOW;
+                });
                 EntityMotionGuard.runWithMotionSource(player, () -> {
                     var movementScale = Skills.STORM_WING.get().hasProficiencyMilestone(player, 2)
                             ? 1.15
@@ -285,7 +290,7 @@ public final class StormWing extends Skill {
             if (!active) {
                 // This path runs for every player tick. Never clear fall distance here.
                 LAST_BOOST_TICK.remove(player.getUUID());
-                if (wasActive) WingFlightPose.sync(player, false);
+                if (wasActive) WingFlightPose.sync(player, WingFlightPose.Pose.IDLE);
             }
         }
 
@@ -309,7 +314,10 @@ public final class StormWing extends Skill {
             var boostTick = LAST_BOOST_TICK.get(player.getUUID());
             var now = player.level().getGameTime();
             var boosting = WingFlightPose.isBoosting(now, boostTick);
-            WingFlightPose.sync(player, boosting);
+            if (player.getData(AttachmentTypes.WING_FLIGHT_POSE.get()) == WingFlightPose.Pose.FAST
+                    && !boosting) {
+                WingFlightPose.sync(player, WingFlightPose.coastingPose(player));
+            }
             tickTurbulence(player, now, boosting);
         }
 
