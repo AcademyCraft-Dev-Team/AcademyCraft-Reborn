@@ -47,6 +47,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         registerEquality(result);
         for (var domain : CollectionDomain.values()) registerCollection(result, domain);
         registerRandomCollectionValues(result);
+        registerAdvancedValues(result);
         types = Map.copyOf(result);
     }
 
@@ -101,10 +102,10 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
     private static void registerScalarLogic(Map<Identifier, ProgramNodeType<?>> result) {
         put(result, CommonProgramNodeIds.NUMERIC_ARITHMETIC, type(
                 NumericArithmeticConfiguration.CODEC,
-                configuration -> binarySchema(
-                        configuration.kind().type(),
-                        configuration.kind().type()
-                ),
+                configuration -> configuration.operator() == ArithmeticOperator.ABSOLUTE
+                        ? unarySchema("value", configuration.kind().type(),
+                        "result", configuration.kind().type())
+                        : binarySchema(configuration.kind().type(), configuration.kind().type()),
                 ProgramNodeRole.VALUE,
                 ProgramNodePurity.PURE
         ));
@@ -336,6 +337,16 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.DIRECTION,
                 ProgramValueTypes.FLOAT
         )));
+        put(result, CommonProgramNodeIds.VEC3_OPERATION, type(
+                Vec3OperationConfiguration.CODEC,
+                configuration -> binarySchema(
+                        configuration.kind().type(),
+                        configuration.operator() == Vec3Operator.DOT
+                                ? ProgramValueTypes.FLOAT : configuration.kind().type()
+                ),
+                ProgramNodeRole.VALUE,
+                ProgramNodePurity.PURE
+        ));
     }
 
     private static void registerQueries(Map<Identifier, ProgramNodeType<?>> result) {
@@ -405,6 +416,14 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodeRole.QUERY,
                 ProgramNodePurity.WORLD_QUERY
         ));
+        put(result, CommonProgramNodeIds.BLOCK_VOLUME, queryType(new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("first", ProgramValueTypes.BLOCK_POSITION),
+                        ProgramPortDefinition.requiredInput("second", ProgramValueTypes.BLOCK_POSITION)
+                ),
+                List.of(ProgramPortDefinition.output(
+                        "blocks", ProgramValueTypes.BLOCK_POSITION_SET))
+        )));
     }
 
     private static void registerEquality(Map<Identifier, ProgramNodeType<?>> result) {
@@ -476,6 +495,43 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         put(result, CommonProgramNodeIds.FILTER_ENTITY_TYPE, type(
                 EntityKindConfiguration.CODEC,
                 _ -> entitySetFilter,
+                ProgramNodeRole.QUERY,
+                ProgramNodePurity.WORLD_QUERY
+        ));
+        put(result, CommonProgramNodeIds.FILTER_ENTITY_EXACT, type(
+                ExactFilterConfiguration.CODEC,
+                _ -> entitySetFilter,
+                ProgramNodeRole.QUERY,
+                ProgramNodePurity.WORLD_QUERY
+        ));
+        put(result, CommonProgramNodeIds.FILTER_BLOCK_EXACT, type(
+                ExactFilterConfiguration.CODEC,
+                _ -> unarySchema("blocks", ProgramValueTypes.BLOCK_POSITION_SET,
+                        "blocks", ProgramValueTypes.BLOCK_POSITION_SET),
+                ProgramNodeRole.QUERY,
+                ProgramNodePurity.WORLD_QUERY
+        ));
+    }
+
+    private static void registerAdvancedValues(Map<Identifier, ProgramNodeType<?>> result) {
+        put(result, CommonProgramNodeIds.RANDOM_NUMBER, type(
+                RandomNumberConfiguration.CODEC,
+                configuration -> outputSchema("value", configuration.kind().type()),
+                ProgramNodeRole.VALUE,
+                ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE, type(
+                DistanceSortConfiguration.CODEC,
+                configuration -> new ProgramNodeSchema(
+                        List.of(
+                                ProgramPortDefinition.requiredInput(
+                                        "values", configuration.kind().collectionType()),
+                                ProgramPortDefinition.requiredInput(
+                                        "origin", ProgramValueTypes.WORLD_POSITION)
+                        ),
+                        List.of(ProgramPortDefinition.output(
+                                "values", configuration.kind().collectionType()))
+                ),
                 ProgramNodeRole.QUERY,
                 ProgramNodePurity.WORLD_QUERY
         ));
@@ -827,6 +883,90 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         ).apply(instance, LoopTriggerConfiguration::new));
     }
 
+    public record ExactFilterConfiguration(String selectors) {
+        public static final Codec<ExactFilterConfiguration> CODEC = Codec.STRING
+                .fieldOf("selectors")
+                .xmap(ExactFilterConfiguration::new, ExactFilterConfiguration::selectors)
+                .codec();
+
+        public ExactFilterConfiguration {
+            if (selectors == null || selectors.isBlank() || selectors.length() > 512
+                    || parsedSelectors(selectors).isEmpty()) {
+                throw new IllegalArgumentException("At least one exact selector is required");
+            }
+        }
+
+        public List<String> values() {
+            return parsedSelectors(selectors);
+        }
+
+        private static List<String> parsedSelectors(String value) {
+            return java.util.Arrays.stream(value.split("[,;\\r\\n]+"))
+                    .map(String::trim)
+                    .filter(selector -> !selector.isEmpty())
+                    .distinct()
+                    .limit(64)
+                    .toList();
+        }
+    }
+
+    public record RandomNumberConfiguration(NumericKind kind, String lower, String upper) {
+        public static final Codec<RandomNumberConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        NumericKind.CODEC.fieldOf("type").forGetter(RandomNumberConfiguration::kind),
+                        Codec.STRING.fieldOf("lower").forGetter(RandomNumberConfiguration::lower),
+                        Codec.STRING.fieldOf("upper").forGetter(RandomNumberConfiguration::upper)
+                ).apply(instance, RandomNumberConfiguration::new));
+
+        public RandomNumberConfiguration {
+            if (kind == null || lower == null || upper == null) {
+                throw new IllegalArgumentException("Random-number bounds are required");
+            }
+            switch (kind) {
+                case INTEGER -> {
+                    if (Integer.parseInt(lower) > Integer.parseInt(upper)) invalidBounds();
+                }
+                case BIG_INTEGER -> {
+                    if (new BigInteger(lower).compareTo(new BigInteger(upper)) > 0) invalidBounds();
+                }
+                case FLOAT -> {
+                    var minimum = finiteBound(lower);
+                    var maximum = finiteBound(upper);
+                    if (minimum > maximum) invalidBounds();
+                }
+            }
+        }
+
+        private static double finiteBound(String value) {
+            var parsed = Double.parseDouble(value);
+            if (!Double.isFinite(parsed)) invalidBounds();
+            return parsed;
+        }
+
+        private static void invalidBounds() {
+            throw new IllegalArgumentException("Random-number lower bound exceeds upper bound");
+        }
+    }
+
+    public record Vec3OperationConfiguration(Vec3Kind kind, Vec3Operator operator) {
+        public static final Codec<Vec3OperationConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Vec3Kind.CODEC.fieldOf("type").forGetter(Vec3OperationConfiguration::kind),
+                        Vec3Operator.CODEC.fieldOf("operator")
+                                .forGetter(Vec3OperationConfiguration::operator)
+                ).apply(instance, Vec3OperationConfiguration::new));
+    }
+
+    public record DistanceSortConfiguration(PointCollectionKind kind, SortOrder order) {
+        public static final Codec<DistanceSortConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        PointCollectionKind.CODEC.fieldOf("type")
+                                .forGetter(DistanceSortConfiguration::kind),
+                        SortOrder.CODEC.fieldOf("order")
+                                .forGetter(DistanceSortConfiguration::order)
+                ).apply(instance, DistanceSortConfiguration::new));
+    }
+
     public record MovementTriggerConfiguration(MovementCondition condition) {
         public static final Codec<MovementTriggerConfiguration> CODEC = MovementCondition.CODEC
                 .fieldOf("condition")
@@ -1097,7 +1237,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         SUBTRACT("subtract"),
         MULTIPLY("multiply"),
         DIVIDE("divide"),
-        MODULO("modulo");
+        MODULO("modulo"),
+        ABSOLUTE("absolute");
 
         private static final Codec<ArithmeticOperator> CODEC = Codec.STRING.xmap(
                 ArithmeticOperator::byName,
@@ -1116,6 +1257,91 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         private static ArithmeticOperator byName(String name) {
             for (var operator : values()) if (operator.wireName.equals(name)) return operator;
             throw new IllegalArgumentException("Unknown arithmetic operator " + name);
+        }
+    }
+
+    public enum Vec3Kind {
+        DIRECTION("direction", ProgramValueTypes.DIRECTION),
+        WORLD_POSITION("world_position", ProgramValueTypes.WORLD_POSITION);
+
+        private static final Codec<Vec3Kind> CODEC = Codec.STRING.xmap(
+                Vec3Kind::byName, Vec3Kind::wireName);
+        private final String wireName;
+        private final ProgramValueType type;
+
+        Vec3Kind(String wireName, ProgramValueType type) {
+            this.wireName = wireName;
+            this.type = type;
+        }
+
+        public String wireName() { return wireName; }
+        public ProgramValueType type() { return type; }
+
+        private static Vec3Kind byName(String name) {
+            for (var value : values()) if (value.wireName.equals(name)) return value;
+            throw new IllegalArgumentException("Unknown vec3 type " + name);
+        }
+    }
+
+    public enum Vec3Operator {
+        DOT("dot"), CROSS("cross"), ADD("add");
+
+        private static final Codec<Vec3Operator> CODEC = Codec.STRING.xmap(
+                Vec3Operator::byName, Vec3Operator::wireName);
+        private final String wireName;
+
+        Vec3Operator(String wireName) { this.wireName = wireName; }
+        public String wireName() { return wireName; }
+
+        private static Vec3Operator byName(String name) {
+            for (var value : values()) if (value.wireName.equals(name)) return value;
+            throw new IllegalArgumentException("Unknown vec3 operator " + name);
+        }
+    }
+
+    public enum PointCollectionKind {
+        ENTITY("entity", ProgramValueTypes.ENTITY_SET),
+        WORLD_POSITION("world_position", ProgramValueTypes.WORLD_POSITION_SET),
+        BLOCK_POSITION("block_position", ProgramValueTypes.BLOCK_POSITION_SET);
+
+        private static final Codec<PointCollectionKind> CODEC = Codec.STRING.xmap(
+                PointCollectionKind::byName, PointCollectionKind::wireName);
+        private final String wireName;
+        private final ProgramValueType collectionType;
+
+        PointCollectionKind(String wireName, ProgramValueType collectionType) {
+            this.wireName = wireName;
+            this.collectionType = collectionType;
+        }
+
+        public String wireName() { return wireName; }
+        public ProgramValueType collectionType() { return collectionType; }
+
+        private static PointCollectionKind byName(String name) {
+            for (var value : values()) if (value.wireName.equals(name)) return value;
+            throw new IllegalArgumentException("Unknown point collection type " + name);
+        }
+    }
+
+    public enum SortOrder {
+        ASCENDING("ascending", false), DESCENDING("descending", true);
+
+        private static final Codec<SortOrder> CODEC = Codec.STRING.xmap(
+                SortOrder::byName, SortOrder::wireName);
+        private final String wireName;
+        private final boolean reversed;
+
+        SortOrder(String wireName, boolean reversed) {
+            this.wireName = wireName;
+            this.reversed = reversed;
+        }
+
+        public String wireName() { return wireName; }
+        public boolean reversed() { return reversed; }
+
+        private static SortOrder byName(String name) {
+            for (var value : values()) if (value.wireName.equals(name)) return value;
+            throw new IllegalArgumentException("Unknown sort order " + name);
         }
     }
 

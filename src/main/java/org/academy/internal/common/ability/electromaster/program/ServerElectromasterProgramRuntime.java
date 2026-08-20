@@ -50,10 +50,16 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private static final Map<UUID, ControlDestination> CONTROL_DESTINATIONS = new HashMap<>();
 
     private final ServerPlayer player;
+    private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
 
     public ServerElectromasterProgramRuntime(ServerPlayer player) {
+        this(player, 1.0f);
+    }
+
+    public ServerElectromasterProgramRuntime(ServerPlayer player, float costMultiplier) {
         this.player = Objects.requireNonNull(player, "player");
+        this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
     }
 
@@ -502,9 +508,17 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     }
 
     private void charge(Skill skill, float cost) {
-        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player, cost, skill)) {
+        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                player, cost * costMultiplier, skill)) {
             throw new IllegalStateException("Insufficient CP for Electromaster program action");
         }
+    }
+
+    private static float requireCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+            throw new IllegalArgumentException("Program cost multiplier must be positive");
+        }
+        return multiplier;
     }
 
     private void setVelocity(Entity entity, Vec3 velocity) {

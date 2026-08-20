@@ -41,12 +41,20 @@ public final class DarkmatterProgramExecutionBridge {
             CompiledProgram program,
             ServerPlayer player
     ) {
+        return executeServer(program, player, 1.0f);
+    }
+
+    public static ServerExecutionResult executeServer(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier
+    ) {
         Objects.requireNonNull(player, "player");
         var transaction = new ProgramActionTransaction();
         var vmResult = execute(
                 program,
                 player.level().getGameTime(),
-                new ServerDarkmatterProgramRuntime(player),
+                new ServerDarkmatterProgramRuntime(player, costMultiplier),
                 transaction
         );
         if (vmResult.status() != ProgramVmResult.Status.COMPLETED) {

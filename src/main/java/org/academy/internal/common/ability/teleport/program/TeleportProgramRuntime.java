@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.teleport.program;
 
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 
@@ -28,4 +29,12 @@ public interface TeleportProgramRuntime extends ProgramTargetResolver {
     );
 
     boolean isSpaceSafe(Object entity, ProgramWorldPosition position);
+
+    default ProgramActionTransaction.ProgramAction teleportBlockOrItem(
+            ProgramBlockPosition position,
+            int hotbarSlot,
+            TeleportProgramNodeCatalog.BlockItemTeleportMode mode
+    ) {
+        throw new UnsupportedOperationException("Block-item teleport is unavailable");
+    }
 }

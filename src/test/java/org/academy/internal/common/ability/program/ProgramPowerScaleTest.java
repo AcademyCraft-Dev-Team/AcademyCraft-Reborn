@@ -7,13 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ProgramPowerScaleTest {
     @Test
-    void scalesDamageLinearlyAndCostQuadratically() {
+    void scalesDamageLinearlyAndCostWithTheCubicPrecisionCurve() {
         assertEquals(0.0f, ProgramPowerScale.damageMultiplier(0.0f));
         assertEquals(1.0f, ProgramPowerScale.damageMultiplier(1.0f));
         assertEquals(2.0f, ProgramPowerScale.damageMultiplier(2.0f));
-        assertEquals(0.0f, ProgramPowerScale.cost(20.0f, 0.0f));
+        assertEquals(10.0f, ProgramPowerScale.cost(20.0f, 0.0f));
         assertEquals(20.0f, ProgramPowerScale.cost(20.0f, 1.0f));
-        assertEquals(80.0f, ProgramPowerScale.cost(20.0f, 2.0f));
+        assertEquals(90.0f, ProgramPowerScale.cost(20.0f, 2.0f));
     }
 
     @Test

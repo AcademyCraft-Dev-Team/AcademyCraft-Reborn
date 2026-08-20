@@ -30,10 +30,16 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
+    private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
 
     public ServerAeromanipProgramRuntime(ServerPlayer player) {
+        this(player, 1.0f);
+    }
+
+    public ServerAeromanipProgramRuntime(ServerPlayer player, float costMultiplier) {
         this.player = Objects.requireNonNull(player, "player");
+        this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
     }
 
@@ -117,7 +123,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                         normalizedDirection,
                         laminarRange(power),
                         laminarDamageScale(power),
-                        laminarCost(power)
+                        laminarCost(power) * costMultiplier
                 )) {
                     throw new IllegalStateException("Laminar Cutter program cast was rejected");
                 }
@@ -191,12 +197,19 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     }
 
     private void charge(Skill skill, float cost) {
-        var adjusted = cost * AeromanipConfig.cpMultiplier(
+        var adjusted = cost * costMultiplier * AeromanipConfig.cpMultiplier(
                 player, SkillNames.PNEUMATIC_GRASP);
         if (!AbilitySystemServer.getSystem(player)
                 .tryTimedOccupation(player, adjusted, skill)) {
             throw new IllegalStateException("Insufficient CP for Aeromanip program action");
         }
+    }
+
+    private static float requireCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+            throw new IllegalArgumentException("Program cost multiplier must be positive");
+        }
+        return multiplier;
     }
 
     private void spawnPushEffect(Entity target) {

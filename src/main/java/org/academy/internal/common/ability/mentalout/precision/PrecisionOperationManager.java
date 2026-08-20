@@ -155,7 +155,9 @@ public final class PrecisionOperationManager {
             if (!matches) continue;
             var compiled = compiled(player, slot);
             if (!compiled.valid()) continue;
-            PrecisionOperationRuntime.execute(player, slot, compiled.program(), false);
+            PrecisionOperationRuntime.execute(
+                    player, slot, compiled.program(), false,
+                    ProgramTriggers.costMultiplier(abilityProgram));
         }
     }
 

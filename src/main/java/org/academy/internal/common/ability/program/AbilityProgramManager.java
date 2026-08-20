@@ -173,7 +173,8 @@ public final class AbilityProgramManager {
                     : ProgramTriggers.matches(program, trigger, movement, gameTime);
             if (!matches) continue;
             var compiled = definition.compile(program, capabilities);
-            if (compiled.valid()) adapter.execute(compiled.program(), player);
+            if (compiled.valid()) adapter.execute(
+                    compiled.program(), player, ProgramTriggers.costMultiplier(program));
         }
     }
 
@@ -231,9 +232,11 @@ public final class AbilityProgramManager {
 
     private static ExecutionOutcome executeAccelerator(
             CompiledProgram program,
-            ServerPlayer player
+            ServerPlayer player,
+            float costMultiplier
     ) {
-        var execution = AcceleratorProgramExecutionBridge.executeServer(program, player);
+        var execution = AcceleratorProgramExecutionBridge.executeServer(
+                program, player, costMultiplier);
         if (execution.successful()) return ExecutionOutcome.success();
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
@@ -245,9 +248,11 @@ public final class AbilityProgramManager {
 
     private static ExecutionOutcome executeAeromanip(
             CompiledProgram program,
-            ServerPlayer player
+            ServerPlayer player,
+            float costMultiplier
     ) {
-        var execution = AeromanipProgramExecutionBridge.executeServer(program, player);
+        var execution = AeromanipProgramExecutionBridge.executeServer(
+                program, player, costMultiplier);
         if (execution.successful()) return ExecutionOutcome.success();
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
@@ -259,9 +264,11 @@ public final class AbilityProgramManager {
 
     private static ExecutionOutcome executeDarkmatter(
             CompiledProgram program,
-            ServerPlayer player
+            ServerPlayer player,
+            float costMultiplier
     ) {
-        var execution = DarkmatterProgramExecutionBridge.executeServer(program, player);
+        var execution = DarkmatterProgramExecutionBridge.executeServer(
+                program, player, costMultiplier);
         if (execution.successful()) return ExecutionOutcome.success();
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
@@ -273,9 +280,11 @@ public final class AbilityProgramManager {
 
     private static ExecutionOutcome executeElectromaster(
             CompiledProgram program,
-            ServerPlayer player
+            ServerPlayer player,
+            float costMultiplier
     ) {
-        var execution = ElectromasterProgramExecutionBridge.executeServer(program, player);
+        var execution = ElectromasterProgramExecutionBridge.executeServer(
+                program, player, costMultiplier);
         if (execution.successful()) return ExecutionOutcome.success();
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
@@ -287,9 +296,11 @@ public final class AbilityProgramManager {
 
     private static ExecutionOutcome executeTeleport(
             CompiledProgram program,
-            ServerPlayer player
+            ServerPlayer player,
+            float costMultiplier
     ) {
-        var execution = TeleportProgramExecutionBridge.executeServer(program, player);
+        var execution = TeleportProgramExecutionBridge.executeServer(
+                program, player, costMultiplier);
         if (execution.successful()) return ExecutionOutcome.success();
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
@@ -301,9 +312,11 @@ public final class AbilityProgramManager {
 
     private static ExecutionOutcome executeMeltdowner(
             CompiledProgram program,
-            ServerPlayer player
+            ServerPlayer player,
+            float costMultiplier
     ) {
-        var execution = MeltdownerProgramExecutionBridge.executeServer(program, player);
+        var execution = MeltdownerProgramExecutionBridge.executeServer(
+                program, player, costMultiplier);
         if (execution.successful()) return ExecutionOutcome.success();
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
@@ -550,7 +563,7 @@ public final class AbilityProgramManager {
                         null, -1, ProgramVmDiagnostic.NONE);
                 return;
             }
-            var outcome = adapter.execute(compiled.program(), player);
+            var outcome = adapter.execute(compiled.program(), player, 1.0f);
             result(player, packet.category, packet.slot,
                     outcome.successful ? FeedbackType.COMPLETED : FeedbackType.ERROR,
                     current.revision(),
@@ -914,7 +927,11 @@ public final class AbilityProgramManager {
 
     @FunctionalInterface
     private interface CategoryExecutionAdapter {
-        ExecutionOutcome execute(CompiledProgram program, ServerPlayer player);
+        ExecutionOutcome execute(
+                CompiledProgram program,
+                ServerPlayer player,
+                float costMultiplier
+        );
     }
 
     private record ExecutionOutcome(
