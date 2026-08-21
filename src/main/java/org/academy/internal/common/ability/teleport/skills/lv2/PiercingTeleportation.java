@@ -174,18 +174,19 @@ public final class PiercingTeleportation extends Skill {
                 }
                 var eyePosition = player.getEyePosition(event.getPartialTick());
                 var viewDirection = player.getViewVector(event.getPartialTick());
-                var resolvedCenter = useDefaultTarget
-                        ? TeleportTargeting.findDefaultPiercingTeleportCenter(
-                        player, eyePosition, viewDirection, distance)
-                        : TeleportTargeting.findPiercingTeleportCenter(
-                        player, eyePosition, viewDirection, distance);
-                var center = resolvedCenter == null
+                var candidate = TeleportTargeting.findPiercingTeleportCandidate(
+                        player, eyePosition, viewDirection, distance, useDefaultTarget);
+                var center = candidate == null
                         ? eyePosition.add(viewDirection.scale(distance))
-                        : resolvedCenter;
+                        : candidate;
                 var dimensions = player.getDimensions(Pose.STANDING);
-                validDestination = resolvedCenter != null;
+                validDestination = candidate != null;
                 var feetPosition = center.add(0, -dimensions.height() / 2.0, 0);
-                TeleportCursorRenderer.render(event, feetPosition, validDestination);
+                TeleportCursorRenderer.render(
+                        event,
+                        feetPosition,
+                        validDestination && TeleportTargeting.isSafeCenter(player, center)
+                );
             }
 
             private void cleanup() {
@@ -234,9 +235,8 @@ public final class PiercingTeleportation extends Skill {
             var skill = Skills.PIERCING_TELEPORTATION.get();
             if (!Double.isFinite(distance) || distance < 0.0 || distance > MAX_DISTANCE) return;
 
-            var center = packet.useDefaultTarget
-                    ? TeleportTargeting.findDefaultPiercingTeleportCenter(player, distance)
-                    : TeleportTargeting.findPiercingTeleportCenter(player, distance);
+            var center = TeleportTargeting.findPiercingTeleportCandidate(
+                    player, distance, packet.useDefaultTarget);
             if (center == null) return;
             var dimensions = player.getDimensions(Pose.STANDING);
             skill.executeActive(player, (ctx, actualCost) -> {
