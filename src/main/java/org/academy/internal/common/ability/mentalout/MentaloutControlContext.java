@@ -77,7 +77,7 @@ public final class MentaloutControlContext extends ServerContext {
                 .map(entry -> entry.subject)
                 .toList();
         for (var subject : released) {
-            if (subject instanceof Mob mob) MentalControlRecall.suppressUntilExit(controller, mob);
+            MentalControlMemory.forget(controller, subject);
             context.remove(subject.getUUID());
         }
     }
@@ -117,8 +117,8 @@ public final class MentaloutControlContext extends ServerContext {
     public static ToggleResult toggleTarget(ServerPlayer player, LivingEntity target) {
         var existing = get(player);
         if (existing != null && target != null && existing.entries.containsKey(target.getUUID())) {
+            MentalControlMemory.forget(player, target);
             existing.remove(target.getUUID());
-            if (target instanceof Mob mob) MentalControlRecall.suppressUntilExit(player, mob);
             return ToggleResult.REMOVED;
         }
         if (!MentaloutTargetValidation.isValidRosterTarget(player, target)) {

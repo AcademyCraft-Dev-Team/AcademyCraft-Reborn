@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -26,15 +27,15 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.TrailVfx;
-import org.academy.internal.client.render.vfx.TrailVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.lv3.LightShield;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.academy.internal.common.world.entity.skill.Smoke;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -52,6 +53,8 @@ public final class JetStrike extends Skill {
     static final double DAMAGE_RADIUS = 3.25;
     static final float BASE_DAMAGE = 10.0f;
     static final int TRAIL_TICKS = 10;
+    static final double DASH_SPEED = 3;
+    static final float JET_BEAM_LENGTH = 32.0f;
 
     public JetStrike() {
         super(Builder
@@ -81,9 +84,13 @@ public final class JetStrike extends Skill {
         );
     }
 
+    static Vec3 calculateDashVelocity(Vec3 delta) {
+        var direction = normalizeDirection(delta);
+        return direction == null ? Vec3.ZERO : direction.scale(DASH_SPEED);
+    }
+
     @Override
     public void initClient() {
-        TrailVfxClient.register();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -117,8 +124,6 @@ public final class JetStrike extends Skill {
             var player = Minecraft.getInstance().player;
             if (player == null) return;
             MisakaNetworkClient.send(DashPacket.INSTANCE);
-            TrailVfx.INSTANCE.createTrail(1.5f, 0.1f, 1.0f, 0.4f, 0.1f)
-                    .addPoint((float) player.getX(), (float) player.getY(), (float) player.getZ());
         }
 
         public static class Config extends KeyBindingConfig {
@@ -157,14 +162,18 @@ public final class JetStrike extends Skill {
 
         private static void dash(ServerPlayer player, Vec3 delta, int milestone) {
             var level = player.level();
+            var velocity = calculateDashVelocity(delta);
             if (delta.lengthSqr() > 1.0e-8) {
                 player.resetFallDistance();
-                player.setDeltaMovement(delta.x, delta.y + 0.15, delta.z);
+                player.setDeltaMovement(velocity.x, velocity.y + 0.15, velocity.z);
                 player.connection.send(new ClientboundSetEntityMotionPacket(player));
             }
 
             var skill = Skills.JET_STRIKE.get();
             var system = AbilitySystemServer.getSystem(player);
+            if (velocity.lengthSqr() > 1.0e-8) {
+                spawnJetBeam(player, velocity.normalize().scale(-1.0), skill, milestone, system);
+            }
             var damage = calculateDamage(
                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                     system.getPlayerDamageMultiplier(player.getUUID())
@@ -180,6 +189,47 @@ public final class JetStrike extends Skill {
             for (var target : targets) target.hurtServer(level, source, damage);
             if (delta.lengthSqr() > 1.0e-8) {
                 AbilitySystemServer.registerContext(new TrailContext(player, milestone, damage));
+            }
+        }
+
+        private static void spawnJetBeam(
+                ServerPlayer player,
+                Vec3 beamDirection,
+                Skill skill,
+                int milestone,
+                AbilitySystemServer system
+        ) {
+            var level = player.level();
+            var beam = new HighSpeedElectronBeam(
+                    EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
+            beam.configure(
+                    player,
+                    skill,
+                    0.0f,
+                    0.0f,
+                    system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                    system.getPlayerDamageMultiplier(player.getUUID()),
+                    false,
+                    false,
+                    milestone
+            );
+            beam.setIgnoredTarget(player);
+            beam.setAttackDelayTicks(0);
+            beam.setBeamLength(JET_BEAM_LENGTH);
+            beam.setBeamScale(1.0f);
+            beam.setPos(player.getBoundingBox().getCenter());
+            beam.setYRot((float) Math.toDegrees(Math.atan2(-beamDirection.x, beamDirection.z)));
+            beam.setXRot((float) Math.toDegrees(-Math.asin(
+                    Math.clamp(beamDirection.y, -1.0, 1.0))));
+            if (level.addFreshEntity(beam)) {
+                level.playSound(
+                        null,
+                        player,
+                        SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
+                        SoundSource.PLAYERS,
+                        1.0f,
+                        1.0f
+                );
             }
         }
 

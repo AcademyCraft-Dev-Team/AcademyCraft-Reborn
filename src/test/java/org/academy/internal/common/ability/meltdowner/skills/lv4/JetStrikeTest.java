@@ -21,4 +21,15 @@ class JetStrikeTest {
         assertEquals(8.0, JetStrike.DISTANCE);
         assertEquals(3.25, JetStrike.DAMAGE_RADIUS);
     }
+
+    @Test
+    void dashVelocityUsesAtomicJetImpulseSpeed() {
+        var velocity = JetStrike.calculateDashVelocity(new Vec3(8.0, 0.0, 0.0));
+
+        assertEquals(JetStrike.DASH_SPEED, velocity.length(), 0.0001);
+        assertEquals(JetStrike.DASH_SPEED, velocity.x, 0.0001);
+        assertEquals(0.0, velocity.y, 0.0001);
+        assertEquals(0.0, velocity.z, 0.0001);
+        assertEquals(Vec3.ZERO, JetStrike.calculateDashVelocity(Vec3.ZERO));
+    }
 }

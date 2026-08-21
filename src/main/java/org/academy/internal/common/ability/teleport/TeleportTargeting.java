@@ -107,6 +107,44 @@ public final class TeleportTargeting {
         return isSafeCenter(source, center) ? center : null;
     }
 
+    public static @Nullable Vec3 findPiercingTeleportCandidate(
+            LivingEntity source,
+            double selectedDistance,
+            boolean useDefaultTarget
+    ) {
+        return findPiercingTeleportCandidate(
+                source,
+                source.getEyePosition(),
+                source.getLookAngle(),
+                selectedDistance,
+                useDefaultTarget
+        );
+    }
+
+    /**
+     * Resolves the point Piercing Teleport may use. Collision only controls the
+     * cursor's danger state; unlike Self Teleport it does not reject the point.
+     */
+    public static @Nullable Vec3 findPiercingTeleportCandidate(
+            LivingEntity source,
+            Vec3 eyePosition,
+            Vec3 viewDirection,
+            double selectedDistance,
+            boolean useDefaultTarget
+    ) {
+        var safeCenter = useDefaultTarget
+                ? findDefaultPiercingTeleportCenter(
+                source, eyePosition, viewDirection, selectedDistance)
+                : findPiercingTeleportCenter(
+                source, eyePosition, viewDirection, selectedDistance);
+        if (safeCenter != null) return safeCenter;
+
+        var direction = normalizedDirection(viewDirection);
+        if (direction == null || !validPlacementRequest(eyePosition, selectedDistance)) return null;
+        var center = eyePosition.add(direction.scale(selectedDistance));
+        return source.level().hasChunkAt(BlockPos.containing(center)) ? center : null;
+    }
+
     public static @Nullable Vec3 findDefaultPiercingTeleportCenter(
             LivingEntity source,
             double selectedDistance
@@ -177,7 +215,7 @@ public final class TeleportTargeting {
         return direction.normalize();
     }
 
-    private static boolean isSafeCenter(LivingEntity source, Vec3 center) {
+    public static boolean isSafeCenter(LivingEntity source, Vec3 center) {
         if (!source.level().hasChunkAt(BlockPos.containing(center))) return false;
         var dimensions = source.getDimensions(Pose.STANDING);
         var halfWidth = dimensions.width() / 2.0;
