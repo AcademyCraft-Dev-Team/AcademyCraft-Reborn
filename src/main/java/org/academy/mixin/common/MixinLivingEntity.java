@@ -29,6 +29,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
@@ -138,6 +139,7 @@ public abstract class MixinLivingEntity {
         if ((Object) this instanceof Player player) {
             health = PlayerAttributeRuntime.modifyHealthWrite(player, health);
         }
+        health = OutputControl.modifyHealthWrite(entity, health);
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.isVectorDefenseActive(player)
                 && !VectorReflection.Server.isImagineBreakerMutation(player)) {
@@ -185,6 +187,7 @@ public abstract class MixinLivingEntity {
             }
         }
         PlayerAttributeRuntime.pushDamageContext(source);
+        OutputControl.pushDamageContext(source);
     }
 
     @Inject(
@@ -192,6 +195,7 @@ public abstract class MixinLivingEntity {
             at = @At("RETURN")
     )
     private void academy$endDamageContext(ServerLevel level, DamageSource source, float damage, CallbackInfo ci) {
+        OutputControl.popDamageContext();
         PlayerAttributeRuntime.popDamageContext();
     }
 
