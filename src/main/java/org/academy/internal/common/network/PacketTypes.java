@@ -66,6 +66,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
 import org.academy.internal.common.ability.electromaster.skills.lv5.BallLightning;
 import org.academy.internal.common.ability.electromaster.skills.lv5.LightningStorm;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Thunderclap;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
@@ -146,6 +147,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PropsPackets.StartPacket>>
             PROPS_START = PACKET_TYPES.register("props_start",
             () -> new PacketType<>(PropsPackets.StartPacket.class, PropsPackets.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, OutputControl.SettingsPacket>>
+            OUTPUT_CONTROL_SETTINGS = PACKET_TYPES.register("output_control_settings",
+            () -> new PacketType<>(OutputControl.SettingsPacket.class, OutputControl.SettingsPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ConnectNodePacket>>
             CONNECT_NODE = PACKET_TYPES.register("connect_node",

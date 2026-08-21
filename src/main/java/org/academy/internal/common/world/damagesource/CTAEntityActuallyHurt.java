@@ -7,6 +7,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 
@@ -53,12 +54,15 @@ public final class CTAEntityActuallyHurt {
         if (entity instanceof Player player && DamageTypes.isImmunePlayer(player)) return false;
         if (shouldPreventFriendlyFire(source)) return false;
 
-        var adjustedAmount = entity instanceof Player player
+        var reducedAmount = entity instanceof Player player
                 ? PlayerAttributeRuntime.reduceDamage(player, amount, 0.08)
                 : amount;
+        var adjustedAmount = OutputControl.adjustDamage(source, reducedAmount);
         var applied = new boolean[1];
-        PlayerAttributeRuntime.runWithoutResistance(
-                () -> applied[0] = apply(level, source, adjustedAmount)
+        OutputControl.runWithoutDamageScaling(
+                () -> PlayerAttributeRuntime.runWithoutResistance(
+                        () -> applied[0] = apply(level, source, adjustedAmount)
+                )
         );
         return applied[0];
     }

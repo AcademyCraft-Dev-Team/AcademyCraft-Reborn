@@ -93,4 +93,5 @@ public final class SkillNames {
     public static final String ABSOLUTE_SELF_CONTROL = "absolute_self_control";
     public static final String ENDURANCE_TRAINING = "endurance_training";
     public static final String PHYSICAL_TRAINING = "physical_training";
+    public static final String OUTPUT_CONTROL = "output_control";
 }

@@ -223,6 +223,7 @@ public final class Skills {
     public static final DeferredHolder<Skill, AbsoluteSelfControl> ABSOLUTE_SELF_CONTROL = SKILLS.register(SkillNames.ABSOLUTE_SELF_CONTROL, AbsoluteSelfControl::new);
     public static final DeferredHolder<Skill, EnduranceTraining> ENDURANCE_TRAINING = SKILLS.register(SkillNames.ENDURANCE_TRAINING, EnduranceTraining::new);
     public static final DeferredHolder<Skill, PhysicalTraining> PHYSICAL_TRAINING = SKILLS.register(SkillNames.PHYSICAL_TRAINING, PhysicalTraining::new);
+    public static final DeferredHolder<Skill, OutputControl> OUTPUT_CONTROL = SKILLS.register(SkillNames.OUTPUT_CONTROL, OutputControl::new);
 
     private Skills() {
     }

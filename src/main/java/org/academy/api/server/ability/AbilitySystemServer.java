@@ -23,6 +23,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.skilldata.SkillData;
@@ -789,7 +790,8 @@ public final class AbilitySystemServer {
 
         var baseCost = calculator.calculate(ctx);
         if (!Float.isFinite(baseCost) || baseCost < 0) return false;
-        var actualCost = Math.max(0, baseCost * playerCPManager.getCalculationIntensity(uuid));
+        var actualCost = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, baseCost)
+                * playerCPManager.getCalculationIntensity(uuid));
         var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCost);
         if (playerCPManager.tryOccupation(
                 uuid, actualCost, skill, iterationPoints, false, stackGroup, stackLimit
@@ -822,7 +824,8 @@ public final class AbilitySystemServer {
     ) {
         if (action == null || !Float.isFinite(cost) || cost < 0) return false;
         var uuid = player.getUUID();
-        var actualCost = Math.max(0, cost * playerCPManager.getCalculationIntensity(uuid));
+        var actualCost = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, cost)
+                * playerCPManager.getCalculationIntensity(uuid));
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         if (!playerCPManager.tryOccupationIf(
                 uuid,
@@ -842,7 +845,8 @@ public final class AbilitySystemServer {
 
     public boolean tryPermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
+        var actualAmount = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, amount)
+                * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.tryOccupation(uuid, actualAmount, skill, 0, true);
     }
 
@@ -862,7 +866,8 @@ public final class AbilitySystemServer {
 
     public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill, int iterationPoints) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
+        var actualAmount = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, amount)
+                * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.tryOccupation(
                 uuid,
                 actualAmount,
@@ -886,7 +891,8 @@ public final class AbilitySystemServer {
                 return false;
             }
             actual.add(new PlayerCPManager.TimedOccupationCharge(
-                    Math.max(0.0f, charge.amount() * intensity),
+                    Math.max(0.0f, OutputControl.adjustCpCost(
+                            this, uuid, skill, charge.amount()) * intensity),
                     resolveIterationPoints(charge.iterationPoints(), charge.amount())
             ));
         }
@@ -895,7 +901,8 @@ public final class AbilitySystemServer {
 
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        var actualAmount = Math.max(0, amount * playerCPManager.getCalculationIntensity(uuid));
+        var actualAmount = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, amount)
+                * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.ensurePermanentOccupation(uuid, actualAmount, skill);
     }
 
@@ -910,7 +917,8 @@ public final class AbilitySystemServer {
         for (var entry : amounts.entrySet()) {
             var amount = entry.getValue();
             if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
-            actual.put(entry.getKey(), Math.max(0, amount * intensity));
+            actual.put(entry.getKey(), Math.max(0, OutputControl.adjustCpCost(
+                    this, uuid, entry.getKey(), amount) * intensity));
         }
         return playerCPManager.replacePermanentOccupationsAndTryOccupation(
                 uuid,
@@ -956,10 +964,12 @@ public final class AbilitySystemServer {
         for (var charge : timedCharges) {
             if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
             actualTimed.add(new PlayerCPManager.TimedOccupationCharge(
-                    Math.max(0.0f, charge.amount() * intensity), charge.iterationPoints()));
+                    Math.max(0.0f, OutputControl.adjustCpCost(
+                            this, uuid, skill, charge.amount()) * intensity), charge.iterationPoints()));
         }
         return new MixedOccupationCharges(
-                Math.max(0.0f, permanentAmount * intensity), List.copyOf(actualTimed));
+                Math.max(0.0f, OutputControl.adjustCpCost(
+                        this, uuid, skill, permanentAmount) * intensity), List.copyOf(actualTimed));
     }
 
     public record TimedOccupationCharge(float amount, int iterationPoints) {
@@ -986,9 +996,11 @@ public final class AbilitySystemServer {
         for (var entry : permanentAmounts.entrySet()) {
             var amount = entry.getValue();
             if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
-            actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
+            actualPermanent.put(entry.getKey(), Math.max(0, OutputControl.adjustCpCost(
+                    this, uuid, entry.getKey(), amount) * intensity));
         }
-        var actualCast = Math.max(0, castCost * intensity);
+        var actualCast = Math.max(0, OutputControl.adjustCpCost(
+                this, uuid, castSkill, castCost) * intensity);
         if (!playerCPManager.replacePermanentOccupationsAndTryOccupation(
                 uuid,
                 actualPermanent,
@@ -1020,9 +1032,11 @@ public final class AbilitySystemServer {
         for (var entry : permanentAmounts.entrySet()) {
             var amount = entry.getValue();
             if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
-            actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
+            actualPermanent.put(entry.getKey(), Math.max(0, OutputControl.adjustCpCost(
+                    this, uuid, entry.getKey(), amount) * intensity));
         }
-        var actualCast = Math.max(0, castCost * intensity);
+        var actualCast = Math.max(0, OutputControl.adjustCpCost(
+                this, uuid, castSkill, castCost) * intensity);
         return playerCPManager.canReplacePermanentOccupationsAndTryOccupation(
                 uuid,
                 actualPermanent,
