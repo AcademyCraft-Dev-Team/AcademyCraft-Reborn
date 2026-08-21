@@ -70,9 +70,7 @@ public final class ProgramTriggers {
     }
 
     public static float loopCostMultiplier(int interval) {
-        var checked = Math.max(1, interval);
-        return checked >= DEFAULT_LOOP_INTERVAL
-                ? 1.0f : Math.max(2.0f, 10.0f / checked);
+        return 1.0f;
     }
 
     public static boolean matchesHealth(
