@@ -83,7 +83,8 @@ object SettingsApp : App {
 
         private data class CaptureTarget(
             val section: BindingSection,
-            val bindingName: String
+            val bindingName: String,
+            val keyLabel: LabelWidget
         )
 
         private fun createRoot(): FrameLayoutWidget {
@@ -518,7 +519,7 @@ object SettingsApp : App {
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
             rebindButton.onClickListener = { _: Widget? ->
-                startCapture(section, bindingName)
+                startCapture(section, bindingName, keyLabel)
             }
             rebindButton.addChild(
                 "text", LabelWidget(
@@ -536,7 +537,7 @@ object SettingsApp : App {
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
             resetButton.onClickListener = { _: Widget? ->
-                resetBinding(section, bindingName)
+                resetBinding(section, bindingName, keyLabel)
             }
             resetButton.addChild(
                 "text", LabelWidget(
@@ -679,10 +680,14 @@ object SettingsApp : App {
             pendingModifiers = 0
         }
 
-        private fun startCapture(section: BindingSection, bindingName: String) {
+        private fun startCapture(
+            section: BindingSection,
+            bindingName: String,
+            keyLabel: LabelWidget
+        ) {
             if (bindingName in section.hiddenBindings || bindingName == TerminalHud.KEY_NAME_TOGGLE) return
             resetCaptureState()
-            capturing = CaptureTarget(section, bindingName)
+            capturing = CaptureTarget(section, bindingName, keyLabel)
             captureLayer.isEnabled = true
             captureLayer.visibility = Widget.Visibility.VISIBLE
             updateHint()
@@ -701,17 +706,21 @@ object SettingsApp : App {
             InputSystem.updateKeyBinding(target.bindingName, combo)
             target.section.persist(target.section.config)
             AcademyCraftClient.Config.INSTANCE.save()
+            target.keyLabel.text = displayBinding(combo)
             exitCapture()
-            showPage(PAGE_KEYBINDINGS)
         }
 
-        private fun resetBinding(section: BindingSection, bindingName: String) {
+        private fun resetBinding(
+            section: BindingSection,
+            bindingName: String,
+            keyLabel: LabelWidget
+        ) {
             val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
             section.config.setKeyBinding(bindingName, defaultCombo)
             InputSystem.updateKeyBinding(bindingName, defaultCombo)
             section.persist(section.config)
             AcademyCraftClient.Config.INSTANCE.save()
-            showPage(PAGE_KEYBINDINGS)
+            keyLabel.text = displayBinding(defaultCombo)
         }
 
         private fun displayBinding(combo: InputSystem.KeyCombination): String {

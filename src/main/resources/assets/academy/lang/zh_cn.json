@@ -945,7 +945,7 @@
   "screen.academy.program.node.flow.trigger.hurt": "受击时触发",
   "screen.academy.program.node.flow.trigger.hurt.description": "玩家受到的攻击被接受后、伤害实际结算前启动此自定义技能。",
   "screen.academy.program.node.flow.trigger.loop": "循环触发",
-  "screen.academy.program.node.flow.trigger.loop.description": "按配置的 0–1200 tick 固定间隔启动；默认 40 tick。小于 40 tick 时行动消耗按 max(2, 10/间隔) 倍计算。",
+  "screen.academy.program.node.flow.trigger.loop.description": "按配置的 0–1200 tick 固定间隔启动；默认 40 tick。循环不再额外放大行动消耗，更快的触发间隔会自然累积更多 CP 占用。",
   "screen.academy.program.node.flow.trigger.melee": "近战时触发",
   "screen.academy.program.node.flow.trigger.melee.description": "玩家对目标进行近战攻击后启动此自定义技能。",
   "screen.academy.program.node.flow.trigger.movement": "运动时触发",

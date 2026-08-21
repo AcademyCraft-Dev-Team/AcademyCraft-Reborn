@@ -945,7 +945,7 @@
   "screen.academy.program.node.flow.trigger.hurt": "When Hurt",
   "screen.academy.program.node.flow.trigger.hurt.description": "Starts this custom skill after an incoming attack is accepted but before its damage is applied.",
   "screen.academy.program.node.flow.trigger.loop": "Periodic Trigger",
-  "screen.academy.program.node.flow.trigger.loop.description": "Starts at a fixed 0–1200 tick interval, defaulting to 40 ticks. Below 40 ticks, action cost is multiplied by max(2, 10 / interval).",
+  "screen.academy.program.node.flow.trigger.loop.description": "Starts at a fixed 0–1200 tick interval, defaulting to 40 ticks. Looping does not add an extra action-cost multiplier; faster intervals naturally accumulate more CP occupation.",
   "screen.academy.program.node.flow.trigger.melee": "After Melee Attack",
   "screen.academy.program.node.flow.trigger.melee.description": "Starts this custom skill after the caster performs a melee attack against a target.",
   "screen.academy.program.node.flow.trigger.movement": "Movement Trigger",
