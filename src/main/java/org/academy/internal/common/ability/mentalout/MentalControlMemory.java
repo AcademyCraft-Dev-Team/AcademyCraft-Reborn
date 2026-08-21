@@ -20,6 +20,14 @@ public final class MentalControlMemory {
         subject.addTag(tag(controller.getUUID()));
     }
 
+    /**
+     * Removes the persistent recall marker after the controller explicitly releases a subject.
+     */
+    public static void forget(ServerPlayer controller, LivingEntity subject) {
+        if (controller == null || subject == null) return;
+        subject.removeTag(tag(controller.getUUID()));
+    }
+
     public static boolean wasControlledBy(Mob subject, UUID controllerId) {
         return subject != null && controllerId != null && subject.entityTags().contains(tag(controllerId));
     }

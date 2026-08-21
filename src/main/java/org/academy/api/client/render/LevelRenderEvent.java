@@ -50,6 +50,10 @@ public class LevelRenderEvent extends Event {
 
     public void submitPoseGeometry(RenderType renderType,
                                    SubmitNodeCollector.CustomGeometryRenderer renderer) {
+        if (WorldLineOverlayPass.accepts(renderType)) {
+            WorldLineOverlayPass.submitPose(poseStack, renderType, renderer);
+            return;
+        }
         submitNodeCollector.submitCustomGeometry(poseStack, renderType, renderer);
     }
 }

@@ -48,6 +48,7 @@ import org.jspecify.annotations.Nullable;
 public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime {
     public static final double MAX_QUERY_RANGE = 128.0;
     public static final int MAX_QUERY_RESULTS = 128;
+    private static final double BLOCK_CELL_CONTACT_EPSILON = 1.0e-7;
 
     private final ServerPlayer player;
     private final float costMultiplier;
@@ -469,6 +470,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 var level = targets.level();
                 var inventory = snapshotInventory();
                 var spawned = new ArrayList<ItemEntity>();
+                var damageTargets = entitiesTouchingBlockCell(target);
                 try {
                     charge(Skills.SELF_TELEPORT.get(), 10.0f);
                     var drops = blockDrops(target, replacedState, transmitted);
@@ -488,7 +490,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                     } else {
                         spawned.add(spawnItem(target, transmitted));
                     }
-                    damageAtTarget(target, transmitted);
+                    damageAtTarget(target, transmitted, damageTargets);
                     player.getInventory().setChanged();
                     return () -> {
                         spawned.forEach(Entity::discard);
@@ -799,9 +801,26 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         }
     }
 
+    private List<Entity> entitiesTouchingBlockCell(BlockPos target) {
+        var cell = new AABB(target);
+        return List.copyOf(targets.level().getEntities(
+                player,
+                cell.inflate(BLOCK_CELL_CONTACT_EPSILON),
+                entity -> entity.isAlive()
+                        && touchesBlockCell(entity.getBoundingBox(), cell)
+        ));
+    }
+
+    static boolean touchesBlockCell(AABB entityBounds, AABB cell) {
+        return entityBounds.maxX >= cell.minX && entityBounds.minX <= cell.maxX
+                && entityBounds.maxY >= cell.minY && entityBounds.minY <= cell.maxY
+                && entityBounds.maxZ >= cell.minZ && entityBounds.minZ <= cell.maxZ;
+    }
+
     private void damageAtTarget(
             BlockPos target,
-            ItemStack transmitted
+            ItemStack transmitted,
+            List<Entity> damageTargets
     ) {
         var damage = transmitted.getItem() instanceof BlockItem blockItem
                 ? Math.max(0.0f, blockItem.getBlock().defaultBlockState()
@@ -812,11 +831,9 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 EquipmentSlot.MAINHAND
         ));
         if (!(damage > 0.0f)) return;
-        var box = new AABB(target);
         var source = SkillDamageSource.of(player, Skills.SELF_TELEPORT.get());
-        for (var entity : targets.level().getEntities(
-                player, box,
-                entity -> entity.isAlive() && entity.getBoundingBox().intersects(box))) {
+        for (var entity : damageTargets) {
+            if (!entity.isAlive()) continue;
             if (entity instanceof LivingEntity living
                     && CtaFriendlyFireWhitelist.shouldProtect(player, living)) continue;
             entity.hurtServer(targets.level(), source, damage);

@@ -1,8 +1,11 @@
 package org.academy.internal.common.ability.teleport.program;
 
+import net.minecraft.world.phys.AABB;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ServerTeleportProgramRuntimeTest {
     @Test
@@ -23,5 +26,17 @@ class ServerTeleportProgramRuntimeTest {
         assertEquals(33.75f, ServerTeleportProgramRuntime.entityCost(2.0f, 16.0));
         assertEquals(67.5f, ServerTeleportProgramRuntime.entityCost(2.0f, 32.0));
         assertEquals(135.0f, ServerTeleportProgramRuntime.entityCost(2.0f, 64.0));
+    }
+
+    @Test
+    void blockItemTeleportDamageIncludesEntitiesTouchingTheTargetCell() {
+        var cell = new AABB(4.0, 8.0, 12.0, 5.0, 9.0, 13.0);
+
+        assertTrue(ServerTeleportProgramRuntime.touchesBlockCell(
+                new AABB(4.2, 9.0, 12.2, 4.8, 10.8, 12.8), cell));
+        assertTrue(ServerTeleportProgramRuntime.touchesBlockCell(
+                new AABB(4.2, 8.2, 12.2, 4.8, 8.8, 12.8), cell));
+        assertFalse(ServerTeleportProgramRuntime.touchesBlockCell(
+                new AABB(4.2, 9.0001, 12.2, 4.8, 10.8, 12.8), cell));
     }
 }
