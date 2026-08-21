@@ -123,13 +123,13 @@ class ProgramTriggersTest {
     }
 
     @Test
-    void loopCostMultiplierUsesTheFortyTickBaseline() {
+    void loopCostMultiplierDoesNotSurchargeFastLoops() {
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(0));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(1));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(5));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(39));
         assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(40));
         assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(80));
-        assertEquals(2.0f, ProgramTriggers.loopCostMultiplier(39));
-        assertEquals(2.0f, ProgramTriggers.loopCostMultiplier(5));
-        assertEquals(10.0f, ProgramTriggers.loopCostMultiplier(1));
-        assertEquals(10.0f, ProgramTriggers.loopCostMultiplier(0));
     }
 
     private static CompiledProgram compiled(

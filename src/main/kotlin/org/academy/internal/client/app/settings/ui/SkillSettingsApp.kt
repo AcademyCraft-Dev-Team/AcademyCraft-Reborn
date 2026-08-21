@@ -86,7 +86,8 @@ object SkillSettingsApp : App {
 
         private data class CaptureTarget(
             val section: BindingSection,
-            val bindingName: String
+            val bindingName: String,
+            val keyLabel: LabelWidget
         )
 
         private fun createRoot(): FrameLayoutWidget {
@@ -484,13 +485,14 @@ object SkillSettingsApp : App {
                         .height(10f)
                         .gravity(Gravity.CENTER_LEFT)
                 })
-            row.addChild("key", LabelWidget(displayBinding(combo)).apply {
+            val keyLabel = LabelWidget(displayBinding(combo)).apply {
                 scale = 0.7f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .width(44f)
                     .height(10f)
                     .gravity(Gravity.CENTER)
-            })
+            }
+            row.addChild("key", keyLabel)
             row.addChild("toggle", ToggleButtonWidget().apply {
                 setChecked(section.config.isKeyBindingEnabled(bindingName))
                 layoutParams = LinearLayoutWidget.LayoutParams()
@@ -510,7 +512,7 @@ object SkillSettingsApp : App {
             rebind.layoutParams = LinearLayoutWidget.LayoutParams()
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
-            rebind.onClickListener = { startCapture(section, bindingName) }
+            rebind.onClickListener = { startCapture(section, bindingName, keyLabel) }
             rebind.addChild("text", LabelWidget(translate("app.academy.settings.keybind.rebind")).apply {
                 scale = 0.7f
                 layoutParams = FrameLayoutWidget.LayoutParams()
@@ -523,7 +525,7 @@ object SkillSettingsApp : App {
             reset.layoutParams = LinearLayoutWidget.LayoutParams()
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
-            reset.onClickListener = { resetBinding(section, bindingName) }
+            reset.onClickListener = { resetBinding(section, bindingName, keyLabel) }
             reset.addChild("text", LabelWidget(translate("app.academy.settings.keybind.reset")).apply {
                 scale = 0.7f
                 layoutParams = FrameLayoutWidget.LayoutParams()
@@ -825,9 +827,13 @@ object SkillSettingsApp : App {
             pendingModifiers = 0
         }
 
-        private fun startCapture(section: BindingSection, bindingName: String) {
+        private fun startCapture(
+            section: BindingSection,
+            bindingName: String,
+            keyLabel: LabelWidget
+        ) {
             resetCaptureState()
-            capturing = CaptureTarget(section, bindingName)
+            capturing = CaptureTarget(section, bindingName, keyLabel)
             captureLayer.isEnabled = true
             captureLayer.visibility = Widget.Visibility.VISIBLE
             updateCaptureHint()
@@ -846,17 +852,21 @@ object SkillSettingsApp : App {
             InputSystem.updateKeyBinding(target.bindingName, combo)
             target.section.persist(target.section.config)
             AcademyCraftClient.Config.INSTANCE.save()
+            target.keyLabel.text = displayBinding(combo)
             exitCapture()
-            refreshPage()
         }
 
-        private fun resetBinding(section: BindingSection, bindingName: String) {
+        private fun resetBinding(
+            section: BindingSection,
+            bindingName: String,
+            keyLabel: LabelWidget
+        ) {
             val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
             section.config.setKeyBinding(bindingName, defaultCombo)
             InputSystem.updateKeyBinding(bindingName, defaultCombo)
             section.persist(section.config)
             AcademyCraftClient.Config.INSTANCE.save()
-            refreshPage()
+            keyLabel.text = displayBinding(defaultCombo)
         }
 
         private fun displayBinding(combo: InputSystem.KeyCombination): String {
