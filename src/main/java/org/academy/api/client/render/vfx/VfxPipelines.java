@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
@@ -23,7 +24,7 @@ import java.util.Optional;
 import static com.mojang.blaze3d.pipeline.RenderPipeline.builder;
 import static org.academy.AcademyCraft.academy;
 
-@EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+@EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class VfxPipelines {
     public static final RenderPipeline IMAG_PHASE_PARTICLE_ALWAYS_VISIBLE = builder(RenderPipelines.PARTICLE_SNIPPET)
             .withLocation(academy("pipeline/imag_phase_particle_always_visible"))

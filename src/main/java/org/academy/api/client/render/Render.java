@@ -29,6 +29,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
@@ -494,7 +495,7 @@ public final class Render {
         }
     }
 
-    @EventBusSubscriber
+    @EventBusSubscriber(Dist.CLIENT)
     public static final class RenderPipelines extends net.minecraft.client.renderer.RenderPipelines {
         public static final RenderPipeline.Snippet PROJECTION_SNIPPET = builder()
                 .withBindGroupLayout(BindGroupLayouts.PROJECTION)
