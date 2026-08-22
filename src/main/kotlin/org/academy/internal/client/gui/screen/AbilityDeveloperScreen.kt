@@ -31,6 +31,7 @@ import org.academy.api.client.resources.R
 import org.academy.api.common.ability.*
 import org.academy.api.common.util.L10n
 import org.academy.api.common.wireless.GetCurrentNodePacket
+import org.academy.internal.common.ability.AbilityDevelopmentAccess
 import org.academy.internal.common.ability.ProficiencyPolicy
 import org.academy.internal.common.ability.level0.Level0
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity
@@ -300,15 +301,24 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         panel.addChild("text_exp", expLabel)
 
         if (!isLevel0 && AbilitySystemClient.canLevelUp()) {
+            val targetLevel = level.levelCode + 1
+            val machineRequired = !AbilityDevelopmentAccess.canDevelopAbilityLevel(
+                developmentSource, targetLevel
+            )
             val upgradeBtn = ButtonWidget()
             upgradeBtn.layoutParams = WidgetContainer.LayoutParams()
                 .gravity(Gravity.TOP_LEFT)
                 .margin(60f, 14.5f, 0f, 0f)
                 .size(48f, 15f)
             upgradeBtn.onClickListener = OnClickListener { addCover(createLevelUpCover()) }
+            if (machineRequired) {
+                upgradeBtn.tooltipText =
+                    L10n["academy.ability_developer.portable.level_restricted"]
+            }
             panel.addChild("btn_upgrade", upgradeBtn) {
                 val btnTex = ImageWidget(AcademyCraft.academy("textures/gui/developer/button_learn.png"))
                 btnTex.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+                btnTex.alpha = if (machineRequired) 0.4f else 1.0f
                 upgradeBtn.addChild("tex", btnTex)
             }
         } else {
@@ -927,14 +937,18 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private fun createSkillNode(category: AbilityCategory, info: AbilitySystemClient.SkillInfo): ButtonWidget {
         val isLearned = AbilitySystemClient.isSkillLearned(info.skill)
+        val machineRequired = !isLearned && !AbilityDevelopmentAccess.canLearnSkill(
+            developmentSource, info.skill.recommendedLevel.levelCode
+        )
         val hasDepsLearned = info.dependencies.isEmpty() || info.dependencies.all {
             AbilitySystemClient.isSkillLearned(it.skill)
         }
-        val mAlpha = when {
+        val baseAlpha = when {
             isLearned -> 1.0f
             hasDepsLearned -> 0.7f
             else -> 0.25f
         }
+        val mAlpha = if (machineRequired) minOf(baseAlpha, 0.4f) else baseAlpha
 
         val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
         var outlineTexView: GpuTextureView? = null
@@ -959,6 +973,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     val proficiency = AbilitySystemClient.getSkillProficiency(info.skill)
                     "${info.skill.translatedName}\n${L10n["academy.ability_developer.skill_exp"]}" +
                             String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
+                } else if (machineRequired) {
+                    "${info.skill.translatedName}\n" +
+                            L10n["academy.ability_developer.portable.skill_restricted"]
                 } else {
                     info.skill.translatedName
                 }
@@ -1374,6 +1391,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val isLearned = AbilitySystemClient.isSkillLearned(info.skill)
         val skill = info.skill
         val skillId = skill.getKeyString()
+        val machineRequired = !isLearned && !AbilityDevelopmentAccess.canLearnSkill(
+            developmentSource, skill.recommendedLevel.levelCode
+        )
 
         val cover = FrameLayoutWidget()
         cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
@@ -1631,12 +1651,20 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         }
                     }
 
-                    val learnQuestion = L10n["academy.ability_developer.learn_question"].format(
-                        LearningHelper.getEstimatedSkillConsumption(skill)
-                    )
+                    val learnQuestion = if (machineRequired) {
+                        L10n["academy.ability_developer.portable.skill_restricted"]
+                    } else {
+                        L10n["academy.ability_developer.learn_question"].format(
+                            LearningHelper.getEstimatedSkillConsumption(skill)
+                        )
+                    }
                     val messageLabel = object : LabelWidget(learnQuestion) {
                         override fun tick() {
                             super.tick()
+                            if (machineRequired) {
+                                text = L10n["academy.ability_developer.portable.skill_restricted"]
+                                return
+                            }
                             val targetId = AbilitySystemClient.getDevTargetId()
                             if (targetId == skillId) {
                                 text = when {
@@ -1660,13 +1688,14 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             }
                         }
                     }
-                    messageLabel.baseFontSize = 10f
+                    messageLabel.baseFontSize = if (machineRequired) 8f else 10f
                     messageLabel.alpha = 0.66f
                     messageLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER_HORIZONTAL)
+                        .width(240f)
                     textArea.addChild("message", messageLabel)
 
-                    if (!AbilitySystemClient.isDevelopmentActive()) {
+                    if (!AbilitySystemClient.isDevelopmentActive() && !machineRequired) {
                         val learnBtn = createDevButton()
                         learnBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
                         learnBtn.onClickListener = OnClickListener {
@@ -1675,7 +1704,13 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             ) {
                                 AbilitySystemClient.resetDevState()
                             }
-                            if (currentEnergy() < LearningHelper.getEstimatedSkillConsumption(skill)) {
+                            if (!AbilityDevelopmentAccess.canLearnSkill(
+                                    developmentSource, skill.recommendedLevel.levelCode
+                                )
+                            ) {
+                                messageLabel.text =
+                                    L10n["academy.ability_developer.portable.skill_restricted"]
+                            } else if (currentEnergy() < LearningHelper.getEstimatedSkillConsumption(skill)) {
                                 messageLabel.text = L10n["academy.ability_developer.noenergy"]
                             } else if (skill.recommendedLevel.levelCode > AbilitySystemClient.getLevel().levelCode) {
                                 messageLabel.text =
@@ -1733,6 +1768,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private fun createLevelUpCover(): FrameLayoutWidget {
         val level = AbilitySystemClient.getLevel()
+        val targetLevel = level.levelCode + 1
+        val machineRequired = !AbilityDevelopmentAccess.canDevelopAbilityLevel(
+            developmentSource, targetLevel
+        )
         val cost = LearningHelper.getEstimatedLevelUpConsumption(level.levelCode)
 
         var shouldRebuild = false
@@ -1836,7 +1875,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 .gravity(Gravity.CENTER)
             textArea.orientation = Orientation.VERTICAL
             coverCenter.addChild("text_area", textArea) {
-                val title = LabelWidget(L10n["academy.ability_developer.uplevel"].format(level.levelCode + 1))
+                val title = LabelWidget(L10n["academy.ability_developer.uplevel"].format(targetLevel))
                 title.baseFontSize = 12f
                 title.layoutParams = WidgetContainer.LayoutParams()
                     .gravity(Gravity.CENTER_HORIZONTAL)
@@ -1849,57 +1888,71 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 textArea.addChild("req", reqLabel)
 
                 val hintLabel = LabelWidget("")
-                hintLabel.baseFontSize = 9f
-                hintLabel.text = L10n["academy.ability_developer.level_question"]
+                hintLabel.baseFontSize = if (machineRequired) 8f else 9f
+                hintLabel.text = if (machineRequired) {
+                    L10n["academy.ability_developer.portable.level_restricted"]
+                } else {
+                    L10n["academy.ability_developer.level_question"]
+                }
                 hintLabel.layoutParams =
-                    WidgetContainer.LayoutParams().gravity(Gravity.CENTER_HORIZONTAL)
+                    WidgetContainer.LayoutParams()
+                        .gravity(Gravity.CENTER_HORIZONTAL)
+                        .width(240f)
                 textArea.addChild("hint", hintLabel)
 
-                val upgBtn = createDevButton()
-                upgBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
-                upgBtn.onClickListener = {
-                    if (currentEnergy() < cost) {
-                        hintLabel.text = L10n["academy.ability_developer.noenergy"]
-                    } else {
-                        AbilitySystemClient.resetDevState()
-
-                        MisakaNetworkClient.FUTURE_MANAGER.send(
-                            StartLevelDevPacket(developmentSource)
+                if (!machineRequired) {
+                    val upgBtn = createDevButton()
+                    upgBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
+                    upgBtn.onClickListener = {
+                        if (!AbilityDevelopmentAccess.canDevelopAbilityLevel(
+                                developmentSource, targetLevel
+                            )
                         ) {
-                            if (it != null && it.isSuccess) {
-                                fun poll() {
-                                    val state = AbilitySystemClient.getDevState()
-                                    when (state) {
-                                        DevState.DEVELOPING -> {
-                                            hintLabel.text = L10n["academy.ability_developer.dev_developing"]
-                                            iconProgressRef.set(AbilitySystemClient.getDevProgress())
-                                            cover.pollNextFrame { poll() }
-                                        }
+                            hintLabel.text =
+                                L10n["academy.ability_developer.portable.level_restricted"]
+                        } else if (currentEnergy() < cost) {
+                            hintLabel.text = L10n["academy.ability_developer.noenergy"]
+                        } else {
+                            AbilitySystemClient.resetDevState()
 
-                                        DevState.DONE -> {
-                                            iconProgressRef.set(1.0f)
-                                            hintLabel.text = L10n["academy.ability_developer.dev_successful"]
-                                            shouldRebuild = true
-                                        }
+                            MisakaNetworkClient.FUTURE_MANAGER.send(
+                                StartLevelDevPacket(developmentSource)
+                            ) {
+                                if (it != null && it.isSuccess) {
+                                    fun poll() {
+                                        val state = AbilitySystemClient.getDevState()
+                                        when (state) {
+                                            DevState.DEVELOPING -> {
+                                                hintLabel.text = L10n["academy.ability_developer.dev_developing"]
+                                                iconProgressRef.set(AbilitySystemClient.getDevProgress())
+                                                cover.pollNextFrame { poll() }
+                                            }
 
-                                        DevState.FAILED -> {
-                                            hintLabel.text = developmentFailureMessage()
-                                        }
+                                            DevState.DONE -> {
+                                                iconProgressRef.set(1.0f)
+                                                hintLabel.text = L10n["academy.ability_developer.dev_successful"]
+                                                shouldRebuild = true
+                                            }
 
-                                        else -> {
-                                            cover.pollNextFrame { poll() }
+                                            DevState.FAILED -> {
+                                                hintLabel.text = developmentFailureMessage()
+                                            }
+
+                                            else -> {
+                                                cover.pollNextFrame { poll() }
+                                            }
                                         }
                                     }
+                                    poll()
+                                } else {
+                                    hintLabel.text = it?.message ?: L10n["academy.ability_developer.dev_failed"]
                                 }
-                                poll()
-                            } else {
-                                hintLabel.text = it?.message ?: L10n["academy.ability_developer.dev_failed"]
                             }
                         }
+                        textArea.removeChild("upgrade_btn")
                     }
-                    textArea.removeChild("upgrade_btn")
+                    textArea.addChild("upgrade_btn", upgBtn)
                 }
-                textArea.addChild("upgrade_btn", upgBtn)
             }
         }
 
