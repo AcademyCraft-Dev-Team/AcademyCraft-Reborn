@@ -91,6 +91,46 @@ class KeyBindingConfigMigrationTest {
         assertEquals(InputConstants.MOD_CONTROL, binding.modifiers());
     }
 
+    @Test
+    void collapsesLegacyPressAndReleaseRowsIntoOneMaintainedGesture() {
+        var config = GSON.fromJson("""
+                {
+                  "keyBindings": {
+                    "legacy_press": {
+                      "type": "KEYBOARD",
+                      "keys": [71],
+                      "action": 1,
+                      "modifiers": 4,
+                      "availableWhenScreen": false,
+                      "unbound": false
+                    },
+                    "legacy_release": {
+                      "type": "KEYBOARD",
+                      "keys": [71],
+                      "action": 0,
+                      "modifiers": 4,
+                      "availableWhenScreen": false,
+                      "unbound": false
+                    }
+                  }
+                }
+                """, TestConfig.class);
+
+        var binding = config.getMaintainedKeyBinding(
+                "logical_hold",
+                defaultBinding(),
+                "legacy_press",
+                "legacy_release"
+        );
+
+        assertEquals(InputSystem.ANY_ACTION, binding.action());
+        assertEquals(Set.of(71), binding.keys());
+        assertEquals(InputConstants.MOD_ALT, binding.modifiers());
+        assertFalse(config.containsKeyBinding("legacy_press"));
+        assertFalse(config.containsKeyBinding("legacy_release"));
+        assertTrue(config.containsKeyBinding("logical_hold"));
+    }
+
     private static InputSystem.KeyCombination defaultBinding() {
         return InputSystem.combo(
                 InputSystem.InputType.KEYBOARD,

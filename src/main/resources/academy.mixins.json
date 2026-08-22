@@ -50,6 +50,7 @@
     "common.item.MixinMaceItemAirflowMomentum"
   ],
   "client": [
+    "client.AbstractContainerScreenAccessor",
     "client.MixinArmedEntityRenderState",
     "client.MixinAvatarRenderer",
     "client.MixinCamera",
@@ -72,6 +73,7 @@
     "client.MixinModelDiscovery",
     "client.MixinMouseHandler",
     "client.MixinSoundEngine",
+    "client.MixinThrownTridentRenderer",
     "client.compatibility.MixinIrisHandRenderer"
   ],
   "injectors": {

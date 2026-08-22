@@ -30,8 +30,10 @@ import org.academy.internal.common.ability.aeromanip.skills.lv5.AtmosphericDomin
 import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
 import org.academy.internal.common.ability.aeromanip.skills.lv5.VacuumDomain;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterGeneration;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
+import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhaseTuning;
 import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterRepair;
@@ -162,7 +164,9 @@ public final class Skills {
     /**
      * Darkmatter
      */
+    public static final DeferredHolder<Skill, DarkmatterGeneration> DARKMATTER_GENERATION = SKILLS.register(SkillNames.DARKMATTER_GENERATION, DarkmatterGeneration::new);
     public static final DeferredHolder<Skill, DarkmatterShaping> DARKMATTER_SHAPING = SKILLS.register(SkillNames.DARKMATTER_SHAPING, DarkmatterShaping::new);
+    public static final DeferredHolder<Skill, DarkmatterPhaseTuning> DARKMATTER_PHASE_TUNING = SKILLS.register(SkillNames.DARKMATTER_PHASE_TUNING, DarkmatterPhaseTuning::new);
     public static final DeferredHolder<Skill, DarkmatterDisassemble> DARKMATTER_DISASSEMBLE = SKILLS.register(SkillNames.DARKMATTER_DISASSEMBLE, DarkmatterDisassemble::new);
     public static final DeferredHolder<Skill, DarkmatterCut> DARKMATTER_CUT = SKILLS.register(SkillNames.DARKMATTER_CUT, DarkmatterCut::new);
     public static final DeferredHolder<Skill, DarkmatterRadiation> DARKMATTER_RADIATION = SKILLS.register(SkillNames.DARKMATTER_RADIATION, DarkmatterRadiation::new);

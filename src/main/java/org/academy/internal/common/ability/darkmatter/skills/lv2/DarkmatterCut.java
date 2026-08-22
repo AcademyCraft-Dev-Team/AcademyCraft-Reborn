@@ -2,8 +2,11 @@ package org.academy.internal.common.ability.darkmatter.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,8 +14,13 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -32,8 +40,11 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
+import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
+import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.DarkmatterCutSlash;
 import org.misaka.MisakaNetworkClient;
@@ -45,24 +56,27 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 public final class DarkmatterCut extends Skill {
-    static final double RADIUS = 8.0;
+    static final double RADIUS = 5.0;
     static final double SIX_WINGS_RADIUS = 24.0;
     static final double MIN_DOT = 0.5;
     static final float BASE_DAMAGE = 12.0f;
     static final float SIX_WINGS_DAMAGE = 16.0f;
+    static final float MATTER_COST = 3.0f;
+    private static final Identifier PENETRATION_ID = AcademyCraft.academy(
+            "darkmatter_cut_phase_penetration");
 
     public DarkmatterCut() {
         super(Builder
                 .of(AbilityCategories.DARKMATTER.get())
-                .level(AbilityLevel.LEVEL2)
-                .energyCost(10_000)
-                .cpCost(20)
+                .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
+                .cpCost(0)
                 .iterationTicks(10)
                 .maxStacks(10)
                 .dependsOn(Skills.DARKMATTER_DISASSEMBLE)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition(
-                        "Dark Matter Disassemble", "academy:darkmatter_disassemble"))
+                        "Dark Matter Deconstruction", "academy:darkmatter_disassemble"))
         );
     }
 
@@ -90,7 +104,7 @@ public final class DarkmatterCut extends Skill {
                         Skills.DARKMATTER_CUT.get(),
                         List.of(DarkmatterDisassemble.Client.SKILL_INFO),
                         R.textures.darkmatter_cut_icon,
-                        20,
+                        140,
                         104
                 )
         );
@@ -132,7 +146,11 @@ public final class DarkmatterCut extends Skill {
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            tryCast(player, player.getLookAngle(), -1.0, 1.0f, -1.0f);
+            tryCast(player, player.getLookAngle());
+        }
+
+        public static boolean tryCast(ServerPlayer player, Vec3 direction) {
+            return tryCastInternal(player, direction, -1.0, 1.0f, -1.0f);
         }
 
         public static boolean tryProgramCast(
@@ -142,10 +160,10 @@ public final class DarkmatterCut extends Skill {
                 float damageScale,
                 float baseCost
         ) {
-            return tryCast(player, direction, maximumRadius, damageScale, baseCost);
+            return tryCastInternal(player, direction, maximumRadius, damageScale, baseCost);
         }
 
-        private static boolean tryCast(
+        private static boolean tryCastInternal(
                 ServerPlayer player,
                 Vec3 direction,
                 double maximumRadius,
@@ -173,15 +191,13 @@ public final class DarkmatterCut extends Skill {
             if (maximumRadius > 0.0 && horizontal.lengthSqr() < 1.0E-8) return false;
             var skill = Skills.DARKMATTER_CUT.get();
             var milestone = skill.getEffectiveProficiencyMilestone(player);
-            var enhanced = DarkmatterSixWings.Server.isActive(player);
-            var calculatedRadius = (enhanced ? SIX_WINGS_RADIUS : RADIUS) * (milestone >= 2 ? 1.2 : 1.0);
-            if (enhanced && Skills.DARKMATTER_SIX_WINGS.get().hasProficiencyMilestone(player, 2)) {
-                calculatedRadius *= 1.1;
-            }
+            var phase = DarkmatterPhase.weights(player);
+            var calculatedRadius = effectiveRadius(
+                    phase.alpha(), milestone, phase.gamma() > 0.0f,
+                    Skills.DARKMATTER_SIX_WINGS.get().getEffectiveProficiencyMilestone(player));
             if (maximumRadius > 0.0) calculatedRadius = Math.min(calculatedRadius, maximumRadius);
             var radius = calculatedRadius;
-            var minimumDot = milestone >= 2
-                    ? Math.cos(Math.acos(MIN_DOT) * 1.2) : MIN_DOT;
+            var minimumDot = effectiveMinimumDot(phase.alpha(), milestone, false);
             var origin = player.position().add(0, player.getBbHeight() * 0.5, 0);
             var visualDirection = direction.normalize();
             var look = horizontalLook(visualDirection, player.getYRot());
@@ -191,60 +207,161 @@ public final class DarkmatterCut extends Skill {
                                     && !player.isAlliedTo(target)
                                     && insideCone(origin, look, target.getBoundingBox().getCenter(),
                                     radius, minimumDot));
-            var finalRadius = radius;
-            var finalMinimumDot = minimumDot;
-            return skill.executeActive(
+            var requestedBaseCost = baseCost < 0.0f ? MATTER_COST : baseCost;
+            var cost = matterCost(requestedBaseCost, milestone);
+            var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            if (manager.getView(player).totalMatter() + 1.0e-5f < cost) return false;
+            var applied = new boolean[1];
+            var executed = skill.executeActive(
                     player,
-                    context -> baseCost < 0.0f
-                            ? skill.getCpCost(context.level()) : baseCost,
+                    context -> 0.0f,
                     (context, actualCost) -> {
-                        spawnSlash(level, player, visualDirection, enhanced ? 3.0f : 1.0f);
+                        var currentCost = matterCost(requestedBaseCost, context.milestone());
+                        if (currentCost > 1.0e-5f && !manager.consume(
+                                player, currentCost, skill,
+                                skill.getIterationTicks(player))) return;
+                        applied[0] = true;
+                        spawnSlash(level, player, visualDirection, phase.gamma() > 0.0f ? 2.0f : 1.0f);
                         level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                                 SoundSource.PLAYERS, 1.0f, 1.0f);
                         var system = AbilitySystemServer.getSystem(player);
-                        var damage = (enhanced ? SIX_WINGS_DAMAGE : BASE_DAMAGE)
+                        var damage = directDamage(phase.alpha(), phase.beta())
                                 * system.getPlayerAbilityPowerMultiplier(player.getUUID())
                                 * system.getPlayerDamageMultiplier(player.getUUID())
                                 * damageScale;
                         var source = SkillDamageSource.of(player, skill);
+                        var hitTargets = new ArrayList<UUID>();
                         for (var target : targets) {
-                            if (!target.hurtServer(level, source, damage)) continue;
+                            var detonation = DarkmatterLawMark.detonate(player, target);
+                            if (detonation > 0.0f) {
+                                target.invulnerableTime = 0;
+                                SkillDamageUtil.applyDirect(level, target, source, detonation);
+                                target.invulnerableTime = 0;
+                                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
+                            }
+                            if (!hurtWithPhase(level, target, source, damage, phase.beta())) continue;
+                            hitTargets.add(target.getUUID());
+                            var push = target.position().subtract(player.position());
+                            if (push.horizontalDistanceSqr() > 1.0e-6) {
+                                push = push.normalize().scale(knockback(phase.alpha()));
+                                target.push(push.x, 0.08 + phase.alpha() * 0.04, push.z);
+                            }
+                            DarkmatterLawMark.apply(player, target, phase.beta(),
+                                    markDuration(phase.beta(), context.milestone()));
                             level.sendParticles(ParticleTypes.SWEEP_ATTACK,
                                     target.getX(), target.getY() + target.getBbHeight() * 0.5,
                                     target.getZ(), 6, 0.25, 0.25, 0.25, 0.01);
                         }
-                        if (context.milestone() >= 3) {
-                            TimedSkillEffectRuntime.schedule(player, 8, () -> {
+                        var delayedDamageMultiplier = delayedRiftDamageMultiplier(
+                                phase.gamma(), context.milestone())
+                                * DarkmatterSixWings.Server.gammaMagnitudeMultiplier(player);
+                        if (delayedDamageMultiplier > 0.0f && !hitTargets.isEmpty()) {
+                            var mirroredTargets = List.copyOf(hitTargets);
+                            TimedSkillEffectRuntime.schedule(player,
+                                    context.milestone() >= 3 ? 4 : 8, () -> {
                                 if (!player.isAlive() || player.level() != level) return;
-                                spawnSlash(level, player, visualDirection,
-                                        enhanced ? 2.0f : 0.75f);
-                                var delayedTargets = level.getEntitiesOfClass(
-                                        LivingEntity.class,
-                                        new AABB(origin, origin).inflate(finalRadius),
-                                        target -> target != player
-                                                && target.isAlive()
-                                                && !target.isRemoved()
-                                                && !player.isAlliedTo(target)
-                                                && insideCone(
-                                                origin,
-                                                look,
-                                                target.getBoundingBox().getCenter(),
-                                                finalRadius,
-                                                finalMinimumDot
-                                        ));
-                                for (var target : delayedTargets) {
+                                spawnSlash(level, player, visualDirection.scale(-1.0),
+                                        1.5f);
+                                for (var targetId : mirroredTargets) {
+                                    if (!(level.getEntity(targetId) instanceof LivingEntity target)
+                                            || target == player || !target.isAlive()
+                                            || target.isRemoved() || player.isAlliedTo(target)) continue;
                                     target.invulnerableTime = 0;
-                                    target.hurtServer(level, source, damage * 0.5f);
+                                    var detonation = DarkmatterLawMark.detonate(player, target);
+                                    if (detonation > 0.0f) {
+                                        SkillDamageUtil.applyDirect(
+                                                level, target, source, detonation);
+                                        target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
+                                        target.invulnerableTime = 0;
+                                    }
+                                    hurtWithPhase(level, target, source,
+                                            damage * delayedDamageMultiplier, phase.beta());
                                 }
                             });
                         }
                     });
+            return executed && applied[0];
+        }
+
+        private static boolean hurtWithPhase(
+                ServerLevel level,
+                LivingEntity target,
+                net.minecraft.world.damagesource.DamageSource source,
+                float damage,
+                float beta
+        ) {
+            var armor = target.getAttribute(Attributes.ARMOR);
+            if (armor == null || beta <= 0.0f) return target.hurtServer(level, source, damage);
+            var existing = armor.getModifier(PENETRATION_ID);
+            if (existing != null) armor.removeModifier(PENETRATION_ID);
+            armor.addTransientModifier(new AttributeModifier(
+                    PENETRATION_ID,
+                    -penetration(beta),
+                    AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+            try {
+                return target.hurtServer(level, source, damage);
+            } finally {
+                armor.removeModifier(PENETRATION_ID);
+                if (existing != null) armor.addTransientModifier(existing);
+            }
         }
 
         static Vec3 horizontalLook(Vec3 look, float yaw) {
             var horizontal = new Vec3(look.x, 0, look.z);
             if (horizontal.lengthSqr() < 1.0e-6) horizontal = Vec3.directionFromRotation(0, yaw);
             return horizontal.normalize();
+        }
+
+        static double effectiveRadius(
+                float alpha,
+                int milestone,
+                boolean sixWings,
+                int sixWingsMilestone
+        ) {
+            var radius = RADIUS + Math.max(0.0f, alpha);
+            if (Math.clamp(milestone, 0, 3) >= 2) radius *= 1.15;
+            if (sixWings) radius *= DarkmatterSixWings.Server.areaMultiplier(sixWingsMilestone);
+            return radius;
+        }
+
+        static double effectiveMinimumDot(float alpha, int milestone, boolean alternate) {
+            if (alternate) return -1.0;
+            var halfAngle = 30.0 + Math.max(0.0f, alpha) * 6.0;
+            if (Math.clamp(milestone, 0, 3) >= 2) halfAngle *= 1.15;
+            return Math.cos(Math.toRadians(Math.min(179.0, halfAngle)));
+        }
+
+        static float delayedRiftDamageMultiplier(int milestone) {
+            return delayedRiftDamageMultiplier(1.0f, milestone);
+        }
+
+        static float delayedRiftDamageMultiplier(float gamma, int milestone) {
+            if (!(gamma > 0.0f)) return 0.0f;
+            return 0.25f + 0.10f * gamma
+                    + (Math.clamp(milestone, 0, 3) >= 3 ? 0.15f : 0.0f);
+        }
+
+        static int markDuration(float beta, int milestone) {
+            var ticks = 40.0f + Math.max(0.0f, beta) * 20.0f;
+            return Math.round(Math.clamp(milestone, 0, 3) >= 2 ? ticks * 1.5f : ticks);
+        }
+
+        static float directDamage(float alpha, float beta) {
+            return (6.0f + 2.0f * Math.max(0.0f, alpha))
+                    * Math.max(0.6f, 1.0f - 0.08f * Math.max(0.0f, beta));
+        }
+
+        static double knockback(float alpha) {
+            return 0.2 + Math.max(0.0f, alpha) * 0.12;
+        }
+
+        static float penetration(float beta) {
+            return Math.clamp(Math.max(0.0f, beta) * 0.10f, 0.0f, 0.50f);
+        }
+
+        static float matterCost(float base, int milestone) {
+            return Math.max(0.0f, base)
+                    * (Math.clamp(milestone, 0, 3) >= 1 ? 0.9f : 1.0f);
         }
 
         static boolean insideCone(Vec3 origin, Vec3 look, Vec3 target,

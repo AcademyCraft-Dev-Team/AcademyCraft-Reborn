@@ -2,41 +2,42 @@ package org.academy.internal.common.ability.darkmatter.skills.lv1;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
+import net.minecraft.world.item.enchantment.Enchantments;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
-import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
+import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+import org.academy.api.common.ability.darkmatter.DarkmatterShapingRegistries;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.gui.screen.DarkmatterShapingScreen;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
-import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.common.world.item.Items;
+import org.academy.mixin.client.AbstractContainerScreenAccessor;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -45,17 +46,25 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 public final class DarkmatterShaping extends Skill {
+    private static final float MATERIAL_MATTER_COST = 1.0f;
+
     public DarkmatterShaping() {
-        super(Builder
-                .of(AbilityCategories.DARKMATTER.get())
+        super(Builder.of(AbilityCategories.DARKMATTER.get())
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(50)
                 .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.DARKMATTER_GENERATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
-        );
+                .devCondition(new DevCondition.DependencyCondition(
+                        "Dark Matter Generation", "academy:darkmatter_generation")));
     }
 
     @Override
@@ -63,15 +72,25 @@ public final class DarkmatterShaping extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(
+        var configured = Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_U,
-                        InputConstants.RELEASE, 0)
-        ), context -> Client.cast());
+                        InputConstants.PRESS, 0, true)
+        );
+        // Older saves kept this one-shot skill disabled while a container screen was open,
+        // which made the inventory-slot material action unreachable. Preserve the selected
+        // physical key while migrating the action and screen policy required by this skill.
+        configured = new InputSystem.KeyCombination(
+                configured.type(), configured.keys(), InputConstants.PRESS,
+                configured.modifiers(), true, configured.unbound());
+        Client.CONFIG.setKeyBinding(Client.KEY_NAME_CAST, configured);
+        InputSystem.addKeyBinding(Client.KEY_NAME_CAST, configured, _ -> Client.cast());
+        MisakaNetworkClient.NETWORK_MANAGER.register(ClientPackets.class);
     }
 
     @Override
     public void initServer(MinecraftServerContext context) {
+        DarkmatterModifiers.bootstrap();
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
@@ -80,131 +99,401 @@ public final class DarkmatterShaping extends Skill {
                 AbilityCategories.DARKMATTER.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.DARKMATTER_SHAPING.get(),
-                        List.of(),
+                        List.of(DarkmatterGeneration.Client.SKILL_INFO),
                         R.textures.darkmatter_shaping_icon,
-                        20,
-                        40
-                )
-        );
+                        58, 72));
         public static final String KEY_NAME_CAST = SkillNames.DARKMATTER_SHAPING + "_cast";
         public static Config CONFIG = new Config();
 
-        private Client() {
-        }
+        private Client() { }
 
         private static void cast() {
-            if (ClientUtil.hasScreen()
-                    || !AbilitySystemClient.canUseSkill(Skills.DARKMATTER_SHAPING.get())) return;
-            MisakaNetworkClient.send(CastPacket.INSTANCE);
+            if (!AbilitySystemClient.canUseSkill(Skills.DARKMATTER_SHAPING.get())) return;
+            var minecraft = Minecraft.getInstance();
+            var current = minecraft.gui.screen();
+            if (current instanceof DarkmatterShapingScreen) return;
+            if (current instanceof AbstractContainerScreen<?> screen
+                    && (screen instanceof InventoryScreen
+                    || screen instanceof CreativeModeInventoryScreen)
+                    && minecraft.player != null) {
+                var slot = ((AbstractContainerScreenAccessor) screen).academy$getHoveredSlot();
+                if (slot != null && slot.getItem().isEmpty() && slot.mayPlace(
+                        new ItemStack(Items.DARKMATTER.get()))) {
+                    MisakaNetworkClient.send(CastPacket.material(slot.getContainerSlot()));
+                    return;
+                }
+            }
+            minecraft.gui.setScreen(new DarkmatterShapingScreen());
+        }
+
+        public static void shape(DarkmatterShape shape, int alphaPercent,
+                                 Map<String, Integer> modifiers) {
+            MisakaNetworkClient.send(CastPacket.shape(shape, alphaPercent, modifiers));
         }
 
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-
-                private Action() {
-                }
-
-                @Override
-                public Config getDefault() {
-                    return new Config();
-                }
-
-                @Override
-                public Class<Config> getTypeClass() {
-                    return Config.class;
-                }
+                private Action() { }
+                @Override public Config getDefault() { return new Config(); }
+                @Override public Class<Config> getTypeClass() { return Config.class; }
             }
         }
     }
 
     public static final class Server {
-        private Server() {
-        }
+        private Server() { }
 
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var skill = Skills.DARKMATTER_SHAPING.get();
-            var heldBeforeCast = player.getMainHandItem();
-            skill.executeActive(player, context -> context.milestone() >= 2 && !heldBeforeCast.isEmpty()
-                    ? 25.0f : 50.0f, (context, actualCost) -> {
-                var held = player.getMainHandItem();
-                if (held.isEmpty()) {
-                    player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DARKMATTER.get()));
-                } else {
-                    DarkmatterItemUtil.repairDurability(held);
-                    DarkmatterItemUtil.toggleEnchantment(player.registryAccess(), held,
-                            DarkmatterEnchantments.DARKMATTER);
-                    if (DarkmatterSixWings.Server.isActive(player)) {
-                        for (var slot : new EquipmentSlot[]{
-                                EquipmentSlot.HEAD,
-                                EquipmentSlot.CHEST,
-                                EquipmentSlot.LEGS,
-                                EquipmentSlot.FEET
-                        }) {
-                            DarkmatterItemUtil.toggleEnchantment(
-                                    player.registryAccess(),
-                                    player.getItemBySlot(slot),
-                                    DarkmatterEnchantments.DARKMATTER_DEFENSE
-                            );
-                        }
-                    }
-                }
-                player.getInventory().setChanged();
-                player.inventoryMenu.broadcastChanges();
-                if (player.containerMenu != player.inventoryMenu) player.containerMenu.broadcastChanges();
-            });
+            var result = packet.usage() == Usage.MATERIAL_SLOT
+                    ? createMaterialResult(player, packet.slotIndex())
+                    : createShapedResult(player, packet.shape(), packet.alphaPercent(), packet.modifiers());
+            MisakaNetworkServer.send(player, new ResultPacket(result));
         }
 
-        private static void tickAutoRepair(ServerPlayer player) {
-            if (player.tickCount % 20 != 0 || !player.isAlive() || player.hasDisconnected()) return;
+        public static boolean createShaped(ServerPlayer player, DarkmatterShape shape,
+                                           int alphaPercent, Map<String, Integer> requestedModifiers) {
+            return createShapedResult(player, shape, alphaPercent, requestedModifiers)
+                    == Result.SHAPED;
+        }
+
+        private static Result createShapedResult(ServerPlayer player, DarkmatterShape shape,
+                                                 int alphaPercent,
+                                                 Map<String, Integer> requestedModifiers) {
             var skill = Skills.DARKMATTER_SHAPING.get();
-            if (!skill.isEnabled(player) || !skill.hasProficiencyMilestone(player, 3)
-                    || !ProficiencyPolicy.server(player).enabled()
-                    || !ProficiencySkillSettings.isEnabled(
-                    player, ProficiencySkillSettings.DARKMATTER_SHAPING_AUTO_REPAIR)) return;
-            var held = player.getMainHandItem();
-            if (!DarkmatterItemUtil.hasFamilyEnchantment(held) || !held.isDamageableItem()
-                    || !held.isDamaged() || held.getMaxDamage() <= 0
-                    || held.getMaxDamage() - held.getDamageValue() >= held.getMaxDamage() * 0.25f) return;
-            var repair = Math.min(held.getDamageValue(), Math.max(1, Math.round(held.getMaxDamage() * 0.15f)));
-            var baseCost = 50.0f * repair / held.getMaxDamage();
-            var proficiencyCost = skill.adjustProficiencyCost(
-                    player, SkillProficiencyProfile.CostKind.CAST, baseCost);
-            var finalCost = DarkmatterSixWings.Server.adjustCategoryCost(
-                    player, skill, baseCost, proficiencyCost);
+            if (!skill.isEnabled(player)) return Result.UNAVAILABLE;
             var system = AbilitySystemServer.getSystem(player);
-            if (!system.tryTimedOccupation(player.getUUID(), finalCost, skill, 20)) return;
-            held.setDamageValue(Math.max(0, held.getDamageValue() - repair));
+            var level = Math.clamp(system.getPlayerLevel(player.getUUID()), 1, 5);
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var validation = validateModifiers(shape, requestedModifiers, level, milestone);
+            if (!validation.valid()) return Result.INVALID_PROFILE;
+
+            var total = level * 50;
+            var alpha = Math.round(total * Math.clamp(alphaPercent, 0, 100) / 100.0f);
+            var profile = new DarkmatterShapingProfile(
+                    level, alpha, total - alpha, validation.modifiers());
+            var cost = shapingCost(shape.baseMatterCost()
+                    + validation.usedPoints() * 0.5f, milestone);
+            var resource = system.getDarkmatterResourceManager();
+            if (!resource.consume(player, cost, skill, skill.getIterationTicks(player))) {
+                return Result.INSUFFICIENT_MP;
+            }
+
+            for (var output : createOutputs(shape, profile)) {
+                player.getInventory().placeItemBackInInventory(output);
+            }
+            skill.reportTrigger(player);
             skill.reportActivity(player, true);
             player.getInventory().setChanged();
             player.inventoryMenu.broadcastChanges();
+            return Result.SHAPED;
+        }
+
+        private static List<ItemStack> createOutputs(DarkmatterShape shape,
+                                                     DarkmatterShapingProfile profile) {
+            var output = new ArrayList<ItemStack>();
+            if (shape == DarkmatterShape.ARMOR) {
+                output.add(profile(new ItemStack(Items.DARK_MATTER_HELMET.get()), profile));
+                output.add(profile(new ItemStack(Items.DARK_MATTER_CHESTPLATE.get()), profile));
+                output.add(profile(new ItemStack(Items.DARK_MATTER_LEGGINGS.get()), profile));
+                output.add(profile(new ItemStack(Items.DARK_MATTER_BOOTS.get()), profile));
+                return output;
+            }
+            var stack = new ItemStack(switch (shape) {
+                case TOOL -> Items.DARKMATTER_TOOL.get();
+                case SWORD -> Items.DARKMATTER_SWORD.get();
+                case SPEAR -> Items.DARKMATTER_SPEAR.get();
+                case TRIDENT -> Items.DARKMATTER_TRIDENT.get();
+                case BOW -> Items.DARKMATTER_BOW.get();
+                case CROSSBOW -> Items.DARKMATTER_CROSSBOW.get();
+                case MACE -> Items.DARKMATTER_MACE.get();
+                case ARROW -> Items.DARKMATTER_ARROW.get();
+                case ARMOR -> throw new IllegalStateException("Armor handled above");
+            }, shape.outputCount());
+            output.add(profile(stack, profile));
+            return output;
+        }
+
+        private static ItemStack profile(ItemStack stack, DarkmatterShapingProfile profile) {
+            DarkmatterItemUtil.setShapingProfile(stack, profile);
+            return stack;
+        }
+
+        public static ModifierValidation validateModifiers(
+                DarkmatterShape shape, Map<String, Integer> requested,
+                int abilityLevel, int milestone
+        ) {
+            DarkmatterModifiers.bootstrap();
+            var normalized = new LinkedHashMap<String, Integer>();
+            var errors = new ArrayList<String>();
+            var used = 0;
+            if (requested != null) for (var entry : requested.entrySet()) {
+                var type = DarkmatterShapingRegistries.modifier(entry.getKey()).orElse(null);
+                var requestedLevel = entry.getValue() == null ? 0 : entry.getValue();
+                if (type == null || requestedLevel < 0 || requestedLevel > type.maxLevel()) {
+                    errors.add("modifier:" + entry.getKey());
+                    continue;
+                }
+                if (requestedLevel == 0) continue;
+                if (!type.supports(shape)) {
+                    errors.add("incompatible:" + entry.getKey());
+                    continue;
+                }
+                normalized.put(type.id(), requestedLevel);
+                used += type.pointCost() * requestedLevel;
+            }
+            for (var entry : normalized.entrySet()) {
+                var type = DarkmatterShapingRegistries.modifier(entry.getKey()).orElseThrow();
+                if (type.conflicts().stream().anyMatch(normalized::containsKey)) {
+                    errors.add("conflict:" + type.id());
+                }
+            }
+            var budget = modifierBudget(abilityLevel, milestone);
+            if (used > budget) errors.add("budget:" + used + "/" + budget);
+            return new ModifierValidation(errors.isEmpty(), Map.copyOf(normalized),
+                    used, budget, List.copyOf(errors));
+        }
+
+        public static int modifierBudget(int abilityLevel, int milestone) {
+            return 2 + 2 * Math.clamp(abilityLevel, 1, 5) + Math.clamp(milestone, 0, 3);
+        }
+
+        private static Result createMaterialResult(ServerPlayer player, int slotIndex) {
+            var skill = Skills.DARKMATTER_SHAPING.get();
+            if (!skill.isEnabled(player)) return Result.UNAVAILABLE;
+            var inventory = player.getInventory();
+            if (!isMaterialInventorySlot(slotIndex)
+                    || !inventory.getItem(slotIndex).isEmpty()) return Result.INVALID_SLOT;
+            var stack = new ItemStack(Items.DARKMATTER.get());
+            var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            if (!resource.consume(player, shapingCost(MATERIAL_MATTER_COST,
+                    skill.getEffectiveProficiencyMilestone(player)), skill,
+                    skill.getIterationTicks(player))) return Result.INSUFFICIENT_MP;
+            inventory.setItem(slotIndex, stack);
+            inventory.setChanged();
+            player.inventoryMenu.broadcastChanges();
+            skill.reportTrigger(player);
+            return Result.MATERIAL;
+        }
+
+        static boolean isMaterialInventorySlot(int slotIndex) {
+            // Player inventory indices 0..35 are storage/hotbar; 40 is the offhand.
+            // Armor indices deliberately remain invalid even if a forged request targets them.
+            return slotIndex >= 0 && slotIndex < 36 || slotIndex == 40;
+        }
+
+        public static boolean createMaterialForTesting(ServerPlayer player, int slotIndex) {
+            return createMaterialResult(player, slotIndex) == Result.MATERIAL;
+        }
+
+        public static void refreshHeldNativeProfile(ServerPlayer player) {
+            var held = player.getMainHandItem();
+            if (!DarkmatterItemUtil.isShapedItem(held)) return;
+            if (!DarkmatterItemUtil.isOperational(held)) {
+                DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
+                        Enchantments.EFFICIENCY, 0);
+                DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
+                        Enchantments.FORTUNE, 0);
+                return;
+            }
+            var profile = DarkmatterItemUtil.shapingProfile(held);
+            var fortune = toolFortune(profile.betaPower())
+                    + profile.modifierLevel(DarkmatterModifiers.LUCKY);
+            var changed = false;
+            if (DarkmatterItemUtil.shape(held) == DarkmatterShape.TOOL) {
+                changed |= DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
+                        Enchantments.EFFICIENCY, toolEfficiency(profile.alphaPower()));
+                changed |= DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
+                        Enchantments.FORTUNE, fortune);
+            }
+            if (DarkmatterItemUtil.shape(held).isOffensive()
+                    && DarkmatterItemUtil.shape(held) != DarkmatterShape.TOOL) {
+                changed |= DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
+                        Enchantments.LOOTING,
+                        profile.modifierLevel(DarkmatterModifiers.LUCKY));
+            }
+            if (changed) player.getInventory().setChanged();
+        }
+
+        public static int toolEfficiency(float alphaPower) {
+            var alpha = finitePower(alphaPower);
+            return Math.round(1.5f * alpha + 0.1f * alpha * alpha);
+        }
+        public static int toolFortune(float betaPower) { return Math.round(finitePower(betaPower)); }
+        public static float miningSpeedBonus(float alphaPower) {
+            var efficiency = toolEfficiency(alphaPower);
+            return efficiency <= 0 ? 0.0f : efficiency * efficiency + 1.0f;
+        }
+        public static float spearDamage(float alphaPower) { return 5.0f + 2.0f * finitePower(alphaPower); }
+        public static float spearRange(float alphaPower) { return 8.0f + 2.0f * finitePower(alphaPower); }
+        public static float spearSpeed(float betaPower) { return 1.5f + 0.2f * finitePower(betaPower); }
+        public static float spearPenetration(float betaPower) {
+            return Math.min(0.50f, 0.10f * finitePower(betaPower));
+        }
+        public static float directDamage(DarkmatterShape shape, float alphaPower) {
+            var base = switch (shape) {
+                case TOOL -> 6.0f;
+                case SWORD -> 7.0f;
+                case SPEAR -> 5.0f;
+                case TRIDENT -> 8.0f;
+                case MACE -> 0.0f;
+                case BOW, CROSSBOW, ARROW -> 3.0f;
+                case ARMOR -> 1.0f;
+            };
+            return base + phaseDamageBonus(alphaPower);
+        }
+        public static float phaseDamageBonus(float alphaPower) {
+            return 2.0f * finitePower(alphaPower);
+        }
+        public static float penetration(DarkmatterShape shape, float betaPower) {
+            var scale = shape == DarkmatterShape.SPEAR || shape == DarkmatterShape.TRIDENT
+                    ? 0.10f : 0.08f;
+            return Math.min(shape == DarkmatterShape.SPEAR || shape == DarkmatterShape.TRIDENT
+                    ? 0.50f : 0.40f, scale * finitePower(betaPower));
+        }
+        public static float armorReduction(float alphaPower) {
+            return Math.min(0.20f, 0.04f * finitePower(alphaPower));
+        }
+        public static int armorWeaknessTicks(float betaPower) {
+            return 20 + Math.round(10.0f * finitePower(betaPower));
+        }
+        private static float finitePower(float power) {
+            return Float.isFinite(power) ? Math.max(0.0f, power) : 0.0f;
+        }
+        static float shapingCost(float base, int milestone) {
+            return Math.max(0.0f, base) * (Math.clamp(milestone, 0, 3) >= 1 ? 0.9f : 1.0f);
+        }
+        public static float gammaShapingMultiplier(int milestone) {
+            return Math.clamp(milestone, 0, 3) >= 3 ? 1.25f : 1.0f;
+        }
+        static boolean repairsOnEnchant(int milestone) { return false; }
+        static boolean unlocksAutoRepair(int milestone) { return false; }
+
+        public record ModifierValidation(boolean valid, Map<String, Integer> modifiers,
+                                         int usedPoints, int budget, List<String> errors) { }
+    }
+
+    public static final class ClientPackets {
+        private ClientPackets() { }
+
+        @SubscribePacket
+        public static void handle(ResultPacket packet) {
+            var minecraft = Minecraft.getInstance();
+            if (minecraft.gui.screen() instanceof DarkmatterShapingScreen screen) {
+                screen.acceptServerResult(packet.result());
+            } else if (minecraft.player != null) {
+                minecraft.player.sendOverlayMessage(Component.translatable(
+                        packet.result().translationKey()));
+            }
         }
     }
 
-    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
-    public static final class Events {
-        private Events() {
+    public enum Result {
+        SHAPED("screen.academy.darkmatter_shaping.result.shaped"),
+        MATERIAL("screen.academy.darkmatter_shaping.result.material"),
+        UNAVAILABLE("screen.academy.darkmatter_shaping.result.unavailable"),
+        INVALID_SLOT("screen.academy.darkmatter_shaping.result.invalid_slot"),
+        INVALID_PROFILE("screen.academy.darkmatter_shaping.result.invalid_profile"),
+        INSUFFICIENT_MP("screen.academy.darkmatter_shaping.result.insufficient_mp");
+
+        private final String translationKey;
+
+        Result(String translationKey) {
+            this.translationKey = translationKey;
         }
 
-        @SubscribeEvent
-        public static void onPlayerTick(PlayerTickEvent.Post event) {
-            if (event.getEntity() instanceof ServerPlayer player) Server.tickAutoRepair(player);
+        public String translationKey() {
+            return translationKey;
         }
     }
+
+    public enum Usage { SHAPE, MATERIAL_SLOT }
 
     @PacketTarget(ThreadType.SERVER)
     public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
-        public static final CastPacket INSTANCE = new CastPacket();
-        public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE);
+        public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.of(
+                (buffer, packet) -> {
+                    ByteBufCodecs.VAR_INT.encode(buffer, packet.usage.ordinal());
+                    ByteBufCodecs.STRING_UTF8.encode(buffer, packet.shape.id());
+                    ByteBufCodecs.VAR_INT.encode(buffer, packet.alphaPercent);
+                    ByteBufCodecs.map(LinkedHashMap::new,
+                            ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)
+                            .encode(buffer, new LinkedHashMap<>(packet.modifiers));
+                    ByteBufCodecs.VAR_INT.encode(buffer, packet.slotIndex);
+                },
+                buffer -> new CastPacket(
+                        Usage.values()[Math.clamp(ByteBufCodecs.VAR_INT.decode(buffer),
+                                0, Usage.values().length - 1)],
+                        DarkmatterShape.byId(ByteBufCodecs.STRING_UTF8.decode(buffer)),
+                        ByteBufCodecs.VAR_INT.decode(buffer),
+                        ByteBufCodecs.map(LinkedHashMap::new,
+                                ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT).decode(buffer),
+                        ByteBufCodecs.VAR_INT.decode(buffer)));
 
-        private CastPacket() {
+        private final Usage usage;
+        private final DarkmatterShape shape;
+        private final int alphaPercent;
+        private final Map<String, Integer> modifiers;
+        private final int slotIndex;
+
+        private CastPacket(Usage usage, DarkmatterShape shape, int alphaPercent,
+                           Map<String, Integer> modifiers, int slotIndex) {
+            this.usage = usage;
+            this.shape = shape;
+            this.alphaPercent = alphaPercent;
+            this.modifiers = Map.copyOf(modifiers);
+            this.slotIndex = slotIndex;
         }
+
+        public static CastPacket shape(DarkmatterShape shape, int alphaPercent,
+                                       Map<String, Integer> modifiers) {
+            return new CastPacket(Usage.SHAPE, shape, alphaPercent, modifiers, -1);
+        }
+        public static CastPacket material(int slotIndex) {
+            return new CastPacket(Usage.MATERIAL_SLOT, DarkmatterShape.TOOL,
+                    50, Map.of(), slotIndex);
+        }
+        public Usage usage() { return usage; }
+        public DarkmatterShape shape() { return shape; }
+        public int alphaPercent() { return alphaPercent; }
+        public Map<String, Integer> modifiers() { return modifiers; }
+        public int slotIndex() { return slotIndex; }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
             return PacketTypes.DARKMATTER_SHAPING_CAST.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class ResultPacket extends Packet<ClientPacketListener, ResultPacket> {
+        public static final StreamCodec<ByteBuf, ResultPacket> CODEC = StreamCodec.of(
+                (buffer, packet) -> ByteBufCodecs.VAR_INT.encode(
+                        buffer, packet.result.ordinal()),
+                buffer -> {
+                    var ordinal = ByteBufCodecs.VAR_INT.decode(buffer);
+                    if (ordinal < 0 || ordinal >= Result.values().length) {
+                        throw new IllegalArgumentException(
+                                "Invalid darkmatter shaping result: " + ordinal);
+                    }
+                    return new ResultPacket(Result.values()[ordinal]);
+                });
+
+        private final Result result;
+
+        public ResultPacket(Result result) {
+            this.result = result;
+        }
+
+        public Result result() {
+            return result;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, ResultPacket> getPacketType() {
+            return PacketTypes.DARKMATTER_SHAPING_RESULT.get();
         }
     }
 }

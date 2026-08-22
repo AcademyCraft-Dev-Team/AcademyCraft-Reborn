@@ -8,6 +8,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import static org.academy.AcademyCraft.MODID;
+import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
+import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
 
 public final class ItemDataComponents {
     public static final DeferredRegister.DataComponents DATA_COMPONENTS =
@@ -17,6 +19,18 @@ public final class ItemDataComponents {
             DATA_COMPONENTS.registerComponentType("energy", builder -> builder
                     .persistent(Codec.INT)
                     .networkSynchronized(ByteBufCodecs.VAR_INT));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DarkmatterIntegrity>>
+            DARKMATTER_INTEGRITY = DATA_COMPONENTS.registerComponentType(
+            "darkmatter_integrity", builder -> builder
+                    .persistent(DarkmatterIntegrity.CODEC)
+                    .networkSynchronized(DarkmatterIntegrity.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DarkmatterShapingProfile>>
+            DARKMATTER_SHAPING_PROFILE = DATA_COMPONENTS.registerComponentType(
+            "darkmatter_shaping_profile", builder -> builder
+                    .persistent(DarkmatterShapingProfile.CODEC)
+                    .networkSynchronized(DarkmatterShapingProfile.STREAM_CODEC));
 
     private ItemDataComponents() {
     }

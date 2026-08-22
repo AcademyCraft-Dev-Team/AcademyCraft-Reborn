@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -44,6 +45,7 @@ import org.academy.api.client.gui.msdf.font.MsdfFontService;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.hud.terminal.TerminalHud;
+import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
@@ -161,6 +163,7 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
+        InputSystem.tickMaintainedKeyBindings();
         AbilityControlTabletSpecialRenderer.tickHeldItems();
         ImagPhaseDowsingRodClient.tick();
     }
@@ -479,6 +482,10 @@ public final class AcademyCraftClient {
                 academy("imag_phase_dowsing_rod"),
                 ImagPhaseDowsingRodSpecialRenderer.Unbaked.MAP_CODEC
         );
+        event.register(
+                academy("darkmatter_trident"),
+                DarkmatterTridentSpecialRenderer.Unbaked.MAP_CODEC
+        );
     }
 
     @SubscribeEvent
@@ -493,6 +500,19 @@ public final class AcademyCraftClient {
                 return HumanoidModel.ArmPose.CROSSBOW_HOLD;
             }
         }, Items.IMAG_PHASE_DOWSING_ROD.get());
+        // The shaped armor remains a fully functional equipment set, but its worn layer is
+        // intentionally invisible. Keep the equipment asset and animated textures available
+        // for item rendering/resource packs while suppressing only the humanoid layer submit.
+        event.registerItem(new IClientItemExtensions() {
+            @Override
+            public int getArmorLayerTintColor(
+                    ItemStack stack, EquipmentClientInfo.Layer layer,
+                    int layerIdx, int fallbackColor
+            ) {
+                return 0;
+            }
+        }, Items.DARK_MATTER_HELMET.get(), Items.DARK_MATTER_CHESTPLATE.get(),
+                Items.DARK_MATTER_LEGGINGS.get(), Items.DARK_MATTER_BOOTS.get());
     }
 
     @SubscribeEvent

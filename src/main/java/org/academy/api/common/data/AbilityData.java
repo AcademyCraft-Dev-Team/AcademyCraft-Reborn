@@ -18,8 +18,8 @@ public class AbilityData {
     private int foodSpRecoveryTicks = 0;
     private float spRecoveryCpRemainder = 0.0f;
 
-    private float currMP = 100;
-    private float maxMP = 100;
+    private float currMP;
+    private float maxMP;
 
     private float abilityExp = 0;
 
@@ -210,25 +210,49 @@ public class AbilityData {
     }
 
     public float getCurrMP() {
+        normalizeMpLimit();
         return currMP;
     }
 
     public void setCurrMP(float currMP) {
-        this.currMP = Mth.clamp(maxMP, 0, currMP);
+        this.currMP = Float.isFinite(currMP)
+                ? Math.max(0.0f, currMP)
+                : 0.0f;
         markDirty();
     }
 
     public void addMP(float amount) {
-        currMP = Mth.clamp(maxMP, 0, currMP + amount);
+        var safeAmount = Float.isFinite(amount) ? amount : 0.0f;
+        var next = getCurrMP() + safeAmount;
+        currMP = Float.isFinite(next)
+                ? Math.max(0.0f, next)
+                : safeAmount > 0.0f ? Float.MAX_VALUE : 0.0f;
         markDirty();
     }
 
     public float getMaxMP() {
+        normalizeMpLimit();
         return maxMP;
     }
 
     public void setMaxMP(float maxMP) {
-        this.maxMP = maxMP;
+        this.maxMP = Float.isFinite(maxMP) ? Math.max(0.0f, maxMP) : 0.0f;
+        markDirty();
+    }
+
+    private float normalizedMaxMp() {
+        return Float.isFinite(maxMP) ? Math.max(0.0f, maxMP) : 0.0f;
+    }
+
+    private void normalizeMpLimit() {
+        var normalizedMax = normalizedMaxMp();
+        var normalizedCurrent = Float.isFinite(currMP)
+                ? Math.max(0.0f, currMP)
+                : 0.0f;
+        if (Float.compare(maxMP, normalizedMax) == 0
+                && Float.compare(currMP, normalizedCurrent) == 0) return;
+        maxMP = normalizedMax;
+        currMP = normalizedCurrent;
         markDirty();
     }
 
@@ -310,6 +334,8 @@ public class AbilityData {
         }
 
         public AbilityData build() {
+            data.normalizeMpLimit();
+            data.clearDirty();
             return data;
         }
     }

@@ -2,6 +2,10 @@ package org.academy.internal.common.world.item;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.MaceItem;
+import net.minecraft.world.item.ToolMaterial;
+import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.equipment.ArmorType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -15,6 +19,49 @@ public final class Items {
             ITEMS.registerItem("icon", Item::new);
     public static final DeferredHolder<Item, Item> DARKMATTER =
             ITEMS.registerItem("darkmatter", Item::new);
+    public static final DeferredHolder<Item, DarkmatterToolItem> DARKMATTER_TOOL =
+            ITEMS.registerItem("darkmatter_tool", properties -> new DarkmatterToolItem(
+                    properties.tool(
+                            ToolMaterial.NETHERITE,
+                            DarkmatterToolItem.EFFECTIVE_BLOCKS,
+                            8.0f,
+                            -2.4f,
+                            0.0f
+                    )
+            ));
+    public static final DeferredHolder<Item, DarkmatterSwordItem> DARKMATTER_SWORD =
+            ITEMS.registerItem("darkmatter_sword", properties -> new DarkmatterSwordItem(
+                    properties.sword(ToolMaterial.NETHERITE, 5.0f, -2.4f)));
+    public static final DeferredHolder<Item, DarkmatterSpearItem> DARKMATTER_SPEAR =
+            ITEMS.registerItem("darkmatter_spear", properties -> new DarkmatterSpearItem(
+                    properties.spear(
+                            ToolMaterial.NETHERITE,
+                            0.65f,
+                            0.7f,
+                            0.75f,
+                            5.0f,
+                            14.0f,
+                            10.0f,
+                            5.1f,
+                            15.0f,
+                            4.6f
+                    )));
+    public static final DeferredHolder<Item, DarkmatterTridentItem> DARKMATTER_TRIDENT =
+            ITEMS.registerItem("darkmatter_trident", properties -> new DarkmatterTridentItem(
+                    properties.attributes(TridentItem.createAttributes())
+                            .component(DataComponents.TOOL, TridentItem.createToolProperties())));
+    public static final DeferredHolder<Item, DarkmatterBowItem> DARKMATTER_BOW =
+            ITEMS.registerItem("darkmatter_bow", DarkmatterBowItem::new);
+    public static final DeferredHolder<Item, DarkmatterCrossbowItem> DARKMATTER_CROSSBOW =
+            ITEMS.registerItem("darkmatter_crossbow", DarkmatterCrossbowItem::new);
+    public static final DeferredHolder<Item, DarkmatterMaceItem> DARKMATTER_MACE =
+            ITEMS.registerItem("darkmatter_mace", properties -> new DarkmatterMaceItem(
+                    properties.attributes(MaceItem.createAttributes())
+                            .component(DataComponents.TOOL, MaceItem.createToolProperties())));
+    public static final DeferredHolder<Item, DarkmatterArrowItem> DARKMATTER_ARROW =
+            ITEMS.registerItem("darkmatter_arrow", DarkmatterArrowItem::new);
+    public static final DeferredHolder<Item, Item> DARKMATTER_FEATHER =
+            ITEMS.registerItem("darkmatter_feather", Item::new);
     public static final DeferredHolder<Item, Item> IMAG_PHASE_INGOT =
             ITEMS.registerItem("imag_phase_ingot", Item::new);
     public static final DeferredHolder<Item, Item> IMAG_PHASE_CRYSTAL =
@@ -31,17 +78,17 @@ public final class Items {
             ITEMS.registerItem("wind_gen_base_screen", Item::new);
     public static final DeferredHolder<Item, ImagPhaseDowsingRodItem> IMAG_PHASE_DOWSING_ROD =
             ITEMS.registerItem("imag_phase_dowsing_rod", ImagPhaseDowsingRodItem::new);
-    public static final DeferredHolder<Item, Item> DARK_MATTER_HELMET =
-            ITEMS.registerItem("dark_matter_helmet", properties -> new Item(
+    public static final DeferredHolder<Item, DarkmatterEquipmentItem> DARK_MATTER_HELMET =
+            ITEMS.registerItem("dark_matter_helmet", properties -> new DarkmatterEquipmentItem(
                     properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.HELMET)));
-    public static final DeferredHolder<Item, Item> DARK_MATTER_CHESTPLATE =
-            ITEMS.registerItem("dark_matter_chestplate", properties -> new Item(
+    public static final DeferredHolder<Item, DarkmatterEquipmentItem> DARK_MATTER_CHESTPLATE =
+            ITEMS.registerItem("dark_matter_chestplate", properties -> new DarkmatterEquipmentItem(
                     properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.CHESTPLATE)));
-    public static final DeferredHolder<Item, Item> DARK_MATTER_LEGGINGS =
-            ITEMS.registerItem("dark_matter_leggings", properties -> new Item(
+    public static final DeferredHolder<Item, DarkmatterEquipmentItem> DARK_MATTER_LEGGINGS =
+            ITEMS.registerItem("dark_matter_leggings", properties -> new DarkmatterEquipmentItem(
                     properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.LEGGINGS)));
-    public static final DeferredHolder<Item, Item> DARK_MATTER_BOOTS =
-            ITEMS.registerItem("dark_matter_boots", properties -> new Item(
+    public static final DeferredHolder<Item, DarkmatterEquipmentItem> DARK_MATTER_BOOTS =
+            ITEMS.registerItem("dark_matter_boots", properties -> new DarkmatterEquipmentItem(
                     properties.humanoidArmor(DarkmatterArmorMaterial.INSTANCE, ArmorType.BOOTS)));
     public static final DeferredHolder<Item, DataTerminalItem> DATA_TERMINAL =
             ITEMS.registerItem("data_terminal", DataTerminalItem::new);

@@ -23,6 +23,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.darkmatter.SyncDarkmatterStatePacket;
 import org.academy.internal.common.skilldata.SkillData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -51,6 +52,13 @@ public final class AbilitySystemClient {
     private static boolean activeHUD = false;
     private static AbilityData cpData = new AbilityData();
     private static float calculationIntensity = 1.0f;
+    private static volatile int darkmatterLevel;
+    private static volatile int darkmatterTotalPoints;
+    private static volatile int darkmatterAlphaPoints;
+    private static volatile boolean darkmatterGammaActive;
+    private static volatile float darkmatterNaturalMatter;
+    private static volatile float darkmatterCreatedMatter;
+    private static volatile float darkmatterReservedMatter;
     private static volatile DevState devState = DevState.IDLE;
     private static volatile float devProgress = 0f;
     private static volatile String devMessage = "";
@@ -217,6 +225,17 @@ public final class AbilitySystemClient {
         SKILL_OCCUPATIONS.clear();
         packet.getSkillOccupations().forEach(snapshot ->
                 SKILL_OCCUPATIONS.put(snapshot.skillId(), snapshot));
+    }
+
+    @SubscribePacket
+    public static void handleSync(SyncDarkmatterStatePacket packet) {
+        darkmatterLevel = packet.abilityLevel();
+        darkmatterTotalPoints = packet.totalPoints();
+        darkmatterAlphaPoints = packet.alphaPoints();
+        darkmatterGammaActive = packet.gammaActive();
+        darkmatterNaturalMatter = packet.naturalMatter();
+        darkmatterCreatedMatter = packet.createdMatter();
+        darkmatterReservedMatter = packet.reservedMatter();
     }
 
     @SubscribePacket
@@ -482,6 +501,33 @@ public final class AbilitySystemClient {
     public static float getMaxMP() {
         return cpData.getMaxMP();
     }
+
+    public static float getDarkmatterPhase() {
+        return getDarkmatterBeta() * 2.0f - 1.0f;
+    }
+
+    public static float getDarkmatterAlpha() {
+        return darkmatterTotalPoints <= 0
+                ? 0.5f : darkmatterAlphaPoints / (float) darkmatterTotalPoints;
+    }
+
+    public static float getDarkmatterBeta() {
+        return 1.0f - getDarkmatterAlpha();
+    }
+
+    public static float getDarkmatterGamma() {
+        if (darkmatterTotalPoints <= 0) return 0.0f;
+        var beta = darkmatterTotalPoints - darkmatterAlphaPoints;
+        return 2.0f * Math.min(darkmatterAlphaPoints, beta) / darkmatterTotalPoints;
+    }
+
+    public static int getDarkmatterLevel() { return darkmatterLevel; }
+    public static int getDarkmatterTotalPoints() { return darkmatterTotalPoints; }
+    public static int getDarkmatterAlphaPoints() { return darkmatterAlphaPoints; }
+    public static boolean isDarkmatterGammaActive() { return darkmatterGammaActive; }
+    public static float getDarkmatterNaturalMatter() { return darkmatterNaturalMatter; }
+    public static float getDarkmatterCreatedMatter() { return darkmatterCreatedMatter; }
+    public static float getDarkmatterReservedMatter() { return darkmatterReservedMatter; }
 
     public static AbilityCategory getCategory() {
         return category;

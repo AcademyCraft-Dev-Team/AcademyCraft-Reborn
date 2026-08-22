@@ -14,6 +14,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
+import org.academy.api.common.ability.darkmatter.DarkmatterResourceService;
 import org.academy.api.common.ability.event.AbilityOverloadEvent;
 import org.academy.api.common.ability.event.AbilityRecoveryEvent;
 import org.academy.api.common.data.AbilityData;
@@ -50,6 +51,7 @@ public final class AbilitySystemServer {
     private final SkillDataManager skillDataManager;
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
+    private final DarkmatterResourceManager darkmatterResourceManager;
     private final PropsManager propsManager;
     private final SyncManager syncManager;
     private final InitialAbilityRecommendationCache initialAbilityRecommendations =
@@ -64,6 +66,10 @@ public final class AbilitySystemServer {
         playerCPManager = new PlayerCPManager(playerDataManager, abilityConfig, syncManager);
         NeoForge.EVENT_BUS.register(playerCPManager);
         SubsystemRegistry.registerSubsystem(playerCPManager, SyncTypes.CP_DATA);
+
+        darkmatterResourceManager = new DarkmatterResourceManager(
+                playerDataManager, playerCPManager, syncManager);
+        SubsystemRegistry.registerSubsystem(darkmatterResourceManager, SyncTypes.DARKMATTER_STATE);
 
         propsManager = new PropsManager(playerDataManager, syncManager);
         NeoForge.EVENT_BUS.register(propsManager);
@@ -539,6 +545,14 @@ public final class AbilitySystemServer {
 
     public PropsManager getPropsManager() {
         return propsManager;
+    }
+
+    public DarkmatterResourceManager getDarkmatterResourceManager() {
+        return darkmatterResourceManager;
+    }
+
+    public DarkmatterResourceService getDarkmatterResourceService() {
+        return darkmatterResourceManager;
     }
 
     public Player getPlayerData(UUID uuid) {

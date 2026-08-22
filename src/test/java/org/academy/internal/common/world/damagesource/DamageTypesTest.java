@@ -12,6 +12,7 @@ class DamageTypesTest {
         assertTrue(DamageTypes.usesVerifiedTrueHealth(DamageTypes.CTA));
         assertTrue(DamageTypes.usesDirectActuallyHurt(DamageTypes.VEC));
         assertTrue(DamageTypes.usesDirectActuallyHurt(DamageTypes.CTA));
+        assertFalse(DamageTypes.usesDirectActuallyHurt(DamageTypes.DM_DAMAGE));
         assertFalse(DamageTypes.usesVerifiedTrueHealth(DamageTypes.MELT_DAMAGE));
     }
 }
