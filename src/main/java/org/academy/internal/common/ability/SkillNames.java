@@ -50,10 +50,14 @@ public final class SkillNames {
     public static final String AREA_TELEPORT_SELECT = "area_teleport_select";
     public static final String FLASHING = "flashing";
     public static final String DEFENSIVE_TELEPORT = "defensive_teleport";
+    public static final String DARKMATTER_GENERATION = "darkmatter_generation";
     public static final String DARKMATTER_SHAPING = "darkmatter_shaping";
+    public static final String DARKMATTER_PHASE_TUNING = "darkmatter_phase_tuning";
     public static final String DARKMATTER_DISASSEMBLE = "darkmatter_disassemble";
     public static final String DARKMATTER_CUT = "darkmatter_cut";
-    public static final String DARKMATTER_RADIATION = "darkmatter_radiation";
+    public static final String DARKMATTER_INTERFERENCE = "darkmatter_interference";
+    /** Java compatibility name; the registered skill ID is the canonical interference ID. */
+    @Deprecated public static final String DARKMATTER_RADIATION = DARKMATTER_INTERFERENCE;
     public static final String DARKMATTER_REPAIR = "darkmatter_repair";
     public static final String DARKMATTER_CREATION = "darkmatter_creation";
     public static final String DARKMATTER_SIX_WINGS = "darkmatter_six_wings";

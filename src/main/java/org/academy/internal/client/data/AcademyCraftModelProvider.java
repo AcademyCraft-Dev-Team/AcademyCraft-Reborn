@@ -1,13 +1,23 @@
 package org.academy.internal.client.data;
 
+import java.util.List;
+
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.ModelProvider;
 import net.minecraft.client.data.models.model.*;
+import net.minecraft.client.renderer.item.ClientItem;
+import net.minecraft.client.renderer.item.ItemModel;
+import net.minecraft.client.renderer.item.properties.numeric.CrossbowPull;
+import net.minecraft.client.renderer.item.properties.numeric.UseDuration;
+import net.minecraft.client.renderer.item.properties.select.Charge;
+import net.minecraft.client.renderer.item.properties.select.DisplayContext;
+import net.minecraft.client.renderer.special.TridentSpecialRenderer;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.CrossbowItem;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
 import org.academy.api.client.resources.model.cuboid.CoinModelGenerator;
@@ -138,6 +148,15 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.CAT_ENGINE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DATA_TERMINAL.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARKMATTER.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.DARKMATTER_TOOL.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
+        itemModels.generateFlatItem(Items.DARKMATTER_SWORD.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
+        generateDarkmatterSpear(itemModels);
+        generateDarkmatterTrident(itemModels);
+        generateDarkmatterBow(itemModels);
+        generateDarkmatterCrossbow(itemModels);
+        itemModels.generateFlatItem(Items.DARKMATTER_MACE.get(), ModelTemplates.FLAT_HANDHELD_MACE_ITEM);
+        itemModels.generateFlatItem(Items.DARKMATTER_ARROW.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
+        itemModels.generateFlatItem(Items.DARKMATTER_FEATHER.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_INGOT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_CRYSTAL.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_POLYMER.get(), ModelTemplates.FLAT_ITEM);
@@ -247,5 +266,112 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         SolarGenSpecialRenderer.Unbaked.INSTANCE
                 )
         );
+    }
+
+    private static void generateDarkmatterSpear(ItemModelGenerators itemModels) {
+        var item = Items.DARKMATTER_SPEAR.get();
+        var flatLocation = ModelTemplates.FLAT_ITEM.create(
+                ModelLocationUtils.getModelLocation(item),
+                TextureMapping.layer0(item),
+                itemModels.modelOutput);
+        var inHandLocation = ModelTemplates.SPEAR_IN_HAND.create(
+                item,
+                TextureMapping.layer0(TextureMapping.getItemTexture(item, "_in_hand")),
+                itemModels.modelOutput);
+        var flat = ItemModelUtils.plainModel(flatLocation);
+        var inHand = ItemModelUtils.plainModel(inHandLocation);
+        itemModels.itemModelOutput.accept(
+                item,
+                ItemModelUtils.select(
+                        new DisplayContext(),
+                        inHand,
+                        ItemModelUtils.when(List.of(
+                                ItemDisplayContext.GUI,
+                                ItemDisplayContext.GROUND,
+                                ItemDisplayContext.FIXED,
+                                ItemDisplayContext.ON_SHELF), flat)),
+                new ClientItem.Properties(true, false, 1.95f));
+    }
+
+    private static void generateDarkmatterBow(ItemModelGenerators itemModels) {
+        var item = Items.DARKMATTER_BOW.get();
+        var base = ItemModelUtils.plainModel(ModelTemplates.BOW.create(item,
+                TextureMapping.layer0(item), itemModels.modelOutput));
+        var pulling0 = darkmatterStateModel(itemModels, item, "_pulling_0", ModelTemplates.BOW);
+        var pulling1 = darkmatterStateModel(itemModels, item, "_pulling_1", ModelTemplates.BOW);
+        var pulling2 = darkmatterStateModel(itemModels, item, "_pulling_2", ModelTemplates.BOW);
+        var hand = ItemModelUtils.conditional(
+                ItemModelUtils.isUsingItem(),
+                ItemModelUtils.rangeSelect(new UseDuration(false), 0.05f, pulling0,
+                        ItemModelUtils.override(pulling1, 0.65f),
+                        ItemModelUtils.override(pulling2, 0.9f)),
+                base);
+        itemModels.itemModelOutput.accept(item, stableInventoryModel(base, hand));
+    }
+
+    private static void generateDarkmatterCrossbow(ItemModelGenerators itemModels) {
+        var item = Items.DARKMATTER_CROSSBOW.get();
+        var base = ItemModelUtils.plainModel(ModelTemplates.CROSSBOW.create(item,
+                TextureMapping.layer0(item), itemModels.modelOutput));
+        var pulling0 = darkmatterStateModel(itemModels, item, "_pulling_0", ModelTemplates.CROSSBOW);
+        var pulling1 = darkmatterStateModel(itemModels, item, "_pulling_1", ModelTemplates.CROSSBOW);
+        var pulling2 = darkmatterStateModel(itemModels, item, "_pulling_2", ModelTemplates.CROSSBOW);
+        var loadedArrow = darkmatterStateModel(itemModels, item, "_arrow", ModelTemplates.CROSSBOW);
+        var loadedFirework = darkmatterStateModel(itemModels, item, "_firework", ModelTemplates.CROSSBOW);
+        var charging = ItemModelUtils.conditional(
+                ItemModelUtils.isUsingItem(),
+                ItemModelUtils.rangeSelect(new CrossbowPull(), pulling0,
+                        ItemModelUtils.override(pulling1, 0.58f),
+                        ItemModelUtils.override(pulling2, 1.0f)),
+                base);
+        var hand = ItemModelUtils.select(new Charge(), charging,
+                ItemModelUtils.when(CrossbowItem.ChargeType.ARROW, loadedArrow),
+                ItemModelUtils.when(CrossbowItem.ChargeType.ROCKET, loadedFirework));
+        itemModels.itemModelOutput.accept(item, stableInventoryModel(base, hand));
+    }
+
+    private static ItemModel.Unbaked darkmatterStateModel(
+            ItemModelGenerators itemModels, net.minecraft.world.item.Item item,
+            String suffix, ModelTemplate template
+    ) {
+        var location = template.create(ModelLocationUtils.getModelLocation(item, suffix),
+                TextureMapping.layer0(TextureMapping.getItemTexture(item, suffix)),
+                itemModels.modelOutput);
+        return ItemModelUtils.plainModel(location);
+    }
+
+    private static ItemModel.Unbaked stableInventoryModel(
+            ItemModel.Unbaked inventory, ItemModel.Unbaked hand
+    ) {
+        return ItemModelUtils.select(new DisplayContext(), hand,
+                ItemModelUtils.when(List.of(
+                        ItemDisplayContext.GUI,
+                        ItemDisplayContext.GROUND,
+                        ItemDisplayContext.FIXED,
+                        ItemDisplayContext.ON_SHELF), inventory));
+    }
+
+    private static void generateDarkmatterTrident(ItemModelGenerators itemModels) {
+        var item = Items.DARKMATTER_TRIDENT.get();
+        var flatLocation = ModelTemplates.FLAT_ITEM.create(
+                ModelLocationUtils.getModelLocation(item),
+                TextureMapping.layer0(item), itemModels.modelOutput);
+        var flat = ItemModelUtils.plainModel(flatLocation);
+        var inHand = ItemModelUtils.specialModel(
+                AcademyCraft.vanilla("trident_in_hand").withPrefix("item/"),
+                DarkmatterTridentSpecialRenderer.Unbaked.INSTANCE);
+        var throwing = ItemModelUtils.specialModel(
+                AcademyCraft.vanilla("trident_throwing").withPrefix("item/"),
+                DarkmatterTridentSpecialRenderer.Unbaked.INSTANCE);
+        var held = ItemModelUtils.conditional(
+                TridentSpecialRenderer.DEFAULT_TRANSFORMATION,
+                ItemModelUtils.isUsingItem(), throwing, inHand);
+        itemModels.itemModelOutput.accept(item, ItemModelUtils.select(
+                new DisplayContext(), held,
+                ItemModelUtils.when(List.of(
+                        ItemDisplayContext.GUI,
+                        ItemDisplayContext.GROUND,
+                        ItemDisplayContext.FIXED,
+                        ItemDisplayContext.ON_SHELF), flat)));
     }
 }

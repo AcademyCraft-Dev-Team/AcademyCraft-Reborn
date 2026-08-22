@@ -6,6 +6,9 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
+import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
+import org.academy.internal.common.world.entity.projectile.DarkmatterCreatureProjectile;
+import org.academy.internal.common.world.entity.projectile.DarkmatterSpearProjectile;
 import org.academy.internal.common.world.entity.skill.*;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 
@@ -66,8 +69,20 @@ public class EntityTypes {
                     "smoke", Smoke::new, MobCategory.MISC);
     public static final DeferredHolder<EntityType<?>, EntityType<DarkmatterCutSlash>> DARKMATTER_CUT_SLASH =
             ENTITY_TYPES.registerEntityType(
-                    "darkmatter_cut_slash", DarkmatterCutSlash::new, MobCategory.MISC,
-                    builder -> builder.sized(0.1f, 0.1f).clientTrackingRange(64).updateInterval(1));
+                "darkmatter_cut_slash", DarkmatterCutSlash::new, MobCategory.MISC,
+                builder -> builder.sized(0.1f, 0.1f).clientTrackingRange(64).updateInterval(1));
+    public static final DeferredHolder<EntityType<?>, EntityType<DarkmatterFeatherProjectile>> DARKMATTER_FEATHER_PROJECTILE =
+            ENTITY_TYPES.registerEntityType(
+                    "darkmatter_feather_projectile", DarkmatterFeatherProjectile::new, MobCategory.MISC,
+                    builder -> builder.sized(0.18f, 0.18f).clientTrackingRange(64).updateInterval(1));
+    public static final DeferredHolder<EntityType<?>, EntityType<DarkmatterCreatureProjectile>> DARKMATTER_CREATURE_PROJECTILE =
+            ENTITY_TYPES.registerEntityType(
+                    "darkmatter_creature_projectile", DarkmatterCreatureProjectile::new, MobCategory.MISC,
+                    builder -> builder.sized(0.22f, 0.22f).clientTrackingRange(96).updateInterval(1));
+    public static final DeferredHolder<EntityType<?>, EntityType<DarkmatterSpearProjectile>> DARKMATTER_SPEAR_PROJECTILE =
+            ENTITY_TYPES.registerEntityType(
+                    "darkmatter_spear_projectile", DarkmatterSpearProjectile::new, MobCategory.MISC,
+                    builder -> builder.sized(0.25f, 0.25f).clientTrackingRange(64).updateInterval(1));
     public static final DeferredHolder<EntityType<?>, EntityType<DarkmatterBeetle>> DARKMATTER_BEETLE =
             ENTITY_TYPES.registerEntityType(
                     "darkmatter_beetle", DarkmatterBeetle::new, MobCategory.MISC,

@@ -23,7 +23,7 @@ public final class DamageTypes {
             AERO_DAMAGE, DM_DAMAGE, ELECTRO_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA
     );
     private static final Set<ResourceKey<DamageType>> DIRECT_ACTUALLY_HURT_TYPES = Set.of(
-            DM_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA
+            MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA
     );
     private static final Set<ResourceKey<DamageType>> VERIFIED_TRUE_HEALTH_TYPES = Set.of(
             VEC, CTA

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/bow",
+  "textures": {
+    "layer0": "academy:item/darkmatter_bow_pulling_1"
+  }
+}

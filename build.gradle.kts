@@ -303,7 +303,9 @@ neoForge {
 
             systemProperty("mixin.debug.export", "true")
 
-            jvmArgument("-XX:+AllowEnhancedClassRedefinition")
+            if (System.getProperty("java.vendor", "").contains("JetBrains", ignoreCase = true)) {
+                jvmArgument("-XX:+AllowEnhancedClassRedefinition")
+            }
             jvmArgument("-Xverify:none")
         }
     }

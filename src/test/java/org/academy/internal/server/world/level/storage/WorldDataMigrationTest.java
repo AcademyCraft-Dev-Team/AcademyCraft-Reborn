@@ -77,6 +77,8 @@ class WorldDataMigrationTest {
                 Player.canonicalizeSkillId("academy:area_teleport_start"));
         assertEquals("academy:parallel_thought_computation",
                 Player.canonicalizeSkillId("academy:level0_passive_lv3"));
+        assertEquals("academy:darkmatter_interference",
+                Player.canonicalizeSkillId("academy:darkmatter_radiation"));
     }
 
     @Test
@@ -207,6 +209,42 @@ class WorldDataMigrationTest {
         assertFalse(player.getSkillDataMap().containsKey("academy:hell_flare"));
         assertTrue(player.getCpOccupations().isEmpty());
         assertTrue(player.isDirty());
+    }
+
+    @Test
+    void grantsGenerationToLegacyDarkmatterUsersAndPreservesMpForLedgerSplit() {
+        var json = """
+                {
+                  "players": {
+                    "d96a465b-b8ca-4f14-a047-65289d9ae91c": {
+                      "abilityCategory": "academy:darkmatter",
+                      "skillData": {
+                        "academy:darkmatter_shaping": {
+                          "proficiency": 1750.0,
+                          "enabled": true
+                        }
+                      },
+                      "cpData": {
+                        "maxCP": 500.0,
+                        "availableCP": 400.0,
+                        "currMP": 20.0,
+                        "maxMP": 100.0
+                      }
+                    }
+                  }
+                }
+                """;
+
+        var worldData = WorldData.createGson().fromJson(json, WorldData.class);
+        assertTrue(worldData.migrateLegacyData());
+
+        var player = worldData.getPlayers().get(PLAYER_ID);
+        var generation = player.getSkillDataMap().get("academy:darkmatter_generation");
+        assertNotNull(generation);
+        assertEquals(1750.0f, generation.getProficiency());
+        assertEquals(20.0f, player.getCpData().getCurrMP());
+        assertEquals(100.0f, player.getCpData().getMaxMP());
+        assertEquals(25, player.getDarkmatterState().getAlphaPoints(1));
     }
 
     @Test
