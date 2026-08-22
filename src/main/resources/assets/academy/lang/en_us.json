@@ -34,6 +34,8 @@
   "academy.ability_developer.level_fail": "You must reach level %d first.",
   "academy.ability_developer.level_question": "Continue?",
   "academy.ability_developer.noenergy": "Insufficient device energy.",
+  "academy.ability_developer.portable.level_restricted": "The tablet supports development through Lv3; reaching Lv4-Lv5 requires the full-size Ability Developer.",
+  "academy.ability_developer.portable.skill_restricted": "The tablet only supports Lv1-Lv3 skills; this skill requires the full-size Ability Developer.",
   "academy.ability_developer.progress": "Progress",
   "academy.ability_developer.req": "Req.",
   "academy.ability_developer.skill_exp": "Skill Proficiency: ",

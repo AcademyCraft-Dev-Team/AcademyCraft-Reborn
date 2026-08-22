@@ -24,6 +24,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.AbilityDevelopmentAccess;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -152,6 +153,13 @@ public final class AbilitySystemServer {
             return new StartSkillDevPacket.Response(false, "Unknown skill");
         }
         var skill = skillRef.get().value();
+        var recommendedLevel = skill.getRecommendedLevel().getLevelCode();
+        if (!AbilityDevelopmentAccess.canLearnSkill(source, recommendedLevel)) {
+            return new StartSkillDevPacket.Response(
+                    false,
+                    "Portable developer only supports level 1-3 skills"
+            );
+        }
         var server = level.getServer();
         var instance = server.getAcademyCraftServer().getAbilitySystemServer();
         var playerData = instance.getPlayerData(player.getUUID());
@@ -180,7 +188,6 @@ public final class AbilitySystemServer {
         }
 
         var playerLevel = instance.getPlayerLevel(player.getUUID());
-        var recommendedLevel = skill.getRecommendedLevel().getLevelCode();
         if (playerLevel < recommendedLevel) {
             return new StartSkillDevPacket.Response(false, "Level too low");
         }
@@ -213,7 +220,7 @@ public final class AbilitySystemServer {
 
             @Override
             public boolean validate(ServerPlayer sp, WirelessUser dev) {
-                return canDevelopSkill(sp, dev, skill);
+                return canDevelopSkill(sp, dev, skill, source);
             }
 
             @Override
@@ -262,9 +269,16 @@ public final class AbilitySystemServer {
         // A missing category is always the initial Level 0 development, even if a legacy save
         // contains an inconsistent CP level. Completing it repairs the player to category Level 1.
         var plan = LevelDevelopmentPlan.create(initialDevelopment, currentLevel);
+        if (!AbilityDevelopmentAccess.canDevelopAbilityLevel(source, plan.targetLevel())) {
+            return new StartLevelDevPacket.Response(
+                    false,
+                    "Ability levels 4-5 require the full-size Ability Developer"
+            );
+        }
         var cost = plan.energyCost();
         if (!canDevelopLevel(
-                player, developer, currentCategory, currentLevel, initialDevelopment, cost
+                player, developer, source, currentCategory, currentLevel,
+                plan.targetLevel(), initialDevelopment, cost
         )) {
             return new StartLevelDevPacket.Response(false, "Development conditions not met");
         }
@@ -346,9 +360,10 @@ public final class AbilitySystemServer {
             @Override
             public boolean validate(ServerPlayer sp, WirelessUser dev) {
                 return canDevelopLevel(
-                        sp, dev,
+                        sp, dev, source,
                         currentCategory,
                         currentLevel,
+                        plan.targetLevel(),
                         initialDevelopment,
                         cost
                 );
@@ -376,9 +391,12 @@ public final class AbilitySystemServer {
     private static boolean canDevelopSkill(
             ServerPlayer player,
             WirelessUser developer,
-            Skill skill
+            Skill skill,
+            DevelopmentSource source
     ) {
         if (!isPlayerReadyForDevelopment(player)) return false;
+        if (!AbilityDevelopmentAccess.canLearnSkill(
+                source, skill.getRecommendedLevel().getLevelCode())) return false;
         var instance = getSystem(player);
         var playerData = instance.getPlayerData(player.getUUID());
         if (!LearningHelper.isSkillAvailableForCategory(instance.getPlayerAbilityCategory(player.getUUID()), skill)
@@ -398,12 +416,17 @@ public final class AbilitySystemServer {
     private static boolean canDevelopLevel(
             ServerPlayer player,
             WirelessUser developer,
+            DevelopmentSource source,
             AbilityCategory expectedCategory,
             int expectedLevel,
+            int expectedTargetLevel,
             boolean initialDevelopment,
             int expectedCost
     ) {
         if (!isPlayerReadyForDevelopment(player)) return false;
+        if (!AbilityDevelopmentAccess.canDevelopAbilityLevel(source, expectedTargetLevel)) {
+            return false;
+        }
         var instance = getSystem(player);
         var currentCategory = instance.getPlayerAbilityCategory(player.getUUID());
         if (initialDevelopment) {
