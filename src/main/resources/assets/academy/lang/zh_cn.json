@@ -34,6 +34,8 @@
   "academy.ability_developer.level_fail": "必须先达到 %d 级才能学习该技能。",
   "academy.ability_developer.level_question": "要继续吗？",
   "academy.ability_developer.noenergy": "设备能量不足。",
+  "academy.ability_developer.portable.level_restricted": "能力开发平板仅支持提升至 Lv3；提升至 Lv4-Lv5 需要能力开发机。",
+  "academy.ability_developer.portable.skill_restricted": "能力开发平板仅支持学习 Lv1-Lv3 技能；该技能需要能力开发机。",
   "academy.ability_developer.progress": "进度",
   "academy.ability_developer.req": "需求",
   "academy.ability_developer.skill_exp": "技能熟练度：",
