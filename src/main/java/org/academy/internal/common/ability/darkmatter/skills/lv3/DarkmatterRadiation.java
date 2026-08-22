@@ -2,7 +2,9 @@ package org.academy.internal.common.ability.darkmatter.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +15,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
@@ -22,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -40,8 +45,14 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
+import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
+import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhaseTuning;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -52,23 +63,21 @@ import org.misaka.api.common.network.packet.PacketType;
 
 public final class DarkmatterRadiation extends Skill {
     static final double RANGE = 32.0;
-    static final int PULSE_INTERVAL = 2;
-    static final float FLAT_DAMAGE = 2.0f;
-    static final float MIN_DARKMATTER_DAMAGE = 2.0f;
-    static final float HEALTH_FRACTION = 0.001f;
+    static final int EXPOSURE_PULSE_TICKS = 20;
+    static final float MATTER_COST_PER_SECOND = 2.0f;
 
     public DarkmatterRadiation() {
         super(Builder
                 .of(AbilityCategories.DARKMATTER.get())
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
-                .cpCost(10)
+                .cpCost(0)
                 .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.DARKMATTER_CUT)
+                .dependsOn(Skills.DARKMATTER_PHASE_TUNING)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .devCondition(new DevCondition.DependencyCondition(
-                        "Dark Matter Cut", "academy:darkmatter_cut"))
+                        "Phase Tuning", "academy:darkmatter_phase_tuning"))
         );
     }
 
@@ -77,16 +86,25 @@ public final class DarkmatterRadiation extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_START,
+        var binding = Client.CONFIG.getMaintainedKeyBinding(
+                Client.KEY_NAME_CAST,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
-                        InputConstants.PRESS, 0)
-        ), context -> Client.start());
-        InputSystem.addKeyBinding(Client.KEY_NAME_END, Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_END,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
-                        InputConstants.RELEASE, 0)
-        ), context -> Client.stop());
+                        InputSystem.ANY_ACTION, 0),
+                Client.LEGACY_KEY_NAME_CAST,
+                Client.LEGACY_KEY_NAME_START,
+                Client.LEGACY_KEY_NAME_END,
+                Client.LEGACY_CANONICAL_START,
+                Client.LEGACY_CANONICAL_END
+        );
+        AcademyCraftClient.Config.INSTANCE.save();
+        InputSystem.addMaintainedKeyBinding(
+                Client.KEY_NAME_CAST,
+                binding,
+                _ -> Client.start(),
+                _ -> Client.stop(),
+                _ -> Client.heartbeat(),
+                () -> AbilitySystemClient.canUseSkill(Skills.DARKMATTER_RADIATION.get())
+        );
     }
 
     @Override
@@ -99,27 +117,39 @@ public final class DarkmatterRadiation extends Skill {
                 AbilityCategories.DARKMATTER.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.DARKMATTER_RADIATION.get(),
-                        List.of(DarkmatterCut.Client.SKILL_INFO),
+                        List.of(DarkmatterPhaseTuning.Client.SKILL_INFO),
                         R.textures.darkmatter_radiation_icon,
-                        75,
-                        104
+                        140,
+                        40
                 )
         );
-        public static final String KEY_NAME_START = SkillNames.DARKMATTER_RADIATION + "_start";
-        public static final String KEY_NAME_END = SkillNames.DARKMATTER_RADIATION + "_end";
+        public static final String KEY_NAME_CAST = SkillNames.DARKMATTER_RADIATION + "_cast";
+        private static final String LEGACY_KEY_NAME_CAST = "darkmatter_radiation_cast";
+        private static final String LEGACY_KEY_NAME_START = "darkmatter_radiation_start";
+        private static final String LEGACY_KEY_NAME_END = "darkmatter_radiation_end";
+        private static final String LEGACY_CANONICAL_START = "darkmatter_interference_start";
+        private static final String LEGACY_CANONICAL_END = "darkmatter_interference_end";
         public static Config CONFIG = new Config();
+        private static boolean active;
 
         private Client() {
         }
 
         private static void start() {
-            if (ClientUtil.hasScreen()
+            if (active || ClientUtil.hasScreen()
                     || !AbilitySystemClient.canUseSkill(Skills.DARKMATTER_RADIATION.get())) return;
+            active = true;
             MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
 
         private static void stop() {
+            if (!active) return;
+            active = false;
             MisakaNetworkClient.send(StopPacket.INSTANCE);
+        }
+
+        private static void heartbeat() {
+            if (active) MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -150,30 +180,44 @@ public final class DarkmatterRadiation extends Skill {
 
         @SubscribePacket
         public static void handle(StartPacket packet) {
-            var player = packet.getPacketListener().getPlayer();
+            beginChannel(packet.getPacketListener().getPlayer());
+        }
+
+        public static boolean beginChannel(ServerPlayer player) {
+            if (player == null) return false;
             var skill = Skills.DARKMATTER_RADIATION.get();
-            if (!skill.isEnabled(player)) return;
-            if (ACTIVE.putIfAbsent(player.getUUID(), new RadiationState(
-                    player.level().getGameTime(), skill.getEffectiveProficiencyMilestone(player))) == null) {
-                skill.reportTrigger(player);
+            if (!skill.isEnabled(player)) return false;
+            var now = player.level().getGameTime();
+            var existing = ACTIVE.get(player.getUUID());
+            if (existing != null) {
+                existing.leaseExpiresAt = now + RadiationState.LEASE_TICKS;
+                return true;
             }
+            if (ACTIVE.putIfAbsent(player.getUUID(), new RadiationState(
+                    now, skill.getEffectiveProficiencyMilestone(player))) == null) {
+                skill.reportTrigger(player);
+                return true;
+            }
+            return false;
         }
 
         @SubscribePacket
         public static void handle(StopPacket packet) {
-            ACTIVE.remove(packet.getPacketListener().getPlayer().getUUID());
+            endChannel(packet.getPacketListener().getPlayer());
         }
 
-        static float damage(float maxHealth, float abilityPower, float damageMultiplier) {
-            return flatDamage(abilityPower, damageMultiplier) + darkmatterDamage(maxHealth, abilityPower);
+        public static void endChannel(ServerPlayer player) {
+            if (player != null) ACTIVE.remove(player.getUUID());
         }
 
-        static float flatDamage(float abilityPower, float damageMultiplier) {
-            return FLAT_DAMAGE * Math.max(0.0f, abilityPower) * Math.max(0.0f, damageMultiplier);
+        public static boolean isChanneling(ServerPlayer player) {
+            return player != null && ACTIVE.containsKey(player.getUUID());
         }
 
-        static float darkmatterDamage(float maxHealth, float abilityPower) {
-            return Math.max(MIN_DARKMATTER_DAMAGE, maxHealth * HEALTH_FRACTION) * abilityPower;
+        public static int getExposureTicks(ServerPlayer player, LivingEntity target) {
+            if (player == null || target == null) return 0;
+            var state = ACTIVE.get(player.getUUID());
+            return state == null ? 0 : state.exposure.getOrDefault(target.getUUID(), 0);
         }
 
         static boolean insideFrontHemisphere(Vec3 eye, Vec3 look, Vec3 target) {
@@ -197,59 +241,228 @@ public final class DarkmatterRadiation extends Skill {
         private static void pulse(ServerLevel level, ServerPlayer player, RadiationState state) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle().normalize();
-            var range = state.milestone >= 2 ? 36.0 : RANGE;
-            spawnRadiationVisual(level, player, eye, look, range);
+            var phase = DarkmatterPhase.weights(player);
+            var alphaRange = alphaRange(phase.alpha(), state.milestone);
+            var betaRange = betaRange(phase.beta(), state.milestone);
+            var sixMilestone = Skills.DARKMATTER_SIX_WINGS.get()
+                    .getEffectiveProficiencyMilestone(player);
+            if (phase.gamma() > 0.0f) {
+                var area = DarkmatterSixWings.Server.areaMultiplier(sixMilestone);
+                alphaRange *= area;
+                betaRange *= area;
+            }
+            var queryRange = Math.max(alphaRange, betaRange);
+            var alphaMinimumDot = Math.cos(Math.toRadians(alphaHalfAngle(phase.alpha())));
+            var betaMinimumDot = Math.cos(Math.toRadians(betaHalfAngle(phase.beta())));
+            spawnRadiationVisual(level, player, eye, look, queryRange);
             var targets = level.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(eye, eye).inflate(range),
-                    target -> isHostileTarget(player, target)
-                            && insideFrontHemisphere(eye, look,
-                            target.getBoundingBox().getCenter(), range));
-            if (targets.isEmpty()) return;
+                    new AABB(eye, eye).inflate(queryRange),
+                    target -> isHostileTarget(player, target));
+            if (targets.isEmpty()) {
+                state.exposure.clear();
+                return;
+            }
 
             var skill = Skills.DARKMATTER_RADIATION.get();
             var system = AbilitySystemServer.getSystem(player);
             var power = system.getPlayerAbilityPowerMultiplier(player.getUUID());
             var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
+            var gammaMagnitude = DarkmatterSixWings.Server.gammaMagnitudeMultiplier(player);
             var darkmatterSource = SkillDamageSource.of(player, skill);
+            var alphaTargets = new ArrayList<LivingEntity>();
+            var betaExposed = new HashSet<UUID>();
             for (var target : targets) {
+                var center = target.getBoundingBox().getCenter();
+                var inAlpha = insidePhaseArea(eye, look, center, alphaRange, alphaMinimumDot);
+                var inBeta = insidePhaseArea(eye, look, center, betaRange, betaMinimumDot);
+                if (!inAlpha && !inBeta) continue;
                 target.invulnerableTime = 0;
-                var hit = target.hurtServer(level, darkmatterSource,
-                        flatDamage(power, damageMultiplier));
-                if (target.isAlive()) {
+                var hit = false;
+                if (inAlpha) {
+                    hit = target.hurtServer(level, darkmatterSource,
+                            alphaPulseDamage(phase.alpha()) * power * damageMultiplier);
+                    var push = center.subtract(eye);
+                    if (push.lengthSqr() > 1.0e-6) {
+                        push = push.normalize().scale(0.05f + 0.04f * phase.alpha());
+                        target.push(push.x, Math.max(0.02, push.y), push.z);
+                    }
+                }
+                if (inBeta && target.isAlive()) {
                     target.invulnerableTime = 0;
                     hit |= target.hurtServer(
                             level,
                             darkmatterSource,
-                            darkmatterDamage(target.getMaxHealth(), power)
+                            betaPulseDamage(phase.beta()) * power * damageMultiplier
                     );
                 }
                 if (!hit) continue;
-                if (state.milestone >= 3) {
-                    var exposure = state.exposure.merge(target.getUUID(), 1, Integer::sum);
-                    if (exposure >= 20) {
+                if (inAlpha) alphaTargets.add(target);
+                var detonation = DarkmatterLawMark.detonate(player, target);
+                if (detonation > 0.0f) {
+                    target.invulnerableTime = 0;
+                    SkillDamageUtil.applyDirect(level, target, darkmatterSource, detonation);
+                    target.invulnerableTime = 0;
+                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
+                }
+                if (inBeta && phase.beta() > 0.0f) {
+                    betaExposed.add(target.getUUID());
+                    target.addEffect(new MobEffectInstance(
+                            MobEffects.GLOWING, 40 + Math.round(phase.beta() * 20), 0));
+                    target.addEffect(new MobEffectInstance(
+                            MobEffects.WEAKNESS, 40 + Math.round(phase.beta() * 20), 0));
+                    var exposure = state.exposure.merge(
+                            target.getUUID(), pulseInterval(state.milestone), Integer::sum);
+                    if (exposure >= exposurePulseTicks(state.milestone)) {
                         state.exposure.put(target.getUUID(), 0);
-                        radiationPulse(level, player, target, skill, power, damageMultiplier);
+                        target.invulnerableTime = 0;
+                        target.hurtServer(level, darkmatterSource,
+                                exposureBurstDamage(phase.beta()));
                     }
                 }
                 level.sendParticles(ParticleTypes.PORTAL,
                         target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
                         6, 0.2, 0.25, 0.2, 0.02);
             }
+            state.exposure.keySet().retainAll(betaExposed);
+
+            var now = level.getGameTime();
+            if (phase.alpha() > 0.0f && !alphaTargets.isEmpty()
+                    && now >= state.nextAlphaFeatherTick) {
+                spawnFeathers(
+                        level,
+                        player,
+                        alphaTargets,
+                        alphaFeatherCount(phase.alpha()),
+                        alphaFeatherDamage(phase.alpha()) * power * damageMultiplier,
+                        0.0f,
+                        alphaRange);
+                state.nextAlphaFeatherTick = now + 20;
+            }
+
+            if (phase.gamma() > 0.0f && now >= state.nextGammaTick) {
+                gammaFeatherPulse(level, player, targets, phase.gamma(), phase.beta(),
+                        state.milestone, power,
+                        damageMultiplier * gammaMagnitude);
+                state.nextGammaTick = now + 20;
+            }
         }
 
-        private static void radiationPulse(ServerLevel level, ServerPlayer player, LivingEntity center,
-                                           Skill skill, float power, float damageMultiplier) {
-            var source = SkillDamageSource.of(player, skill);
-            var processed = 0;
-            for (var target : level.getEntitiesOfClass(LivingEntity.class,
-                    center.getBoundingBox().inflate(3.0), target -> isHostileTarget(player, target))) {
-                if (processed++ >= 96) break;
-                target.invulnerableTime = 0;
-                target.hurtServer(level, source,
-                        damage(target.getMaxHealth(), power, damageMultiplier) * 4.0f);
+        static double alphaRange(float alpha, int milestone) {
+            var range = 12.0 + Math.max(0.0f, alpha) * 2.0;
+            return Math.clamp(milestone, 0, 3) >= 2 ? range * 1.15 : range;
+        }
+
+        static double betaRange(float beta, int milestone) {
+            var range = 10.0 + Math.max(0.0f, beta) * 2.0;
+            return Math.clamp(milestone, 0, 3) >= 2 ? range * 1.15 : range;
+        }
+
+        static double alphaHalfAngle(float alpha) {
+            return Math.max(12.0, 32.0 - Math.max(0.0f, alpha) * 3.0);
+        }
+
+        static double betaHalfAngle(float beta) {
+            return Math.min(80.0, 40.0 + Math.max(0.0f, beta) * 8.0);
+        }
+
+        static float alphaPulseDamage(float alpha) {
+            return 0.5f + 0.4f * Math.max(0.0f, alpha);
+        }
+
+        static float betaPulseDamage(float beta) {
+            return 0.25f + 0.25f * Math.max(0.0f, beta);
+        }
+
+        static float exposureBurstDamage(float beta) {
+            return 1.0f + Math.max(0.0f, beta);
+        }
+
+        static int exposurePulseTicks(int milestone) {
+            return Math.clamp(milestone, 0, 3) >= 3 ? 15 : EXPOSURE_PULSE_TICKS;
+        }
+
+        static int pulseInterval(int milestone) {
+            return Math.clamp(milestone, 0, 3) >= 2 ? 4 : 5;
+        }
+
+        static int gammaFeatherCount(float gamma, int milestone) {
+            if (!(gamma > 0.0f)) return 0;
+            return 2 + Math.round(gamma) + (Math.clamp(milestone, 0, 3) >= 3 ? 2 : 0);
+        }
+
+        static int alphaFeatherCount(float alpha) {
+            return Math.max(0, 1 + (int) Math.floor(Math.max(0.0f, alpha) / 2.0f));
+        }
+
+        static float alphaFeatherDamage(float alpha) {
+            return 0.75f + 0.35f * Math.max(0.0f, alpha);
+        }
+
+        static float maintenanceCost(int milestone) {
+            return MATTER_COST_PER_SECOND
+                    * (Math.clamp(milestone, 0, 3) >= 1 ? 0.9f : 1.0f);
+        }
+
+        private static void gammaFeatherPulse(
+                ServerLevel level, ServerPlayer player, List<LivingEntity> candidates,
+                float gamma, float beta, int milestone,
+                float power, float damageMultiplier
+        ) {
+            var count = gammaFeatherCount(gamma, milestone);
+            var radius = 4.0 + 2.0 * gamma;
+            var nearby = candidates.stream()
+                    .filter(target -> target.distanceToSqr(player) <= radius * radius)
+                    .sorted(java.util.Comparator.comparingDouble(target -> target.distanceToSqr(player)))
+                    .toList();
+            spawnFeathers(
+                    level,
+                    player,
+                    nearby,
+                    count,
+                    (0.5f + 0.2f * gamma) * power * damageMultiplier,
+                    exposureBurstDamage(beta) * power * damageMultiplier,
+                    radius);
+        }
+
+        private static void spawnFeathers(
+                ServerLevel level,
+                ServerPlayer player,
+                List<LivingEntity> candidates,
+                int count,
+                float damage,
+                float exposureBurstDamage,
+                double range
+        ) {
+            if (count <= 0) return;
+            var targets = candidates.stream()
+                    .filter(target -> isHostileTarget(player, target)
+                            && target.distanceToSqr(player) <= range * range)
+                    .sorted(java.util.Comparator.comparingDouble(
+                            target -> target.distanceToSqr(player)))
+                    .toList();
+            for (var index = 0; index < count; index++) {
+                var target = targets.isEmpty() ? null : targets.get(index % targets.size());
+                var angle = Math.PI * 2.0 * index / Math.max(1, count);
+                var direction = target == null
+                        ? new Vec3(Math.cos(angle), 0.05, Math.sin(angle))
+                        : target.getBoundingBox().getCenter().subtract(player.getEyePosition());
+                var feather = new DarkmatterFeatherProjectile(
+                        EntityTypes.DARKMATTER_FEATHER_PROJECTILE.get(), level);
+                feather.configure(player, target, direction, damage, exposureBurstDamage);
+                level.addFreshEntity(feather);
             }
-            level.sendParticles(ParticleTypes.WITCH, center.getX(), center.getY() + center.getBbHeight() * 0.5,
-                    center.getZ(), 24, 1.5, 1.5, 1.5, 0.08);
+        }
+
+        private static boolean insidePhaseArea(
+                Vec3 eye,
+                Vec3 look,
+                Vec3 target,
+                double range,
+                double minimumDot
+        ) {
+            var offset = target.subtract(eye);
+            return offset.lengthSqr() <= range * range
+                    && (offset.lengthSqr() <= 1.0e-6 || look.dot(offset.normalize()) >= minimumDot);
         }
 
         private static void spawnRadiationVisual(ServerLevel level, ServerPlayer player,
@@ -272,7 +485,7 @@ public final class DarkmatterRadiation extends Skill {
             }
         }
 
-        private static void tick(ServerPlayer player) {
+        public static void tick(ServerPlayer player) {
             var state = ACTIVE.get(player.getUUID());
             if (state == null) return;
             var skill = Skills.DARKMATTER_RADIATION.get();
@@ -282,31 +495,50 @@ public final class DarkmatterRadiation extends Skill {
                 return;
             }
             var now = level.getGameTime();
+            if (now > state.leaseExpiresAt) {
+                ACTIVE.remove(player.getUUID(), state);
+                return;
+            }
             skill.reportActivity(player, false);
             if (now >= state.nextCostTick) {
-                if (!skill.executeContinuous(player, (context, actualCost) -> {
-                }, false)) {
+                var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+                var paid = new boolean[1];
+                var executed = skill.executeContinuous(player, _ -> 0.0f, (context, _) -> {
+                    paid[0] = manager.consume(
+                            player,
+                            maintenanceCost(context.milestone()),
+                            skill,
+                            skill.getIterationTicks(player));
+                }, true);
+                if (!executed || !paid[0]) {
                     ACTIVE.remove(player.getUUID());
                     return;
                 }
-                state.nextCostTick = now + PULSE_INTERVAL;
+                skill.reportActivity(player, true);
+                state.nextCostTick = now + 20;
             }
             if (now < state.nextDamageTick) return;
             pulse(level, player, state);
-            state.nextDamageTick = now + 1;
+            state.nextDamageTick = now + pulseInterval(state.milestone);
         }
 
         private static final class RadiationState {
+            private static final long LEASE_TICKS = 60;
             private final int milestone;
             private final Map<UUID, Integer> exposure = new HashMap<>();
             private long nextDamageTick;
             private long nextCostTick;
-            private int cursor;
+            private long nextAlphaFeatherTick;
+            private long nextGammaTick;
+            private long leaseExpiresAt;
 
             private RadiationState(long now, int milestone) {
                 this.milestone = milestone;
                 nextDamageTick = now;
                 nextCostTick = now;
+                nextAlphaFeatherTick = now;
+                nextGammaTick = now;
+                leaseExpiresAt = now + LEASE_TICKS;
             }
         }
     }
@@ -319,6 +551,16 @@ public final class DarkmatterRadiation extends Skill {
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.tick(player);
+        }
+
+        @SubscribeEvent
+        public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.endChannel(player);
+        }
+
+        @SubscribeEvent
+        public static void onDimensionChange(PlayerEvent.PlayerChangedDimensionEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.endChannel(player);
         }
     }
 

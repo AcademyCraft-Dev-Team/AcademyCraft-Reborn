@@ -151,6 +151,21 @@ open class ProgressBarWidget : AbstractWidget() {
         return this
     }
 
+    /** Java-friendly combined setter; avoids the property/compatibility setter name collision. */
+    fun setBarColors(background: Int, foreground: Int): ProgressBarWidget {
+        var changed = false
+        if (backgroundColor != background) {
+            backgroundColor = background
+            changed = true
+        }
+        if (progressColor != foreground) {
+            progressColor = foreground
+            changed = true
+        }
+        if (changed) invalidate()
+        return this
+    }
+
     fun setOrientation(orientation: Orientation): ProgressBarWidget {
         this.orientation = orientation
         requestLayout()

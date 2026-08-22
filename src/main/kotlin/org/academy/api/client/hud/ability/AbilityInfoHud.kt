@@ -35,6 +35,7 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.util.L10n
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
+import org.academy.internal.common.ability.Skills
 import org.joml.Vector3f
 import kotlin.math.abs
 import kotlin.math.max
@@ -548,8 +549,58 @@ class AbilityInfoHud private constructor() {
                     sp.layoutParams = FrameLayoutWidget.LayoutParams()
                         .sizeMode(SizeMode.MATCH_PARENT)
                     cp.addChild("sp", sp)
+
+                    val matter = object : LabelWidget("") {
+                        override fun tick() {
+                            val maximum = AbilitySystemClient.getMaxMP()
+                            visibility = if (maximum > 0f) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+                            if (maximum <= 0f) return
+                            val current = AbilitySystemClient.getCurrMP().roundToInt()
+                            val maxValue = maximum.roundToInt()
+                            text = "MP $current/$maxValue"
+                            super.tick()
+                        }
+                    }.apply {
+                        baseFontSize = 7f
+                        setRed(0.84f)
+                        setGreen(0.80f)
+                        setBlue(1.0f)
+                        setDropShadow(true)
+                        layoutParams = FrameLayoutWidget.LayoutParams().apply {
+                            size(72f, 8f)
+                            gravity(Gravity.BOTTOM_RIGHT)
+                            marginRight = 156f
+                            marginBottom = 1f
+                        }
+                    }
+                    cp.addChild("matter", matter)
                 }
             }
+
+            val phase = object : LabelWidget("") {
+                override fun tick() {
+                    visibility = if (AbilitySystemClient.getDarkmatterLevel() > 0)
+                        Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+                    if (visibility == Widget.Visibility.VISIBLE) {
+                        val alphaValue = (AbilitySystemClient.getDarkmatterAlpha() * 100f).roundToInt()
+                        val betaValue = (AbilitySystemClient.getDarkmatterBeta() * 100f).roundToInt()
+                        text = "α$alphaValue%  β$betaValue%"
+                    }
+                    super.tick()
+                }
+            }.apply {
+                baseFontSize = 7f
+                setRed(0.84f)
+                setGreen(0.80f)
+                setBlue(1.0f)
+                setDropShadow(true)
+                layoutParams = FrameLayoutWidget.LayoutParams().apply {
+                    size(92f, 8f)
+                    gravity(Gravity.CENTER)
+                }
+                translationY = 100f
+            }
+            root.addChild("darkmatter_phase", phase)
 
             skillWheel.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)

@@ -56,6 +56,35 @@ public abstract class KeyBindingConfig {
         keyBindingMap().put(name, GSON.toJsonTree(keyBinding));
     }
 
+    public void removeKeyBinding(String name) {
+        keyBindingMap().remove(name);
+        enabledBindingMap().remove(name);
+    }
+
+    /**
+     * Collapses legacy press/release rows into one maintained gesture while preserving the
+     * player's physical key, modifiers and screen policy.
+     */
+    public InputSystem.KeyCombination getMaintainedKeyBinding(
+            String name,
+            InputSystem.KeyCombination defaultConfig,
+            String... legacyNames
+    ) {
+        var configured = getKeyBinding(name);
+        if (configured == null) {
+            for (var legacyName : legacyNames) {
+                configured = getKeyBinding(legacyName);
+                if (configured != null) break;
+            }
+        }
+        if (configured == null) configured = defaultConfig;
+        configured = InputSystem.withAction(configured, InputSystem.ANY_ACTION);
+        setKeyBinding(name, configured);
+        for (var legacyName : legacyNames) removeKeyBinding(legacyName);
+        InputSystem.rememberDefaultKeyBinding(name, InputSystem.withAction(defaultConfig, InputSystem.ANY_ACTION));
+        return configured;
+    }
+
     public boolean isKeyBindingEnabled(String name) {
         return enabledBindingMap().getOrDefault(name, true);
     }

@@ -371,6 +371,8 @@ public class PlayerCPManager implements AbilitySubsystem {
         while (iterator.hasNext()) {
             var occupation = iterator.next();
             if (!occupation.isPermanent()) continue;
+            if ("academy:darkmatter_generation".equals(occupation.getSkillId())
+                    && cpData.getCurrMP() > CP_EPSILON) continue;
             var id = Identifier.tryParse(occupation.getSkillId());
             var enabled = id != null && Registries.SKILLS.get(id)
                     .map(reference -> reference.value().isEnabled(player))
@@ -489,9 +491,8 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (matching.size() == 1 && Float.compare(matching.getFirst().getAmount(), amount) == 0) {
             return true;
         }
-
-        releaseMaintenanceOccupation(uuid, skill.getKeyString());
-        return tryOccupation(uuid, amount, skill, 0, true);
+        return replacePermanentOccupationsAndTryOccupation(
+                uuid, Map.of(skill, amount), null, 0.0f, 0);
     }
 
     public boolean replacePermanentOccupationsAndTryOccupation(

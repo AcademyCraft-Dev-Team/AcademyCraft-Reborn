@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,8 @@ public final class InputSystem {
     public static final String CONFIG_KEY = "input_system_keybindings";
 
     private static final Map<String, KeyBinding> KEY_BINDINGS = new LinkedHashMap<>();
+    private static final Map<String, MaintainedBinding> MAINTAINED_BINDINGS = new HashMap<>();
+    private static final Map<String, ActiveMaintainedBinding> ACTIVE_MAINTAINED_BINDINGS = new HashMap<>();
     private static final Map<String, KeyCombination> DEFAULT_BINDINGS = new LinkedHashMap<>();
     private static final Map<String, Skill> EXPLICIT_TOGGLE_BINDINGS = new HashMap<>();
     private static final Map<String, Consumer<Integer>> SCROLL_LISTENERS = new HashMap<>();
@@ -45,11 +48,61 @@ public final class InputSystem {
 
     public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
         rememberDefaultKeyBinding(keyName, combo);
+        cancelMaintainedKeyBinding(keyName);
+        MAINTAINED_BINDINGS.remove(keyName);
         KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler, true));
         bindingRevision++;
     }
 
+    /**
+     * Registers one logical press-and-hold action. The configured row uses one physical gesture;
+     * press starts it and release stops it. Once started, its STOP callback is never gated by a
+     * newly opened screen or by changed modifier keys.
+     */
+    public static void addMaintainedKeyBinding(
+            String keyName,
+            KeyCombination combo,
+            Consumer<BindingContext> onStart,
+            Consumer<BindingContext> onStop,
+            Consumer<BindingContext> onHeartbeat,
+            BooleanSupplier canRemainActive
+    ) {
+        var maintainedCombo = withAction(combo, ANY_ACTION);
+        rememberDefaultKeyBinding(keyName, maintainedCombo);
+        cancelMaintainedKeyBinding(keyName);
+        MAINTAINED_BINDINGS.put(
+                keyName,
+                new MaintainedBinding(onStart, onStop, onHeartbeat, canRemainActive)
+        );
+        KEY_BINDINGS.put(
+                keyName,
+                new KeyBinding(maintainedCombo, context -> handleMaintainedInput(keyName, context), true)
+        );
+        bindingRevision++;
+    }
+
+    public static void addMaintainedKeyBinding(
+            String keyName,
+            KeyCombination combo,
+            Consumer<BindingContext> onStart,
+            Consumer<BindingContext> onStop
+    ) {
+        addMaintainedKeyBinding(keyName, combo, onStart, onStop, _ -> {}, () -> true);
+    }
+
+    public static void addMaintainedKeyBinding(
+            String keyName,
+            KeyCombination combo,
+            Consumer<BindingContext> onStart,
+            Consumer<BindingContext> onStop,
+            BooleanSupplier canRemainActive
+    ) {
+        addMaintainedKeyBinding(keyName, combo, onStart, onStop, _ -> {}, canRemainActive);
+    }
+
     public static void removeKeyBinding(String keyName) {
+        cancelMaintainedKeyBinding(keyName);
+        MAINTAINED_BINDINGS.remove(keyName);
         KEY_BINDINGS.remove(keyName);
         bindingRevision++;
     }
@@ -85,6 +138,8 @@ public final class InputSystem {
     public static void setKeyBinding(String keyName, KeyCombination combo) {
         var binding = KEY_BINDINGS.get(keyName);
         if (binding == null) return;
+        cancelMaintainedKeyBinding(keyName);
+        if (MAINTAINED_BINDINGS.containsKey(keyName)) combo = withAction(combo, ANY_ACTION);
         KEY_BINDINGS.put(keyName, new KeyBinding(combo, binding.handler, binding.enabled));
         bindingRevision++;
     }
@@ -243,6 +298,7 @@ public final class InputSystem {
             return;
         }
         if (existing.enabled != enabled) {
+            if (!enabled) cancelMaintainedKeyBinding(keyName);
             KEY_BINDINGS.put(keyName, new KeyBinding(existing.combo, existing.handler, enabled));
             bindingRevision++;
         }
@@ -313,6 +369,45 @@ public final class InputSystem {
         return new KeyCombination(
                 template.type, Set.of(), template.action, template.modifiers, template.availableWhenScreen, true
         );
+    }
+
+    public static KeyCombination withAction(KeyCombination template, int action) {
+        return new KeyCombination(
+                template.type,
+                template.keys,
+                action,
+                template.modifiers,
+                template.availableWhenScreen,
+                template.unbound
+        );
+    }
+
+    /** Cancels maintained actions whose client-side preconditions no longer hold. */
+    public static void tickMaintainedKeyBindings() {
+        var minecraft = net.minecraft.client.Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.level == null
+                || minecraft.gui.screen() != null || !minecraft.isWindowActive()) {
+            cancelMaintainedKeyBindings();
+            return;
+        }
+        for (var keyName : List.copyOf(ACTIVE_MAINTAINED_BINDINGS.keySet())) {
+            var maintained = MAINTAINED_BINDINGS.get(keyName);
+            if (maintained == null || !maintained.canRemainActive.getAsBoolean()) {
+                cancelMaintainedKeyBinding(keyName);
+                continue;
+            }
+            var active = ACTIVE_MAINTAINED_BINDINGS.get(keyName);
+            if (active != null && ++active.ticksUntilHeartbeat >= 20) {
+                active.ticksUntilHeartbeat = 0;
+                maintained.onHeartbeat.accept(active.context);
+            }
+        }
+    }
+
+    public static void cancelMaintainedKeyBindings() {
+        for (var keyName : List.copyOf(ACTIVE_MAINTAINED_BINDINGS.keySet())) {
+            cancelMaintainedKeyBinding(keyName);
+        }
     }
 
     public static void handleMouseMove(double xpos, double ypos, CallbackInfo ci) {
@@ -388,12 +483,58 @@ public final class InputSystem {
     }
 
     private static void dispatch(InputType eventType, int input, int action, int modifiers) {
-        for (var binding : KEY_BINDINGS.values()) {
+        var context = new BindingContext(eventType, input, action, modifiers);
+        for (var entry : KEY_BINDINGS.entrySet()) {
+            var keyName = entry.getKey();
+            var binding = entry.getValue();
             if (!binding.enabled) continue;
             var combo = binding.combo;
+            if (action == InputConstants.RELEASE
+                    && isReleaseForActiveMaintainedBinding(keyName, combo, eventType, input)) {
+                binding.handler.accept(context);
+                continue;
+            }
             if (!matches(combo, eventType, input, action, modifiers)) continue;
-            binding.handler.accept(new BindingContext(eventType, input, action, modifiers));
+            binding.handler.accept(context);
         }
+    }
+
+    private static void handleMaintainedInput(String keyName, BindingContext context) {
+        var maintained = MAINTAINED_BINDINGS.get(keyName);
+        if (maintained == null) return;
+        if (context.action == InputConstants.PRESS) {
+            if (ACTIVE_MAINTAINED_BINDINGS.containsKey(keyName)
+                    || !maintained.canRemainActive.getAsBoolean()) return;
+            ACTIVE_MAINTAINED_BINDINGS.put(keyName, new ActiveMaintainedBinding(context));
+            maintained.onStart.accept(context);
+        } else if (context.action == InputConstants.RELEASE) {
+            var active = ACTIVE_MAINTAINED_BINDINGS.remove(keyName);
+            if (active != null) maintained.onStop.accept(context);
+        }
+    }
+
+    private static boolean isReleaseForActiveMaintainedBinding(
+            String keyName, KeyCombination combo, InputType type, int input
+    ) {
+        var active = ACTIVE_MAINTAINED_BINDINGS.get(keyName);
+        if (active == null || combo.type != type) return false;
+        return combo.keys.isEmpty() || combo.keys.contains(input) || active.context.input == input;
+    }
+
+    private static void cancelMaintainedKeyBinding(String keyName) {
+        var active = ACTIVE_MAINTAINED_BINDINGS.remove(keyName);
+        var maintained = MAINTAINED_BINDINGS.get(keyName);
+        if (active == null || maintained == null) return;
+        maintained.onStop.accept(new BindingContext(
+                active.context.type,
+                active.context.input,
+                InputConstants.RELEASE,
+                active.context.modifiers
+        ));
+    }
+
+    static void dispatchMaintainedForTesting(String keyName, BindingContext context) {
+        handleMaintainedInput(keyName, context);
     }
 
     static int modifiersForDispatch(InputType type, int input, int action, int modifiers) {
@@ -569,6 +710,23 @@ public final class InputSystem {
     }
 
     private record KeyBinding(KeyCombination combo, Consumer<BindingContext> handler, boolean enabled) {
+    }
+
+    private record MaintainedBinding(
+            Consumer<BindingContext> onStart,
+            Consumer<BindingContext> onStop,
+            Consumer<BindingContext> onHeartbeat,
+            BooleanSupplier canRemainActive
+    ) {
+    }
+
+    private static final class ActiveMaintainedBinding {
+        private final BindingContext context;
+        private int ticksUntilHeartbeat;
+
+        private ActiveMaintainedBinding(BindingContext context) {
+            this.context = context;
+        }
     }
 
     private record InputKey(InputType type, int key) {

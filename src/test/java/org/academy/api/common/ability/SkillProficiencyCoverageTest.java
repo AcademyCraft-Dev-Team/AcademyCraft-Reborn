@@ -42,7 +42,7 @@ class SkillProficiencyCoverageTest {
 
     @Test
     void allNonCommonSkillsDeclareAProficiencyPlan() {
-        assertEquals(85, SkillProficiencyProfiles.declaredSkillPaths().size());
+        assertEquals(87, SkillProficiencyProfiles.declaredSkillPaths().size());
         for (var path : SkillProficiencyProfiles.declaredSkillPaths()) {
             var id = "academy:" + path;
             assertTrue(SkillProficiencyProfiles.isDeclared(id), path);
@@ -51,6 +51,16 @@ class SkillProficiencyCoverageTest {
                             || SkillProficiencyProfiles.customProfileReason(id) != null,
                     path + " needs a scalar profile or an explicit custom implementation reason");
         }
+    }
+
+    @Test
+    void newDarkmatterSkillsHaveExplicitProficiencyPlans() {
+        assertTrue(SkillProficiencyProfiles.isDeclared("academy:darkmatter_generation"));
+        assertTrue(SkillProficiencyProfiles.isDeclared("academy:darkmatter_phase_tuning"));
+        assertNotNull(SkillProficiencyProfiles.customProfileReason(
+                "academy:darkmatter_generation"));
+        assertNotNull(SkillProficiencyProfiles.customProfileReason(
+                "academy:darkmatter_phase_tuning"));
     }
 
     @Test
@@ -114,6 +124,33 @@ class SkillProficiencyCoverageTest {
             assertEquals(10, profile.resolveIterationTicks(1, 40), path);
             assertEquals(10, profile.resolveIterationTicks(2, 40), path);
             assertEquals(5, profile.resolveIterationTicks(3, 40), path);
+        }
+    }
+
+    @Test
+    void darkmatterSkillsDeclareCustomMultiAxisMilestones() {
+        for (var path : new String[]{"darkmatter_generation", "darkmatter_shaping",
+                "darkmatter_phase_tuning", "darkmatter_disassemble", "darkmatter_cut",
+                "darkmatter_interference", "darkmatter_repair", "darkmatter_creation",
+                "darkmatter_six_wings"}) {
+            assertNotNull(SkillProficiencyProfiles.customProfileReason("academy:" + path), path);
+        }
+    }
+
+    @Test
+    void darkmatterIterationTimesAreNotSilentlyChangedByGenericProfiles() {
+        for (var path : new String[]{"darkmatter_shaping", "darkmatter_disassemble",
+                "darkmatter_cut", "darkmatter_interference", "darkmatter_repair"}) {
+            var profile = SkillProficiencyProfiles.forSkill("academy:" + path);
+            assertEquals(SkillProficiencyProfile.NONE, profile, path);
+        }
+    }
+
+    private static void assertIterationSequence(String path, int base, int upgraded) {
+        var profile = SkillProficiencyProfiles.forSkill("academy:" + path);
+        assertEquals(base, profile.resolveIterationTicks(0, 40), path);
+        for (var milestone = 1; milestone <= 3; milestone++) {
+            assertEquals(upgraded, profile.resolveIterationTicks(milestone, 40), path);
         }
     }
 

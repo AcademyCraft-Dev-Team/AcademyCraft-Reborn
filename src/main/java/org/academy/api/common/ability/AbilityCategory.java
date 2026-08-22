@@ -73,6 +73,13 @@ public abstract class AbilityCategory {
         return true;
     }
 
+    /**
+     * Optional resource exposed by this category. Categories without one keep the resource HUD hidden.
+     */
+    public Optional<AbilityResourceSpec> getResourceSpec() {
+        return Optional.empty();
+    }
+
     public Identifier getKey() {
         return Objects.requireNonNull(Registries.ABILITY_CATEGORIES.getKey(this), "This ability category has not been registered.");
     }

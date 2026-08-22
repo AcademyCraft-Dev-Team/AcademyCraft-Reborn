@@ -43,8 +43,11 @@ import org.academy.internal.common.ability.aeromanip.skills.lv5.AtmosphericDomin
 import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
 import org.academy.internal.common.ability.aeromanip.skills.lv5.VacuumDomain;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterGeneration;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
+import org.academy.internal.common.ability.darkmatter.SyncDarkmatterStatePacket;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
+import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhaseTuning;
 import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterRepair;
@@ -138,6 +141,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncSkillDataPacket>>
             SYNC_SKILL_DATA = PACKET_TYPES.register("sync_skill_data",
             () -> new PacketType<>(SyncSkillDataPacket.class, SyncSkillDataPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncDarkmatterStatePacket>>
+            SYNC_DARKMATTER_STATE = PACKET_TYPES.register("sync_darkmatter_state",
+            () -> new PacketType<>(SyncDarkmatterStatePacket.class, SyncDarkmatterStatePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PropsPackets.SyncPacket>>
             PROPS_SYNC = PACKET_TYPES.register("props_sync",
             () -> new PacketType<>(PropsPackets.SyncPacket.class, PropsPackets.SyncPacket.CODEC));
@@ -381,6 +387,15 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterShaping.CastPacket>>
             DARKMATTER_SHAPING_CAST = PACKET_TYPES.register("darkmatter_shaping_cast",
             () -> new PacketType<>(DarkmatterShaping.CastPacket.class, DarkmatterShaping.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterShaping.ResultPacket>>
+            DARKMATTER_SHAPING_RESULT = PACKET_TYPES.register("darkmatter_shaping_result",
+            () -> new PacketType<>(DarkmatterShaping.ResultPacket.class, DarkmatterShaping.ResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterGeneration.ControlPacket>>
+            DARKMATTER_GENERATION_CONTROL = PACKET_TYPES.register("darkmatter_generation_control",
+            () -> new PacketType<>(DarkmatterGeneration.ControlPacket.class, DarkmatterGeneration.ControlPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterPhaseTuning.ControlPacket>>
+            DARKMATTER_PHASE_TUNING_CONTROL = PACKET_TYPES.register("darkmatter_phase_tuning_control",
+            () -> new PacketType<>(DarkmatterPhaseTuning.ControlPacket.class, DarkmatterPhaseTuning.ControlPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterDisassemble.CastPacket>>
             DARKMATTER_DISASSEMBLE_CAST = PACKET_TYPES.register("darkmatter_disassemble_cast",
             () -> new PacketType<>(DarkmatterDisassemble.CastPacket.class, DarkmatterDisassemble.CastPacket.CODEC));
@@ -399,6 +414,24 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.CastPacket>>
             DARKMATTER_CREATION_CAST = PACKET_TYPES.register("darkmatter_creation_cast",
             () -> new PacketType<>(DarkmatterCreation.CastPacket.class, DarkmatterCreation.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.EditorRequestPacket>>
+            DARKMATTER_CREATION_EDITOR_REQUEST = PACKET_TYPES.register("darkmatter_creation_editor_request",
+            () -> new PacketType<>(DarkmatterCreation.EditorRequestPacket.class, DarkmatterCreation.EditorRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.SaveBlueprintPacket>>
+            DARKMATTER_CREATION_SAVE = PACKET_TYPES.register("darkmatter_creation_save",
+            () -> new PacketType<>(DarkmatterCreation.SaveBlueprintPacket.class, DarkmatterCreation.SaveBlueprintPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.SummonPacket>>
+            DARKMATTER_CREATION_SUMMON = PACKET_TYPES.register("darkmatter_creation_summon",
+            () -> new PacketType<>(DarkmatterCreation.SummonPacket.class, DarkmatterCreation.SummonPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.DismantlePacket>>
+            DARKMATTER_CREATION_DISMANTLE = PACKET_TYPES.register("darkmatter_creation_dismantle",
+            () -> new PacketType<>(DarkmatterCreation.DismantlePacket.class, DarkmatterCreation.DismantlePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterCreation.EditorSnapshotPacket>>
+            DARKMATTER_CREATION_EDITOR_SNAPSHOT = PACKET_TYPES.register("darkmatter_creation_editor_snapshot",
+            () -> new PacketType<>(DarkmatterCreation.EditorSnapshotPacket.class, DarkmatterCreation.EditorSnapshotPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterCreation.RosterDeltaPacket>>
+            DARKMATTER_CREATION_ROSTER_DELTA = PACKET_TYPES.register("darkmatter_creation_roster_delta",
+            () -> new PacketType<>(DarkmatterCreation.RosterDeltaPacket.class, DarkmatterCreation.RosterDeltaPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterSixWings.TogglePacket>>
             DARKMATTER_SIX_WINGS_TOGGLE = PACKET_TYPES.register("darkmatter_six_wings_toggle",
             () -> new PacketType<>(DarkmatterSixWings.TogglePacket.class, DarkmatterSixWings.TogglePacket.CODEC));

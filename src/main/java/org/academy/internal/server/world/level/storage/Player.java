@@ -9,6 +9,7 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.common.ability.darkmatter.DarkmatterStateData;
 
 import java.util.*;
 
@@ -37,7 +38,8 @@ public final class Player {
             Map.entry("kinetic_superposition", "kinetic_energy_applied"),
             Map.entry("directed_shock", "kinetic_energy_applied"),
             Map.entry("bioelectric_surge", "bioelectric_operation"),
-            Map.entry("electron_barrier", "light_shield")
+            Map.entry("electron_barrier", "light_shield"),
+            Map.entry("darkmatter_radiation", "darkmatter_interference")
     );
     private static final Set<String> RETIRED_SKILLS = Set.of(
             "academy:hell_flare",
@@ -62,6 +64,8 @@ public final class Player {
     private List<AbilityData.CpOccupationData> cpOccupations = new ArrayList<>();
     @SerializedName("cpData")
     private AbilityData cpData = new AbilityData();
+    @SerializedName("darkmatterState")
+    private DarkmatterStateData darkmatterState = new DarkmatterStateData();
     @SerializedName("appliedCommonSkillMaxCpBonus")
     private float appliedCommonSkillMaxCpBonus;
     @SerializedName("maxCpInitialized")
@@ -131,6 +135,11 @@ public final class Player {
 
     public Map<String, SkillData> getSkillDataMap() {
         return skillDataMap;
+    }
+
+    public DarkmatterStateData getDarkmatterState() {
+        if (darkmatterState == null) darkmatterState = new DarkmatterStateData();
+        return darkmatterState;
     }
 
     public boolean isSkillLearned(String skillId) {
@@ -241,6 +250,8 @@ public final class Player {
         changed |= removeRetiredSkills();
         changed |= migrateOccupations();
         changed |= migrateLegacyAbilityData();
+        changed |= migrateDarkmatterResource();
+        changed |= getDarkmatterState().repair();
         changed |= getPropsData().repair();
         if (changed) markDirty();
         return changed;
@@ -356,6 +367,21 @@ public final class Player {
         legacyMaxComputingPower = null;
         legacyComputingPowerRecoverySpeed = null;
         return true;
+    }
+
+    private boolean migrateDarkmatterResource() {
+        var changed = false;
+        var shaping = skillDataMap.get("academy:darkmatter_shaping");
+        if (shaping != null && !skillDataMap.containsKey("academy:darkmatter_generation")) {
+            var generation = new CommonSkillData();
+            generation.setProficiency(shaping.getProficiency());
+            skillDataMap.put("academy:darkmatter_generation", generation);
+            changed = true;
+        }
+
+        // Preserve legacy MP until DarkmatterResourceManager can split it against the migrated
+        // permanent generation occupation. Dropping it here made debt-free legacy saves lose MP.
+        return changed;
     }
 
     private boolean migrateRetainedSkillProficiencies() {

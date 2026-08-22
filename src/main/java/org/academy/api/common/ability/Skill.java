@@ -426,7 +426,7 @@ public abstract class Skill {
         return maintenanceCost;
     }
 
-    public final float getMaintenanceCost(ServerPlayer player) {
+    public float getMaintenanceCost(ServerPlayer player) {
         return adjustProficiencyCost(
                 player,
                 SkillProficiencyProfile.CostKind.MAINTENANCE,

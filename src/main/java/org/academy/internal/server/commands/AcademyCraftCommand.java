@@ -31,6 +31,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatProfileRegistry;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityDiagnostics;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityMode;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,6 +88,7 @@ public final class AcademyCraftCommand {
                         .then(Commands.literal("god")
                                 .executes(AcademyCraftCommand::toggleSkillDebugMode))
                         .then(CPDebugCommands.register())
+                        .then(DarkmatterDebugCommands.register())
                 )
                 .then(Commands.literal("dev")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
@@ -428,6 +430,113 @@ public final class AcademyCraftCommand {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    private static final class DarkmatterDebugCommands {
+        static LiteralArgumentBuilder<CommandSourceStack> register() {
+            return Commands.literal("darkmatter")
+                    .then(Commands.literal("info")
+                            .executes(ctx -> info(ctx, ctx.getSource().getPlayerOrException()))
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .executes(ctx -> info(ctx, EntityArgument.getPlayer(ctx, "target")))))
+                    .then(Commands.literal("level")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("value", abilityLevelArgument())
+                                            .executes(ctx -> level(ctx, EntityArgument.getPlayer(ctx, "target"),
+                                                    IntegerArgumentType.getInteger(ctx, "value"))))))
+                    .then(Commands.literal("phase")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("alpha_points", IntegerArgumentType.integer(0, 250))
+                                            .executes(ctx -> phase(ctx, EntityArgument.getPlayer(ctx, "target"),
+                                                    IntegerArgumentType.getInteger(ctx, "alpha_points"))))))
+                    .then(Commands.literal("mp")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("natural", FloatArgumentType.floatArg(0))
+                                            .then(Commands.argument("created", FloatArgumentType.floatArg(0))
+                                                    .then(Commands.argument("cp_debt", FloatArgumentType.floatArg(0))
+                                                            .then(Commands.argument("reserved", FloatArgumentType.floatArg(0))
+                                                                    .executes(ctx -> pools(ctx,
+                                                                            EntityArgument.getPlayer(ctx, "target"),
+                                                                            FloatArgumentType.getFloat(ctx, "natural"),
+                                                                            FloatArgumentType.getFloat(ctx, "created"),
+                                                                            FloatArgumentType.getFloat(ctx, "cp_debt"),
+                                                                            FloatArgumentType.getFloat(ctx, "reserved")))))))))
+                    .then(Commands.literal("gamma")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("active", BoolArgumentType.bool())
+                                            .executes(ctx -> gamma(ctx, EntityArgument.getPlayer(ctx, "target"),
+                                                    BoolArgumentType.getBool(ctx, "active"))))))
+                    .then(Commands.literal("proficiency")
+                            .then(Commands.argument("target", EntityArgument.player())
+                                    .then(Commands.argument("skill", IdentifierArgument.id())
+                                            .suggests(AcademyCraftCommand::suggestLearnedSkills)
+                                            .then(Commands.argument("value", FloatArgumentType.floatArg(0, 3000))
+                                                    .executes(DarkmatterDebugCommands::proficiency)))));
+        }
+
+        private static int info(CommandContext<CommandSourceStack> ctx, ServerPlayer player) {
+            var manager = CommandUtils.getSystem(ctx).getDarkmatterResourceManager();
+            var phase = manager.getPhaseSnapshot(player);
+            var mp = manager.getView(player);
+            var message = Component.literal(String.format(Locale.ROOT,
+                    "§e[Darkmatter: %s]§r\nL%d points=%d α=%d(%.2f/%.0f%%) β=%d(%.2f/%.0f%%) γ=%d(%.2f/%.0f%%) active=%s\nMP natural=%.2f created=%.2f total=%.2f / effective=%.2f base=%.2f\nCP debt=%.2f reserved-limit=%.2f",
+                    player.getName().getString(), phase.abilityLevel(), phase.totalPoints(),
+                    phase.alphaPoints(), phase.alphaPower(), phase.alphaRatio() * 100,
+                    phase.betaPoints(), phase.betaPower(), phase.betaRatio() * 100,
+                    phase.gammaPoints(), phase.gammaPower(), phase.gammaRatio() * 100,
+                    phase.gammaActive(), mp.naturalMatter(), mp.createdMatter(), mp.totalMatter(),
+                    mp.effectiveCapacity(), mp.baseCapacity(), mp.createdCpDebt(), mp.reservedMatter()));
+            ctx.getSource().sendSuccess(() -> message, false);
+            return 1;
+        }
+
+        private static int level(CommandContext<CommandSourceStack> ctx, ServerPlayer player, int value) {
+            CommandUtils.getSystem(ctx).setPlayerLevel(player.getUUID(), value);
+            CommandUtils.getSystem(ctx).getDarkmatterResourceManager().requestSync(player);
+            return info(ctx, player);
+        }
+
+        private static int phase(CommandContext<CommandSourceStack> ctx, ServerPlayer player, int points) {
+            if (!CommandUtils.getSystem(ctx).getDarkmatterResourceManager().setAlphaPoints(player, points)) {
+                ctx.getSource().sendFailure(Component.literal("Unable to set darkmatter phase points."));
+                return 0;
+            }
+            return info(ctx, player);
+        }
+
+        private static int pools(CommandContext<CommandSourceStack> ctx, ServerPlayer player,
+                                 float natural, float created, float debt, float reserved) {
+            if (!CommandUtils.getSystem(ctx).getDarkmatterResourceManager()
+                    .debugSetPools(player, natural, created, debt, reserved)) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "Unable to apply pools; check category, learned generation, CP and base capacity."));
+                return 0;
+            }
+            return info(ctx, player);
+        }
+
+        private static int gamma(CommandContext<CommandSourceStack> ctx, ServerPlayer player,
+                                 boolean active) {
+            if (!DarkmatterSixWings.Server.debugSetActive(player, active)) {
+                ctx.getSource().sendFailure(Component.literal("Unable to set γ state."));
+                return 0;
+            }
+            return info(ctx, player);
+        }
+
+        private static int proficiency(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+            var player = EntityArgument.getPlayer(ctx, "target");
+            var id = IdentifierArgument.getId(ctx, "skill");
+            var value = FloatArgumentType.getFloat(ctx, "value");
+            var skill = Registries.SKILLS.get(id).map(reference -> reference.value()).orElse(null);
+            if (skill == null || skill.getCategory() != org.academy.internal.common.ability.AbilityCategories.DARKMATTER.get()
+                    || !CommandUtils.getSystem(ctx).setPlayerSkillProficiency(player.getUUID(), skill, value)) {
+                ctx.getSource().sendFailure(Component.literal("Unable to set darkmatter proficiency for " + id));
+                return 0;
+            }
+            ctx.getSource().sendSuccess(() -> Component.literal("Set " + id + " proficiency to " + value), false);
+            return 1;
         }
     }
 
