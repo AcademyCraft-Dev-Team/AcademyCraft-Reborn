@@ -71,7 +71,7 @@ public final class PlatinumCosmosPass {
                 );
             }
             withModelView(modelViewMatrix,
-                    () -> IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(WORLD_STORAGE)));
+                    () -> dispatcher.renderAllFeatures(WORLD_STORAGE));
         } catch (Throwable throwable) {
             worldPassAvailable = false;
             if (WORLD_FAILURE_LOGGED.compareAndSet(false, true)) {
@@ -98,7 +98,7 @@ public final class PlatinumCosmosPass {
                     partialTick
             );
             if (submitted) {
-                IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(HAND_STORAGE));
+                dispatcher.renderAllFeatures(HAND_STORAGE);
             }
         } catch (Throwable throwable) {
             IrisCompat.markHandBridgeFailed(throwable);
@@ -126,11 +126,7 @@ public final class PlatinumCosmosPass {
                     poseStack, HIDDEN_HUD_STORAGE, player, packedLight, partialTick
             );
             if (submitted) {
-                if (mode == PlatinumCosmosRenderMode.EXACT) {
-                    IrisCompat.runWithBypass(() -> dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE));
-                } else {
-                    dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE);
-                }
+                dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE);
             }
         } catch (Throwable throwable) {
             hiddenHudPassAvailable = false;

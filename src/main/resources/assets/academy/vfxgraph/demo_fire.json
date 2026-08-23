@@ -1,0 +1,531 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "editor",
+  "parameters": [
+    {
+      "id": "fire_gradient",
+      "name": "Flame Color Gradient",
+      "type": "GRADIENT",
+      "default": {
+        "type": "GRADIENT",
+        "gradient": [
+          {
+            "p": 0.0,
+            "r": 1.0,
+            "g": 0.95,
+            "b": 0.6,
+            "a": 1.0
+          },
+          {
+            "p": 0.2,
+            "r": 1.0,
+            "g": 0.85,
+            "b": 0.3,
+            "a": 1.0
+          },
+          {
+            "p": 0.45,
+            "r": 1.0,
+            "g": 0.55,
+            "b": 0.1,
+            "a": 1.0
+          },
+          {
+            "p": 0.7,
+            "r": 0.85,
+            "g": 0.25,
+            "b": 0.03,
+            "a": 1.0
+          },
+          {
+            "p": 0.9,
+            "r": 0.5,
+            "g": 0.08,
+            "b": 0.0,
+            "a": 1.0
+          },
+          {
+            "p": 1.0,
+            "r": 0.2,
+            "g": 0.01,
+            "b": 0.0,
+            "a": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "fire_alpha",
+      "name": "Flame Alpha",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0.0,
+            "v": 0.6,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.15,
+            "v": 0.95,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.6,
+            "v": 0.8,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.85,
+            "v": 0.3,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1.0,
+            "v": 0.0,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fire_size",
+      "name": "Flame Size",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0.0,
+            "v": 0.6,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.3,
+            "v": 1.0,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.7,
+            "v": 0.95,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1.0,
+            "v": 0.4,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "smoke_alpha",
+      "name": "Smoke Alpha",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0.0,
+            "v": 0.2,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.35,
+            "v": 0.5,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.7,
+            "v": 0.35,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1.0,
+            "v": 0.0,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "smoke_size",
+      "name": "Smoke Size Growth",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0.0,
+            "v": 0.5,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.5,
+            "v": 1.1,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1.0,
+            "v": 2.4,
+            "it": 0.0,
+            "ot": 0.0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Spawn",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_core",
+          "type": "vfx.block.spawn_rate",
+          "properties": {
+            "lifetime": "0.8",
+            "shape": "disc",
+            "color": "1,0.97,0.75,1",
+            "size": "0.12",
+            "vx": "0",
+            "vy": "1.2",
+            "vz": "0",
+            "radius": "0.0",
+            "rate": "10",
+            "layer": "fire",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0"
+          }
+        },
+        {
+          "id": "spawn_flame",
+          "type": "vfx.block.spawn_rate",
+          "properties": {
+            "lifetime": "1.6",
+            "shape": "disc",
+            "color": "1,0.55,0.1,1",
+            "size": "0.35",
+            "vx": "0",
+            "vy": "0.9",
+            "vz": "0",
+            "radius": "0.0",
+            "rate": "10",
+            "layer": "fire",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0"
+          }
+        },
+        {
+          "id": "spawn_ember",
+          "type": "vfx.block.spawn_rate",
+          "properties": {
+            "color": "1,0.4,0.05,1",
+            "rate": "10",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0",
+            "size": "0.05",
+            "half_x": "1.0",
+            "lifetime": "2.0",
+            "radius": "0.0",
+            "shape": "disc",
+            "layer": "fire",
+            "vx": "0",
+            "vy": "1.6",
+            "vz": "0"
+          }
+        },
+        {
+          "id": "spawn_smoke",
+          "type": "vfx.block.spawn_rate",
+          "properties": {
+            "lifetime": "2.5",
+            "shape": "disc",
+            "color": "0.18,0.16,0.15,0.4",
+            "size": "0.5",
+            "vx": "0",
+            "vy": "0.45",
+            "vz": "0",
+            "radius": "0.0",
+            "rate": "2",
+            "layer": "smoke",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_init",
+      "type": "INITIALIZE",
+      "name": "Initialize",
+      "x": 440.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "init_vel_core",
+          "type": "vfx.block.init_velocity",
+          "properties": {
+            "vx": "0.05",
+            "vy": "1.2",
+            "vz": "0.05",
+            "random": "0.25"
+          }
+        },
+        {
+          "id": "rand_core",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "size": "0.3",
+            "lifetime": "0.2",
+            "pos": "0.04",
+            "vel": "0.2"
+          }
+        },
+        {
+          "id": "init_vel_flame",
+          "type": "vfx.block.init_velocity",
+          "properties": {
+            "vx": "0.04",
+            "vy": "0.9",
+            "vz": "0.04",
+            "random": "0.15"
+          }
+        },
+        {
+          "id": "rand_flame",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "size": "0.3",
+            "lifetime": "0.15",
+            "pos": "0.06",
+            "vel": "0.15"
+          }
+        },
+        {
+          "id": "init_vel_ember",
+          "type": "vfx.block.init_velocity",
+          "properties": {
+            "vx": "0.1",
+            "vy": "1.6",
+            "vz": "0.1",
+            "random": "0.4"
+          }
+        },
+        {
+          "id": "rand_ember",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "size": "0.3",
+            "lifetime": "0.15",
+            "pos": "0.04",
+            "vel": "0.3"
+          }
+        },
+        {
+          "id": "init_vel_smoke",
+          "type": "vfx.block.init_velocity",
+          "properties": {
+            "vx": "0.03",
+            "vy": "0.45",
+            "vz": "0.03",
+            "random": "0.2"
+          }
+        },
+        {
+          "id": "rand_smoke",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "size": "0.35",
+            "lifetime": "0.2",
+            "pos": "0.1",
+            "vel": "0.15"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Update",
+      "x": 880.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "buoy",
+          "type": "vfx.block.update_force",
+          "properties": {
+            "fy": "0.3",
+            "fz": "0",
+            "fx": "0"
+          }
+        },
+        {
+          "id": "turb",
+          "type": "vfx.block.update_turbulence",
+          "properties": {
+            "amplitude": "0.35",
+            "frequency": "1.5"
+          }
+        },
+        {
+          "id": "integ",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        },
+        {
+          "id": "life_color",
+          "type": "vfx.block.life_color",
+          "properties": {
+            "layer": "fire",
+            "gradient": "fire_gradient"
+          }
+        },
+        {
+          "id": "life_alpha_fire",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "layer": "fire",
+            "curve": "fire_alpha"
+          }
+        },
+        {
+          "id": "life_size_fire",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "layer": "fire",
+            "curve": "fire_size"
+          }
+        },
+        {
+          "id": "life_alpha_smoke",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "layer": "smoke",
+            "curve": "smoke_alpha"
+          }
+        },
+        {
+          "id": "life_size_smoke",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "layer": "smoke",
+            "curve": "smoke_size"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_out",
+      "type": "OUTPUT",
+      "name": "Output",
+      "x": 1320.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out",
+          "type": "vfx.block.output_quad_glow",
+          "properties": {
+            "blend": "glow",
+            "layer": "fire",
+            "vertex": "academy:core/vfxgraph_fire",
+            "shader": "academy:core/vfxgraph_fire"
+          }
+        },
+        {
+          "id": "out_smoke",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "blend": "translucent",
+            "layer": "smoke",
+            "vertex": "academy:core/vfxgraph_smoke",
+            "shader": "academy:core/vfxgraph_smoke"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx_spawn",
+      "to": "ctx_init"
+    },
+    {
+      "from": "ctx_init",
+      "to": "ctx_update"
+    },
+    {
+      "from": "ctx_update",
+      "to": "ctx_out"
+    }
+  ],
+  "blockFlows": [
+    {
+      "from": "spawn_core",
+      "to": "init_vel_core"
+    },
+    {
+      "from": "spawn_flame",
+      "to": "init_vel_flame"
+    },
+    {
+      "from": "spawn_ember",
+      "to": "init_vel_ember"
+    },
+    {
+      "from": "spawn_smoke",
+      "to": "init_vel_smoke"
+    }
+  ],
+  "dataEdges": [],
+  "outputs": [
+    "out",
+    "out_smoke"
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "editor",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Spawn",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "contact",
+          "type": "vfx.block.arc_contact",
+          "properties": {
+            "mesh": "builtin:plane",
+            "contact_mesh": "builtin:sphere",
+            "contact_range": "4.1",
+            "contact_origin_x": "0.52",
+            "contact_origin_y": "4.34",
+            "contact_origin_z": "0.38",
+            "density": "1.47",
+            "probability": "0.15",
+            "frequency": "1.0",
+            "frame_period": "1",
+            "fps": "30",
+            "height": "1.0",
+            "curve": "0.78",
+            "width": "0.008",
+            "segments": "12",
+            "lifetime": "0.2",
+            "color": "1.0,1.0,1.0,1",
+            "emission": "1.0",
+            "noise_strength": "0.5",
+            "drift_speed": "1.5",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_out",
+      "type": "OUTPUT",
+      "name": "Output",
+      "x": 440.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_glow",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "blend": "glow",
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_arc",
+            "sparks": "0",
+            "emission": "3.0",
+            "overall_scale": "1.0",
+            "segments": "12"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx_spawn",
+      "to": "ctx_out"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "out_glow"
+  ]
+}
