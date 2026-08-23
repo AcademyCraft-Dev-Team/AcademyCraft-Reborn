@@ -65,7 +65,9 @@ public class SpacialExcision extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
+        InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBindingMigratingDefaults(Client.KEY,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
+                                InputConstants.PRESS, InputConstants.MOD_ALT),
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                                 InputConstants.PRESS, InputConstants.MOD_ALT))
                 , ctx -> Client.onUse());

@@ -35,6 +35,7 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.util.L10n
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
+import org.academy.internal.common.ability.AbilityCategories
 import org.academy.internal.common.ability.Skills
 import org.joml.Vector3f
 import kotlin.math.abs
@@ -552,9 +553,14 @@ class AbilityInfoHud private constructor() {
 
                     val matter = object : LabelWidget("") {
                         override fun tick() {
+                            val isDarkmatter = AbilitySystemClient.getCategory() == AbilityCategories.DARKMATTER.get()
                             val maximum = AbilitySystemClient.getMaxMP()
-                            visibility = if (maximum > 0f) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
-                            if (maximum <= 0f) return
+                            visibility = if (isDarkmatter && maximum > 0f) {
+                                Widget.Visibility.VISIBLE
+                            } else {
+                                Widget.Visibility.GONE
+                            }
+                            if (!isDarkmatter || maximum <= 0f) return
                             val current = AbilitySystemClient.getCurrMP().roundToInt()
                             val maxValue = maximum.roundToInt()
                             text = "MP $current/$maxValue"
@@ -579,8 +585,12 @@ class AbilityInfoHud private constructor() {
 
             val phase = object : LabelWidget("") {
                 override fun tick() {
-                    visibility = if (AbilitySystemClient.getDarkmatterLevel() > 0)
-                        Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+                    val isDarkmatter = AbilitySystemClient.getCategory() == AbilityCategories.DARKMATTER.get()
+                    visibility = if (isDarkmatter && AbilitySystemClient.getDarkmatterLevel() > 0) {
+                        Widget.Visibility.VISIBLE
+                    } else {
+                        Widget.Visibility.GONE
+                    }
                     if (visibility == Widget.Visibility.VISIBLE) {
                         val alphaValue = (AbilitySystemClient.getDarkmatterAlpha() * 100f).roundToInt()
                         val betaValue = (AbilitySystemClient.getDarkmatterBeta() * 100f).roundToInt()
@@ -741,7 +751,12 @@ class AbilityInfoHud private constructor() {
                 .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
             var migratedLegacyBindings = false
 
-            fun hudBinding(name: String, key: Int, action: Int): InputSystem.KeyCombination {
+            fun hudBinding(
+                name: String,
+                key: Int,
+                action: Int,
+                vararg obsoleteDefaultKeys: Int
+            ): InputSystem.KeyCombination {
                 val defaultBinding = InputSystem.combo(
                     InputSystem.InputType.KEYBOARD,
                     key,
@@ -749,13 +764,15 @@ class AbilityInfoHud private constructor() {
                     0
                 )
                 val configured = config.getKeyBinding(name, defaultBinding)
+                val defaultKeys = obsoleteDefaultKeys.toSet() + key
                 val isLegacyDefault = configured.type == InputSystem.InputType.KEYBOARD
-                        && configured.keys == setOf(key)
+                        && configured.keys.size == 1
+                        && configured.keys.first() in defaultKeys
                         && configured.action == action
-                        && configured.modifiers == InputSystem.ANY_MODIFIER
+                        && (configured.modifiers == 0 || configured.modifiers == InputSystem.ANY_MODIFIER)
                         && !configured.availableWhenScreen
                         && !configured.unbound
-                if (!isLegacyDefault) return configured
+                if (!isLegacyDefault || configured == defaultBinding) return configured
                 config.setKeyBinding(name, defaultBinding)
                 migratedLegacyBindings = true
                 return defaultBinding
@@ -763,11 +780,21 @@ class AbilityInfoHud private constructor() {
 
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_UP,
-                hudBinding(KEY_NAME_WHEEL_UP, InputConstants.KEY_UP, InputConstants.PRESS)
+                hudBinding(
+                    KEY_NAME_WHEEL_UP,
+                    InputConstants.KEY_Z,
+                    InputConstants.PRESS,
+                    InputConstants.KEY_UP
+                )
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(-1) }
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_DOWN,
-                hudBinding(KEY_NAME_WHEEL_DOWN, InputConstants.KEY_DOWN, InputConstants.PRESS)
+                hudBinding(
+                    KEY_NAME_WHEEL_DOWN,
+                    InputConstants.KEY_X,
+                    InputConstants.PRESS,
+                    InputConstants.KEY_DOWN
+                )
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(1) }
             InputSystem.addKeyBinding(
                 KEY_NAME_RELEASE_SELECTED,
