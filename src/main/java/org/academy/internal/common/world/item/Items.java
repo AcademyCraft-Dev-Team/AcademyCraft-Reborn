@@ -19,6 +19,11 @@ public final class Items {
             ITEMS.registerItem("icon", Item::new);
     public static final DeferredHolder<Item, Item> DARKMATTER =
             ITEMS.registerItem("darkmatter", Item::new);
+    public static final DeferredHolder<Item, DarkmatterCoatingItem> DARKMATTER_COATING =
+            ITEMS.registerItem("darkmatter_coating", DarkmatterCoatingItem::new);
+    public static final DeferredHolder<Item, DarkmatterBlockItem> DARKMATTER_BLOCK =
+            ITEMS.registerItem("darkmatter_block", properties -> new DarkmatterBlockItem(
+                    Blocks.DARKMATTER_BLOCK.get(), properties));
     public static final DeferredHolder<Item, DarkmatterToolItem> DARKMATTER_TOOL =
             ITEMS.registerItem("darkmatter_tool", properties -> new DarkmatterToolItem(
                     properties.tool(

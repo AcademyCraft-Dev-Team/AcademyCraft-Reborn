@@ -1,8 +1,12 @@
 package org.academy.internal.common.ability.darkmatter.skills.lv4;
 
+import io.netty.buffer.Unpooled;
+import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class DarkmatterCreationTest {
     @Test
@@ -30,5 +34,34 @@ class DarkmatterCreationTest {
         assertEquals(80, DarkmatterCreation.gammaRepeatTicks(3));
         assertEquals(1.0f, DarkmatterCreation.swarmDamageMultiplier(3, 8), 0.0001f);
         org.junit.jupiter.api.Assertions.assertFalse(DarkmatterCreation.unlocksSwarmCommand(3));
+    }
+
+    @Test
+    void summonRequestCarriesTheEditedBlueprintAtomically() {
+        var expected = DarkmatterCreatureBlueprint.defaultFor(2, 5);
+        var buffer = Unpooled.buffer();
+        DarkmatterCreation.SummonPacket.CODEC.encode(buffer,
+                new DarkmatterCreation.SummonPacket(2, expected));
+        var decoded = DarkmatterCreation.SummonPacket.CODEC.decode(buffer);
+        assertEquals(2, decoded.slot);
+        assertNotNull(decoded.blueprint);
+        assertEquals(expected.name(), decoded.blueprint.name());
+        assertEquals(expected.investment(), decoded.blueprint.investment());
+
+        var quickBuffer = Unpooled.buffer();
+        DarkmatterCreation.SummonPacket.CODEC.encode(quickBuffer,
+                new DarkmatterCreation.SummonPacket(1));
+        assertNull(DarkmatterCreation.SummonPacket.CODEC.decode(quickBuffer).blueprint);
+    }
+
+    @Test
+    void everySummonFailureReasonRoundTripsToTheClient() {
+        for (var result : DarkmatterCreation.SummonResult.values()) {
+            var buffer = Unpooled.buffer();
+            DarkmatterCreation.SummonResultPacket.CODEC.encode(buffer,
+                    new DarkmatterCreation.SummonResultPacket(result));
+            assertEquals(result,
+                    DarkmatterCreation.SummonResultPacket.CODEC.decode(buffer).result);
+        }
     }
 }

@@ -15,6 +15,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
+import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.jspecify.annotations.Nullable;
 
 final class MentalControlProtection {
@@ -40,6 +41,7 @@ final class MentalControlProtection {
 
     static @Nullable Kind kind(LivingEntity subject) {
         if (subject == null) return Kind.IMMUNE_TAG;
+        if (subject instanceof DarkmatterBeetle) return Kind.DARKMATTER_NETWORK;
         if (subject.getType().builtInRegistryHolder().is(IMMUNE_ENTITY_TYPES)) return Kind.IMMUNE_TAG;
         if (!(subject instanceof ServerPlayer player)) return null;
         if (VectorReflection.Server.isActive(player) || VectorDeviation.Server.isActive(player)) {
@@ -83,6 +85,7 @@ final class MentalControlProtection {
         IMMUNE_TAG("message.academy.mentalout.protected_target"),
         VECTOR_FILTER("message.academy.mentalout.protected.vector_filter"),
         ELECTROMAGNETIC_FIELD("message.academy.mentalout.protected.electromagnetic_field"),
+        DARKMATTER_NETWORK("message.academy.mentalout.protected.darkmatter_network"),
         DARKMATTER_UNKNOWN("message.academy.mentalout.protected.darkmatter_unknown");
 
         private final String feedbackKey;

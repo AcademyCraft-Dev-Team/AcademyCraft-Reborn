@@ -8,6 +8,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.MaceItem;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
@@ -59,8 +65,16 @@ public final class DarkmatterItemUtil {
     }
 
     public static DarkmatterShape shape(ItemStack stack) {
-        return stack.getItem() instanceof DarkmatterShapedItem shaped
-                ? shaped.darkmatterShape() : DarkmatterShape.TOOL;
+        if (stack.getItem() instanceof DarkmatterShapedItem shaped) {
+            return shaped.darkmatterShape();
+        }
+        var item = stack.getItem();
+        if (item instanceof ArrowItem) return DarkmatterShape.ARROW;
+        if (item instanceof CrossbowItem) return DarkmatterShape.CROSSBOW;
+        if (item instanceof BowItem || item instanceof ProjectileWeaponItem) return DarkmatterShape.BOW;
+        if (item instanceof TridentItem) return DarkmatterShape.TRIDENT;
+        if (item instanceof MaceItem) return DarkmatterShape.MACE;
+        return DarkmatterShape.TOOL;
     }
 
     public static DarkmatterShapingProfile shapingProfile(ItemStack stack) {
@@ -76,7 +90,38 @@ public final class DarkmatterItemUtil {
     }
 
     public static int modifierLevel(ItemStack stack, String id) {
-        return isShapedItem(stack) ? shapingProfile(stack).modifierLevel(id) : 0;
+        var level = hasNativeItemEffects(stack) ? shapingProfile(stack).modifierLevel(id) : 0;
+        var coating = stack.get(ItemDataComponents.DARKMATTER_COATING_PROFILE.get());
+        return level + (coating == null ? 0 : coating.modifierLevel(id));
+    }
+
+    public static boolean hasCoating(ItemStack stack) {
+        return !stack.isEmpty() && stack.has(ItemDataComponents.DARKMATTER_COATING_PROFILE.get());
+    }
+
+    public static DarkmatterShapingProfile coatingProfile(ItemStack stack) {
+        return stack.getOrDefault(ItemDataComponents.DARKMATTER_COATING_PROFILE.get(),
+                DarkmatterShapingProfile.DEFAULT);
+    }
+
+    public static boolean hasNativeItemEffects(ItemStack stack) {
+        return isShapedItem(stack) && shape(stack).carriesActiveItemEffects();
+    }
+
+    public static boolean hasShapingEffects(ItemStack stack) {
+        return !stack.isEmpty() && (hasNativeItemEffects(stack) || hasCoating(stack));
+    }
+
+    public static float effectAlphaPower(ItemStack stack) {
+        var result = hasNativeItemEffects(stack) ? shapingProfile(stack).alphaPower() : 0.0f;
+        if (hasCoating(stack)) result += coatingProfile(stack).alphaPower();
+        return result;
+    }
+
+    public static float effectBetaPower(ItemStack stack) {
+        var result = hasNativeItemEffects(stack) ? shapingProfile(stack).betaPower() : 0.0f;
+        if (hasCoating(stack)) result += coatingProfile(stack).betaPower();
+        return result;
     }
 
     public static float integrity(ItemStack stack) {

@@ -13,6 +13,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
 import org.jspecify.annotations.Nullable;
 
@@ -46,6 +47,8 @@ public final class SkillDamageUtil {
 
     public static boolean applyDirect(ServerLevel level, LivingEntity target,
                                       SkillDamageSource source, float amount) {
+        if (DarkmatterTargeting.isNetworkMember(target)
+                && DarkmatterTargeting.isDarkmatterDamage(source)) return false;
         if (!(source.getEntity() instanceof ServerPlayer attacker)) return false;
         if (DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)) {
             return false;

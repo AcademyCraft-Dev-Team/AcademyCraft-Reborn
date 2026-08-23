@@ -14,7 +14,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
-import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
 import org.academy.internal.common.ability.Skills;
@@ -31,7 +30,6 @@ import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
-import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -42,17 +40,9 @@ import org.misaka.api.common.network.packet.PacketType;
 public final class PrecisionOperationManager {
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     private static final Map<UUID, CachedPrograms> COMPILED = new HashMap<>();
-    private static boolean clientInitialized;
     private static boolean serverInitialized;
 
     private PrecisionOperationManager() {
-    }
-
-    public static synchronized void initClient() {
-        if (clientInitialized) return;
-        clientInitialized = true;
-        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
-        NeoForge.EVENT_BUS.register(PrecisionOperationClient.class);
     }
 
     public static synchronized void initServer() {

@@ -17,10 +17,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -46,6 +42,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhaseTuning;
@@ -231,11 +228,7 @@ public final class DarkmatterRadiation extends Skill {
         }
 
         private static boolean isHostileTarget(ServerPlayer player, LivingEntity target) {
-            if (target == player || target instanceof Player || !target.isAlive()
-                    || target.isRemoved() || player.isAlliedTo(target)) return false;
-            if (target instanceof TamableAnimal tame && tame.isOwnedBy(player)) return false;
-            return target instanceof Enemy
-                    || target instanceof Mob mob && mob.getTarget() == player;
+            return DarkmatterTargeting.isEnemyTarget(player, target);
         }
 
         private static void pulse(ServerLevel level, ServerPlayer player, RadiationState state) {
@@ -279,7 +272,7 @@ public final class DarkmatterRadiation extends Skill {
                 target.invulnerableTime = 0;
                 var hit = false;
                 if (inAlpha) {
-                    hit = target.hurtServer(level, darkmatterSource,
+                    hit = DarkmatterTargeting.hurt(level, target, darkmatterSource,
                             alphaPulseDamage(phase.alpha()) * power * damageMultiplier);
                     var push = center.subtract(eye);
                     if (push.lengthSqr() > 1.0e-6) {
@@ -289,8 +282,9 @@ public final class DarkmatterRadiation extends Skill {
                 }
                 if (inBeta && target.isAlive()) {
                     target.invulnerableTime = 0;
-                    hit |= target.hurtServer(
+                    hit |= DarkmatterTargeting.hurt(
                             level,
+                            target,
                             darkmatterSource,
                             betaPulseDamage(phase.beta()) * power * damageMultiplier
                     );
@@ -315,7 +309,7 @@ public final class DarkmatterRadiation extends Skill {
                     if (exposure >= exposurePulseTicks(state.milestone)) {
                         state.exposure.put(target.getUUID(), 0);
                         target.invulnerableTime = 0;
-                        target.hurtServer(level, darkmatterSource,
+                        DarkmatterTargeting.hurt(level, target, darkmatterSource,
                                 exposureBurstDamage(phase.beta()));
                     }
                 }

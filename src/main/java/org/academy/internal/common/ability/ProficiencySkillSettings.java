@@ -1,15 +1,12 @@
 package org.academy.internal.common.ability;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.player.Player;
-import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
-import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -18,7 +15,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Set;
 
 public final class ProficiencySkillSettings {
@@ -29,7 +25,6 @@ public final class ProficiencySkillSettings {
             FLASHING_AUTO_ESCAPE
     );
     private static boolean serverInitialized;
-    private static boolean clientInitialized;
 
     private ProficiencySkillSettings() {
     }
@@ -55,49 +50,6 @@ public final class ProficiencySkillSettings {
         if (serverInitialized) return;
         serverInitialized = true;
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    public static void initClient() {
-        if (clientInitialized) return;
-        clientInitialized = true;
-        registerToggle(
-                Skills.DARKMATTER_SHAPING.get(),
-                "auto_repair",
-                "app.academy.skill_settings.advanced.darkmatter_auto_repair",
-                DARKMATTER_SHAPING_AUTO_REPAIR
-        );
-        registerToggle(
-                Skills.FLASHING.get(),
-                "auto_escape",
-                "app.academy.skill_settings.advanced.flashing_auto_escape",
-                FLASHING_AUTO_ESCAPE
-        );
-    }
-
-    private static void registerToggle(
-            org.academy.api.common.ability.Skill skill,
-            String id,
-            String labelKey,
-            String option
-    ) {
-        SkillSettingsRegistry.INSTANCE.register(
-                skill,
-                new SkillSettingsRegistry.Module(
-                        "proficiency",
-                        "",
-                        List.of(new SkillSettingsRegistry.Toggle(
-                                id,
-                                labelKey,
-                                () -> isEnabled(Minecraft.getInstance().player, option),
-                                enabled -> {
-                                    var player = Minecraft.getInstance().player;
-                                    if (player == null) return;
-                                    setEnabled(player, option, enabled);
-                                    MisakaNetworkClient.send(new SetPacket(option, enabled));
-                                }
-                        ))
-                )
-        );
     }
 
     public static final class Server {
