@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "demo_fountain",
+  "parameters": [
+    {
+      "id": "strength",
+      "name": "Strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.0
+      },
+      "min": 0.0,
+      "max": 5.0
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx0",
+      "type": "SPAWN",
+      "name": "Spawn",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "spawn",
+          "type": "vfx.block.spawn_rate",
+          "properties": {
+            "rate": "40",
+            "param": "",
+            "lifetime": "1.5",
+            "size": "0.15",
+            "color": "1,1,1,1",
+            "vx": "0",
+            "vy": "4",
+            "vz": "0",
+            "shape": "point",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx1",
+      "type": "INITIALIZE",
+      "name": "Initialize",
+      "x": 440,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "vel",
+          "type": "vfx.block.init_velocity",
+          "properties": {
+            "vx": "0",
+            "vy": "4",
+            "vz": "0",
+            "random": "0.5",
+            "param": "strength"
+          }
+        },
+        {
+          "id": "col",
+          "type": "vfx.block.init_color",
+          "properties": {
+            "color": "0.3,0.9,0.6,1",
+            "param": ""
+          }
+        },
+        {
+          "id": "life",
+          "type": "vfx.block.init_lifetime",
+          "properties": {
+            "lifetime": "1.5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx2",
+      "type": "UPDATE",
+      "name": "Update",
+      "x": 880,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "grav",
+          "type": "vfx.block.update_gravity",
+          "properties": {
+            "gravity": "-12",
+            "param": ""
+          }
+        },
+        {
+          "id": "integ",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        },
+        {
+          "id": "fade",
+          "type": "vfx.block.update_fade",
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "id": "ctx3",
+      "type": "OUTPUT",
+      "name": "Output",
+      "x": 1320,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "out",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "shader": "academy:core/vfxgraph_particle",
+            "blend": "translucent",
+            "vertex": "academy:core/vfxgraph_particle"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx0",
+      "to": "ctx1"
+    },
+    {
+      "from": "ctx1",
+      "to": "ctx2"
+    },
+    {
+      "from": "ctx2",
+      "to": "ctx3"
+    }
+  ],
+  "dataEdges": [],
+  "outputs": [
+    "out"
+  ]
+}

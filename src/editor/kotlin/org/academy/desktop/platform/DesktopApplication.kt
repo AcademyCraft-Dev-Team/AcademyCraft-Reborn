@@ -37,6 +37,9 @@ object DesktopApplication {
         RenderSystem.initRenderThread()
         Util.setTimeSource(RenderSystem.initBackendSystem())
 
+        // 着色器优先从项目源目录读取（配合 ShaderHotReload 实现热重载）
+        ClasspathShaderSource.sourceDir = environment.workingDir.resolve("src").resolve("main").resolve("resources")
+
         GLFW.glfwDefaultWindowHints()
         GLFW.glfwWindowHint(131088, GLFW.GLFW_TRUE)
 
@@ -133,7 +136,6 @@ object DesktopApplication {
         }
         window.close()
     }
-
     private fun configureSurface(surface: GpuSurface, window: Window) {
         val presentMode = GpuSurface.PresentMode.getSupportedVsyncMode(surface.supportedPresentModes(), true)
         surface.configure(GpuSurface.Configuration(window.width, window.height, presentMode))
@@ -162,6 +164,7 @@ object DesktopApplication {
             Render.RenderPipelines.MSDF_TEXT,
             Render.RenderPipelines.SDF_SHARP_MARGIN,
             Render.RenderPipelines.SKILL_PROGRESS,
+            Render.RenderPipelines.IMGUI,
         )
         for (pipeline in needed) {
             try {

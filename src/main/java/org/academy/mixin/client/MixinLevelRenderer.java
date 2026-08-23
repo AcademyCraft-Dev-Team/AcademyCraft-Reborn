@@ -16,8 +16,12 @@ import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxContexts;
 import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.api.client.render.vfxgraph.render.GraphCamera;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
+import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
+import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -47,6 +51,16 @@ public abstract class MixinLevelRenderer {
             CallbackInfo ci
     ) {
         VfxManager.INSTANCE.renderFrame();
+        var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        var target = mainTarget.getColorTextureView();
+        if (target != null) {
+            var graphCamera = GraphCamera.fromGameCamera(
+                    new Vector3f((float) cameraState.pos.x, (float) cameraState.pos.y, (float) cameraState.pos.z),
+                    new Matrix4f(cameraState.viewRotationMatrix),
+                    new Matrix4f(cameraState.projectionMatrix)
+            );
+            VfxGraphManager.INSTANCE.renderFrame(target, mainTarget.getDepthTextureView(), graphCamera);
+        }
         GlowEffect.getInstance().process();
         PostEffect.pre();
         PostEffect.post();
