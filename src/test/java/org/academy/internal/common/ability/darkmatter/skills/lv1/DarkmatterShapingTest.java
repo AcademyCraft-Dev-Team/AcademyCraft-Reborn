@@ -2,7 +2,9 @@ package org.academy.internal.common.ability.darkmatter.skills.lv1;
 
 import io.netty.buffer.Unpooled;
 import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
+import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.api.common.ability.darkmatter.DarkmatterShapingRegistries;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -93,6 +95,72 @@ class DarkmatterShapingTest {
                 DarkmatterShape.SWORD, Map.of("missing_extension", 1), 3, 0).valid());
         assertFalse(DarkmatterShaping.Server.validateModifiers(
                 DarkmatterShape.SWORD, Map.of(DarkmatterModifiers.EXPLOSIVE, 3), 1, 0).valid());
+
+        assertTrue(DarkmatterShaping.Server.validateModifiers(
+                DarkmatterShape.COATING,
+                Map.of(DarkmatterModifiers.HARVEST, 1,
+                        DarkmatterModifiers.TELEPORT_PROTECTION, 1), 5, 0).valid());
+        assertFalse(DarkmatterShaping.Server.validateModifiers(
+                DarkmatterShape.BLOCK,
+                Map.of(DarkmatterModifiers.STRUCTURAL_GUARD, 1), 3, 0).valid());
+    }
+
+    @Test
+    void shapesUseTheConfiguredAbilityLevelGates() {
+        assertEquals(1, DarkmatterShape.TOOL.requiredAbilityLevel());
+        assertEquals(1, DarkmatterShape.SWORD.requiredAbilityLevel());
+        assertEquals(1, DarkmatterShape.BLOCK.requiredAbilityLevel());
+        assertEquals(3, DarkmatterShape.SPEAR.requiredAbilityLevel());
+        assertEquals(3, DarkmatterShape.TRIDENT.requiredAbilityLevel());
+        assertEquals(4, DarkmatterShape.BOW.requiredAbilityLevel());
+        assertEquals(4, DarkmatterShape.CROSSBOW.requiredAbilityLevel());
+        assertEquals(4, DarkmatterShape.ARROW.requiredAbilityLevel());
+        assertEquals(4, DarkmatterShape.ARMOR.requiredAbilityLevel());
+        assertEquals(5, DarkmatterShape.COATING.requiredAbilityLevel());
+        assertEquals(5, DarkmatterShape.MACE.requiredAbilityLevel());
+
+        for (var shape : DarkmatterShape.values()) {
+            var below = Math.max(1, shape.requiredAbilityLevel() - 1);
+            if (below < shape.requiredAbilityLevel()) {
+                var result = DarkmatterShaping.Server.validateModifiers(
+                        shape, Map.of(), below, 0);
+                assertFalse(result.valid(), shape.id());
+                assertTrue(result.hasLevelGateError(), shape.id());
+            }
+            assertTrue(DarkmatterShaping.Server.validateModifiers(
+                    shape, Map.of(), shape.requiredAbilityLevel(), 0).valid(), shape.id());
+        }
+    }
+
+    @Test
+    void modifiersUseTheConfiguredAbilityLevelGates() {
+        DarkmatterModifiers.bootstrap();
+        assertModifierLevel(2, DarkmatterModifiers.HOLY, DarkmatterModifiers.DISMEMBER,
+                DarkmatterModifiers.SLAUGHTER, DarkmatterModifiers.DRYING,
+                DarkmatterModifiers.EXTINGUISH);
+        assertModifierLevel(3, DarkmatterModifiers.LUCKY, DarkmatterModifiers.PULL,
+                DarkmatterModifiers.KNOCKBACK, DarkmatterModifiers.ANTIGRAVITY);
+        assertModifierLevel(4, DarkmatterModifiers.TELEPORT_SUPPRESSION,
+                DarkmatterModifiers.TELEPORT_PROTECTION, DarkmatterModifiers.EXPLOSIVE,
+                DarkmatterModifiers.FREEZING, DarkmatterModifiers.BURNING,
+                DarkmatterModifiers.LIGHTNING, DarkmatterModifiers.REACH);
+        assertModifierLevel(5, DarkmatterModifiers.ECHO, DarkmatterModifiers.LAW_EROSION,
+                DarkmatterModifiers.FEATHER_PURSUIT, DarkmatterModifiers.STRUCTURAL_GUARD);
+        assertModifierLevel(1, DarkmatterModifiers.SHEAR, DarkmatterModifiers.HARVEST,
+                DarkmatterModifiers.TILL, DarkmatterModifiers.MAGNETIC,
+                DarkmatterModifiers.EDIBLE);
+
+        var locked = DarkmatterShaping.Server.validateModifiers(DarkmatterShape.TOOL,
+                Map.of(DarkmatterModifiers.EXPLOSIVE, 1), 3, 3);
+        assertFalse(locked.valid());
+        assertTrue(locked.hasLevelGateError());
+        assertTrue(DarkmatterShaping.Server.validateModifiers(DarkmatterShape.TOOL,
+                Map.of(DarkmatterModifiers.EXPLOSIVE, 1), 4, 3).valid());
+    }
+
+    private static void assertModifierLevel(int expected, String... ids) {
+        for (var id : ids) assertEquals(expected, DarkmatterShapingRegistries.modifier(id)
+                .orElseThrow().requiredAbilityLevel(), id);
     }
 
     @Test
@@ -115,5 +183,19 @@ class DarkmatterShapingTest {
             assertEquals(result,
                     DarkmatterShaping.ResultPacket.CODEC.decode(buffer).result());
         }
+    }
+
+    @Test
+    void blockShapingPacketRoundTripsItsPhysicalProfile() {
+        var expectedProfile = new DarkmatterBlockProfile(12.5f, 240.0f, true);
+        var expected = DarkmatterShaping.CastPacket.shape(
+                DarkmatterShape.BLOCK, 35, Map.of(), expectedProfile);
+        var buffer = Unpooled.buffer();
+        DarkmatterShaping.CastPacket.CODEC.encode(buffer, expected);
+        var decoded = DarkmatterShaping.CastPacket.CODEC.decode(buffer);
+
+        assertEquals(DarkmatterShape.BLOCK, decoded.shape());
+        assertEquals(35, decoded.alphaPercent());
+        assertEquals(expectedProfile, decoded.blockProfile());
     }
 }

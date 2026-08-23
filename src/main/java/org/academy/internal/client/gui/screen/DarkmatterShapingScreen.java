@@ -18,7 +18,9 @@ import org.academy.api.client.gui.widget.LinearLayoutWidget;
 import org.academy.api.client.gui.widget.ScrollBarWidget;
 import org.academy.api.client.gui.widget.ScrollPanelWidget;
 import org.academy.api.client.gui.widget.SeekBarWidget;
+import org.academy.api.client.gui.widget.ToggleButtonWidget;
 import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.api.common.ability.darkmatter.DarkmatterModifierType;
 import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
@@ -28,10 +30,12 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** Standalone Tinkers-style editor for native dark-matter equipment blueprints. */
+/** Standalone editor for native dark-matter equipment and material blueprints. */
 public final class DarkmatterShapingScreen extends UiScreen {
     private static final int PANEL_W = 392;
     private static final int PANEL_H = 210;
@@ -39,6 +43,8 @@ public final class DarkmatterShapingScreen extends UiScreen {
 
     private final Map<String, Integer> modifiers = new LinkedHashMap<>();
     private final Map<DarkmatterShape, ButtonWidget> shapeButtons = new LinkedHashMap<>();
+    private final List<Widget> phaseWidgets = new ArrayList<>();
+    private final List<Widget> blockWidgets = new ArrayList<>();
     private DarkmatterShape selectedShape = DarkmatterShape.TOOL;
     private int alphaPercent = 50;
     private LinearLayoutWidget modifierContent;
@@ -49,6 +55,13 @@ public final class DarkmatterShapingScreen extends UiScreen {
     private LabelWidget parametersLabel;
     private LabelWidget selectionLabel;
     private LabelWidget statusLabel;
+    private LabelWidget blockHardnessLabel;
+    private LabelWidget blockResistanceLabel;
+    private LabelWidget blockGravityLabel;
+    private ButtonWidget createButton;
+    private float blockHardness = DarkmatterBlockProfile.DEFAULT.hardness();
+    private float blockResistance = DarkmatterBlockProfile.DEFAULT.explosionResistance();
+    private boolean blockGravity = DarkmatterBlockProfile.DEFAULT.gravity();
     private boolean requestPending;
 
     public DarkmatterShapingScreen() {
@@ -107,10 +120,19 @@ public final class DarkmatterShapingScreen extends UiScreen {
                 .width(77).heightMode(SizeMode.WRAP_CONTENT));
         var index = 0;
         for (var shape : DarkmatterShape.values()) {
-            var button = textButton(Component.translatable(shape.translationKey()).getString(), 77, 18);
+            var unlocked = shape.isUnlockedAt(currentAbilityLevel());
+            var name = Component.translatable(shape.translationKey()).getString();
+            var button = textButton(unlocked ? name : Component.translatable(
+                    "screen.academy.darkmatter_shaping.locked.entry", name,
+                    shape.requiredAbilityLevel()).getString(), 77, 18);
             button.setOnClickListener(_ -> selectShape(shape));
-            button.setTooltipText(Component.translatable(
-                    "screen.academy.darkmatter_shaping.shape.tooltip", shape.baseMatterCost()).getString());
+            button.setEnabled(unlocked);
+            button.setAlpha(unlocked ? 1.0f : 0.34f);
+            button.setTooltipText((unlocked
+                    ? Component.translatable("screen.academy.darkmatter_shaping.shape.tooltip",
+                    shape.baseMatterCost())
+                    : Component.translatable("screen.academy.darkmatter_shaping.shape.tooltip.locked",
+                    shape.baseMatterCost(), shape.requiredAbilityLevel())).getString());
             shapeButtons.put(shape, button);
             content.addChild("shape_" + index++, button);
         }
@@ -143,11 +165,13 @@ public final class DarkmatterShapingScreen extends UiScreen {
         alphaLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(60, 10).gravity(Gravity.TOP_LEFT).margin(108, 67, 0, 0));
         panel.addChild("alpha", alphaLabel);
+        phaseWidgets.add(alphaLabel);
         betaLabel = new LabelWidget("");
         betaLabel.setBaseFontSize(7.0f);
         betaLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(60, 10).gravity(Gravity.TOP_RIGHT).margin(0, 67, 157, 0));
         panel.addChild("beta", betaLabel);
+        phaseWidgets.add(betaLabel);
 
         var slider = new SeekBarWidget();
         slider.setMin(0.0f);
@@ -169,12 +193,14 @@ public final class DarkmatterShapingScreen extends UiScreen {
             @Override public void onStopTrackingTouch(SeekBarWidget seekBar) { }
         });
         panel.addChild("phase_slider", slider);
+        phaseWidgets.add(slider);
 
         budgetLabel = new LabelWidget("");
         budgetLabel.setBaseFontSize(7.0f);
         budgetLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 10).gravity(Gravity.TOP_LEFT).margin(108, 100, 0, 0));
         panel.addChild("budget", budgetLabel);
+        phaseWidgets.add(budgetLabel);
         costLabel = new LabelWidget("");
         costLabel.setBaseFontSize(7.0f);
         costLabel.setAlpha(0.72f);
@@ -188,6 +214,83 @@ public final class DarkmatterShapingScreen extends UiScreen {
         parametersLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 48).gravity(Gravity.TOP_LEFT).margin(108, 130, 0, 0));
         panel.addChild("parameters", parametersLabel);
+
+        buildBlockEditor(panel);
+    }
+
+    private void buildBlockEditor(FrameLayoutWidget panel) {
+        blockHardnessLabel = new LabelWidget("");
+        blockHardnessLabel.setBaseFontSize(7.0f);
+        blockHardnessLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(128, 10).gravity(Gravity.TOP_LEFT).margin(108, 67, 0, 0));
+        panel.addChild("block_hardness_label", blockHardnessLabel);
+        blockWidgets.add(blockHardnessLabel);
+
+        var hardnessSlider = new SeekBarWidget();
+        hardnessSlider.setMin(DarkmatterBlockProfile.MIN_HARDNESS);
+        hardnessSlider.setMax(DarkmatterBlockProfile.MAX_HARDNESS);
+        hardnessSlider.setProgress(blockHardness);
+        hardnessSlider.setKeyProgressIncrement(1);
+        hardnessSlider.setBarColors(0x402A2A2A, ACCENT);
+        hardnessSlider.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(128, 6).gravity(Gravity.TOP_LEFT).margin(108, 80, 0, 0));
+        hardnessSlider.setOnSeekBarChangeListener(new SeekBarWidget.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBarWidget seekBar, float progress, boolean fromUser) {
+                blockHardness = Math.round(progress * 2.0f) / 2.0f;
+                refreshSummary();
+            }
+            @Override public void onStartTrackingTouch(SeekBarWidget seekBar) { }
+            @Override public void onStopTrackingTouch(SeekBarWidget seekBar) { }
+        });
+        panel.addChild("block_hardness_slider", hardnessSlider);
+        blockWidgets.add(hardnessSlider);
+
+        blockResistanceLabel = new LabelWidget("");
+        blockResistanceLabel.setBaseFontSize(7.0f);
+        blockResistanceLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(128, 10).gravity(Gravity.TOP_LEFT).margin(108, 92, 0, 0));
+        panel.addChild("block_resistance_label", blockResistanceLabel);
+        blockWidgets.add(blockResistanceLabel);
+
+        var resistanceSlider = new SeekBarWidget();
+        resistanceSlider.setMin(DarkmatterBlockProfile.MIN_EXPLOSION_RESISTANCE);
+        resistanceSlider.setMax(DarkmatterBlockProfile.MAX_EXPLOSION_RESISTANCE);
+        resistanceSlider.setProgress(blockResistance);
+        resistanceSlider.setKeyProgressIncrement(10);
+        resistanceSlider.setBarColors(0x402A2A2A, ACCENT);
+        resistanceSlider.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(128, 6).gravity(Gravity.TOP_LEFT).margin(108, 105, 0, 0));
+        resistanceSlider.setOnSeekBarChangeListener(new SeekBarWidget.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBarWidget seekBar, float progress, boolean fromUser) {
+                blockResistance = Math.round(progress / 10.0f) * 10.0f;
+                refreshSummary();
+            }
+            @Override public void onStartTrackingTouch(SeekBarWidget seekBar) { }
+            @Override public void onStopTrackingTouch(SeekBarWidget seekBar) { }
+        });
+        panel.addChild("block_resistance_slider", resistanceSlider);
+        blockWidgets.add(resistanceSlider);
+
+        blockGravityLabel = new LabelWidget("");
+        blockGravityLabel.setBaseFontSize(7.0f);
+        blockGravityLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(96, 12).gravity(Gravity.TOP_LEFT).margin(108, 132, 0, 0));
+        panel.addChild("block_gravity_label", blockGravityLabel);
+        blockWidgets.add(blockGravityLabel);
+
+        var gravityToggle = new ToggleButtonWidget();
+        gravityToggle.updateChecked(blockGravity);
+        gravityToggle.updateTrackColors(0x50FFFFFF, ACCENT);
+        gravityToggle.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(28, 10).gravity(Gravity.TOP_LEFT).margin(208, 130, 0, 0));
+        gravityToggle.updateOnCheckedChangeListener((_, checked) -> {
+            blockGravity = checked;
+            refreshSummary();
+        });
+        panel.addChild("block_gravity_toggle", gravityToggle);
+        blockWidgets.add(gravityToggle);
     }
 
     private void buildModifierList(FrameLayoutWidget panel) {
@@ -223,15 +326,19 @@ public final class DarkmatterShapingScreen extends UiScreen {
         statusLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 10).gravity(Gravity.BOTTOM_LEFT).margin(256, 0, 0, 12));
         panel.addChild("status", statusLabel);
-        var create = textButton(Component.translatable(
+        createButton = textButton(Component.translatable(
                 "screen.academy.darkmatter_shaping.create").getString(), 128, 18);
-        create.setOnClickListener(_ -> submit());
-        create.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+        createButton.setOnClickListener(_ -> submit());
+        createButton.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 18).gravity(Gravity.BOTTOM_LEFT).margin(108, 0, 0, 8));
-        panel.addChild("create", create);
+        panel.addChild("create", createButton);
     }
 
     private void selectShape(DarkmatterShape shape) {
+        if (!shape.isUnlockedAt(currentAbilityLevel())) {
+            showLevelRequirement(shape.requiredAbilityLevel());
+            return;
+        }
         selectedShape = shape;
         modifiers.entrySet().removeIf(entry -> DarkmatterShapingRegistries
                 .modifier(entry.getKey()).map(type -> !type.supports(shape)).orElse(true));
@@ -239,7 +346,12 @@ public final class DarkmatterShapingScreen extends UiScreen {
     }
 
     private void refreshAll() {
-        shapeButtons.forEach((shape, button) -> button.setSelected(shape == selectedShape));
+        shapeButtons.forEach((shape, button) -> {
+            var unlocked = shape.isUnlockedAt(currentAbilityLevel());
+            button.setSelected(unlocked && shape == selectedShape);
+            button.setEnabled(unlocked);
+            button.setAlpha(unlocked ? 1.0f : 0.34f);
+        });
         rebuildModifierRows();
         refreshSummary();
     }
@@ -250,6 +362,14 @@ public final class DarkmatterShapingScreen extends UiScreen {
         for (var type : DarkmatterShapingRegistries.modifiers()) {
             if (!type.supports(selectedShape)) continue;
             modifierContent.addChild("modifier_" + index++, modifierRow(type));
+        }
+        if (index == 0) {
+            var empty = new LabelWidget(Component.translatable(
+                    "screen.academy.darkmatter_shaping.modifiers.none").getString());
+            empty.setBaseFontSize(6.5f);
+            empty.setAlpha(0.6f);
+            empty.setLayoutParams(new LinearLayoutWidget.LayoutParams().size(114, 18));
+            modifierContent.addChild("modifier_empty", empty);
         }
     }
 
@@ -266,10 +386,18 @@ public final class DarkmatterShapingScreen extends UiScreen {
         row.addChild("minus", minus);
         var level = modifiers.getOrDefault(type.id(), 0);
         var name = Component.translatable(type.nameKey()).getString();
-        var text = new LabelWidget(name + (level > 0 ? "  " + level : ""));
+        var unlocked = type.isUnlockedAt(currentAbilityLevel());
+        var displayName = unlocked ? name : Component.translatable(
+                "screen.academy.darkmatter_shaping.locked.entry", name,
+                type.requiredAbilityLevel()).getString();
+        var text = new LabelWidget(displayName + (level > 0 ? "  " + level : ""));
         text.setBaseFontSize(6.5f);
-        text.setTooltipText(Component.translatable(type.descriptionKey()).getString());
-        text.setAlpha(level > 0 ? 1.0f : 0.68f);
+        text.setTooltipText((unlocked
+                ? Component.translatable("screen.academy.darkmatter_shaping.modifier.tooltip",
+                Component.translatable(type.descriptionKey()))
+                : Component.translatable("screen.academy.darkmatter_shaping.modifier.tooltip.locked",
+                Component.translatable(type.descriptionKey()), type.requiredAbilityLevel())).getString());
+        text.setAlpha(unlocked ? (level > 0 ? 1.0f : 0.68f) : 0.34f);
         text.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(78, 16).gravity(Gravity.CENTER));
         row.addChild("name", text);
@@ -277,11 +405,19 @@ public final class DarkmatterShapingScreen extends UiScreen {
         plus.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(16, 16).gravity(Gravity.CENTER_RIGHT).marginRight(1));
         plus.setOnClickListener(_ -> changeModifier(type, 1));
+        minus.setEnabled(unlocked);
+        plus.setEnabled(unlocked);
+        minus.setAlpha(unlocked ? 1.0f : 0.34f);
+        plus.setAlpha(unlocked ? 1.0f : 0.34f);
         row.addChild("plus", plus);
         return row;
     }
 
     private void changeModifier(DarkmatterModifierType type, int delta) {
+        if (!type.isUnlockedAt(currentAbilityLevel())) {
+            showLevelRequirement(type.requiredAbilityLevel());
+            return;
+        }
         var current = modifiers.getOrDefault(type.id(), 0);
         var next = Math.clamp(current + delta, 0, type.maxLevel());
         if (next > 0) {
@@ -307,6 +443,12 @@ public final class DarkmatterShapingScreen extends UiScreen {
 
     private void refreshSummary() {
         var validation = clientValidation(modifiers);
+        var blockMode = selectedShape == DarkmatterShape.BLOCK;
+        setGroupVisible(phaseWidgets, !blockMode);
+        setGroupVisible(blockWidgets, blockMode);
+        parametersLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(128, blockMode ? 30 : 48).gravity(Gravity.TOP_LEFT)
+                .margin(108, blockMode ? 148 : 130, 0, 0));
         selectionLabel.setText(Component.translatable(selectedShape.translationKey()).getString());
         alphaLabel.setText(Component.translatable(
                 "screen.academy.darkmatter_shaping.alpha", alphaPercent).getString());
@@ -321,7 +463,29 @@ public final class DarkmatterShapingScreen extends UiScreen {
         var cost = rawCost * (milestone >= 1 ? 0.9f : 1.0f);
         costLabel.setText(Component.translatable(
                 "screen.academy.darkmatter_shaping.cost", cost).getString());
+        blockHardnessLabel.setText(Component.translatable(
+                "screen.academy.darkmatter_shaping.block.hardness",
+                decimal(blockHardness)).getString());
+        blockResistanceLabel.setText(Component.translatable(
+                "screen.academy.darkmatter_shaping.block.explosion_resistance",
+                decimal(blockResistance)).getString());
+        blockGravityLabel.setText(Component.translatable(
+                "screen.academy.darkmatter_shaping.block.gravity",
+                Component.translatable(blockGravity
+                        ? "screen.academy.darkmatter_shaping.block.gravity.enabled"
+                        : "screen.academy.darkmatter_shaping.block.gravity.disabled")).getString());
         parametersLabel.setText(parameterText(previewProfile()));
+        if (createButton != null) {
+            createButton.setEnabled(!requestPending && validation.valid());
+            createButton.setAlpha(!requestPending && validation.valid() ? 1.0f : 0.34f);
+        }
+        if (!requestPending) {
+            var requiredLevel = firstLockedRequirement();
+            if (requiredLevel > 0) showLevelRequirement(requiredLevel);
+            else if (!validation.valid()) statusLabel.setText(Component.translatable(
+                    DarkmatterShaping.Result.INVALID_PROFILE.translationKey()).getString());
+            else statusLabel.setText("");
+        }
     }
 
     private DarkmatterShapingProfile previewProfile() {
@@ -365,7 +529,28 @@ public final class DarkmatterShapingScreen extends UiScreen {
                     "screen.academy.darkmatter_shaping.parameters.armor",
                     decimal(DarkmatterShaping.Server.armorReduction(alpha) * 100.0f),
                     DarkmatterShaping.Server.armorWeaknessTicks(beta)).getString();
+            case COATING -> Component.translatable(
+                    "screen.academy.darkmatter_shaping.parameters.coating",
+                    decimal(DarkmatterShaping.Server.phaseDamageBonus(alpha)),
+                    DarkmatterShaping.Server.toolEfficiency(alpha),
+                    DarkmatterShaping.Server.toolFortune(beta),
+                    decimal(DarkmatterShaping.Server.penetration(
+                            DarkmatterShape.TOOL, beta) * 100.0f)).getString();
+            case BLOCK -> Component.translatable(
+                    "screen.academy.darkmatter_shaping.parameters.block",
+                    decimal(blockHardness), decimal(blockResistance)).getString();
         };
+    }
+
+    private DarkmatterBlockProfile blockProfile() {
+        return new DarkmatterBlockProfile(blockHardness, blockResistance, blockGravity);
+    }
+
+    private static void setGroupVisible(List<Widget> widgets, boolean visible) {
+        for (var widget : widgets) {
+            widget.setVisibility(visible ? Widget.Visibility.VISIBLE : Widget.Visibility.GONE);
+            widget.setEnabled(visible);
+        }
     }
 
     private static String decimal(float value) {
@@ -379,7 +564,34 @@ public final class DarkmatterShapingScreen extends UiScreen {
         requestPending = true;
         statusLabel.setText(Component.translatable(
                 "screen.academy.darkmatter_shaping.status.waiting").getString());
-        DarkmatterShaping.Client.shape(selectedShape, alphaPercent, modifiers);
+        if (createButton != null) {
+            createButton.setEnabled(false);
+            createButton.setAlpha(0.34f);
+        }
+        DarkmatterShaping.Client.shape(selectedShape, alphaPercent, modifiers, blockProfile());
+    }
+
+    private int firstLockedRequirement() {
+        if (!selectedShape.isUnlockedAt(currentAbilityLevel())) {
+            return selectedShape.requiredAbilityLevel();
+        }
+        for (var entry : modifiers.entrySet()) {
+            if (entry.getValue() <= 0) continue;
+            var type = DarkmatterShapingRegistries.modifier(entry.getKey()).orElse(null);
+            if (type != null && !type.isUnlockedAt(currentAbilityLevel())) {
+                return type.requiredAbilityLevel();
+            }
+        }
+        return 0;
+    }
+
+    private void showLevelRequirement(int requiredLevel) {
+        if (statusLabel != null) statusLabel.setText(Component.translatable(
+                "screen.academy.darkmatter_shaping.locked.level", requiredLevel).getString());
+    }
+
+    private static int currentAbilityLevel() {
+        return Math.clamp(AbilitySystemClient.getDarkmatterLevel(), 1, 5);
     }
 
     public void acceptServerResult(DarkmatterShaping.Result result) {
@@ -392,6 +604,7 @@ public final class DarkmatterShapingScreen extends UiScreen {
             Minecraft.getInstance().gui.setScreen(null);
             return;
         }
+        refreshSummary();
         statusLabel.setText(Component.translatable(result.translationKey()).getString());
     }
 

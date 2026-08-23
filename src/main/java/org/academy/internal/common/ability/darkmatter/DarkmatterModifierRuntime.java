@@ -66,24 +66,24 @@ public final class DarkmatterModifierRuntime {
     private static final Identifier ENTITY_REACH_ID = AcademyCraft.academy("shaping_entity_reach");
     private static final Identifier PROJECTILE_PENETRATION_ID =
             AcademyCraft.academy("shaping_projectile_penetration");
-    private static final TagKey<Block> TCONSTRUCT_CROPS = TagKey.create(
-            Registries.BLOCK, Identifier.fromNamespaceAndPath("tconstruct", "harvestable/crops"));
-    private static final TagKey<Block> TCONSTRUCT_INTERACT = TagKey.create(
-            Registries.BLOCK, Identifier.fromNamespaceAndPath("tconstruct", "harvestable/interact"));
-    private static final TagKey<Block> TCONSTRUCT_STACKABLE = TagKey.create(
-            Registries.BLOCK, Identifier.fromNamespaceAndPath("tconstruct", "harvestable/stackable"));
-    private static final TagKey<net.minecraft.world.item.Item> TCONSTRUCT_SEEDS = TagKey.create(
-            Registries.ITEM, Identifier.fromNamespaceAndPath("tconstruct", "seeds"));
+    private static final TagKey<Block> ADDITIONAL_HARVESTABLE_CROPS = TagKey.create(
+            Registries.BLOCK, AcademyCraft.academy("darkmatter_harvestable/crops"));
+    private static final TagKey<Block> INTERACT_HARVESTABLES = TagKey.create(
+            Registries.BLOCK, AcademyCraft.academy("darkmatter_harvestable/interact"));
+    private static final TagKey<Block> STACKABLE_HARVESTABLES = TagKey.create(
+            Registries.BLOCK, AcademyCraft.academy("darkmatter_harvestable/stackable"));
+    private static final TagKey<net.minecraft.world.item.Item> HARVEST_REPLANT_ITEMS = TagKey.create(
+            Registries.ITEM, AcademyCraft.academy("darkmatter_harvestable/replant_items"));
     private static final Map<UUID, Long> TELEPORT_SUPPRESSED_UNTIL = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> MAGNETIC_UNTIL = new ConcurrentHashMap<>();
 
     private DarkmatterModifierRuntime() { }
 
     public static void applyMelee(ServerPlayer attacker, LivingEntity target, ItemStack weapon) {
-        if (!usable(weapon) || target == attacker || attacker.isAlliedTo(target)) return;
-        var profile = DarkmatterItemUtil.shapingProfile(weapon);
-        applyTargetEffects(attacker, target, weapon, profile.betaPower(), false);
-        if (profile.modifierLevel(DarkmatterModifiers.MAGNETIC) > 0) {
+        if (!usable(weapon) || !DarkmatterTargeting.isAttackableBy(attacker, target)) return;
+        applyTargetEffects(attacker, target, weapon,
+                DarkmatterItemUtil.effectBetaPower(weapon), false);
+        if (DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.MAGNETIC) > 0) {
             MAGNETIC_UNTIL.put(attacker.getUUID(), attacker.level().getGameTime() + 30L);
         }
     }
@@ -91,8 +91,8 @@ public final class DarkmatterModifierRuntime {
     private static void applyTargetEffects(ServerPlayer attacker, LivingEntity target,
                                            ItemStack weapon, float betaPower,
                                            boolean projectile) {
-        var profile = DarkmatterItemUtil.shapingProfile(weapon);
-        var suppression = profile.modifierLevel(DarkmatterModifiers.TELEPORT_SUPPRESSION);
+        var suppression = DarkmatterItemUtil.modifierLevel(
+                weapon, DarkmatterModifiers.TELEPORT_SUPPRESSION);
         if (suppression > 0) {
             TELEPORT_SUPPRESSED_UNTIL.put(target.getUUID(),
                     target.level().getGameTime() + suppression * 100L);
@@ -101,55 +101,57 @@ public final class DarkmatterModifierRuntime {
         var extraDamage = creatureBonus(target, weapon);
         if (extraDamage > 0.0f && target.level() instanceof ServerLevel level) {
             target.invulnerableTime = 0;
-            target.hurtServer(level, SkillDamageSource.of(attacker,
+            DarkmatterTargeting.hurt(level, target, SkillDamageSource.of(attacker,
                     Skills.DARKMATTER_SHAPING.get()), extraDamage);
         }
 
-        var freezing = profile.modifierLevel(DarkmatterModifiers.FREEZING);
+        var freezing = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.FREEZING);
         if (freezing > 0) {
             target.setTicksFrozen(Math.max(target.getTicksFrozen(), 80 + freezing * 60));
             target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                     net.minecraft.world.effect.MobEffects.SLOWNESS, 40 + freezing * 40,
                     Math.max(0, freezing - 1)));
         }
-        var burning = profile.modifierLevel(DarkmatterModifiers.BURNING);
+        var burning = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.BURNING);
         if (burning > 0) target.setRemainingFireTicks(Math.max(
                 target.getRemainingFireTicks(), burning * 80));
 
-        var law = profile.modifierLevel(DarkmatterModifiers.LAW_EROSION);
+        var law = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.LAW_EROSION);
         if (law > 0) DarkmatterLawMark.apply(attacker, target,
                 Math.max(betaPower, law * 0.5f), 60 + law * 40);
 
-        var pull = profile.modifierLevel(DarkmatterModifiers.PULL);
-        var knockback = profile.modifierLevel(DarkmatterModifiers.KNOCKBACK);
+        var pull = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.PULL);
+        var knockback = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.KNOCKBACK);
         if (pull > 0) moveTarget(target,
                 attacker.position().subtract(target.position()), 0.38 * pull * 2.0);
         else if (knockback > 0) moveTarget(target,
                 target.position().subtract(attacker.position()), 0.38 * knockback);
 
-        var teleportProtection = profile.modifierLevel(DarkmatterModifiers.TELEPORT_PROTECTION);
+        var teleportProtection = DarkmatterItemUtil.modifierLevel(
+                weapon, DarkmatterModifiers.TELEPORT_PROTECTION);
         if (projectile && teleportProtection > 0) {
             randomTeleport(target, 16 + 8 * (teleportProtection - 1));
         }
 
-        var explosion = profile.modifierLevel(DarkmatterModifiers.EXPLOSIVE);
+        var explosion = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.EXPLOSIVE);
         if (explosion > 0) target.level().explode(attacker, target.getX(), target.getY(),
                 target.getZ(), 1.0f + 0.65f * explosion, Level.ExplosionInteraction.NONE);
 
-        var echo = profile.modifierLevel(DarkmatterModifiers.ECHO);
+        var echo = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.ECHO);
         if (echo > 0 && target.level() instanceof ServerLevel level) {
             var source = SkillDamageSource.of(attacker, Skills.DARKMATTER_SHAPING.get());
-            var damage = 0.75f * echo + 0.25f * profile.alphaPower();
+            var damage = 0.75f * echo
+                    + 0.25f * DarkmatterItemUtil.effectAlphaPower(weapon);
             for (var nearby : level.getEntitiesOfClass(LivingEntity.class,
                     target.getBoundingBox().inflate(3.0), candidate -> candidate != attacker
                             && candidate != target && candidate.isAlive()
-                            && !attacker.isAlliedTo(candidate))) {
+                            && DarkmatterTargeting.isAttackableBy(attacker, candidate))) {
                 nearby.invulnerableTime = 0;
-                nearby.hurtServer(level, source, damage);
+                DarkmatterTargeting.hurt(level, nearby, source, damage);
             }
         }
 
-        var lightning = profile.modifierLevel(DarkmatterModifiers.LIGHTNING);
+        var lightning = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.LIGHTNING);
         if (lightning > 0 && target.level() instanceof ServerLevel level
                 && level.getRandom().nextFloat() < 0.10f * lightning) {
             var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(
@@ -161,7 +163,8 @@ public final class DarkmatterModifierRuntime {
             }
         }
 
-        var feathers = profile.modifierLevel(DarkmatterModifiers.FEATHER_PURSUIT);
+        var feathers = DarkmatterItemUtil.modifierLevel(
+                weapon, DarkmatterModifiers.FEATHER_PURSUIT);
         if (feathers > 0 && target.level() instanceof ServerLevel level) {
             for (var index = 0; index < feathers; index++) {
                 var feather = org.academy.internal.common.world.entity.EntityTypes
@@ -171,28 +174,28 @@ public final class DarkmatterModifierRuntime {
                 var angle = Math.PI * 2.0 * index / Math.max(1, feathers);
                 feather.configure(attacker, target,
                         new Vec3(Math.cos(angle), 0.1, Math.sin(angle)),
-                        0.5f + 0.35f * profile.alphaPower(), 0.0f);
+                        0.5f + 0.35f * DarkmatterItemUtil.effectAlphaPower(weapon), 0.0f);
                 level.addFreshEntity(feather);
             }
         }
     }
 
     private static float creatureBonus(LivingEntity target, ItemStack weapon) {
-        var profile = DarkmatterItemUtil.shapingProfile(weapon);
         var level = 0;
         if (target.getType().builtInRegistryHolder().is(EntityTypeTags.UNDEAD)) {
-            level = profile.modifierLevel(DarkmatterModifiers.HOLY);
+            level = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.HOLY);
         } else if (target.getType().builtInRegistryHolder().is(EntityTypeTags.ARTHROPOD)) {
-            level = profile.modifierLevel(DarkmatterModifiers.DISMEMBER);
+            level = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.DISMEMBER);
         } else if (target instanceof Player || target instanceof Villager
                 || target instanceof AbstractIllager) {
-            level = profile.modifierLevel(DarkmatterModifiers.SLAUGHTER);
+            level = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.SLAUGHTER);
         } else if (target.getType().builtInRegistryHolder().is(EntityTypeTags.AQUATIC)) {
-            level = profile.modifierLevel(DarkmatterModifiers.DRYING);
+            level = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.DRYING);
         } else if (target.fireImmune()) {
-            level = profile.modifierLevel(DarkmatterModifiers.EXTINGUISH);
+            level = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.EXTINGUISH);
         }
-        return level <= 0 ? 0.0f : level * (1.5f + 0.25f * profile.alphaPower());
+        return level <= 0 ? 0.0f : level
+                * (1.5f + 0.25f * DarkmatterItemUtil.effectAlphaPower(weapon));
     }
 
     private static void moveTarget(LivingEntity target, Vec3 direction, double strength) {
@@ -204,7 +207,8 @@ public final class DarkmatterModifierRuntime {
     }
 
     private static boolean usable(ItemStack stack) {
-        return DarkmatterItemUtil.isShapedItem(stack) && DarkmatterItemUtil.isOperational(stack);
+        return DarkmatterItemUtil.hasShapingEffects(stack)
+                && DarkmatterItemUtil.isOperational(stack);
     }
 
     private static ItemStack projectileSource(Projectile projectile) {
@@ -248,10 +252,10 @@ public final class DarkmatterModifierRuntime {
             var hit = event.getRayTraceResult();
             if (hit instanceof EntityHitResult entityHit
                     && entityHit.getEntity() instanceof LivingEntity target
-                    && target != owner && !owner.isAlliedTo(target)) {
+                    && DarkmatterTargeting.isAttackableBy(owner, target)) {
                 applyProjectilePhase(owner, target, source);
                 applyTargetEffects(owner, target, source,
-                        DarkmatterItemUtil.shapingProfile(source).betaPower(), true);
+                        DarkmatterItemUtil.effectBetaPower(source), true);
                 if (DarkmatterItemUtil.modifierLevel(source, DarkmatterModifiers.MAGNETIC) > 0) {
                     MAGNETIC_UNTIL.put(owner.getUUID(), owner.level().getGameTime() + 30L);
                 }
@@ -274,7 +278,7 @@ public final class DarkmatterModifierRuntime {
                     || !DarkmatterItemUtil.isOperational(held)
                     || !shearable.readyForShearing()) return;
             shearable.shear((ServerLevel) player.level(), SoundSource.PLAYERS, held);
-            DarkmatterItemUtil.damageIntegrity(held, 1.0f / 12_000.0f);
+            damageForUse(player, held, event.getHand(), 1);
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.SUCCESS);
         }
@@ -286,8 +290,8 @@ public final class DarkmatterModifierRuntime {
             if (!usable(held)) return;
             var harvest = DarkmatterItemUtil.modifierLevel(held, DarkmatterModifiers.HARVEST);
             var till = DarkmatterItemUtil.modifierLevel(held, DarkmatterModifiers.TILL);
-            var changed = harvest > 0 && harvest(player, held, event.getPos(), harvest,
-                    event.getHitVec());
+            var changed = harvest > 0 && harvest(player, held, event.getHand(),
+                    event.getPos(), harvest, event.getHitVec());
             if (!changed && till > 0) {
                 var radius = Math.max(0, till - 1);
                 for (var x = -radius; x <= radius; x++) for (var z = -radius; z <= radius; z++) {
@@ -312,7 +316,7 @@ public final class DarkmatterModifierRuntime {
             if (!usable(held)
                     || DarkmatterItemUtil.modifierLevel(held, DarkmatterModifiers.EDIBLE) <= 0
                     || !player.getFoodData().needsFood()) return;
-            if (!DarkmatterItemUtil.damageIntegrity(held, 15.0f / 12_000.0f)) return;
+            if (!damageForUse(player, held, event.getHand(), 15)) return;
             player.getFoodData().eat(1, 0.1f);
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.SUCCESS);
@@ -357,16 +361,16 @@ public final class DarkmatterModifierRuntime {
     ) {
         var shape = DarkmatterItemUtil.shape(source);
         if (!shape.isRanged()) return;
-        var profile = DarkmatterItemUtil.shapingProfile(source);
-        var damage = DarkmatterShaping.Server.phaseDamageBonus(profile.alphaPower())
+        var damage = DarkmatterShaping.Server.phaseDamageBonus(
+                DarkmatterItemUtil.effectAlphaPower(source))
                 * AbilitySystemServer.getSystem(owner)
                 .getPlayerDamageMultiplier(owner.getUUID());
         if (!(damage > 0.0f)) return;
         var penetration = DarkmatterShaping.Server.penetration(
-                shape, profile.betaPower());
+                shape, DarkmatterItemUtil.effectBetaPower(source));
         var armor = target.getAttribute(Attributes.ARMOR);
         if (armor == null || penetration <= 0.0f) {
-            target.hurtServer((ServerLevel) owner.level(),
+            DarkmatterTargeting.hurt((ServerLevel) owner.level(), target,
                     SkillDamageSource.of(owner, Skills.DARKMATTER_SHAPING.get()), damage);
             return;
         }
@@ -377,7 +381,7 @@ public final class DarkmatterModifierRuntime {
                 -Math.clamp(penetration, 0.0f, 0.50f),
                 AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         try {
-            target.hurtServer((ServerLevel) owner.level(),
+            DarkmatterTargeting.hurt((ServerLevel) owner.level(), target,
                     SkillDamageSource.of(owner, Skills.DARKMATTER_SHAPING.get()), damage);
         } finally {
             armor.removeModifier(PROJECTILE_PENETRATION_ID);
@@ -385,7 +389,8 @@ public final class DarkmatterModifierRuntime {
         }
     }
 
-    private static boolean harvest(ServerPlayer player, ItemStack held, BlockPos center,
+    private static boolean harvest(ServerPlayer player, ItemStack held,
+                                   net.minecraft.world.InteractionHand hand, BlockPos center,
                                    int level, BlockHitResult originalHit) {
         var changed = false;
         var radius = level;
@@ -393,25 +398,26 @@ public final class DarkmatterModifierRuntime {
         for (var x = -radius; x <= radius; x++) for (var z = -radius; z <= radius; z++) {
             var pos = center.offset(x, 0, z);
             var state = world.getBlockState(pos);
-            if (state.is(TCONSTRUCT_INTERACT)) {
+            if (state.is(INTERACT_HARVESTABLES)) {
                 changed |= state.useWithoutItem(world, player,
                         new BlockHitResult(Vec3.atCenterOf(pos), originalHit.getDirection(),
                                 pos, false)).consumesAction();
                 continue;
             }
-            if (state.is(TCONSTRUCT_STACKABLE)) {
+            if (state.is(STACKABLE_HARVESTABLES)) {
                 var bottom = pos;
-                while (world.getBlockState(bottom.below()).is(TCONSTRUCT_STACKABLE)) {
+                while (world.getBlockState(bottom.below()).is(STACKABLE_HARVESTABLES)) {
                     bottom = bottom.below();
                 }
                 var second = bottom.above();
-                if (world.getBlockState(second).is(TCONSTRUCT_STACKABLE)) {
+                if (world.getBlockState(second).is(STACKABLE_HARVESTABLES)) {
                     changed |= player.gameMode.destroyBlock(second);
                 }
                 continue;
             }
             var crop = state.getBlock() instanceof CropBlock cropBlock && cropBlock.isMaxAge(state);
-            if (!(crop || state.is(TCONSTRUCT_CROPS) || state.is(BlockTags.CROPS))) continue;
+            if (!(crop || state.is(ADDITIONAL_HARVESTABLE_CROPS)
+                    || state.is(BlockTags.CROPS))) continue;
             if (!player.gameMode.destroyBlock(pos)) continue;
             changed = true;
             if (consumeNearbySeed(world, pos)) {
@@ -420,14 +426,27 @@ public final class DarkmatterModifierRuntime {
                         : state.getBlock().defaultBlockState(), 3);
             }
         }
-        if (changed) DarkmatterItemUtil.damageIntegrity(held, 1.0f / 12_000.0f);
+        if (changed) damageForUse(player, held, hand, 1);
         return changed;
+    }
+
+    private static boolean damageForUse(ServerPlayer player, ItemStack stack,
+                                        net.minecraft.world.InteractionHand hand, int amount) {
+        if (DarkmatterItemUtil.isNativeEquipment(stack)) {
+            return DarkmatterItemUtil.damageIntegrity(stack, amount / 12_000.0f);
+        }
+        // Coatings also support normally indestructible targets. Such targets keep their
+        // vanilla durability semantics while still receiving the configured active effect.
+        if (!stack.isDamageableItem()) return true;
+        stack.hurtAndBreak(amount, player, hand == net.minecraft.world.InteractionHand.MAIN_HAND
+                ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+        return true;
     }
 
     private static boolean consumeNearbySeed(ServerLevel level, BlockPos pos) {
         for (var item : level.getEntitiesOfClass(ItemEntity.class,
                 new net.minecraft.world.phys.AABB(pos).inflate(1.5), entity ->
-                        entity.isAlive() && entity.getItem().is(TCONSTRUCT_SEEDS))) {
+                        entity.isAlive() && entity.getItem().is(HARVEST_REPLANT_ITEMS))) {
             item.getItem().shrink(1);
             if (item.getItem().isEmpty()) item.discard();
             return true;

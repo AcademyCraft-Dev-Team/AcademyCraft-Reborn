@@ -36,7 +36,6 @@ import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeC
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
-import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -74,16 +73,9 @@ public final class AbilityProgramManager {
             TeleportProgramNodeCatalog.TELEPORT,
             AbilityProgramManager::executeTeleport
     );
-    private static boolean clientInitialized;
     private static boolean serverInitialized;
 
     private AbilityProgramManager() {
-    }
-
-    public static synchronized void initClient() {
-        if (clientInitialized) return;
-        clientInitialized = true;
-        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
     }
 
     public static synchronized void initServer() {

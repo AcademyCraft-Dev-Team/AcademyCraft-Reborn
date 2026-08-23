@@ -8,6 +8,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -164,6 +165,17 @@ public final class DarkmatterCreation extends Skill {
         public static void handle(RosterDeltaPacket packet) {
             DarkmatterCreationScreen.acceptRosterDelta(packet);
         }
+
+        @SubscribePacket
+        public static void handle(SummonResultPacket packet) {
+            var minecraft = Minecraft.getInstance();
+            if (minecraft.gui.screen() instanceof DarkmatterCreationScreen) {
+                DarkmatterCreationScreen.acceptSummonResult(packet);
+            } else if (minecraft.player != null) {
+                minecraft.player.sendOverlayMessage(Component.translatable(
+                        packet.result.translationKey()));
+            }
+        }
     }
 
     public static final class Server {
@@ -185,7 +197,12 @@ public final class DarkmatterCreation extends Skill {
             sendSnapshot(player);
         }
         @SubscribePacket public static void handle(SummonPacket packet) {
-            summon(player(packet), packet.slot);
+            var player = player(packet);
+            var result = prepareAndSummon(player, packet.slot, packet.blueprint);
+            if (player != null) {
+                sendSnapshot(player);
+                MisakaNetworkServer.send(player, new SummonResultPacket(result));
+            }
         }
         @SubscribePacket public static void handle(DismantlePacket packet) {
             var player = player(packet);
@@ -210,45 +227,99 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static void summonSelected(ServerPlayer player) {
-            if (!isUsable(player)) return;
+            if (player == null) return;
             var slot = data(player).map(DarkmatterCreationData::getSelectedSlot).orElse(0);
-            summon(player, slot);
+            var result = prepareAndSummon(player, slot, null);
+            sendSnapshot(player);
+            MisakaNetworkServer.send(player, new SummonResultPacket(result));
         }
 
-        private static void summon(ServerPlayer player, int slot) {
-            if (!isUsable(player) || !(player.level() instanceof ServerLevel level)) return;
-            var data = data(player).orElse(null);
-            if (data == null || data.getSummons().size() >= MAX_CREATURES) return;
+        private static SummonResult prepareAndSummon(ServerPlayer player, int slot,
+                                                      DarkmatterCreatureBlueprint submitted) {
+            if (!isUsable(player) || !(player.level() instanceof ServerLevel level)) {
+                return SummonResult.UNAVAILABLE;
+            }
             var abilityLevel = abilityLevel(player);
             var normalizedSlot = Math.clamp(slot, 0, DarkmatterCreationData.BLUEPRINT_SLOTS - 1);
+            if (submitted != null) {
+                if (!submitted.validate(abilityLevel).isEmpty()) {
+                    return SummonResult.INVALID_BLUEPRINT;
+                }
+                updateData(player, data -> data.setBlueprint(
+                        normalizedSlot, submitted, abilityLevel));
+            }
+            return summon(player, level, normalizedSlot, abilityLevel);
+        }
+
+        private static SummonResult summon(ServerPlayer player, ServerLevel level,
+                                           int normalizedSlot, int abilityLevel) {
+            var data = data(player).orElse(null);
+            if (data == null) return SummonResult.UNAVAILABLE;
+            if (data.getSummons().size() >= MAX_CREATURES) return SummonResult.LIMIT_REACHED;
             var blueprint = data.getBlueprint(normalizedSlot, abilityLevel);
-            if (!blueprint.validate(abilityLevel).isEmpty()) { sendSnapshot(player); return; }
-            var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            if (!blueprint.validate(abilityLevel).isEmpty()) return SummonResult.INVALID_BLUEPRINT;
+            var system = AbilitySystemServer.getSystem(player);
+            var resource = system.getDarkmatterResourceManager();
             var investment = blueprint.investment();
             var view = resource.getView(player);
             if (data.getSummons().size() >= MAX_CREATURES
-                    || view.totalMatter() + 1.0e-4f < investment) return;
+                    || view.totalMatter() + 1.0e-4f < investment) {
+                return SummonResult.INSUFFICIENT_MP;
+            }
 
             var creature = createCreature(level, player, player.position()
                     .add(player.getLookAngle().scale(1.5)), blueprint, normalizedSlot);
-            if (creature == null || !level.noCollision(creature)
-                    || !level.addFreshEntity(creature)) return;
+            if (creature == null) return SummonResult.SPAWN_FAILED;
+            if (!placeCreatureSafely(level, player, creature)) return SummonResult.NO_SPAWN_SPACE;
             var desiredCount = data.getSummons().size() + 1;
             if (!replaceCreationOccupation(player, desiredCount)) {
                 creature.discard();
-                return;
+                return SummonResult.INSUFFICIENT_CP;
+            }
+            if (!level.addFreshEntity(creature)) {
+                replaceCreationOccupation(player, desiredCount - 1);
+                creature.discard();
+                return SummonResult.SPAWN_FAILED;
             }
             if (!resource.consume(player, investment, Skills.DARKMATTER_CREATION.get(),
                     Skills.DARKMATTER_CREATION.get().getIterationTicks(player))) {
                 replaceCreationOccupation(player, desiredCount - 1);
                 creature.discard();
-                return;
+                return SummonResult.INSUFFICIENT_MP;
             }
             updateData(player, mutable -> mutable.addSummon(
                     creature.getUUID(), blueprint.name(), investment, normalizedSlot,
                     level.dimension().identifier().toString(), creature.getX(), creature.getY(), creature.getZ()));
             Skills.DARKMATTER_CREATION.get().reportActivity(player, true);
-            sendSnapshot(player);
+            return SummonResult.SUMMONED;
+        }
+
+        private static boolean placeCreatureSafely(ServerLevel level, ServerPlayer player,
+                                                   DarkmatterBeetle creature) {
+            var look = player.getLookAngle();
+            var horizontal = new Vec3(look.x, 0.0, look.z);
+            if (horizontal.lengthSqr() < 1.0e-6) {
+                horizontal = Vec3.directionFromRotation(0.0f, player.getYRot());
+            }
+            horizontal = horizontal.normalize();
+            var side = new Vec3(-horizontal.z, 0.0, horizontal.x);
+            var origin = player.position();
+            var offsets = List.of(
+                    horizontal.scale(1.5), horizontal.scale(2.5),
+                    side.scale(1.5), side.scale(-1.5), horizontal.scale(-1.5));
+            for (var vertical : new double[]{0.0, 1.0, -1.0}) {
+                for (var offset : offsets) {
+                    var candidate = origin.add(offset).add(0.0, vertical, 0.0);
+                    var block = BlockPos.containing(candidate);
+                    if (!level.hasChunkAt(block) || !level.getWorldBorder().isWithinBounds(block)
+                            || block.getY() < level.getMinY() || block.getY() >= level.getMaxY()) {
+                        continue;
+                    }
+                    creature.snapTo(candidate.x, candidate.y, candidate.z, player.getYRot(), 0.0f);
+                    if (level.noCollision(creature)) return true;
+                }
+            }
+            return false;
         }
 
         private static DarkmatterBeetle createCreature(ServerLevel level, ServerPlayer player,
@@ -530,6 +601,27 @@ public final class DarkmatterCreation extends Skill {
         return count;
     }
 
+    public enum SummonResult {
+        SUMMONED("screen.academy.darkmatter_creation.result.summoned"),
+        UNAVAILABLE("screen.academy.darkmatter_creation.result.unavailable"),
+        INVALID_BLUEPRINT("screen.academy.darkmatter_creation.result.invalid_blueprint"),
+        LIMIT_REACHED("screen.academy.darkmatter_creation.result.limit_reached"),
+        INSUFFICIENT_MP("screen.academy.darkmatter_creation.result.insufficient_mp"),
+        INSUFFICIENT_CP("screen.academy.darkmatter_creation.result.insufficient_cp"),
+        NO_SPAWN_SPACE("screen.academy.darkmatter_creation.result.no_spawn_space"),
+        SPAWN_FAILED("screen.academy.darkmatter_creation.result.spawn_failed");
+
+        private final String translationKey;
+
+        SummonResult(String translationKey) {
+            this.translationKey = translationKey;
+        }
+
+        public String translationKey() {
+            return translationKey;
+        }
+    }
+
     private static void encodeRosterEntry(ByteBuf buf, RosterEntry entry) {
         encodeUuid(buf, entry.uuid());
         ByteBufCodecs.STRING_UTF8.encode(buf, entry.name());
@@ -583,10 +675,20 @@ public final class DarkmatterCreation extends Skill {
     @PacketTarget(ThreadType.SERVER)
     public static final class SummonPacket extends Packet<ServerGamePacketListenerImpl, SummonPacket> {
         public static final StreamCodec<ByteBuf, SummonPacket> CODEC = StreamCodec.of(
-                (buf, packet) -> ByteBufCodecs.VAR_INT.encode(buf, packet.slot),
-                buf -> new SummonPacket(ByteBufCodecs.VAR_INT.decode(buf)));
+                (buf, packet) -> {
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.slot);
+                    buf.writeBoolean(packet.blueprint != null);
+                    if (packet.blueprint != null) encodeBlueprint(buf, packet.blueprint);
+                },
+                buf -> new SummonPacket(ByteBufCodecs.VAR_INT.decode(buf),
+                        buf.readBoolean() ? decodeBlueprint(buf) : null));
         public final int slot;
-        public SummonPacket(int slot) { this.slot = Math.clamp(slot, 0, 3); }
+        public final DarkmatterCreatureBlueprint blueprint;
+        public SummonPacket(int slot) { this(slot, null); }
+        public SummonPacket(int slot, DarkmatterCreatureBlueprint blueprint) {
+            this.slot = Math.clamp(slot, 0, 3);
+            this.blueprint = blueprint == null ? null : blueprint.copy();
+        }
         @Override public PacketType<ServerGamePacketListenerImpl, SummonPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_SUMMON.get();
         }
@@ -672,6 +774,29 @@ public final class DarkmatterCreation extends Skill {
 
         @Override public PacketType<ClientPacketListener, RosterDeltaPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_ROSTER_DELTA.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class SummonResultPacket extends Packet<ClientPacketListener, SummonResultPacket> {
+        public static final StreamCodec<ByteBuf, SummonResultPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> ByteBufCodecs.VAR_INT.encode(buf, packet.result.ordinal()),
+                buf -> {
+                    var ordinal = ByteBufCodecs.VAR_INT.decode(buf);
+                    if (ordinal < 0 || ordinal >= SummonResult.values().length) {
+                        throw new DecoderException("Invalid darkmatter creation summon result: " + ordinal);
+                    }
+                    return new SummonResultPacket(SummonResult.values()[ordinal]);
+                });
+        public final SummonResult result;
+
+        public SummonResultPacket(SummonResult result) {
+            this.result = result == null ? SummonResult.SPAWN_FAILED : result;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, SummonResultPacket> getPacketType() {
+            return PacketTypes.DARKMATTER_CREATION_SUMMON_RESULT.get();
         }
     }
 }

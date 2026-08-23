@@ -23,6 +23,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.GameType;
@@ -39,12 +40,17 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhaseTuning;
 import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterRepair;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
 
@@ -97,6 +103,10 @@ public final class DarkmatterResourceGameTests {
     }
 
     private static ServerPlayer createPlayer(GameTestHelper helper, int level) {
+        return createPlayer(helper, level, true);
+    }
+
+    private static ServerPlayer createPlayer(GameTestHelper helper, int level, boolean allowPvp) {
         var profile = new GameProfile(
                 UUID.randomUUID(),
                 "dm-test-" + NEXT_PLAYER_ID.incrementAndGet()
@@ -109,6 +119,11 @@ public final class DarkmatterResourceGameTests {
             @Override
             public GameType gameMode() {
                 return GameType.SURVIVAL;
+            }
+
+            @Override
+            public boolean canHarmPlayer(Player other) {
+                return allowPvp && super.canHarmPlayer(other);
             }
         };
         var position = helper.absoluteVec(Vec3.atBottomCenterOf(new BlockPos(1, 2, 1)));
@@ -717,6 +732,76 @@ public final class DarkmatterResourceGameTests {
                             "Interference remained active after release");
                     removePlayer(helper, player);
                 }).thenSucceed();
+            }
+        },
+        DARKMATTER_NETWORK_MEMBERS_ARE_PROTECTED(
+                "darkmatter_network_members_are_protected", 40) {
+            @Override
+            void run(GameTestHelper helper) {
+                var owner = createPlayer(helper, 4);
+                var beetle = new DarkmatterBeetle(
+                        org.academy.internal.common.world.entity.EntityTypes.DARKMATTER_BEETLE.get(),
+                        helper.getLevel());
+                beetle.setOwnerUUID(owner.getUUID());
+                helper.assertTrue(MentalControlRuntime.isProtectedTarget(beetle),
+                        "A dark-matter summon was accepted by psychological control");
+                helper.assertTrue(!DarkmatterTargeting.isAttackableBy(owner, beetle),
+                        "A dark-matter summon entered its owner's hostile target pool");
+
+                var health = beetle.getHealth();
+                var source = SkillDamageSource.of(owner, Skills.DARKMATTER_CUT.get());
+                helper.assertTrue(!beetle.hurtServer(helper.getLevel(), source, 8.0f),
+                        "A dark-matter skill damaged a dark-matter network member");
+                helper.assertTrue(!SkillDamageUtil.applyDirect(
+                                helper.getLevel(), beetle, source, 8.0f),
+                        "Direct skill damage bypassed dark-matter network immunity");
+                assertClose(helper, health, beetle.getHealth(),
+                        "Dark-matter immunity changed summon health");
+                removePlayer(helper, owner);
+                helper.succeed();
+            }
+        },
+        NON_TEAM_PLAYERS_IGNORE_GLOBAL_PVP_FOR_DARKMATTER(
+                "non_team_players_ignore_global_pvp_for_darkmatter", 100) {
+            @Override
+            void run(GameTestHelper helper) {
+                var attacker = createPlayer(helper, 3, false);
+                var target = createPlayer(helper, 1, false);
+                target.snapTo(helper.absoluteVec(new Vec3(3.5, 2.0, 1.5)));
+                helper.assertTrue(!attacker.canHarmPlayer(target),
+                        "GameTest attacker did not emulate disabled server PVP");
+                helper.assertTrue(DarkmatterTargeting.isEnemyTarget(attacker, target),
+                        "A non-team player was omitted from hostile-only dark-matter targeting");
+
+                helper.runAfterDelay(65, () -> {
+                    target.setInvulnerable(false);
+                    target.invulnerableTime = 0;
+                    target.setHealth(20.0f);
+                    var source = SkillDamageSource.of(
+                            attacker, Skills.DARKMATTER_RADIATION.get());
+                    helper.assertTrue(DarkmatterTargeting.hurt(
+                                    helper.getLevel(), target, source, 4.0f),
+                            "Dark-matter damage was rejected solely because PVP was disabled");
+                    helper.assertTrue(target.getHealth() < 20.0f,
+                            "PVP-bypassed dark-matter damage did not reach the target");
+                    var team = helper.getLevel().getScoreboard()
+                            .addPlayerTeam("dm_pvp_team");
+                    helper.getLevel().getScoreboard().addPlayerToTeam(
+                            attacker.getScoreboardName(), team);
+                    helper.getLevel().getScoreboard().addPlayerToTeam(
+                            target.getScoreboardName(), team);
+                    helper.assertTrue(!DarkmatterTargeting.isEnemyTarget(attacker, target),
+                            "A same-team player remained in hostile dark-matter targeting");
+                    var alliedHealth = target.getHealth();
+                    helper.assertTrue(!DarkmatterTargeting.hurt(
+                                    helper.getLevel(), target, source, 4.0f),
+                            "PVP bypass ignored same-team protection");
+                    assertClose(helper, alliedHealth, target.getHealth(),
+                            "Same-team protection changed target health");
+                    removePlayer(helper, target);
+                    removePlayer(helper, attacker);
+                    helper.succeed();
+                });
             }
         },
         REPAIR_PRODUCTIVE_PULSES_ARE_OPERATIONAL(

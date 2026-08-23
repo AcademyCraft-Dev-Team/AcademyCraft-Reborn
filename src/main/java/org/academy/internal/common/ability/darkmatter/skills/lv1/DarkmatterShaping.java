@@ -24,6 +24,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
+import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingRegistries;
@@ -128,7 +129,14 @@ public final class DarkmatterShaping extends Skill {
 
         public static void shape(DarkmatterShape shape, int alphaPercent,
                                  Map<String, Integer> modifiers) {
-            MisakaNetworkClient.send(CastPacket.shape(shape, alphaPercent, modifiers));
+            shape(shape, alphaPercent, modifiers, DarkmatterBlockProfile.DEFAULT);
+        }
+
+        public static void shape(DarkmatterShape shape, int alphaPercent,
+                                 Map<String, Integer> modifiers,
+                                 DarkmatterBlockProfile blockProfile) {
+            MisakaNetworkClient.send(CastPacket.shape(
+                    shape, alphaPercent, modifiers, blockProfile));
         }
 
         public static class Config extends KeyBindingConfig {
@@ -149,7 +157,8 @@ public final class DarkmatterShaping extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var result = packet.usage() == Usage.MATERIAL_SLOT
                     ? createMaterialResult(player, packet.slotIndex())
-                    : createShapedResult(player, packet.shape(), packet.alphaPercent(), packet.modifiers());
+                    : createShapedResult(player, packet.shape(), packet.alphaPercent(),
+                    packet.modifiers(), packet.blockProfile());
             MisakaNetworkServer.send(player, new ResultPacket(result));
         }
 
@@ -162,13 +171,23 @@ public final class DarkmatterShaping extends Skill {
         private static Result createShapedResult(ServerPlayer player, DarkmatterShape shape,
                                                  int alphaPercent,
                                                  Map<String, Integer> requestedModifiers) {
+            return createShapedResult(player, shape, alphaPercent, requestedModifiers,
+                    DarkmatterBlockProfile.DEFAULT);
+        }
+
+        private static Result createShapedResult(ServerPlayer player, DarkmatterShape shape,
+                                                 int alphaPercent,
+                                                 Map<String, Integer> requestedModifiers,
+                                                 DarkmatterBlockProfile blockProfile) {
             var skill = Skills.DARKMATTER_SHAPING.get();
             if (!skill.isEnabled(player)) return Result.UNAVAILABLE;
             var system = AbilitySystemServer.getSystem(player);
             var level = Math.clamp(system.getPlayerLevel(player.getUUID()), 1, 5);
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var validation = validateModifiers(shape, requestedModifiers, level, milestone);
-            if (!validation.valid()) return Result.INVALID_PROFILE;
+            if (!validation.valid()) {
+                return validation.hasLevelGateError() ? Result.LOCKED_LEVEL : Result.INVALID_PROFILE;
+            }
 
             var total = level * 50;
             var alpha = Math.round(total * Math.clamp(alphaPercent, 0, 100) / 100.0f);
@@ -181,7 +200,7 @@ public final class DarkmatterShaping extends Skill {
                 return Result.INSUFFICIENT_MP;
             }
 
-            for (var output : createOutputs(shape, profile)) {
+            for (var output : createOutputs(shape, profile, blockProfile)) {
                 player.getInventory().placeItemBackInInventory(output);
             }
             skill.reportTrigger(player);
@@ -192,7 +211,8 @@ public final class DarkmatterShaping extends Skill {
         }
 
         private static List<ItemStack> createOutputs(DarkmatterShape shape,
-                                                     DarkmatterShapingProfile profile) {
+                                                     DarkmatterShapingProfile profile,
+                                                     DarkmatterBlockProfile blockProfile) {
             var output = new ArrayList<ItemStack>();
             if (shape == DarkmatterShape.ARMOR) {
                 output.add(profile(new ItemStack(Items.DARK_MATTER_HELMET.get()), profile));
@@ -210,8 +230,14 @@ public final class DarkmatterShaping extends Skill {
                 case CROSSBOW -> Items.DARKMATTER_CROSSBOW.get();
                 case MACE -> Items.DARKMATTER_MACE.get();
                 case ARROW -> Items.DARKMATTER_ARROW.get();
+                case COATING -> Items.DARKMATTER_COATING.get();
+                case BLOCK -> Items.DARKMATTER_BLOCK.get();
                 case ARMOR -> throw new IllegalStateException("Armor handled above");
             }, shape.outputCount());
+            if (shape == DarkmatterShape.BLOCK) {
+                org.academy.internal.common.world.item.DarkmatterBlockItem.setProfile(
+                        stack, blockProfile);
+            }
             output.add(profile(stack, profile));
             return output;
         }
@@ -229,6 +255,12 @@ public final class DarkmatterShaping extends Skill {
             var normalized = new LinkedHashMap<String, Integer>();
             var errors = new ArrayList<String>();
             var used = 0;
+            var level = Math.clamp(abilityLevel, 1, 5);
+            if (shape == null) {
+                errors.add("shape:missing");
+            } else if (!shape.isUnlockedAt(level)) {
+                errors.add("locked_shape:" + shape.id() + ":" + shape.requiredAbilityLevel());
+            }
             if (requested != null) for (var entry : requested.entrySet()) {
                 var type = DarkmatterShapingRegistries.modifier(entry.getKey()).orElse(null);
                 var requestedLevel = entry.getValue() == null ? 0 : entry.getValue();
@@ -237,6 +269,10 @@ public final class DarkmatterShaping extends Skill {
                     continue;
                 }
                 if (requestedLevel == 0) continue;
+                if (!type.isUnlockedAt(level)) {
+                    errors.add("locked_modifier:" + type.id() + ":" + type.requiredAbilityLevel());
+                    continue;
+                }
                 if (!type.supports(shape)) {
                     errors.add("incompatible:" + entry.getKey());
                     continue;
@@ -250,7 +286,7 @@ public final class DarkmatterShaping extends Skill {
                     errors.add("conflict:" + type.id());
                 }
             }
-            var budget = modifierBudget(abilityLevel, milestone);
+            var budget = modifierBudget(level, milestone);
             if (used > budget) errors.add("budget:" + used + "/" + budget);
             return new ModifierValidation(errors.isEmpty(), Map.copyOf(normalized),
                     used, budget, List.copyOf(errors));
@@ -290,7 +326,7 @@ public final class DarkmatterShaping extends Skill {
 
         public static void refreshHeldNativeProfile(ServerPlayer player) {
             var held = player.getMainHandItem();
-            if (!DarkmatterItemUtil.isShapedItem(held)) return;
+            if (!DarkmatterItemUtil.hasNativeItemEffects(held)) return;
             if (!DarkmatterItemUtil.isOperational(held)) {
                 DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
                         Enchantments.EFFICIENCY, 0);
@@ -298,13 +334,14 @@ public final class DarkmatterShaping extends Skill {
                         Enchantments.FORTUNE, 0);
                 return;
             }
-            var profile = DarkmatterItemUtil.shapingProfile(held);
-            var fortune = toolFortune(profile.betaPower())
-                    + profile.modifierLevel(DarkmatterModifiers.LUCKY);
+            var alpha = DarkmatterItemUtil.effectAlphaPower(held);
+            var beta = DarkmatterItemUtil.effectBetaPower(held);
+            var fortune = toolFortune(beta)
+                    + DarkmatterItemUtil.modifierLevel(held, DarkmatterModifiers.LUCKY);
             var changed = false;
             if (DarkmatterItemUtil.shape(held) == DarkmatterShape.TOOL) {
                 changed |= DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
-                        Enchantments.EFFICIENCY, toolEfficiency(profile.alphaPower()));
+                        Enchantments.EFFICIENCY, toolEfficiency(alpha));
                 changed |= DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
                         Enchantments.FORTUNE, fortune);
             }
@@ -312,7 +349,7 @@ public final class DarkmatterShaping extends Skill {
                     && DarkmatterItemUtil.shape(held) != DarkmatterShape.TOOL) {
                 changed |= DarkmatterItemUtil.setEnchantmentLevel(player.registryAccess(), held,
                         Enchantments.LOOTING,
-                        profile.modifierLevel(DarkmatterModifiers.LUCKY));
+                        DarkmatterItemUtil.modifierLevel(held, DarkmatterModifiers.LUCKY));
             }
             if (changed) player.getInventory().setChanged();
         }
@@ -341,6 +378,7 @@ public final class DarkmatterShaping extends Skill {
                 case MACE -> 0.0f;
                 case BOW, CROSSBOW, ARROW -> 3.0f;
                 case ARMOR -> 1.0f;
+                case COATING, BLOCK -> 0.0f;
             };
             return base + phaseDamageBonus(alphaPower);
         }
@@ -372,7 +410,11 @@ public final class DarkmatterShaping extends Skill {
         static boolean unlocksAutoRepair(int milestone) { return false; }
 
         public record ModifierValidation(boolean valid, Map<String, Integer> modifiers,
-                                         int usedPoints, int budget, List<String> errors) { }
+                                         int usedPoints, int budget, List<String> errors) {
+            public boolean hasLevelGateError() {
+                return errors.stream().anyMatch(error -> error.startsWith("locked_"));
+            }
+        }
     }
 
     public static final class ClientPackets {
@@ -396,6 +438,7 @@ public final class DarkmatterShaping extends Skill {
         UNAVAILABLE("screen.academy.darkmatter_shaping.result.unavailable"),
         INVALID_SLOT("screen.academy.darkmatter_shaping.result.invalid_slot"),
         INVALID_PROFILE("screen.academy.darkmatter_shaping.result.invalid_profile"),
+        LOCKED_LEVEL("screen.academy.darkmatter_shaping.result.locked_level"),
         INSUFFICIENT_MP("screen.academy.darkmatter_shaping.result.insufficient_mp");
 
         private final String translationKey;
@@ -421,6 +464,7 @@ public final class DarkmatterShaping extends Skill {
                     ByteBufCodecs.map(LinkedHashMap::new,
                             ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)
                             .encode(buffer, new LinkedHashMap<>(packet.modifiers));
+                    DarkmatterBlockProfile.STREAM_CODEC.encode(buffer, packet.blockProfile);
                     ByteBufCodecs.VAR_INT.encode(buffer, packet.slotIndex);
                 },
                 buffer -> new CastPacket(
@@ -430,35 +474,47 @@ public final class DarkmatterShaping extends Skill {
                         ByteBufCodecs.VAR_INT.decode(buffer),
                         ByteBufCodecs.map(LinkedHashMap::new,
                                 ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT).decode(buffer),
+                        DarkmatterBlockProfile.STREAM_CODEC.decode(buffer),
                         ByteBufCodecs.VAR_INT.decode(buffer)));
 
         private final Usage usage;
         private final DarkmatterShape shape;
         private final int alphaPercent;
         private final Map<String, Integer> modifiers;
+        private final DarkmatterBlockProfile blockProfile;
         private final int slotIndex;
 
         private CastPacket(Usage usage, DarkmatterShape shape, int alphaPercent,
-                           Map<String, Integer> modifiers, int slotIndex) {
+                           Map<String, Integer> modifiers,
+                           DarkmatterBlockProfile blockProfile, int slotIndex) {
             this.usage = usage;
             this.shape = shape;
             this.alphaPercent = alphaPercent;
             this.modifiers = Map.copyOf(modifiers);
+            this.blockProfile = blockProfile == null
+                    ? DarkmatterBlockProfile.DEFAULT : blockProfile;
             this.slotIndex = slotIndex;
         }
 
         public static CastPacket shape(DarkmatterShape shape, int alphaPercent,
                                        Map<String, Integer> modifiers) {
-            return new CastPacket(Usage.SHAPE, shape, alphaPercent, modifiers, -1);
+            return shape(shape, alphaPercent, modifiers, DarkmatterBlockProfile.DEFAULT);
+        }
+        public static CastPacket shape(DarkmatterShape shape, int alphaPercent,
+                                       Map<String, Integer> modifiers,
+                                       DarkmatterBlockProfile blockProfile) {
+            return new CastPacket(Usage.SHAPE, shape, alphaPercent, modifiers,
+                    blockProfile, -1);
         }
         public static CastPacket material(int slotIndex) {
             return new CastPacket(Usage.MATERIAL_SLOT, DarkmatterShape.TOOL,
-                    50, Map.of(), slotIndex);
+                    50, Map.of(), DarkmatterBlockProfile.DEFAULT, slotIndex);
         }
         public Usage usage() { return usage; }
         public DarkmatterShape shape() { return shape; }
         public int alphaPercent() { return alphaPercent; }
         public Map<String, Integer> modifiers() { return modifiers; }
+        public DarkmatterBlockProfile blockProfile() { return blockProfile; }
         public int slotIndex() { return slotIndex; }
 
         @Override

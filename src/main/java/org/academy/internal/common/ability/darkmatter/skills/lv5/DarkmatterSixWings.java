@@ -20,6 +20,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -312,7 +313,7 @@ public final class DarkmatterSixWings extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player)
                     || !(player.level() instanceof ServerLevel level)
                     || !(event.getTarget() instanceof LivingEntity target)
-                    || target == player || player.isAlliedTo(target)
+                    || !DarkmatterTargeting.isAttackableBy(player, target)
                     || !Server.isActive(player)) return;
             var alpha = DarkmatterPhase.alpha(player);
             if (!(alpha > 0.0f)) return;
@@ -320,7 +321,7 @@ public final class DarkmatterSixWings extends Skill {
             var pair = new WingStrikePair(player.getUUID(), target.getUUID());
             if (now < NEXT_WING_STRIKE_TICK.getOrDefault(pair, 0L)) return;
             NEXT_WING_STRIKE_TICK.put(pair, now + 10L);
-            target.hurtServer(level,
+            DarkmatterTargeting.hurt(level, target,
                     SkillDamageSource.of(player, Skills.DARKMATTER_SIX_WINGS.get()),
                     1.0f + alpha);
         }

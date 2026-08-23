@@ -16,6 +16,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.world.item.Items;
 
 /** Short-lived, server-owned feather blade used by Dark Matter Interference. */
@@ -84,16 +85,16 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         if (!(level() instanceof ServerLevel level)
                 || !(getOwner() instanceof ServerPlayer owner)
                 || !(result.getEntity() instanceof LivingEntity target)
-                || target == owner || owner.isAlliedTo(target)) {
+                || !DarkmatterTargeting.isAttackableBy(owner, target)) {
             discard();
             return;
         }
         var source = SkillDamageSource.of(owner, Skills.DARKMATTER_RADIATION.get());
         target.invulnerableTime = 0;
-        var hit = damage > 0.0f && target.hurtServer(level, source, damage);
+        var hit = damage > 0.0f && DarkmatterTargeting.hurt(level, target, source, damage);
         if (exposureBurstDamage > 0.0f && target.isAlive()) {
             target.invulnerableTime = 0;
-            hit |= target.hurtServer(level, source, exposureBurstDamage);
+            hit |= DarkmatterTargeting.hurt(level, target, source, exposureBurstDamage);
         }
         if (hit) Skills.DARKMATTER_RADIATION.get().reportActivity(owner, true);
         discard();

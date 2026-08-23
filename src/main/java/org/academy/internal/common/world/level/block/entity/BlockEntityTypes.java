@@ -75,6 +75,14 @@ public final class BlockEntityTypes {
                             Blocks.SOLAR_GEN.get()
                     )
             );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DarkmatterBlockEntity>> DARKMATTER_BLOCK =
+            BLOCK_ENTITY_TYPES.register(
+                    "darkmatter_block",
+                    () -> new BlockEntityType<>(
+                            DarkmatterBlockEntity::new,
+                            Blocks.DARKMATTER_BLOCK.get()
+                    )
+            );
 
     private BlockEntityTypes() {
     }

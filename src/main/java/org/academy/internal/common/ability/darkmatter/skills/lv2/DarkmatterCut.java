@@ -42,6 +42,7 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
@@ -203,8 +204,7 @@ public final class DarkmatterCut extends Skill {
             var look = horizontalLook(visualDirection, player.getYRot());
             var targets = level.getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(radius), target ->
-                            target != player && target.isAlive() && !target.isRemoved()
-                                    && !player.isAlliedTo(target)
+                            DarkmatterTargeting.isAttackableBy(player, target)
                                     && insideCone(origin, look, target.getBoundingBox().getCenter(),
                                     radius, minimumDot));
             var requestedBaseCost = baseCost < 0.0f ? MATTER_COST : baseCost;
@@ -264,8 +264,7 @@ public final class DarkmatterCut extends Skill {
                                         1.5f);
                                 for (var targetId : mirroredTargets) {
                                     if (!(level.getEntity(targetId) instanceof LivingEntity target)
-                                            || target == player || !target.isAlive()
-                                            || target.isRemoved() || player.isAlliedTo(target)) continue;
+                                            || !DarkmatterTargeting.isAttackableBy(player, target)) continue;
                                     target.invulnerableTime = 0;
                                     var detonation = DarkmatterLawMark.detonate(player, target);
                                     if (detonation > 0.0f) {
@@ -291,7 +290,9 @@ public final class DarkmatterCut extends Skill {
                 float beta
         ) {
             var armor = target.getAttribute(Attributes.ARMOR);
-            if (armor == null || beta <= 0.0f) return target.hurtServer(level, source, damage);
+            if (armor == null || beta <= 0.0f) {
+                return DarkmatterTargeting.hurt(level, target, source, damage);
+            }
             var existing = armor.getModifier(PENETRATION_ID);
             if (existing != null) armor.removeModifier(PENETRATION_ID);
             armor.addTransientModifier(new AttributeModifier(
@@ -299,7 +300,7 @@ public final class DarkmatterCut extends Skill {
                     -penetration(beta),
                     AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
             try {
-                return target.hurtServer(level, source, damage);
+                return DarkmatterTargeting.hurt(level, target, source, damage);
             } finally {
                 armor.removeModifier(PENETRATION_ID);
                 if (existing != null) armor.addTransientModifier(existing);

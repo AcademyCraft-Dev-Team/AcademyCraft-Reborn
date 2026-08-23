@@ -4,22 +4,26 @@ import java.util.Locale;
 
 /** Built-in shape catalogue. The GUI is populated from this catalogue instead of fixed buttons. */
 public enum DarkmatterShape {
-    TOOL(4.0f, 1),
-    SWORD(4.0f, 1),
-    SPEAR(4.0f, 1),
-    TRIDENT(6.0f, 1),
-    BOW(5.0f, 1),
-    CROSSBOW(6.0f, 1),
-    MACE(6.0f, 1),
-    ARROW(4.0f, 16),
-    ARMOR(16.0f, 4);
+    TOOL(4.0f, 1, 1),
+    SWORD(4.0f, 1, 1),
+    SPEAR(4.0f, 1, 3),
+    TRIDENT(6.0f, 1, 3),
+    BOW(5.0f, 1, 4),
+    CROSSBOW(6.0f, 1, 4),
+    MACE(6.0f, 1, 5),
+    ARROW(4.0f, 16, 4),
+    ARMOR(16.0f, 4, 4),
+    COATING(3.0f, 1, 5),
+    BLOCK(8.0f, 1, 1);
 
     private final float baseMatterCost;
     private final int outputCount;
+    private final int requiredAbilityLevel;
 
-    DarkmatterShape(float baseMatterCost, int outputCount) {
+    DarkmatterShape(float baseMatterCost, int outputCount, int requiredAbilityLevel) {
         this.baseMatterCost = baseMatterCost;
         this.outputCount = outputCount;
+        this.requiredAbilityLevel = Math.clamp(requiredAbilityLevel, 1, 5);
     }
 
     public String id() {
@@ -38,6 +42,14 @@ public enum DarkmatterShape {
         return outputCount;
     }
 
+    public int requiredAbilityLevel() {
+        return requiredAbilityLevel;
+    }
+
+    public boolean isUnlockedAt(int abilityLevel) {
+        return abilityLevel >= requiredAbilityLevel;
+    }
+
     public boolean isArmor() {
         return this == ARMOR;
     }
@@ -51,7 +63,14 @@ public enum DarkmatterShape {
     }
 
     public boolean isOffensive() {
-        return this != ARMOR;
+        return switch (this) {
+            case TOOL, SWORD, SPEAR, TRIDENT, BOW, CROSSBOW, MACE, ARROW -> true;
+            case ARMOR, COATING, BLOCK -> false;
+        };
+    }
+
+    public boolean carriesActiveItemEffects() {
+        return this != COATING && this != BLOCK;
     }
 
     public static DarkmatterShape byId(String id) {

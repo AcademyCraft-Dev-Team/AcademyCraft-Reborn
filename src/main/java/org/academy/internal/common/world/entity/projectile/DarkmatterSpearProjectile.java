@@ -20,6 +20,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import org.academy.AcademyCraft;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.world.item.Items;
@@ -88,7 +89,7 @@ public final class DarkmatterSpearProjectile extends AbstractArrow implements It
         if (returning || !(level() instanceof ServerLevel level)
                 || !(getOwner() instanceof ServerPlayer owner)
                 || !(result.getEntity() instanceof LivingEntity target)
-                || target == owner || owner.isAlliedTo(target)) return;
+                || !DarkmatterTargeting.isAttackableBy(owner, target)) return;
         var source = SkillDamageSource.of(owner, Skills.DARKMATTER_SHAPING.get());
         hurtWithPenetration(level, target, source, phaseDamage, penetration);
         if (gammaPower > 0.0f) {
@@ -121,7 +122,7 @@ public final class DarkmatterSpearProjectile extends AbstractArrow implements It
         var processed = 0;
         for (var nearby : level.getEntitiesOfClass(LivingEntity.class,
                 primary.getBoundingBox().inflate(pursuitRange), candidate -> candidate != primary
-                        && candidate != owner && candidate.isAlive() && !owner.isAlliedTo(candidate))) {
+                        && DarkmatterTargeting.isAttackableBy(owner, candidate))) {
             if (processed++ >= count) break;
             hurtWithPenetration(level, nearby, source, damage, penetration);
         }
@@ -131,14 +132,16 @@ public final class DarkmatterSpearProjectile extends AbstractArrow implements It
                                                net.minecraft.world.damagesource.DamageSource source,
                                                float damage, float penetration) {
         var armor = target.getAttribute(Attributes.ARMOR);
-        if (armor == null || penetration <= 0.0f) return target.hurtServer(level, source, damage);
+        if (armor == null || penetration <= 0.0f) {
+            return DarkmatterTargeting.hurt(level, target, source, damage);
+        }
         var existing = armor.getModifier(PENETRATION_ID);
         if (existing != null) armor.removeModifier(PENETRATION_ID);
         armor.addTransientModifier(new AttributeModifier(PENETRATION_ID,
                 -Math.clamp(penetration, 0.0f, 0.50f),
                 AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         try {
-            return target.hurtServer(level, source, damage);
+            return DarkmatterTargeting.hurt(level, target, source, damage);
         } finally {
             armor.removeModifier(PENETRATION_ID);
             if (existing != null) armor.addTransientModifier(existing);

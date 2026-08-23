@@ -9,6 +9,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -59,13 +60,13 @@ public final class AbilityProgramEditorClient {
     private static Config config;
     private static ModularProgramScreen screen;
     private static long executionSequence;
+    private static boolean networkHandlersInitialized;
 
     private AbilityProgramEditorClient() {
     }
 
     public static void init() {
-        AbilityProgramManager.initClient();
-        PrecisionOperationManager.initClient();
+        initNetworkHandlers();
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, Config.Action.INSTANCE);
         config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY);
         var openKey = config.getKeyBinding(KEY_NAME_OPEN, defaultOpenKey());
@@ -105,6 +106,14 @@ public final class AbilityProgramEditorClient {
                     }
             );
         }
+    }
+
+    private static void initNetworkHandlers() {
+        if (networkHandlersInitialized) return;
+        networkHandlersInitialized = true;
+        MisakaNetworkClient.NETWORK_MANAGER.register(AbilityProgramManager.Client.class);
+        MisakaNetworkClient.NETWORK_MANAGER.register(PrecisionOperationManager.Client.class);
+        NeoForge.EVENT_BUS.register(PrecisionOperationClient.class);
     }
 
     public static void openEditor() {

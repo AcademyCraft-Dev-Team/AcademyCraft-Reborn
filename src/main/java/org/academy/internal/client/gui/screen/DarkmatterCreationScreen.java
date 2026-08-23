@@ -80,6 +80,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
     private int panelX;
     private int panelY;
     private boolean compact;
+    private String summonStatus;
     private final List<ModuleHoverTarget> moduleHoverTargets = new ArrayList<>();
 
     public DarkmatterCreationScreen() {
@@ -118,6 +119,22 @@ public final class DarkmatterCreationScreen extends UiScreen {
             latest = next;
             if (Minecraft.getInstance().gui.screen() instanceof DarkmatterCreationScreen screen) {
                 screen.applySnapshot(next);
+            }
+        });
+    }
+
+    public static void acceptSummonResult(DarkmatterCreation.SummonResultPacket packet) {
+        Minecraft.getInstance().execute(() -> {
+            var minecraft = Minecraft.getInstance();
+            var message = Component.translatable(packet.result.translationKey());
+            if (minecraft.player != null) minecraft.player.sendOverlayMessage(message);
+            if (minecraft.gui.screen() instanceof DarkmatterCreationScreen screen) {
+                screen.summonStatus = message.getString();
+                if (packet.result == DarkmatterCreation.SummonResult.SUMMONED) {
+                    screen.tab = Tab.SUMMONED;
+                    screen.rosterPage = 0;
+                }
+                screen.rebuild();
             }
         });
     }
@@ -271,7 +288,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
                         editing.moduleCost(), editing.moduleBudget()),
                 26, compact ? 157 : 191);
         var errors = editing.validate(snapshot.abilityLevel);
-        addLabelLiteral(fit(errors.isEmpty()
+        addLabelLiteral(fit(summonStatus != null ? summonStatus : errors.isEmpty()
                         ? tr("screen.academy.darkmatter_creation.valid")
                         : tr("screen.academy.darkmatter_creation.invalid",
                         errors.stream().map(this::validationError).toList().stream()
@@ -571,6 +588,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
         selectedSlot = Math.clamp(slot, 0, 3);
         editing = blueprint(selectedSlot);
         dirty = false;
+        summonStatus = null;
         rebuild();
     }
 
@@ -596,6 +614,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
                 editing.torso(), editing.limbs(), editing.additional(), editing.headAlpha(),
                 editing.torsoAlpha(), editing.limbsAlpha(), editing.additionalAlpha(), editing.modules());
         dirty = true;
+        summonStatus = null;
         rebuild();
     }
 
@@ -631,9 +650,10 @@ public final class DarkmatterCreationScreen extends UiScreen {
     private void saveAndSummon() {
         commitName();
         if (!editing.validate(snapshot.abilityLevel).isEmpty()) return;
-        MisakaNetworkClient.send(new DarkmatterCreation.SaveBlueprintPacket(selectedSlot, editing));
-        MisakaNetworkClient.send(new DarkmatterCreation.SummonPacket(selectedSlot));
+        MisakaNetworkClient.send(new DarkmatterCreation.SummonPacket(selectedSlot, editing));
+        summonStatus = tr("screen.academy.darkmatter_creation.status.waiting");
         dirty = false;
+        rebuild();
     }
 
     private static int indexOf(String[] values, String value) {

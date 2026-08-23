@@ -27,6 +27,18 @@ public final class RecipeSerializers {
                     DARKMATTER_DUPLICATION_STREAM_CODEC
             ));
 
+    static final StreamCodec<RegistryFriendlyByteBuf, DarkmatterCoatingRecipe>
+            DARKMATTER_COATING_STREAM_CODEC = StreamCodec.of(
+            (_, _) -> { },
+            _ -> new DarkmatterCoatingRecipe());
+
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<DarkmatterCoatingRecipe>>
+            DARKMATTER_COATING = RECIPE_SERIALIZERS.register("darkmatter_coating", () ->
+            new RecipeSerializer<>(
+                    MapCodec.unit(DarkmatterCoatingRecipe::new),
+                    DARKMATTER_COATING_STREAM_CODEC
+            ));
+
     private RecipeSerializers() {
     }
 }

@@ -58,6 +58,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
@@ -288,8 +289,7 @@ public final class DarkmatterDisassemble extends Skill {
         }
 
         static boolean validTarget(ServerPlayer player, LivingEntity target) {
-            return target != player && target.isAlive() && !target.isRemoved()
-                    && !player.isAlliedTo(target);
+            return DarkmatterTargeting.isAttackableBy(player, target);
         }
 
         public static boolean tryAutomatedAttack(ServerPlayer player, LivingEntity target) {
@@ -399,7 +399,7 @@ public final class DarkmatterDisassemble extends Skill {
                                                         net.minecraft.world.damagesource.DamageSource source,
                                                         float damage, float penetration) {
             var armor = target.getAttribute(Attributes.ARMOR);
-            if (armor == null) return target.hurtServer(level, source, damage);
+            if (armor == null) return DarkmatterTargeting.hurt(level, target, source, damage);
             var existing = armor.getModifier(ARMOR_PENETRATION_ID);
             if (existing != null) armor.removeModifier(ARMOR_PENETRATION_ID);
             armor.addTransientModifier(new AttributeModifier(
@@ -407,7 +407,7 @@ public final class DarkmatterDisassemble extends Skill {
                     -Math.clamp(penetration, 0.0f, 0.5f),
                     AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
             try {
-                return target.hurtServer(level, source, damage);
+                return DarkmatterTargeting.hurt(level, target, source, damage);
             } finally {
                 armor.removeModifier(ARMOR_PENETRATION_ID);
                 if (existing != null) armor.addTransientModifier(existing);

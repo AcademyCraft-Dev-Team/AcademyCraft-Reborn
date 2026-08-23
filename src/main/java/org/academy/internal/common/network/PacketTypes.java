@@ -432,6 +432,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterCreation.RosterDeltaPacket>>
             DARKMATTER_CREATION_ROSTER_DELTA = PACKET_TYPES.register("darkmatter_creation_roster_delta",
             () -> new PacketType<>(DarkmatterCreation.RosterDeltaPacket.class, DarkmatterCreation.RosterDeltaPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterCreation.SummonResultPacket>>
+            DARKMATTER_CREATION_SUMMON_RESULT = PACKET_TYPES.register("darkmatter_creation_summon_result",
+            () -> new PacketType<>(DarkmatterCreation.SummonResultPacket.class, DarkmatterCreation.SummonResultPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterSixWings.TogglePacket>>
             DARKMATTER_SIX_WINGS_TOGGLE = PACKET_TYPES.register("darkmatter_six_wings_toggle",
             () -> new PacketType<>(DarkmatterSixWings.TogglePacket.class, DarkmatterSixWings.TogglePacket.CODEC));

@@ -15,6 +15,7 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.AnvilUpdateEvent;
 import net.neoforged.neoforge.event.enchanting.EnchantedBlockLootEvent;
+import net.neoforged.neoforge.event.enchanting.EnchantedEntityLootEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
@@ -101,27 +102,28 @@ public final class DarkmatterEquipmentEvents {
                     || !(player.level() instanceof ServerLevel level)
                     || !(event.getTarget() instanceof LivingEntity target)
                     || target == player || player.isAlliedTo(target)) return;
-            if (!(DarkmatterItemUtil.hasEnchantment(player.getMainHandItem(),
-                    DarkmatterEnchantments.DARKMATTER)
-                    || DarkmatterItemUtil.isNativeEquipment(player.getMainHandItem()))
-                    || !DarkmatterItemUtil.isOperational(player.getMainHandItem())) return;
-            var phase = DarkmatterPhase.weights(player);
             var held = player.getMainHandItem();
-            var shaped = DarkmatterItemUtil.isShapedItem(held);
-            var profile = DarkmatterItemUtil.shapingProfile(held);
-            var alpha = shaped ? profile.alphaPower() : phase.alpha();
-            var beta = shaped ? profile.betaPower() : phase.beta();
-            var shape = shaped ? DarkmatterItemUtil.shape(held) : DarkmatterShape.TOOL;
-            var damage = (shaped
+            var nativeEffects = DarkmatterItemUtil.hasNativeItemEffects(held);
+            var coating = DarkmatterItemUtil.hasCoating(held);
+            if (!(DarkmatterItemUtil.hasEnchantment(held, DarkmatterEnchantments.DARKMATTER)
+                    || nativeEffects || coating) || !DarkmatterItemUtil.isOperational(held)) return;
+            var phase = DarkmatterPhase.weights(player);
+            var alpha = nativeEffects || coating
+                    ? DarkmatterItemUtil.effectAlphaPower(held) : phase.alpha();
+            var beta = nativeEffects || coating
+                    ? DarkmatterItemUtil.effectBetaPower(held) : phase.beta();
+            var shape = DarkmatterItemUtil.shape(held);
+            var damage = (nativeEffects
                     ? DarkmatterShaping.Server.directDamage(shape, alpha)
+                    : coating ? DarkmatterShaping.Server.phaseDamageBonus(alpha)
                     : 6.0f + alpha * 0.8f)
                     * AbilitySystemServer.getSystem(player)
                     .getPlayerDamageMultiplier(player.getUUID());
             hurtWithPenetration(level, target,
                     SkillDamageSource.of(player, Skills.DARKMATTER_SHAPING.get()),
                     damage, DarkmatterShaping.Server.penetration(shape, beta));
-            if (shaped && shape != DarkmatterShape.MACE) event.setCanceled(true);
-            if (shaped) DarkmatterModifierRuntime.applyMelee(player, target, held);
+            if (nativeEffects && shape != DarkmatterShape.MACE) event.setCanceled(true);
+            if (nativeEffects || coating) DarkmatterModifierRuntime.applyMelee(player, target, held);
             if (held.is(org.academy.internal.common.world.item.Items.DARKMATTER_SPEAR.get())
                     && phase.gamma() > 0.0f) {
                 var source = SkillDamageSource.of(player, Skills.DARKMATTER_SHAPING.get());
@@ -176,11 +178,15 @@ public final class DarkmatterEquipmentEvents {
         public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var held = player.getMainHandItem();
-            if (DarkmatterItemUtil.isNativeEquipment(held)
-                    || !DarkmatterItemUtil.hasEnchantment(
-                    held, DarkmatterEnchantments.DARKMATTER)) return;
-            var bonus = DarkmatterShaping.Server.miningSpeedBonus(
-                    DarkmatterPhase.snapshot(player).alphaPower());
+            if (DarkmatterItemUtil.hasNativeItemEffects(held)) return;
+            var alpha = 0.0f;
+            if (DarkmatterItemUtil.hasEnchantment(held, DarkmatterEnchantments.DARKMATTER)) {
+                alpha += DarkmatterPhase.snapshot(player).alphaPower();
+            }
+            if (DarkmatterItemUtil.hasCoating(held)) {
+                alpha += DarkmatterItemUtil.coatingProfile(held).alphaPower();
+            }
+            var bonus = DarkmatterShaping.Server.miningSpeedBonus(alpha);
             if (bonus > 0.0f) event.setNewSpeed(event.getNewSpeed() + bonus);
         }
 
@@ -190,12 +196,32 @@ public final class DarkmatterEquipmentEvents {
             var player = BlockLootPlayerContext.current();
             if (player == null) return;
             var held = player.getMainHandItem();
-            if (DarkmatterItemUtil.isNativeEquipment(held)
-                    || !DarkmatterItemUtil.hasEnchantment(
-                    held, DarkmatterEnchantments.DARKMATTER)) return;
-            event.setEnchantmentLevel(event.getEnchantmentLevel()
-                    + DarkmatterShaping.Server.toolFortune(
-                    DarkmatterPhase.snapshot(player).betaPower()));
+            if (DarkmatterItemUtil.hasNativeItemEffects(held)) return;
+            var beta = 0.0f;
+            if (DarkmatterItemUtil.hasEnchantment(held, DarkmatterEnchantments.DARKMATTER)) {
+                beta += DarkmatterPhase.snapshot(player).betaPower();
+            }
+            if (DarkmatterItemUtil.hasCoating(held)) {
+                beta += DarkmatterItemUtil.coatingProfile(held).betaPower();
+            }
+            var extra = DarkmatterShaping.Server.toolFortune(beta)
+                    + DarkmatterItemUtil.modifierLevel(held,
+                    org.academy.api.common.ability.darkmatter.DarkmatterModifiers.LUCKY);
+            if (extra > 0) event.setEnchantmentLevel(event.getEnchantmentLevel() + extra);
+        }
+
+        @SubscribeEvent
+        public static void onEnchantedEntityLoot(EnchantedEntityLootEvent event) {
+            if (!event.getEnchantment().is(Enchantments.LOOTING)
+                    || !(event.getDamageSource().getEntity() instanceof ServerPlayer player)) return;
+            var held = player.getMainHandItem();
+            // Native equipment already exposes the aggregate level through its synchronized
+            // vanilla enchantment, so only ordinary coated targets need an event-side bonus.
+            if (DarkmatterItemUtil.hasNativeItemEffects(held)
+                    || !DarkmatterItemUtil.hasCoating(held)) return;
+            var extra = DarkmatterItemUtil.modifierLevel(
+                    held, org.academy.api.common.ability.darkmatter.DarkmatterModifiers.LUCKY);
+            if (extra > 0) event.setEnchantmentLevel(event.getEnchantmentLevel() + extra);
         }
 
         @SubscribeEvent
@@ -204,26 +230,27 @@ public final class DarkmatterEquipmentEvents {
             var protectedPieces = 0;
             var shapedAlpha = 0.0f;
             var shapedBeta = 0.0f;
+            var phase = DarkmatterPhase.weights(player);
             for (var slot : new EquipmentSlot[]{
                     EquipmentSlot.HEAD, EquipmentSlot.CHEST,
                     EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
                 var armor = player.getItemBySlot(slot);
                 if ((DarkmatterItemUtil.hasFamilyEnchantment(armor)
-                        || DarkmatterItemUtil.isNativeEquipment(armor))
+                        || DarkmatterItemUtil.isNativeEquipment(armor)
+                        || DarkmatterItemUtil.hasCoating(armor))
                         && DarkmatterItemUtil.isOperational(armor)) {
                     protectedPieces++;
-                    if (DarkmatterItemUtil.isShapedItem(armor)) {
-                        var profile = DarkmatterItemUtil.shapingProfile(armor);
-                        shapedAlpha += profile.alphaPower();
-                        shapedBeta += profile.betaPower();
+                    if (DarkmatterItemUtil.hasShapingEffects(armor)) {
+                        shapedAlpha += DarkmatterItemUtil.effectAlphaPower(armor);
+                        shapedBeta += DarkmatterItemUtil.effectBetaPower(armor);
+                    } else {
+                        shapedAlpha += phase.alpha();
+                        shapedBeta += phase.beta();
                     }
                 }
             }
-            var phase = DarkmatterPhase.weights(player);
-            var armorAlpha = shapedAlpha > 0.0f ? shapedAlpha / Math.max(1, protectedPieces)
-                    : phase.alpha();
-            var armorBeta = shapedBeta > 0.0f ? shapedBeta / Math.max(1, protectedPieces)
-                    : phase.beta();
+            var armorAlpha = shapedAlpha / Math.max(1, protectedPieces);
+            var armorBeta = shapedBeta / Math.max(1, protectedPieces);
             var fullSetReduction = DarkmatterShaping.Server.armorReduction(armorAlpha);
             event.setAmount(event.getAmount()
                     * (1.0f - fullSetReduction * protectedPieces / 4.0f));
