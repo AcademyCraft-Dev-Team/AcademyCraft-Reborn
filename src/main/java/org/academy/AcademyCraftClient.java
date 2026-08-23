@@ -2,10 +2,9 @@ package org.academy;
 
 import com.google.common.reflect.TypeToken;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.math.Axis;
-import net.irisshaders.iris.pipeline.IrisPipelines;
-import net.irisshaders.iris.pipeline.programs.ShaderKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.EntityModel;
@@ -19,9 +18,10 @@ import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -32,11 +32,10 @@ import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.client.fluid.FluidTintSources;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
-import net.neoforged.neoforge.client.fluid.FluidTintSources;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.gui.editor.UiLayoutEditor;
 import org.academy.api.client.gui.editor.UiLayoutEditorScreen;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
@@ -49,6 +48,7 @@ import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
@@ -76,21 +76,22 @@ import org.academy.internal.client.particle.BloodSprayParticle;
 import org.academy.internal.client.particle.ImagPhaseFluidParticle;
 import org.academy.internal.client.particle.VectorBlastParticle;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
-import org.academy.internal.client.render.vfx.*;
 import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
+import org.academy.internal.client.render.vfx.*;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
-import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
+import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
 import org.academy.internal.common.world.level.material.Fluids;
+import org.joml.Vector3f;
 
 import java.io.File;
 import java.util.function.BiConsumer;
@@ -136,6 +137,16 @@ public final class AcademyCraftClient {
     public static void initRender() {
         Render.init();
         VfxManager.INSTANCE.init();
+        VfxGraphManager.INSTANCE.init();
+        if (isUiDebugEnvironment()) {
+            // dev 热重载：监听运行目录下的 vfxgraph 资产（与资源包目录一致）
+            var root = Minecraft.getInstance().gameDirectory.toPath().resolve("vfxgraph");
+            try {
+                java.nio.file.Files.createDirectories(root);
+            } catch (java.io.IOException ignored) {
+            }
+            VfxGraphManager.INSTANCE.startFileWatcher(root);
+        }
         GlowEffect.init();
         ScreenDispatcher.Companion.init();
         HudManager.INSTANCE.initRender();
@@ -159,12 +170,40 @@ public final class AcademyCraftClient {
     public static void onClientTick(ClientTickEvent.Post event) {
         AbilityControlTabletSpecialRenderer.tickHeldItems();
         ImagPhaseDowsingRodClient.tick();
+        // 注：VFX 图效果模拟改由 renderFrame 每帧按真实帧时间步进（平滑，不锁 20Hz tick），故此处不再调用 tick
     }
 
     @SubscribeEvent
     public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(
                 Commands.literal("academy")
+                        .then(
+                                Commands.literal("vfx")
+                                        .then(
+                                                Commands.literal("spawn")
+                                                        .then(
+                                                                Commands.argument("graph", StringArgumentType.word())
+                                                                        .executes(ctx -> spawnVfx(ctx.getArgument("graph", String.class), null))
+                                                                        .then(
+                                                                                Commands.argument("x", FloatArgumentType.floatArg())
+                                                                                        .then(
+                                                                                                Commands.argument("y", FloatArgumentType.floatArg())
+                                                                                                        .then(
+                                                                                                                Commands.argument("z", FloatArgumentType.floatArg())
+                                                                                                                        .executes(ctx -> spawnVfx(
+                                                                                                                                ctx.getArgument("graph", String.class),
+                                                                                                                                new Vector3f(
+                                                                                                                                        ctx.getArgument("x", Float.class),
+                                                                                                                                        ctx.getArgument("y", Float.class),
+                                                                                                                                        ctx.getArgument("z", Float.class)
+                                                                                                                                )
+                                                                                                                        ))
+                                                                                                        )
+                                                                                        )
+                                                                        )
+                                                        )
+                                        )
+                        )
                         .then(Commands.literal("debug")
                                 .then(Commands.literal("skillgui")
                                         .executes(_ -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode()))
@@ -275,6 +314,32 @@ public final class AcademyCraftClient {
         return 1;
     }
 
+    private static int spawnVfx(String graph, Vector3f position) {
+        var mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            notifyClient("No world loaded.");
+            return 0;
+        }
+        var assetId = Identifier.fromNamespaceAndPath("academy", "vfxgraph/" + graph);
+        Vector3f target;
+        if (position != null) {
+            target = position;
+        } else if (mc.getCameraEntity() != null) {
+            var eye = mc.getCameraEntity().getEyePosition(mc.getDeltaTracker().getGameTimeDeltaPartialTick(false));
+            target = new Vector3f((float) eye.x, (float) eye.y, (float) eye.z);
+        } else {
+            target = new Vector3f(0f, 64f, 0f);
+        }
+        try {
+            VfxGraphManager.INSTANCE.spawn(assetId, target);
+            notifyClient("Spawned vfx graph: " + assetId);
+            return 1;
+        } catch (Exception exception) {
+            notifyClient("Unable to spawn vfx graph " + assetId + ": " + exception.getMessage());
+            return 0;
+        }
+    }
+
     private static void notifyClient(String message) {
         var player = Minecraft.getInstance().player;
         if (player != null) player.sendSystemMessage(Component.literal(message));
@@ -306,6 +371,7 @@ public final class AcademyCraftClient {
         PostEffect.close();
         GlowEffect.getInstance().close();
         VfxManager.INSTANCE.close();
+        VfxGraphManager.INSTANCE.close();
         Render.close();
     }
 

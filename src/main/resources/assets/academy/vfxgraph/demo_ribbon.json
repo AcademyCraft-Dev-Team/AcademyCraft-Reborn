@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "demo_ribbon",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "ctx0",
+      "type": "SPAWN",
+      "name": "Spawn",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "spawn",
+          "type": "vfx.block.spawn_rate",
+          "properties": {
+            "rate": "60",
+            "param": "",
+            "lifetime": "1.2",
+            "size": "0.08",
+            "color": "1,0.7,0.3,1",
+            "vx": "0",
+            "vy": "0",
+            "vz": "-2",
+            "shape": "sphere",
+            "radius": "0.3",
+            "origin_x": "0",
+            "origin_y": "0.5",
+            "origin_z": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx1",
+      "type": "INITIALIZE",
+      "name": "Initialize",
+      "x": 440,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "col",
+          "type": "vfx.block.init_color",
+          "properties": {
+            "color": "1,0.7,0.3,1",
+            "param": ""
+          }
+        },
+        {
+          "id": "life",
+          "type": "vfx.block.init_lifetime",
+          "properties": {
+            "lifetime": "1.2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx2",
+      "type": "UPDATE",
+      "name": "Update",
+      "x": 880,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "integ",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        },
+        {
+          "id": "fade",
+          "type": "vfx.block.update_fade",
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "id": "ctx3",
+      "type": "OUTPUT",
+      "name": "Output",
+      "x": 1320,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "rib",
+          "type": "vfx.block.output_ribbon",
+          "properties": {
+            "shader": "academy:core/vfxgraph_simple",
+            "blend": "translucent",
+            "vertex": "academy:core/vfxgraph_simple"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx0",
+      "to": "ctx1"
+    },
+    {
+      "from": "ctx1",
+      "to": "ctx2"
+    },
+    {
+      "from": "ctx2",
+      "to": "ctx3"
+    }
+  ],
+  "dataEdges": [],
+  "outputs": [
+    "rib"
+  ]
+}

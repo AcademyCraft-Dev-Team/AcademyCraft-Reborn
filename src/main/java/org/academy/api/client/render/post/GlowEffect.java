@@ -15,6 +15,7 @@ import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
@@ -138,7 +139,7 @@ public final class GlowEffect {
     }
 
     public void process() {
-        if (!hasBeenUsed && !VfxManager.INSTANCE.hasGlowData()) return;
+        if (!hasBeenUsed && !VfxManager.INSTANCE.hasGlowData() && !VfxGraphManager.INSTANCE.hasGlowData()) return;
 
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.gameRenderer.mainRenderTarget();
@@ -182,6 +183,9 @@ public final class GlowEffect {
 
             if (VfxManager.INSTANCE.hasGlowData()) {
                 VfxManager.INSTANCE.renderGlowFrame(inputView, input.getDepthTextureView());
+            }
+            if (VfxGraphManager.INSTANCE.hasGlowData()) {
+                VfxGraphManager.INSTANCE.renderGlowFrame(inputView, input.getDepthTextureView());
             }
 
             {

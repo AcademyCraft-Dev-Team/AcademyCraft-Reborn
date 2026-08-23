@@ -18,6 +18,7 @@ val neoVersion = libs.versions.neoforge.get()
 val modVersion = libs.versions.academy.get()
 
 val isDev = (System.getProperty("isDev") ?: System.getenv("IS_DEV") ?: "false").toBoolean()
+val isCompat = (System.getProperty("isCompat") ?: System.getenv("IS_COMPAT") ?: "false").toBoolean()
 val modId = project.property("mod_id").toString()
 
 val renderDocVersion = libs.versions.renderdoc.get()
@@ -147,12 +148,14 @@ sourceSets.named("test") {
     runtimeClasspath += sourceSets.named("main").get().compileClasspath
 }
 
-// Standalone desktop tooling (out-of-game UI editors). Inherits the mod's
-// Minecraft/NeoForge/LWJGL runtime classpath so it can host the Blaze3D stack
-// and the mod's UI framework without launching the game.
 val editorSourceSet = sourceSets.create("editor") {
     compileClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().compileClasspath
     runtimeClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().runtimeClasspath
+}
+
+val editorTestSourceSet = sourceSets.create("editorTest") {
+    compileClasspath += editorSourceSet.output + editorSourceSet.compileClasspath
+    runtimeClasspath += editorSourceSet.output + editorSourceSet.runtimeClasspath
 }
 
 repositories {
@@ -235,11 +238,14 @@ neoForge {
     runs {
         register("client") {
             client()
-            environment("IS_DEV", "false")
         }
         register("clientDev") {
             client()
             environment("IS_DEV", "true")
+        }
+        register("clientCompat") {
+            client()
+            environment("IS_COMPAT", "true")
         }
         register("clientDevWithRenderDoc") {
             client()
@@ -295,6 +301,14 @@ neoForge {
             systemProperty("academy.desktop.main", "org.academy.desktop.hudeditor.HudEditorMainKt")
             programArguments.add("--project-root=${layout.projectDirectory}")
         }
+        register("graphEditor") {
+            client()
+            environment("IS_DEV", "true")
+            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
+            sourceSet.set(editorSourceSet)
+            systemProperty("academy.desktop.main", "org.academy.desktop.grapheditor.GraphEditorMainKt")
+            programArguments.add("--project-root=${layout.projectDirectory}")
+        }
         configureEach {
             logLevel.set(Level.DEBUG)
             systemProperty("terminal.ansi", "true")
@@ -334,21 +348,53 @@ fun DependencyHandler.implAndJarJar(
     }
 }
 
+fun DependencyHandler.compat(dep: Any) {
+    if (isCompat) {
+        implementation(dep)
+    } else {
+        compileOnly(dep)
+    }
+}
+
+fun DependencyHandler.dev(dep: Any) {
+    if (isDev) {
+        implementation(dep)
+        jarJar(dep)
+    } else {
+        compileOnly(dep)
+    }
+}
+
+fun DependencyHandler.dev(
+    dep: Provider<*>,
+    config: Action<ExternalModuleDependency>? = null
+) {
+    if (config != null) {
+        if (isDev) {
+            implementation(dep, config)
+            jarJar(dep, config)
+        } else {
+            compileOnly(dep, config)
+        }
+    } else {
+        if (isDev) {
+            implementation(dep)
+            jarJar(dep)
+        } else {
+            compileOnly(dep)
+        }
+    }
+}
+
 dependencies {
     implementation(libs.kotlinforforge)
-    /*
-        val geckolib = libs.geckolib
-        interfaceInjectionData(geckolib)
-        implAndJarJar(geckolib)
-    */
-
-    implementation(libs.sodium)
-    implementation(libs.iris)
-
-    implementation(libs.jade)
 
     compileOnly(libs.jei.api)
-    implementation(libs.jei)
+
+    compat(libs.sodium)
+    compat(libs.iris)
+    compat(libs.jade)
+    compat(libs.jei)
 
     apiAndJarJar(libs.misaka)
 
@@ -361,24 +407,20 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    "editorTestImplementation"(platform("org.junit:junit-bom:5.10.2"))
+    "editorTestImplementation"("org.junit.jupiter:junit-jupiter")
+    "editorTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+
     implAndJarJar(libs.jflac)
     implAndJarJar(libs.jlayer)
 
-    val imguiBinding = libs.imgui.binding
-    val imguiLwjgl3 = libs.imgui.lwjgl3
-
-    if (isDev) {
-        implAndJarJar(imguiBinding)
-        implAndJarJar(imguiLwjgl3) {
-            exclude(group = "org.lwjgl")
-        }
-        implAndJarJar(libs.imgui.linux)
-        implAndJarJar(libs.imgui.macos)
-        implAndJarJar(libs.imgui.windows)
-    } else {
-        compileOnly(imguiBinding)
-        compileOnly(imguiLwjgl3)
+    dev(libs.imgui.binding)
+    dev(libs.imgui.lwjgl3) {
+        exclude(group = "org.lwjgl")
     }
+    dev(libs.imgui.linux)
+    dev(libs.imgui.macos)
+    dev(libs.imgui.windows)
 }
 
 idea {
@@ -444,6 +486,10 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    // M16-05 golden 快照更新模式：./gradlew test -Dgolden.update=true
+    if (System.getProperty("golden.update") == "true") {
+        systemProperty("golden.update", "true")
+    }
 }
 
 fun registerClassPointerJvmTest(
@@ -479,6 +525,17 @@ val testClassPointerFallback = registerClassPointerJvmTest(
         "academy.test.expect_class_pointer_unsupported" to "true"
     )
 )
+
+val editorTest = tasks.register<Test>("editorTest") {
+    description = "Runs unit tests for the standalone editor tooling"
+    group = "verification"
+    testClassesDirs = editorTestSourceSet.output.classesDirs
+    classpath = editorTestSourceSet.runtimeClasspath
+}
+
+tasks.check {
+    dependsOn(editorTest)
+}
 
 tasks.check {
     dependsOn(testUncompressedClassPointers, testCompactObjectHeaders, testClassPointerFallback)
