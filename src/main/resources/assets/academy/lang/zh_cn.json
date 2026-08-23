@@ -22,7 +22,7 @@
   "academy.ability_developer.console.props_expired": "P.R.O.P.S 判定结果已过期，请重新输入 `learn`。",
   "academy.ability_developer.console.props_invalid_answer": "请输入 Y 或 N。",
   "academy.ability_developer.console.user_detected": "检测到用户 %s，系统启动中......",
-  "academy.ability_developer.console.welcome": "Welcome to Academy OS, Ver 0.0.3",
+  "academy.ability_developer.console.welcome": "Welcome to Academy OS, Ver 0.0.4",
   "academy.ability_developer.course.ability": "能力",
   "academy.ability_developer.course.common": "通用",
   "academy.ability_developer.dev_developing": "开发中...",
