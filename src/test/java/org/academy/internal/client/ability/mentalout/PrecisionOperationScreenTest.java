@@ -1,5 +1,6 @@
 package org.academy.internal.client.ability.mentalout;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
@@ -68,6 +69,13 @@ class PrecisionOperationScreenTest {
                 assertEquals(32, PrecisionOperationScreen.parameterEditorHeight(kind), kind.name());
             }
         }
+    }
+
+    @Test
+    void modularEditorAcceptsDeleteAndBackspaceForNodeDeletion() {
+        assertTrue(ModularProgramScreen.isDeleteKey(InputConstants.KEY_DELETE));
+        assertTrue(ModularProgramScreen.isDeleteKey(InputConstants.KEY_BACKSPACE));
+        assertFalse(ModularProgramScreen.isDeleteKey(InputConstants.KEY_ESCAPE));
     }
 
     @Test

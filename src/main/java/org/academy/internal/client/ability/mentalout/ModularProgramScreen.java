@@ -47,6 +47,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,6 +81,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private static final int DIVIDER = 0x80FFFFFF;
     private static final int GRID_MINOR = 0x0FFFFFFF;
     private static final int GRID_MAJOR = 0x20FFFFFF;
+    private static final int SELECTION_BACKGROUND = 0x20FFFFFF;
+    private static final double SELECTION_DRAG_THRESHOLD = 3.0;
     private static final int DEFAULT_ACCENT = 0xFF1177D6;
     private static final int TEXT = 0xFFFFFFFF;
     private static final int DIM = 0xBFFFFFFF;
@@ -136,7 +139,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private ProgramEditorNodeCatalog.Group selectedGroup = ProgramEditorNodeCatalog.Group.TARGET;
     private int paletteScroll;
     private int selectedNode = -1;
+    private final Set<Integer> selectedNodes = new LinkedHashSet<>();
     private Integer draggingNode;
+    private SelectionDrag selectionDrag;
     private boolean panning;
     private boolean spaceDown;
     private double panX;
@@ -472,6 +477,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         for (var edge : document.program().graph().edges()) renderEdge(graphics, edge);
         for (var node : nodes()) renderNode(graphics, node, mouseX, mouseY);
         pose.popMatrix();
+        renderSelectionDrag(graphics);
         renderConnectionPreview(graphics, mouseX, mouseY);
         renderPortTooltip(graphics, mouseX, mouseY);
         graphics.disableScissor();
@@ -503,7 +509,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var errorNode = serverDiagnostic != PrecisionGraph.Diagnostic.OK
                 ? serverDiagnosticNode : localError == null ? -1 : localError.nodeId();
         var hasError = node.id() == errorNode;
-        var selected = node.id() == selectedNode;
+        var selected = selectedNodes.contains(node.id());
         graphics.fill(x, y, x + NODE_W, y + height,
                 hasError ? ERROR_BACKGROUND : selected ? NODE_SELECTED_BACKGROUND : NODE_BACKGROUND);
         border(graphics, x, y, NODE_W, height,
@@ -576,6 +582,19 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (openEnd) graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2, 0xFF111111);
     }
 
+    private void renderSelectionDrag(GuiGraphicsExtractor graphics) {
+        if (selectionDrag == null) return;
+        var bounds = selectionDrag.bounds();
+        if (!bounds.exceeds(SELECTION_DRAG_THRESHOLD)) return;
+        var left = (int) Math.floor(bounds.left());
+        var top = (int) Math.floor(bounds.top());
+        var right = (int) Math.ceil(bounds.right());
+        var bottom = (int) Math.ceil(bounds.bottom());
+        graphics.fill(left, top, right, bottom, SELECTION_BACKGROUND);
+        border(graphics, left, top,
+                Math.max(1, right - left), Math.max(1, bottom - top), accentColor);
+    }
+
     private void renderConnectionPreview(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (connection == null) return;
         var anchor = endpointScreen(connection.endpoint);
@@ -606,7 +625,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 x + 5, canvasY + 5, DIM, width - 10);
         var selected = node(selectedNode);
         if (selected == null) {
-            smallText(graphics, Component.translatable("screen.academy.precision_operation.no_selection").getString(),
+            var status = selectedNodes.size() > 1
+                    ? Component.translatable(
+                            "screen.academy.precision_operation.multi_selection",
+                            selectedNodes.size())
+                    : Component.translatable("screen.academy.precision_operation.no_selection");
+            smallText(graphics, status.getString(),
                     x + 5, canvasY + 22, DIM, width - 10);
             return;
         }
@@ -755,6 +779,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                     || handleRailClick(x, y) || handleInspectorClick(x, y)
                     || handlePaletteClick(x, y)) return true;
             if (spaceDown && inside(x, y, canvasX, canvasY, canvasW, canvasH)) {
+                selectionDrag = null;
                 panning = true;
                 return true;
             }
@@ -778,6 +803,10 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             return true;
         }
         if (connection != null) return true;
+        if (selectionDrag != null && event.button() == 0) {
+            updateSelectionDrag(event.x(), event.y());
+            return true;
+        }
         if (draggingNode != null) {
             var selected = node(draggingNode);
             if (selected != null) {
@@ -805,6 +834,11 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (connection != null && event.button() == 0) {
             finishConnection(event.x(), event.y());
             draggingNode = null;
+            return true;
+        }
+        if (selectionDrag != null && event.button() == 0) {
+            updateSelectionDrag(event.x(), event.y());
+            selectionDrag = null;
             return true;
         }
         draggingNode = null;
@@ -846,12 +880,14 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             spaceDown = true;
             return true;
         }
-        if (event.key() == InputConstants.KEY_ESCAPE && (connection != null || quickInsert != null)) {
+        if (event.key() == InputConstants.KEY_ESCAPE
+                && (connection != null || quickInsert != null || selectionDrag != null)) {
             connection = null;
             quickInsert = null;
+            selectionDrag = null;
             return true;
         }
-        if (event.key() == InputConstants.KEY_DELETE) {
+        if (isDeleteKey(event.key())) {
             deleteSelected();
             return true;
         }
@@ -874,6 +910,10 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             }
         }
         return super.keyPressed(event);
+    }
+
+    static boolean isDeleteKey(int key) {
+        return key == InputConstants.KEY_DELETE || key == InputConstants.KEY_BACKSPACE;
     }
 
     @Override
@@ -1118,13 +1158,13 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 connection = null;
             } else {
                 connection = new ConnectionDrag(endpoint, mouseX, mouseY);
-                selectedNode = endpoint.nodeId;
+                selectNode(endpoint.nodeId);
             }
             return true;
         }
         for (var node : reversed(nodes())) {
             if (insideHeader(mouseX, mouseY, node)) {
-                selectedNode = node.id();
+                selectNode(node.id());
                 pushUndo();
                 draggingNode = node.id();
                 return true;
@@ -1137,7 +1177,33 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
         selectNode(-1);
         connection = null;
+        selectionDrag = new SelectionDrag(mouseX, mouseY, mouseX, mouseY);
         return true;
+    }
+
+    private void updateSelectionDrag(double mouseX, double mouseY) {
+        if (selectionDrag == null) return;
+        var clampedX = Math.clamp(mouseX, canvasX, canvasX + canvasW);
+        var clampedY = Math.clamp(mouseY, canvasY, canvasY + canvasH);
+        selectionDrag = selectionDrag.update(clampedX, clampedY);
+        var screenBounds = selectionDrag.bounds();
+        if (!screenBounds.exceeds(SELECTION_DRAG_THRESHOLD)) {
+            selectNodes(Set.of());
+            return;
+        }
+        var graphBounds = PrecisionEditorGeometry.selectionBounds(
+                screenToGraphX(screenBounds.left()),
+                screenToGraphY(screenBounds.top()),
+                screenToGraphX(screenBounds.right()),
+                screenToGraphY(screenBounds.bottom())
+        );
+        var selected = new LinkedHashSet<Integer>();
+        for (var node : nodes()) {
+            if (graphBounds.intersects(node.x, node.y, NODE_W, nodeHeight(node))) {
+                selected.add(node.id());
+            }
+        }
+        selectNodes(selected);
     }
 
     private void finishConnection(double mouseX, double mouseY) {
@@ -1242,16 +1308,16 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
         pushUndo();
         install(result.document(), true);
-        selectedNode = document.program().graph().nodes().stream()
+        var addedId = document.program().graph().nodes().stream()
                 .map(ProgramGraph.Node::id).filter(id -> !existingIds.contains(id))
                 .findFirst().orElse(-1);
-        configurationNode = -1;
+        selectNode(addedId);
         return node(selectedNode);
     }
 
     private void deleteSelected() {
-        if (node(selectedNode) == null) return;
-        var result = document.removeNode(selectedNode);
+        if (selectedNodes.isEmpty()) return;
+        var result = document.removeNodes(Set.copyOf(selectedNodes));
         if (!result.successful()) {
             showTransient(result.diagnostic());
             return;
@@ -1410,6 +1476,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (recordUndo) pushUndo();
         document = document(program == null ? session.emptyProgram(slot) : program);
         selectNode(-1);
+        selectionDrag = null;
         connection = null;
         quickInsert = null;
         configurationInputValidity.clear();
@@ -1803,7 +1870,17 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private void selectNode(int nodeId) {
-        selectedNode = nodeId;
+        selectNodes(nodeId >= 0 ? Set.of(nodeId) : Set.of());
+    }
+
+    private void selectNodes(Set<Integer> nodeIds) {
+        selectedNodes.clear();
+        document.program().graph().nodes().stream()
+                .map(ProgramGraph.Node::id)
+                .filter(nodeIds::contains)
+                .forEach(selectedNodes::add);
+        selectedNode = selectedNodes.size() == 1
+                ? selectedNodes.iterator().next() : -1;
         clearConfigurationInputs();
     }
 
@@ -2227,6 +2304,21 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private record ConnectionDrag(Endpoint endpoint, double startX, double startY) {
+    }
+
+    private record SelectionDrag(
+            double startX,
+            double startY,
+            double currentX,
+            double currentY
+    ) {
+        private SelectionDrag update(double x, double y) {
+            return new SelectionDrag(startX, startY, x, y);
+        }
+
+        private PrecisionEditorGeometry.SelectionBounds bounds() {
+            return PrecisionEditorGeometry.selectionBounds(startX, startY, currentX, currentY);
+        }
     }
 
     private record QuickInsert(

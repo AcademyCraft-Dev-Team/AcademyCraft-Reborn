@@ -37,6 +37,20 @@ final class PrecisionEditorGeometry {
         return origin + pan + graph * zoom;
     }
 
+    static SelectionBounds selectionBounds(
+            double startX,
+            double startY,
+            double endX,
+            double endY
+    ) {
+        return new SelectionBounds(
+                Math.min(startX, endX),
+                Math.min(startY, endY),
+                Math.max(startX, endX),
+                Math.max(startY, endY)
+        );
+    }
+
     static View zoomAt(
             double mouseX,
             double mouseY,
@@ -76,5 +90,16 @@ final class PrecisionEditorGeometry {
     }
 
     record View(double panX, double panY, double zoom) {
+    }
+
+    record SelectionBounds(double left, double top, double right, double bottom) {
+        boolean intersects(double x, double y, double width, double height) {
+            return right >= x && left <= x + width
+                    && bottom >= y && top <= y + height;
+        }
+
+        boolean exceeds(double minimumDistance) {
+            return right - left >= minimumDistance || bottom - top >= minimumDistance;
+        }
     }
 }

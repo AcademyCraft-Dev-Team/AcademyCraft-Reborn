@@ -3,6 +3,7 @@ package org.academy.internal.client.ability.mentalout;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PrecisionEditorGeometryTest {
@@ -45,5 +46,25 @@ class PrecisionEditorGeometryTest {
                 PrecisionEditorGeometry.zoomAt(0, 0, 0, 0, 0, 0, 1.0, 0.1).zoom());
         assertEquals(PrecisionOperationScreen.MAX_ZOOM,
                 PrecisionEditorGeometry.zoomAt(0, 0, 0, 0, 0, 0, 1.0, 4.0).zoom());
+    }
+
+    @Test
+    void reverseDragProducesNormalizedSelectionBounds() {
+        var bounds = PrecisionEditorGeometry.selectionBounds(120, 90, 20, 30);
+
+        assertEquals(20, bounds.left());
+        assertEquals(30, bounds.top());
+        assertEquals(120, bounds.right());
+        assertEquals(90, bounds.bottom());
+        assertTrue(bounds.exceeds(3));
+    }
+
+    @Test
+    void selectionBoundsIncludeIntersectingNodesOnly() {
+        var bounds = PrecisionEditorGeometry.selectionBounds(10, 10, 80, 60);
+
+        assertTrue(bounds.intersects(70, 50, 20, 20));
+        assertTrue(bounds.intersects(10, 10, 1, 1));
+        assertFalse(bounds.intersects(81, 61, 20, 20));
     }
 }

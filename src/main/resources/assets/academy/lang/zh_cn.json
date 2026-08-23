@@ -785,6 +785,7 @@
   "screen.academy.precision_operation.group.mental_action": "心灵行动",
   "screen.academy.precision_operation.group.target": "目标",
   "screen.academy.precision_operation.inspector": "参数检查",
+  "screen.academy.precision_operation.multi_selection": "已选择 %1$s 个节点；按 Backspace 或 Delete 删除。",
   "screen.academy.precision_operation.no_selection": "选择节点以检查其类型化端口和参数。",
   "screen.academy.precision_operation.node.ability_supported": "能力支持筛选",
   "screen.academy.precision_operation.node.ability_supported.description": "保留支持指定心理控制能力的实体。",
