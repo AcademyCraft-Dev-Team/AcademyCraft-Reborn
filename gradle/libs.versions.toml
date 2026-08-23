@@ -1,5 +1,5 @@
 [versions]
-academy = "0.0.3-alpha"
+academy = "0.0.4-alpha"
 
 java = "25"
 minecraft = "26.2.0"
