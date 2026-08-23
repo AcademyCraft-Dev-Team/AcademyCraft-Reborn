@@ -48,6 +48,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
 import org.jspecify.annotations.Nullable;
 
@@ -436,7 +437,7 @@ public final class DarkmatterBeetle extends Monster {
         if (modules.contains(DarkmatterCreatureRegistries.MODULE_SCOUT.toString())) {
             for (var target : level.getEntitiesOfClass(Monster.class, getBoundingBox().inflate(
                     getAttributeValue(Attributes.FOLLOW_RANGE)), mob -> mob.isAlive()
-                    && mob != this && !owner.isAlliedTo(mob))) {
+                    && DarkmatterTargeting.isAttackableBy(owner, mob))) {
                 target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 50, 0, false, false));
             }
         }
@@ -444,7 +445,7 @@ public final class DarkmatterBeetle extends Monster {
             var beta = betaPower(additionalAlpha);
             for (var target : level.getEntitiesOfClass(Monster.class,
                     getBoundingBox().inflate(getAttributeValue(Attributes.FOLLOW_RANGE)),
-                    mob -> mob.isAlive() && mob != this && !owner.isAlliedTo(mob))) {
+                    mob -> mob.isAlive() && DarkmatterTargeting.isAttackableBy(owner, mob))) {
                 target.addEffect(new MobEffectInstance(
                         MobEffects.GLOWING, 30 + Math.round(10.0f * beta), 0, false, false));
             }
@@ -564,9 +565,7 @@ public final class DarkmatterBeetle extends Monster {
     }
 
     private boolean isCommandedTarget(ServerPlayer owner, LivingEntity target) {
-        if (target == this || target == owner || !target.isAlive() || target.isRemoved()
-                || owner.isAlliedTo(target)) return false;
-        if (target instanceof Player player && (player.isCreative() || player.isSpectator())) return false;
+        if (!DarkmatterTargeting.isAttackableBy(owner, target)) return false;
         var guard = limbs.equals(DarkmatterCreatureRegistries.LIMBS_GUARD.toString())
                 || modules.contains(DarkmatterCreatureRegistries.MODULE_GUARD.toString());
         var focus = modules.contains(DarkmatterCreatureRegistries.MODULE_FOCUS.toString());
@@ -635,7 +634,9 @@ public final class DarkmatterBeetle extends Monster {
             float penetration
     ) {
         var armor = target.getAttribute(Attributes.ARMOR);
-        if (armor == null || penetration <= 0.0f) return target.hurtServer(level, source, damage);
+        if (armor == null || penetration <= 0.0f) {
+            return DarkmatterTargeting.hurt(level, target, source, damage);
+        }
         var previous = armor.getModifier(PENETRATION_ID);
         if (previous != null) armor.removeModifier(PENETRATION_ID);
         armor.addTransientModifier(new AttributeModifier(
@@ -643,7 +644,7 @@ public final class DarkmatterBeetle extends Monster {
                 -Math.clamp(penetration, 0.0f, 0.5f),
                 AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         try {
-            return target.hurtServer(level, source, damage);
+            return DarkmatterTargeting.hurt(level, target, source, damage);
         } finally {
             armor.removeModifier(PENETRATION_ID);
             if (previous != null) armor.addTransientModifier(previous);
@@ -655,6 +656,7 @@ public final class DarkmatterBeetle extends Monster {
 
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        if (DarkmatterTargeting.isDarkmatterDamage(source)) return false;
         var reduction = gammaCatalyzed() ? Math.min(0.75f, 0.03f * averageGammaPower) : 0.0f;
         if (torso.equals(DarkmatterCreatureRegistries.TORSO_FLY.toString())) {
             reduction = Math.min(0.80f, reduction + Math.min(0.20f,

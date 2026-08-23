@@ -162,6 +162,21 @@ open class ToggleButtonWidget : AbstractWidget() {
         return this
     }
 
+    /** Java-friendly aliases that avoid Kotlin property-setter overload ambiguity. */
+    fun updateChecked(checked: Boolean): ToggleButtonWidget = apply {
+        isChecked = checked
+    }
+
+    fun updateTrackColors(normal: Int, checked: Int): ToggleButtonWidget = apply {
+        trackColor = normal
+        checkedTrackColor = checked
+        invalidate()
+    }
+
+    fun updateOnCheckedChangeListener(listener: OnCheckedChangeListener?): ToggleButtonWidget = apply {
+        onCheckedChangeListener = listener
+    }
+
     interface OnCheckedChangeListener {
         fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean)
     }

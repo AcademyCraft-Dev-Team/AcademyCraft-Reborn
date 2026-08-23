@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.portal.TeleportTransition;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -99,5 +100,17 @@ public abstract class MixinServerPlayer extends Player implements ImagineBreaker
         if (!(remainingDamage > 0.0f) || !Float.isFinite(remainingDamage)) return false;
         return VectorReflection.Server.isVectorDefenseActive((ServerPlayer) (Object) this)
                 ? false : super.hurtServer(level, source, remainingDamage);
+    }
+
+    @Redirect(
+            method = "hurtServer",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/level/ServerPlayer;canHarmPlayer(Lnet/minecraft/world/entity/player/Player;)Z"
+            )
+    )
+    private boolean academy$allowNonTeamDarkmatterPvp(ServerPlayer victim, Player attacker) {
+        return DarkmatterTargeting.shouldBypassPvpCheck(victim, attacker)
+                || victim.canHarmPlayer(attacker);
     }
 }

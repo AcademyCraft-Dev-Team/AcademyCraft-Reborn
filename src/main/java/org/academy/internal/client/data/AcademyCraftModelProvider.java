@@ -50,6 +50,11 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         new TextureMapping().put(
                                 TextureSlot.ALL, new Material(academy("black").withPrefix("block/"))
                         ), ModelTemplates.CUBE_ALL);
+        var darkmatterBlock = createDefault(
+                _ -> new TextureMapping().put(
+                        TextureSlot.ALL,
+                        new Material(academy("darkmatter").withPrefix("block/"))),
+                ModelTemplates.CUBE_ALL);
         var imagPhaseVegetation = createDefault(
                 _ -> new TextureMapping()
                         .put(
@@ -116,6 +121,10 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.SOLAR_GEN.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.IMAG_PHASE.get(), providerBlack);
+        var configurableDarkmatterBlock = Blocks.DARKMATTER_BLOCK.get();
+        blockModels.createTrivialBlock(configurableDarkmatterBlock, darkmatterBlock);
+        blockModels.registerSimpleItemModel(configurableDarkmatterBlock,
+                ModelLocationUtils.getModelLocation(configurableDarkmatterBlock));
 
         var vegetationBlock = Blocks.IMAG_PHASE_VEGETATION.get();
         blockModels.createTrivialBlock(vegetationBlock, imagPhaseVegetation);
@@ -148,6 +157,11 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.CAT_ENGINE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DATA_TERMINAL.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARKMATTER.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.itemModelOutput.accept(Items.DARKMATTER_COATING.get(),
+                ItemModelUtils.plainModel(ModelTemplates.FLAT_ITEM.create(
+                        ModelLocationUtils.getModelLocation(Items.DARKMATTER_COATING.get()),
+                        TextureMapping.layer0(Items.DARKMATTER.get()),
+                        itemModels.modelOutput)));
         itemModels.generateFlatItem(Items.DARKMATTER_TOOL.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
         itemModels.generateFlatItem(Items.DARKMATTER_SWORD.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
         generateDarkmatterSpear(itemModels);

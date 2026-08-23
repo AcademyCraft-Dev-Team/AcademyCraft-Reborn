@@ -22,6 +22,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.item.Items;
 
@@ -88,9 +89,7 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
         if (!(level() instanceof ServerLevel level)
                 || !(getOwner() instanceof ServerPlayer owner)
                 || !(result.getEntity() instanceof LivingEntity target)
-                || target == owner || owner.isAlliedTo(target)
-                || (target instanceof DarkmatterBeetle beetle
-                && beetle.getOwnerUUID().filter(owner.getUUID()::equals).isPresent())) {
+                || !DarkmatterTargeting.isAttackableBy(owner, target)) {
             discard();
             return;
         }
@@ -117,13 +116,15 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
                                                net.minecraft.world.damagesource.DamageSource source,
                                                float damage, float penetration) {
         var armor = target.getAttribute(Attributes.ARMOR);
-        if (armor == null || penetration <= 0.0f) return target.hurtServer(level, source, damage);
+        if (armor == null || penetration <= 0.0f) {
+            return DarkmatterTargeting.hurt(level, target, source, damage);
+        }
         var previous = armor.getModifier(PENETRATION_ID);
         if (previous != null) armor.removeModifier(PENETRATION_ID);
         armor.addTransientModifier(new AttributeModifier(
                 PENETRATION_ID, -penetration, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         try {
-            return target.hurtServer(level, source, damage);
+            return DarkmatterTargeting.hurt(level, target, source, damage);
         } finally {
             armor.removeModifier(PENETRATION_ID);
             if (previous != null) armor.addTransientModifier(previous);

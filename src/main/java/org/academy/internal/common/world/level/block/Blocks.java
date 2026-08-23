@@ -64,6 +64,14 @@ public final class Blocks {
             );
     public static final DeferredHolder<Block, ImagPhaseLichenBlock> IMAG_PHASE_LICHEN =
             BLOCKS.registerBlock("imag_phase_lichen", ImagPhaseLichenBlock::new);
+    public static final DeferredHolder<Block, DarkmatterConfigurableBlock> DARKMATTER_BLOCK =
+            BLOCKS.registerBlock(
+                    "darkmatter_block",
+                    DarkmatterConfigurableBlock::new,
+                    () -> BlockBehaviour.Properties.of()
+                            .strength(5.0f, 30.0f)
+                            .sound(SoundType.AMETHYST)
+            );
 
     private Blocks() {
     }
