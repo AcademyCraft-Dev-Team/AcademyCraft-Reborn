@@ -594,6 +594,13 @@ public final class R {
                     private music() {
                     }
                 }
+
+                public static final class tutorial {
+                    public static final Identifier icon = academy("textures/gui/app/tutorial/icon.png");
+
+                    private tutorial() {
+                    }
+                }
             }
 
             public static final class developer {
