@@ -1,8 +1,10 @@
 package org.academy.internal.client.ability;
 
 import net.minecraft.client.Minecraft;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.common.ability.Skill;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.Skills;
 import org.misaka.MisakaNetworkClient;
@@ -29,6 +31,40 @@ public final class ProficiencySkillSettingsClient {
                 "auto_escape",
                 "app.academy.skill_settings.advanced.flashing_auto_escape",
                 ProficiencySkillSettings.FLASHING_AUTO_ESCAPE
+        );
+        registerMiningBeamHarvestMode();
+    }
+
+    private static void registerMiningBeamHarvestMode() {
+        var skill = Skills.MINING_BEAM.get();
+        var option = ProficiencySkillSettings.MINING_BEAM_HARVEST_MODE;
+        SkillSettingsRegistry.INSTANCE.register(
+                skill,
+                new SkillSettingsRegistry.Module(
+                        "proficiency",
+                        "",
+                        List.of(new SkillSettingsRegistry.Choice(
+                                "harvest_mode",
+                                "app.academy.skill_settings.advanced.mining_beam.harvest_mode",
+                                List.of(
+                                        "app.academy.skill_settings.advanced.mining_beam.harvest_mode.auto_smelt",
+                                        "app.academy.skill_settings.advanced.mining_beam.harvest_mode.fortune_3",
+                                        "app.academy.skill_settings.advanced.mining_beam.harvest_mode.silk_touch"
+                                ),
+                                () -> ProficiencySkillSettings.getMode(
+                                        Minecraft.getInstance().player, option),
+                                mode -> {
+                                    var player = Minecraft.getInstance().player;
+                                    if (player == null) return;
+                                    ProficiencySkillSettings.setMode(player, option, mode);
+                                    MisakaNetworkClient.send(
+                                            new ProficiencySkillSettings.SetModePacket(option, mode));
+                                },
+                                () -> AbilitySystemClient.getSkillProficiencyMilestone(skill) >= 3
+                                        && ProficiencyPolicy.client().enabled(),
+                                "app.academy.skill_settings.advanced.mining_beam.harvest_mode.locked"
+                        ))
+                )
         );
     }
 

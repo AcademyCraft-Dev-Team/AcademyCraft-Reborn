@@ -4,11 +4,18 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -28,6 +35,7 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
@@ -43,6 +51,7 @@ import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeed
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
+import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -278,7 +287,8 @@ public final class MiningBeam extends Skill {
                         true,
                         true,
                         true,
-                        player
+                        player,
+                        MiningBeam::dropConfiguredResources
                 );
             }
             LinearAttackExecutor.SegmentExecutionResult outboundResult = null;
@@ -296,7 +306,9 @@ public final class MiningBeam extends Skill {
                         true,
                         true,
                         !(breakTick && destroyBlocks),
-                        attack.reflectionCandidate().orElseThrow().reflector()
+                        attack.reflectionCandidate().orElseThrow().reflector(),
+                        (level, pos, state, blockEntity, _) -> dropConfiguredResources(
+                                level, pos, state, blockEntity, player)
                 );
                 attack = attack.limitReturnLength(returnLength);
             }
@@ -342,20 +354,52 @@ public final class MiningBeam extends Skill {
 
     public static boolean dropRefinedResources(
             ServerLevel level,
-            net.minecraft.core.BlockPos pos,
-            net.minecraft.world.level.block.state.BlockState state,
-            net.minecraft.world.level.block.entity.BlockEntity blockEntity,
+            BlockPos pos,
+            BlockState state,
+            BlockEntity blockEntity,
             ServerPlayer player
     ) {
         var skill = Skills.MINING_BEAM.get();
         if (!skill.hasProficiencyMilestone(player, 3)
+                || getHarvestMode(player) != HarvestMode.AUTO_SMELT
                 || !ProficiencyPolicy.server(player).allowMiningBeamSmelting()) {
             return false;
         }
-        var drops = net.minecraft.world.level.block.Block.getDrops(
-                state, level, pos, blockEntity, player, net.minecraft.world.item.ItemStack.EMPTY);
+        return dropSmeltedResources(level, pos, state, blockEntity, player);
+    }
+
+    public static boolean dropConfiguredResources(
+            ServerLevel level,
+            BlockPos pos,
+            BlockState state,
+            BlockEntity blockEntity,
+            ServerPlayer player
+    ) {
+        if (!Skills.MINING_BEAM.get().hasProficiencyMilestone(player, 3)) return false;
+        return switch (getHarvestMode(player)) {
+            case AUTO_SMELT -> ProficiencyPolicy.server(player).allowMiningBeamSmelting()
+                    && dropSmeltedResources(level, pos, state, blockEntity, player);
+            case FORTUNE_III -> dropEnchantedResources(
+                    level, pos, state, blockEntity, player, Enchantments.FORTUNE, 3);
+            case SILK_TOUCH -> dropEnchantedResources(
+                    level, pos, state, blockEntity, player, Enchantments.SILK_TOUCH, 1);
+        };
+    }
+
+    public static HarvestMode getHarvestMode(Player player) {
+        return HarvestMode.fromIndex(ProficiencySkillSettings.getMode(
+                player, ProficiencySkillSettings.MINING_BEAM_HARVEST_MODE));
+    }
+
+    private static boolean dropSmeltedResources(
+            ServerLevel level,
+            BlockPos pos,
+            BlockState state,
+            BlockEntity blockEntity,
+            ServerPlayer player
+    ) {
+        var drops = Block.getDrops(state, level, pos, blockEntity, player, ItemStack.EMPTY);
         if (drops.isEmpty()) return false;
-        var refinedAny = false;
         for (var drop : drops) {
             var input = new net.minecraft.world.item.crafting.SingleRecipeInput(drop.copyWithCount(1));
             var recipe = level.getServer().getRecipeManager().getRecipeFor(
@@ -370,13 +414,41 @@ public final class MiningBeam extends Skill {
                 continue;
             }
             output.setCount(output.getCount() * drop.getCount());
-            net.minecraft.world.level.block.Block.popResource(level, pos, output);
+            Block.popResource(level, pos, output);
             var experience = Math.round(recipe.value().experience() * drop.getCount());
             if (experience > 0) net.minecraft.world.entity.ExperienceOrb.award(level,
                     net.minecraft.world.phys.Vec3.atCenterOf(pos), experience);
-            refinedAny = true;
         }
         return true;
+    }
+
+    private static boolean dropEnchantedResources(
+            ServerLevel level,
+            BlockPos pos,
+            BlockState state,
+            BlockEntity blockEntity,
+            ServerPlayer player,
+            net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> enchantment,
+            int enchantmentLevel
+    ) {
+        var tool = new ItemStack(Items.NETHERITE_PICKAXE);
+        DarkmatterItemUtil.setEnchantmentLevel(
+                level.registryAccess(), tool, enchantment, enchantmentLevel);
+        for (var drop : Block.getDrops(state, level, pos, blockEntity, player, tool)) {
+            if (!drop.isEmpty()) Block.popResource(level, pos, drop);
+        }
+        state.spawnAfterBreak(level, pos, tool, true);
+        return true;
+    }
+
+    public enum HarvestMode {
+        AUTO_SMELT,
+        FORTUNE_III,
+        SILK_TOUCH;
+
+        public static HarvestMode fromIndex(int index) {
+            return values()[Math.clamp(index, 0, values().length - 1)];
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
