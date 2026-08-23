@@ -82,6 +82,25 @@ object SkillSettingsRegistry {
         }
     }
 
+    data class Choice(
+        override val id: String,
+        override val labelKey: String,
+        val optionKeys: List<String>,
+        val getter: IntSupplier,
+        val setter: IntConsumer,
+        val available: BooleanSupplier,
+        val unavailableKey: String
+    ) : Entry {
+        init {
+            require(optionKeys.isNotEmpty()) { "Choice setting '$id' must have at least one option" }
+            require(optionKeys.none(String::isBlank)) {
+                "Choice setting '$id' contains an empty option translation key"
+            }
+        }
+
+        fun clampIndex(index: Int): Int = index.coerceIn(optionKeys.indices)
+    }
+
     fun interface FloatSupplier {
         fun getAsFloat(): Float
     }

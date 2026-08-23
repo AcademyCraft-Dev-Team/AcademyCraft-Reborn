@@ -20,4 +20,14 @@ class MiningBeamTest {
         assertEquals(48.0f, MiningBeam.MAX_LENGTH);
         assertEquals(4, MiningBeam.MINING_TIER);
     }
+
+    @Test
+    void harvestModeIndexIsClampedToTheThreeSupportedModes() {
+        assertEquals(MiningBeam.HarvestMode.AUTO_SMELT,
+                MiningBeam.HarvestMode.fromIndex(-1));
+        assertEquals(MiningBeam.HarvestMode.FORTUNE_III,
+                MiningBeam.HarvestMode.fromIndex(1));
+        assertEquals(MiningBeam.HarvestMode.SILK_TOUCH,
+                MiningBeam.HarvestMode.fromIndex(9));
+    }
 }
