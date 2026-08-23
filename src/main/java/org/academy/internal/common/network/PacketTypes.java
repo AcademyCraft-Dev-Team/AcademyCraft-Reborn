@@ -127,6 +127,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ProficiencySkillSettings.SetPacket>>
             PROFICIENCY_SKILL_OPTION_SET = PACKET_TYPES.register("proficiency_skill_option_set",
             () -> new PacketType<>(ProficiencySkillSettings.SetPacket.class, ProficiencySkillSettings.SetPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ProficiencySkillSettings.SetModePacket>>
+            PROFICIENCY_SKILL_MODE_SET = PACKET_TYPES.register("proficiency_skill_mode_set",
+            () -> new PacketType<>(ProficiencySkillSettings.SetModePacket.class,
+                    ProficiencySkillSettings.SetModePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ?>>
             SYNC_DATA = PACKET_TYPES.register("sync_data",

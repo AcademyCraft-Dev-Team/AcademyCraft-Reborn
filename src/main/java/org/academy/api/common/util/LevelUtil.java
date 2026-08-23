@@ -16,6 +16,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.GameMasterBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -89,6 +90,34 @@ public class LevelUtil {
             boolean simulate,
             @Nullable ServerPlayer breaker
     ) {
+        return destroyBlocksAlongPath(
+                level,
+                start,
+                end,
+                radius,
+                miningLevel,
+                dropBlock,
+                spawnParticles,
+                canBlock,
+                simulate,
+                breaker,
+                null
+        );
+    }
+
+    public static Pair<Boolean, Double> destroyBlocksAlongPath(
+            Level level,
+            Vec3 start,
+            Vec3 end,
+            float radius,
+            int miningLevel,
+            boolean dropBlock,
+            boolean spawnParticles,
+            boolean canBlock,
+            boolean simulate,
+            @Nullable ServerPlayer breaker,
+            @Nullable BlockDropHandler dropHandler
+    ) {
         var pathLength = start.distanceTo(end);
         var collectedBlocks = collectBlocksOptimized(level, start, end, radius, miningLevel, canBlock);
 
@@ -107,7 +136,8 @@ public class LevelUtil {
                     minBlockedDist,
                     dropBlock,
                     spawnParticles,
-                    breaker
+                    breaker,
+                    dropHandler
             );
         }
         return Pair.of(minBlockedDist < pathLength, minBlockedDist);
@@ -229,7 +259,8 @@ public class LevelUtil {
             double minBlockedDist,
             boolean dropBlock,
             boolean spawnParticles,
-            @Nullable ServerPlayer breaker
+            @Nullable ServerPlayer breaker,
+            @Nullable BlockDropHandler dropHandler
     ) {
         var air = Blocks.AIR.defaultBlockState();
         for (var pos : breakableBlocks) {
@@ -246,10 +277,10 @@ public class LevelUtil {
                 var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
 
                 if (dropBlock) {
-                    var refined = breaker != null && level instanceof net.minecraft.server.level.ServerLevel serverLevel
-                            && org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam
-                            .dropRefinedResources(serverLevel, pos, blockState, blockEntity, breaker);
-                    if (!refined) Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
+                    var handled = breaker != null && level instanceof ServerLevel serverLevel
+                            && dropHandler != null
+                            && dropHandler.drop(serverLevel, pos, blockState, blockEntity, breaker);
+                    if (!handled) Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
                 }
                 level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
                 if (spawnParticles) {
@@ -388,5 +419,16 @@ public class LevelUtil {
             List<BlockPos> breakable, List<BlockPos> unbreakable,
             LongOpenHashSet visited, BlockPos.MutableBlockPos mutablePos
     ) {
+    }
+
+    @FunctionalInterface
+    public interface BlockDropHandler {
+        boolean drop(
+                ServerLevel level,
+                BlockPos pos,
+                BlockState state,
+                @Nullable BlockEntity blockEntity,
+                ServerPlayer breaker
+        );
     }
 }

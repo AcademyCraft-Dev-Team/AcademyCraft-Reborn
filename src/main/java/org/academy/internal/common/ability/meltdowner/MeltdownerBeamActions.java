@@ -130,6 +130,30 @@ public final class MeltdownerBeamActions {
             boolean canBlock,
             ServerPlayer breaker
     ) {
+        destroyBlocksAlongSegment(
+                level,
+                segment,
+                radius,
+                miningLevel,
+                dropBlocks,
+                spawnParticles,
+                canBlock,
+                breaker,
+                null
+        );
+    }
+
+    public static void destroyBlocksAlongSegment(
+            ServerLevel level,
+            LinearSegment segment,
+            float radius,
+            int miningLevel,
+            boolean dropBlocks,
+            boolean spawnParticles,
+            boolean canBlock,
+            ServerPlayer breaker,
+            LevelUtil.BlockDropHandler dropHandler
+    ) {
         executeBlocksAlongSegment(
                 level,
                 segment,
@@ -139,7 +163,8 @@ public final class MeltdownerBeamActions {
                 spawnParticles,
                 canBlock,
                 false,
-                breaker
+                breaker,
+                dropHandler
         );
     }
 
@@ -154,6 +179,32 @@ public final class MeltdownerBeamActions {
             boolean simulate,
             ServerPlayer breaker
     ) {
+        return executeBlocksAlongSegment(
+                level,
+                segment,
+                radius,
+                miningLevel,
+                dropBlocks,
+                spawnParticles,
+                canBlock,
+                simulate,
+                breaker,
+                null
+        );
+    }
+
+    public static double executeBlocksAlongSegment(
+            ServerLevel level,
+            LinearSegment segment,
+            float radius,
+            int miningLevel,
+            boolean dropBlocks,
+            boolean spawnParticles,
+            boolean canBlock,
+            boolean simulate,
+            ServerPlayer breaker,
+            LevelUtil.BlockDropHandler dropHandler
+    ) {
         var result = LevelUtil.destroyBlocksAlongPath(
                 level,
                 segment.start(),
@@ -164,7 +215,8 @@ public final class MeltdownerBeamActions {
                 spawnParticles,
                 canBlock,
                 simulate,
-                breaker
+                breaker,
+                dropHandler
         );
         return Mth.clamp(result.getValue(), 0.0, segment.length());
     }

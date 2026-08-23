@@ -623,6 +623,76 @@ object SkillSettingsApp : App {
                     row.addChild("increase", smallButton("+") { change(entry.step) })
                 }
 
+                is SkillSettingsRegistry.Choice -> {
+                    var tracking = false
+                    var displayedIndex = entry.clampIndex(entry.getter.asInt)
+                    val value = object : LabelWidget(translate(entry.optionKeys[displayedIndex])) {
+                        override fun tick() {
+                            super.tick()
+                            val available = entry.available.asBoolean
+                            if (!tracking) displayedIndex = entry.clampIndex(entry.getter.asInt)
+                            text = if (available) {
+                                translate(entry.optionKeys[displayedIndex])
+                            } else {
+                                translate(entry.unavailableKey)
+                            }
+                            alpha = if (available) 0.85f else 0.35f
+                        }
+                    }.apply {
+                        scale = 0.7f
+                        layoutParams = LinearLayoutWidget.LayoutParams()
+                            .width(64f)
+                            .height(10f)
+                            .gravity(Gravity.CENTER)
+                    }
+                    val slider = object : SeekBarWidget() {
+                        override fun tick() {
+                            super.tick()
+                            val available = entry.available.asBoolean
+                            isEnabled = available
+                            alpha = if (available) 1f else 0.2f
+                            if (!tracking) {
+                                val selected = entry.clampIndex(entry.getter.asInt)
+                                displayedIndex = selected
+                                if (progress.roundToInt() != selected) setProgress(selected.toFloat())
+                            }
+                        }
+                    }
+                    slider.setMin(0f)
+                    slider.setMax(entry.optionKeys.lastIndex.toFloat())
+                    slider.setProgress(displayedIndex.toFloat())
+                    slider.setKeyProgressIncrement(1)
+                    slider.layoutParams = LinearLayoutWidget.LayoutParams()
+                        .size(48f, 5f)
+                        .gravity(Gravity.CENTER)
+                    slider.setOnSeekBarChangeListener(object : SeekBarWidget.OnSeekBarChangeListener {
+                        override fun onProgressChanged(
+                            seekBar: SeekBarWidget,
+                            progress: Float,
+                            fromUser: Boolean
+                        ) {
+                            if (!fromUser || !entry.available.asBoolean) return
+                            displayedIndex = entry.clampIndex(progress.roundToInt())
+                            value.text = translate(entry.optionKeys[displayedIndex])
+                            if (!tracking) entry.setter.accept(displayedIndex)
+                        }
+
+                        override fun onStartTrackingTouch(seekBar: SeekBarWidget) {
+                            tracking = true
+                        }
+
+                        override fun onStopTrackingTouch(seekBar: SeekBarWidget) {
+                            if (tracking && entry.available.asBoolean) {
+                                entry.setter.accept(displayedIndex)
+                                seekBar.setProgress(displayedIndex.toFloat())
+                            }
+                            tracking = false
+                        }
+                    })
+                    row.addChild("slider", slider)
+                    row.addChild("value", value)
+                }
+
                 is SkillSettingsRegistry.FloatRange -> {
                     fun displayedValue(): String {
                         val range = entry.max - entry.min
