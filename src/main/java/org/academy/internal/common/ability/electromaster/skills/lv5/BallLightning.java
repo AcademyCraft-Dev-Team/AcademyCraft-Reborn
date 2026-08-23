@@ -86,12 +86,17 @@ public class BallLightning extends Skill {
         var previousDefault = InputSystem.combo(
                 InputSystem.InputType.KEYBOARD, InputConstants.KEY_Z, InputConstants.PRESS, 0
         );
-        var newDefault = InputSystem.combo(
+        var obsoleteXDefault = InputSystem.combo(
                 InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                 InputConstants.PRESS, InputConstants.MOD_CONTROL
         );
+        var newDefault = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
+                InputConstants.PRESS, InputConstants.MOD_CONTROL
+        );
         var configured = Client.CONFIG.getKeyBinding(KEY_NAME_ACTIVATE, newDefault);
-        if (configured.equals(legacyDefault) || configured.equals(previousDefault)) {
+        if (configured.equals(legacyDefault) || configured.equals(previousDefault)
+                || configured.equals(obsoleteXDefault)) {
             configured = newDefault;
             Client.CONFIG.setKeyBinding(KEY_NAME_ACTIVATE, configured);
             AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);

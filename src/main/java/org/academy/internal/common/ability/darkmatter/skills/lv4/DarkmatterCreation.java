@@ -110,8 +110,15 @@ public final class DarkmatterCreation extends Skill {
                 Client.KEY_NAME_EDITOR,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, GLFW.GLFW_KEY_EQUAL,
                         InputConstants.RELEASE, 0)), _ -> Client.openEditor());
-        InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBinding(
+        var defaultCastBinding = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD, InputConstants.KEY_Y,
+                InputConstants.RELEASE, 0
+        );
+        InputSystem.addKeyBinding(Client.KEY_NAME_CAST, Client.CONFIG.getKeyBindingMigratingDefaults(
                 Client.KEY_NAME_CAST,
+                defaultCastBinding,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
+                        InputConstants.RELEASE, 0),
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_K,
                         InputConstants.RELEASE, 0)), _ -> Client.cast());
         MisakaNetworkClient.NETWORK_MANAGER.register(ClientPackets.class);

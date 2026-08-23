@@ -764,8 +764,29 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     private fun clampSelection() {
         if (itemCount == 0) {
             applyPosition(0)
+            return
+        }
+
+        val clampedSelection = if (isCyclic) {
+            normalizePosition(_selectedPosition)
         } else {
-            applyPosition(_selectedPosition)
+            _selectedPosition.coerceIn(0, itemCount - 1)
+        }
+        if (clampedSelection != _selectedPosition) {
+            applyPosition(clampedSelection)
+            return
+        }
+
+        // Measuring and laying out a valid wheel must not cancel a queued scroll. Dynamic HUD
+        // labels can request layout while the wheel is moving, so only clamp the pending target
+        // when a non-cyclic list has actually become too short for it.
+        if (!isCyclic) {
+            val clampedTarget = (_selectedPosition + targetPosition)
+                .coerceIn(0, itemCount - 1) - _selectedPosition
+            if (clampedTarget != targetPosition) {
+                targetPosition = clampedTarget
+                invalidate()
+            }
         }
     }
 

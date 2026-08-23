@@ -89,12 +89,16 @@ public class DirStrike extends Skill {
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_PRESS,
-                Client.CONFIG.getKeyBinding(Client.KEY_NAME_PRESS,
+                Client.CONFIG.getKeyBindingMigratingDefaults(Client.KEY_NAME_PRESS,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
+                                InputConstants.PRESS, 0),
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                                 InputConstants.PRESS, 0)),
                 ctx -> Client.onAction(true));
         InputSystem.addKeyBinding(Client.KEY_NAME_RELEASE,
-                Client.CONFIG.getKeyBinding(Client.KEY_NAME_RELEASE,
+                Client.CONFIG.getKeyBindingMigratingDefaults(Client.KEY_NAME_RELEASE,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
+                                InputConstants.RELEASE, 0),
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                                 InputConstants.RELEASE, 0)),
                 ctx -> Client.onAction(false));
