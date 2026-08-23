@@ -1499,9 +1499,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             coverCenter.addChild("text_area", textArea) {
                 if (isLearned) {
                     val nameLabel = LabelWidget(skill.translatedName)
-                    nameLabel.baseFontSize = 12f
+                    nameLabel.baseFontSize = 10f
+                    nameLabel.wrapText = true
                     nameLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER)
+                        .width(240f)
                     textArea.addChild("name", nameLabel)
 
                     val expLabel =
@@ -1520,7 +1522,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     val detailsPanel = ScrollPanelWidget()
                     detailsPanel.layoutParams = LinearLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER)
-                        .size(240f, 112f)
+                        .size(240f, 104f)
                     val details = LinearLayoutWidget()
                     details.orientation = Orientation.VERTICAL
                     details.spacing = 2f
@@ -1528,7 +1530,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
                     val descLabel = LabelWidget(skill.translatedDescription)
-                    descLabel.baseFontSize = 8f
+                    descLabel.baseFontSize = 7f
+                    descLabel.wrapText = true
                     descLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER)
                         .width(228f)
@@ -1542,7 +1545,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             val marker = if (reached) "✓" else if (next) "→" else "•"
                             val key = "${skill.descriptionId}.proficiency.$threshold"
                             val label = LabelWidget("$marker $threshold  ${Language.getInstance().getOrDefault(key)}")
-                            label.baseFontSize = 7f
+                            label.baseFontSize = 5f
+                            label.wrapText = true
                             label.layoutParams = WidgetContainer.LayoutParams()
                                 .gravity(Gravity.LEFT)
                                 .width(228f)
@@ -1561,7 +1565,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         }
                         if (ProficiencyPolicy.clientHasRestriction(skill)) {
                             val restricted = LabelWidget(L10n["academy.ability_developer.proficiency_restricted"])
-                            restricted.baseFontSize = 7f
+                            restricted.baseFontSize = 8f
+                            restricted.wrapText = true
                             restricted.setRed(1.0f); restricted.setGreen(0.38f); restricted.setBlue(0.3f)
                             restricted.layoutParams = WidgetContainer.LayoutParams()
                                 .gravity(Gravity.LEFT)
@@ -1573,18 +1578,22 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     textArea.addChild("details", detailsPanel)
                 } else {
                     val lvlLabel = LabelWidget("${skill.translatedName} (LV ${skill.recommendedLevel.levelCode})")
-                    lvlLabel.baseFontSize = 12f
+                    lvlLabel.baseFontSize = 10f
+                    lvlLabel.wrapText = true
                     lvlLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER)
+                        .width(240f)
                     textArea.addChild("lvl_name", lvlLabel)
 
                     val notLearnedLabel = LabelWidget(L10n["academy.ability_developer.skill_not_learned"])
                     notLearnedLabel.baseFontSize = 10f
+                    notLearnedLabel.wrapText = true
                     notLearnedLabel.setRed(1.0f)
                     notLearnedLabel.setGreen(0.33f)
                     notLearnedLabel.setBlue(0.33f)
                     notLearnedLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER)
+                        .width(240f)
                     textArea.addChild("not_learned", notLearnedLabel)
 
                     val conditions = skill.devConditions.filter { it.shouldDisplay() }
@@ -1689,6 +1698,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         }
                     }
                     messageLabel.baseFontSize = if (machineRequired) 8f else 10f
+                    messageLabel.wrapText = true
                     messageLabel.alpha = 0.66f
                     messageLabel.layoutParams = WidgetContainer.LayoutParams()
                         .gravity(Gravity.CENTER_HORIZONTAL)
@@ -1876,9 +1886,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             textArea.orientation = Orientation.VERTICAL
             coverCenter.addChild("text_area", textArea) {
                 val title = LabelWidget(L10n["academy.ability_developer.uplevel"].format(targetLevel))
-                title.baseFontSize = 12f
+                title.baseFontSize = 10f
+                title.wrapText = true
                 title.layoutParams = WidgetContainer.LayoutParams()
                     .gravity(Gravity.CENTER_HORIZONTAL)
+                    .width(240f)
                 textArea.addChild("title", title)
 
                 val reqLabel = LabelWidget(L10n["academy.ability_developer.req"] + " " + cost)
@@ -1889,6 +1901,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
                 val hintLabel = LabelWidget("")
                 hintLabel.baseFontSize = if (machineRequired) 8f else 9f
+                hintLabel.wrapText = true
                 hintLabel.text = if (machineRequired) {
                     L10n["academy.ability_developer.portable.level_restricted"]
                 } else {

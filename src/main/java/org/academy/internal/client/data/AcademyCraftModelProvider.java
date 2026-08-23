@@ -156,6 +156,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.ICON.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.CAT_ENGINE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DATA_TERMINAL.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.TUTORIAL.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARKMATTER.get(), ModelTemplates.FLAT_ITEM);
         itemModels.itemModelOutput.accept(Items.DARKMATTER_COATING.get(),
                 ItemModelUtils.plainModel(ModelTemplates.FLAT_ITEM.create(
