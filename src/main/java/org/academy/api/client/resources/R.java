@@ -86,6 +86,13 @@ public final class R {
             public static final Identifier skill_progress = academy("core/skill_progress");
             public static final Identifier spatial_distortion = academy("core/spatial_distortion");
             public static final Identifier trail = academy("core/trail");
+            public static final Identifier vfxgraph_particle = academy("core/vfxgraph_particle");
+            public static final Identifier vfxgraph_fire = academy("core/vfxgraph_fire");
+            public static final Identifier vfxgraph_smoke = academy("core/vfxgraph_smoke");
+            public static final Identifier vfxgraph_mesh = academy("core/vfxgraph_mesh");
+            public static final Identifier vfxgraph_simple = academy("core/vfxgraph_simple");
+            public static final Identifier vfxgraph_arc = academy("core/vfxgraph_arc");
+            public static final Identifier vfxgraph_surface = academy("core/vfxgraph_surface");
 
             private core() {
             }

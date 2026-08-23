@@ -34,6 +34,7 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
@@ -45,6 +46,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -84,7 +86,7 @@ public class DirStrike extends Skill {
 
     @Override
     public void initClient() {
-        DirStrikeVisualPacket.initClient();
+        SpawnVfxGraphPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -217,8 +219,15 @@ public class DirStrike extends Skill {
                 var look = horizontalLook(player);
                 level.playSound(null, playerPos, SoundEvents.DIR_STRIKE.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
-                DirStrikeVisualPacket.broadcast(
-                        level, player.position(), playerPos, radius, airborne, look);
+                // 图 VFX 挂点（M20，A4）：以冲击波位置广播图资产，radius/speed 作为存活参数驱动
+                // 爆发规模与速度（图资产缺失时客户端静默兜底，不影响伤害逻辑）。
+                SpawnVfxGraphPacket.broadcast(level,
+                        org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager.DIR_STRIKE_ASSET,
+                        player.position(), -1, 1f,
+                        Map.of("radius", (float) radius,
+                                "speed", 4f + (airborne ? 2f : 0f),
+                                "look_x", (float) look.x,
+                                "look_z", (float) look.z));
 
                 var minY = playerPos.getY() + EFFECT_MIN_Y_OFFSET;
                 var maxY = playerPos.getY() + EFFECT_MAX_Y_OFFSET + 1;
