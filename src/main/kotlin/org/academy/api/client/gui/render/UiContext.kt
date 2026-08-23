@@ -6,11 +6,15 @@ import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.blaze3d.textures.FilterMode
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.render.GuiItemAtlas
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
 import org.academy.AcademyCraft
+import org.academy.api.client.gui.command.ItemStackDrawCommand
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.MeasureSpec
@@ -25,6 +29,7 @@ import org.joml.Vector4f
 import org.lwjgl.system.MemoryStack
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.ceil
 
 open class UiContext {
     private val commandList = AtomicReference<MutableList<SubmittedCommand>?>()
@@ -36,6 +41,8 @@ open class UiContext {
     private val dynamicUniformStorages: MutableMap<Class<out DynamicUniform>, DynamicUniformStorage<*>> =
         HashMap()
     private val commandExecutor = CommandExecutor()
+    private var itemAtlas: GuiItemAtlas? = null
+    private var itemAtlasSlotSize = 0
 
     private var projectionMatrixBuffer: ProjectionMatrixBuffer? = null
     private val projection = Projection()
@@ -98,16 +105,18 @@ open class UiContext {
 
         if (commands.isNullOrEmpty()) return
 
+        val environment = UiEnvironment.get()
+        val effectiveScale = environment.guiScale
+        val preparedCommands = prepareItemCommands(commands, effectiveScale)
+
         val meshesToDraw = BatchProcessor.process(
-            commands,
+            preparedCommands,
             object : UboUploader {
                 override fun <T : DynamicUniform> upload(payload: UniformPayload<T>): GpuBufferSlice {
                     return uploadPayload(payload)
                 }
             })
 
-        val environment = UiEnvironment.get()
-        val effectiveScale = environment.guiScale
         val guiScaledWidth = environment.physicalWidth / effectiveScale
         val guiScaledHeight = environment.physicalHeight / effectiveScale
         projection.setupOrtho(0f, 1f, guiScaledWidth, guiScaledHeight, true)
@@ -116,6 +125,52 @@ open class UiContext {
             meshesToDraw, colorTextureView,
             projectionBufferSlice, dynamicTransformsUbo, effectiveScale
         )
+    }
+
+    @RenderThread
+    private fun prepareItemCommands(
+        commands: MutableList<SubmittedCommand>,
+        effectiveScale: Float
+    ): MutableList<SubmittedCommand> {
+        val itemCommands = commands.mapNotNull { it.command as? ItemStackDrawCommand }
+        if (itemCommands.isEmpty()) {
+            itemAtlas?.endFrame()
+            return commands
+        }
+
+        val slotSize = ceil(16f * effectiveScale).toInt().coerceAtLeast(16)
+        val identities = itemCommands.mapTo(mutableSetOf()) { it.itemState.modelIdentity }
+        val textureSize = GuiItemAtlas.computeTextureSizeFor(slotSize, identities.size)
+
+        var atlas = itemAtlas
+        val canReuse = atlas != null &&
+            itemAtlasSlotSize == slotSize &&
+            atlas.textureSize() == textureSize &&
+            atlas.tryPrepareFor(identities)
+        if (!canReuse) {
+            atlas?.close()
+            atlas = GuiItemAtlas(
+                Minecraft.getInstance().gameRenderer.featureRenderDispatcher(),
+                textureSize,
+                slotSize
+            )
+            itemAtlas = atlas
+            itemAtlasSlotSize = slotSize
+        }
+
+        val sampler = RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)
+        val prepared = commands.mapNotNullTo(mutableListOf()) { submitted ->
+            val itemCommand = submitted.command as? ItemStackDrawCommand ?: return@mapNotNullTo submitted
+            val slot = atlas.getOrUpdate(itemCommand.itemState) ?: return@mapNotNullTo null
+            SubmittedCommand(
+                itemCommand.resolve(slot, sampler),
+                submitted.pose,
+                submitted.scissorRect,
+                submitted.drawOrder
+            )
+        }
+        atlas.endFrame()
+        return prepared
     }
 
     open fun generateCommands(
@@ -183,6 +238,9 @@ open class UiContext {
         if (dynamicTransformsUbo != null) dynamicTransformsUbo!!.close()
 
         commandExecutor.close()
+        itemAtlas?.close()
+        itemAtlas = null
+        itemAtlasSlotSize = 0
         for (ubo in dynamicUniformStorages.values) ubo.close()
         dynamicUniformStorages.clear()
         closed.set(true)

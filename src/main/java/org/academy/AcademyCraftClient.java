@@ -66,6 +66,7 @@ import org.academy.internal.client.app.props.PropsClientState;
 import org.academy.internal.client.app.props.PropsIcon;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
+import org.academy.internal.client.app.tutorial.TutorialApp;
 import org.academy.internal.client.commands.ClientProfileCommand;
 import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
 import org.academy.internal.client.gui.debug.UiDebugLayoutDefinition;
@@ -116,6 +117,7 @@ public final class AcademyCraftClient {
         ProfilerClientHooks.INSTANCE.initMain();
         TerminalHud.Companion.addApp(SettingsApp.INSTANCE);
         TerminalHud.Companion.addApp(SkillSettingsApp.INSTANCE);
+        TerminalHud.Companion.addApp(TutorialApp.INSTANCE);
         TerminalHud.Companion.addApp(MusicApp.INSTANCE);
         PropsIcon.INSTANCE.init();
         TerminalHud.Companion.addApp(PropsApp.INSTANCE);

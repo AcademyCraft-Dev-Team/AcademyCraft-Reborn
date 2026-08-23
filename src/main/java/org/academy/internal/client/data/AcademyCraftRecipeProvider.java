@@ -72,6 +72,17 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .unlockedBy("has_redstone", has(REDSTONE))
                 .save(output);
 
+        shaped(RecipeCategory.MISC, Items.TUTORIAL.get())
+                .define('A', AMETHYST_SHARD)
+                .define('B', BOOK)
+                .define('I', IRON_INGOT)
+                .define('R', REDSTONE)
+                .pattern(" A ")
+                .pattern("RBR")
+                .pattern(" I ")
+                .unlockedBy("has_book", has(BOOK))
+                .save(output);
+
         shaped(RecipeCategory.MISC, Items.IMAG_PHASE_DOWSING_ROD.get())
                 .define('Q', COMPARATOR)
                 .define('L', LIGHTNING_ROD.weathering().unaffected())

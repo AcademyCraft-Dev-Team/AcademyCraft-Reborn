@@ -19,7 +19,17 @@ open class LabelWidget(text: String) : AbstractWidget() {
             }
         }
     protected var layoutScale: Float = 1.0f
+    var wrapText: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                displayText = text
+                requestLayout()
+                invalidate()
+            }
+        }
     protected var dropShadow: Boolean = false
+    private var displayText: String = text
     private var measuredText: String? = null
     private var measuredFontSize = 0f
     private var measuredTextWidth = 0f
@@ -28,6 +38,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
         set(text) {
             if (field != text) {
                 field = text
+                displayText = text
                 requestLayout()
                 invalidate()
             }
@@ -84,6 +95,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
     override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
         val lp = layoutParams
         if (text.isEmpty()) {
+            displayText = ""
             layoutScale = 1f
             setMeasuredDimension(
                 resolveSize(lp.paddingLeft + lp.paddingRight, widthMeasureSpec),
@@ -92,15 +104,24 @@ open class LabelWidget(text: String) : AbstractWidget() {
             return
         }
 
-        val baseTextWidth = getTextWidth(text)
-        val baseTextHeight = getTextHeight(text)
-
         val constraintWidth =
             if (widthMeasureSpec.mode == MeasureSpec.Mode.UNSPECIFIED) Float.MAX_VALUE else (widthMeasureSpec.size - lp.paddingLeft - lp.paddingRight)
         val constraintHeight =
             if (heightMeasureSpec.mode == MeasureSpec.Mode.UNSPECIFIED) Float.MAX_VALUE else (heightMeasureSpec.size - lp.paddingTop - lp.paddingBottom)
 
-        layoutScale = calculateLayoutScale(baseTextWidth, baseTextHeight, constraintWidth, constraintHeight)
+        displayText = if (wrapText) {
+            TextWrapUtil.wrap(text, constraintWidth) { candidate -> getTextWidth(candidate) }
+        } else {
+            text
+        }
+        val baseTextWidth = getTextWidth(displayText)
+        val baseTextHeight = getTextHeight(displayText)
+
+        layoutScale = if (wrapText) {
+            1f
+        } else {
+            calculateLayoutScale(baseTextWidth, baseTextHeight, constraintWidth, constraintHeight)
+        }
 
         val measuredWidth = baseTextWidth * layoutScale + lp.paddingLeft + lp.paddingRight
         val measuredHeight = baseTextHeight * layoutScale + lp.paddingTop + lp.paddingBottom
@@ -113,11 +134,12 @@ open class LabelWidget(text: String) : AbstractWidget() {
 
     override fun render(context: RenderContext) {
         super.render(context)
-        if (!isVisible() || text.isEmpty()) return
+        val renderText = displayText
+        if (!isVisible() || renderText.isEmpty()) return
 
         val lp = layoutParams
-        val baseTextWidth = getTextWidth(text)
-        val baseTextHeight = getTextHeight(text)
+        val baseTextWidth = getTextWidth(renderText)
+        val baseTextHeight = getTextHeight(renderText)
 
         val finalScale = scale * layoutScale
 
@@ -148,11 +170,11 @@ open class LabelWidget(text: String) : AbstractWidget() {
             context.pose().scale(finalScale, finalScale)
 
             val finalAlpha = alpha * context.accumulatedAlpha
-            if (colorChanged || lastFinalAlpha != finalAlpha || (text != lastText)) {
+            if (colorChanged || lastFinalAlpha != finalAlpha || (renderText != lastText)) {
                 drawCommands = generateDrawCommands(
-                    text, baseFontSize, 0f, red, green, blue, finalAlpha
+                    renderText, baseFontSize, 0f, red, green, blue, finalAlpha
                 )
-                lastText = text
+                lastText = renderText
                 colorChanged = false
             }
             lastFinalAlpha = finalAlpha
