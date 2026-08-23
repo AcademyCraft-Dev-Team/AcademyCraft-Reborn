@@ -255,11 +255,19 @@ public class MagnetManipulation extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_STOP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_STOP,
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.RELEASE, 0))
                 , _ -> Client.onMoveStop(PullMode.PLAYER_TO_TARGET));
-        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_START, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TARGET_START,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0))
+        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_START,
+                Client.CONFIG.getKeyBindingMigratingDefaults(Client.KEY_NAME_TARGET_START,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
+                                InputConstants.PRESS, 0),
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                                InputConstants.PRESS, 0))
                 , _ -> Client.onMoveStart(PullMode.TARGET_TO_PLAYER));
-        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_STOP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TARGET_STOP,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.RELEASE, 0))
+        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_STOP,
+                Client.CONFIG.getKeyBindingMigratingDefaults(Client.KEY_NAME_TARGET_STOP,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
+                                InputConstants.RELEASE, 0),
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
+                                InputConstants.RELEASE, 0))
                 , _ -> Client.onMoveStop(PullMode.TARGET_TO_PLAYER));
     }
 

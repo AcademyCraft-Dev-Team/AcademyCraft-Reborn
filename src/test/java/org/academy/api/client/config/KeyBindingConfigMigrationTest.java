@@ -92,6 +92,62 @@ class KeyBindingConfigMigrationTest {
     }
 
     @Test
+    void replacesObsoleteDefaultBinding() {
+        var config = new TestConfig();
+        var obsoleteDefault = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_X,
+                InputConstants.PRESS,
+                InputConstants.MOD_ALT
+        );
+        var currentDefault = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_N,
+                InputConstants.PRESS,
+                InputConstants.MOD_ALT
+        );
+        config.setKeyBinding(NAME, obsoleteDefault);
+
+        var binding = config.getKeyBindingMigratingDefaults(
+                NAME, currentDefault, obsoleteDefault
+        );
+
+        assertEquals(currentDefault, binding);
+        assertEquals(currentDefault, config.getKeyBinding(NAME));
+    }
+
+    @Test
+    void preservesCustomizedBindingDuringDefaultMigration() {
+        var config = new TestConfig();
+        var obsoleteDefault = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_X,
+                InputConstants.PRESS,
+                0
+        );
+        var currentDefault = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_N,
+                InputConstants.PRESS,
+                0
+        );
+        var customized = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_R,
+                InputConstants.PRESS,
+                0
+        );
+        config.setKeyBinding(NAME, customized);
+
+        var binding = config.getKeyBindingMigratingDefaults(
+                NAME, currentDefault, obsoleteDefault
+        );
+
+        assertEquals(customized, binding);
+        assertEquals(customized, config.getKeyBinding(NAME));
+    }
+
+    @Test
     void collapsesLegacyPressAndReleaseRowsIntoOneMaintainedGesture() {
         var config = GSON.fromJson("""
                 {

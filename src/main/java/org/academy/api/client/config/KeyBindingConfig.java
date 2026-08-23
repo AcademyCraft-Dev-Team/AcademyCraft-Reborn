@@ -30,6 +30,24 @@ public abstract class KeyBindingConfig {
         return keyBinding;
     }
 
+    /**
+     * Replaces bindings that still exactly match an obsolete default while preserving every
+     * customized binding. The current default is also registered for the settings reset action.
+     */
+    public InputSystem.KeyCombination getKeyBindingMigratingDefaults(
+            String name,
+            InputSystem.KeyCombination defaultConfig,
+            InputSystem.KeyCombination... obsoleteDefaults
+    ) {
+        var configured = getKeyBinding(name, defaultConfig);
+        for (var obsoleteDefault : obsoleteDefaults) {
+            if (!configured.equals(obsoleteDefault)) continue;
+            setKeyBinding(name, defaultConfig);
+            return defaultConfig;
+        }
+        return configured;
+    }
+
     public InputSystem.@Nullable KeyCombination getKeyBinding(String name) {
         var keyBinding = decodeKeyBinding(keyBindingMap().get(name));
         if (keyBinding == null) return null;
