@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -143,6 +144,23 @@ class ProgramEditorDocumentTest {
         assertEquals(1, document.program().graph().nodes().size());
         assertTrue(document.program().graph().edges().isEmpty());
         assertFalse(document.program().editorLayout().nodePositions().containsKey(0));
+    }
+
+    @Test
+    void removingMultipleNodesIsAtomicAndCleansAllConnectedState() {
+        var document = emptyDocument();
+        document = document.addNode(CommonProgramNodeIds.BOOLEAN_CONSTANT, 0, 0).orElseThrow();
+        document = document.addNode(CommonProgramNodeIds.BOOLEAN_NOT, 80, 0).orElseThrow();
+        document = document.addNode(CommonProgramNodeIds.BOOLEAN_NOT, 160, 0).orElseThrow();
+        document = document.connect(endpoint(0, "value"), endpoint(1, "value")).orElseThrow();
+        document = document.connect(endpoint(1, "result"), endpoint(2, "value")).orElseThrow();
+
+        document = document.removeNodes(Set.of(0, 1)).orElseThrow();
+
+        assertEquals(List.of(2), document.program().graph().nodes().stream()
+                .map(ProgramGraph.Node::id).toList());
+        assertTrue(document.program().graph().edges().isEmpty());
+        assertEquals(Set.of(2), document.program().editorLayout().nodePositions().keySet());
     }
 
     @Test

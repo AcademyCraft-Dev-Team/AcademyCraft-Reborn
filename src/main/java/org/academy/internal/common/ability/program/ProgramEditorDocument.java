@@ -171,12 +171,26 @@ public final class ProgramEditorDocument {
     }
 
     public EditResult removeNode(int nodeId) {
-        if (node(nodeId) == null) return failure(ProgramDiagnosticCode.INVALID_NODE, nodeId, null);
-        var nodes = program.graph().nodes().stream().filter(node -> node.id() != nodeId).toList();
+        return removeNodes(Set.of(nodeId));
+    }
+
+    public EditResult removeNodes(Set<Integer> nodeIds) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return failure(ProgramDiagnosticCode.INVALID_NODE, -1, null);
+        }
+        for (var nodeId : nodeIds) {
+            if (nodeId == null || node(nodeId) == null) {
+                return failure(ProgramDiagnosticCode.INVALID_NODE,
+                        nodeId == null ? -1 : nodeId, null);
+            }
+        }
+        var nodes = program.graph().nodes().stream()
+                .filter(node -> !nodeIds.contains(node.id())).toList();
         var edges = program.graph().edges().stream().filter(edge ->
-                edge.from().nodeId() != nodeId && edge.to().nodeId() != nodeId).toList();
+                !nodeIds.contains(edge.from().nodeId())
+                        && !nodeIds.contains(edge.to().nodeId())).toList();
         var positions = new HashMap<>(program.editorLayout().nodePositions());
-        positions.remove(nodeId);
+        positions.keySet().removeAll(nodeIds);
         return success(replace(new ProgramGraph(nodes, edges), positions));
     }
 

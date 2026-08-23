@@ -785,6 +785,7 @@
   "screen.academy.precision_operation.group.mental_action": "Mental actions",
   "screen.academy.precision_operation.group.target": "Targets",
   "screen.academy.precision_operation.inspector": "Inspector",
+  "screen.academy.precision_operation.multi_selection": "%1$s nodes selected; press Backspace or Delete to remove them.",
   "screen.academy.precision_operation.no_selection": "Select a node to inspect its typed ports and parameter.",
   "screen.academy.precision_operation.node.ability_supported": "Capability Support",
   "screen.academy.precision_operation.node.ability_supported.description": "Keeps entities supporting the selected mental-control capability.",
