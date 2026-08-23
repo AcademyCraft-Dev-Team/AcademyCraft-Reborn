@@ -22,6 +22,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.academy.AcademyCraftServer;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.profiler.AcademyProfiler;
@@ -31,6 +32,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatProfileRegistry;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityDiagnostics;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityMode;
+import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 
 import java.io.File;
@@ -45,6 +47,8 @@ import java.util.concurrent.CompletableFuture;
 public final class AcademyCraftCommand {
     static final int MIN_COMMAND_ABILITY_LEVEL = 0;
     static final int MAX_COMMAND_ABILITY_LEVEL = 5;
+    static final Identifier SELF_SERVICE_CATEGORY =
+            AcademyCraft.academy(AbilityCategoryNames.LEVEL0);
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
@@ -65,7 +69,6 @@ public final class AcademyCraftCommand {
                                 .suggests(AcademyCraftCommand::suggestLearnableSkills)
                                 .executes(AcademyCraftCommand::learnSingleSkill)))
                 .then(Commands.literal("set_category")
-                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("category_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestAbilityCategories)
                                 .executes(AcademyCraftCommand::setAbilityCategory)))
@@ -234,6 +237,15 @@ public final class AcademyCraftCommand {
             return 0;
         }
 
+        var isGameMaster = Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)
+                .test(context.getSource());
+        if (!canSetAbilityCategory(categoryIdentifier, isGameMaster)) {
+            context.getSource().sendFailure(Component.literal(
+                    "Operator permission is required to set an ability category other than "
+                            + SELF_SERVICE_CATEGORY + "."));
+            return 0;
+        }
+
         var serverContext = player.level().getServer();
         var abilitySystemServer = serverContext.getAcademyCraftServer().getAbilitySystemServer();
         abilitySystemServer.replacePlayerAbilityCategory(playerUuid, categoryToSet.get().value());
@@ -310,10 +322,18 @@ public final class AcademyCraftCommand {
     }
 
     private static CompletableFuture<Suggestions> suggestAbilityCategories(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        var isGameMaster = Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)
+                .test(context.getSource());
         return SharedSuggestionProvider.suggest(
-                Registries.ABILITY_CATEGORIES.keySet().stream().map(Identifier::toString),
+                Registries.ABILITY_CATEGORIES.keySet().stream()
+                        .filter(identifier -> canSetAbilityCategory(identifier, isGameMaster))
+                        .map(Identifier::toString),
                 builder
         );
+    }
+
+    static boolean canSetAbilityCategory(Identifier category, boolean isGameMaster) {
+        return isGameMaster || SELF_SERVICE_CATEGORY.equals(category);
     }
 
     private static CompletableFuture<Suggestions> suggestLearnedSkills(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
