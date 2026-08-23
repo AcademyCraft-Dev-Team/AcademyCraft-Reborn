@@ -2,6 +2,7 @@
   <dictionary name="project">
     <words>
       <w>Avatarlike</w>
+      <w>COMPAT</w>
       <w>Compat</w>
       <w>Coord</w>
       <w>Cubemap</w>
@@ -14,6 +15,7 @@
       <w>Msdf</w>
       <w>NOCATEGORY</w>
       <w>Xdoclint</w>
+      <w>compat</w>
       <w>cpdata</w>
       <w>cubemap</w>
       <w>dynamictransforms</w>

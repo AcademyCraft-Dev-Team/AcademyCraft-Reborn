@@ -2,17 +2,13 @@ package org.academy.api.client.compatibility;
 
 import net.irisshaders.iris.api.v0.IrisApi;
 import net.irisshaders.iris.shadows.ShadowRenderer;
-import net.irisshaders.iris.vertices.ImmediateState;
 import net.neoforged.fml.loading.FMLLoader;
 import org.academy.AcademyCraft;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class IrisCompat {
-    private static final ThreadLocal<ArrayDeque<Boolean>> BYPASS_STATES =
-            ThreadLocal.withInitial(ArrayDeque::new);
     private static final AtomicBoolean HAND_BRIDGE_WARNING_LOGGED = new AtomicBoolean();
     private static boolean hasIris = false;
     private static volatile boolean handBridgeMounted;
@@ -34,34 +30,6 @@ public final class IrisCompat {
 
     public static boolean isShadowRendererActive() {
         return hasIris() && ShadowRenderer.ACTIVE;
-    }
-
-    public static void enableBypass() {
-        if (hasIris()) {
-            BYPASS_STATES.get().push(ImmediateState.bypass);
-            ImmediateState.bypass = true;
-        }
-    }
-
-    public static void resetBypass() {
-        if (!hasIris()) return;
-        var states = BYPASS_STATES.get();
-        if (states.isEmpty()) return;
-        ImmediateState.bypass = states.pop();
-        if (states.isEmpty()) BYPASS_STATES.remove();
-    }
-
-    public static void runWithBypass(Runnable action) {
-        if (!hasIris()) {
-            action.run();
-            return;
-        }
-        enableBypass();
-        try {
-            action.run();
-        } finally {
-            resetBypass();
-        }
     }
 
     public static void markHandBridgeMounted() {

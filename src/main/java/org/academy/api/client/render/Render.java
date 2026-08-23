@@ -36,7 +36,6 @@ import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
-import org.academy.api.client.compatibility.IrisCompat;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.resources.R;
@@ -122,21 +121,19 @@ public final class Render {
                                 clearDepth ? OptionalDouble.of(1) : OptionalDouble.empty()
                         )
         ) {
-            IrisCompat.runWithBypass(() -> {
-                renderPass.setPipeline(pipeline);
+            renderPass.setPipeline(pipeline);
 
-                for (var texture : textures) {
-                    renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
-                }
-                for (var uniform : uniforms) {
-                    renderPass.setUniform(uniform.name(), uniform.slice());
-                }
+            for (var texture : textures) {
+                renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
+            }
+            for (var uniform : uniforms) {
+                renderPass.setUniform(uniform.name(), uniform.slice());
+            }
 
-                renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer.slice());
-                var sequentialBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
-                renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
-                renderPass.drawIndexed(6, 1, 0, 0, 0);
-            });
+            renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer.slice());
+            var sequentialBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+            renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
+            renderPass.drawIndexed(6, 1, 0, 0, 0);
         }
     }
 

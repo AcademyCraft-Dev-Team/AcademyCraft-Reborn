@@ -1,6 +1,7 @@
 package org.academy.mixin.plugin;
 
 import org.academy.api.client.compatibility.IrisCompat;
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -18,7 +19,7 @@ public class MixinPlugin implements IMixinConfigPlugin {
     }
 
     @Override
-    public String getRefMapperConfig() {
+    public @Nullable String getRefMapperConfig() {
         return null;
     }
 
