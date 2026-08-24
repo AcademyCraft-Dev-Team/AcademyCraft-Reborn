@@ -16,21 +16,21 @@ import static org.academy.AcademyCraft.MODID;
 public final class Blocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     public static final DeferredHolder<Block, WirelessNodeBlock> WIRELESS_NODE =
-            BLOCKS.registerBlock("wireless_node", WirelessNodeBlock::new);
+            BLOCKS.registerBlock("wireless_node", WirelessNodeBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, WindGenBaseBlock> WIND_GEN_BASE =
-            BLOCKS.registerBlock("wind_gen_base", WindGenBaseBlock::new);
+            BLOCKS.registerBlock("wind_gen_base", WindGenBaseBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, WindGenTopBlock> WIND_GEN_TOP =
-            BLOCKS.registerBlock("wind_gen_top", WindGenTopBlock::new);
+            BLOCKS.registerBlock("wind_gen_top", WindGenTopBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, WindGenPillarBlock> WIND_GEN_PILLAR =
-            BLOCKS.registerBlock("wind_gen_pillar", WindGenPillarBlock::new);
+            BLOCKS.registerBlock("wind_gen_pillar", WindGenPillarBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, AbilityDeveloperBlock> ABILITY_DEVELOPER =
-            BLOCKS.registerBlock("ability_developer", AbilityDeveloperBlock::new);
+            BLOCKS.registerBlock("ability_developer", AbilityDeveloperBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, OmniCraftingTableBlock> OMNI_CRAFTING_TABLE =
-            BLOCKS.registerBlock("omni_crafting_table", OmniCraftingTableBlock::new);
+            BLOCKS.registerBlock("omni_crafting_table", OmniCraftingTableBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, CatEngineBlock> CAT_ENGINE =
-            BLOCKS.registerBlock("cat_engine", CatEngineBlock::new);
+            BLOCKS.registerBlock("cat_engine", CatEngineBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, SolarGenBlock> SOLAR_GEN =
-            BLOCKS.registerBlock("solar_gen", SolarGenBlock::new);
+            BLOCKS.registerBlock("solar_gen", SolarGenBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, LiquidBlock> IMAG_PHASE =
             BLOCKS.registerBlock(
                     "imag_phase",
@@ -72,6 +72,13 @@ public final class Blocks {
                             .strength(5.0f, 30.0f)
                             .sound(SoundType.AMETHYST)
             );
+
+    private static BlockBehaviour.Properties machineProperties() {
+        // Match the enchanting table's mining behavior without copying its light or map color.
+        return BlockBehaviour.Properties.of()
+                .strength(5.0F, 1200.0F)
+                .requiresCorrectToolForDrops();
+    }
 
     private Blocks() {
     }

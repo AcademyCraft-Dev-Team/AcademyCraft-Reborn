@@ -32,6 +32,7 @@ import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.resources.R
 import org.academy.api.client.vanilla.ResizeDisplayEvent
+import org.academy.api.common.ability.AbilityCategory
 import org.academy.api.common.util.L10n
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
@@ -56,6 +57,10 @@ private val cpColors = listOf(
 private const val WHEEL_ITEM_ENTRANCE_DURATION = 200L
 private const val WHEEL_ITEM_ENTRANCE_STAGGER = 30L
 private const val WHEEL_ITEM_ENTRANCE_MAX_DELAY = 240L
+
+internal fun shouldShowAbilityResource(category: AbilityCategory, maximum: Float): Boolean {
+    return category.resourceSpec.isPresent && maximum.isFinite() && maximum > 0f
+}
 
 private fun autoLerpColor(progress: Float): Color {
     val p = progress.coerceIn(0f, 1f)
@@ -553,17 +558,21 @@ class AbilityInfoHud private constructor() {
 
                     val matter = object : LabelWidget("") {
                         override fun tick() {
-                            val isDarkmatter = AbilitySystemClient.getCategory() == AbilityCategories.DARKMATTER.get()
+                            val category = AbilitySystemClient.getCategory()
                             val maximum = AbilitySystemClient.getMaxMP()
-                            visibility = if (isDarkmatter && maximum > 0f) {
+                            val shouldShow = shouldShowAbilityResource(category, maximum)
+                            visibility = if (shouldShow) {
                                 Widget.Visibility.VISIBLE
                             } else {
                                 Widget.Visibility.GONE
                             }
-                            if (!isDarkmatter || maximum <= 0f) return
-                            val current = AbilitySystemClient.getCurrMP().roundToInt()
-                            val maxValue = maximum.roundToInt()
-                            text = "MP $current/$maxValue"
+                            text = if (shouldShow) {
+                                val current = AbilitySystemClient.getCurrMP().roundToInt()
+                                val maxValue = maximum.roundToInt()
+                                "MP $current/$maxValue"
+                            } else {
+                                ""
+                            }
                             super.tick()
                         }
                     }.apply {
@@ -586,15 +595,17 @@ class AbilityInfoHud private constructor() {
             val phase = object : LabelWidget("") {
                 override fun tick() {
                     val isDarkmatter = AbilitySystemClient.getCategory() == AbilityCategories.DARKMATTER.get()
-                    visibility = if (isDarkmatter && AbilitySystemClient.getDarkmatterLevel() > 0) {
+                    visibility = if (isDarkmatter) {
                         Widget.Visibility.VISIBLE
                     } else {
                         Widget.Visibility.GONE
                     }
-                    if (visibility == Widget.Visibility.VISIBLE) {
+                    text = if (isDarkmatter) {
                         val alphaValue = (AbilitySystemClient.getDarkmatterAlpha() * 100f).roundToInt()
                         val betaValue = (AbilitySystemClient.getDarkmatterBeta() * 100f).roundToInt()
-                        text = "α$alphaValue%  β$betaValue%"
+                        "α$alphaValue%  β$betaValue%"
+                    } else {
+                        ""
                     }
                     super.tick()
                 }

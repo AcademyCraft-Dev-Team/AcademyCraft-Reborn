@@ -42,6 +42,7 @@
     "common.MixinPlayerMagneticWeaponAttack",
     "common.MixinPhantom",
     "common.MixinSignalGetter",
+    "common.MixinThrownTridentVectorPickup",
     "common.MixinVibrationSystemListener",
     "common.MixinWardenDiggingBehavior",
     "common.MixinWitherBoss",
