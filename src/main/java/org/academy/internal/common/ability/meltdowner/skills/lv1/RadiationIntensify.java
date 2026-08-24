@@ -15,6 +15,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 
@@ -117,7 +118,8 @@ public final class RadiationIntensify extends Skill {
             var spread = 0;
             for (var target : level.getEntitiesOfClass(LivingEntity.class,
                     event.getEntity().getBoundingBox().inflate(5.0),
-                    target -> target.isAlive() && target != owner && !owner.isAlliedTo(target))) {
+                    target -> target.isAlive()
+                            && MeltdownerTargeting.canAffectNegatively(owner, target))) {
                 if (spread++ >= 3) break;
                 target.getPersistentData().putLong(TARGET_MARK_UNTIL_KEY, now + remaining);
                 TimedSkillEffectRuntime.put(owner, target.getUUID(), skill,
