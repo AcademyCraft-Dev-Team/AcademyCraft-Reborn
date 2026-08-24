@@ -54,10 +54,10 @@ public final class AcademyCraftServer {
         context.setAcademyCraftServer(this);
         server = context.getMinecraftServer();
 
-        var serverConfigFile = new File(
-                server.getServerDirectory().toFile(),
-                "config" + File.separator + AcademyCraft.MOD_ID + "-server" + ".json"
-        );
+        var serverConfigFile = server.getServerDirectory()
+                .resolve("config")
+                .resolve(AcademyCraft.MOD_ID + "-server.json")
+                .toFile();
         worldDataFile = server.getWorldPath(
                 LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json"
         ).toFile();
