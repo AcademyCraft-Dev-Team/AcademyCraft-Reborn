@@ -433,6 +433,10 @@ public class VectorReflection extends Skill {
             return isActive(player) || VectorDeviation.Server.isActive(player);
         }
 
+        public static boolean usesFullInstanceProtection(ServerPlayer player) {
+            return isActive(player) || VectorDeviation.Server.usesClassPointerProtection(player);
+        }
+
         static ReflectionResult calculateReflection(float damage, float availableCP,
                                                     float calculationIntensity, int milestone,
                                                     float freeDamageThreshold, boolean devMode) {
@@ -546,6 +550,10 @@ public class VectorReflection extends Skill {
 
         public static void maintainProtection(ServerPlayer player) {
             if (!isVectorDefenseActive(player)) return;
+            if (!usesFullInstanceProtection(player)) {
+                VectorReflectionRuntime.deactivate(player);
+                return;
+            }
             VectorReflectionRuntime.maintain(player);
             player.hurtTime = 0;
             player.hurtDuration = 0;
@@ -584,7 +592,7 @@ public class VectorReflection extends Skill {
         }
 
         public static boolean shouldForceAlive(ServerPlayer player) {
-            return isVectorDefenseActive(player);
+            return usesFullInstanceProtection(player);
         }
 
         public static boolean isImagineBreakerMutation(ServerPlayer player) {
@@ -774,7 +782,7 @@ public class VectorReflection extends Skill {
         @SubscribeEvent
         public static void onKnockBack(LivingKnockBackEvent event) {
             if (event.getEntity() instanceof ServerPlayer player
-                    && Server.isVectorDefenseActive(player)) {
+                    && Server.usesFullInstanceProtection(player)) {
                 event.setCanceled(true);
             }
         }
@@ -782,7 +790,7 @@ public class VectorReflection extends Skill {
         @SubscribeEvent
         public static void onExplosionKnockback(ExplosionKnockbackEvent event) {
             if (event.getAffectedEntity() instanceof ServerPlayer player
-                    && Server.isVectorDefenseActive(player)) {
+                    && Server.usesFullInstanceProtection(player)) {
                 event.setKnockbackVelocity(Vec3.ZERO);
             }
         }
@@ -790,7 +798,7 @@ public class VectorReflection extends Skill {
         @SubscribeEvent
         public static void onDrown(LivingDrownEvent event) {
             if (!(event.getEntity() instanceof ServerPlayer player)
-                    || !Server.isVectorDefenseActive(player)) return;
+                    || !Server.usesFullInstanceProtection(player)) return;
             player.setAirSupply(player.getMaxAirSupply());
             event.setCanceled(true);
         }

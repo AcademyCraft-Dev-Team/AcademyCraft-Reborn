@@ -43,8 +43,8 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `vector_blast` 矢量冲击 | 现行 | L1 / 5k / 射击 10；拉/推每 10 tick 10 | 64 格、半径 1 射线造成 `10AD`；也可在 32 格内持续拉/推。跨越深渊启用时追加半径 8 的真实范围伤害。 | `Alt+鼠标左键↑` | `academy:vector_accel` | `VectorBlast` |
 | `vector_accel` 矢量加速 | 现行 | L1 / 5k / 10 | 最长蓄力 40 tick，速度 `7×sin(0.4+0.6C)`；满熟练度冲撞追加 `6AD`。 | `C↓ / C↑` | 无 | `VectorAccel` |
-| `vector_deviation` 矢量偏移 | 现行 | L3 / 10k / 维持 40；拦截伤害/投射物按处理量动态计费（满熟练时低于 `1%最大CP` 的伤害无消耗） | 维持减速场：半径 6–10、实体减速 50%–80%、投射物速度 ×0.1；还能折射来伤、线性攻击和投射物。 | `N↓` | `academy:kinetic_energy_applied` | `VectorDeviation` |
-| `kinetic_energy_applied` 动能加持 | 现行 | L2 / 10k / 维持 15；每次冲击 `10L` | 维持移动/攻击强化；1–5 级冲击伤害 `(4+L²)AD`、半径 `L²+2`，并可破坏方块；其他攻击先 ×2，再追加 `4AD`。 | `K↓` | `academy:vector_accel` | `KineticEnergyApplied` |
+| `vector_deviation` 矢量偏移 | 现行 | L3 / 10k / 维持 40；投射物拦截及成功的伤害折射按处理量动态计费（满熟练时低于 `1%最大CP` 的伤害无消耗） | 维持减速场并折射投射物；未满熟练时每次可折射来伤有 50% 概率尝试完整折射，未折射的实际生命损失按 0/1000/2000 熟练减免 50%/70%/90%并播放偏移反馈；满熟练恢复完整实例保护及稳定折射。 | `N↓` | `academy:kinetic_energy_applied` | `VectorDeviation` |
+| `kinetic_energy_applied` 动能加持 | 现行 | L2 / 10k / 维持 15；每次冲击 `10L` | 维持移动/攻击强化；1–3 级冲击伤害 `(4+L²)AD`、半径 `L²+2`，并可破坏方块；其他攻击先 ×2，再追加 `4AD`。 | `K↓` | `academy:vector_accel` | `KineticEnergyApplied` |
 | `dir_strike` 导向踏击 | 现行 | L2 / 10k / 15 | 半径 12 地面环形冲击造成 `12AD`；空中俯冲半径再 +6。 | `Alt+R↓` | `academy:vector_blast` | `DirStrike` |
 | `vector_reflection` 矢量反射 | 现行 | L4 / 30k / 维持基础 40；过滤模式为 40/60/80，名单每项 +5；另按来伤动态扣除（满熟练时低于 `1%最大CP` 的伤害无消耗） | 反射可处理的来伤并把投射物速度反向 ×1.2；每点处理伤害消耗 CP 倍率为 2/1/0.5/0.5（熟练度档位）。 | `R↓` | `academy:vector_deviation` | `VectorReflection` |
 | `reflection_filter` 过滤网 | 现行 | L4 / 60k / 自身 0；会改变矢量反射维持占用 | 配置矢量反射的全反射/正面过滤/中性过滤模式，以及效果白名单和黑名单（合计最多 256 项）。 | 见源码（可配置） | `academy:vector_reflection` | `ReflectionFilter` |
@@ -81,7 +81,7 @@
 
 | 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `single_high_speed_electron_beam` 粒机波形高速炮 | 现行 | L1 / 5k / 15 | 延迟 10 tick 成形的 50 格窄射束，伤害 `16MAD+1%Hmax`。 | `Alt+鼠标左键↓` | 无 | `SingleHighSpeedElectronBeam` |
+| `single_high_speed_electron_beam` 粒机波形高速炮 | 现行 | L1 / 5k / 15 | 从随机始发点发射延迟 10 tick 成形的 50 格窄射束，伤害 `16MAD+1%Hmax`；准星校正率随熟练度由 50% 提升至 100%。 | `Alt+鼠标左键↓` | 无 | `SingleHighSpeedElectronBeam` |
 | `scatter_bomb` 电子弹散射 | 现行 | L2 / 10k / 40 | 蓄力 20–80 tick 后释放 7 束 50 格射线；每束 `16MAD+1%Hmax`。 | 见源码（可配置） | `academy:single_high_speed_electron_beam` | `ScatterBomb` |
 | `radiation_intensify` 镭射强化 | 现行 | L1 / 5k / 0 | 被动：射束命中施加 200 tick 标记，使后续兼容射束的固定基础伤害 ×1.5。 | 无 | `academy:single_high_speed_electron_beam` | `RadiationIntensify` |
 | `mining_beam` 采矿光束 | 现行 | L2 / 10k / 每 20 tick 20 | 最长 48 格；每 20 tick 对路径实体造成 `12AD`，每 3 tick 破坏半径 0.35、采掘等级 4 的方块。 | `M↓ / M↑` | `academy:single_high_speed_electron_beam` | `MiningBeam` |

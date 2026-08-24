@@ -1,7 +1,9 @@
 package org.academy.internal.common.entitycontrol;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -89,17 +91,26 @@ public final class EntityControlApi {
         var previous = BYPASS_GUARDS.get();
         if (force) BYPASS_GUARDS.set(true);
         try {
+            if (entity instanceof ServerPlayer player) {
+                target = VectorDeviation.Server.limitHealthWrite(
+                        player, getAuthoritativeHealth(entity), target);
+            }
+            var writeTarget = target;
             var accessor = HEALTH_ACCESSORS.get(entity.getClass());
-            var wrote = accessor.write(entity, target);
-            if (!wrote || Math.abs(accessor.read(entity, Float.NaN) - target) > EPSILON) {
+            var wrote = VectorDeviation.Server.runWithHealthWriteLimitBypassed(
+                    () -> accessor.write(entity, writeTarget));
+            if (!wrote || Math.abs(accessor.read(entity, Float.NaN) - writeTarget) > EPSILON) {
                 try {
-                    entity.setHealth(target);
+                    VectorDeviation.Server.runWithHealthWriteLimitBypassed(() -> {
+                        entity.setHealth(writeTarget);
+                        return true;
+                    });
                     wrote = true;
                 } catch (Throwable ignored) {
                 }
             }
             var observed = HEALTH_ACCESSORS.get(entity.getClass()).read(entity, safeVisibleHealth(entity));
-            return wrote && Float.isFinite(observed) && Math.abs(observed - target) <= EPSILON;
+            return wrote && Float.isFinite(observed) && Math.abs(observed - writeTarget) <= EPSILON;
         } finally {
             if (force) BYPASS_GUARDS.set(previous);
         }

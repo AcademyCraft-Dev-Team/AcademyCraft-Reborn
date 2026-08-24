@@ -39,7 +39,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
     }
 
     private boolean academy$protected() {
-        return VectorReflection.Server.isVectorDefenseActive(this);
+        return VectorReflection.Server.usesFullInstanceProtection(this);
     }
 
     private boolean academy$reflects(MobEffectInstance effect) {

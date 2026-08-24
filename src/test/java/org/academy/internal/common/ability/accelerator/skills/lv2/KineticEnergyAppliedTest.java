@@ -25,17 +25,19 @@ class KineticEnergyAppliedTest {
     @Test
     void clampsAndCyclesImpactLevel() {
         assertEquals(1, KineticEnergyApplied.clampImpactLevel(-5));
-        assertEquals(5, KineticEnergyApplied.clampImpactLevel(9));
+        assertEquals(3, KineticEnergyApplied.clampImpactLevel(9));
         assertEquals(2, KineticEnergyApplied.nextImpactLevel(1));
-        assertEquals(1, KineticEnergyApplied.nextImpactLevel(5));
+        assertEquals(1, KineticEnergyApplied.nextImpactLevel(3));
     }
 
     @Test
-    void followsReferenceShockwaveScaling() {
-        assertEquals(3.0f, KineticEnergyApplied.getImpactRadius(1));
-        assertEquals(27.0f, KineticEnergyApplied.getImpactRadius(5));
+    void usesLinearShockwaveRadiusScaling() {
+        assertEquals(4.0f, KineticEnergyApplied.getImpactRadius(1));
+        assertEquals(6.0f, KineticEnergyApplied.getImpactRadius(2));
+        assertEquals(8.0f, KineticEnergyApplied.getImpactRadius(3));
+        assertEquals(8, KineticEnergyApplied.DEFAULT_PROGRAM_RADIUS);
         assertEquals(5.0f, KineticEnergyApplied.getImpactDamage(1, 1.0f, 1.0f));
-        assertEquals(58.0f, KineticEnergyApplied.getImpactDamage(5, 2.0f, 1.0f));
+        assertEquals(26.0f, KineticEnergyApplied.getImpactDamage(3, 2.0f, 1.0f));
         assertEquals(26.0f, KineticEnergyApplied.getProgramImpactDamage(2.0f, 1.0f, 1.0f));
         assertEquals(0.0f, KineticEnergyApplied.getProgramImpactDamage(1.0f, 0.0f, 0.0f));
     }

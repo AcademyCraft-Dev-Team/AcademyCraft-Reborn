@@ -661,11 +661,11 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         };
     }
 
-    private static int impactLevel(AcceleratorProgramStrength strength) {
+    static int impactLevel(AcceleratorProgramStrength strength) {
         return switch (Objects.requireNonNull(strength, "strength")) {
             case CONTROLLED -> 1;
-            case STANDARD -> 3;
-            case MAXIMUM -> 5;
+            case STANDARD -> 2;
+            case MAXIMUM -> 3;
         };
     }
 

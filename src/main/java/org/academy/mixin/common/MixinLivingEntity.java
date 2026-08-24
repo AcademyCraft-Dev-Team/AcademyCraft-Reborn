@@ -19,7 +19,7 @@ import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
@@ -44,6 +44,7 @@ import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -141,7 +142,7 @@ public abstract class MixinLivingEntity {
         }
         health = OutputControl.modifyHealthWrite(entity, health);
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isVectorDefenseActive(player)
+                && VectorReflection.Server.usesFullInstanceProtection(player)
                 && !VectorReflection.Server.isImagineBreakerMutation(player)) {
             var current = player.getHealth();
             var maximum = player.getMaxHealth();
@@ -155,6 +156,22 @@ public abstract class MixinLivingEntity {
         return EntityControlApi.clampHealthWrite(entity, health);
     }
 
+    @ModifyArg(
+            method = "setHealth",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/network/syncher/SynchedEntityData;set(Lnet/minecraft/network/syncher/EntityDataAccessor;Ljava/lang/Object;)V"
+            ),
+            index = 1
+    )
+    private Object academy$limitVectorDeviationHealthDataWrite(Object value) {
+        if (!(value instanceof Float requested)
+                || !((Object) this instanceof ServerPlayer player)) {
+            return value;
+        }
+        return VectorDeviation.Server.limitHealthWrite(player, player.getHealth(), requested);
+    }
+
     @Inject(
             method = "actuallyHurt(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)V",
             at = @At("HEAD"),
@@ -166,25 +183,24 @@ public abstract class MixinLivingEntity {
             return;
         }
         if ((Object) this instanceof ServerPlayer player) {
-            var reflection = VectorReflection.Server.hurtServer(player, level, source, damage);
-            if (reflection.getLeft()) {
-                ci.cancel();
-                var remaining = reflection.getRight();
-                if (!VectorReflection.Server.isVectorDefenseActive(player)
-                        && remaining > 0.0f && Float.isFinite(remaining)) {
-                    ((LivingEntityDamageInvoker) this)
-                            .academy$actuallyHurt(level, source, remaining);
+            if (VectorReflection.Server.usesFullInstanceProtection(player)) {
+                var reflection = VectorReflection.Server.hurtServer(player, level, source, damage);
+                if (reflection.getLeft()) {
+                    ci.cancel();
+                    var remaining = reflection.getRight();
+                    if (!VectorReflection.Server.usesFullInstanceProtection(player)
+                            && remaining > 0.0f && Float.isFinite(remaining)) {
+                        ((LivingEntityDamageInvoker) this)
+                                .academy$actuallyHurt(level, source, remaining);
+                    }
+                    return;
                 }
-                return;
+                if (VectorReflection.Server.usesFullInstanceProtection(player)) {
+                    ci.cancel();
+                    return;
+                }
             }
-            if (VectorReflection.Server.isVectorDefenseActive(player)) {
-                ci.cancel();
-                return;
-            }
-            if (VectorExternalInterceptionService.tryDirectRefraction(player, source, damage)) {
-                ci.cancel();
-                return;
-            }
+            VectorDeviation.Server.pushHealthReductionContext(player, source);
         }
         PlayerAttributeRuntime.pushDamageContext(source);
         OutputControl.pushDamageContext(source);
@@ -197,12 +213,15 @@ public abstract class MixinLivingEntity {
     private void academy$endDamageContext(ServerLevel level, DamageSource source, float damage, CallbackInfo ci) {
         OutputControl.popDamageContext();
         PlayerAttributeRuntime.popDamageContext();
+        if ((Object) this instanceof ServerPlayer player) {
+            VectorDeviation.Server.popHealthReductionContext(player, source);
+        }
     }
 
     @Inject(method = "getHealth", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionHealthRead(CallbackInfoReturnable<Float> cir) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isVectorDefenseActive(player)
+                && VectorReflection.Server.usesFullInstanceProtection(player)
                 && ClassPointerProtectionManager.backend(player)
                 != ProtectionBackend.CLASS_POINTER) {
             cir.setReturnValue(Math.max(1.0f, cir.getReturnValue()));
@@ -244,7 +263,7 @@ public abstract class MixinLivingEntity {
             CallbackInfo ci
     ) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isVectorDefenseActive(player)
+                && VectorReflection.Server.usesFullInstanceProtection(player)
                 && reason != Entity.RemovalReason.CHANGED_DIMENSION
                 && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
             ci.cancel();
@@ -254,7 +273,7 @@ public abstract class MixinLivingEntity {
     @Inject(method = "kill", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionLivingKill(ServerLevel level, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isVectorDefenseActive(player)) {
+                && VectorReflection.Server.usesFullInstanceProtection(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
@@ -263,7 +282,7 @@ public abstract class MixinLivingEntity {
     @Inject(method = "die", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionDeath(DamageSource source, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isVectorDefenseActive(player)) {
+                && VectorReflection.Server.usesFullInstanceProtection(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
@@ -373,7 +392,7 @@ public abstract class MixinLivingEntity {
     @Inject(method = "animateHurt", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorHurtAnimation(float direction, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isVectorDefenseActive(player)) {
+                && VectorReflection.Server.usesFullInstanceProtection(player)) {
             player.hurtTime = 0;
             player.hurtDuration = 0;
             player.hurtMarked = false;
@@ -384,7 +403,7 @@ public abstract class MixinLivingEntity {
     @Inject(method = "handleDamageEvent", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorDamageEvent(DamageSource source, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isVectorDefenseActive(player)) {
+                && VectorReflection.Server.usesFullInstanceProtection(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }

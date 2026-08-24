@@ -2077,7 +2077,7 @@
   "skill.academy.shackle.proficiency.2000": "Imprisonment for non-player targets increases from 8 to 10 seconds; players remain at 8 seconds.",
   "skill.academy.shackle.proficiency.3000": "A target forcibly moved over 2 blocks while shackled returns to its anchor and takes 40% secondary damage, once per imprisonment.",
   "skill.academy.single_high_speed_electron_beam": "Single High-Speed Electron Beam",
-  "skill.academy.single_high_speed_electron_beam.desc": "Fire a delayed electron beam that deals base damage plus one percent of the target's maximum health.",
+  "skill.academy.single_high_speed_electron_beam.desc": "Fire a delayed electron beam from a randomized origin; aim correction improves with proficiency and fully converges on the crosshair target at maximum proficiency.",
   "skill.academy.single_high_speed_electron_beam.proficiency.1000": "Cast cost -10%.",
   "skill.academy.single_high_speed_electron_beam.proficiency.2000": "Formation delay -25% and range +20%.",
   "skill.academy.single_high_speed_electron_beam.proficiency.3000": "The beam continues through the first creature once, dealing 60% ordinary damage to the second target; maximum-health damage does not penetrate.",

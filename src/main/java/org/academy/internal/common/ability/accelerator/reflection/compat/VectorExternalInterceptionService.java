@@ -23,7 +23,7 @@ public final class VectorExternalInterceptionService {
     public static void protectIncomingBoundary(LivingIncomingDamageEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer defender) || event.getSource() == null) return;
         VectorAttackAttributionResolver.rememberFromSource(defender, event.getSource());
-        if (event.isCanceled() || !VectorReflection.Server.isVectorDefenseActive(defender)) return;
+        if (event.isCanceled() || !VectorReflection.Server.usesFullInstanceProtection(defender)) return;
 
         var amount = event.getAmount();
         if (!(amount > 0.0f) || !Float.isFinite(amount)) {
@@ -35,7 +35,7 @@ public final class VectorExternalInterceptionService {
         var result = VectorReflection.Server.hurtServer(
                 defender, defender.level(), event.getSource(), amount);
         var remaining = result.getRight();
-        if (VectorReflection.Server.isVectorDefenseActive(defender)) {
+        if (VectorReflection.Server.usesFullInstanceProtection(defender)) {
             event.setCanceled(true);
             VectorReflection.Server.maintainProtection(defender);
             return;
@@ -60,7 +60,7 @@ public final class VectorExternalInterceptionService {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void repairAfterForeignDamage(LivingDamageEvent.Post event) {
         if (event.getEntity() instanceof ServerPlayer defender
-                && VectorReflection.Server.isVectorDefenseActive(defender)) {
+                && VectorReflection.Server.usesFullInstanceProtection(defender)) {
             VectorReflection.Server.maintainProtection(defender);
         }
     }
@@ -74,6 +74,14 @@ public final class VectorExternalInterceptionService {
             return;
         }
 
+        if (!VectorReflection.Server.usesFullInstanceProtection(defender)) {
+            if (event.getSource().getDirectEntity() instanceof Projectile projectile
+                    && VectorProjectileInterceptionService.intercept(defender, projectile)) {
+                event.setCanceled(true);
+            }
+            return;
+        }
+
         if (VectorReflection.Server.canMaintainLinearReflectionLease(defender)
                 || VectorDeviation.Server.canMaintain(defender)) {
             var reflection = VectorReflection.Server.hurtServer(
@@ -84,7 +92,7 @@ public final class VectorExternalInterceptionService {
             );
             if (reflection.getLeft()) {
                 var remaining = reflection.getRight();
-                if (VectorReflection.Server.isVectorDefenseActive(defender)) {
+                if (VectorReflection.Server.usesFullInstanceProtection(defender)) {
                     event.setCanceled(true);
                     VectorReflection.Server.maintainProtection(defender);
                 } else if (remaining > 0.0f && Float.isFinite(remaining)) {
@@ -95,7 +103,7 @@ public final class VectorExternalInterceptionService {
                 return;
             }
         }
-        if (VectorReflection.Server.isVectorDefenseActive(defender)) {
+        if (VectorReflection.Server.usesFullInstanceProtection(defender)) {
             event.setCanceled(true);
             VectorReflection.Server.maintainProtection(defender);
             return;
@@ -223,7 +231,7 @@ public final class VectorExternalInterceptionService {
 
     private static void neutralizeAppliedBoundary(LivingDamageEvent.Pre event) {
         if (!(event.getEntity() instanceof ServerPlayer defender)
-                || !VectorReflection.Server.isVectorDefenseActive(defender)) return;
+                || !VectorReflection.Server.usesFullInstanceProtection(defender)) return;
         event.setNewDamage(0.0f);
         event.getContainer().setShouldCauseSideEffects(false);
         VectorReflection.Server.maintainProtection(defender);

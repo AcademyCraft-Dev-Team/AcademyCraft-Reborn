@@ -56,7 +56,7 @@ class AcceleratorProgramExecutionBridgeTest {
                 configuration.keySet());
         assertFalse(configuration.get("destroy_blocks").getAsBoolean());
         assertEquals(1.0f, configuration.get("power").getAsFloat());
-        assertEquals(11, configuration.get("radius").getAsInt());
+        assertEquals(8, configuration.get("radius").getAsInt());
     }
 
     @Test
@@ -98,7 +98,7 @@ class AcceleratorProgramExecutionBridgeTest {
                         .orElseThrow();
         assertEquals(1.0f, shockwave.power());
         assertFalse(shockwave.destroyBlocks());
-        assertEquals(11, shockwave.radius());
+        assertEquals(8, shockwave.radius());
 
         var invalid = new JsonObject();
         invalid.addProperty("strength", 3);

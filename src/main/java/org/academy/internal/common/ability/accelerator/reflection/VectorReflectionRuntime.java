@@ -71,7 +71,7 @@ public final class VectorReflectionRuntime {
                 else ANCHORS.remove(entry.getKey(), entry.getValue());
                 continue;
             }
-            if (!VectorReflection.Server.isVectorDefenseActive(player)) {
+            if (!VectorReflection.Server.usesFullInstanceProtection(player)) {
                 deactivate(player);
                 continue;
             }
