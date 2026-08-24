@@ -6,6 +6,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
@@ -33,12 +34,13 @@ public final class VectorReflectionClientRuntime {
         currentPlayer = new WeakReference<>(player);
         if (player == null) return;
 
-        // Arm the dispatch class as soon as either vector defense is learned and retain it for the
-        // lifetime of this LocalPlayer. The generated overrides delegate to vanilla while
-        // reflection is disabled, so toggling a skill no longer changes the runtime class between
-        // two rendered frames.
+        // Reflection retains its existing learned-skill arming behavior. Vector Deviation only
+        // receives the dispatch subclass after its final proficiency milestone.
         if (shouldKeepClassPointerArmed(player)) {
             ClassPointerProtectionManager.ensureClientPlayer(player);
+        } else if (ClassPointerProtectionManager.backend(player)
+                == ProtectionBackend.CLASS_POINTER) {
+            ClassPointerProtectionManager.restore(player);
         }
         if (!isProtected(player)) {
             return;
@@ -67,7 +69,7 @@ public final class VectorReflectionClientRuntime {
                 && AbilitySystemClient.getSkillData(Skills.VECTOR_REFLECTION.get())
                 .map(data -> data.isEnabled() && AbilitySystemClient.getAvailableCP() > 0.0f)
                 .orElse(false);
-        return reflection || isVectorDeviationActive(player);
+        return reflection || isVectorDeviationFullyProtected(player);
     }
 
     public static boolean isReflectionProtected(LocalPlayer player) {
@@ -95,14 +97,20 @@ public final class VectorReflectionClientRuntime {
                 .orElse(false);
     }
 
+    private static boolean isVectorDeviationFullyProtected(LocalPlayer player) {
+        return isVectorDeviationActive(player)
+                && ProficiencyPolicy.client().enabled()
+                && AbilitySystemClient.getSkillProficiencyMilestone(
+                Skills.VECTOR_DEVIATION.get()) >= 3;
+    }
+
     private static boolean shouldKeepClassPointerArmed(LocalPlayer player) {
         if (player == null) return false;
-        if (ClassPointerProtectionManager.backend(player)
-                == ProtectionBackend.CLASS_POINTER) {
-            return true;
-        }
         return AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
-                || AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get());
+                || AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get())
+                && ProficiencyPolicy.client().enabled()
+                && AbilitySystemClient.getSkillProficiencyMilestone(
+                Skills.VECTOR_DEVIATION.get()) >= 3;
     }
 
     public static void imaginebreaker(LocalPlayer player, float amount) {

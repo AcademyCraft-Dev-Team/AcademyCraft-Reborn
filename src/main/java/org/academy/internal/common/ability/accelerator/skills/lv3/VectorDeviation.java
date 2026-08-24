@@ -59,7 +59,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
+import java.util.function.Supplier;
 import net.minecraft.util.Mth;
 
 public class VectorDeviation extends Skill {
@@ -222,6 +225,12 @@ public class VectorDeviation extends Skill {
     }
 
     public static final class Server {
+        private static final float[] DAMAGE_REDUCTION_BY_MILESTONE = {0.5f, 0.7f, 0.9f};
+        private static final ThreadLocal<Integer> HEALTH_WRITE_LIMIT_BYPASS =
+                ThreadLocal.withInitial(() -> 0);
+        private static final ThreadLocal<Deque<HealthReductionContext>> HEALTH_REDUCTION_CONTEXT =
+                new ThreadLocal<>();
+
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
@@ -250,6 +259,124 @@ public class VectorDeviation extends Skill {
                     && player.connection != null
                     && !player.isSpectator()
                     && Skills.VECTOR_DEVIATION.get().isEnabled(player);
+        }
+
+        public static boolean usesClassPointerProtection(ServerPlayer player) {
+            return isActive(player)
+                    && VectorDefenseProficiency.effectiveMilestone(
+                    player, Skills.VECTOR_DEVIATION.get()) >= 3;
+        }
+
+        public static boolean usesPartialHealthProtection(ServerPlayer player) {
+            return isActive(player) && !usesClassPointerProtection(player);
+        }
+
+        static float damageReductionForMilestone(int milestone) {
+            return DAMAGE_REDUCTION_BY_MILESTONE[Math.clamp(milestone, 0, 2)];
+        }
+
+        static float limitNegativeHealthChange(float currentHealth, float requestedHealth,
+                                               int milestone) {
+            if (!Float.isFinite(currentHealth)) return requestedHealth;
+            if (!Float.isFinite(requestedHealth)) return currentHealth;
+            if (requestedHealth >= currentHealth || milestone >= 3) return requestedHealth;
+            var damage = currentHealth - requestedHealth;
+            var remainingDamage = damage * (1.0f - damageReductionForMilestone(milestone));
+            return Math.max(0.0f, currentHealth - remainingDamage);
+        }
+
+        static boolean passesLowProficiencyRefractionRoll(float roll) {
+            return Float.isFinite(roll) && roll >= 0.0f && roll < 0.5f;
+        }
+
+        public static float limitHealthWrite(ServerPlayer player, float currentHealth,
+                                             float requestedHealth) {
+            if (HEALTH_WRITE_LIMIT_BYPASS.get() > 0
+                    || !usesPartialHealthProtection(player)
+                    || VectorReflection.Server.isImagineBreakerMutation(player)) {
+                return requestedHealth;
+            }
+            var limitedHealth = limitNegativeHealthChange(
+                    currentHealth,
+                    requestedHealth,
+                    VectorDefenseProficiency.effectiveMilestone(
+                            player, Skills.VECTOR_DEVIATION.get())
+            );
+            if (Float.isFinite(requestedHealth) && limitedHealth > requestedHealth) {
+                emitHealthReductionFeedback(player, currentHealthReductionSource(player));
+            }
+            return limitedHealth;
+        }
+
+        public static void pushHealthReductionContext(ServerPlayer player, DamageSource source) {
+            if (!usesPartialHealthProtection(player) || source == null) return;
+            var contexts = HEALTH_REDUCTION_CONTEXT.get();
+            if (contexts == null) {
+                contexts = new ArrayDeque<>();
+                HEALTH_REDUCTION_CONTEXT.set(contexts);
+            }
+            contexts.push(new HealthReductionContext(player.getUUID(), source));
+        }
+
+        public static void popHealthReductionContext(ServerPlayer player, DamageSource source) {
+            if (player == null || source == null) return;
+            var contexts = HEALTH_REDUCTION_CONTEXT.get();
+            if (contexts == null) return;
+            var context = contexts.peek();
+            if (context != null && context.playerId.equals(player.getUUID())
+                    && context.source == source) {
+                contexts.pop();
+            }
+            if (contexts.isEmpty()) HEALTH_REDUCTION_CONTEXT.remove();
+        }
+
+        private static DamageSource currentHealthReductionSource(ServerPlayer player) {
+            if (player == null) return null;
+            var contexts = HEALTH_REDUCTION_CONTEXT.get();
+            if (contexts == null) return null;
+            for (var context : contexts) {
+                if (context.playerId.equals(player.getUUID())) return context.source;
+            }
+            return null;
+        }
+
+        private static void emitHealthReductionFeedback(ServerPlayer player, DamageSource source) {
+            var incoming = source == null
+                    ? player.getLookAngle().scale(-1.0)
+                    : VectorAttackAttributionResolver.resolve(player, source)
+                    .effectDirection().scale(-1.0);
+            if (normalizeOrZero(incoming) == Vec3.ZERO) incoming = player.getLookAngle().scale(-1.0);
+            var direction = refractedDirection(player.getLookAngle(), incoming);
+            if (normalizeOrZero(direction) == Vec3.ZERO) direction = player.getLookAngle();
+            var position = player.getBoundingBox().getCenter();
+            if (source != null) {
+                VectorEnvironmentalFeedbackController.emitRefraction(
+                        player,
+                        source,
+                        VectorAttackFingerprint.computeLeaseKey(player.getId(), source, incoming),
+                        direction,
+                        position
+                );
+                return;
+            }
+            VectorCompatibilityEffectLimiter.emit(
+                    player,
+                    0x564543544F525F44L,
+                    direction,
+                    position,
+                    VectorRedirectKind.REFRACTION
+            );
+        }
+
+        public static <T> T runWithHealthWriteLimitBypassed(Supplier<T> action) {
+            var depth = HEALTH_WRITE_LIMIT_BYPASS.get();
+            HEALTH_WRITE_LIMIT_BYPASS.set(depth + 1);
+            try {
+                return action.get();
+            } finally {
+                if (depth == 0) HEALTH_WRITE_LIMIT_BYPASS.remove();
+                else HEALTH_WRITE_LIMIT_BYPASS.set(depth);
+            }
         }
 
         public static void forceDeactivate(ServerPlayer player) {
@@ -305,6 +432,11 @@ public class VectorDeviation extends Skill {
                     || !Float.isFinite(incomingDamage)) {
                 return VectorIncomingDamageResult.passThrough(incomingDamage);
             }
+            var fullProtection = usesClassPointerProtection(player);
+            if (!fullProtection && !passesLowProficiencyRefractionRoll(
+                    player.getRandom().nextFloat())) {
+                return VectorIncomingDamageResult.passThrough(incomingDamage);
+            }
             var skill = Skills.VECTOR_DEVIATION.get();
             var system = AbilitySystemServer.getSystem(player);
             var result = VectorDefenseProficiency.calculate(
@@ -316,6 +448,9 @@ public class VectorDeviation extends Skill {
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (!(result.processedDamage() > 0.0f)) {
+                return VectorIncomingDamageResult.passThrough(incomingDamage);
+            }
+            if (!fullProtection && !result.isFull()) {
                 return VectorIncomingDamageResult.passThrough(incomingDamage);
             }
             var attribution = VectorAttackAttributionResolver.resolve(player, source);
@@ -349,6 +484,9 @@ public class VectorDeviation extends Skill {
             return VectorIncomingDamageResult.partial(result.remainingDamage());
         }
 
+        private record HealthReductionContext(java.util.UUID playerId, DamageSource source) {
+        }
+
         public static boolean absorbAnomalousDamage(
                 ServerPlayer player,
                 DamageSource source,
@@ -356,6 +494,7 @@ public class VectorDeviation extends Skill {
         ) {
             if (!VectorIncomingDamageCoordinator.isAnomalousDamage(incomingDamage)
                     || !isActive(player)
+                    || !usesClassPointerProtection(player)
                     || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || !canRefractSource(player, source)) {
                 return false;
@@ -396,6 +535,7 @@ public class VectorDeviation extends Skill {
                 boolean emitFeedback
         ) {
             if (!isActive(player)
+                    || !usesClassPointerProtection(player)
                     || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || !(incomingDamage > 0.0f)
                     || !Float.isFinite(incomingDamage)

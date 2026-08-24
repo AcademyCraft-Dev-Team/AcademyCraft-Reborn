@@ -93,12 +93,12 @@ public abstract class MixinServerPlayer extends Player implements ImagineBreaker
     public boolean redirectHurtServer(Player instance, ServerLevel level, DamageSource source, float damage) {
         var pair = VectorReflection.Server.hurtServer(instance, level, source, damage);
         if (!pair.getLeft()) {
-            if (VectorReflection.Server.isVectorDefenseActive((ServerPlayer) (Object) this)) return false;
+            if (VectorReflection.Server.usesFullInstanceProtection((ServerPlayer) (Object) this)) return false;
             return super.hurtServer(level, source, pair.getRight());
         }
         var remainingDamage = pair.getRight();
         if (!(remainingDamage > 0.0f) || !Float.isFinite(remainingDamage)) return false;
-        return VectorReflection.Server.isVectorDefenseActive((ServerPlayer) (Object) this)
+        return VectorReflection.Server.usesFullInstanceProtection((ServerPlayer) (Object) this)
                 ? false : super.hurtServer(level, source, remainingDamage);
     }
 

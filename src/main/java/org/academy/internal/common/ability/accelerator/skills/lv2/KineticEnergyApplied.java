@@ -105,13 +105,13 @@ import org.misaka.api.common.network.packet.PacketType;
 
 public class KineticEnergyApplied extends Skill {
     public static final int MIN_IMPACT_LEVEL = 1;
-    public static final int MAX_IMPACT_LEVEL = 5;
+    public static final int MAX_IMPACT_LEVEL = 3;
     public static final int DEFAULT_IMPACT_LEVEL = 1;
     public static final int PROGRAM_IMPACT_LEVEL = 3;
     public static final float BASE_PROGRAM_DAMAGE = 13.0f;
     public static final int MIN_PROGRAM_RADIUS = 0;
     public static final int MAX_PROGRAM_RADIUS = 32;
-    public static final int DEFAULT_PROGRAM_RADIUS = 11;
+    public static final int DEFAULT_PROGRAM_RADIUS = 8;
     private static final float BASE_IMPACT_DAMAGE = 4.0f;
     private static final double SERVER_AIR_VERIFY_REACH = 6.0;
     private static final float MAX_VISUAL_RADIUS = 24.0f;
@@ -151,7 +151,7 @@ public class KineticEnergyApplied extends Skill {
 
     public static float getImpactRadius(int impactLevel) {
         var level = clampImpactLevel(impactLevel);
-        return level * level + 2.0f;
+        return level * 2.0f + 2.0f;
     }
 
     public static float getImpactDamage(int impactLevel, float abilityPower, float damageMultiplier) {
@@ -965,14 +965,8 @@ public class KineticEnergyApplied extends Skill {
             var state = level.getBlockState(pos);
             if (state.isAir()) return clearFluid(level, player, pos, state);
 
-            var bedrock = state.is(Blocks.BEDROCK);
-            if (state.getDestroySpeed(level, pos) < 0.0f
-                    && !(impactLevel >= MAX_IMPACT_LEVEL && bedrock)) {
+            if (state.getDestroySpeed(level, pos) < 0.0f) {
                 return clearFluid(level, player, pos, state);
-            }
-            if (bedrock) {
-                return level.setBlock(pos, Blocks.AIR.defaultBlockState(),
-                        Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
             }
             return level.destroyBlock(pos, dropBlocks, player);
         }
