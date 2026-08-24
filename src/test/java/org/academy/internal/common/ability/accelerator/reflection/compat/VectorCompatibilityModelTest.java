@@ -65,6 +65,24 @@ class VectorCompatibilityModelTest {
     }
 
     @Test
+    void redirectedProjectilePickupIsAlsoAuthorizedForItsOriginalOwner() {
+        var original = UUID.randomUUID();
+        var redirector = UUID.randomUUID();
+        var unrelated = UUID.randomUUID();
+
+        assertTrue(VectorProjectileRedirects.allowsOriginalOwnerPickup(
+                true, original, original));
+        assertFalse(VectorProjectileRedirects.allowsOriginalOwnerPickup(
+                true, original, redirector));
+        assertFalse(VectorProjectileRedirects.allowsOriginalOwnerPickup(
+                true, original, unrelated));
+        assertFalse(VectorProjectileRedirects.allowsOriginalOwnerPickup(
+                false, original, original));
+        assertFalse(VectorProjectileRedirects.allowsOriginalOwnerPickup(
+                true, null, original));
+    }
+
+    @Test
     void confidenceOrderingIsExplicit() {
         assertTrue(VectorAttackConfidence.EXACT.atLeast(VectorAttackConfidence.HIGH));
         assertTrue(VectorAttackConfidence.MEDIUM.atLeast(VectorAttackConfidence.MEDIUM));

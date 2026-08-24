@@ -44,7 +44,7 @@ public final class AbilityDeveloperBlock extends MultiBlock {
     public static final String ABILITY_DEVELOPER_SCREEN = "ability_developer_screen";
 
     public AbilityDeveloperBlock(Properties properties) {
-        super(properties.noOcclusion().strength(6.0F, 7.0F).requiresCorrectToolForDrops());
+        super(properties.noOcclusion());
     }
 
     @Override

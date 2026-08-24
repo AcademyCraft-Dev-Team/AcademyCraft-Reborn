@@ -2,11 +2,26 @@ package org.academy.internal.common.ability.accelerator.skills.lv2;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import org.academy.api.client.input.MouseButtonEvent;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class KineticEnergyAppliedTest {
+    @Test
+    void attackWaveInputRunsAfterInteractiveOverlays() throws NoSuchMethodException {
+        var method = KineticEnergyApplied.ClientEvents.class.getDeclaredMethod(
+                "onMouseButton", MouseButtonEvent.class
+        );
+        var annotation = method.getAnnotation(SubscribeEvent.class);
+
+        assertNotNull(annotation);
+        assertEquals(EventPriority.LOWEST, annotation.priority());
+    }
+
     @Test
     void clampsAndCyclesImpactLevel() {
         assertEquals(1, KineticEnergyApplied.clampImpactLevel(-5));

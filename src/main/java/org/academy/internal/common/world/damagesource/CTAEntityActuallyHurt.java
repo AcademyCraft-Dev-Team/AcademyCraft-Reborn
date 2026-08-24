@@ -77,9 +77,14 @@ public final class CTAEntityActuallyHurt {
             return false;
         }
 
-        // Install the short anti-heal ceiling only after the exact write has been verified. Doing
-        // this before a damage call used to pre-kill lethal targets and skip vanilla die/loot.
-        EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);
+        // A zero-health cap would also reject the recovery write performed by vanilla totems and
+        // other death protection. Because EntityControlApi keys that cap by UUID, it could then
+        // survive long enough to affect the replacement ServerPlayer created during respawn. A
+        // lethal hit proceeds directly into the normal death-protection/death flow below and does
+        // not need the short anti-heal ceiling used by surviving targets.
+        if (shouldInstallPostDamageHealthCap(expected)) {
+            EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);
+        }
         var inflicted = Math.max(0.0f, before - observed);
         if (!(inflicted > 0.0f)) return false;
 
@@ -92,6 +97,10 @@ public final class CTAEntityActuallyHurt {
                 expected == 0.0f, false
         );
         return true;
+    }
+
+    static boolean shouldInstallPostDamageHealthCap(float expectedHealth) {
+        return Float.isFinite(expectedHealth) && expectedHealth > 0.0f;
     }
 
     private boolean shouldPreventFriendlyFire(DamageSource source) {

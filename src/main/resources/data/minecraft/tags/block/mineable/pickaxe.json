@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "academy:ability_developer",
+    "academy:cat_engine",
+    "academy:omni_crafting_table",
+    "academy:solar_gen",
+    "academy:wind_gen_base",
+    "academy:wind_gen_pillar",
+    "academy:wind_gen_top",
+    "academy:wireless_node"
+  ]
+}

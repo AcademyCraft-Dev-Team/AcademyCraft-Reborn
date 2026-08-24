@@ -35,8 +35,6 @@ public final class SolarGenBlock extends BaseEntityBlock {
                 .mapColor(MapColor.STONE)
                 .sound(SoundType.STONE)
                 .noOcclusion()
-                .strength(20.0f)
-                .requiresCorrectToolForDrops()
         );
     }
 

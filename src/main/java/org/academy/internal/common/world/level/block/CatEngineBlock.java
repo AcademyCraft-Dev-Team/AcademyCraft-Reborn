@@ -26,8 +26,6 @@ public final class CatEngineBlock extends BaseEntityBlock {
                 .mapColor(MapColor.STONE)
                 .sound(SoundType.STONE)
                 .noOcclusion()
-                .strength(20.0f)
-                .requiresCorrectToolForDrops()
         );
     }
 
