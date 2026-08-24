@@ -56,6 +56,7 @@ Mentalout 通过可组合、可撤销的运行时覆盖控制实体行为，不�
 | Lv3 | `impression_manipulation` | 印象操作 | `mental_intervention`、`target_misidentification` | M1 | `自动验证通过` |
 | Lv3 | `command_positioning` | 指挥定位 | `mental_intervention` | M1 | `自动验证通过` |
 | Lv4 | `mental_takeover` | 意识接管 | `mental_intrusion`、`command_positioning`、`mental_stupor` | M4 | `开发中` |
+| Lv5 | `mind_destruction` | 心智破坏 | `sensory_distortion` | M5 | `代码完成` |
 | Lv5 | `precision_operation` | 精密操作 | `impression_manipulation`、`mental_stupor` | M3 | `代码完成` |
 
 ### 心灵介入
