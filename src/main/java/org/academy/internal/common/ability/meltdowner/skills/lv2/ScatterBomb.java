@@ -35,6 +35,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -343,7 +344,8 @@ public final class ScatterBomb extends Skill {
                 var endpoint = beam.position().add(beam.getLookAngle().scale(BEAM_LENGTH));
                 var target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
                                 new net.minecraft.world.phys.AABB(endpoint, endpoint).inflate(8.0),
-                                living -> living.isAlive() && !player.isAlliedTo(living)
+                                living -> living.isAlive()
+                                        && MeltdownerTargeting.canAffectNegatively(player, living)
                                         && org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify
                                         .isMarked(living, level.getGameTime()))
                         .stream().min(java.util.Comparator.comparingDouble(living -> living.distanceToSqr(endpoint)))

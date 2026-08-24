@@ -30,6 +30,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.lv3.LightShield;
 import org.academy.internal.common.network.PacketTypes;
@@ -184,7 +185,8 @@ public final class JetStrike extends Skill {
             var targets = level.getEntitiesOfClass(
                     LivingEntity.class,
                     targetBox,
-                    target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                    target -> target.isAlive()
+                            && MeltdownerTargeting.canAffectNegatively(player, target)
             );
             for (var target : targets) target.hurtServer(level, source, damage);
             if (delta.lengthSqr() > 1.0e-8) {
@@ -282,7 +284,8 @@ public final class JetStrike extends Skill {
                 var source = SkillDamageSource.of(player, Skills.JET_STRIKE.get());
                 for (var target : initialLevel.getEntitiesOfClass(LivingEntity.class,
                         player.getBoundingBox().inflate(1.25),
-                        target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                        target -> target.isAlive()
+                                && MeltdownerTargeting.canAffectNegatively(player, target)
                                 && !hitTargets.contains(target.getUUID()))) {
                     hitTargets.add(target.getUUID());
                     target.hurtServer(initialLevel, source, damage * 0.4f);

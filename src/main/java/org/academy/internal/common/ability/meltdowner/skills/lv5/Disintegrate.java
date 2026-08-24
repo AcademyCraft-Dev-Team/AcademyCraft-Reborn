@@ -28,6 +28,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.meltdowner.skills.ContinuousBeam;
 import org.academy.internal.common.network.PacketTypes;
@@ -162,7 +163,7 @@ public class Disintegrate extends Skill {
                             LivingEntity.class,
                             new AABB(center, center).inflate(SCATTER_RADIUS),
                             target -> target != player && target != killed && target.isAlive()
-                                    && !player.isAlliedTo(target)
+                                    && MeltdownerTargeting.canAffectNegatively(player, target)
                                     && (!(target instanceof ServerPlayer serverPlayer)
                                     || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
                     ).stream()
@@ -181,7 +182,8 @@ public class Disintegrate extends Skill {
             return level.getEntitiesOfClass(
                             LivingEntity.class,
                             new AABB(start, end).inflate(1.0),
-                            target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                            target -> target.isAlive()
+                                    && MeltdownerTargeting.canAffectNegatively(player, target)
                                     && (!(target instanceof ServerPlayer serverPlayer)
                                     || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
                                     && distanceToSegmentSqr(target.getBoundingBox().getCenter(), start, end) <= 1.0
@@ -228,7 +230,8 @@ public class Disintegrate extends Skill {
             for (var candidate : player.level().getEntitiesOfClass(
                     LivingEntity.class,
                     search,
-                    target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                    target -> target.isAlive()
+                            && MeltdownerTargeting.canAffectNegatively(player, target)
                             && (!(target instanceof ServerPlayer serverPlayer)
                             || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
                             && (target.getBoundingBox().inflate(0.125).contains(start)
