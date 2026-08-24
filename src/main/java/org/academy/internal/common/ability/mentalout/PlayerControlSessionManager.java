@@ -56,15 +56,12 @@ public final class PlayerControlSessionManager {
     private static final int READY_TIMEOUT_TICKS = 20;
     private static final int NEUTRAL_AFTER_TICKS = 5;
     private static final int CLIENT_TIMEOUT_TICKS = 20;
-    private static final int STRUGGLE_MAX = 100;
-    private static final int STRUGGLE_DECAY_DELAY = 10;
     private static final StreamCodec<ByteBuf, Tag> ITEM_STACK_TAG_CODEC = ByteBufCodecs.tagCodec(
             () -> NbtAccounter.create(1024L * 1024L));
     private static final Map<UUID, Session> BY_CONTROLLER = new HashMap<>();
     private static final Map<UUID, Session> BY_SUBJECT = new HashMap<>();
     private static final Map<UUID, MobSession> MOB_BY_CONTROLLER = new HashMap<>();
     private static final Map<UUID, MobSession> MOB_BY_SUBJECT = new HashMap<>();
-    private static final Map<UUID, Long> RESISTANCE_UNTIL = new HashMap<>();
     private static final Map<UUID, Long> REVISIONS = new HashMap<>();
     private static final Map<UUID, Anchor> FREEZE_ANCHORS = new HashMap<>();
     private static final Map<UUID, EndReason> CLOSED_PATH_REASONS = new HashMap<>();
@@ -281,7 +278,6 @@ public final class PlayerControlSessionManager {
 
     public static void tick(MinecraftServer server) {
         var now = server.overworld().getGameTime();
-        RESISTANCE_UNTIL.clear();
         FREEZE_ANCHORS.entrySet().removeIf(entry -> {
             var player = server.getPlayerList().getPlayer(entry.getKey());
             return player == null || !MentalControlRuntime.isFrozen(player);
@@ -310,13 +306,6 @@ public final class PlayerControlSessionManager {
                     && session.lastNeutralTick != now) {
                 session.lastNeutralTick = now;
                 authorize(session, PlayerControlFrame.NEUTRAL, ++session.authorizedSequence);
-            }
-            if (now - session.lastStruggleTick > STRUGGLE_DECAY_DELAY && session.struggle > 0) {
-                session.struggle--;
-            }
-            if (session.struggle >= STRUGGLE_MAX) {
-                stop(session, EndReason.STRUGGLE, true);
-                continue;
             }
             if (now % 5L == 0L) sendStatus(session);
             if (now - session.lastViewSnapshotTick >= 2L) sendTargetViewState(session, now);
@@ -355,7 +344,7 @@ public final class PlayerControlSessionManager {
     }
 
     public static boolean isResistant(ServerPlayer subject) {
-        return false;
+        return MentalResistanceManager.isResistant(subject);
     }
 
     public static boolean blocksUntrustedWorldAction(ServerPlayer player) {
@@ -369,13 +358,21 @@ public final class PlayerControlSessionManager {
     }
 
     public static long resistanceUntil(ServerPlayer subject) {
-        return 0L;
+        return MentalResistanceManager.resistanceUntil(subject);
     }
 
     public static void grantResistance(ServerPlayer subject) {
         if (subject == null) return;
-        RESISTANCE_UNTIL.remove(subject.getUUID());
         MentalControlRuntime.releasePlayerInputLeases(subject.level().getServer(), subject.getUUID());
+    }
+
+    /** Ends hostile player-input control after the shared resistance threshold is reached. */
+    public static void breakFree(ServerPlayer subject) {
+        if (subject == null) return;
+        var session = BY_SUBJECT.get(subject.getUUID());
+        if (session != null && session.controller != session.subject) {
+            stop(session, EndReason.STRUGGLE, true, false);
+        }
     }
 
     public static void releaseEntity(UUID entityId) {
@@ -397,7 +394,6 @@ public final class PlayerControlSessionManager {
                 session -> stop(session, EndReason.LIFECYCLE, false));
         MOB_BY_CONTROLLER.clear();
         MOB_BY_SUBJECT.clear();
-        RESISTANCE_UNTIL.clear();
         REVISIONS.clear();
         FREEZE_ANCHORS.clear();
         CLOSED_PATH_REASONS.clear();
@@ -679,28 +675,7 @@ public final class PlayerControlSessionManager {
         var direction = packet.directionMask & 0xF;
         if (session.controller == session.subject && hasSelfOverrideInput(direction, packet.edgeMask)) {
             stop(session, EndReason.CONTROLLER_STOPPED, true, false);
-            return;
         }
-        var points = strugglePoints(session.lastDirectionMask, direction, packet.edgeMask);
-        session.lastDirectionMask = direction;
-        if (points > 0) {
-            if (Skills.MENTAL_TAKEOVER.get().hasProficiencyMilestone(session.controller, 2)) {
-                var scaled = points * 0.75f + session.struggleRemainder;
-                points = (int) Math.floor(scaled);
-                session.struggleRemainder = scaled - points;
-            }
-            session.struggle = Math.min(STRUGGLE_MAX, session.struggle + Math.min(2, points));
-            session.lastStruggleTick = now;
-            sendStatus(session);
-        }
-    }
-
-    static int strugglePoints(int previousDirectionMask, int directionMask, int edgeMask) {
-        var points = 0;
-        var direction = directionMask & 0xF;
-        if (direction != 0 && direction != (previousDirectionMask & 0xF)) points++;
-        if ((edgeMask & 0x3) != 0) points++;
-        return Math.min(2, points);
     }
 
     static boolean hasSelfOverrideInput(int directionMask, int edgeMask) {
@@ -871,7 +846,9 @@ public final class PlayerControlSessionManager {
     private static void sendStatus(Session session) {
         var system = AbilitySystemServer.getSystem(session.controller);
         var status = new StatusPacket(
-                session.id, session.revision, session.struggle,
+                session.id, session.revision,
+                Math.round(100.0f * MentalResistanceManager.progress(session.subject)
+                        / Math.max(1, MentalResistanceManager.threshold(session.subject))),
                 system.getPlayerAvailableCP(session.controller.getUUID()),
                 system.getPlayerMaxCP(session.controller.getUUID())
         );
@@ -1846,15 +1823,11 @@ public final class PlayerControlSessionManager {
         private long lastOffhandUseTick = Long.MIN_VALUE;
         private long lastSubjectSequence = -1L;
         private long lastStruggleAcceptedTick = Long.MIN_VALUE;
-        private long lastStruggleTick;
         private long authorizedSequence;
         private long lastAppliedSequence = -1L;
         private long lastAppliedTick;
         private long lastViewSnapshotTick = Long.MIN_VALUE;
         private long viewSnapshotSequence;
-        private int lastDirectionMask;
-        private int struggle;
-        private float struggleRemainder;
         private int invalidMoves;
         private Vec3 lastGoodPosition;
         private PlayerControlFrame authorizedFrame = PlayerControlFrame.NEUTRAL;
@@ -1881,7 +1854,6 @@ public final class PlayerControlSessionManager {
             this.controllerAnchor = controllerAnchor;
             this.lastIntentTick = now;
             this.lastAppliedTick = now;
-            this.lastStruggleTick = now;
             this.lastGoodPosition = lastGoodPosition;
         }
     }

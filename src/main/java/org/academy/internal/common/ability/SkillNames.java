@@ -90,6 +90,7 @@ public final class SkillNames {
     public static final String MENTAL_STUPOR = "mental_stupor";
     public static final String COMMAND_POSITIONING = "command_positioning";
     public static final String PRECISION_OPERATION = "precision_operation";
+    public static final String MIND_DESTRUCTION = "mind_destruction";
     public static final String BRAIN_DOMAIN_DEVELOPMENT = "brain_domain_development";
     public static final String MULTIPLE_BRAIN_DOMAIN_SEGMENTATION = "multiple_brain_domain_segmentation";
     public static final String PARALLEL_THOUGHT_COMPUTATION = "parallel_thought_computation";

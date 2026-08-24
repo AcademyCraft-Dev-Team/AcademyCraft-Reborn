@@ -29,6 +29,7 @@ import org.academy.internal.common.ability.darkmatter.program.DarkmatterProgramN
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramExecutionBridge;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeCatalog;
 import org.academy.internal.common.ability.electromaster.program.ServerElectromasterProgramRuntime;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramExecutionBridge;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramExecutionBridge;
@@ -165,8 +166,8 @@ public final class AbilityProgramManager {
                     : ProgramTriggers.matches(program, trigger, movement, gameTime);
             if (!matches) continue;
             var compiled = definition.compile(program, capabilities);
-            if (compiled.valid()) adapter.execute(
-                    compiled.program(), player, ProgramTriggers.costMultiplier(program));
+            if (compiled.valid()) OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(
+                    compiled.program(), player, ProgramTriggers.costMultiplier(program)));
         }
     }
 
@@ -555,7 +556,8 @@ public final class AbilityProgramManager {
                         null, -1, ProgramVmDiagnostic.NONE);
                 return;
             }
-            var outcome = adapter.execute(compiled.program(), player, 1.0f);
+            var outcome = OutputControl.callWithoutOutputAdjustment(
+                    () -> adapter.execute(compiled.program(), player, 1.0f));
             result(player, packet.category, packet.slot,
                     outcome.successful ? FeedbackType.COMPLETED : FeedbackType.ERROR,
                     current.revision(),

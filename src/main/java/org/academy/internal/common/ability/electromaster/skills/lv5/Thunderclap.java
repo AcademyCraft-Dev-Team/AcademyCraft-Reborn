@@ -58,6 +58,7 @@ public class Thunderclap extends Skill {
     public Thunderclap() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(100)

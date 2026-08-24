@@ -23,9 +23,9 @@ class ServerTeleportProgramRuntimeTest {
         assertEquals(30.0f, ServerTeleportProgramRuntime.entityCost(1.0f, 32.01));
         assertEquals(30.0f, ServerTeleportProgramRuntime.entityCost(1.0f, 64.0));
 
-        assertEquals(33.75f, ServerTeleportProgramRuntime.entityCost(2.0f, 16.0));
-        assertEquals(67.5f, ServerTeleportProgramRuntime.entityCost(2.0f, 32.0));
-        assertEquals(135.0f, ServerTeleportProgramRuntime.entityCost(2.0f, 64.0));
+        assertEquals(30.0f, ServerTeleportProgramRuntime.entityCost(2.0f, 16.0));
+        assertEquals(60.0f, ServerTeleportProgramRuntime.entityCost(2.0f, 32.0));
+        assertEquals(120.0f, ServerTeleportProgramRuntime.entityCost(2.0f, 64.0));
     }
 
     @Test

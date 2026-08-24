@@ -64,7 +64,8 @@ public final class MentaloutRequestGuard {
         MENTAL_TAKEOVER,
         SENSORY_DISTORTION,
         COMMAND_POSITIONING,
-        PRECISION_OPERATION
+        PRECISION_OPERATION,
+        MIND_DESTRUCTION
     }
 
     static final class SequenceCounter {

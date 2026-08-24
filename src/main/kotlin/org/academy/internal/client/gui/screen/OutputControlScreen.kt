@@ -19,6 +19,7 @@ import org.academy.api.client.gui.widget.SeekBarWidget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.input.InputSystem
 import org.academy.internal.common.ability.level0.skills.OutputControl
+import org.academy.internal.common.ability.program.ProgramPowerScale
 import java.util.Locale
 
 class OutputControlScreen(
@@ -28,7 +29,9 @@ class OutputControlScreen(
     private val heldInputType: InputSystem.InputType,
     private val heldInput: Int
 ) : UiScreen(Component.translatable("screen.academy.output_control.title")) {
-    private var abilityOutput = Mth.clamp(initialAbilityOutput, 0f, 2f)
+    private var abilityOutput = Mth.clamp(
+        initialAbilityOutput, ProgramPowerScale.MIN, ProgramPowerScale.MAX
+    )
     private var movementSpeed = Mth.clamp(initialMovementSpeed, 0f, 1f)
     private var jumpHeight = Mth.clamp(initialJumpHeight, 0f, 1f)
     private var lastSendNanos = 0L
@@ -92,8 +95,8 @@ class OutputControlScreen(
 
         content.addChild("ability_output", createParameterRow(
             "screen.academy.output_control.ability_output",
-            0f,
-            2f,
+            ProgramPowerScale.MIN,
+            ProgramPowerScale.MAX,
             abilityOutput,
             { value -> abilityValue(value) },
             { value ->
@@ -247,10 +250,11 @@ class OutputControlScreen(
     }
 
     private fun abilityValue(value: Float): String {
-        val cp = 0.5f + 0.5f * value * value * value
+        val effect = ProgramPowerScale.effectMultiplier(value)
+        val cp = ProgramPowerScale.costMultiplier(value)
         return Component.translatable(
             "screen.academy.output_control.value.ability",
-            decimal(value),
+            decimal(effect),
             decimal(cp)
         ).string
     }

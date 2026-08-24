@@ -33,6 +33,14 @@ class SkillInitialStateTest {
                 new TestCategory("free_iteration"), 0, 0, 40).getIterationTicks(0));
     }
 
+    @Test
+    void onlyExplicitDamageSkillsOptIntoOutputAdjustedAttackCosts() {
+        var category = new TestCategory("output_adjustment");
+
+        assertFalse(new TestSkill(category, false).isOutputAdjustableDamage());
+        assertTrue(new DamageSkill(category).isOutputAdjustableDamage());
+    }
+
     private static final class TestSkill extends Skill {
         private TestSkill(AbilityCategory category, boolean initiallyDisabled) {
             super(createBuilder(category, initiallyDisabled));
@@ -51,6 +59,12 @@ class SkillInitialStateTest {
                     .cpCost(cpCost)
                     .maintenanceCost(maintenanceCost)
                     .iterationTicks(iterationTicks));
+        }
+    }
+
+    private static final class DamageSkill extends Skill {
+        private DamageSkill(AbilityCategory category) {
+            super(Builder.of(category).damage());
         }
     }
 

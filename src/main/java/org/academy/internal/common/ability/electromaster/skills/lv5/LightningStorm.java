@@ -57,6 +57,7 @@ public class LightningStorm extends Skill {
     public LightningStorm() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(60_000)
                 .cpCost(80)

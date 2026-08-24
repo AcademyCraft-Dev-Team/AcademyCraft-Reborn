@@ -81,6 +81,7 @@ public final class DarkmatterDisassemble extends Skill {
     public DarkmatterDisassemble() {
         super(Builder
                 .of(AbilityCategories.DARKMATTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(CP_COST)

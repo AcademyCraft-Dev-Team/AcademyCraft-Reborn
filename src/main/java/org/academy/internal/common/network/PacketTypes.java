@@ -80,6 +80,7 @@ import org.academy.internal.common.ability.meltdowner.skills.lv4.ParticleWaveCan
 import org.academy.internal.common.ability.meltdowner.skills.lv5.AutoCruiseBeamCannon;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
@@ -89,6 +90,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv1.TargetMisidentif
 import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
+import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
@@ -693,6 +695,19 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalStupor.UsePacket>>
             MENTAL_STUPOR_USE = PACKET_TYPES.register("mental_stupor_use",
             () -> new PacketType<>(MentalStupor.UsePacket.class, MentalStupor.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MindDestruction.UsePacket>>
+            MIND_DESTRUCTION_USE = PACKET_TYPES.register("mind_destruction_use",
+            () -> new PacketType<>(MindDestruction.UsePacket.class, MindDestruction.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalResistanceManager.InputPacket>>
+            MENTAL_RESISTANCE_INPUT = PACKET_TYPES.register("mental_resistance_input",
+            () -> new PacketType<>(MentalResistanceManager.InputPacket.class,
+                    MentalResistanceManager.InputPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalResistanceManager.StatePacket>>
+            MENTAL_RESISTANCE_STATE = PACKET_TYPES.register("mental_resistance_state",
+            () -> new PacketType<>(MentalResistanceManager.StatePacket.class,
+                    MentalResistanceManager.StatePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ImpressionManipulation.UsePacket>>
             IMPRESSION_MANIPULATION_USE = PACKET_TYPES.register("impression_manipulation_use",

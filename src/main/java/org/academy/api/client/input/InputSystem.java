@@ -28,6 +28,8 @@ public final class InputSystem {
     private static final Map<String, KeyBinding> KEY_BINDINGS = new LinkedHashMap<>();
     private static final Map<String, MaintainedBinding> MAINTAINED_BINDINGS = new HashMap<>();
     private static final Map<String, ActiveMaintainedBinding> ACTIVE_MAINTAINED_BINDINGS = new HashMap<>();
+    private static final Map<String, ActivePairedBinding> ACTIVE_PAIRED_BINDINGS = new HashMap<>();
+    private static final Set<SuppressedPairedRelease> SUPPRESSED_PAIRED_RELEASES = new HashSet<>();
     private static final Map<String, KeyCombination> DEFAULT_BINDINGS = new LinkedHashMap<>();
     private static final Map<String, Skill> EXPLICIT_TOGGLE_BINDINGS = new HashMap<>();
     private static final Map<String, Consumer<Integer>> SCROLL_LISTENERS = new HashMap<>();
@@ -49,6 +51,7 @@ public final class InputSystem {
     public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
         rememberDefaultKeyBinding(keyName, combo);
         cancelMaintainedKeyBinding(keyName);
+        cancelPairedBindingsFor(keyName);
         MAINTAINED_BINDINGS.remove(keyName);
         KEY_BINDINGS.put(keyName, new KeyBinding(combo, handler, true));
         bindingRevision++;
@@ -102,6 +105,7 @@ public final class InputSystem {
 
     public static void removeKeyBinding(String keyName) {
         cancelMaintainedKeyBinding(keyName);
+        cancelPairedBindingsFor(keyName);
         MAINTAINED_BINDINGS.remove(keyName);
         KEY_BINDINGS.remove(keyName);
         bindingRevision++;
@@ -139,6 +143,7 @@ public final class InputSystem {
         var binding = KEY_BINDINGS.get(keyName);
         if (binding == null) return;
         cancelMaintainedKeyBinding(keyName);
+        cancelPairedBindingsFor(keyName);
         if (MAINTAINED_BINDINGS.containsKey(keyName)) combo = withAction(combo, ANY_ACTION);
         KEY_BINDINGS.put(keyName, new KeyBinding(combo, binding.handler, binding.enabled));
         bindingRevision++;
@@ -298,7 +303,10 @@ public final class InputSystem {
             return;
         }
         if (existing.enabled != enabled) {
-            if (!enabled) cancelMaintainedKeyBinding(keyName);
+            if (!enabled) {
+                cancelMaintainedKeyBinding(keyName);
+                cancelPairedBindingsFor(keyName);
+            }
             KEY_BINDINGS.put(keyName, new KeyBinding(existing.combo, existing.handler, enabled));
             bindingRevision++;
         }
@@ -408,6 +416,9 @@ public final class InputSystem {
         for (var keyName : List.copyOf(ACTIVE_MAINTAINED_BINDINGS.keySet())) {
             cancelMaintainedKeyBinding(keyName);
         }
+        for (var keyName : List.copyOf(ACTIVE_PAIRED_BINDINGS.keySet())) {
+            cancelPairedBinding(keyName, true);
+        }
     }
 
     public static void handleMouseMove(double xpos, double ypos, CallbackInfo ci) {
@@ -490,13 +501,107 @@ public final class InputSystem {
             if (!binding.enabled) continue;
             var combo = binding.combo;
             if (action == InputConstants.RELEASE
+                    && consumeSuppressedPairedRelease(keyName, eventType, input)) {
+                continue;
+            }
+            if (action == InputConstants.RELEASE
+                    && dispatchActivePairedRelease(keyName, combo, context)) {
+                continue;
+            }
+            if (action == InputConstants.RELEASE
                     && isReleaseForActiveMaintainedBinding(keyName, combo, eventType, input)) {
                 binding.handler.accept(context);
                 continue;
             }
             if (!matches(combo, eventType, input, action, modifiers)) continue;
             binding.handler.accept(context);
+            if (action == InputConstants.PRESS) armPairedReleaseBindings(keyName, combo, context);
         }
+    }
+
+    /**
+     * Keeps legacy two-row press/release skill bindings safe until they are migrated to
+     * {@link #addMaintainedKeyBinding}. Only an actually dispatched matching START/PRESS/CHARGE
+     * row arms its related STOP/END/RELEASE row, so unrelated release-triggered skills remain
+     * unavailable while a screen is open.
+     */
+    private static void armPairedReleaseBindings(
+            String startName, KeyCombination startCombo, BindingContext context
+    ) {
+        var startRoot = pairedStartRoot(startName);
+        if (startRoot == null) return;
+        for (var entry : KEY_BINDINGS.entrySet()) {
+            var releaseName = entry.getKey();
+            var releaseBinding = entry.getValue();
+            if (!releaseBinding.enabled || !startRoot.equals(pairedReleaseRoot(releaseName))
+                    || !sameGesture(startCombo, releaseBinding.combo)) continue;
+            SUPPRESSED_PAIRED_RELEASES.removeIf(suppressed ->
+                    suppressed.releaseName.equals(releaseName));
+            ACTIVE_PAIRED_BINDINGS.putIfAbsent(
+                    releaseName, new ActivePairedBinding(startName, context));
+        }
+    }
+
+    private static boolean dispatchActivePairedRelease(
+            String releaseName, KeyCombination combo, BindingContext context
+    ) {
+        var active = ACTIVE_PAIRED_BINDINGS.get(releaseName);
+        if (active == null || combo.type != context.type
+                || !(combo.keys.isEmpty() || combo.keys.contains(context.input)
+                || active.context.input == context.input)) return false;
+        ACTIVE_PAIRED_BINDINGS.remove(releaseName, active);
+        var binding = KEY_BINDINGS.get(releaseName);
+        if (binding != null) binding.handler.accept(context);
+        return true;
+    }
+
+    private static void cancelPairedBindingsFor(String keyName) {
+        for (var entry : List.copyOf(ACTIVE_PAIRED_BINDINGS.entrySet())) {
+            if (entry.getKey().equals(keyName) || entry.getValue().startName.equals(keyName)) {
+                cancelPairedBinding(entry.getKey(), true);
+            }
+        }
+    }
+
+    private static void cancelPairedBinding(String releaseName, boolean suppressPhysicalRelease) {
+        var active = ACTIVE_PAIRED_BINDINGS.remove(releaseName);
+        if (active == null) return;
+        var binding = KEY_BINDINGS.get(releaseName);
+        if (binding != null) binding.handler.accept(new BindingContext(
+                active.context.type,
+                active.context.input,
+                InputConstants.RELEASE,
+                active.context.modifiers
+        ));
+        if (suppressPhysicalRelease) SUPPRESSED_PAIRED_RELEASES.add(new SuppressedPairedRelease(
+                releaseName, active.context.type, active.context.input));
+    }
+
+    private static boolean consumeSuppressedPairedRelease(String releaseName, InputType type, int input) {
+        return SUPPRESSED_PAIRED_RELEASES.remove(new SuppressedPairedRelease(releaseName, type, input));
+    }
+
+    private static boolean sameGesture(KeyCombination first, KeyCombination second) {
+        return !first.unbound && !second.unbound
+                && first.type == second.type
+                && first.keys.equals(second.keys)
+                && first.modifiers == second.modifiers
+                && first.availableWhenScreen == second.availableWhenScreen;
+    }
+
+    private static @Nullable String pairedStartRoot(String name) {
+        return stripPairedSuffix(name, "_start", ".start", "_press", ".press", "_charge", ".charge");
+    }
+
+    private static @Nullable String pairedReleaseRoot(String name) {
+        return stripPairedSuffix(name, "_stop", ".stop", "_end", ".end", "_release", ".release");
+    }
+
+    private static @Nullable String stripPairedSuffix(String name, String... suffixes) {
+        for (var suffix : suffixes) {
+            if (name.endsWith(suffix)) return name.substring(0, name.length() - suffix.length());
+        }
+        return null;
     }
 
     private static void handleMaintainedInput(String keyName, BindingContext context) {
@@ -535,6 +640,18 @@ public final class InputSystem {
 
     static void dispatchMaintainedForTesting(String keyName, BindingContext context) {
         handleMaintainedInput(keyName, context);
+    }
+
+    static void dispatchPairedForTesting(String keyName, BindingContext context) {
+        var binding = KEY_BINDINGS.get(keyName);
+        if (binding == null || !binding.enabled) return;
+        if (context.action == InputConstants.RELEASE
+                && (consumeSuppressedPairedRelease(keyName, context.type, context.input)
+                || dispatchActivePairedRelease(keyName, binding.combo, context))) return;
+        binding.handler.accept(context);
+        if (context.action == InputConstants.PRESS) {
+            armPairedReleaseBindings(keyName, binding.combo, context);
+        }
     }
 
     static int modifiersForDispatch(InputType type, int input, int action, int modifiers) {
@@ -727,6 +844,12 @@ public final class InputSystem {
         private ActiveMaintainedBinding(BindingContext context) {
             this.context = context;
         }
+    }
+
+    private record ActivePairedBinding(String startName, BindingContext context) {
+    }
+
+    private record SuppressedPairedRelease(String releaseName, InputType type, int input) {
     }
 
     private record InputKey(InputType type, int key) {

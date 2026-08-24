@@ -29,8 +29,22 @@ class PropsMathTest {
         assertEquals(200.0, PropsMath.enduranceHealthBonus(2_000.0));
         assertEquals(4.0, PropsMath.dexteritySpeedBonus(2_000.0));
         assertEquals(Mth.sqrt(11.0f) - 1.0, PropsMath.dexterityJumpStrengthBonus(2_000.0));
+        assertEquals(8.0, PropsMath.dexteritySafeFallDistanceBonus(2_000.0));
         assertEquals(10, PropsMath.perceptionEnchantmentBonus(2_000.0));
         assertEquals(1.1, PropsMath.perceptionExperienceMultiplier(2_000.0));
         assertEquals(1.2, PropsMath.neuralIterationMultiplier(2_000.0));
+    }
+
+    @Test
+    void dexteritySafeFallCoversItsOwnJumpApex() {
+        assertEquals(0.0, PropsMath.dexteritySafeFallDistanceBonus(0.0));
+        assertEquals(1.0, PropsMath.dexteritySafeFallDistanceBonus(500.0));
+        assertEquals(4.0, PropsMath.dexteritySafeFallDistanceBonus(1_000.0));
+        assertEquals(0.0, PropsMath.dexteritySafeFallDistanceBonus(Double.NaN));
+
+        var maximumJumpStrength = 0.42
+                * (1.0 + PropsMath.dexterityJumpStrengthBonus(2_000.0));
+        var protectedDistance = 3.0 + PropsMath.dexteritySafeFallDistanceBonus(2_000.0);
+        assertEquals(true, protectedDistance >= PropsMath.jumpApexHeight(maximumJumpStrength));
     }
 }

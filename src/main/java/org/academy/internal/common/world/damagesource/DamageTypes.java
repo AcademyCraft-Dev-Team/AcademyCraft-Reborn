@@ -18,12 +18,14 @@ public final class DamageTypes {
     public static final ResourceKey<DamageType> SPACE_DAMAGE = create("spacedamage");
     public static final ResourceKey<DamageType> VEC = create("vec");
     public static final ResourceKey<DamageType> CTA = create("cta");
+    public static final ResourceKey<DamageType> MENTAL_DAMAGE = create("mentaldamage");
 
     private static final Set<ResourceKey<DamageType>> ACADEMY_DAMAGE_TYPES = Set.of(
-            AERO_DAMAGE, DM_DAMAGE, ELECTRO_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA
+            AERO_DAMAGE, DM_DAMAGE, ELECTRO_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA,
+            MENTAL_DAMAGE
     );
     private static final Set<ResourceKey<DamageType>> DIRECT_ACTUALLY_HURT_TYPES = Set.of(
-            MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA
+            MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA, MENTAL_DAMAGE
     );
     private static final Set<ResourceKey<DamageType>> VERIFIED_TRUE_HEALTH_TYPES = Set.of(
             VEC, CTA

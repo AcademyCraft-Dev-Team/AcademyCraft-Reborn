@@ -63,6 +63,7 @@ public class IronSandArsenal extends Skill {
 
     public IronSandArsenal() {
         super(Builder.of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .passive()

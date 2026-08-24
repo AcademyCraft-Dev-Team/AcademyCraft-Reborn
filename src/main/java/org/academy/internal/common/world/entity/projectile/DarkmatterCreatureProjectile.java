@@ -23,6 +23,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.item.Items;
 
@@ -39,6 +40,7 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
     private float betaPower;
     private float speed = 1.2f;
     private int maximumLifetime = 60;
+    private boolean outputAdjustmentBypassed;
 
     public DarkmatterCreatureProjectile(EntityType<? extends AbstractArrow> type, Level level) {
         super(type, level);
@@ -48,7 +50,7 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
 
     public void configure(ServerPlayer owner, DarkmatterBeetle creator, LivingEntity target,
                           boolean homing, float damage, float penetration, float betaPower,
-                          float speed) {
+                          float speed, boolean outputAdjustmentBypassed) {
         setOwner(owner);
         creatorId = creator.getUUID();
         targetId = target.getUUID();
@@ -57,6 +59,7 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
         this.penetration = Math.clamp(finitePositive(penetration), 0.0f, 0.5f);
         this.betaPower = finitePositive(betaPower);
         this.speed = Math.max(0.4f, finitePositive(speed));
+        this.outputAdjustmentBypassed = outputAdjustmentBypassed;
         maximumLifetime = Math.max(20, Math.round(48.0f / this.speed));
         snapTo(creator.getX(), creator.getEyeY(), creator.getZ(), creator.getYRot(), creator.getXRot());
         var direction = target.getBoundingBox().getCenter().subtract(position());
@@ -93,9 +96,22 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
             discard();
             return;
         }
-        if (hurtWithPenetration(level, target,
+        var hurt = outputAdjustmentBypassed
+                ? OutputControl.callWithoutOutputAdjustment(() -> hurtWithPenetration(
+                level,
+                target,
                 SkillDamageSource.of(owner, Skills.DARKMATTER_CREATION.get()),
-                damage, penetration)) {
+                damage,
+                penetration
+        ))
+                : hurtWithPenetration(
+                level,
+                target,
+                SkillDamageSource.of(owner, Skills.DARKMATTER_CREATION.get()),
+                damage,
+                penetration
+        );
+        if (hurt) {
             target.addEffect(new MobEffectInstance(
                     MobEffects.WEAKNESS, 20 + Math.round(10.0f * betaPower), 0, false, false));
             if (homing && betaPower > 0.0f) {
@@ -145,6 +161,8 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
         betaPower = input.getIntOr("academy_beta_milli", 0) / 1_000.0f;
         speed = input.getIntOr("academy_speed_milli", 1_200) / 1_000.0f;
         maximumLifetime = Math.max(20, input.getIntOr("academy_lifetime", 60));
+        outputAdjustmentBypassed = input.getIntOr(
+                "academy_output_adjustment_bypassed", 0) != 0;
     }
 
     @Override
@@ -158,6 +176,8 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
         output.putInt("academy_beta_milli", Math.round(betaPower * 1_000.0f));
         output.putInt("academy_speed_milli", Math.round(speed * 1_000.0f));
         output.putInt("academy_lifetime", maximumLifetime);
+        output.putInt(
+                "academy_output_adjustment_bypassed", outputAdjustmentBypassed ? 1 : 0);
     }
 
     private static float finitePositive(float value) {

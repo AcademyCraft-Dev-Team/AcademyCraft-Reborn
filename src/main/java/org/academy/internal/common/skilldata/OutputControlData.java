@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
+import org.academy.internal.common.ability.program.ProgramPowerScale;
 
 public final class OutputControlData extends SkillData {
     public static final Identifier ID = AcademyCraft.academy("output_control_data");
@@ -23,12 +24,14 @@ public final class OutputControlData extends SkillData {
     }
 
     public float getAbilityOutput() {
-        abilityOutput = clamp(abilityOutput, 0.0f, 2.0f, 1.0f);
+        abilityOutput = clamp(
+                abilityOutput, ProgramPowerScale.MIN, ProgramPowerScale.MAX, 1.0f);
         return abilityOutput;
     }
 
     public void setAbilityOutput(float abilityOutput) {
-        this.abilityOutput = clamp(abilityOutput, 0.0f, 2.0f, 1.0f);
+        this.abilityOutput = clamp(
+                abilityOutput, ProgramPowerScale.MIN, ProgramPowerScale.MAX, 1.0f);
     }
 
     public float getMovementSpeed() {

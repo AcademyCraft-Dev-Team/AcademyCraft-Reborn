@@ -63,6 +63,7 @@ public class DirStrike extends Skill {
     public DirStrike() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(15)

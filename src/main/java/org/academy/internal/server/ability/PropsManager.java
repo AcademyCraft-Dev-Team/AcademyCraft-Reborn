@@ -34,6 +34,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.attribute.AbilityFactor;
 import org.academy.api.common.attribute.PlayerAttributes;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.attribute.PropsMath;
 import org.academy.internal.common.attribute.PropsPackets;
 import org.academy.internal.server.world.level.storage.PropsData;
@@ -163,6 +164,25 @@ public final class PropsManager implements AbilitySubsystem {
         if (!storedPlayer.getPropsData().setLocked(factor, locked)) return;
         storedPlayer.markDirty();
         syncNow(player);
+    }
+
+    public boolean reset(ServerPlayer player) {
+        var storedPlayer = playerDataManager.getData(player.getUUID());
+        if (storedPlayer == null) return false;
+
+        var uuid = player.getUUID();
+        storedPlayer.getPropsData().reset();
+        storedPlayer.markDirty();
+
+        activity.put(uuid, ActivitySnapshot.capture(player));
+        healthBeforeDamage.remove(uuid);
+        foodBeforeConsumption.remove(uuid);
+        curingPlayers.entrySet().removeIf(entry -> entry.getValue().playerId.equals(uuid));
+        dirtySync.remove(uuid);
+
+        syncNow(player);
+        PlayerAttributeRuntime.syncPlayer(player);
+        return true;
     }
 
     private void syncNow(ServerPlayer player) {

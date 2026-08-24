@@ -75,6 +75,7 @@ public final class LightShield extends Skill {
     public LightShield() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .iterationTicks(5)
