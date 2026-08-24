@@ -60,6 +60,7 @@ public final class JetStrike extends Skill {
     public JetStrike() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(20)

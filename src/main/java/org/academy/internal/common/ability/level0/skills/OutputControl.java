@@ -32,6 +32,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.client.gui.screen.OutputControlScreen;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.OutputControlData;
@@ -48,6 +49,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 public final class OutputControl extends Skill {
     private static final Identifier MOVEMENT_SCALE_ID =
@@ -60,6 +62,8 @@ public final class OutputControl extends Skill {
     private static final ThreadLocal<Deque<DamageContext>> DAMAGE_CONTEXT =
             ThreadLocal.withInitial(ArrayDeque::new);
     private static final ThreadLocal<Integer> DAMAGE_SCALING_BYPASS_DEPTH =
+            ThreadLocal.withInitial(() -> 0);
+    private static final ThreadLocal<Integer> OUTPUT_ADJUSTMENT_BYPASS_DEPTH =
             ThreadLocal.withInitial(() -> 0);
 
     public OutputControl() {
@@ -95,7 +99,8 @@ public final class OutputControl extends Skill {
     ) {
         if (!(amount > 0.0f) || !Float.isFinite(amount)
                 || chargedSkill == null
-                || chargedSkill == Skills.PRECISION_OPERATION.get()) {
+                || !chargedSkill.isOutputAdjustableDamage()
+                || isOutputAdjustmentBypassed()) {
             return amount;
         }
         var playerData = system.getPlayerData(playerId);
@@ -105,14 +110,15 @@ public final class OutputControl extends Skill {
     }
 
     static float cpMultiplier(float abilityOutput) {
-        var output = Mth.clamp(abilityOutput, 0.0f, 2.0f);
-        return 0.5f + 0.5f * output * output * output;
+        return ProgramPowerScale.costMultiplier(Mth.clamp(
+                abilityOutput, ProgramPowerScale.MIN, ProgramPowerScale.MAX));
     }
 
     static float scaleDamage(float damage, float abilityOutput) {
         if (!(damage > 0.0f) || !Float.isFinite(damage)) return damage;
-        var output = Mth.clamp(abilityOutput, 0.0f, 2.0f);
-        return output == 0.0f ? 1.0f : damage * output;
+        var output = Mth.clamp(
+                abilityOutput, ProgramPowerScale.MIN, ProgramPowerScale.MAX);
+        return damage * ProgramPowerScale.effectMultiplier(output);
     }
 
     public static float adjustDamage(DamageSource source, float damage) {
@@ -170,8 +176,32 @@ public final class OutputControl extends Skill {
         }
     }
 
+    /** Executes Precision Operation code without stacking Tab output onto its own power setting. */
+    public static <T> T callWithoutOutputAdjustment(Supplier<T> action) {
+        OUTPUT_ADJUSTMENT_BYPASS_DEPTH.set(OUTPUT_ADJUSTMENT_BYPASS_DEPTH.get() + 1);
+        try {
+            return action.get();
+        } finally {
+            var depth = OUTPUT_ADJUSTMENT_BYPASS_DEPTH.get() - 1;
+            if (depth <= 0) OUTPUT_ADJUSTMENT_BYPASS_DEPTH.remove();
+            else OUTPUT_ADJUSTMENT_BYPASS_DEPTH.set(depth);
+        }
+    }
+
+    public static void runWithoutOutputAdjustment(Runnable action) {
+        callWithoutOutputAdjustment(() -> {
+            action.run();
+            return null;
+        });
+    }
+
+    public static boolean isOutputAdjustmentBypassed() {
+        return OUTPUT_ADJUSTMENT_BYPASS_DEPTH.get() > 0;
+    }
+
     private static float abilityOutput(DamageSource source) {
-        if (!(source instanceof SkillDamageSource skillSource)
+        if (isOutputAdjustmentBypassed()
+                || !(source instanceof SkillDamageSource skillSource)
                 || skillSource.getSkill() == Skills.PRECISION_OPERATION.get()
                 || !(skillSource.getEntity() instanceof ServerPlayer player)) {
             return Float.NaN;
@@ -193,7 +223,7 @@ public final class OutputControl extends Skill {
     static float scaleHealthLoss(float healthLoss, float abilityOutput, boolean finalized) {
         if (!(healthLoss > 0.0f) || !Float.isFinite(healthLoss)) return healthLoss;
         var output = Mth.clamp(abilityOutput, 0.0f, 2.0f);
-        if (finalized) return output == 0.0f ? 1.0f : healthLoss;
+        if (finalized) return healthLoss;
         return scaleDamage(healthLoss, output);
     }
 

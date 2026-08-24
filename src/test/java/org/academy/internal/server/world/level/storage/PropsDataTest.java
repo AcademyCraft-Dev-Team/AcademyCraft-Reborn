@@ -44,4 +44,27 @@ class PropsDataTest {
         data.initialize(new double[]{Double.NaN, -1.0, Double.POSITIVE_INFINITY, 10.0, 20.0});
         assertEquals(30.0, data.total());
     }
+
+    @Test
+    void resetClearsAllPropsProgressAndReturnsToUninitializedState() {
+        var data = new PropsData();
+        data.initialize(new double[]{100.0, 200.0, 300.0, 400.0, 500.0});
+        assertTrue(data.start());
+        assertTrue(data.setLocked(AbilityFactor.PERCEPTION, true));
+        assertTrue(data.visitStructure("minecraft:overworld|minecraft:village|0,0"));
+        assertTrue(data.markMilestone(1));
+
+        data.reset();
+
+        assertEquals(PropsData.CURRENT_VERSION, data.getVersion());
+        assertEquals(0.0, data.total());
+        assertEquals(0, data.getLockedMask());
+        assertFalse(data.isStarted());
+        for (var factor : AbilityFactor.values()) {
+            assertEquals(0.0, data.get(factor));
+            assertFalse(data.isLocked(factor));
+        }
+        assertTrue(data.visitStructure("minecraft:overworld|minecraft:village|0,0"));
+        assertTrue(data.markMilestone(1));
+    }
 }

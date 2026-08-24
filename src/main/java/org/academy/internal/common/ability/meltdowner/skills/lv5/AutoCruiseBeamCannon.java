@@ -60,6 +60,7 @@ public final class AutoCruiseBeamCannon extends Skill {
     public AutoCruiseBeamCannon() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(10)

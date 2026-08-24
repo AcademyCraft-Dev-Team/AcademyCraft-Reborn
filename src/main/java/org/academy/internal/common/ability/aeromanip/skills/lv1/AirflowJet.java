@@ -118,10 +118,11 @@ public final class AirflowJet extends Skill {
             Client.CONFIG.setKeyBinding(Client.KEY_NAME_CAST, configuredBinding);
             AcademyCraftClient.Config.INSTANCE.save();
         }
-        InputSystem.addKeyBinding(
+        InputSystem.addMaintainedKeyBinding(
                 Client.KEY_NAME_CAST,
                 configuredBinding,
-                Client::handleInput
+                _ -> Client.start(),
+                _ -> Client.stop()
         );
     }
 
@@ -147,13 +148,13 @@ public final class AirflowJet extends Skill {
         private Client() {
         }
 
-        public static void handleInput(InputSystem.BindingContext context) {
-            if (context.action() == InputConstants.PRESS) {
-                if (!AbilitySystemClient.canUseSkill(Skills.AIRFLOW_JET.get())) return;
-                MisakaNetworkClient.send(StartPacket.INSTANCE);
-            } else if (context.action() == InputConstants.RELEASE) {
-                MisakaNetworkClient.send(StopPacket.INSTANCE);
-            }
+        private static void start() {
+            if (!AbilitySystemClient.canUseSkill(Skills.AIRFLOW_JET.get())) return;
+            MisakaNetworkClient.send(StartPacket.INSTANCE);
+        }
+
+        private static void stop() {
+            MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 
         public static final class Config extends KeyBindingConfig {

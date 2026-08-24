@@ -15,6 +15,8 @@ class PlayerAttributeRuntimeTest {
                 PlayerAttributeRuntime.dexteritySpeedBonus(1.0), 1.0E-12);
         assertEquals(Mth.sqrt(1.005f) - 1.0,
                 PlayerAttributeRuntime.dexterityJumpStrengthBonus(1.0), 1.0E-12);
+        assertEquals(8.0,
+                PlayerAttributeRuntime.dexteritySafeFallDistanceBonus(2_000.0));
         assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(199.99));
         assertEquals(1, PlayerAttributeRuntime.logarithmicLevel(200.0));
     }
@@ -24,6 +26,7 @@ class PlayerAttributeRuntimeTest {
         assertEquals(0.0, PlayerAttributeRuntime.muscleDamageBonus(-10.0));
         assertEquals(0.0, PlayerAttributeRuntime.enduranceHealthBonus(Double.NaN));
         assertEquals(0.0, PlayerAttributeRuntime.dexteritySpeedBonus(Double.POSITIVE_INFINITY));
+        assertEquals(0.0, PlayerAttributeRuntime.dexteritySafeFallDistanceBonus(Double.NaN));
         assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(-1.0));
     }
 

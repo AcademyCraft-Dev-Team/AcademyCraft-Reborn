@@ -51,6 +51,7 @@ public class ThunderLance extends Skill {
     public ThunderLance() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(20)

@@ -93,6 +93,13 @@ public final class MentaloutControlContext extends ServerContext {
         List.copyOf(contexts).forEach(context -> context.remove(subjectUuid));
     }
 
+    /** Clears active effects for a subject while intentionally retaining Mental Intervention. */
+    public static void releaseEffects(UUID subjectUuid) {
+        var contexts = BY_SUBJECT.get(subjectUuid);
+        if (contexts == null) return;
+        List.copyOf(contexts).forEach(context -> context.releaseEntryEffects(subjectUuid));
+    }
+
     public static void releaseMisidentificationTarget(UUID targetUuid) {
         var contexts = BY_MISIDENTIFICATION_TARGET.get(targetUuid);
         if (contexts == null) return;
@@ -636,6 +643,21 @@ public final class MentaloutControlContext extends ServerContext {
         } else {
             sendRemove(targetUuid);
         }
+    }
+
+    private void releaseEntryEffects(UUID targetUuid) {
+        var entry = entries.get(targetUuid);
+        if (entry == null) return;
+        close(entry.stupor);
+        close(entry.impression);
+        close(entry.misidentification);
+        entry.stupor = null;
+        entry.impression = null;
+        entry.misidentification = null;
+        entry.stuporStartedAt = Long.MAX_VALUE;
+        entry.removeImpressionBuff();
+        replacePermanentOccupations();
+        sendUpsert(entry);
     }
 
     private void replacePermanentOccupations() {

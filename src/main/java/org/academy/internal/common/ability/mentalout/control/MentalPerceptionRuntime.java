@@ -11,6 +11,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import org.academy.api.common.entitycontrol.PerceptionDecision;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.Skills;
 
 import java.util.*;
@@ -102,6 +103,12 @@ public final class MentalPerceptionRuntime {
                     || MentalControlRuntime.isProtectedTarget(relation.observer)) {
                 expired.add(lease.id);
             } else {
+                if (relation.observer instanceof ServerPlayer subject) {
+                    var controller = server.getPlayerList().getPlayer(lease.controllerId);
+                    if (controller != null) {
+                        MentalResistanceManager.markAffected(controller, subject, false);
+                    }
+                }
                 clearNaturalTarget(relation.observer, relation.hidden);
             }
         }

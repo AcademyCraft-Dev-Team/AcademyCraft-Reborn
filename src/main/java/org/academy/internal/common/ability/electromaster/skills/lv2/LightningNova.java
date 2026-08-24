@@ -47,6 +47,7 @@ public class LightningNova extends Skill {
     public LightningNova() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(15)

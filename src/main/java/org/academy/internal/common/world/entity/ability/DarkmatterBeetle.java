@@ -50,6 +50,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
@@ -97,6 +98,7 @@ public final class DarkmatterBeetle extends Monster {
     private int recentHeadAttackTick = Integer.MIN_VALUE;
     private int nextHeadAttackTick;
     private int nextExcavationTick;
+    private boolean outputAdjustmentBypassed;
     private NonNullList<ItemStack> cargo = NonNullList.withSize(MAX_CARGO_SLOTS, ItemStack.EMPTY);
 
     public DarkmatterBeetle(EntityType<? extends Monster> type, Level level) {
@@ -147,6 +149,7 @@ public final class DarkmatterBeetle extends Monster {
         limbsAlpha = blueprint.limbsAlpha(); additionalAlpha = blueprint.additionalAlpha();
         modules = blueprint.modules();
         averageGammaPower = gammaCatalyzed ? blueprint.averageGammaPower(abilityLevel) : 0.0f;
+        outputAdjustmentBypassed = OutputControl.isOutputAdjustmentBypassed();
         entityData.set(GAMMA_CATALYZED, gammaCatalyzed);
         syncModels();
         configureNavigation();
@@ -557,7 +560,8 @@ public final class DarkmatterBeetle extends Monster {
         var homing = head.equals(DarkmatterCreatureRegistries.HEAD_HOMING.toString());
         var projectileSpeed = (homing ? 0.95f : 1.25f) + 0.12f * alpha;
         projectile.configure(owner, this, target, homing,
-                (float) (base * multiplier), penetration, beta, projectileSpeed);
+                (float) (base * multiplier), penetration, beta, projectileSpeed,
+                outputAdjustmentBypassed);
         if (level.addFreshEntity(projectile) && !gammaRepeat) {
             recentHeadTarget = target.getUUID();
             recentHeadAttackTick = tickCount;
@@ -607,9 +611,22 @@ public final class DarkmatterBeetle extends Monster {
         var penetration = Math.min(0.5f, 0.06f * beta
                 + (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_WEAPON.toString())
                 ? 0.06f * betaPower(additionalAlpha) : 0.0f));
-        var hurt = hurtWithPenetration(level, target,
+        var damage = (float) (base * multiplier);
+        var hurt = outputAdjustmentBypassed
+                ? OutputControl.callWithoutOutputAdjustment(() -> hurtWithPenetration(
+                level,
+                target,
                 SkillDamageSource.of(owner, Skills.DARKMATTER_CREATION.get()),
-                (float) (base * multiplier), penetration);
+                damage,
+                penetration
+        ))
+                : hurtWithPenetration(
+                level,
+                target,
+                SkillDamageSource.of(owner, Skills.DARKMATTER_CREATION.get()),
+                damage,
+                penetration
+        );
         if (hurt) {
             if (beta > 0.0f) target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,
                     20 + Math.round(10 * beta), 0, false, false));
@@ -704,6 +721,8 @@ public final class DarkmatterBeetle extends Monster {
         limbsAlpha = input.getIntOr("academy_limbs_alpha", abilityLevel * 25);
         additionalAlpha = input.getIntOr("academy_additional_alpha", abilityLevel * 25);
         averageGammaPower = input.getIntOr("academy_gamma_power_milli", 0) / 1000.0f;
+        outputAdjustmentBypassed = input.getIntOr(
+                "academy_output_adjustment_bypassed", 0) != 0;
         entityData.set(GAMMA_CATALYZED, input.getIntOr("academy_gamma_catalyzed", 0) != 0);
         modules = parseModules(input.getString("academy_modules").orElse(""));
         cargo = NonNullList.withSize(MAX_CARGO_SLOTS, ItemStack.EMPTY);
@@ -728,6 +747,8 @@ public final class DarkmatterBeetle extends Monster {
         output.putInt("academy_limbs_alpha", limbsAlpha); output.putInt("academy_additional_alpha", additionalAlpha);
         output.putInt("academy_gamma_catalyzed", gammaCatalyzed() ? 1 : 0);
         output.putInt("academy_gamma_power_milli", Math.round(averageGammaPower * 1000));
+        output.putInt(
+                "academy_output_adjustment_bypassed", outputAdjustmentBypassed ? 1 : 0);
         output.putString("academy_modules", String.join(";", modules));
         ContainerHelper.saveAllItems(output.child("academy_cargo"), cargo, false);
     }

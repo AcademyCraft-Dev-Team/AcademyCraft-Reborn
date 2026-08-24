@@ -66,6 +66,7 @@ public final class DarkmatterRadiation extends Skill {
     public DarkmatterRadiation() {
         super(Builder
                 .of(AbilityCategories.DARKMATTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .cpCost(0)

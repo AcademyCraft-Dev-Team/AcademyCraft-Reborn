@@ -75,6 +75,7 @@ public final class PlatinumWing extends Skill {
 
     public PlatinumWing() {
         super(Builder.of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .passive()

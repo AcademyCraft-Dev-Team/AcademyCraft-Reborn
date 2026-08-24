@@ -86,6 +86,7 @@ public final class AcademyCraftCommand {
                                 .then(Commands.argument("amount", FloatArgumentType.floatArg(0, 3000))
                                         .executes(AcademyCraftCommand::setSkillExp)))
                 )
+                .then(propsCommands())
                 .then(Commands.literal("debug")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("god")
@@ -124,6 +125,28 @@ public final class AcademyCraftCommand {
 
     static IntegerArgumentType abilityLevelArgument() {
         return IntegerArgumentType.integer(MIN_COMMAND_ABILITY_LEVEL, MAX_COMMAND_ABILITY_LEVEL);
+    }
+
+    static LiteralArgumentBuilder<CommandSourceStack> propsCommands() {
+        return LiteralArgumentBuilder.<CommandSourceStack>literal("props")
+                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("reset")
+                        .executes(AcademyCraftCommand::resetProps));
+    }
+
+    private static int resetProps(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        var player = context.getSource().getPlayerOrException();
+        if (!CommandUtils.getSystem(context).resetProps(player)) {
+            context.getSource().sendFailure(Component.translatable(
+                    "command.academy.props.reset.failed"
+            ));
+            return 0;
+        }
+        context.getSource().sendSuccess(
+                () -> Component.translatable("command.academy.props.reset.success"),
+                false
+        );
+        return 1;
     }
 
     private static int toggleDevMode(CommandContext<CommandSourceStack> context) {

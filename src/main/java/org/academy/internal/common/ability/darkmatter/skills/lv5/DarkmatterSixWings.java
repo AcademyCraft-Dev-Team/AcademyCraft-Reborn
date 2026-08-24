@@ -69,6 +69,7 @@ public final class DarkmatterSixWings extends Skill {
     public DarkmatterSixWings() {
         super(Builder
                 .of(AbilityCategories.DARKMATTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .passive()

@@ -8,7 +8,9 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalControlMemory;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.jspecify.annotations.Nullable;
@@ -787,6 +789,13 @@ public final class MentalControlRuntime {
                         unavailableTargetLeaseIds.add(lease.id());
                         break;
                     }
+                }
+                if (!invalidLeaseIds.contains(lease.id()) && subject instanceof ServerPlayer playerSubject) {
+                    MentalResistanceManager.markAffected(
+                            controller,
+                            playerSubject,
+                            lease.source().equals(Skills.MENTAL_TAKEOVER.get().getKey())
+                    );
                 }
             }
             recordFailures(state, unavailableTargetLeaseIds, ControlFailureReason.TARGET_UNAVAILABLE);

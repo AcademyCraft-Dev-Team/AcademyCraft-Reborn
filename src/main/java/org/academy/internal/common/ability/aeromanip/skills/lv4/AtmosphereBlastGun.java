@@ -52,6 +52,7 @@ public final class AtmosphereBlastGun extends Skill {
     public AtmosphereBlastGun() {
         super(Builder
                 .of(AbilityCategories.AEROMANIP.get())
+                .damage()
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(30)

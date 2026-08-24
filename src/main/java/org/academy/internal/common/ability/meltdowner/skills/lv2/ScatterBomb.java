@@ -61,6 +61,7 @@ public final class ScatterBomb extends Skill {
     public ScatterBomb() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(40)

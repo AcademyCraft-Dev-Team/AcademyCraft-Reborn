@@ -69,6 +69,7 @@ public class BloodflowReverse extends Skill {
     public BloodflowReverse() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(100)

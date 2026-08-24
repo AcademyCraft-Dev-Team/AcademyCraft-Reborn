@@ -6,6 +6,7 @@ import net.minecraft.client.gui.Hud;
 import org.academy.api.client.hud.terminal.TerminalHud;
 import org.academy.internal.client.ability.mentalout.ControlledPlayerHudRenderer;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.client.ability.mentalout.MentalResistanceClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -66,7 +67,8 @@ public abstract class MixinHud {
             ControlledPlayerHudRenderer.extract(graphics, deltaTracker);
         }
         if (!MentalIntrusionClientState.isActive() && !MentalIntrusionClientState.hasFilters()
-                && !PlayerControlClientState.isActive()) return;
+                && !PlayerControlClientState.isActive()
+                && !MentalResistanceClientState.isActive()) return;
         var width = graphics.guiWidth();
         var height = graphics.guiHeight();
         var pulse = (int) (36 + (Mth.sin(System.nanoTime() * 0.000000003) + 1.0) * 22);
@@ -75,13 +77,16 @@ public abstract class MixinHud {
         graphics.fill(0, height - 3, width, height, color);
         graphics.fill(0, 3, 3, height - 3, color);
         graphics.fill(width - 3, 3, width, height - 3, color);
-        if (PlayerControlClientState.isActive()) {
+        if (PlayerControlClientState.isActive() || MentalResistanceClientState.isActive()) {
             var barWidth = Math.min(160, Math.max(80, width / 5));
             var left = (width - barWidth) / 2;
             var top = PlayerControlClientState.isController() ? height - 65 : height - 18;
             graphics.fill(left - 1, top - 1, left + barWidth + 1, top + 7, 0xB0000000);
+            var struggleProgress = MentalResistanceClientState.isActive()
+                    ? MentalResistanceClientState.progress()
+                    : PlayerControlClientState.struggle() / 100.0f;
             graphics.fill(left, top,
-                    left + Math.round(barWidth * PlayerControlClientState.struggle() / 100.0f),
+                    left + Math.round(barWidth * struggleProgress),
                     top + 6, 0xD8D95B6A);
             var maxCp = PlayerControlClientState.controllerMaxCp();
             if (maxCp > 0.0f) {

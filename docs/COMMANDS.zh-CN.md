@@ -15,7 +15,7 @@
 
 ## 权限和可用环境
 
-所有服务端命令都要求游戏管理员权限（`Commands.LEVEL_GAMEMASTERS`）。其中只操作“当前玩家”的命令还要求由玩家执行。带 `<target>` 的管理命令、性能分析命令、矢量兼容命令和 `/academy dev` 可以从服务器控制台执行。
+除 `/academy props reset` 和将自身能力重置为未开发的 `/academy set_category academy:level0` 外，服务端命令都要求游戏管理员权限（`Commands.LEVEL_GAMEMASTERS`）。`/academy props reset` 无需 OP 权限，但只能由玩家重置自己的 P.R.O.P.S；不能指定其他目标，也不能由服务器控制台执行。带 `<target>` 的管理命令、性能分析命令、矢量兼容命令和 `/academy dev` 可以从服务器控制台执行。
 
 客户端命令在本地执行，不要求服务端管理员权限：
 
@@ -50,6 +50,8 @@
 │  ├─ set <target> <amount>
 │  ├─ add <target> <amount>
 │  └─ info [<target>]
+├─ props
+│  └─ reset
 ├─ profile
 │  ├─ start [<interval_ms>]
 │  ├─ stop
@@ -61,6 +63,12 @@
 │  └─ mode [strict|safe|aggressive]
 └─ uieditor [<layout>]                                     （仅开发客户端）
 ```
+
+## P.R.O.P.S
+
+| 命令 | 权限 | 作用 |
+| --- | --- | --- |
+| `/academy props reset` | 普通玩家可用 | 重置执行者自己的 P.R.O.P.S 因子、锁定项、结构探索记录、里程碑奖励记录和启用状态，并立即撤销相应属性效果。不会重置能力类别、能力等级或已学习技能；重置后需在 P.R.O.P.S 应用中输入 `start` 重新启用。 |
 
 ## 能力类别和技能
 

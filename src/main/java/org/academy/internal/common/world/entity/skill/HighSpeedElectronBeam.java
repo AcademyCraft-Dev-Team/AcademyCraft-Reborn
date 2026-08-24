@@ -18,6 +18,7 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
 import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 import java.util.UUID;
@@ -98,6 +99,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private boolean powerScaledBase;
     private boolean radiationEnabled;
     private boolean betaTrailOnFire;
+    private boolean outputAdjustmentBypassed;
     private int proficiencyMilestone;
 
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
@@ -178,6 +180,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         this.targetMaxHealthDamageRatio = Math.max(0.0f, targetMaxHealthDamageRatio);
         this.playerDamageMultiplier = Math.max(0.0f, playerDamageMultiplier);
         this.radiationEnabled = radiationEnabled;
+        outputAdjustmentBypassed = OutputControl.isOutputAdjustmentBypassed();
         entityData.set(DESTROYS_BLOCKS, destroysBlocks);
     }
 
@@ -299,7 +302,11 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                     kill(serverLevel);
                     return;
                 }
-                fire(serverLevel, owner);
+                if (outputAdjustmentBypassed) {
+                    OutputControl.runWithoutOutputAdjustment(() -> fire(serverLevel, owner));
+                } else {
+                    fire(serverLevel, owner);
+                }
                 markFired();
             }
         }

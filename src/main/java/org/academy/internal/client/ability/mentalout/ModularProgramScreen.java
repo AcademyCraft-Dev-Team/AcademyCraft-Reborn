@@ -41,6 +41,7 @@ import org.academy.internal.common.ability.program.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
 import org.academy.internal.common.ability.program.ProgramEditorDocument;
 import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.ProgramPowerScale;
 
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
@@ -699,8 +700,11 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 var valueY = rowY + 11;
                 var valueWidth = 32;
                 var trackWidth = Math.max(16, width - valueWidth - 4);
-                var power = Math.clamp(currentValue.getAsFloat(), 0.0f, 2.0f);
-                var fillWidth = Math.round(trackWidth * power / 2.0f);
+                var power = Math.clamp(
+                        currentValue.getAsFloat(), ProgramPowerScale.MIN, ProgramPowerScale.MAX);
+                var progress = (power - ProgramPowerScale.MIN)
+                        / (ProgramPowerScale.MAX - ProgramPowerScale.MIN);
+                var fillWidth = Math.round(trackWidth * progress);
                 graphics.fill(x, valueY + 6, x + trackWidth, valueY + 8, BORDER_MUTED);
                 graphics.fill(x, valueY + 6, x + fillWidth, valueY + 8, accentColor);
                 var thumbX = x + fillWidth;
@@ -1109,8 +1113,11 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var width = inspectorWidth() - 10;
         var trackWidth = Math.max(16, width - 36);
         var trackX = inspectorX() + 5;
-        var power = Math.clamp((mouseX - trackX) / trackWidth * 2.0, 0.0, 2.0);
+        var progress = Math.clamp((mouseX - trackX) / trackWidth, 0.0, 1.0);
+        var power = ProgramPowerScale.MIN
+                + progress * (ProgramPowerScale.MAX - ProgramPowerScale.MIN);
         power = Math.round(power * 100.0) / 100.0;
+        power = Math.clamp(power, ProgramPowerScale.MIN, ProgramPowerScale.MAX);
         var object = selected.source.configuration().getAsJsonObject().deepCopy();
         object.addProperty(field, power);
         var result = document.configureNode(selected.id(), object);

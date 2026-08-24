@@ -63,6 +63,7 @@ public final class ParticleWaveCannon extends Skill {
     public ParticleWaveCannon() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(10)

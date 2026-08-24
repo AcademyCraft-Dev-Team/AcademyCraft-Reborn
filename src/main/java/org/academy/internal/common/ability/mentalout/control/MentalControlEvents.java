@@ -19,6 +19,7 @@ import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.internal.common.ability.mentalout.*;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
+import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class MentalControlEvents {
@@ -83,7 +84,9 @@ public final class MentalControlEvents {
         MentalIntrusionManager.tick(event.getServer());
         PlayerControlSessionManager.tick(event.getServer());
         PrecisionOperationRuntime.tick(event.getServer());
+        MindDestruction.tick(event.getServer());
         MentalControlRecall.tick(event.getServer());
+        MentalResistanceManager.tick(event.getServer());
     }
 
     @SubscribeEvent
@@ -96,6 +99,8 @@ public final class MentalControlEvents {
         MentalIntrusionManager.releaseEntity(entityId);
         PlayerControlSessionManager.releaseEntity(entityId);
         PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
+        MindDestruction.releaseEntity(entityId);
+        MentalResistanceManager.releaseEntity(entityId);
         if (event.getEntity() instanceof ServerPlayer) {
             MentalControlRecall.releaseController(entityId);
             MentaloutControlContext.releaseController(entityId);
@@ -115,6 +120,8 @@ public final class MentalControlEvents {
         MentalIntrusionManager.releaseEntity(entityId);
         PlayerControlSessionManager.releaseEntity(entityId);
         PrecisionOperationRuntime.releaseEntity(level.getServer(), entityId);
+        MindDestruction.releaseEntity(entityId);
+        MentalResistanceManager.releaseEntity(entityId);
         if (event.getEntity() instanceof ServerPlayer) {
             MentalControlRecall.releaseController(entityId);
             MentaloutControlContext.releaseController(entityId);
@@ -135,6 +142,8 @@ public final class MentalControlEvents {
         PlayerControlSessionManager.releaseEntity(player.getUUID());
         MentalIntrusionManager.releaseController(player.getUUID());
         PrecisionOperationRuntime.releaseEntity(player.level().getServer(), player.getUUID());
+        MindDestruction.releaseEntity(player.getUUID());
+        MentalResistanceManager.releaseEntity(player.getUUID());
         PrecisionOperationManager.releaseController(player);
     }
 
@@ -150,6 +159,8 @@ public final class MentalControlEvents {
         PlayerControlSessionManager.releaseEntity(player.getUUID());
         MentalIntrusionManager.releaseController(player.getUUID());
         PrecisionOperationRuntime.releaseEntity(player.level().getServer(), player.getUUID());
+        MindDestruction.releaseEntity(player.getUUID());
+        MentalResistanceManager.releaseEntity(player.getUUID());
         PrecisionOperationManager.releaseController(player);
     }
 
@@ -161,6 +172,8 @@ public final class MentalControlEvents {
         MentalControlRuntime.clear(event.getServer());
         MentalIntrusionManager.clear();
         PlayerControlSessionManager.clear();
+        MindDestruction.clear();
+        MentalResistanceManager.clear();
         PrecisionOperationManager.clear(event.getServer());
     }
 }

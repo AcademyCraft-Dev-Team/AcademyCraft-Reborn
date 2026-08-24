@@ -68,6 +68,7 @@ public class PlasmaGeneration extends Skill {
     public PlasmaGeneration() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(CP_PER_SECOND)

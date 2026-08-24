@@ -52,6 +52,10 @@ public final class SingleHighSpeedElectronBeam extends Skill {
     public static final float BASE_DAMAGE = 16.0f;
     public static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
     static final float MIN_AIM_CORRECTION = 0.5f;
+    static final double MAX_AIM_DEVIATION_DEGREES = 2.0;
+    private static final double MIN_TARGET_LEAD_DISTANCE = 0.25;
+    private static final double MAX_AIM_DEVIATION_TANGENT = Math.tan(
+            Math.toRadians(MAX_AIM_DEVIATION_DEGREES));
 
     static float getAimCorrection(float proficiency) {
         var progress = Mth.clamp(
@@ -83,17 +87,69 @@ public final class SingleHighSpeedElectronBeam extends Skill {
         return isFiniteDirection(corrected) ? corrected.normalize() : perfectDirection;
     }
 
+    /**
+     * Preserves the existing randomized origin when it already produces a nearly forward shot.
+     * Close targets progressively tighten the lateral origin spread and keep the origin before
+     * the aim point, preventing full correction from turning block destruction sharply sideways.
+     */
+    static Vec3 constrainRandomSpawnPosition(
+            Vec3 viewOrigin,
+            Vec3 originalDirection,
+            Vec3 randomSpawnPosition,
+            Vec3 aimPoint
+    ) {
+        if (!isFinitePosition(viewOrigin)
+                || !isFiniteDirection(originalDirection)
+                || !isFinitePosition(randomSpawnPosition)
+                || !isFinitePosition(aimPoint)) {
+            return randomSpawnPosition == null ? Vec3.ZERO : randomSpawnPosition;
+        }
+        var forward = originalDirection.normalize();
+        var aimOffset = aimPoint.subtract(viewOrigin);
+        var aimForwardDistance = aimOffset.dot(forward);
+        if (!Double.isFinite(aimForwardDistance) || aimForwardDistance <= 1.0E-6) {
+            return randomSpawnPosition;
+        }
+
+        var randomOffset = randomSpawnPosition.subtract(viewOrigin);
+        var randomForwardDistance = randomOffset.dot(forward);
+        var spawnForwardDistance = Math.min(
+                randomForwardDistance,
+                aimForwardDistance - MIN_TARGET_LEAD_DISTANCE
+        );
+        var remainingForwardDistance = aimForwardDistance - spawnForwardDistance;
+
+        var aimLateralOffset = aimOffset.subtract(forward.scale(aimForwardDistance));
+        var randomLateralOffset = randomOffset.subtract(forward.scale(randomForwardDistance));
+        var lateralDeviation = randomLateralOffset.subtract(aimLateralOffset);
+        var maximumLateralDeviation = MAX_AIM_DEVIATION_TANGENT * remainingForwardDistance;
+        if (lateralDeviation.lengthSqr()
+                > maximumLateralDeviation * maximumLateralDeviation) {
+            lateralDeviation = lateralDeviation.normalize().scale(maximumLateralDeviation);
+        }
+
+        return viewOrigin
+                .add(forward.scale(spawnForwardDistance))
+                .add(aimLateralOffset)
+                .add(lateralDeviation);
+    }
+
     private static boolean isFiniteDirection(Vec3 direction) {
-        return direction != null
-                && Double.isFinite(direction.x)
-                && Double.isFinite(direction.y)
-                && Double.isFinite(direction.z)
+        return isFinitePosition(direction)
                 && direction.lengthSqr() > 1.0E-12;
+    }
+
+    private static boolean isFinitePosition(Vec3 position) {
+        return position != null
+                && Double.isFinite(position.x)
+                && Double.isFinite(position.y)
+                && Double.isFinite(position.z);
     }
 
     public SingleHighSpeedElectronBeam() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(15)
@@ -186,7 +242,8 @@ public final class SingleHighSpeedElectronBeam extends Skill {
             return Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get().executeActive(player, (context, _) -> {
                 var level = player.level();
                 var beam = new HighSpeedElectronBeam(EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
-                var eyePos = player.getEyePosition().add(0, -0.5, 0);
+                var viewOrigin = player.getEyePosition();
+                var eyePos = viewOrigin.add(0, -0.5, 0);
                 var yaw = player.getYRot();
                 var pitch = player.getXRot();
                 var offsetFactor = 2.0;
@@ -197,18 +254,21 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 var beamDistance = 1.75;
                 var yawRad = (yaw) * Mth.DEG_TO_RAD;
                 var pitchRad = (pitch) * Mth.DEG_TO_RAD;
-                var spawnPos = eyePos.add(
+                var randomSpawnPos = eyePos.add(
                         -Mth.sin(yawRad) * Mth.cos(pitchRad) * beamDistance,
                         -Mth.sin(pitchRad) * beamDistance,
                         Mth.cos(yawRad) * Mth.cos(pitchRad) * beamDistance
                 ).add(randomOffsetX, randomOffsetY, randomOffsetZ);
                 var beamLength = context.milestone() >= 2 ? 60.0f : 50.0f;
                 var aimPoint = findAimPoint(player, beamLength);
+                var lookDirection = player.getLookAngle();
+                var spawnPos = constrainRandomSpawnPosition(
+                        viewOrigin, lookDirection, randomSpawnPos, aimPoint);
                 var effectiveProficiency = ProficiencyPolicy.server(player).enabled()
                         ? context.proficiency()
                         : 0.0f;
                 var direction = getCorrectedAimDirection(
-                        player.getLookAngle(), spawnPos, aimPoint, effectiveProficiency);
+                        lookDirection, spawnPos, aimPoint, effectiveProficiency);
                 var system = AbilitySystemServer.getSystem(player);
                 beam.configure(
                         player,

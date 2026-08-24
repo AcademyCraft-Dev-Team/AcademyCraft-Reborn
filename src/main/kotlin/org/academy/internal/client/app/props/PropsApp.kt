@@ -258,7 +258,8 @@ object PropsApp : App {
                 AbilityFactor.DEXTERITY -> tr("app.academy.props.effect.dexterity").format(
                     Locale.ROOT,
                     formatDecimal(effective * 0.2),
-                    formatDecimal(effective * 0.5)
+                    formatDecimal(effective * 0.5),
+                    formatDecimal(PropsMath.dexteritySafeFallDistanceBonus(effective))
                 )
 
                 AbilityFactor.PERCEPTION -> tr("app.academy.props.effect.perception").format(

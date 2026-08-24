@@ -68,6 +68,15 @@ public final class PropsData {
         version = CURRENT_VERSION;
     }
 
+    public void reset() {
+        version = CURRENT_VERSION;
+        values = new double[AbilityFactor.values().length];
+        lockedMask = 0;
+        visitedStructures = new HashSet<>();
+        milestoneMask = 0;
+        started = false;
+    }
+
     public double total() {
         ensureContainers();
         return Arrays.stream(values).sum();

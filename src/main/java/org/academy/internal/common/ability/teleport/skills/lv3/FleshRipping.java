@@ -62,6 +62,7 @@ public final class FleshRipping extends Skill {
     public FleshRipping() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
+                .damage()
                 .level(AbilityLevel.LEVEL3)
                 .energyCost(30_000)
                 .cpCost(20)

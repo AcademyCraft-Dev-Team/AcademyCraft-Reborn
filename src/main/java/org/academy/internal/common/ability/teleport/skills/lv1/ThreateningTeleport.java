@@ -69,6 +69,7 @@ public final class ThreateningTeleport extends Skill {
     public ThreateningTeleport() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
+                .damage()
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)

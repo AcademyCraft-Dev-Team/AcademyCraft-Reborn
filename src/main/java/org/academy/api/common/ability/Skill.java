@@ -65,6 +65,7 @@ public abstract class Skill {
      */
     private final float maintenanceCost;
     private final boolean isPassive;
+    private final boolean outputAdjustableDamage;
     private final boolean initiallyEnabled;
     private final float cpCost;
     private final SkillProficiencyProfile proficiencyProfile;
@@ -89,6 +90,7 @@ public abstract class Skill {
         maxStacks = builder.maxStacks;
         maintenanceCost = builder.maintenanceCost;
         isPassive = builder.isPassive;
+        outputAdjustableDamage = builder.outputAdjustableDamage;
         initiallyEnabled = builder.initiallyEnabled;
         cpCost = builder.cpCost;
         proficiencyProfile = builder.proficiencyProfile;
@@ -446,6 +448,11 @@ public abstract class Skill {
         return isPassive;
     }
 
+    /** Whether an active damage payment may be regulated by Output Control. */
+    public final boolean isOutputAdjustableDamage() {
+        return outputAdjustableDamage;
+    }
+
     public int getIterationTicks(int skillLevel) {
         return iterationTicks;
     }
@@ -563,6 +570,7 @@ public abstract class Skill {
         private int maxStacks = 2;
         private float maintenanceCost = 0f;
         private boolean isPassive = false;
+        private boolean outputAdjustableDamage = false;
         private boolean initiallyEnabled = true;
         private float cpCost = 0;
         private SkillProficiencyProfile proficiencyProfile = SkillProficiencyProfile.NONE;
@@ -588,6 +596,12 @@ public abstract class Skill {
 
         public Builder passive() {
             isPassive = true;
+            return this;
+        }
+
+        /** Marks active attack payments and damage from this skill as output-adjustable. */
+        public Builder damage() {
+            outputAdjustableDamage = true;
             return this;
         }
 

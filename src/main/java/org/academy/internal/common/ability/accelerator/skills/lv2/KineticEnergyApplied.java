@@ -128,6 +128,7 @@ public class KineticEnergyApplied extends Skill {
     public KineticEnergyApplied() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .passive()
@@ -430,7 +431,7 @@ public class KineticEnergyApplied extends Skill {
         private static boolean executeImpact(ServerLevel level, ServerPlayer player, Vec3 center,
                                              Vec3 direction, int impactLevel, BlockPos priorityBlock) {
             var system = AbilitySystemServer.getSystem(player);
-            if (!system.tryTimedOccupation(
+            if (!system.tryTimedAttackOccupation(
                     player.getUUID(),
                     impactLevel * 10.0f,
                     Skills.KINETIC_ENERGY_APPLIED.get(),
@@ -523,9 +524,7 @@ public class KineticEnergyApplied extends Skill {
                 int radius
         ) {
             if (!validConfiguredProgramImpact(player, center, direction)
-                    || !Float.isFinite(power)
-                    || power < ProgramPowerScale.MIN
-                    || power > ProgramPowerScale.MAX
+                    || !ProgramPowerScale.isAccepted(power)
                     || radius < MIN_PROGRAM_RADIUS
                     || radius > MAX_PROGRAM_RADIUS) {
                 return false;

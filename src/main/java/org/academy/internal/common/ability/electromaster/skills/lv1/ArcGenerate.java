@@ -61,6 +61,7 @@ public final class ArcGenerate extends Skill {
         super(
                 Builder
                         .of(AbilityCategories.ELECTROMASTER.get())
+                        .damage()
                         .level(AbilityLevel.LEVEL1)
                         .energyCost(5_000)
                         .cpCost(10)

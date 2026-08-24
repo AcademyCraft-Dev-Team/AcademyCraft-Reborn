@@ -8,6 +8,7 @@ import org.academy.api.client.vanilla.MainLoopEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.client.ability.mentalout.MentalResistanceClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -47,6 +48,7 @@ public abstract class MixinMinecraft {
         NeoForge.EVENT_BUS.post(new MainLoopEvent());
         VectorReflectionClientRuntime.tick((Minecraft) (Object) this);
         MentalIntrusionClientState.tick();
+        MentalResistanceClientState.tick();
         PlayerControlClientState.tick();
     }
 
@@ -54,6 +56,7 @@ public abstract class MixinMinecraft {
     private void academy$restoreVectorReflectionPlayer(CallbackInfo ci) {
         VectorReflectionClientRuntime.shutdown();
         MentalIntrusionClientState.clearLocal();
+        MentalResistanceClientState.clearLocal();
         PlayerControlClientState.clearLocal();
     }
 

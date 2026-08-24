@@ -55,6 +55,7 @@ public class Disarm extends Skill {
     public Disarm() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
+                .damage()
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .cpCost(20)
