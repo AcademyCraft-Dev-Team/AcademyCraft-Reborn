@@ -48,6 +48,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -319,9 +320,10 @@ public class KineticEnergyApplied extends Skill {
         private ClientEvents() {
         }
 
-        @SubscribeEvent
+        @SubscribeEvent(priority = EventPriority.LOWEST)
         public static void onMouseButton(MouseButtonEvent event) {
-            if (event.button != GLFW.GLFW_MOUSE_BUTTON_1
+            if (event.isCanceled()
+                    || event.button != GLFW.GLFW_MOUSE_BUTTON_1
                     || event.action != InputConstants.PRESS
                     || event.modifiers != 0) return;
 
