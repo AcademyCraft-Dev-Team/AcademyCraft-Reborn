@@ -17,6 +17,7 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearReflecti
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
+import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 import java.util.UUID;
@@ -314,7 +315,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 .builder(owner, sourceSkill, source, 0.125f)
                 .targetFilter(target -> target.getType() != getType())
                 .outboundTargetFilter(target -> !target.getUUID().equals(ignoredTargetId)
-                        && !owner.isAlliedTo(target))
+                        && MeltdownerTargeting.canAffectNegatively(owner, target))
                 .damage(target -> {
                     var living = target instanceof net.minecraft.world.entity.LivingEntity entity ? entity : null;
                     var index = hitIndex.getAndIncrement();

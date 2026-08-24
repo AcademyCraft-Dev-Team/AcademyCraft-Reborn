@@ -86,7 +86,7 @@ public final class MeltdownerBeamActions {
         var source = SkillDamageSource.of(player, skill);
         return LinearAttackPayload.builder(player, skill, source, radius)
                 .targetFilter(targetFilter)
-                .outboundTargetFilter(target -> !player.isAlliedTo(target))
+                .outboundTargetFilter(target -> MeltdownerTargeting.canAffectNegatively(player, target))
                 .damage(target -> {
                     var living = target instanceof LivingEntity entity ? entity : null;
                     var marked = radiationEnabled
