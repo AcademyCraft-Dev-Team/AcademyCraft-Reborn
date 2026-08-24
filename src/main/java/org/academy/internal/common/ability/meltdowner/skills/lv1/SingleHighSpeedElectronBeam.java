@@ -6,6 +6,12 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -19,9 +25,13 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
+import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -35,13 +45,51 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
     public static final int DEFAULT_ATTACK_DELAY_TICKS = 10;
     public static final float BASE_DAMAGE = 16.0f;
     public static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
+    static final float MIN_AIM_CORRECTION = 0.5f;
+
+    static float getAimCorrection(float proficiency) {
+        var progress = Mth.clamp(
+                proficiency / SkillData.MAX_PROFICIENCY,
+                0.0f,
+                1.0f
+        );
+        return Mth.lerp(progress, MIN_AIM_CORRECTION, 1.0f);
+    }
+
+    static Vec3 getCorrectedAimDirection(
+            Vec3 originalDirection,
+            Vec3 spawnPosition,
+            Vec3 aimPoint,
+            float proficiency
+    ) {
+        if (!isFiniteDirection(originalDirection)
+                || spawnPosition == null
+                || aimPoint == null) {
+            return Vec3.ZERO;
+        }
+        var forward = originalDirection.normalize();
+        var toAim = aimPoint.subtract(spawnPosition);
+        if (!isFiniteDirection(toAim)) return forward;
+        var perfectDirection = toAim.normalize();
+        var correction = getAimCorrection(proficiency);
+        var corrected = forward.scale(1.0f - correction)
+                .add(perfectDirection.scale(correction));
+        return isFiniteDirection(corrected) ? corrected.normalize() : perfectDirection;
+    }
+
+    private static boolean isFiniteDirection(Vec3 direction) {
+        return direction != null
+                && Double.isFinite(direction.x)
+                && Double.isFinite(direction.y)
+                && Double.isFinite(direction.z)
+                && direction.lengthSqr() > 1.0E-12;
+    }
 
     public SingleHighSpeedElectronBeam() {
         super(Builder
@@ -154,6 +202,13 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                         -Mth.sin(pitchRad) * beamDistance,
                         Mth.cos(yawRad) * Mth.cos(pitchRad) * beamDistance
                 ).add(randomOffsetX, randomOffsetY, randomOffsetZ);
+                var beamLength = context.milestone() >= 2 ? 60.0f : 50.0f;
+                var aimPoint = findAimPoint(player, beamLength);
+                var effectiveProficiency = ProficiencyPolicy.server(player).enabled()
+                        ? context.proficiency()
+                        : 0.0f;
+                var direction = getCorrectedAimDirection(
+                        player.getLookAngle(), spawnPos, aimPoint, effectiveProficiency);
                 var system = AbilitySystemServer.getSystem(player);
                 beam.configure(
                         player,
@@ -169,14 +224,51 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 var delay = getConfiguredAttackDelayTicks(player);
                 if (context.milestone() >= 2) delay = Math.max(0, Math.round(delay * 0.75f));
                 beam.setAttackDelayTicks(delay);
-                if (context.milestone() >= 2) beam.setBeamLength(60.0f);
+                if (getAimCorrection(effectiveProficiency) >= 1.0f) {
+                    beamLength = Math.max(
+                            beamLength,
+                            (float) spawnPos.distanceTo(aimPoint) + 0.25f
+                    );
+                }
+                beam.setBeamLength(beamLength);
                 beam.setPos(spawnPos);
-                beam.setYRot(yaw);
-                beam.setXRot(pitch);
+                beam.setYRot((float) (Mth.atan2(-direction.x, direction.z)) * Mth.RAD_TO_DEG);
+                beam.setXRot((float) (Mth.atan2(-direction.y,
+                        direction.horizontalDistance())) * Mth.RAD_TO_DEG);
                 level.addFreshEntity(beam);
                 level.playSound(null, player, SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
             });
+        }
+
+        private static Vec3 findAimPoint(ServerPlayer player, float range) {
+            var level = player.level();
+            var eye = player.getEyePosition();
+            var look = player.getLookAngle();
+            if (!isFiniteDirection(look)) return eye;
+            var end = eye.add(look.normalize().scale(range));
+            var blockHit = level.clip(new ClipContext(
+                    eye,
+                    end,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    player
+            ));
+            var entityRayEnd = blockHit.getType() == HitResult.Type.MISS
+                    ? end
+                    : blockHit.getLocation();
+            var entityHit = ProjectileUtil.getEntityHitResult(
+                    level,
+                    player,
+                    eye,
+                    entityRayEnd,
+                    new AABB(eye, entityRayEnd).inflate(1.0),
+                    entity -> entity.isPickable()
+                            && MeltdownerTargeting.canAffectNegatively(
+                            player, MultipartEntityTargeting.resolve(entity)),
+                    0.125f
+            );
+            return entityHit == null ? entityRayEnd : entityHit.getLocation();
         }
     }
 

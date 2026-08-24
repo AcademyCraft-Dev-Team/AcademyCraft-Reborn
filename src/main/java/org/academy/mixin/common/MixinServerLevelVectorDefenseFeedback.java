@@ -20,7 +20,7 @@ public abstract class MixinServerLevelVectorDefenseFeedback {
             CallbackInfo ci
     ) {
         if (entity instanceof ServerPlayer player
-                && (VectorReflection.Server.isVectorDefenseActive(player)
+                && (VectorReflection.Server.usesFullInstanceProtection(player)
                 || VectorDefenseFeedbackTickets.shouldSuppressDamage(player, source))) {
             ci.cancel();
         }
@@ -30,7 +30,7 @@ public abstract class MixinServerLevelVectorDefenseFeedback {
     private void academy$suppressConfirmedVectorHurtState(Entity entity, byte state, CallbackInfo ci) {
         if ((state == 2 || state == 3)
                 && entity instanceof ServerPlayer player
-                && (VectorReflection.Server.isVectorDefenseActive(player)
+                && (VectorReflection.Server.usesFullInstanceProtection(player)
                 || VectorDefenseFeedbackTickets.shouldSuppressEntityEvent(player))) {
             ci.cancel();
         }
