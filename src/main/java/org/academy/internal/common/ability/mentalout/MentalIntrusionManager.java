@@ -294,6 +294,9 @@ public final class MentalIntrusionManager {
                 if (protectedTarget) MentalControlRuntime.notifyProtectionBlocked(player, target);
                 stop(player.getUUID(), true);
             } else {
+                if (session.confirmed && target instanceof ServerPlayer subject) {
+                    MentalResistanceManager.markAffected(player, subject, false);
+                }
                 Skills.MENTAL_INTRUSION.get().reportActivity(player, session.confirmed);
                 if (session.distortion != null && !session.distortion.isClosed()) {
                     Skills.SENSORY_DISTORTION.get().reportActivity(player, true);
@@ -326,6 +329,14 @@ public final class MentalIntrusionManager {
             if (session.player.getUUID().equals(entityId) || session.target.getUUID().equals(entityId)) {
                 stop(session.player.getUUID(), true);
             }
+        }
+    }
+
+    /** Stops every intrusion observing the target without changing Mental Intervention rosters. */
+    public static void releaseTarget(UUID targetId) {
+        if (targetId == null) return;
+        for (var session : List.copyOf(SESSIONS.values())) {
+            if (session.target.getUUID().equals(targetId)) stop(session.player.getUUID(), true);
         }
     }
 

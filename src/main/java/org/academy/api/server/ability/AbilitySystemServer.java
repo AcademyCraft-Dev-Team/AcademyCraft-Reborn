@@ -570,6 +570,11 @@ public final class AbilitySystemServer {
         return propsManager;
     }
 
+    public boolean resetProps(ServerPlayer player) {
+        initialAbilityRecommendations.clear(player.getUUID());
+        return propsManager.reset(player);
+    }
+
     public DarkmatterResourceManager getDarkmatterResourceManager() {
         return darkmatterResourceManager;
     }
@@ -882,8 +887,8 @@ public final class AbilitySystemServer {
 
     public boolean tryPermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        var actualAmount = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, amount)
-                * playerCPManager.getCalculationIntensity(uuid));
+        var actualAmount = Math.max(
+                0, amount * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.tryOccupation(uuid, actualAmount, skill, 0, true);
     }
 
@@ -902,9 +907,32 @@ public final class AbilitySystemServer {
     }
 
     public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill, int iterationPoints) {
+        return tryTimedOccupation(uuid, amount, skill, iterationPoints, false);
+    }
+
+    /** Reserves the independently paid attack portion of a maintained damage skill. */
+    public boolean tryTimedAttackOccupation(
+            UUID uuid,
+            float amount,
+            Skill skill,
+            int iterationPoints
+    ) {
+        return tryTimedOccupation(uuid, amount, skill, iterationPoints, true);
+    }
+
+    private boolean tryTimedOccupation(
+            UUID uuid,
+            float amount,
+            Skill skill,
+            int iterationPoints,
+            boolean outputAdjustable
+    ) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        var actualAmount = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, amount)
-                * playerCPManager.getCalculationIntensity(uuid));
+        var adjusted = outputAdjustable
+                ? OutputControl.adjustCpCost(this, uuid, skill, amount)
+                : amount;
+        var actualAmount = Math.max(
+                0, adjusted * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.tryOccupation(
                 uuid,
                 actualAmount,
@@ -928,8 +956,7 @@ public final class AbilitySystemServer {
                 return false;
             }
             actual.add(new PlayerCPManager.TimedOccupationCharge(
-                    Math.max(0.0f, OutputControl.adjustCpCost(
-                            this, uuid, skill, charge.amount()) * intensity),
+                    Math.max(0.0f, charge.amount() * intensity),
                     resolveIterationPoints(charge.iterationPoints(), charge.amount())
             ));
         }
@@ -938,8 +965,8 @@ public final class AbilitySystemServer {
 
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        var actualAmount = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, amount)
-                * playerCPManager.getCalculationIntensity(uuid));
+        var actualAmount = Math.max(
+                0, amount * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.ensurePermanentOccupation(uuid, actualAmount, skill);
     }
 
@@ -954,8 +981,7 @@ public final class AbilitySystemServer {
         for (var entry : amounts.entrySet()) {
             var amount = entry.getValue();
             if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
-            actual.put(entry.getKey(), Math.max(0, OutputControl.adjustCpCost(
-                    this, uuid, entry.getKey(), amount) * intensity));
+            actual.put(entry.getKey(), Math.max(0, amount * intensity));
         }
         return playerCPManager.replacePermanentOccupationsAndTryOccupation(
                 uuid,
@@ -1001,12 +1027,10 @@ public final class AbilitySystemServer {
         for (var charge : timedCharges) {
             if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
             actualTimed.add(new PlayerCPManager.TimedOccupationCharge(
-                    Math.max(0.0f, OutputControl.adjustCpCost(
-                            this, uuid, skill, charge.amount()) * intensity), charge.iterationPoints()));
+                    Math.max(0.0f, charge.amount() * intensity), charge.iterationPoints()));
         }
         return new MixedOccupationCharges(
-                Math.max(0.0f, OutputControl.adjustCpCost(
-                        this, uuid, skill, permanentAmount) * intensity), List.copyOf(actualTimed));
+                Math.max(0.0f, permanentAmount * intensity), List.copyOf(actualTimed));
     }
 
     public record TimedOccupationCharge(float amount, int iterationPoints) {
@@ -1033,8 +1057,7 @@ public final class AbilitySystemServer {
         for (var entry : permanentAmounts.entrySet()) {
             var amount = entry.getValue();
             if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
-            actualPermanent.put(entry.getKey(), Math.max(0, OutputControl.adjustCpCost(
-                    this, uuid, entry.getKey(), amount) * intensity));
+            actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
         }
         var actualCast = Math.max(0, OutputControl.adjustCpCost(
                 this, uuid, castSkill, castCost) * intensity);
@@ -1069,8 +1092,7 @@ public final class AbilitySystemServer {
         for (var entry : permanentAmounts.entrySet()) {
             var amount = entry.getValue();
             if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
-            actualPermanent.put(entry.getKey(), Math.max(0, OutputControl.adjustCpCost(
-                    this, uuid, entry.getKey(), amount) * intensity));
+            actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
         }
         var actualCast = Math.max(0, OutputControl.adjustCpCost(
                 this, uuid, castSkill, castCost) * intensity);

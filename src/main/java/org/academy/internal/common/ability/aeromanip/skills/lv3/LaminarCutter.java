@@ -58,7 +58,7 @@ public final class LaminarCutter extends Skill {
     private static final Identifier LAMINAR_FRACTURE_ID = AcademyCraft.academy("laminar_fracture");
 
     public LaminarCutter() {
-        super(Builder.of(AbilityCategories.AEROMANIP.get()).level(AbilityLevel.LEVEL3).energyCost(30_000)
+        super(Builder.of(AbilityCategories.AEROMANIP.get()).damage().level(AbilityLevel.LEVEL3).energyCost(30_000)
                 .cpCost(20).iterationTicks(10).maxStacks(20).dependsOn(Skills.PNEUMATIC_GRASP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }

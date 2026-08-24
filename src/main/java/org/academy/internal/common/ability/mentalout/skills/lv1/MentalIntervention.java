@@ -25,6 +25,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.network.PacketTypes;
@@ -53,6 +54,7 @@ public final class MentalIntervention extends Skill {
 
     @Override
     public void initClient() {
+        MentalResistanceManager.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -70,6 +72,7 @@ public final class MentalIntervention extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
+        MentalResistanceManager.initServer();
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
         MentaloutRosterPackets.initServer();
     }

@@ -89,6 +89,7 @@ public final class DarkmatterCreation extends Skill {
 
     public DarkmatterCreation() {
         super(Builder.of(AbilityCategories.DARKMATTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(0).cpCost(0).iterationTicks(15).maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.DARKMATTER_REPAIR).dependsOn(Skills.DARKMATTER_CUT)

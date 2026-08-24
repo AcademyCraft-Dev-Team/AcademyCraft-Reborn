@@ -51,6 +51,7 @@ public class SpacialExcision extends Skill {
     public SpacialExcision() {
         super(Builder
                 .of(AbilityCategories.TELEPORT.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(0)

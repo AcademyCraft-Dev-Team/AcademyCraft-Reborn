@@ -74,6 +74,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioni
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.ability.mentalout.skills.lv4.MentalTakeover;
 import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
+import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.ability.teleport.skills.lv1.SpaceFoldingTheorem;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
@@ -198,6 +199,8 @@ public final class Skills {
             SKILLS.register(SkillNames.COMMAND_POSITIONING, CommandPositioning::new);
     public static final DeferredHolder<Skill, PrecisionOperation> PRECISION_OPERATION =
             SKILLS.register(SkillNames.PRECISION_OPERATION, PrecisionOperation::new);
+    public static final DeferredHolder<Skill, MindDestruction> MIND_DESTRUCTION =
+            SKILLS.register(SkillNames.MIND_DESTRUCTION, MindDestruction::new);
     /**
      * Phase 2 - Aura and Toggle Skills
      */

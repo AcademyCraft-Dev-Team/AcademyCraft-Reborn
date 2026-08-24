@@ -81,7 +81,7 @@
 
 | 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `single_high_speed_electron_beam` 粒机波形高速炮 | 现行 | L1 / 5k / 15 | 从随机始发点发射延迟 10 tick 成形的 50 格窄射束，伤害 `16MAD+1%Hmax`；准星校正率随熟练度由 50% 提升至 100%。 | `Alt+鼠标左键↓` | 无 | `SingleHighSpeedElectronBeam` |
+| `single_high_speed_electron_beam` 粒机波形高速炮 | 现行 | L1 / 5k / 15 | 从随机始发点发射延迟 10 tick 成形的 50 格窄射束，伤害 `16MAD+1%Hmax`；准星校正率随熟练度由 50% 提升至 100%，近距离始发散布自动收紧至 2° 直射锥。 | `Alt+鼠标左键↓` | 无 | `SingleHighSpeedElectronBeam` |
 | `scatter_bomb` 电子弹散射 | 现行 | L2 / 10k / 40 | 蓄力 20–80 tick 后释放 7 束 50 格射线；每束 `16MAD+1%Hmax`。 | 见源码（可配置） | `academy:single_high_speed_electron_beam` | `ScatterBomb` |
 | `radiation_intensify` 镭射强化 | 现行 | L1 / 5k / 0 | 被动：射束命中施加 200 tick 标记，使后续兼容射束的固定基础伤害 ×1.5。 | 无 | `academy:single_high_speed_electron_beam` | `RadiationIntensify` |
 | `mining_beam` 采矿光束 | 现行 | L2 / 10k / 每 20 tick 20 | 最长 48 格；每 20 tick 对路径实体造成 `12AD`，每 3 tick 破坏半径 0.35、采掘等级 4 的方块。 | `M↓ / M↑` | `academy:single_high_speed_electron_beam` | `MiningBeam` |

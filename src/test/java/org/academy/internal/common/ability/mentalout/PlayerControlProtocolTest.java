@@ -102,11 +102,7 @@ class PlayerControlProtocolTest {
     }
 
     @Test
-    void struggleAddsAtMostTwoPointsAndVerticalValidationHonorsMode() {
-        assertEquals(0, PlayerControlSessionManager.strugglePoints(1, 1, 0));
-        assertEquals(1, PlayerControlSessionManager.strugglePoints(1, 2, 0));
-        assertEquals(2, PlayerControlSessionManager.strugglePoints(1, 2, 3));
-
+    void verticalValidationHonorsMode() {
         var walking = new PlayerControlFrame(
                 1, 0, 0, 0, false, false, false, false, false, PlayerMovementMode.WALK);
         var jumping = new PlayerControlFrame(

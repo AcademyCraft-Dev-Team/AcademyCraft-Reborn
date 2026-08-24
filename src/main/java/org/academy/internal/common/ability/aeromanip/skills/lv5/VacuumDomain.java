@@ -70,6 +70,7 @@ public final class VacuumDomain extends Skill {
     public VacuumDomain() {
         super(Builder
                 .of(AbilityCategories.AEROMANIP.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(50)
@@ -114,10 +115,11 @@ public final class VacuumDomain extends Skill {
             Client.CONFIG.setKeyBinding(Client.KEY_NAME_CAST, maintainedBinding);
             AcademyCraftClient.Config.INSTANCE.save();
         }
-        InputSystem.addKeyBinding(
+        InputSystem.addMaintainedKeyBinding(
                 Client.KEY_NAME_CAST,
                 maintainedBinding,
-                Client::handleInput
+                _ -> Client.start(),
+                _ -> Client.stop()
         );
     }
 
@@ -144,15 +146,16 @@ public final class VacuumDomain extends Skill {
         private Client() {
         }
 
-        private static void handleInput(InputSystem.BindingContext context) {
-            if (context.action() == InputConstants.PRESS) {
-                if (maintaining || !AbilitySystemClient.canUseSkill(Skills.VACUUM_DOMAIN.get())) return;
-                maintaining = true;
-                MisakaNetworkClient.send(new CastPacket(true));
-            } else if (context.action() == InputConstants.RELEASE && maintaining) {
-                maintaining = false;
-                MisakaNetworkClient.send(new CastPacket(false));
-            }
+        private static void start() {
+            if (maintaining || !AbilitySystemClient.canUseSkill(Skills.VACUUM_DOMAIN.get())) return;
+            maintaining = true;
+            MisakaNetworkClient.send(new CastPacket(true));
+        }
+
+        private static void stop() {
+            if (!maintaining) return;
+            maintaining = false;
+            MisakaNetworkClient.send(new CastPacket(false));
         }
 
         public static final class Config extends KeyBindingConfig {

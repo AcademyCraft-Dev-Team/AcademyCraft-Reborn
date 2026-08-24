@@ -21,6 +21,7 @@
     "common.MixinDragonHoverPhase",
     "common.MixinEnderDragon",
     "common.MixinEntity",
+    "common.MixinFoodData",
     "common.MixinGhast",
     "common.MixinLivingEntity",
     "common.LivingEntityAttackStateAccessor",

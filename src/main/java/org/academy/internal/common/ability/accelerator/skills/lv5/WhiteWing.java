@@ -49,6 +49,7 @@ import static org.lwjgl.glfw.GLFW.*;
 public final class WhiteWing extends Skill {
     public WhiteWing() {
         super(Builder.of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .passive()

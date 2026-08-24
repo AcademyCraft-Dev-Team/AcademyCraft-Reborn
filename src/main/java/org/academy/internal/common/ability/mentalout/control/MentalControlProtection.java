@@ -15,6 +15,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.jspecify.annotations.Nullable;
 
@@ -44,6 +45,7 @@ final class MentalControlProtection {
         if (subject instanceof DarkmatterBeetle) return Kind.DARKMATTER_NETWORK;
         if (subject.getType().builtInRegistryHolder().is(IMMUNE_ENTITY_TYPES)) return Kind.IMMUNE_TAG;
         if (!(subject instanceof ServerPlayer player)) return null;
+        if (MentalResistanceManager.isResistant(player)) return Kind.MENTAL_RESISTANCE;
         if (VectorReflection.Server.isActive(player) || VectorDeviation.Server.isActive(player)) {
             return Kind.VECTOR_FILTER;
         }
@@ -86,7 +88,8 @@ final class MentalControlProtection {
         VECTOR_FILTER("message.academy.mentalout.protected.vector_filter"),
         ELECTROMAGNETIC_FIELD("message.academy.mentalout.protected.electromagnetic_field"),
         DARKMATTER_NETWORK("message.academy.mentalout.protected.darkmatter_network"),
-        DARKMATTER_UNKNOWN("message.academy.mentalout.protected.darkmatter_unknown");
+        DARKMATTER_UNKNOWN("message.academy.mentalout.protected.darkmatter_unknown"),
+        MENTAL_RESISTANCE("message.academy.mentalout.control_resistance");
 
         private final String feedbackKey;
 

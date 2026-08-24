@@ -8,6 +8,11 @@ import net.minecraft.util.Mth;
 public final class PropsMath {
     public static final double MAX_TOTAL = 2_000.0;
     public static final double ACQUISITION_LOG_FACTOR = 0.1075;
+    private static final double BASE_JUMP_STRENGTH = 0.42;
+    private static final double BASE_SAFE_FALL_DISTANCE = 3.0;
+    private static final double VERTICAL_DRAG = 0.98;
+    private static final double GRAVITY_PER_TICK = 0.08;
+    private static final int MAX_JUMP_SIMULATION_TICKS = 256;
 
     private PropsMath() {
     }
@@ -43,6 +48,27 @@ public final class PropsMath {
 
     public static double dexterityJumpStrengthBonus(double value) {
         return Mth.sqrt((float) (1.0 + finiteNonNegative(value) * 0.005)) - 1.0;
+    }
+
+    /**
+     * Adds enough safe-fall distance to cover a jump powered only by the P.R.O.P.S dexterity
+     * modifier. Rounding the simulated apex upward leaves room for landing collision rounding.
+     */
+    public static double dexteritySafeFallDistanceBonus(double value) {
+        var jumpStrength = BASE_JUMP_STRENGTH * (1.0 + dexterityJumpStrengthBonus(value));
+        var requiredSafeDistance = Math.ceil(jumpApexHeight(jumpStrength));
+        return Math.max(0.0, requiredSafeDistance - BASE_SAFE_FALL_DISTANCE);
+    }
+
+    static double jumpApexHeight(double initialVelocity) {
+        if (!Double.isFinite(initialVelocity) || initialVelocity <= 0.0) return 0.0;
+        var velocity = initialVelocity;
+        var height = 0.0;
+        for (var tick = 0; tick < MAX_JUMP_SIMULATION_TICKS && velocity > 0.0; tick++) {
+            height += velocity;
+            velocity = (velocity - GRAVITY_PER_TICK) * VERTICAL_DRAG;
+        }
+        return height;
     }
 
     public static int perceptionEnchantmentBonus(double value) {

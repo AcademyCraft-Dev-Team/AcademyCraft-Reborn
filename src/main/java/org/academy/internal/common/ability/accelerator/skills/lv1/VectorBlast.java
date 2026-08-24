@@ -67,6 +67,7 @@ public final class VectorBlast extends Skill {
     public VectorBlast() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)

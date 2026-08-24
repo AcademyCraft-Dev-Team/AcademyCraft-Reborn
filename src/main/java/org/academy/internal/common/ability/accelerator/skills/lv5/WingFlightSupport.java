@@ -279,7 +279,7 @@ final class WingFlightSupport {
 
     static boolean trySweepCost(ServerPlayer player, Skill skill) {
         return AbilitySystemServer.getSystem(player)
-                .tryTimedOccupation(player.getUUID(), 20.0f, skill, 10);
+                .tryTimedAttackOccupation(player.getUUID(), 20.0f, skill, 10);
     }
 
     private static float upkeepCost(Skill skill) {

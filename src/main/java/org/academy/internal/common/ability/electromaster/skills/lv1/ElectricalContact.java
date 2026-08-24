@@ -43,6 +43,7 @@ public class ElectricalContact extends Skill {
     public ElectricalContact() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL1)
                 .passive()
                 .initiallyDisabled()

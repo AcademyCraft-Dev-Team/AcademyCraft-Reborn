@@ -36,6 +36,8 @@ public final class PlayerAttributeRuntime {
     private static final Identifier DEXTERITY_SPEED = AcademyCraft.academy("attribute_bonus.dexterity_speed");
     private static final Identifier LEGACY_ENDURANCE_JUMP = AcademyCraft.academy("attribute_bonus.endurance_jump");
     private static final Identifier DEXTERITY_JUMP = AcademyCraft.academy("attribute_bonus.dexterity_jump");
+    private static final Identifier DEXTERITY_SAFE_FALL = AcademyCraft.academy(
+            "attribute_bonus.dexterity_safe_fall");
     private static final ThreadLocal<Deque<DamageSource>> DAMAGE_CONTEXT =
             ThreadLocal.withInitial(ArrayDeque::new);
     private static final ThreadLocal<Integer> RESISTANCE_BYPASS_DEPTH =
@@ -47,6 +49,11 @@ public final class PlayerAttributeRuntime {
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        syncPlayer(player);
+    }
+
+    public static void syncPlayer(ServerPlayer player) {
 
         var muscle = value(player, PlayerAttributes.MUSCLE_STRENGTH);
         var endurance = value(player, PlayerAttributes.ENDURANCE);
@@ -94,7 +101,13 @@ public final class PlayerAttributeRuntime {
                 AttributeModifier.Operation.ADD_MULTIPLIED_BASE,
                 true
         );
-
+        syncModifier(
+                player.getAttribute(Attributes.SAFE_FALL_DISTANCE),
+                DEXTERITY_SAFE_FALL,
+                dexteritySafeFallDistanceBonus(dexterity),
+                AttributeModifier.Operation.ADD_VALUE,
+                true
+        );
     }
 
     @SubscribeEvent
@@ -148,6 +161,10 @@ public final class PlayerAttributeRuntime {
 
     public static double dexterityJumpStrengthBonus(double value) {
         return PropsMath.dexterityJumpStrengthBonus(value);
+    }
+
+    public static double dexteritySafeFallDistanceBonus(double value) {
+        return PropsMath.dexteritySafeFallDistanceBonus(value);
     }
 
     public static int logarithmicLevel(double value) {

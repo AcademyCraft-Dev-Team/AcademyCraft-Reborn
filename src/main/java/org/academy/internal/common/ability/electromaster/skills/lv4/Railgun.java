@@ -84,6 +84,7 @@ public final class Railgun extends Skill {
     public Railgun() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL4)
                 .energyCost(60_000)
                 .cpCost(100)

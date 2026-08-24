@@ -56,6 +56,7 @@ public class Disintegrate extends Skill {
 
     public Disintegrate() {
         super(Builder.of(AbilityCategories.MELTDOWNER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(100)

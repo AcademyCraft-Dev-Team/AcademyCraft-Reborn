@@ -65,6 +65,7 @@ public class BallLightning extends Skill {
 
     public BallLightning() {
         super(Builder.of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .cpCost(80)

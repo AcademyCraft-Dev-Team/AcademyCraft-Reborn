@@ -76,6 +76,7 @@ public final class VectorAccel extends Skill {
     public VectorAccel() {
         super(Builder
                 .of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(10)

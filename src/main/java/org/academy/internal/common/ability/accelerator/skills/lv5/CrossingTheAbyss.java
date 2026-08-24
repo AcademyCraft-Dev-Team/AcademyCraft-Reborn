@@ -62,6 +62,7 @@ public final class CrossingTheAbyss extends Skill {
 
     public CrossingTheAbyss() {
         super(Builder.of(AbilityCategories.ACCELERATOR.get())
+                .damage()
                 .level(AbilityLevel.LEVEL5)
                 .energyCost(100_000)
                 .passive()

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AcademyCraftCommandTest {
@@ -33,5 +34,14 @@ class AcademyCraftCommandTest {
                 AcademyCraft.academy("darkmatter"), true));
         assertTrue(AcademyCraftCommand.canSetAbilityCategory(
                 Identifier.fromNamespaceAndPath("example", "custom"), true));
+    }
+
+    @Test
+    void propsResetIsRegisteredWithoutAnOperatorRequirement() {
+        var props = AcademyCraftCommand.propsCommands().build();
+        var reset = props.getChild("reset");
+        assertNotNull(reset);
+        assertTrue(props.getRequirement().test(null));
+        assertTrue(reset.getRequirement().test(null));
     }
 }
