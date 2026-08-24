@@ -138,4 +138,5 @@
 | 3 | 指挥定位 (`academy:command_positioning`) | `academy:mental_intervention` |
 | 3 | 印象操作 (`academy:impression_manipulation`) | `academy:mental_intervention`<br>`academy:target_misidentification` |
 | 4 | 意识接管 (`academy:mental_takeover`) | `academy:mental_intrusion`<br>`academy:command_positioning`<br>`academy:mental_stupor` |
+| 5 | 心智破坏 (`academy:mind_destruction`) | `academy:sensory_distortion` |
 | 5 | 精密操作 (`academy:precision_operation`) | `academy:impression_manipulation`<br>`academy:mental_stupor` |

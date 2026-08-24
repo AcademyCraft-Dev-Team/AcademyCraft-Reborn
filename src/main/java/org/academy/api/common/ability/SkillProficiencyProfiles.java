@@ -32,7 +32,7 @@ public final class SkillProficiencyProfiles {
             "darkmatter_repair", "darkmatter_creation", "darkmatter_six_wings",
             "mental_intervention", "target_misidentification", "mental_stupor", "impression_manipulation",
             "mental_intrusion", "mental_takeover", "sensory_distortion", "command_positioning",
-            "precision_operation"
+            "mind_destruction", "precision_operation"
     );
     private static final Map<String, String> CUSTOM_PROFILE_REASONS = Map.ofEntries(
             Map.entry("flow_sense", "range, cadence and synchronization budgets are resolved together"),
@@ -101,6 +101,8 @@ public final class SkillProficiencyProfiles {
         put(profiles, costs(Map.of(DYNAMIC, 0.9f)), "command_positioning", "precision_operation");
         put(profiles, costsByTier(DYNAMIC, 1.0f, 0.9f, 0.8f, 0.8f),
                 "mental_stupor", "impression_manipulation");
+        put(profiles, costsByTier(CAST, 1.0f, 0.9f, 0.8f, 0.7f),
+                "mind_destruction");
         put(profiles, costs(Map.of(DYNAMIC, 0.85f)), "reflection_filter");
         put(profiles, SkillProficiencyProfile.builder()
                         .iterationTicks(10, 10, 10, 5)

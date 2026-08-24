@@ -135,6 +135,7 @@
 | `mental_takeover` 意识接管 | 现行 | L4 / 60k / 维持 100 | 在心灵潜入期间接管清单目标的移动、视角和攻击；玩家可挣扎解除。 | 见源码（可配置） | `academy:mental_intrusion`<br>`academy:command_positioning`<br>`academy:mental_stupor` | `MentalTakeover` |
 | `sensory_distortion` 感官扭曲 | 现行 | L2 / 10k / 维持 30/25/21；Boss ×2 、玩家 ×3 | 潜入期间屏蔽目标对施术者的视线、仇恨记忆、渲染和直接交互感知。 | 见源码（可配置） | `academy:mental_intrusion` | `SensoryDistortion` |
 | `command_positioning` 指挥定位 | 现行 | L3 / 25k / 每目标 10；Boss ×2 | 命令受控实体移动至准星方块外侧或跟随准星实体，最远 64 格。 | 见源码（可配置） | `academy:mental_intervention` | `CommandPositioning` |
+| `mind_destruction` 心智破坏 | 现行 | L5 / 100k / 施放 100（熟练度档位为 100/90/80/70） | 对清单内准星目标持续 10 秒，每秒造成 `1% 最大生命 + 10` 心智伤害；精神防护只阻止呆然自失，不阻止伤害。 | `Alt+H↓` | `academy:sensory_distortion` | `MindDestruction` |
 | `precision_operation` 精密操作 | 现行 | L5 / 100k / 按节点累加：路径 5、视角 5、守卫 10、误认 20、呆然 10、印象 10、感官 20/15/10、潜入 20/15/10；路径/视角/守卫/呆然/印象对 Boss ×2 | 编辑并并行执行 4 个无环心理程序；各持续行动可限时或永久。 | 见源码（可配置） | `academy:impression_manipulation`<br>`academy:mental_stupor` | `PrecisionOperation` |
 
 ## Level0 公共脑开发

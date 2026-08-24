@@ -42,7 +42,7 @@ class SkillProficiencyCoverageTest {
 
     @Test
     void allNonCommonSkillsDeclareAProficiencyPlan() {
-        assertEquals(87, SkillProficiencyProfiles.declaredSkillPaths().size());
+        assertEquals(88, SkillProficiencyProfiles.declaredSkillPaths().size());
         for (var path : SkillProficiencyProfiles.declaredSkillPaths()) {
             var id = "academy:" + path;
             assertTrue(SkillProficiencyProfiles.isDeclared(id), path);
@@ -61,6 +61,21 @@ class SkillProficiencyCoverageTest {
                 "academy:darkmatter_generation"));
         assertNotNull(SkillProficiencyProfiles.customProfileReason(
                 "academy:darkmatter_phase_tuning"));
+    }
+
+    @Test
+    void mindDestructionHasAnExplicitProgressiveCastCostProfile() {
+        var id = "academy:mind_destruction";
+        assertTrue(SkillProficiencyProfiles.isDeclared(id));
+        var profile = SkillProficiencyProfiles.forSkill(id);
+        assertEquals(100.0f, profile.adjustCost(
+                SkillProficiencyProfile.CostKind.CAST, 0, 100.0f));
+        assertEquals(90.0f, profile.adjustCost(
+                SkillProficiencyProfile.CostKind.CAST, 1, 100.0f));
+        assertEquals(80.0f, profile.adjustCost(
+                SkillProficiencyProfile.CostKind.CAST, 2, 100.0f));
+        assertEquals(70.0f, profile.adjustCost(
+                SkillProficiencyProfile.CostKind.CAST, 3, 100.0f));
     }
 
     @Test
