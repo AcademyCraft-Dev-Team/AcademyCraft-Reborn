@@ -25,6 +25,14 @@ public final class DarkmatterTargeting {
         return entity instanceof DarkmatterBeetle;
     }
 
+    /** Includes owner links that vanilla teams cannot represent for the custom beetle mob. */
+    public static boolean areAllied(Entity first, Entity second) {
+        if (first == null || second == null) return false;
+        if (first == second || first.isAlliedTo(second) || second.isAlliedTo(first)) return true;
+        if (first instanceof DarkmatterBeetle beetle && beetle.isOwnerAlly(second)) return true;
+        return second instanceof DarkmatterBeetle beetle && beetle.isOwnerAlly(first);
+    }
+
     /**
      * Returns whether an explicitly aimed or area dark-matter effect may affect the target.
      * Players on a different team remain valid even when vanilla server PVP is disabled.
@@ -35,7 +43,7 @@ public final class DarkmatterTargeting {
         if (target instanceof Player player && (player.isCreative() || player.isSpectator())) {
             return false;
         }
-        if (owner.isAlliedTo(target) || target.isAlliedTo(owner)) return false;
+        if (areAllied(owner, target)) return false;
         return !(target instanceof TamableAnimal tame && tame.isOwnedBy(owner));
     }
 

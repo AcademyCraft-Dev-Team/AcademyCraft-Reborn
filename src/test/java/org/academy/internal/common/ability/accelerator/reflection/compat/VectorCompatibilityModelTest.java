@@ -152,6 +152,38 @@ class VectorCompatibilityModelTest {
     }
 
     @Test
+    void reentrantReflectedDamageWaitsUntilTheNextTickWithoutExtendingItsDelay() {
+        assertEquals(111L, VectorReflectedDamageAccumulator.deferredFlushAt(110L, 110L));
+        assertEquals(111L, VectorReflectedDamageAccumulator.deferredFlushAt(120L, 110L));
+        assertFalse(VectorReflectedDamageAccumulator.shouldFlush(
+                110L,
+                VectorReflectedDamageAccumulator.deferredFlushAt(110L, 110L)
+        ));
+        assertTrue(VectorReflectedDamageAccumulator.shouldFlush(
+                111L,
+                VectorReflectedDamageAccumulator.deferredFlushAt(110L, 110L)
+        ));
+    }
+
+    @Test
+    void reflectedDamageReentryGuardTracksTargetsAndAlwaysReleasesThem() {
+        var guard = new VectorDamageReentryGuard();
+        var target = UUID.randomUUID();
+        var otherTarget = UUID.randomUUID();
+
+        assertEquals(42, guard.run(target, () -> {
+            assertTrue(guard.isActive(target));
+            assertFalse(guard.isActive(otherTarget));
+            return 42;
+        }));
+        assertFalse(guard.isActive(target));
+
+        assertThrows(IllegalStateException.class, () -> guard.run(target, () ->
+                guard.run(target, () -> null)));
+        assertFalse(guard.isActive(target));
+    }
+
+    @Test
     void continuousEnvironmentalFeedbackUsesIndependentVisualAndSoundIntervals() {
         var visualEmissions = 0;
         var soundEmissions = 0;

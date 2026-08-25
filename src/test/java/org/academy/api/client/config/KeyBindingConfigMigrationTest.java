@@ -148,6 +148,34 @@ class KeyBindingConfigMigrationTest {
     }
 
     @Test
+    void defaultMigrationRunsOnlyOnceAndThenPreservesAnOldDefaultChosenByThePlayer() {
+        var config = new TestConfig();
+        var obsoleteDefault = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_X,
+                InputConstants.PRESS,
+                0
+        );
+        var currentDefault = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_N,
+                InputConstants.PRESS,
+                0
+        );
+        config.setKeyBinding(NAME, obsoleteDefault);
+        assertEquals(currentDefault, config.getKeyBindingMigratingDefaults(
+                NAME, currentDefault, obsoleteDefault));
+
+        // The player deliberately chooses the historical key after the migration completed.
+        config.setKeyBinding(NAME, obsoleteDefault);
+        var restarted = GSON.fromJson(GSON.toJson(config), TestConfig.class);
+
+        assertEquals(obsoleteDefault, restarted.getKeyBindingMigratingDefaults(
+                NAME, currentDefault, obsoleteDefault));
+        assertEquals(obsoleteDefault, restarted.getKeyBinding(NAME));
+    }
+
+    @Test
     void collapsesLegacyPressAndReleaseRowsIntoOneMaintainedGesture() {
         var config = GSON.fromJson("""
                 {

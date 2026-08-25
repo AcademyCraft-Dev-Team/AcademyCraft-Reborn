@@ -5,6 +5,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramCompileContext;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramEntityPositionAnchor;
 import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.api.common.ability.program.ProgramLimits;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
@@ -78,7 +79,8 @@ class CommonProgramNodesTest {
                 .filter(entry -> entry.group() == ProgramEditorNodeCatalog.Group.TARGET)
                 .toList();
         assertEquals(CommonProgramNodeIds.CASTER, targets.get(0).id());
-        assertEquals(CommonProgramNodeIds.LOOK_TARGET, targets.get(1).id());
+        assertEquals(CommonProgramNodeIds.DAMAGE_ATTACKER, targets.get(1).id());
+        assertEquals(CommonProgramNodeIds.LOOK_TARGET, targets.get(2).id());
 
         var collections = entries.stream()
                 .filter(entry -> entry.group() == ProgramEditorNodeCatalog.Group.COLLECTION)
@@ -188,6 +190,112 @@ class CommonProgramNodesTest {
         );
 
         assertEquals(35, run(graph, null).variables().get("result").value());
+    }
+
+    @Test
+    void collectionBuilderCreatesDynamicTypedInputsAndKeepsLegacyEmptyBehavior() {
+        var catalog = AbilityProgramDefinitions.mentalout().editorCatalog();
+        var builderId = CommonProgramNodeCatalog.CollectionDomain.DIRECTION.id("empty");
+        var legacySchema = catalog.schema(builderId, new JsonObject());
+        assertNotNull(legacySchema);
+        assertTrue(legacySchema.inputs().isEmpty());
+
+        var builderConfiguration = new JsonObject();
+        builderConfiguration.addProperty("inputs", 2);
+        var builderSchema = catalog.schema(builderId, builderConfiguration);
+        assertNotNull(builderSchema);
+        assertEquals(List.of("value_1", "value_2"), builderSchema.inputs().stream()
+                .map(port -> port.name()).toList());
+        assertTrue(builderSchema.inputs().stream()
+                .allMatch(port -> port.type().equals(ProgramValueTypes.DIRECTION)));
+
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        directionNode(2, 1.0, 0.0, 0.0),
+                        directionNode(3, 0.0, 1.0, 0.0),
+                        collectionBuilderNode(4, builderId, 2),
+                        variableNode(5, CommonProgramNodeIds.VARIABLE_SET, "directions",
+                                ProgramValueTypes.DIRECTION_SET.id()),
+                        node(6, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 5, "flow"),
+                        edge(2, "direction", 4, "value_1"),
+                        edge(3, "direction", 4, "value_2"),
+                        edge(4, "values", 5, "value"),
+                        edge(5, "flow", 6, "flow")
+                )
+        );
+
+        assertEquals(List.of(
+                new ProgramDirection(1.0, 0.0, 0.0),
+                new ProgramDirection(0.0, 1.0, 0.0)
+        ), run(graph, null).variables().get("directions").value());
+    }
+
+    @Test
+    void entityPositionPassesTheSelectedAnchorToTheTargetResolver() {
+        var expected = new ProgramWorldPosition(OVERWORLD, 4.0, 65.0, 8.0);
+        var seenAnchor = new ProgramEntityPositionAnchor[1];
+        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+            @Override
+            public Object caster() {
+                return "caster";
+            }
+
+            @Override
+            public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<ProgramWorldPosition> positionOf(
+                    Object entityReference,
+                    ProgramEntityPositionAnchor anchor
+            ) {
+                seenAnchor[0] = anchor;
+                return Optional.of(expected);
+            }
+
+            @Override
+            public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
+                return Optional.empty();
+            }
+
+            @Override
+            public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
+                return List.of();
+            }
+
+            @Override
+            public Optional<ProgramBlockPosition> raycastBlock(
+                    ProgramWorldPosition origin,
+                    ProgramDirection direction,
+                    double maximumDistance
+            ) {
+                return Optional.empty();
+            }
+        };
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        node(2, CommonProgramNodeIds.CASTER),
+                        entityPositionNode(3, "center"),
+                        variableNode(4, CommonProgramNodeIds.VARIABLE_SET, "position",
+                                ProgramValueTypes.WORLD_POSITION.id()),
+                        node(5, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 4, "flow"),
+                        edge(2, "entity", 3, "entity"),
+                        edge(3, "position", 4, "value"),
+                        edge(4, "flow", 5, "flow")
+                )
+        );
+
+        assertEquals(expected, run(graph, resolver).variables().get("position").value());
+        assertEquals(ProgramEntityPositionAnchor.CENTER, seenAnchor[0]);
     }
 
     @Test
@@ -1045,6 +1153,22 @@ class CommonProgramNodesTest {
         configuration.addProperty("y", y);
         configuration.addProperty("z", z);
         return new ProgramGraph.Node(id, CommonProgramNodeIds.DIRECTION_CONSTANT, 1, configuration);
+    }
+
+    private static ProgramGraph.Node collectionBuilderNode(
+            int id,
+            Identifier type,
+            int inputs
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("inputs", inputs);
+        return new ProgramGraph.Node(id, type, 1, configuration);
+    }
+
+    private static ProgramGraph.Node entityPositionNode(int id, String anchor) {
+        var configuration = new JsonObject();
+        configuration.addProperty("anchor", anchor);
+        return new ProgramGraph.Node(id, CommonProgramNodeIds.ENTITY_POSITION, 1, configuration);
     }
 
     private static ProgramGraph.Node lookTargetNode(int id, String targetType) {

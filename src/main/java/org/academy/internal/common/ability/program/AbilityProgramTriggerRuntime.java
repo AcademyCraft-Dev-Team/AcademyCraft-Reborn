@@ -26,6 +26,7 @@ public final class AbilityProgramTriggerRuntime {
     private static final Map<UUID, MovementState> MOVEMENT = new HashMap<>();
     private static final Set<UUID> PENDING_MELEE = new HashSet<>();
     private static final Set<UUID> EXECUTING = new HashSet<>();
+    private static final Map<UUID, Object> DAMAGE_ATTACKERS = new HashMap<>();
 
     private AbilityProgramTriggerRuntime() {
     }
@@ -48,8 +49,24 @@ public final class AbilityProgramTriggerRuntime {
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            dispatch(player, ProgramTriggers.Type.HURT, null);
+            var attacker = event.getSource().getEntity();
+            if (attacker == null) attacker = event.getSource().getDirectEntity();
+            var id = player.getUUID();
+            var previous = DAMAGE_ATTACKERS.get(id);
+            if (attacker == null) DAMAGE_ATTACKERS.remove(id);
+            else DAMAGE_ATTACKERS.put(id, attacker);
+            try {
+                dispatch(player, ProgramTriggers.Type.HURT, null);
+            } finally {
+                if (previous == null) DAMAGE_ATTACKERS.remove(id);
+                else DAMAGE_ATTACKERS.put(id, previous);
+            }
         }
+    }
+
+    static java.util.Optional<Object> currentDamageAttacker(Object entity) {
+        if (!(entity instanceof ServerPlayer player)) return java.util.Optional.empty();
+        return java.util.Optional.ofNullable(DAMAGE_ATTACKERS.get(player.getUUID()));
     }
 
     @SubscribeEvent
@@ -89,6 +106,7 @@ public final class AbilityProgramTriggerRuntime {
         MOVEMENT.remove(id);
         PENDING_MELEE.remove(id);
         EXECUTING.remove(id);
+        DAMAGE_ATTACKERS.remove(id);
         ProgramTriggers.clear(id);
     }
 

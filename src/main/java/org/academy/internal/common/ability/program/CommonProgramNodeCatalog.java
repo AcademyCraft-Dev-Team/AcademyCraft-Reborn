@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramNodePurity;
+import org.academy.api.common.ability.program.ProgramEntityPositionAnchor;
 import org.academy.api.common.ability.program.ProgramNodeRole;
 import org.academy.api.common.ability.program.ProgramNodeSchema;
 import org.academy.api.common.ability.program.ProgramNodeScope;
@@ -353,6 +354,9 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         put(result, CommonProgramNodeIds.CASTER, queryType(outputSchema(
                 "entity", ProgramValueTypes.ENTITY_REFERENCE
         )));
+        put(result, CommonProgramNodeIds.DAMAGE_ATTACKER, queryType(outputSchema(
+                "entity", ProgramValueTypes.ENTITY_REFERENCE
+        )));
         put(result, CommonProgramNodeIds.LOOK_TARGET, type(
                 LookTargetConfiguration.CODEC,
                 configuration -> outputSchema(
@@ -362,12 +366,17 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodeRole.QUERY,
                 ProgramNodePurity.WORLD_QUERY
         ));
-        put(result, CommonProgramNodeIds.ENTITY_POSITION, queryType(unarySchema(
-                "entity",
-                ProgramValueTypes.ENTITY_REFERENCE,
-                "position",
-                ProgramValueTypes.WORLD_POSITION
-        )));
+        put(result, CommonProgramNodeIds.ENTITY_POSITION, type(
+                EntityPositionConfiguration.CODEC,
+                _ -> unarySchema(
+                        "entity",
+                        ProgramValueTypes.ENTITY_REFERENCE,
+                        "position",
+                        ProgramValueTypes.WORLD_POSITION
+                ),
+                ProgramNodeRole.QUERY,
+                ProgramNodePurity.WORLD_QUERY
+        ));
         put(result, CommonProgramNodeIds.ENTITY_LOOK_DIRECTION, queryType(unarySchema(
                 "entity",
                 ProgramValueTypes.ENTITY_REFERENCE,
@@ -624,7 +633,19 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                         ProgramPortDefinition.output("value", domain.elementType)
                 )
         );
-        put(result, domain.id("empty"), unitType(empty));
+        put(result, domain.id("empty"), type(
+                CollectionBuilderConfiguration.CODEC,
+                configuration -> {
+                    var inputs = java.util.stream.IntStream
+                            .rangeClosed(1, configuration.inputs())
+                            .mapToObj(index -> ProgramPortDefinition.requiredInput(
+                                    "value_" + index, domain.elementType))
+                            .toList();
+                    return new ProgramNodeSchema(inputs, empty.outputs());
+                },
+                ProgramNodeRole.VALUE,
+                ProgramNodePurity.PURE
+        ));
         put(result, domain.id("singleton"), unitType(singleton));
         put(result, domain.id("union"), unitType(binary));
         put(result, domain.id("intersection"), unitType(binary));
@@ -881,6 +902,28 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 Codec.intRange(0, 1200).fieldOf("interval")
                         .forGetter(LoopTriggerConfiguration::interval)
         ).apply(instance, LoopTriggerConfiguration::new));
+    }
+
+    public record CollectionBuilderConfiguration(int inputs) {
+        public static final Codec<CollectionBuilderConfiguration> CODEC = Codec.intRange(0, 64)
+                .optionalFieldOf("inputs", 0)
+                .xmap(CollectionBuilderConfiguration::new, CollectionBuilderConfiguration::inputs)
+                .codec();
+    }
+
+    public record EntityPositionConfiguration(ProgramEntityPositionAnchor anchor) {
+        public static final Codec<EntityPositionConfiguration> CODEC = Codec.STRING
+                .optionalFieldOf("anchor", ProgramEntityPositionAnchor.FEET.wireName())
+                .xmap(
+                        value -> new EntityPositionConfiguration(
+                                ProgramEntityPositionAnchor.byName(value)),
+                        configuration -> configuration.anchor().wireName()
+                ).codec();
+
+        public EntityPositionConfiguration {
+            if (anchor == null) throw new IllegalArgumentException(
+                    "Entity position anchor is required");
+        }
     }
 
     public record ExactFilterConfiguration(String selectors) {

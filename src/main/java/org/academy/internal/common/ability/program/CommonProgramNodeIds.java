@@ -85,6 +85,7 @@ public final class CommonProgramNodeIds {
     public static final Identifier ENTITY_POSITION = id("query/entity_position");
     public static final Identifier ENTITY_LOOK_DIRECTION = id("query/entity_look_direction");
     public static final Identifier CASTER = id("query/caster");
+    public static final Identifier DAMAGE_ATTACKER = id("query/damage_attacker");
     public static final Identifier LOOK_TARGET = id("query/look_target");
     public static final Identifier ENTITIES_AROUND = id("query/entities_around");
     public static final Identifier RAYCAST_BLOCK = id("query/raycast_block");

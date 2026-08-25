@@ -2,11 +2,14 @@ package org.academy.internal.common.ability.aeromanip.skills.lv1;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.resources.R;
@@ -24,6 +27,9 @@ import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class AirCushion extends Skill {
     private static final float[] REDUCTION = {0.70f, 0.85f, 1.0f};
@@ -55,6 +61,9 @@ public final class AirCushion extends Skill {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
+        private static final Map<UUID, FallProtection> PENDING_PROTECTION =
+                new ConcurrentHashMap<>();
+
         private Events() {
         }
 
@@ -69,8 +78,36 @@ public final class AirCushion extends Skill {
             var cost = skill.adjustProficiencyCost(owner, SkillProficiencyProfile.CostKind.CAST, baseCost);
             if (!system.tryTimedOccupation(owner.getUUID(), cost, skill, 5)) return;
             var level = Math.max(0, Math.min(2, skill.getLevel(owner)));
-            event.setDamageMultiplier(Math.max(0.0f, 1.0f - REDUCTION[level]));
+            // LivingFallEvent's multiplier is not consistently retained by every fall-damage
+            // path. Keep the paid activation until the concrete incoming fall-damage event and
+            // reduce that amount directly.
+            PENDING_PROTECTION.put(player.getUUID(), new FallProtection(
+                    player.level().getGameTime(), damageMultiplier(level)));
             if (skill.hasProficiencyMilestone(owner, 3)) triggerAirBurst(owner, player);
+        }
+
+        @SubscribeEvent
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)
+                    || !event.getSource().is(DamageTypeTags.IS_FALL)) return;
+            var protection = PENDING_PROTECTION.remove(player.getUUID());
+            if (protection == null
+                    || protection.gameTime() != player.level().getGameTime()) return;
+            if (protection.damageMultiplier() <= 0.0f) {
+                event.setCanceled(true);
+            } else {
+                event.setAmount(event.getAmount() * protection.damageMultiplier());
+            }
+        }
+
+        @SubscribeEvent
+        public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+            PENDING_PROTECTION.remove(event.getEntity().getUUID());
+        }
+
+        static float damageMultiplier(int level) {
+            var boundedLevel = Math.max(0, Math.min(2, level));
+            return Math.max(0.0f, 1.0f - REDUCTION[boundedLevel]);
         }
 
         private static ServerPlayer findOwner(ServerPlayer landing) {
@@ -109,6 +146,9 @@ public final class AirCushion extends Skill {
                         .add(0, 0.18, 0));
                 entity.hurtMarked = true;
             }
+        }
+
+        private record FallProtection(long gameTime, float damageMultiplier) {
         }
     }
 }

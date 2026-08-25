@@ -119,6 +119,12 @@ public final class ProgramConfigurationOptions {
                     "entity", "block"
             );
         }
+        if (id.equals(CommonProgramNodeIds.ENTITY_POSITION) && field.equals("anchor")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.entity_position_anchor.",
+                    "feet", "center", "eyes"
+            );
+        }
         if (id.equals(CommonProgramNodeIds.BLOCK_NORMAL) && field.equals("mode")) {
             return stringOptions(
                     "screen.academy.program.configuration.block_normal.",

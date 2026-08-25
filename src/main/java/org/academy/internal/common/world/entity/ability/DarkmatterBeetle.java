@@ -242,6 +242,19 @@ public final class DarkmatterBeetle extends Monster {
         return getOwnerUUID().filter(player.getUUID()::equals).isPresent();
     }
 
+    public boolean isOwnerAlly(Entity entity) {
+        var owner = getOwnerPlayer();
+        if (owner == null || entity == null) return false;
+        if (entity == owner || owner.isAlliedTo(entity)) return true;
+        return entity instanceof DarkmatterBeetle beetle
+                && beetle.getOwnerUUID().filter(owner.getUUID()::equals).isPresent();
+    }
+
+    @Override
+    public boolean canAttack(LivingEntity target) {
+        return !isOwnerAlly(target) && super.canAttack(target);
+    }
+
     @Nullable
     public ServerPlayer getOwnerPlayer() {
         if (!(level() instanceof ServerLevel serverLevel)) return null;

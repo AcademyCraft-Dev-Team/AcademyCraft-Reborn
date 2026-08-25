@@ -35,9 +35,9 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPa
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -245,7 +245,7 @@ public final class ArcGenerate extends Skill {
                                 radius
                         )
                         .damage(_ -> damage)
-                        .targetFilter(entity -> entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get())
+                        .targetFilter(ElectromasterArcTargeting::canDamageAlongArc)
                         .build();
                 var resolved = LinearReflectionResolver.resolve(
                         level,
