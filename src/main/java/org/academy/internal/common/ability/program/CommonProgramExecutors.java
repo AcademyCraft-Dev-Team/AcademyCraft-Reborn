@@ -21,9 +21,11 @@ import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -344,6 +346,13 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 ProgramValueTypes.ENTITY_REFERENCE,
                 resolver(context).caster()
         ));
+        put(result, CommonProgramNodeIds.DAMAGE_ATTACKER, (context, _, _) ->
+                AbilityProgramTriggerRuntime.currentDamageAttacker(resolver(context).caster())
+                        .map(entity -> data(
+                                "entity",
+                                ProgramValueTypes.ENTITY_REFERENCE,
+                                entity
+                        )).orElseGet(CommonProgramExecutors::emptyData));
         put(result, CommonProgramNodeIds.LOOK_TARGET,
                 (ProgramVmContext context,
                  CommonProgramNodeCatalog.LookTargetConfiguration configuration,
@@ -361,8 +370,13 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                                     block
                             )).orElseGet(CommonProgramExecutors::emptyData);
                 });
-        put(result, CommonProgramNodeIds.ENTITY_POSITION, (context, _, inputs) ->
-                resolver(context).positionOf(raw(inputs, "entity", ProgramValueTypes.ENTITY_REFERENCE))
+        put(result, CommonProgramNodeIds.ENTITY_POSITION,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.EntityPositionConfiguration configuration,
+                 ProgramInputView inputs) ->
+                resolver(context).positionOf(
+                                raw(inputs, "entity", ProgramValueTypes.ENTITY_REFERENCE),
+                                configuration.anchor())
                         .map(position -> data(
                                 "position",
                                 ProgramValueTypes.WORLD_POSITION,
@@ -452,13 +466,15 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             var reference = raw(inputs, "reference", ProgramValueTypes.ENTITY_REFERENCE);
             return filterEntities(inputs, entity -> entity instanceof Entity value
                     && reference instanceof Entity target
-                    && (value == target || value.isAlliedTo(target)));
+                    && DarkmatterTargeting.areAllied(value, target));
         });
-        put(result, CommonProgramNodeIds.FILTER_ENTITY_HOSTILE_TO, (_, _, inputs) -> {
+        put(result, CommonProgramNodeIds.FILTER_ENTITY_HOSTILE_TO, (context, _, inputs) -> {
             var reference = raw(inputs, "reference", ProgramValueTypes.ENTITY_REFERENCE);
+            var damageAttacker = AbilityProgramTriggerRuntime
+                    .currentDamageAttacker(reference).orElse(null);
             return filterEntities(inputs, entity -> entity instanceof LivingEntity value
                     && reference instanceof LivingEntity target
-                    && isHostileTo(value, target));
+                    && isHostileTo(value, target, damageAttacker));
         });
         put(result, CommonProgramNodeIds.FILTER_ENTITY_TARGETED_BY, (_, _, inputs) -> {
             var target = raw(inputs, "target", ProgramValueTypes.ENTITY_REFERENCE);
@@ -529,10 +545,15 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         );
     }
 
-    private static boolean isHostileTo(LivingEntity entity, LivingEntity target) {
+    private static boolean isHostileTo(
+            LivingEntity entity,
+            LivingEntity target,
+            Object damageAttacker
+    ) {
         return entity != target
-                && !entity.isAlliedTo(target)
-                && (entity instanceof Mob mob && (mob.getTarget() == target || mob.canAttack(target))
+                && !DarkmatterTargeting.areAllied(entity, target)
+                && (entity == damageAttacker
+                || entity instanceof Mob mob && (mob.getTarget() == target || mob.canAttack(target))
                 || entity.getLastHurtByMob() == target);
     }
 
@@ -821,11 +842,16 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             Map<Identifier, ProgramNodeExecutor<?>> result,
             CommonProgramNodeCatalog.CollectionDomain domain
     ) {
-        put(result, domain.id("empty"), (_, _, _) -> data(
-                "values",
-                domain.collectionType(),
-                List.of()
-        ));
+        put(result, domain.id("empty"),
+                (ProgramVmContext _,
+                 CommonProgramNodeCatalog.CollectionBuilderConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var values = new ArrayList<Object>(configuration.inputs());
+                    for (var index = 1; index <= configuration.inputs(); index++) {
+                        values.add(raw(inputs, "value_" + index, domain.elementType()));
+                    }
+                    return data("values", domain.collectionType(), canonical(values));
+                });
         put(result, domain.id("singleton"), (_, _, inputs) -> data(
                 "values",
                 domain.collectionType(),

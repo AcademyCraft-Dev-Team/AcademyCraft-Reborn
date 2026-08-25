@@ -11,12 +11,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public final class VectorReflectedDamageAccumulator {
     static final long MERGE_WINDOW_TICKS = 10L;
+    static final long REENTRANT_DELAY_TICKS = 1L;
     private static final Map<Key, Pending> PENDING = new HashMap<>();
+    private static final VectorDamageReentryGuard REENTRY_GUARD = new VectorDamageReentryGuard();
 
     private VectorReflectedDamageAccumulator() {
     }
@@ -48,11 +51,19 @@ public final class VectorReflectedDamageAccumulator {
                 kind
         );
         var now = redirector.level().getGameTime();
+        if (REENTRY_GUARD.isActive(target.getUUID())) {
+            defer(key, redirector, target, originalSource, originalAttacker, kind, amount, now);
+            return true;
+        }
+
         var pending = PENDING.get(key);
         if (pending == null || pending.flushAtTick <= now) {
-            if (pending != null && pending.accumulated > 0.0f) applyPending(pending);
+            if (pending != null) {
+                PENDING.remove(key);
+                if (pending.accumulated > 0.0f) applyPending(pending);
+            }
             var landed = applyNow(redirector, target, originalSource, originalAttacker, kind, amount);
-            PENDING.put(key, new Pending(
+            PENDING.putIfAbsent(key, new Pending(
                     redirector,
                     target,
                     originalSource,
@@ -67,18 +78,20 @@ public final class VectorReflectedDamageAccumulator {
     }
 
     public static synchronized void tick() {
-        var iterator = PENDING.entrySet().iterator();
-        while (iterator.hasNext()) {
-            var pending = iterator.next().getValue();
+        // Damage callbacks may synchronously submit more reflected damage. Iterate over a stable
+        // key snapshot so those deferred submissions cannot invalidate a live map iterator.
+        for (var key : List.copyOf(PENDING.keySet())) {
+            var pending = PENDING.get(key);
+            if (pending == null) continue;
             var redirector = pending.redirector.get();
             var target = pending.target.get();
             if (redirector == null || target == null || redirector.isRemoved() || target.isRemoved()) {
-                iterator.remove();
+                PENDING.remove(key, pending);
                 continue;
             }
             if (!shouldFlush(redirector.level().getGameTime(), pending.flushAtTick)) continue;
+            PENDING.remove(key, pending);
             if (pending.accumulated > 0.0f) applyPending(pending);
-            iterator.remove();
         }
     }
 
@@ -90,6 +103,38 @@ public final class VectorReflectedDamageAccumulator {
 
     static boolean shouldFlush(long now, long flushAtTick) {
         return now >= flushAtTick;
+    }
+
+    static long deferredFlushAt(long currentFlushAt, long now) {
+        var nextTick = now + REENTRANT_DELAY_TICKS;
+        return currentFlushAt <= now ? nextTick : Math.min(currentFlushAt, nextTick);
+    }
+
+    private static void defer(
+            Key key,
+            ServerPlayer redirector,
+            LivingEntity target,
+            DamageSource originalSource,
+            @Nullable Entity originalAttacker,
+            VectorRedirectKind kind,
+            float amount,
+            long now
+    ) {
+        var pending = PENDING.get(key);
+        if (pending == null) {
+            pending = new Pending(
+                    redirector,
+                    target,
+                    originalSource,
+                    originalAttacker,
+                    kind,
+                    now + REENTRANT_DELAY_TICKS
+            );
+            PENDING.put(key, pending);
+        } else {
+            pending.flushAtTick = deferredFlushAt(pending.flushAtTick, now);
+        }
+        pending.accumulated += amount;
     }
 
     private static boolean applyPending(Pending pending) {
@@ -124,7 +169,10 @@ public final class VectorReflectedDamageAccumulator {
                 originalAttacker,
                 kind
         );
-        return target.hurtServer(level, source, amount);
+        return REENTRY_GUARD.run(
+                target.getUUID(),
+                () -> target.hurtServer(level, source, amount)
+        );
     }
 
     private static boolean canDamage(ServerPlayer redirector, LivingEntity target, float amount) {
@@ -149,7 +197,7 @@ public final class VectorReflectedDamageAccumulator {
         @Nullable
         private final Entity originalAttacker;
         private final VectorRedirectKind kind;
-        private final long flushAtTick;
+        private long flushAtTick;
         private float accumulated;
 
         private Pending(

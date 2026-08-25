@@ -1,5 +1,7 @@
 package org.academy.api.common.ability.program;
 
+import net.minecraft.world.entity.Entity;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +23,22 @@ public interface ProgramTargetResolver {
     }
 
     Optional<ProgramWorldPosition> positionOf(Object entityReference);
+
+    default Optional<ProgramWorldPosition> positionOf(
+            Object entityReference,
+            ProgramEntityPositionAnchor anchor
+    ) {
+        var feet = positionOf(entityReference);
+        if (feet.isEmpty() || anchor == ProgramEntityPositionAnchor.FEET
+                || !(entityReference instanceof Entity entity)) return feet;
+        var position = switch (anchor) {
+            case FEET -> entity.position();
+            case CENTER -> entity.getBoundingBox().getCenter();
+            case EYES -> entity.getEyePosition();
+        };
+        return Optional.of(new ProgramWorldPosition(
+                feet.get().dimension(), position.x, position.y, position.z));
+    }
 
     Optional<ProgramDirection> lookDirectionOf(Object entityReference);
 

@@ -92,6 +92,14 @@ class ProgramConfigurationOptionsTest {
                         new JsonPrimitive("entity")
                 ))
         );
+        assertEquals(
+                List.of("feet", "center", "eyes"),
+                values(ProgramConfigurationOptions.options(
+                        mentalout.entry(CommonProgramNodeIds.ENTITY_POSITION),
+                        "anchor",
+                        new JsonPrimitive("feet")
+                ))
+        );
 
         assertEquals(16, ProgramConfigurationOptions.options(
                 mentalout.entry(CommonProgramNodeIds.VARIABLE_GET),

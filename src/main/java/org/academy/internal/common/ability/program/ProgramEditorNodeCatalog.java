@@ -147,6 +147,8 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("selectors", "minecraft:stone");
         } else if (id.equals(CommonProgramNodeIds.LOOK_TARGET)) {
             configuration.addProperty("target_type", "entity");
+        } else if (id.equals(CommonProgramNodeIds.ENTITY_POSITION)) {
+            configuration.addProperty("anchor", "feet");
         } else if (id.equals(CommonProgramNodeIds.BLOCK_NORMAL)) {
             configuration.addProperty("mode", "view");
         } else if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) {
@@ -174,6 +176,9 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("x", 0.0);
             configuration.addProperty("y", 0.0);
             configuration.addProperty("z", 1.0);
+        } else if (id.getPath().contains("/collection/")
+                && id.getPath().endsWith("/empty")) {
+            configuration.addProperty("inputs", 0);
         }
         return configuration;
     }
@@ -183,6 +188,7 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         var path = id.getPath();
         if (entry.group() == Group.TARGET) {
             if (id.equals(CommonProgramNodeIds.CASTER)) return -1000;
+            if (id.equals(CommonProgramNodeIds.DAMAGE_ATTACKER)) return -995;
             if (id.equals(CommonProgramNodeIds.LOOK_TARGET)) return -990;
         }
         if (entry.group() == Group.COLLECTION) {
@@ -205,6 +211,7 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
     private static Group commonGroup(Identifier id, ProgramNodeRole role) {
         var path = id.getPath();
         if (id.equals(CommonProgramNodeIds.CASTER)
+                || id.equals(CommonProgramNodeIds.DAMAGE_ATTACKER)
                 || id.equals(CommonProgramNodeIds.LOOK_TARGET)
                 || path.contains("/spatial/")
                 || path.contains("/query/")) return Group.TARGET;
