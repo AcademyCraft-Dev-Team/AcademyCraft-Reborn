@@ -15,14 +15,15 @@ public final class MsdfTextProcessor {
 
     public static LayoutResult layout(String text, float fontSize) {
         var lines = new ArrayList<LineInfo>();
-        var currentLine = new LineInfo();
+        var currentLine = new LineInfo(0);
 
         var i = 0;
         while (i < text.length()) {
             var c = text.codePointAt(i);
             if (c == '\n') {
+                currentLine.codeUnitEnd = i;
                 lines.add(currentLine);
-                currentLine = new LineInfo();
+                currentLine = new LineInfo(i + 1);
                 i++;
                 continue;
             }
@@ -53,19 +54,26 @@ public final class MsdfTextProcessor {
             currentLine.characters.add(new CharInfo(c, font, glyph, i));
             i += Character.charCount(c);
         }
-        if (!currentLine.characters.isEmpty()) lines.add(currentLine);
+        currentLine.codeUnitEnd = text.length();
+        lines.add(currentLine);
+
+        inheritEmptyLineMetrics(lines, fontSize);
+
+        var rawBaselines = new float[lines.size()];
+        var yOffset = 0f;
+        for (var k = 0; k < lines.size(); k++) {
+            rawBaselines[k] = yOffset + lines.get(k).maxAscender;
+            yOffset += lines.get(k).maxLineHeight;
+        }
 
         var rawInstances = new ArrayList<GlyphInstance>();
-        var yOffset = 0f;
         var minY = Float.MAX_VALUE;
         var maxY = -Float.MAX_VALUE;
         var maxRight = 0f;
-        var lastBaselineRaw = 0f;
-        LineInfo lastLine = lines.isEmpty() ? null : lines.get(lines.size() - 1);
 
-        for (var line : lines) {
-            var baselineY = yOffset + line.maxAscender;
-            lastBaselineRaw = baselineY;
+        for (var lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
+            var line = lines.get(lineIndex);
+            var baselineY = rawBaselines[lineIndex];
             var currentX = 0f;
             var prevCode = 0L;
             MsdfFont prevFontForLine = null;
@@ -96,6 +104,10 @@ public final class MsdfTextProcessor {
 
                 if (quadTop < minY) minY = quadTop;
                 if (quadBottom > maxY) maxY = quadBottom;
+                var inkAscender = baselineY - quadTop;
+                if (inkAscender > line.inkAscender) line.inkAscender = inkAscender;
+                var inkDescender = quadBottom - baselineY;
+                if (inkDescender > line.inkDescender) line.inkDescender = inkDescender;
                 var quadRight = quadLeft + quadWidth;
                 if (quadRight > maxRight) maxRight = quadRight;
 
@@ -112,13 +124,27 @@ public final class MsdfTextProcessor {
                 prevCode = ch.codePoint;
                 prevFontForLine = font;
             }
-            yOffset += line.maxLineHeight;
         }
 
-        if (rawInstances.isEmpty()) return new LayoutResult(List.of(), 0f, 0f);
+        var yShift = rawInstances.isEmpty() ? 0f : -minY;
+
+        var lineLayouts = new ArrayList<LineLayout>(lines.size());
+        for (var k = 0; k < lines.size(); k++) {
+            var line = lines.get(k);
+            var baselineY = rawBaselines[k] + yShift;
+            lineLayouts.add(new LineLayout(
+                    k,
+                    line.codeUnitStart,
+                    line.codeUnitEnd,
+                    baselineY - line.inkAscender,
+                    baselineY + line.inkDescender,
+                    !line.characters.isEmpty()
+            ));
+        }
+
+        if (rawInstances.isEmpty()) return new LayoutResult(lineLayouts, List.of(), 0f, 0f);
 
         var finalInstances = new ArrayList<GlyphInstance>(rawInstances.size());
-        var yShift = -minY;
         for (var inst : rawInstances) {
             finalInstances.add(new GlyphInstance(
                     inst.textureView,
@@ -129,19 +155,68 @@ public final class MsdfTextProcessor {
             ));
         }
 
-        var shiftedBaseline = lastBaselineRaw + yShift;
-        var blockHeight = shiftedBaseline + lastLine.maxDescender;
+        var lastLine = lines.get(lines.size() - 1);
+        var blockHeight = rawBaselines[lines.size() - 1] + yShift + lastLine.maxDescender;
         if (maxY + yShift > blockHeight) blockHeight = maxY + yShift;
         if (blockHeight < 0) blockHeight = 0f;
 
-        return new LayoutResult(finalInstances, blockHeight, maxRight);
+        return new LayoutResult(lineLayouts, finalInstances, blockHeight, maxRight);
+    }
+
+    /**
+     * Fills metrics of empty lines so the line grid stays consistent:
+     * each empty line inherits from its nearest non-empty predecessor
+     * (or successor when leading); a text without any glyphs at all
+     * falls back to the default font's metrics.
+     */
+    private static void inheritEmptyLineMetrics(ArrayList<LineInfo> lines, float fontSize) {
+        LineInfo reference = null;
+        for (var line : lines) {
+            if (!line.characters.isEmpty()) {
+                reference = line;
+                break;
+            }
+        }
+        if (reference == null) {
+            var metrics = MsdfFontService.getFont(MsdfFontService.DEFAULT_FONT_ID).metrics;
+            var scale = metrics.unitsPerEm() == 0 ? 0f : fontSize / metrics.unitsPerEm();
+            for (var line : lines) {
+                line.maxAscender = metrics.ascender() * scale;
+                line.maxDescender = -metrics.descender() * scale;
+                line.maxLineHeight = metrics.lineHeight() * scale;
+                line.inkAscender = line.maxAscender;
+                line.inkDescender = line.maxDescender;
+            }
+            return;
+        }
+        LineInfo previous = null;
+        for (var line : lines) {
+            if (!line.characters.isEmpty()) {
+                previous = line;
+            } else {
+                var source = previous != null ? previous : reference;
+                line.maxAscender = source.maxAscender;
+                line.maxDescender = source.maxDescender;
+                line.maxLineHeight = source.maxLineHeight;
+                line.inkAscender = source.inkAscender;
+                line.inkDescender = source.inkDescender;
+            }
+        }
     }
 
     private static class LineInfo {
+        final int codeUnitStart;
+        int codeUnitEnd;
         float maxAscender = 0f;
         float maxDescender = 0f;
         float maxLineHeight = 0f;
+        float inkAscender = 0f;
+        float inkDescender = 0f;
         List<CharInfo> characters = new ArrayList<>();
+
+        LineInfo(int codeUnitStart) {
+            this.codeUnitStart = codeUnitStart;
+        }
     }
 
     private static class CharInfo {
@@ -162,6 +237,10 @@ public final class MsdfTextProcessor {
                                 float u0, float v0, float u1, float v1, int glyphIndex, float penX, float advance) {
     }
 
-    public record LayoutResult(List<GlyphInstance> instances, float height, float width) {
+    public record LineLayout(int index, int codeUnitStart, int codeUnitEnd,
+                             float bandTop, float bandBottom, boolean hasGlyphs) {
+    }
+
+    public record LayoutResult(List<LineLayout> lines, List<GlyphInstance> instances, float height, float width) {
     }
 }
