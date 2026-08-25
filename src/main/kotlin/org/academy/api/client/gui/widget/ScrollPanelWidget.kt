@@ -22,7 +22,8 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         const val SNAP_EPSILON: Float = 0.5f
     }
 
-    private var content: Widget? = null
+    var content: Widget? = null
+        private set
 
     private val scrollListeners: MutableList<() -> Unit> = ArrayList()
 

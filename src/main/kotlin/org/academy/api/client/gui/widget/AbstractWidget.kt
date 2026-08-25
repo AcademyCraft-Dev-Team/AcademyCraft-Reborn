@@ -182,6 +182,14 @@ abstract class AbstractWidget : Widget {
 
     private var isAttached = false
     private val attachedAnimators: MutableList<Animator> = ArrayList()
+    private val detachListeners: MutableList<() -> Unit> = ArrayList()
+    private val postLayoutActions: MutableList<() -> Unit> = ArrayList()
+
+    override var onLayoutComplete: ((Widget.WidgetLayoutInfo) -> Unit)? = null
+
+    override fun postLayout(action: () -> Unit) {
+        postLayoutActions.add(action)
+    }
 
     override var isRenderDirty: Boolean = true
 
@@ -305,6 +313,12 @@ abstract class AbstractWidget : Widget {
         y = top
         protectedWidth = right - left
         protectedHeight = bottom - top
+        onLayoutComplete?.invoke(Widget.WidgetLayoutInfo(x, y, protectedWidth, protectedHeight))
+        if (postLayoutActions.isNotEmpty()) {
+            val actions = ArrayList(postLayoutActions)
+            postLayoutActions.clear()
+            for (action in actions) action()
+        }
     }
 
     override fun requestLayout() {
@@ -438,6 +452,16 @@ abstract class AbstractWidget : Widget {
         if (!isAttached) return
         onDetached()
         isAttached = false
+        for (listener in detachListeners.toList()) listener()
+        detachListeners.clear()
+    }
+
+    override fun addOnDetach(action: () -> Unit) {
+        detachListeners.add(action)
+    }
+
+    override fun removeOnDetach(action: () -> Unit) {
+        detachListeners.remove(action)
     }
 
     override fun onAttached() {

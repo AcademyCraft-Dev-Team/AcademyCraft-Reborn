@@ -19,8 +19,6 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.UiLightmap;
@@ -37,7 +35,6 @@ import net.neoforged.neoforge.client.stencil.StencilOperation;
 import net.neoforged.neoforge.client.stencil.StencilPerFaceTest;
 import net.neoforged.neoforge.client.stencil.StencilTest;
 import org.academy.AcademyCraft;
-import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.resources.R;
@@ -123,21 +120,19 @@ public final class Render {
                                 clearDepth ? OptionalDouble.of(1) : OptionalDouble.empty()
                         )
         ) {
-            IrisIntegration.runWithBypass(() -> {
-                renderPass.setPipeline(pipeline);
+            renderPass.setPipeline(pipeline);
 
-                for (var texture : textures) {
-                    renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
-                }
-                for (var uniform : uniforms) {
-                    renderPass.setUniform(uniform.name(), uniform.slice());
-                }
+            for (var texture : textures) {
+                renderPass.bindTexture(texture.name(), texture.view(), texture.sampler());
+            }
+            for (var uniform : uniforms) {
+                renderPass.setUniform(uniform.name(), uniform.slice());
+            }
 
-                renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer.slice());
-                var sequentialBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
-                renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
-                renderPass.drawIndexed(6, 1, 0, 0, 0);
-            });
+            renderPass.setVertexBuffer(0, fullscreenQuadVertexBuffer.slice());
+            var sequentialBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+            renderPass.setIndexBuffer(sequentialBuffer.getBuffer(6), sequentialBuffer.type());
+            renderPass.drawIndexed(6, 1, 0, 0, 0);
         }
     }
 
@@ -146,43 +141,50 @@ public final class Render {
         TextureViews.close();
     }
 
+    /**
+     * 连续高斯核. 权重在 σ 单位下预计算, 只由相对位置决定, 与 radius 无关;
+     * 仅有像素偏移 offset = rel * sigma 随 radius 连续缩放. 因此 radius 取任意
+     * 小数都能平滑过渡, radius -> 0 时核收敛为恒等 (不模糊).
+     */
     public record GaussianSamples(int sampleCount, Vector4f[] samples) {
         public static final int MAX_GAUSSIAN_SAMPLES = 12;
-        private static final Int2ObjectMap<GaussianSamples> SAMPLES_CACHE = new Int2ObjectLinkedOpenHashMap<>();
+        /**
+         * sigma = radius * SIGMA_SCALE.
+         */
+        private static final float SIGMA_SCALE = 0.5f;
+        /**
+         * 覆盖范围, 单位 sigma, ~3σ 捕获高斯绝大部分.
+         */
+        private static final float MAX_SIGMA = 3.0f;
+        /**
+         * tap 在 σ 单位下的相对偏移 (首个为中心, sampleCount) 与归一化权重.
+         */
+        private static final float[] BASE_OFFSET;
+        private static final float[] BASE_WEIGHT;
 
-        public static GaussianSamples getGaussianSamples(int radius) {
-            return SAMPLES_CACHE.computeIfAbsent(radius, key -> {
-                var samples = new Vector4f[MAX_GAUSSIAN_SAMPLES];
-                var weights = new float[key + 1];
-                var totalWeight = 0.0f;
-                var sigma = key / 2.0f;
+        static {
+            BASE_OFFSET = new float[MAX_GAUSSIAN_SAMPLES];
+            BASE_WEIGHT = new float[MAX_GAUSSIAN_SAMPLES];
+            var total = 0.0f;
+            var step = MAX_SIGMA / (MAX_GAUSSIAN_SAMPLES - 1);
+            for (var i = 0; i < MAX_GAUSSIAN_SAMPLES; i++) {
+                BASE_OFFSET[i] = i * step;
+                BASE_WEIGHT[i] = (float) Math.exp(-0.5 * BASE_OFFSET[i] * BASE_OFFSET[i]);
+                total += (i == 0 ? 1.0f : 2.0f) * BASE_WEIGHT[i];
+            }
+            for (var i = 0; i < MAX_GAUSSIAN_SAMPLES; i++) {
+                BASE_WEIGHT[i] /= total;
+            }
+        }
 
-                for (var i = 0; i <= key; i++) {
-                    weights[i] = (float) (Math.exp(-0.5 * (i * i) / (sigma * sigma)));
-                    totalWeight += (i == 0 ? 1.0f : 2.0f) * weights[i];
-                }
-
-                for (var i = 0; i < weights.length; i++) {
-                    weights[i] /= totalWeight;
-                }
-
-                var sampleCount = 0;
-                samples[sampleCount++] = new Vector4f(0.0f, 0.0f, weights[0], 0.0f);
-
-                for (var i = 1; i < key; i += 2) {
-                    var weight1 = weights[i];
-                    var weight2 = weights[i + 1];
-                    var total = weight1 + weight2;
-                    var offset = (i * weight1 + (i + 1.0f) * weight2) / total;
-                    samples[sampleCount++] = new Vector4f(offset, offset, total, 0.0f);
-                }
-
-                for (var i = sampleCount; i < MAX_GAUSSIAN_SAMPLES; i++) {
-                    samples[i] = new Vector4f();
-                }
-
-                return new GaussianSamples(sampleCount, samples);
-            });
+        public static GaussianSamples getGaussianSamples(float radius) {
+            var sigma = radius * SIGMA_SCALE;
+            var samples = new Vector4f[MAX_GAUSSIAN_SAMPLES];
+            for (var i = 0; i < MAX_GAUSSIAN_SAMPLES; i++) {
+                var offset = BASE_OFFSET[i] * sigma;
+                samples[i] = new Vector4f(offset, offset, BASE_WEIGHT[i], 0.0f);
+            }
+            return new GaussianSamples(MAX_GAUSSIAN_SAMPLES, samples);
         }
     }
 
@@ -197,7 +199,7 @@ public final class Render {
             UBO_SIZE = calculator.get();
         }
 
-        public static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, int radius) {
+        public static void writeBlurUniforms(Vector2f outSize, float dirX, float dirY, float radius) {
             try (var memoryStack = MemoryStack.stackPush()) {
                 var samples = getGaussianSamples(radius);
                 var builder = Std140Builder.onStack(memoryStack, UBO_SIZE);
@@ -642,6 +644,18 @@ public final class Render {
                 )
                 .build();
 
+        public static final RenderPipeline BACKDROP_SAMPLE = builder(BLIT_SCREEN_SNIPPET)
+                .withLocation(academy("pipeline/backdrop_sample"))
+                .withFragmentShader(R.shaders.core.backdrop_sample)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
+                .withBindGroupLayout(
+                        BindGroupLayout.builder()
+                                .withUniform("BackdropInfo", UniformType.UNIFORM_BUFFER)
+                                .build()
+                )
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
+                .build();
+
         public static final RenderPipeline GLOW_BLEND = builder(BLIT_SCREEN_SNIPPET)
                 .withLocation(academy("pipeline/glow_blend"))
                 .withFragmentShader(R.shaders.core.glow_blend)
@@ -790,6 +804,23 @@ public final class Render {
                 .withBindGroupLayout(
                         BindGroupLayout.builder()
                                 .withUniform("SdfUniforms", UniformType.UNIFORM_BUFFER)
+                                .build()
+                )
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+                .build();
+
+        public static final RenderPipeline ROUNDED_RECT = builder()
+                .withLocation(academy("pipeline/rounded_rect"))
+                .withVertexShader(R.shaders.position_tex)
+                .withFragmentShader(R.shaders.core.rounded_rect)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                .withBindGroupLayout(
+                        BindGroupLayout.builder()
+                                .withUniform("RoundedRectUniforms", UniformType.UNIFORM_BUFFER)
                                 .build()
                 )
                 .withCull(false)

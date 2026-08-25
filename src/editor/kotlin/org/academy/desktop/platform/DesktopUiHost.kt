@@ -64,12 +64,13 @@ class DesktopUiHost(
         GLFW.glfwSetScrollCallback(window.handle()) { _, x, y -> onScroll(x, y) }
         GLFW.glfwSetKeyCallback(window.handle()) { _, key, scancode, action, mods -> onKey(key, scancode, action, mods) }
         GLFW.glfwSetCharCallback(window.handle()) { _, codepoint -> onChar(codepoint) }
-        createTarget()
+        // 同步实际 GLFW framebuffer 尺寸：环境 + 离屏 target 必须在首帧前与真实
+        // framebuffer 对齐（framebuffer-size 回调因 old==new 不会在启动时触发），否则
+        // ImGui 的 scissor 会越出 target 导致 "Scissor ... out of bounds"。
+        framebufferSizeChanged()
         if (app.usesImGui) {
             imGuiBackend = ImGuiBackend(
-                window.handle(),
-                { window.width },
-                { window.height }
+                window.handle()
             ).also { it.init() }
             environment.imguiBackend = imGuiBackend
         }

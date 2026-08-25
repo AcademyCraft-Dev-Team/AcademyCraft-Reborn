@@ -57,13 +57,11 @@ internal fun parsePropsConfirmation(input: String): PropsConfirmationAnswer = wh
 class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScreen(Component.empty()) {
     private val blockEntity: AbilityDeveloperBlockEntity?
     private lateinit var area: FrameLayoutWidget
-    private lateinit var mainWidget: FrameLayoutWidget
     private var isConsoleMode: Boolean = false
     private lateinit var consoleOutputs: LinearLayoutWidget
     private lateinit var consoleScrollPanel: ScrollPanelWidget
     private var pendingPropsRecommendation: Identifier? = null
     private var activeCover: FrameLayoutWidget? = null
-    private var hideMainAfterCoverTransition: Boolean = false
     private val skillLineBindings = mutableListOf<SkillLineBinding>()
     private var coursePage = CoursePage.ABILITY
     private var viewedSkillInfo: AbilitySystemClient.SkillInfo? = null
@@ -131,7 +129,6 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     override fun onInit() {
         activeCover = null
-        hideMainAfterCoverTransition = false
         isConsoleMode = false
         pendingPropsRecommendation = null
         skillLineBindings.clear()
@@ -141,7 +138,6 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         main.layoutParams = FrameLayoutWidget.LayoutParams()
             .gravity(Gravity.CENTER)
             .size(PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT)
-        mainWidget = main
 
         val anim = ObjectAnimator.ofFloat(
             { main.translationY = it },
@@ -358,13 +354,13 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             nodeBtn.onClickListener = {
                 // addCover cross-fades this complete page against the developer panel using
                 // the same page-opacity transition as the wireless node screen.
-                val cover = createCover(fadeIn = false)
+                val cover = createCover()
                 run {
                     val wirelessPage = WirelessPanelUtil.create(developer.blockPos, true)
                     wirelessPage.layoutParams.gravity(Gravity.CENTER)
                     cover.addChild("wireless_page", wirelessPage)
                 }
-                addCover(cover, hideMainAfterTransition = true)
+                addCover(cover)
             }
             panel.addChild("button_wireless", nodeBtn) {
                 val bar = ImageWidget(AcademyCraft.academy("textures/gui/element/element_background300x32.png"))
@@ -1170,42 +1166,25 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         ABILITY
     }
 
-    private fun addCover(
-        cover: FrameLayoutWidget,
-        hideMainAfterTransition: Boolean = false
-    ) {
+    private fun addCover(cover: FrameLayoutWidget) {
         if (activeCover != null) return
         activeCover = cover
-        hideMainAfterCoverTransition = hideMainAfterTransition
         root.addChild("cover", cover)
-        mainWidget.cancelAnimations()
-        val exitAnimation = ObjectAnimator.ofFloat(
-            { mainWidget.translationY = it },
-            mainWidget.translationY, -PANEL_MAIN_HEIGHT * 2
-        ).setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
-        mainWidget.startAnimation(exitAnimation)
-        if (hideMainAfterTransition) {
-            cover.cancelAnimations()
-            cover.startAnimation(
-                ObjectAnimator.ofFloat(
-                    { cover.alpha = it },
-                    0f, 1f
-                ).setDuration(100)
-            )
-            val fadeOut = ObjectAnimator.ofFloat(
-                { mainWidget.alpha = it },
-                mainWidget.alpha, 0f
-            ).setDuration(100)
-            fadeOut.addListener(object : AnimatorListener {
-                override fun onAnimationEnd(animation: Animator) {
-                    if (activeCover === cover && hideMainAfterCoverTransition) {
-                        mainWidget.alpha = 0f
-                        mainWidget.visibility = Widget.Visibility.GONE
-                    }
-                }
-            })
-            mainWidget.startAnimation(fadeOut)
-        }
+        val blur = cover.children[BLUR_KEY] as BlurPanelWidget
+        cover.cancelAnimations()
+        blur.cancelAnimations()
+        cover.alpha = 0f
+        blur.blurRadius = 0f
+        cover.startAnimation(
+            ObjectAnimator.ofFloat({ cover.alpha = it }, 0f, 1f)
+                .setDuration(COVER_ANIM_MS)
+                .setInterpolator(EasingFunctions.EASE_OUT_CUBIC)
+        )
+        blur.startAnimation(
+            ObjectAnimator.ofFloat({ blur.blurRadius = it }, 0f, BLUR_MAX_RADIUS)
+                .setDuration(COVER_ANIM_MS)
+                .setInterpolator(EasingFunctions.EASE_OUT_CUBIC)
+        )
     }
 
     private fun removeCover(rebuild: Boolean = false) {
@@ -1214,29 +1193,13 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             MisakaNetworkClient.send(StopDevPacket(developmentSource))
             AbilitySystemClient.resetDevState()
         }
-        val restoreFadedMain = hideMainAfterCoverTransition || mainWidget.alpha < 1f
-        hideMainAfterCoverTransition = false
-        mainWidget.cancelAnimations()
-        mainWidget.visibility = Widget.Visibility.VISIBLE
-        mainWidget.startAnimation(
-            ObjectAnimator.ofFloat(
-                { mainWidget.translationY = it },
-                mainWidget.translationY, 0f
-            ).setDuration(500).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
-        )
-        if (restoreFadedMain) {
-            mainWidget.startAnimation(
-                ObjectAnimator.ofFloat(
-                    { mainWidget.alpha = it },
-                    mainWidget.alpha, 1f
-                ).setDuration(500)
-            )
-        }
+        val blur = cover.children[BLUR_KEY] as BlurPanelWidget
         cover.cancelAnimations()
+        blur.cancelAnimations()
         cover.isEnabled = false
         cover.startAnimation(
             ObjectAnimator.ofFloat({ cover.alpha = it }, cover.alpha, 0f)
-                .setDuration(if (restoreFadedMain) 500 else 150)
+                .setDuration(COVER_ANIM_MS / 2)
                 .addListener(object : AnimatorListener {
                     override fun onAnimationEnd(animation: Animator) {
                         root.removeChild("cover")
@@ -1245,27 +1208,21 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     }
                 })
         )
+        blur.startAnimation(
+            ObjectAnimator.ofFloat({ blur.blurRadius = it }, blur.blurRadius, 0f)
+                .setDuration(COVER_ANIM_MS / 2)
+        )
     }
 
-    private fun createCover(
-        onClick: () -> Unit = { removeCover() },
-        fadeIn: Boolean = true
-    ): FrameLayoutWidget {
+    private fun createCover(onClick: () -> Unit = { removeCover() }): FrameLayoutWidget {
         val cover = FrameLayoutWidget()
         cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         run {
-            val bg = ButtonWidget()
-            bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            bg.onClickListener = OnClickListener { onClick() }
-            cover.addChild("bg", bg)
-        }
-        if (fadeIn) {
-            cover.startAnimation(
-                ObjectAnimator.ofFloat({ cover.alpha = it }, 0f, 1f).setDuration(500)
-                    .setInterpolator(EasingFunctions.EASE_OUT_SINE)
-            )
-        } else {
-            cover.alpha = 1f
+            val blur = BlurPanelWidget()
+            blur.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            blur.blurRadius = 0f
+            blur.onClick = { onClick() }
+            cover.addChild(BLUR_KEY, blur)
         }
         return cover
     }
@@ -1789,18 +1746,15 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val cover = FrameLayoutWidget()
         cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         run {
-            val bg = ButtonWidget()
-            bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            bg.onClickListener = OnClickListener {
+            val blur = BlurPanelWidget()
+            blur.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            blur.blurRadius = 0f
+            blur.onClick = {
                 if (shouldRebuild) onClose()
                 else removeCover()
             }
-            cover.addChild("bg", bg)
+            cover.addChild(BLUR_KEY, blur)
         }
-        cover.startAnimation(
-            ObjectAnimator.ofFloat({ cover.alpha = it }, 0f, 1f).setDuration(500)
-                .setInterpolator(EasingFunctions.EASE_OUT_SINE)
-        )
 
         val iconProgressRef = AtomicReference(0f)
         val levelIconPath =
@@ -1978,6 +1932,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     companion object {
         const val PANEL_MAIN_WIDTH: Float = 400f
         const val PANEL_MAIN_HEIGHT: Float = 187f
+        private const val BLUR_KEY = "blur"
+        private const val COVER_ANIM_MS = 300L
+        private const val BLUR_MAX_RADIUS = 8f
         private const val COURSE_TABS_X = 14f
         private const val COURSE_TABS_Y = 159f
         private const val COURSE_TAB_WIDTH = 34f

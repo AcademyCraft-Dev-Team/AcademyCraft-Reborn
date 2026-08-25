@@ -71,7 +71,7 @@ public final class PlatinumCosmosPass {
                 );
             }
             withModelView(modelViewMatrix,
-                    () -> IrisIntegration.runWithBypass(() -> dispatcher.renderAllFeatures(WORLD_STORAGE)));
+                    () -> dispatcher.renderAllFeatures(WORLD_STORAGE));
         } catch (Throwable throwable) {
             worldPassAvailable = false;
             if (WORLD_FAILURE_LOGGED.compareAndSet(false, true)) {
@@ -91,20 +91,14 @@ public final class PlatinumCosmosPass {
         var player = minecraft.player;
         if (player == null) return;
 
-        try {
-            var submitted = WingVfx.submitFirstPersonCosmos(
-                    new PoseStack(), HAND_STORAGE, player,
-                    minecraft.getEntityRenderDispatcher().getPackedLightCoords(player, partialTick),
-                    partialTick
-            );
-            if (submitted) {
-                IrisIntegration.runWithBypass(() -> dispatcher.renderAllFeatures(HAND_STORAGE));
-            }
-        } catch (Throwable throwable) {
-            IrisIntegration.markHandBridgeFailed(throwable);
-        } finally {
-            drain(HAND_STORAGE);
-        }
+        var submitted = WingVfx.submitFirstPersonCosmos(
+                new PoseStack(), HAND_STORAGE, player,
+                minecraft.getEntityRenderDispatcher().getPackedLightCoords(player, partialTick),
+                partialTick
+        );
+        if (submitted) dispatcher.renderAllFeatures(HAND_STORAGE);
+
+        drain(HAND_STORAGE);
     }
 
     public static void renderFirstPersonWithHiddenHud(FeatureRenderDispatcher dispatcher, float partialTick) {
@@ -126,11 +120,7 @@ public final class PlatinumCosmosPass {
                     poseStack, HIDDEN_HUD_STORAGE, player, packedLight, partialTick
             );
             if (submitted) {
-                if (mode == PlatinumCosmosRenderMode.EXACT) {
-                    IrisIntegration.runWithBypass(() -> dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE));
-                } else {
-                    dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE);
-                }
+                dispatcher.renderAllFeatures(HIDDEN_HUD_STORAGE);
             }
         } catch (Throwable throwable) {
             hiddenHudPassAvailable = false;

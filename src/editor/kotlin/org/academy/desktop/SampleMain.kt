@@ -2,6 +2,7 @@ package org.academy.desktop
 
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.drawable.ColorDrawable
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.serialize.WidgetSerializer
 import org.academy.api.client.gui.widget.FrameLayoutWidget
@@ -44,5 +45,6 @@ fun main(args: Array<String>) {
         ?.let(Path::of)
         ?: Path.of("").toAbsolutePath()
     val environment = DesktopEnvironment(projectRoot, 1280, 720)
+    UiEnvironment.set(environment)
     DesktopApplication.run(SampleApp(), environment)
 }

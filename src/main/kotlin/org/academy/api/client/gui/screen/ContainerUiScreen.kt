@@ -182,27 +182,17 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
 
         if (this.isRenderInventory) {
             val originHeight = 187f
-            val currentHeight = invHeightSupplier().coerceIn(0f, originHeight)
-            val translationY = invTranslationYSupplier()
+            val currentHeight = invHeightSupplier()
+            val scaleY = currentHeight / originHeight
             graphics.pose().pushMatrix()
-            graphics.pose().translate(0f, translationY)
-
-            // Reveal the inventory at its animated height without deforming item atlas blits.
-            // Non-uniform scaling makes special 3D item models flicker or disappear in the GUI.
-            graphics.enableScissor(
-                leftPos,
-                topPos,
-                leftPos + imageWidth,
-                topPos + ceil(currentHeight.toDouble()).toInt()
-            )
+            graphics.pose().translate(0f, topPos.toFloat())
+            graphics.pose().scale(1f, scaleY)
+            graphics.pose().translate(0f, -topPos + invTranslationYSupplier())
 
             extractContents(graphics, mouseX, mouseY, a)
-
-            graphics.disableScissor()
-            graphics.pose().popMatrix()
-
-            // The carried stack follows the cursor and must not inherit the inventory animation.
             extractCarriedItem(graphics, mouseX, mouseY)
+
+            graphics.pose().popMatrix()
         }
         extractTooltip(graphics, mouseX, mouseY)
     }

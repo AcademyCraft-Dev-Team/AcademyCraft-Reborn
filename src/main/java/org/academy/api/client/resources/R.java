@@ -64,6 +64,7 @@ public final class R {
             public static final Identifier vfx_lightning = academy("core/vfx_lightning");
             public static final Identifier glow_blend = academy("core/glow_blend");
             public static final Identifier distortion_ring = academy("core/distortion_ring");
+            public static final Identifier backdrop_sample = academy("core/backdrop_sample");
             public static final Identifier gaussian_blur = academy("core/gaussian_blur");
             public static final Identifier glow_circle = academy("core/glow_circle");
             public static final Identifier platinum_cosmic_wing = academy("core/platinum_cosmic_wing");
@@ -79,6 +80,7 @@ public final class R {
             public static final Identifier msdf_text_instanced = academy("core/msdf_text_instanced");
             public static final Identifier particle_additive = academy("core/particle_additive");
             public static final Identifier pos_color = academy("core/pos_color");
+            public static final Identifier rounded_rect = academy("core/rounded_rect");
             public static final Identifier screen_blit = academy("core/screen_blit");
             public static final Identifier sdf_circle_glow = academy("core/sdf_circle_glow");
             public static final Identifier sdf_sharp_margin = academy("core/sdf_sharp_margin");

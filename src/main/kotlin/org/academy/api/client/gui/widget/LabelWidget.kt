@@ -28,7 +28,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
                 invalidate()
             }
         }
-    protected var dropShadow: Boolean = false
+    var dropShadow: Boolean = false
     private var displayText: String = text
     private var measuredText: String? = null
     private var measuredFontSize = 0f

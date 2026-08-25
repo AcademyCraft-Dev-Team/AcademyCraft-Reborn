@@ -3,6 +3,7 @@ package org.academy.internal.client.gui
 import net.minecraft.resources.Identifier
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
+import org.academy.api.client.gui.serialize.UiBindingContext
 import org.academy.api.client.gui.serialize.WidgetSerializer
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.api.client.gui.widget.Widget
@@ -25,6 +26,15 @@ object SerializedUiLayout {
         requiredNames: List<String>,
         fallback: Supplier<FrameLayoutWidget>
     ): FrameLayoutWidget {
+        return load(identifier, requiredNames, fallback, null)
+    }
+
+    fun load(
+        identifier: Identifier,
+        requiredNames: List<String>,
+        fallback: Supplier<FrameLayoutWidget>,
+        bindings: UiBindingContext?
+    ): FrameLayoutWidget {
         val overrideName = identifier.path.substringAfterLast('/')
         val layoutId = overrideName.removeSuffix(".json")
         if (AcademyCraftClient.isUiDebugEnvironment()) {
@@ -44,7 +54,7 @@ object SerializedUiLayout {
             }.getOrDefault(Long.MIN_VALUE)
             if (rejectedOverrideTimestamps[overrideFile] != modifiedAt) {
                 try {
-                    val loaded = WidgetSerializer.import(overrideFile)
+                    val loaded = WidgetSerializer.import(overrideFile, bindings)
                     validateOrNull(loaded, requiredNames)?.let {
                         rejectedOverrideTimestamps.remove(overrideFile)
                         AcademyCraft.getLogger().info("[UiLayout] Loaded override {}", overrideFile)
@@ -67,17 +77,19 @@ object SerializedUiLayout {
                 }
             }
         }
-        return loadBundled(identifier, requiredNames, fallback)
+        return loadBundled(identifier, requiredNames, fallback, bindings)
     }
 
     /** Loads only the packaged layout, bypassing editable runtime and disk overrides. */
+    @JvmOverloads
     fun loadBundled(
         identifier: Identifier,
         requiredNames: List<String>,
-        fallback: Supplier<FrameLayoutWidget>
+        fallback: Supplier<FrameLayoutWidget>,
+        bindings: UiBindingContext? = null
     ): FrameLayoutWidget {
         return try {
-            validate(identifier, WidgetSerializer.loadLayout(identifier), requiredNames)
+            validate(identifier, WidgetSerializer.loadLayout(identifier, bindings), requiredNames)
         } catch (exception: Exception) {
             AcademyCraft.getLogger().error(
                 "[UiLayout] Failed to load {}; using the built-in fallback",
