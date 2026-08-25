@@ -12,6 +12,7 @@ import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.internal.client.gui.imgui.ImGuiBackend
 import org.lwjgl.glfw.GLFW
 
 /**
@@ -30,6 +31,12 @@ class DesktopUiHost(
         private set
 
     val root: WidgetContainer
+
+    private var imGuiBackend: ImGuiBackend? = null
+
+    /** 共享 ImGui 后端（供编辑器注册任意纹理显示，M11-02）。 */
+    val imgui: ImGuiBackend?
+        get() = imGuiBackend
 
     private var mouseX = 0.0
     private var mouseY = 0.0
@@ -58,6 +65,14 @@ class DesktopUiHost(
         GLFW.glfwSetKeyCallback(window.handle()) { _, key, scancode, action, mods -> onKey(key, scancode, action, mods) }
         GLFW.glfwSetCharCallback(window.handle()) { _, codepoint -> onChar(codepoint) }
         createTarget()
+        if (app.usesImGui) {
+            imGuiBackend = ImGuiBackend(
+                window.handle(),
+                { window.width },
+                { window.height }
+            ).also { it.init() }
+            environment.imguiBackend = imGuiBackend
+        }
     }
 
     private fun createTarget() {
@@ -75,9 +90,13 @@ class DesktopUiHost(
         root.tick()
         uiContext.perform(root, mouseX, mouseY, partialTick)
         uiContext.upload(target!!, true)
+        app.renderBackground(target!!)
+        imGuiBackend?.render(target!!) { app.renderImGui() }
     }
 
     fun close() {
+        imGuiBackend?.dispose()
+        imGuiBackend = null
         target?.destroyBuffers()
         target = null
         uiContext.close()

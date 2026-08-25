@@ -27,5 +27,19 @@ Current design, skill, command, and acceptance documents are listed in the [docu
 ./gradlew build
 ```
 
+### VFX / Shader Graph editor
+
+AcademyCraft includes a Unity-like visual Shader Graph + VFX Graph editor (desktop tool) with
+an in-game runtime. See [docs/vfx-graph/USER_GUIDE.md](docs/vfx-graph/USER_GUIDE.md) for usage,
+or the full roadmap at [docs/vfx-graph/EDITOR_ROADMAP.md](docs/vfx-graph/EDITOR_ROADMAP.md).
+
+Run the editor (requires a display):
+
+```bash
+./gradlew graphEditor
+```
+
+In-game, spawn a graph effect via `/academy vfx spawn <graph> [x y z]` (e.g. `demo_burst`).
+
 ## License
 This project is licensed under the **GPL-3.0**.

@@ -56,6 +56,10 @@ class DesktopEnvironment(
     var clipboardGetter: () -> String = { "" }
     var clipboardSetter: (String) -> Unit = {}
 
+    /** 共享 ImGui 后端（由 DesktopUiHost 注入；编辑器可注册纹理供 ImGui 显示，M11-02/M14）。 */
+    @Volatile
+    var imguiBackend: org.academy.internal.client.gui.imgui.ImGuiBackend? = null
+
     override fun clipboard(): String = clipboardGetter()
     override fun setClipboard(text: String) {
         clipboardSetter(text)

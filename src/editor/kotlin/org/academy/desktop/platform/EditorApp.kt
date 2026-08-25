@@ -1,5 +1,6 @@
 package org.academy.desktop.platform
 
+import com.mojang.blaze3d.pipeline.RenderTarget
 import org.academy.api.client.gui.widget.WidgetContainer
 
 /**
@@ -14,8 +15,25 @@ interface EditorApp {
     /** Builds the root widget tree (framework widgets) shown in the window. */
     fun createRoot(): WidgetContainer
 
+    /**
+     * Whether this app uses ImGui. When true, the host initializes and renders an
+     * [org.academy.internal.client.gui.imgui.ImGuiBackend] and invokes [renderImGui].
+     */
+    val usesImGui: Boolean get() = false
+
     /** Called once per frame on the main (render) thread before rendering. */
     fun onFrame(partialTick: Float) {
+    }
+
+    /**
+     * Called after the widget tree renders and before ImGui, to render app-owned
+     * content (e.g. a shader preview) directly into [target].
+     */
+    fun renderBackground(target: RenderTarget) {
+    }
+
+    /** Called inside the ImGui frame when [usesImGui] is true. */
+    fun renderImGui() {
     }
 
     /** Called when the window's GUI-scaled size changes. */

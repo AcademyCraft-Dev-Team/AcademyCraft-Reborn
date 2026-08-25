@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "editor",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Spawn",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "bolt",
+          "type": "vfx.block.arc_bolt",
+          "properties": {
+            "from_x": "0",
+            "from_y": "0",
+            "from_z": "0",
+            "to_x": "0",
+            "to_y": "3",
+            "to_z": "0",
+            "density": "1.0",
+            "probability": "0.7",
+            "frequency": "30.0",
+            "interval": "0.8",
+            "width": "0.004",
+            "segments": "16",
+            "lifetime": "0.3",
+            "color": "1,1,1,1",
+            "emission": "1.0",
+            "branch_depth": "1",
+            "branch_count": "3",
+            "branch_angle": "1.2",
+            "branch_length_scale": "0.35",
+            "branch_width_scale": "0.5",
+            "branch_brightness_scale": "0.7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_out",
+      "type": "OUTPUT",
+      "name": "Output",
+      "x": 440.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_glow",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "blend": "glow",
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_arc",
+            "sparks": "8",
+            "spark_speed": "2.2",
+            "spark_size": "0.02",
+            "spark_lifetime": "1.0",
+            "spark_gravity": "-9.8",
+            "spark_radius": "0.005",
+            "emission": "5.0",
+            "drift_speed": "0.5",
+            "noise_strength": "0.3",
+            "lifetime": "1.0",
+            "segments": "12",
+            "overall_scale": "1.0",
+            "branch_depth": "2",
+            "branch_count": "2",
+            "branch_angle": "1.57",
+            "branch_length_scale": "0.3",
+            "branch_width_scale": "0.35",
+            "branch_brightness_scale": "0.6"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx_spawn",
+      "to": "ctx_out"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "out_glow"
+  ]
+}
