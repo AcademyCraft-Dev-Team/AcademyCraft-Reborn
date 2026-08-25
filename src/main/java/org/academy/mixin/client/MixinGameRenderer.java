@@ -15,6 +15,7 @@ import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
+import org.academy.api.client.vanilla.WorldCompositeEvent;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
@@ -87,10 +88,22 @@ public abstract class MixinGameRenderer {
             method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V")
     )
-    private void render(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
+    private void beforeGuiRender(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
         var resourcesLoaded = minecraft.isGameLoadFinished();
         var shouldRenderLevel = resourcesLoaded && advanceGameTime && minecraft.level != null;
         if (shouldRenderLevel) HudManager.INSTANCE.render();
+    }
+
+    /**
+     * GuiRenderer 执行完毕后发布喵: 此时主缓冲已含世界 + 原版屏幕背景 + Academy 下方内容,
+     * 正好是模糊面板背后应有的完整背景, 供 WorldCompositeEvent 就地烘焙模糊.
+     */
+    @Inject(
+            method = "render",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V", shift = At.Shift.AFTER)
+    )
+    private void afterGuiRender(DeltaTracker deltaTracker, boolean advanceGameTime, CallbackInfo ci) {
+        NeoForge.EVENT_BUS.post(new WorldCompositeEvent());
     }
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/resource/CrossFrameResourcePool;endFrame()V"))

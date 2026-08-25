@@ -49,11 +49,11 @@ public final class PostEffect {
                 List.of(),
                 false
         );
-        IrisIntegration.runWithBypass(PRE_PHASE::draw);
+        PRE_PHASE.draw();
     }
 
     public static void post() {
-        IrisIntegration.runWithBypass(POST_PHASE::draw);
+        POST_PHASE.draw();
     }
 
     public static Phase getPre() {

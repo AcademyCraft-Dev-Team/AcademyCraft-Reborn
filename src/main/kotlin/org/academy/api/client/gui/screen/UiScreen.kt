@@ -33,7 +33,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
     protected abstract fun onInit()
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
-        val renderTarget = ScreenDispatcher.getRenderTarget() ?: return
+        val renderTarget = ScreenDispatcher.getRenderTarget()
         val colorTextureView = renderTarget.getColorTextureView() ?: return
 
         graphics.innerBlit(

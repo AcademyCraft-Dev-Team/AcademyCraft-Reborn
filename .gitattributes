@@ -1,0 +1,21 @@
+# Auto detect text files and force LF
+* text=auto eol=lf
+
+# Windows scripts need CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.class binary
+*.zip binary
+*.ttf binary
+*.otf binary
+*.ogg binary
+*.mp3 binary
+*.wav binary

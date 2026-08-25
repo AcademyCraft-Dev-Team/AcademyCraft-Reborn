@@ -87,7 +87,7 @@ open class FrameLayoutWidget : AbstractWidgetContainer() {
                         widthMeasureSpec,
                         containerLp.paddingLeft + containerLp.paddingRight +
                                 lp.marginLeft + lp.marginRight,
-                        lp.width, lp.widthMode
+                        lp.width, lp.widthMode, lp.widthPercent
                     )
                 }
 
@@ -104,7 +104,7 @@ open class FrameLayoutWidget : AbstractWidgetContainer() {
                         heightMeasureSpec,
                         containerLp.paddingTop + containerLp.paddingBottom +
                                 lp.marginTop + lp.marginBottom,
-                        lp.height, lp.heightMode
+                        lp.height, lp.heightMode, lp.heightPercent
                     )
                 }
 
@@ -160,7 +160,7 @@ open class FrameLayoutWidget : AbstractWidgetContainer() {
         }
     }
 
-    class LayoutParams : WidgetContainer.LayoutParams {
+    open class LayoutParams : WidgetContainer.LayoutParams {
         constructor() {
             gravity = UNSPECIFIED_GRAVITY
             sizeMode(SizeMode.MATCH_PARENT)

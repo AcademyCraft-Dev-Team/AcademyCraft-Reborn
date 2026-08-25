@@ -113,7 +113,7 @@ object HudManager {
                     mainColor,
                     blurColor,
                     uiDepth,
-                    TerminalHud.getBlurRadius().roundToInt()
+                    TerminalHud.getBlurRadius()
                 )
                 Render.runBlitPass(
                     mainColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,
