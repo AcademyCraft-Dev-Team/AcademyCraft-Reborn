@@ -14,6 +14,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
@@ -30,6 +31,7 @@ import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
+import org.academy.internal.client.ability.program.ProgramClipboardCodec;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.Skills;
@@ -100,9 +102,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private static final int PALETTE_SEARCH_OFFSET_Y = 31;
     private static final int PALETTE_LIST_OFFSET_Y = 49;
     private static final String[] TOOL_LABELS = {
-            "delete", "copy", "undo", "redo", "auto_layout", "fit", "save", "restore"
+            "delete", "copy", "paste", "undo", "redo", "auto_layout", "fit",
+            "export", "import", "save", "restore"
     };
-    private static final String[] TOOL_GLYPHS = {"X", "C", "<", ">", "A", "F", "S", "R"};
+    private static final String[] TOOL_GLYPHS = {
+            "X", "C", "P", "<", ">", "A", "F", "E", "I", "S", "R"
+    };
 
     private final ArrayDeque<AbilityProgram> undo = new ArrayDeque<>();
     private final ArrayDeque<AbilityProgram> redo = new ArrayDeque<>();
@@ -392,7 +397,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
-            var disabled = index == 6 && (!document.validation().valid() || !configurationInputsValid());
+            var disabled = index == 9 && (!document.validation().valid() || !configurationInputsValid());
             iconButton(graphics, toolsX, panelY + 3, TOOL_GLYPHS[index], mouseX, mouseY, disabled);
             if (inside(mouseX, mouseY, toolsX, panelY + 3, TOOL_SIZE, TOOL_SIZE)) {
                 graphics.setTooltipForNextFrame(Component.translatable(
@@ -566,7 +571,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 && diagnostic.port() != null) {
             return Component.translatable(
                     "screen.academy.program.diagnostic.missing_input",
-                    Component.translatable(node.entry.portTranslationKey(diagnostic.port()))
+                    portLabel(node.entry, diagnostic.port())
             ).withColor(ERROR);
         }
         return Component.literal(diagnostic.code().name()).withColor(ERROR);
@@ -613,7 +618,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var owner = node(endpoint.nodeId);
         var label = owner == null
                 ? Component.literal(endpoint.port)
-                : Component.translatable(owner.entry.portTranslationKey(endpoint.port));
+                : portLabel(owner.entry, endpoint.port);
         graphics.setComponentTooltipForNextFrame(font, List.of(
                 Component.empty().append(endpoint.input ? "< " : "> ").append(label),
                 Component.literal(type).withColor(DIM)), mouseX, mouseY);
@@ -650,14 +655,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 x + 5, portsY, DIM, width - 10);
         var y = portsY + 11;
         for (var port : selected.schema.inputs()) {
-            smallText(graphics, "< " + Component.translatable(
-                    selected.entry.portTranslationKey(port.name())).getString(),
+            smallText(graphics, "< " + portLabel(selected.entry, port.name()).getString(),
                     x + 7, y, portColor(port.type()), width - 12);
             y += 9;
         }
         for (var port : selected.schema.outputs()) {
-            smallText(graphics, "> " + Component.translatable(
-                    selected.entry.portTranslationKey(port.name())).getString(),
+            smallText(graphics, "> " + portLabel(selected.entry, port.name()).getString(),
                     x + 7, y, portColor(port.type()), width - 12);
             y += 9;
         }
@@ -897,7 +900,13 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
         if ((event.modifiers() & InputConstants.MOD_CONTROL) != 0) {
             if (event.key() == InputConstants.KEY_C) {
-                copySelected();
+                if ((event.modifiers() & InputConstants.MOD_SHIFT) != 0) exportProgram();
+                else copySelected();
+                return true;
+            }
+            if (event.key() == InputConstants.KEY_V) {
+                if ((event.modifiers() & InputConstants.MOD_SHIFT) != 0) importProgram();
+                else pasteClipboard();
                 return true;
             }
             if (event.key() == InputConstants.KEY_Z) {
@@ -982,12 +991,15 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 switch (index) {
                     case 0 -> deleteSelected();
                     case 1 -> copySelected();
-                    case 2 -> undo();
-                    case 3 -> redo();
-                    case 4 -> autoLayout();
-                    case 5 -> fitCanvas(false);
-                    case 6 -> save();
-                    case 7 -> setProgram(session.restoredProgram(slot), true);
+                    case 2 -> pasteClipboard();
+                    case 3 -> undo();
+                    case 4 -> redo();
+                    case 5 -> autoLayout();
+                    case 6 -> fitCanvas(false);
+                    case 7 -> exportProgram();
+                    case 8 -> importProgram();
+                    case 9 -> save();
+                    case 10 -> setProgram(session.restoredProgram(slot), true);
                     default -> {
                     }
                 }
@@ -1335,27 +1347,100 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private void copySelected() {
-        var selected = node(selectedNode);
-        if (selected == null || selected.entry.type().role() == ProgramNodeRole.ENTRY) return;
-        var existingIds = document.program().graph().nodes().stream()
-                .map(ProgramGraph.Node::id).collect(java.util.stream.Collectors.toSet());
-        var added = document.addNode(selected.entry.id(), selected.x + 18, selected.y + 18);
-        if (!added.successful()) {
-            showTransient(added.diagnostic());
+        var copyable = selectedNodes.stream()
+                .filter(id -> {
+                    var selected = node(id);
+                    return selected != null
+                            && selected.entry.type().role() != ProgramNodeRole.ENTRY;
+                }).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (copyable.isEmpty()) return;
+        UiEnvironment.get().setClipboard(
+                ProgramClipboardCodec.encodeFragment(document.program(), copyable));
+    }
+
+    private void pasteClipboard() {
+        var fragment = ProgramClipboardCodec.decodeFragment(
+                UiEnvironment.get().clipboard(), document.program().category());
+        if (fragment == null || fragment.graph().nodes().isEmpty()) {
+            showTransient(PrecisionGraph.Diagnostic.MALFORMED);
             return;
         }
-        var addedId = added.document().program().graph().nodes().stream()
-                .map(ProgramGraph.Node::id).filter(id -> !existingIds.contains(id))
-                .findFirst().orElse(-1);
-        var configured = added.document().configureNode(
-                addedId, selected.source.configuration().deepCopy());
-        if (!configured.successful()) {
-            showTransient(configured.diagnostic());
-            return;
+        var working = document;
+        var idMap = new HashMap<Integer, Integer>();
+        var newIds = new LinkedHashSet<Integer>();
+        for (var source : fragment.graph().nodes().stream()
+                .sorted(Comparator.comparingInt(ProgramGraph.Node::id)).toList()) {
+            var position = fragment.editorLayout().nodePositions().get(source.id());
+            var x = (position == null ? 0.0 : position.x()) + 18.0;
+            var y = (position == null ? 0.0 : position.y()) + 18.0;
+            var before = working.program().graph().nodes().stream()
+                    .map(ProgramGraph.Node::id).collect(java.util.stream.Collectors.toSet());
+            var added = working.addNode(source.type(), x, y);
+            if (!added.successful()) {
+                showTransient(added.diagnostic());
+                return;
+            }
+            var addedId = added.document().program().graph().nodes().stream()
+                    .map(ProgramGraph.Node::id).filter(id -> !before.contains(id))
+                    .findFirst().orElse(-1);
+            var configured = added.document().configureNode(
+                    addedId, source.configuration());
+            if (!configured.successful()) {
+                showTransient(configured.diagnostic());
+                return;
+            }
+            working = configured.document();
+            idMap.put(source.id(), addedId);
+            newIds.add(addedId);
+        }
+        for (var edge : fragment.graph().edges()) {
+            var from = idMap.get(edge.from().nodeId());
+            var to = idMap.get(edge.to().nodeId());
+            if (from == null || to == null) continue;
+            var connected = working.connect(
+                    new ProgramGraph.Endpoint(from, edge.from().port()),
+                    new ProgramGraph.Endpoint(to, edge.to().port()));
+            if (!connected.successful()) {
+                showTransient(connected.diagnostic());
+                return;
+            }
+            working = connected.document();
         }
         pushUndo();
-        install(configured.document(), true);
-        selectNode(addedId);
+        install(working, true);
+        selectNodes(newIds);
+    }
+
+    private void exportProgram() {
+        UiEnvironment.get().setClipboard(
+                ProgramClipboardCodec.encodeProgram(document.program()));
+    }
+
+    private void importProgram() {
+        var imported = ProgramClipboardCodec.decodeProgram(
+                UiEnvironment.get().clipboard(), document.program().category());
+        if (imported == null) {
+            showTransient(PrecisionGraph.Diagnostic.MALFORMED);
+            return;
+        }
+        var current = document.program();
+        var replacement = new AbilityProgram(
+                AbilityProgram.CURRENT_SCHEMA_VERSION,
+                current.id(),
+                current.name(),
+                current.category(),
+                imported.graph(),
+                imported.editorLayout()
+        );
+        var importedDocument = document(replacement);
+        if (importedDocument.validation().diagnostics().stream().anyMatch(diagnostic ->
+                diagnostic.code() == ProgramDiagnosticCode.UNKNOWN_NODE_TYPE
+                        || diagnostic.code() == ProgramDiagnosticCode.CATEGORY_MISMATCH
+                        || diagnostic.code() == ProgramDiagnosticCode.CAPABILITY_MISSING)) {
+            showTransient(PrecisionGraph.Diagnostic.MALFORMED);
+            return;
+        }
+        setProgram(replacement, true);
     }
 
     private void autoLayout() {
@@ -1854,6 +1939,17 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private static Component configurationFieldLabel(String field) {
         return Component.translatable("screen.academy.program.configuration.field." + field);
+    }
+
+    private static Component portLabel(ProgramEditorNodeCatalog.Entry entry, String port) {
+        if (port.startsWith("value_")) {
+            var suffix = port.substring("value_".length());
+            if (suffix.chars().allMatch(Character::isDigit)) {
+                return Component.translatable(
+                        "screen.academy.program.port.collection_builder_value", suffix);
+            }
+        }
+        return Component.translatable(entry.portTranslationKey(port));
     }
 
     private static Component configurationDisplayValue(

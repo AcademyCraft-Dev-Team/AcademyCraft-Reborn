@@ -532,42 +532,40 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
 
     /**
      * Finds the caret (code point index within [lineText]) for a local X position.
-     * The caret sits between glyph advance boundaries: for each glyph we compare
-     * the click against the midpoint of the gap to its predecessor.
+     * The click is assigned to the closest kerning-adjusted caret stop from the
+     * same layout used for rendering.
      */
     private fun caretCodePointsInLine(lineText: String, localX: Float): Int {
         if (lineText.isEmpty()) return 0
         val result = MsdfTextProcessor.layout(lineText, baseFontSize)
         var best = 0
-        var bestDist = Float.MAX_VALUE
-        var prevPen = 0f
+        var bestDist = kotlin.math.abs(localX)
         for (instance in result.instances) {
-            val gapMid = (prevPen + instance.penX) / 2f
-            val dist = kotlin.math.abs(localX - gapMid)
+            val dist = kotlin.math.abs(localX - instance.penX)
             if (dist < bestDist) {
                 bestDist = dist
                 best = lineText.codePointCount(0, instance.glyphIndex)
             }
-            prevPen = instance.penX + instance.advance
         }
-        val endMid = (prevPen + result.width) / 2f
-        if (kotlin.math.abs(localX - endMid) < bestDist) {
+        if (kotlin.math.abs(localX - result.width) < bestDist) {
             best = lineText.codePointCount(0, lineText.length)
         }
         return best
     }
 
-    /** Max advance edge within [line] up to [unit] code units (0-based). */
+    /**
+     * Returns the caret stop used by the same shaped layout that renders [line]. For an
+     * interior stop this is the next glyph's kerning-adjusted pen; for the final stop it is
+     * the rendered line edge. Keeping these metrics shared prevents GUI scaling from
+     * magnifying the small advance/kerning discrepancy into a visibly displaced caret.
+     */
     private fun lineXAt(line: String, unit: Int): Float {
         if (unit <= 0 || line.isEmpty()) return 0f
         val result = MsdfTextProcessor.layout(line, baseFontSize)
-        var x = 0f
         for (instance in result.instances) {
-            if (instance.glyphIndex >= unit) break
-            val right = instance.penX + instance.advance
-            if (right > x) x = right
+            if (instance.glyphIndex >= unit) return instance.penX
         }
-        return x
+        return result.width
     }
 
     private fun lineAdvancePx(): Float {

@@ -18,6 +18,8 @@ public abstract class KeyBindingConfig {
     private Map<String, JsonElement> keyBindings = new LinkedHashMap<>();
     @SerializedName("enabledBindings")
     private Map<String, Boolean> enabledBindings = new LinkedHashMap<>();
+    @SerializedName("defaultMigrations")
+    private Map<String, String> defaultMigrations = new LinkedHashMap<>();
 
     public InputSystem.KeyCombination getKeyBinding(String name, InputSystem.KeyCombination defaultConfig) {
         InputSystem.rememberDefaultKeyBinding(name, defaultConfig);
@@ -40,11 +42,16 @@ public abstract class KeyBindingConfig {
             InputSystem.KeyCombination... obsoleteDefaults
     ) {
         var configured = getKeyBinding(name, defaultConfig);
+        var migration = migrationFingerprint(defaultConfig, obsoleteDefaults);
+        if (migration.equals(defaultMigrationMap().get(name))) return configured;
         for (var obsoleteDefault : obsoleteDefaults) {
-            if (!configured.equals(obsoleteDefault)) continue;
-            setKeyBinding(name, defaultConfig);
-            return defaultConfig;
+            if (configured.equals(obsoleteDefault)) {
+                configured = defaultConfig;
+                setKeyBinding(name, configured);
+                break;
+            }
         }
+        defaultMigrationMap().put(name, migration);
         return configured;
     }
 
@@ -117,6 +124,21 @@ public abstract class KeyBindingConfig {
 
     private Map<String, Boolean> enabledBindingMap() {
         return enabledBindings;
+    }
+
+    private Map<String, String> defaultMigrationMap() {
+        if (defaultMigrations == null) defaultMigrations = new LinkedHashMap<>();
+        return defaultMigrations;
+    }
+
+    private static String migrationFingerprint(
+            InputSystem.KeyCombination defaultConfig,
+            InputSystem.KeyCombination[] obsoleteDefaults
+    ) {
+        var values = new java.util.ArrayList<InputSystem.KeyCombination>();
+        values.add(defaultConfig);
+        java.util.Collections.addAll(values, obsoleteDefaults);
+        return GSON.toJson(values);
     }
 
     private void migrateStoredKeyBinding(String name, InputSystem.KeyCombination keyBinding) {
