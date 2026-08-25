@@ -14,6 +14,11 @@ class RenderContext {
     private val scissorStack: ScissorStack
     private val drawOrderStack: DrawOrderStack
     private val alphaStack: AlphaStack
+    private val blurRegionBuffer = mutableListOf<BlurRegion>()
+
+    /** 本帧收集到的模糊区域快照。 */
+    val blurRegions: List<BlurRegion>
+        get() = blurRegionBuffer
 
     var recordedMax = 0
         private set
@@ -36,11 +41,12 @@ class RenderContext {
         commands.add(SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder))
     }
 
-    fun addCached(cached: List<SubmittedCommand>) {
+    fun addCached(cached: List<SubmittedCommand>, regions: List<BlurRegion> = emptyList()) {
         for (command in cached) {
             if (command.drawOrder > recordedMax) recordedMax = command.drawOrder
         }
         commands.addAll(cached)
+        blurRegionBuffer.addAll(regions)
     }
 
     fun pose(): PoseStack2D {
@@ -54,6 +60,19 @@ class RenderContext {
     fun alpha(): AlphaStack {
         return alphaStack
     }
+
+    /** 登记一个屏幕空间模糊区域（[BlurPanelWidget]）。由 [UiContext] 收集并交给 [UiCompositor]。 */
+    fun registerBlurRegion(region: BlurRegion) {
+        blurRegionBuffer.add(region)
+    }
+
+    /** 当前已登记的模糊区域数量 (供缓存切分时取其增量)。 */
+    fun blurRegionCount(): Int = blurRegionBuffer.size
+
+    /** 从 [fromIndex] 起新登记的模糊区域 (供缓存时独立捕获子树内的区域)。 */
+    fun blurRegionsSince(fromIndex: Int): List<BlurRegion> =
+        if (fromIndex < blurRegionBuffer.size) blurRegionBuffer.subList(fromIndex, blurRegionBuffer.size).toList()
+        else emptyList()
 
     fun enableScissor(scissorRect: ScissorRect) {
         scissorStack.push(scissorRect)
@@ -70,6 +89,7 @@ class RenderContext {
         commands.clear()
         drawOrderStack.clear()
         alphaStack.clear()
+        blurRegionBuffer.clear()
     }
 
     inner class PoseStack2D {

@@ -36,29 +36,8 @@ public final class IrisIntegration {
         return hasIris() && IrisApi.getInstance().isRenderingShadowPass();
     }
 
-    public static void runWithBypass(Runnable action) {
-        if (!hasIris()) {
-            action.run();
-            return;
-        }
-        var states = BYPASS_STATES.get();
-        states.push(ImmediateState.bypass);
-        ImmediateState.bypass = true;
-        try {
-            action.run();
-        } finally {
-            ImmediateState.bypass = states.pop();
-            if (states.isEmpty()) BYPASS_STATES.remove();
-        }
-    }
-
     public static void markHandBridgeMounted() {
         handBridgeMounted = true;
-    }
-
-    public static void markHandBridgeFailed(Throwable throwable) {
-        handBridgeMounted = false;
-        warnHandBridgeFallback(throwable);
     }
 
     public static boolean isHandBridgeMounted() {

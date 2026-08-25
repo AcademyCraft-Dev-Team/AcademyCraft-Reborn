@@ -12,7 +12,7 @@ open class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
 
     private var imageToViewRatioWidth: Float = 0.9f
     private var imageToViewRatioHeight: Float = 0.9f
-    private var parallaxEnabled: Boolean = true
+    var parallaxEnabled: Boolean = true
 
     override fun render(context: RenderContext) {
         if (!parallaxEnabled) {

@@ -1,5 +1,6 @@
 package org.academy.desktop.uieditor
 
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.desktop.platform.DesktopApplication
 import org.academy.desktop.platform.DesktopEnvironment
 import java.nio.file.Path
@@ -28,5 +29,6 @@ fun main(args: Array<String>) {
         System.setProperty("academy.desktop.dumpPng", it)
     }
     val environment = DesktopEnvironment(projectRoot, 1600, 900, guiScale)
+    UiEnvironment.set(environment)
     DesktopApplication.run(UiEditorApp(environment, layout), environment)
 }

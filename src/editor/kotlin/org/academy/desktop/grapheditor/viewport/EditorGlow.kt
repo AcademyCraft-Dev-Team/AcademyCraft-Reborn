@@ -11,6 +11,7 @@ import com.mojang.blaze3d.textures.GpuTextureView
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformBinding
+import org.academy.api.client.render.post.BackdropBlur
 import org.academy.api.client.render.post.GlowEffect
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer
 import org.academy.api.client.render.vfxgraph.render.GraphCamera
@@ -31,7 +32,6 @@ class EditorGlow(
     private val renderer: VfxGraphRenderer,
 ) {
     private var input: TextureTarget? = null
-    private var blurA: TextureTarget? = null
     private var blurB: TextureTarget? = null
     private var glowUbo: GpuBuffer? = null
     private var blackTexture: GpuTexture? = null
@@ -40,7 +40,6 @@ class EditorGlow(
     /** 释放全部 GPU 资源（视口/预览销毁时调用，防泄漏）。 */
     fun destroy() {
         input?.destroyBuffers(); input = null
-        blurA?.destroyBuffers(); blurA = null
         blurB?.destroyBuffers(); blurB = null
         glowUbo?.close(); glowUbo = null
         blackView?.close(); blackView = null
@@ -66,7 +65,6 @@ class EditorGlow(
             )
         }
         input = ensureTarget(input, "EditorGlow Input", viewportWidth, viewportHeight)
-        blurA = ensureTarget(blurA, "EditorGlow BlurA", viewportWidth / 2, viewportHeight / 2)
         blurB = ensureTarget(blurB, "EditorGlow BlurB", viewportWidth / 2, viewportHeight / 2)
         val inputView = input?.getColorTextureView() ?: return
         val blurBView = blurB?.getColorTextureView() ?: return
@@ -76,9 +74,8 @@ class EditorGlow(
         if (arcBuffer != null) renderer.setArcBuffer(arcBuffer)
         renderer.render(inputView, null, buffer, camera, false, specs, WorldTransform.identity(), true)
 
-        // 2) 半分辨率高斯模糊（H 后 V），复用游戏 GAUSSIAN_BLUR 管线；细亮芯 + 更宽模糊 = 明显光晕
-        runBlur(blurA!!, inputView, 1f, 0f, 6)
-        runBlur(blurB!!, blurA!!.getColorTextureView() ?: return, 0f, 1f, 6)
+        // 2) 半分辨率高斯模糊 (复用唯一 BackdropBlur 引擎); 细亮芯 + 更宽模糊 = 明显光晕
+        BackdropBlur.applyGaussian(inputView, blurBView, null, blurB!!.width, blurB!!.height, 6f)
 
         // 3) GLOW_BLEND 叠加回视口（Sampler0 = 视口当前内容，模糊层 2/3 用纯黑占位）
         writeGlowUniforms(1f, 1.35f)
@@ -94,18 +91,6 @@ class EditorGlow(
             ),
             listOf(UniformBinding("GlowInfo", glowUbo!!.slice())),
             false,
-        )
-    }
-
-    private fun runBlur(out: TextureTarget, source: GpuTextureView, dirX: Float, dirY: Float, radius: Int) {
-        Render.BlurUniforms.writeBlurUniforms(Vector2f(out.width.toFloat(), out.height.toFloat()), dirX, dirY, radius)
-        val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-        Render.runBlitPass(
-            out.getColorTextureView()!!, Render.RenderPipelines.GAUSSIAN_BLUR,
-            Render.Buffers.getInstance().getFSQuadVBNDC(),
-            listOf(TextureBinding("Sampler0", source, sampler)),
-            listOf(UniformBinding("BlurInfo", Render.BlurUniforms.getBlurUniformsBuffer().slice())),
-            true,
         )
     }
 

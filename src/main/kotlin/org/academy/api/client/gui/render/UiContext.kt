@@ -35,6 +35,13 @@ open class UiContext {
     private val commandList = AtomicReference<MutableList<SubmittedCommand>?>()
     private var cachedCommands: MutableList<SubmittedCommand>? = null
 
+    /** 主线程 [perform] 写入, 渲染线程 [blurRegions] 读取喵. */
+    @Volatile
+    private var lastBlurRegions: List<BlurRegion> = emptyList()
+
+    /** 上次 [perform] 的根控件; 换 screen 时作废全部缓存喵. */
+    private var performedRoot: WidgetContainer? = null
+
     private val closed = AtomicBoolean(false)
     private val closing = AtomicBoolean(false)
 
@@ -54,19 +61,30 @@ open class UiContext {
 
     @MainThread
     fun perform(rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float) {
+        val env = UiEnvironment.get()
+        perform(rootWidget, mouseX, mouseY, partialTick, env.guiScaledWidth.toFloat(), env.guiScaledHeight.toFloat())
+    }
+
+    @MainThread
+    fun perform(rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float, logicalW: Float, logicalH: Float) {
         if (closed.get() || closing.get()) return
 
-        val environment = UiEnvironment.get()
+        if (performedRoot !== rootWidget) {
+            cachedCommands = null
+            commandList.set(null)
+            lastBlurRegions = emptyList()
+            performedRoot = rootWidget
+        }
 
-        val width = environment.guiScaledWidth
-        val height = environment.guiScaledHeight
+        val width = logicalW
+        val height = logicalH
 
-        val widthSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, width.toFloat())
-        val heightSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, height.toFloat())
+        val widthSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, width)
+        val heightSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, height)
 
         if (rootWidget.isLayoutDirty) {
             rootWidget.measure(widthSpec, heightSpec)
-            rootWidget.layout(0f, 0f, width.toFloat(), height.toFloat())
+            rootWidget.layout(0f, 0f, width, height)
         }
 
         if (shouldUseCacheCommands(rootWidget)) {
@@ -79,16 +97,69 @@ open class UiContext {
         rootWidget.isRenderDirty = false
         cachedCommands = context.commands.toMutableList()
         commandList.set(context.commands)
+        lastBlurRegions = context.blurRegions
     }
 
     open fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean {
         return !AcademyCraft.DEBUG_UI && !rootWidget.hasPendingRender() && cachedCommands != null
     }
 
+    /** 本帧收集到的模糊区域，供宿主交给 [UiCompositor]（需要世界/下方两个 target）。 */
+    fun blurRegions(): List<BlurRegion> = lastBlurRegions
+
     @RenderThread
     fun upload(target: RenderTarget, clear: Boolean) {
+        val env = UiEnvironment.get()
+        upload(target, clear, env.physicalWidth / env.guiScale, env.physicalHeight / env.guiScale)
+    }
+
+    @RenderThread
+    fun upload(target: RenderTarget, clear: Boolean, guiScaledW: Float, guiScaledH: Float) {
+        uploadSplit(target, clear, guiScaledW, guiScaledH, aboveTarget = null, blurRegions = emptyList())
+    }
+
+    /**
+     * 上传命令到 [target]. 当 [blurRegions] 非空且提供 [aboveTarget] 时, 以模糊区域为界把命令
+     * 切为两层: 「下方内容」照常渲染进 [target] (经 vanilla GUI 管线叠加在原版屏幕背景上),
+     * 「上方内容」渲染进 [aboveTarget] (清屏后), 由宿主在 GUI 渲染完成后就地合成. 否则单 pass.
+     */
+    @RenderThread
+    fun uploadSplit(
+        target: RenderTarget,
+        clear: Boolean,
+        guiScaledW: Float,
+        guiScaledH: Float,
+        aboveTarget: RenderTarget?,
+        blurRegions: List<BlurRegion>
+    ) {
         for (ubo in dynamicUniformStorages.values) ubo.endFrame()
 
+        val environment = UiEnvironment.get()
+        val effectiveScale = environment.guiScale
+
+        val commands = commandList.getAndSet(null)
+        if (commands.isNullOrEmpty()) return
+
+        val preparedCommands = prepareItemCommands(commands, effectiveScale)
+
+        if (blurRegions.isEmpty() || aboveTarget == null) {
+            drawPrepared(target, preparedCommands, clear, guiScaledW, guiScaledH, effectiveScale)
+        } else {
+            val (below, above) = splitCommandsForBlur(preparedCommands, blurRegions)
+            drawPrepared(target, below, clear, guiScaledW, guiScaledH, effectiveScale)
+            drawPrepared(aboveTarget, above, true, guiScaledW, guiScaledH, effectiveScale)
+        }
+    }
+
+    @RenderThread
+    private fun drawPrepared(
+        target: RenderTarget,
+        commands: MutableList<SubmittedCommand>,
+        clear: Boolean,
+        guiScaledW: Float,
+        guiScaledH: Float,
+        effectiveScale: Float
+    ) {
         val commandEncoder = RenderSystem.getDevice().createCommandEncoder()
         val colorTexture = target.getColorTexture()
         val colorTextureView = target.getColorTextureView()
@@ -97,34 +168,43 @@ open class UiContext {
 
         if (clear) commandEncoder.clearColorTexture(colorTexture, Vector4f(0f))
 
+        if (commands.isEmpty()) return
+
         val projectionMatrixBuffer = projectionMatrixBuffer
         val dynamicTransformsUbo = dynamicTransformsUbo
         if (projectionMatrixBuffer == null || dynamicTransformsUbo == null) return
 
-        val commands = commandList.getAndSet(null)
-
-        if (commands.isNullOrEmpty()) return
-
-        val environment = UiEnvironment.get()
-        val effectiveScale = environment.guiScale
-        val preparedCommands = prepareItemCommands(commands, effectiveScale)
-
         val meshesToDraw = BatchProcessor.process(
-            preparedCommands,
+            commands,
             object : UboUploader {
                 override fun <T : DynamicUniform> upload(payload: UniformPayload<T>): GpuBufferSlice {
                     return uploadPayload(payload)
                 }
             })
 
-        val guiScaledWidth = environment.physicalWidth / effectiveScale
-        val guiScaledHeight = environment.physicalHeight / effectiveScale
-        projection.setupOrtho(0f, 1f, guiScaledWidth, guiScaledHeight, true)
+        projection.setupOrtho(0f, 1f, guiScaledW, guiScaledH, true)
         val projectionBufferSlice = projectionMatrixBuffer.getBuffer(projection)
         commandExecutor.execute(
             meshesToDraw, colorTextureView,
             projectionBufferSlice, dynamicTransformsUbo, effectiveScale
         )
+    }
+
+    companion object {
+        /**
+         * 以模糊区域最小 drawOrder 为界切分命令: 返回 (below, above).
+         * below = drawOrder 严格小于最小模糊顺序的命令; above = 其余.
+         */
+        fun splitCommandsForBlur(
+            commands: List<SubmittedCommand>,
+            regions: List<BlurRegion>
+        ): Pair<MutableList<SubmittedCommand>, MutableList<SubmittedCommand>> {
+            val minOrder = regions.minOfOrNull { it.drawOrder }
+                ?: return commands.toMutableList() to mutableListOf()
+            val below = commands.filterTo(ArrayList()) { it.drawOrder < minOrder }
+            val above = commands.filterTo(ArrayList()) { it.drawOrder >= minOrder }
+            return below to above
+        }
     }
 
     @RenderThread
@@ -243,6 +323,9 @@ open class UiContext {
         itemAtlasSlotSize = 0
         for (ubo in dynamicUniformStorages.values) ubo.close()
         dynamicUniformStorages.clear()
+        cachedCommands = null
+        lastBlurRegions = emptyList()
+        performedRoot = null
         closed.set(true)
         closing.set(false)
     }

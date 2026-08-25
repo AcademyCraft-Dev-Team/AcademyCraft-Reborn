@@ -11,6 +11,7 @@ import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.render.BlurRegion
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.util.GlyphCommandGenerator
 import java.util.*
@@ -25,6 +26,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
     private class ChildRenderCache(
         val commands: MutableList<SubmittedCommand>,
+        val regions: List<BlurRegion>,
         val coverBaseRecordedMax: Int
     )
 
@@ -307,7 +309,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         if (cache != null && !wasDirty && !AcademyCraft.DEBUG_UI && !bypassRenderCache &&
             (!child.coverAllPrev || context.recordedMax <= cache.coverBaseRecordedMax)
         ) {
-            context.addCached(cache.commands)
+            context.addCached(cache.commands, cache.regions)
             return
         }
         // Remove the child from the pending set before rendering so that any
@@ -317,10 +319,12 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         // the child's own render path can still decide whether to regenerate.
         dirtyChildrenSet.remove(child)
         val start = context.commands.size
+        val blurStart = context.blurRegionCount()
         val baseline = context.recordedMax
         child.render(context)
         childRenderCaches[child] = ChildRenderCache(
             context.commands.subList(start, context.commands.size).toMutableList(),
+            context.blurRegionsSince(blurStart),
             baseline
         )
         if (child !in dirtyChildrenSet) {
@@ -401,13 +405,15 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             parentWidthSpec,
             layoutParams.paddingLeft + layoutParams.paddingRight + lp.marginLeft + lp.marginRight,
             lp.width,
-            lp.widthMode
+            lp.widthMode,
+            lp.widthPercent
         )
         val childHeightSpec = getChildMeasureSpec(
             parentHeightSpec,
             layoutParams.paddingTop + layoutParams.paddingBottom + lp.marginTop + lp.marginBottom,
             lp.height,
-            lp.heightMode
+            lp.heightMode,
+            lp.heightPercent
         )
         child.measure(childWidthSpec, childHeightSpec)
     }
@@ -580,6 +586,24 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             spec: MeasureSpec,
             padding: Float,
             childDimension: Float,
+            childMode: SizeMode,
+            childPercent: Float
+        ): MeasureSpec {
+            if (childMode == SizeMode.PERCENT) {
+                val specSize = max(0f, spec.size - padding)
+                val resultSize = specSize * childPercent.coerceIn(0f, 1f)
+                val resultMode =
+                    if (spec.mode == MeasureSpec.Mode.EXACTLY) MeasureSpec.Mode.EXACTLY
+                    else MeasureSpec.Mode.AT_MOST
+                return MeasureSpec(resultMode, resultSize)
+            }
+            return getChildMeasureSpec(spec, padding, childDimension, childMode)
+        }
+
+        fun getChildMeasureSpec(
+            spec: MeasureSpec,
+            padding: Float,
+            childDimension: Float,
             childMode: SizeMode
         ): MeasureSpec {
             val specSize = max(0f, spec.size - padding)
@@ -604,6 +628,11 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                             resultSize = specSize
                             resultMode = MeasureSpec.Mode.AT_MOST
                         }
+
+                        SizeMode.PERCENT -> {
+                            resultSize = specSize * childDimension.coerceIn(0f, 1f)
+                            resultMode = MeasureSpec.Mode.EXACTLY
+                        }
                     }
                 }
 
@@ -623,6 +652,11 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                             resultSize = specSize
                             resultMode = MeasureSpec.Mode.AT_MOST
                         }
+
+                        SizeMode.PERCENT -> {
+                            resultSize = specSize * childDimension.coerceIn(0f, 1f)
+                            resultMode = MeasureSpec.Mode.AT_MOST
+                        }
                     }
                 }
 
@@ -638,6 +672,10 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                         }
 
                         SizeMode.WRAP_CONTENT -> {
+                            resultSize = 0f
+                        }
+
+                        SizeMode.PERCENT -> {
                             resultSize = 0f
                         }
                     }

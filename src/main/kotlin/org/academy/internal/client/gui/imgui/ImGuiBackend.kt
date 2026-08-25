@@ -36,14 +36,10 @@ import java.util.concurrent.ConcurrentHashMap
  * 仅使用 Blaze3D 抽象层渲染（PROGRAM.md R1），不含任何 GL/VK 直调。
  *
  * @param windowHandle GLFW 窗口句柄
- * @param surfaceWidth 物理帧缓冲宽度（像素）
- * @param surfaceHeight 物理帧缓冲高度（像素）
  */
 @ApiStatus.Internal
 class ImGuiBackend(
     private val windowHandle: Long,
-    private val surfaceWidth: () -> Int,
-    private val surfaceHeight: () -> Int,
 ) {
     val imGuiImplGlfw = ImGuiImplGlfw()
 
@@ -189,7 +185,7 @@ class ImGuiBackend(
 
             val renderPass = encoder.createRenderPass({ "ImGui" }, colorTextureView, Optional.empty())
             renderPass.use {
-                renderDrawData(drawData, it)
+                renderDrawData(drawData, it, renderTarget.width, renderTarget.height)
             }
         } finally {
             encoder.submit()
@@ -327,7 +323,7 @@ class ImGuiBackend(
         encoder.writeToBuffer(projMatrixUniform.slice(), projMatrixBuffer)
     }
 
-    private fun renderDrawData(drawData: ImDrawData, renderPass: RenderPass) {
+    private fun renderDrawData(drawData: ImDrawData, renderPass: RenderPass, areaWidth: Int, areaHeight: Int) {
         val fbWidth = (drawData.displaySizeX * drawData.framebufferScaleX).toInt()
         val fbHeight = (drawData.displaySizeY * drawData.framebufferScaleY).toInt()
         if (fbWidth <= 0 || fbHeight <= 0) return
@@ -351,8 +347,10 @@ class ImGuiBackend(
         var vertexOffset = 0L
         var indexOffset = 0L
 
-        val physicalWidth = surfaceWidth()
-        val physicalHeight = surfaceHeight()
+        // 用实际渲染区（离屏 target）作为 scissor 上界，而非常规的 surfaceWidth/Height
+        // （window framebuffer）：保证任何尺寸不同步都不会越出渲染区抛异常。
+        val physicalWidth = areaWidth
+        val physicalHeight = areaHeight
 
         for (n in 0 until drawData.cmdListsCount) {
             val vtxCount = drawData.getCmdListVtxBufferSize(n)
