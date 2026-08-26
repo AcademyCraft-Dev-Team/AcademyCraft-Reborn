@@ -39,14 +39,14 @@ class BlenderArcDemoSimulationTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 跑 40 帧（≈ Blender frame40 对照）
-        for (int i = 0; i < 40; i++) {
+        for (var i = 0; i < 40; i++) {
             sim.step(1f / 30f);
         }
 
         var buf = sim.arcBuffer();
         assertTrue(buf.count() > 0, "should spawn arcs");
         int surface = 0, contact = 0, spark = 0;
-        for (int a = 0; a < buf.count(); a++) {
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             if (arc.hasSurface() && arc.hasArchBase() && !arc.pinStart()) surface++;
             else if (arc.hasSurface() && arc.pinStart()) contact++;

@@ -32,13 +32,13 @@ class CurveGeneratorTest {
         assertEquals(42L, arc.seed());
 
         // All points should have generation=0
-        for (int i = 0; i < arc.size(); i++) {
+        for (var i = 0; i < arc.size(); i++) {
             assertEquals(0f, arc.generation(i), 0.01f, "All points should be generation 0");
         }
 
         // Points should form a vertical-ish line (y varies along normal 0,1,0)
         float yMin = Float.MAX_VALUE, yMax = Float.MIN_VALUE;
-        for (int i = 0; i < arc.size(); i++) {
+        for (var i = 0; i < arc.size(); i++) {
             yMin = Math.min(yMin, arc.y(i));
             yMax = Math.max(yMax, arc.y(i));
         }
@@ -65,8 +65,8 @@ class CurveGeneratorTest {
 
         // Should have points at different generations
         boolean hasGen0 = false, hasGen1 = false, hasGen2 = false;
-        for (int i = 0; i < arc.size(); i++) {
-            float gen = arc.generation(i);
+        for (var i = 0; i < arc.size(); i++) {
+            var gen = arc.generation(i);
             if (gen < 0.5f) hasGen0 = true;
             else if (gen < 1.5f) hasGen1 = true;
             else hasGen2 = true;
@@ -91,7 +91,7 @@ class CurveGeneratorTest {
         );
 
         assertEquals(12, arc.size());
-        for (int i = 0; i < arc.size(); i++) {
+        for (var i = 0; i < arc.size(); i++) {
             assertEquals(0f, arc.generation(i), 0.01f);
         }
     }
@@ -108,7 +108,7 @@ class CurveGeneratorTest {
                 1, 2, 1.57f, 0.3f, 0.35f, 0.6f, 2.0f);
 
         assertEquals(a.size(), b.size());
-        for (int i = 0; i < a.size(); i++) {
+        for (var i = 0; i < a.size(); i++) {
             assertEquals(a.x(i), b.x(i), 1e-6f);
             assertEquals(a.y(i), b.y(i), 1e-6f);
             assertEquals(a.z(i), b.z(i), 1e-6f);
@@ -130,9 +130,9 @@ class CurveGeneratorTest {
         // Find widths per generation
         float gen0Width = 0, gen1Width = 0, gen2Width = 0;
         int gen0Count = 0, gen1Count = 0, gen2Count = 0;
-        for (int i = 0; i < arc.size(); i++) {
-            float gen = arc.generation(i);
-            float w = arc.width(i);
+        for (var i = 0; i < arc.size(); i++) {
+            var gen = arc.generation(i);
+            var w = arc.width(i);
             if (gen < 0.5f) {
                 gen0Width += w;
                 gen0Count++;
@@ -145,8 +145,8 @@ class CurveGeneratorTest {
             }
         }
         if (gen0Count > 0 && gen1Count > 0) {
-            float avg0 = gen0Width / gen0Count;
-            float avg1 = gen1Width / gen1Count;
+            var avg0 = gen0Width / gen0Count;
+            var avg1 = gen1Width / gen1Count;
             assertTrue(avg1 < avg0, "Generation 1 should be thinner: " + avg1 + " < " + avg0);
         }
     }
@@ -154,7 +154,7 @@ class CurveGeneratorTest {
     @Test
     void branchBrightnessDecreasesWithDepth() {
         var arc = new ArcCurve();
-        float brightnessScale = 0.6f;
+        var brightnessScale = 0.6f;
         CurveGenerator.generate(arc,
                 0, 0, 0, 0, 1, 0,
                 0.1f, 12,
@@ -167,8 +167,8 @@ class CurveGeneratorTest {
         // 亮度由 generation 在着色器侧衰减：brightness = brightnessScale^generation
         // 验证 generation 值正确分布（着色器会用 pow(brightnessScale, gen) 计算亮度）
         boolean hasGen0 = false, hasGen1 = false;
-        for (int i = 0; i < arc.size(); i++) {
-            float gen = arc.generation(i);
+        for (var i = 0; i < arc.size(); i++) {
+            var gen = arc.generation(i);
             if (gen < 0.5f) hasGen0 = true;
             else if (gen < 1.5f) hasGen1 = true;
         }
@@ -202,7 +202,7 @@ class CurveGeneratorTest {
         assertEquals(0f, arc.x(arc.size() - 1), 1e-4f);
         assertEquals(2f, arc.y(arc.size() - 1), 1e-4f);
         // 控制柄沿 +Y 伸开 → 中部 y 应超过线性插值（起拱）
-        float midY = arc.y(arc.size() / 2);
+        var midY = arc.y(arc.size() / 2);
         assertTrue(midY > 1f + 0.05f, "Arc should arch above linear interpolation, midY=" + midY);
     }
 
@@ -218,7 +218,7 @@ class CurveGeneratorTest {
                 1, 2, 1.57f, 0.3f, 0.35f, 0.6f);
         assertTrue(arc.size() > 12);
         var segments = new HashSet<Integer>();
-        for (int i = 0; i < arc.size(); i++) {
+        for (var i = 0; i < arc.size(); i++) {
             segments.add(arc.segment(i));
         }
         // 主弧 + 2 分支 = 3 个不同 segment

@@ -1187,9 +1187,9 @@ public final class Render {
                 RenderSetup.builder(RenderPipelines.IMAG_PHASE_PARTICLE_POST)
                         .withTexture(
                                 "Sampler0", TextureAtlas.LOCATION_PARTICLES,
-                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
                         )
-                        .sortOnUpload()
+                        .setOutputTarget(GLOW_TARGET)
                         .createRenderSetup()
         );
 

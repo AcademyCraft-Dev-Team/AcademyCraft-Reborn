@@ -68,7 +68,7 @@ public final class PlatinumExecutionVfx implements Vfx {
         for (var iterator = DEATHS.entrySet().iterator(); iterator.hasNext(); ) {
             var entry = iterator.next();
             var state = entry.getValue();
-            float progress = Mth.clamp(
+            var progress = Mth.clamp(
                     (float) ((currentTick - state.startTick) / state.durationTicks), 0.0f, 1.0f);
             if (progress >= 1.0f) {
                 DEATHS.remove(entry.getKey(), state);
@@ -82,12 +82,12 @@ public final class PlatinumExecutionVfx implements Vfx {
             var collapseProgress = Mth.clamp(progress / 0.72f, 0.0f, 1.0f);
             var inverse = 1.0f - collapseProgress;
             var collapse = 81.0f * (1.0f - inverse * inverse * inverse);
-            float flash = progress < 0.08f ? 1.0f - progress / 0.08f : 0.0f;
-            float alpha = progress > 0.70f
+            var flash = progress < 0.08f ? 1.0f - progress / 0.08f : 0.0f;
+            var alpha = progress > 0.70f
                     ? Mth.clamp(1.0f - (progress - 0.70f) / 0.30f, 0.0f, 1.0f)
                     : 1.0f;
-            float red = Mth.clamp(0.80f + flash * 0.20f, 0.0f, 1.0f);
-            float green = Mth.clamp(0.85f + flash * 0.15f, 0.0f, 1.0f);
+            var red = Mth.clamp(0.80f + flash * 0.20f, 0.0f, 1.0f);
+            var green = Mth.clamp(0.85f + flash * 0.15f, 0.0f, 1.0f);
             var halfWidth = Math.max(0.15, state.width * 0.5);
             var localBounds = new AABB(
                     -halfWidth, 0.0, -halfWidth,

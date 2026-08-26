@@ -23,8 +23,8 @@ public final class SceneDepth {
      */
     public void copyFrom(GpuTextureView depth) {
         var source = depth.texture();
-        int w = source.getWidth(0);
-        int h = source.getHeight(0);
+        var w = source.getWidth(0);
+        var h = source.getHeight(0);
         if (texture == null || view == null || w != width || h != height || format != source.getFormat()) {
             release();
             width = w;

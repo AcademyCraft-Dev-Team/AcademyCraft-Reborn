@@ -354,7 +354,7 @@ public final class MentaloutGameTests {
                     var entityHit = MentaloutTargeting.findSightDestination(
                             controller, MentaloutTargeting.MAX_SIGHT_RANGE);
                     helper.assertTrue(
-                            entityHit instanceof ControlDestination.Entity(UUID uuid)
+                            entityHit instanceof ControlDestination.Entity(var uuid)
                                     && uuid.equals(target.getUUID()),
                             "Sight destination did not select the looked-at entity"
                     );
@@ -372,7 +372,7 @@ public final class MentaloutGameTests {
                             new BlockPos(1, 3, 3)
                     ));
                     helper.assertTrue(
-                            blockHit instanceof ControlDestination.Position(Identifier dimension, Vec3 value)
+                            blockHit instanceof ControlDestination.Position(var dimension, var value)
                                     && dimension.equals(helper.getLevel().dimension().identifier())
                                     && value.distanceToSqr(expected) < 1.0e-6,
                             "Sight destination did not return the outside face position"

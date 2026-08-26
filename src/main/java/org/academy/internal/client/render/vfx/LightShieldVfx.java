@@ -30,7 +30,7 @@ public final class LightShieldVfx implements Vfx {
         var roots = WingAvatarRegistry.entries();
         if (roots.isEmpty()) return;
 
-        for (Map.Entry<Integer, Matrix4f> entry : roots.entrySet()) {
+        for (var entry : roots.entrySet()) {
             var entity = level.getEntity(entry.getKey());
             if (!(entity instanceof Player player)) continue;
             if (!player.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get())) continue;

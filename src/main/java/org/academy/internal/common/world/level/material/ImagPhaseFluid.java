@@ -30,9 +30,9 @@ public abstract class ImagPhaseFluid extends FlowingFluid {
 
     @Override
     protected void animateTick(Level level, BlockPos pos, FluidState state, RandomSource random) {
-        double height = Math.max(0.125, state.getOwnHeight());
-        int volumeCount = random.nextInt(2, 5);
-        for (int i = 0; i < volumeCount; i++) {
+        var height = Math.max(0.125, state.getOwnHeight());
+        var volumeCount = random.nextInt(2, 5);
+        for (var i = 0; i < volumeCount; i++) {
             spawnParticle(
                     level,
                     pos.getX() + random.nextDouble(),
@@ -41,8 +41,8 @@ public abstract class ImagPhaseFluid extends FlowingFluid {
             );
         }
 
-        for (Direction direction : Direction.values()) {
-            BlockPos neighborPos = pos.relative(direction);
+        for (var direction : Direction.values()) {
+            var neighborPos = pos.relative(direction);
             if (isSame(level.getFluidState(neighborPos).getType())
                     || level.getBlockState(neighborPos)
                     .isFaceSturdy(level, neighborPos, direction.getOpposite())
@@ -60,10 +60,10 @@ public abstract class ImagPhaseFluid extends FlowingFluid {
             double height,
             RandomSource random
     ) {
-        double x = pos.getX() + SURFACE_INSET + random.nextDouble() * (1.0 - SURFACE_INSET * 2.0);
-        double y = pos.getY() + SURFACE_INSET
+        var x = pos.getX() + SURFACE_INSET + random.nextDouble() * (1.0 - SURFACE_INSET * 2.0);
+        var y = pos.getY() + SURFACE_INSET
                 + random.nextDouble() * Math.max(0.01, height - SURFACE_INSET * 2.0);
-        double z = pos.getZ() + SURFACE_INSET + random.nextDouble() * (1.0 - SURFACE_INSET * 2.0);
+        var z = pos.getZ() + SURFACE_INSET + random.nextDouble() * (1.0 - SURFACE_INSET * 2.0);
         switch (direction) {
             case UP -> y = pos.getY() + height - SURFACE_INSET;
             case DOWN -> y = pos.getY() + SURFACE_INSET;

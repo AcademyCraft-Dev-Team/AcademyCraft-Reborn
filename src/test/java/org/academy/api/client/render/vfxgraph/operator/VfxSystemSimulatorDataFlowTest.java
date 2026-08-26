@@ -82,7 +82,7 @@ class VfxSystemSimulatorDataFlowTest {
         var buffer = sim.buffer();
         assertEquals(1, buffer.count());
         // 粒子 seed 稳定值 S，vx = S*2
-        float seed = buffer.seed(0);
+        var seed = buffer.seed(0);
         assertEquals(seed * 2f, buffer.velocityX(0), 1e-5f);
     }
 
@@ -117,9 +117,9 @@ class VfxSystemSimulatorDataFlowTest {
         sim.step(0.1f);
         var buffer = sim.buffer();
         assertEquals(4, buffer.count());
-        float v0 = buffer.velocityX(0);
+        var v0 = buffer.velocityX(0);
         var distinct = new HashSet<Float>();
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             distinct.add(buffer.velocityX(i));
             assertEquals(buffer.seed(i), buffer.velocityX(i), 1e-5f);
         }

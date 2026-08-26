@@ -15,7 +15,7 @@ public final class VectorAttackFingerprint {
             Vec3 origin,
             Vec3 direction
     ) {
-        long value = gameTime;
+        var value = gameTime;
         value = mix(value, defenderId);
         value = mix(value, source.getMsgId().hashCode());
         value = mix(value, entityId(source.getEntity()));

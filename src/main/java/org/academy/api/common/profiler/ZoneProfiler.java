@@ -17,7 +17,7 @@ public final class ZoneProfiler {
     private static final ConcurrentHashMap<Long, ZoneSession> sessions = new ConcurrentHashMap<>();
 
     private static final ThreadLocal<ZoneSession> threadLocalSession = ThreadLocal.withInitial(() -> {
-        Thread thread = Thread.currentThread();
+        var thread = Thread.currentThread();
         return sessions.computeIfAbsent(
                 thread.threadId(),
                 id -> new ZoneSession(id, thread.getName())
@@ -56,7 +56,7 @@ public final class ZoneProfiler {
         if (!enabled) {
             return;
         }
-        ZoneSession session = threadLocalSession.get();
+        var session = threadLocalSession.get();
         session.pop();
         session.push(name);
     }
@@ -69,7 +69,7 @@ public final class ZoneProfiler {
     }
 
     public static void reset() {
-        for (ZoneSession session : sessions.values()) {
+        for (var session : sessions.values()) {
             session.reset();
         }
     }
@@ -77,7 +77,7 @@ public final class ZoneProfiler {
     public static List<String> threadNames() {
         List<String> names = new ArrayList<>();
         Set<String> seen = new HashSet<>();
-        for (ZoneSession session : sessions.values()) {
+        for (var session : sessions.values()) {
             if (seen.add(session.getName())) {
                 names.add(session.getName());
             }
@@ -88,7 +88,7 @@ public final class ZoneProfiler {
 
     public static Map<String, ZoneSnapshot> snapshot() {
         Map<String, ZoneSnapshot> result = new LinkedHashMap<>();
-        for (ZoneSession session : sessions.values()) {
+        for (var session : sessions.values()) {
             if (!result.containsKey(session.getName())) {
                 result.put(session.getName(), session.snapshot());
             }

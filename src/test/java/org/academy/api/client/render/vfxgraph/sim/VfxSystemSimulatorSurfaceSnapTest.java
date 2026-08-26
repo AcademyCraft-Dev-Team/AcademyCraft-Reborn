@@ -60,11 +60,11 @@ class VfxSystemSimulatorSurfaceSnapTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 多帧：噪声动画会让点漂移，但带表面的弧端点应被拉回平面 y=0
-        for (int i = 0; i < 30; i++) {
+        for (var i = 0; i < 30; i++) {
             sim.step(1f / 60f);
         }
         var buf = sim.arcBuffer();
-        for (int a = 0; a < buf.count(); a++) {
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             if (!arc.hasSurface()) continue;
             assertEquals(0f, arc.y(0), 1e-3f, "endpoint should stay snapped to plane across frames");
@@ -80,10 +80,10 @@ class VfxSystemSimulatorSurfaceSnapTest {
         var arc = buf.add();
         arc.setLifetime(10f);
         arc.setSurface(surface); // 有表面
-        for (int i = 0; i < 12; i++) {
+        for (var i = 0; i < 12; i++) {
             arc.addPoint(0, i * 0.1f, 0, 0.01f, 0);
         }
-        float origY0 = arc.y(0);
+        var origY0 = arc.y(0);
         arc.setSurface(null); // 去掉表面 → 自由弧
 
         // 用 SurfaceConstraint 无表面时不应改变端点

@@ -29,8 +29,8 @@ public final class DarkmatterCoatingRecipe extends CustomRecipe {
     }
 
     private static Inputs findInputs(CraftingInput input) {
-        ItemStack coating = ItemStack.EMPTY;
-        ItemStack target = ItemStack.EMPTY;
+        var coating = ItemStack.EMPTY;
+        var target = ItemStack.EMPTY;
         for (var slot = 0; slot < input.size(); slot++) {
             var stack = input.getItem(slot);
             if (stack.isEmpty()) continue;

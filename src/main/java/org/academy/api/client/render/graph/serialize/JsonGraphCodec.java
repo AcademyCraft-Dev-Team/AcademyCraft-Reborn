@@ -137,7 +137,7 @@ public final class JsonGraphCodec implements GraphCodec {
             return List.of();
         }
         var ports = new ArrayList<Port>(type.ports().size());
-        for (PortSpec spec : type.ports()) {
+        for (var spec : type.ports()) {
             ports.add(new Port(spec.id(), spec.name(), spec.direction(), spec.type(), spec.defaultValue()));
         }
         return ports;
@@ -258,7 +258,7 @@ public final class JsonGraphCodec implements GraphCodec {
 
     private static Curve decodeCurve(JsonArray arr) {
         var kfs = new ArrayList<Curve.Keyframe>();
-        for (JsonElement el : arr) {
+        for (var el : arr) {
             var o = el.getAsJsonObject();
             var interpolation = o.has("i") ? Curve.Interpolation.valueOf(o.get("i").getAsString()) : Curve.Interpolation.LINEAR;
             kfs.add(new Curve.Keyframe(
@@ -286,7 +286,7 @@ public final class JsonGraphCodec implements GraphCodec {
 
     private static Gradient decodeGradient(JsonArray arr) {
         var stops = new ArrayList<Gradient.ColorStop>();
-        for (JsonElement el : arr) {
+        for (var el : arr) {
             var o = el.getAsJsonObject();
             stops.add(new Gradient.ColorStop(
                     o.get("p").getAsFloat(), o.get("r").getAsFloat(), o.get("g").getAsFloat(),

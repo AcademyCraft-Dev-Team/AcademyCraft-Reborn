@@ -60,10 +60,10 @@ class M29bArcGatingTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 跑 300 帧：帧周期 3（@30fps）→ 每 0.1s 一批 ~4 弧，lifetime 0.4s → 稳态 ≈ 4 × 4 = 16
-        for (int i = 0; i < 300; i++) {
+        for (var i = 0; i < 300; i++) {
             sim.step(1f / 60f);
         }
-        int arcs = sim.arcBuffer().count();
+        var arcs = sim.arcBuffer().count();
         assertTrue(arcs > 0, "gated surface arcs should still spawn");
         assertTrue(arcs < 30, "frame-periodic gating should keep steady-state arc count < 30, got " + arcs);
     }
@@ -112,13 +112,13 @@ class M29bArcGatingTest {
                 List.of(), List.of(), List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        for (int i = 0; i < 300; i++) {
+        for (var i = 0; i < 300; i++) {
             sim.step(1f / 60f);
         }
         // 源弧稳态 ~16（见 framePeriodicGatingCapsSpawnedArcs）；火花只从本帧新增弧派生 + 每弧 ≤3 →
         // 火花稳态应远小于"每条弧每控制点每帧"的指数放大（旧 ~1000+）。给宽松上界。
-        int sparks = 0;
-        for (int a = 0; a < sim.arcBuffer().count(); a++) {
+        var sparks = 0;
+        for (var a = 0; a < sim.arcBuffer().count(); a++) {
             if (!sim.arcBuffer().arc(a).hasSurface()) sparks++;
         }
         assertTrue(sparks < 100, "spark arcs should be bounded (fresh-only + per-arc cap), got " + sparks);
@@ -146,7 +146,7 @@ class M29bArcGatingTest {
                 List.of(), List.of(), List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        for (int i = 0; i < 300; i++) {
+        for (var i = 0; i < 300; i++) {
             sim.step(1f / 60f);
         }
         // 稳态后总弧数（源弧 + 火花）应远小于旧 ~1000+ 指数放大：宽松上界

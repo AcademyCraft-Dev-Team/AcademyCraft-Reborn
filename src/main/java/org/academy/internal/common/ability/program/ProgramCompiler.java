@@ -128,7 +128,7 @@ public final class ProgramCompiler {
                     .result()
                     .orElse(null);
             if (configuration == null) return null;
-            ProgramNodeSchema schema = type.schema(configuration);
+            var schema = type.schema(configuration);
             return new CompiledProgram.CompiledNode(
                     node.id(),
                     node.type(),

@@ -22,7 +22,7 @@ public final class EmptyUnitItem extends Item {
 
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
+        var stack = player.getItemInHand(hand);
         var hitResult = getPlayerPOVHitResult(level, player, ClipContext.Fluid.SOURCE_ONLY);
         if (hitResult.getType() == HitResult.Type.MISS) {
             return InteractionResult.PASS;
@@ -40,14 +40,14 @@ public final class EmptyUnitItem extends Item {
             return InteractionResult.FAIL;
         }
 
-        ItemStack filled = bucketPickup.pickupBlock(player, level, pos, state);
+        var filled = bucketPickup.pickupBlock(player, level, pos, state);
         if (filled.isEmpty()) {
             return InteractionResult.FAIL;
         }
 
         bucketPickup.getPickupSound(state).ifPresent(sound -> player.playSound(sound, 1.0F, 1.0F));
         level.gameEvent(player, GameEvent.FLUID_PICKUP, pos);
-        ItemStack result = player.hasInfiniteMaterials()
+        var result = player.hasInfiniteMaterials()
                 ? stack
                 : ItemUtils.createFilledResult(stack, player, filled);
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {

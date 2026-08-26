@@ -55,8 +55,8 @@ public final class DarkmatterBlockItem extends BlockItem implements DarkmatterSh
             ItemStack stack,
             BlockState state
     ) {
-        boolean updated = super.updateCustomBlockEntityTag(pos, level, player, stack, state);
-        BlockEntity blockEntity = level.getBlockEntity(pos);
+        var updated = super.updateCustomBlockEntityTag(pos, level, player, stack, state);
+        var blockEntity = level.getBlockEntity(pos);
         if (blockEntity instanceof DarkmatterBlockEntity darkmatterBlockEntity) {
             darkmatterBlockEntity.setProfile(profile(stack));
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);

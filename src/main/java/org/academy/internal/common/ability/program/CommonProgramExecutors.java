@@ -609,7 +609,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case BLOCK_POSITION -> CommonProgramNodeCatalog.CollectionDomain.BLOCK_POSITION;
                     };
                     var values = new ArrayList<>(collection(inputs, "values", domain));
-                    Comparator<Object> comparator = Comparator.comparingDouble(
+                    var comparator = Comparator.comparingDouble(
                             value -> pointDistanceSquared(context, origin, value));
                     if (configuration.order().reversed()) comparator = comparator.reversed();
                     values.sort(comparator);
@@ -1137,7 +1137,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         if (!ProgramValueTypes.canConnect(source.type(), target)) {
             throw new IllegalArgumentException("Cannot store incompatible program value");
         }
-        Object raw = source.value();
+        var raw = source.value();
         if (source.type().equals(ProgramValueTypes.INTEGER) && target.equals(ProgramValueTypes.FLOAT)) {
             raw = ((Integer) raw).doubleValue();
         }

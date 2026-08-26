@@ -39,7 +39,7 @@ class ActiveEffectTest {
     @Test
     void tickSpawnsAndIntegrates() {
         var effect = new ActiveEffect("k", burstGraph("10"), vfxRegistry, new Vector3f(0f, 0f, 0f));
-        for (int i = 0; i < 3; i++) {
+        for (var i = 0; i < 3; i++) {
             assertFalse(effect.tick(0.1f));
         }
         assertEquals(3, effect.effect().buffer().count());
@@ -95,7 +95,7 @@ class ActiveEffectTest {
         effect.reload(burstGraph("0"));
         assertEquals(5f, effect.position().x, 1e-5f);
         assertInstanceOf(WorldTransform.class, effect.worldTransform());
-        for (int i = 0; i < 2; i++) {
+        for (var i = 0; i < 2; i++) {
             effect.tick(0.1f);
         }
         assertEquals(0, effect.effect().buffer().count());

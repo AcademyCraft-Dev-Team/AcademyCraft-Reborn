@@ -20,7 +20,7 @@ public final class CircleEdgeShape implements EmitterShape {
 
     @Override
     public void sample(Random random, float[] out) {
-        float theta = random.nextFloat() * 2f * (float) Math.PI;
+        var theta = random.nextFloat() * 2f * (float) Math.PI;
         out[0] = cx + (float) Math.cos(theta) * radius;
         out[1] = cy;
         out[2] = cz + (float) Math.sin(theta) * radius;

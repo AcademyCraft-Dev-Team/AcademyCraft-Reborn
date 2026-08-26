@@ -53,7 +53,7 @@ class VfxSystemSimulatorTest {
                 List.of());
 
         var sim = new VfxSystemSimulator(system, blocks, 42L, List.of());
-        for (int i = 0; i < 3; i++) {
+        for (var i = 0; i < 3; i++) {
             sim.step(0.1f);
         }
         var buffer = sim.buffer();
@@ -97,9 +97,9 @@ class VfxSystemSimulatorTest {
         var buffer = sim.buffer();
         assertEquals(2, buffer.count());
         // 两个独立 spawn context 的先后不保证，按颜色断言：红色（链路 A，vx=1 → x=0.1）、绿色（链路 B，vx=3 → x=0.3）
-        int red = -1;
-        int green = -1;
-        for (int i = 0; i < buffer.count(); i++) {
+        var red = -1;
+        var green = -1;
+        for (var i = 0; i < buffer.count(); i++) {
             if (buffer.colorR(i) > 0.5f) red = i;
             else green = i;
         }
@@ -132,9 +132,9 @@ class VfxSystemSimulatorTest {
         sim.step(0.1f);
         var buffer = sim.buffer();
         assertEquals(1, buffer.count());
-        float x = buffer.positionX(0);
+        var x = buffer.positionX(0);
         // dt=0 多帧：无新粒子、位置不变
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
             sim.step(0f);
         }
         assertEquals(1, buffer.count());
@@ -245,7 +245,7 @@ class VfxSystemSimulatorTest {
         var buffer = sim.buffer();
         // 两个 spawn context 各产 1 粒子，init 拿到并集（2 个）都设 vx=5 → x=0.5
         assertEquals(2, buffer.count());
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             assertEquals(0.5f, buffer.positionX(i), 1e-5f);
         }
     }
@@ -270,12 +270,12 @@ class VfxSystemSimulatorTest {
 
         var sim = new VfxSystemSimulator(system, blocks, 42L, List.of());
         // 播完：burst 5 粒 + lifetime 0.3 → 跑 1s 后粒子为 0
-        for (int i = 0; i < 60; i++) sim.step(1f / 60f);
+        for (var i = 0; i < 60; i++) sim.step(1f / 60f);
         assertEquals(0, sim.buffer().count());
         assertTrue(sim.time() > 0f);
 
         // 模拟编辑器 loop 重启：新建模拟器 + setTime 延续原时间
-        float continued = sim.time();
+        var continued = sim.time();
         var sim2 = new VfxSystemSimulator(system, blocks, 42L, List.of());
         sim2.setTime(continued);
         sim2.step(1f / 60f);

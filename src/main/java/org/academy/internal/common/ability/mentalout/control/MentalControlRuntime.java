@@ -381,7 +381,7 @@ public final class MentalControlRuntime {
                 selectedGuardTarget = state.guardTargets.get(attacker.getUUID());
             }
             var controller = attacker.level().getServer().getPlayerList().getPlayer(guard.controllerId());
-            var protectsDestination = guardDirective.destination() instanceof ControlDestination.Entity(UUID uuid)
+            var protectsDestination = guardDirective.destination() instanceof ControlDestination.Entity(var uuid)
                     && uuid.equals(target.getUUID());
             var protectsController = controller != null && (target == controller
                     || controller.isAlliedTo(target)
@@ -1008,7 +1008,7 @@ public final class MentalControlRuntime {
 
     static @Nullable LivingEntity findLivingEntity(MinecraftServer server, UUID entityId) {
         for (var level : server.getAllLevels()) {
-            Entity entity = level.getEntity(entityId);
+            var entity = level.getEntity(entityId);
             if (entity instanceof LivingEntity living) return living;
         }
         return null;
@@ -1184,11 +1184,11 @@ public final class MentalControlRuntime {
             LivingEntity subject,
             ControlDirective directive
     ) {
-        if (directive instanceof ControlDirective.ForceTarget(UUID uuid)) {
+        if (directive instanceof ControlDirective.ForceTarget(var uuid)) {
             validateTarget(server, subject, uuid, directive.capability());
         } else if (directive instanceof ControlDirective.MoveTo moveTo) {
             validateDestination(server, subject, moveTo.destination(), directive.capability());
-        } else if (directive instanceof ControlDirective.LookAt(UUID targetUuid)) {
+        } else if (directive instanceof ControlDirective.LookAt(var targetUuid)) {
             validateTarget(server, subject, targetUuid, directive.capability());
         } else if (directive instanceof ControlDirective.Guard guard) {
             validateDestination(server, subject, guard.destination(), directive.capability());
@@ -1211,9 +1211,9 @@ public final class MentalControlRuntime {
         return switch (directive) {
             case ControlDirective.ForceTarget forceTarget -> forceTarget.targetUuid();
             case ControlDirective.LookAt lookAt -> lookAt.targetUuid();
-            case ControlDirective.MoveTo moveTo -> moveTo.destination() instanceof ControlDestination.Entity(UUID uuid)
+            case ControlDirective.MoveTo moveTo -> moveTo.destination() instanceof ControlDestination.Entity(var uuid)
                     ? uuid : null;
-            case ControlDirective.Guard guard -> guard.destination() instanceof ControlDestination.Entity(UUID uuid)
+            case ControlDirective.Guard guard -> guard.destination() instanceof ControlDestination.Entity(var uuid)
                     ? uuid : null;
             default -> null;
         };
@@ -1808,7 +1808,7 @@ public final class MentalControlRuntime {
 
         synchronized @Nullable UUID forcedTarget(UUID subjectId, long now) {
             var effective = effective(subjectId, ControlCapability.FORCE_TARGET, now);
-            return effective != null && effective.directive() instanceof ControlDirective.ForceTarget(UUID targetUuid)
+            return effective != null && effective.directive() instanceof ControlDirective.ForceTarget(var targetUuid)
                     ? targetUuid
                     : null;
         }
@@ -2042,7 +2042,7 @@ public final class MentalControlRuntime {
             if (subject == null) return;
             for (var entry : lease.entries().entrySet()) {
                 subject.domain(entry.getKey()).remove(entry.getValue());
-                if (entry.getValue().directive() instanceof ControlDirective.ForceTarget(UUID targetUuid)) {
+                if (entry.getValue().directive() instanceof ControlDirective.ForceTarget(var targetUuid)) {
                     result.addTarget(subjectId, targetUuid);
                 }
             }

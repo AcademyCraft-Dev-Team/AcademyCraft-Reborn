@@ -109,7 +109,7 @@ public final class SimContext {
      */
     public void forEachIncoming(IntConsumer action) {
         for (var batch : incomingBatches) {
-            for (int i = batch.start(); i < batch.end(); i++) {
+            for (var i = batch.start(); i < batch.end(); i++) {
                 action.accept(i);
             }
         }

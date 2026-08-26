@@ -554,7 +554,7 @@ public final class ShaderNodes {
             case "math.smoothstep" -> "smoothstep(0.0, 1.0, clamp({x}, 0.0, 1.0))";
             default -> fn == null ? null : fn + "({x})";
         };
-        final String template = body;
+        final var template = body;
         register(metadata, codegen,
                 type(id, "math", name,
                         List.of(in("x", "X", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)), List.of()),
@@ -573,17 +573,17 @@ public final class ShaderNodes {
      * 解析渐变 stops（"t:r,g,b,a;t:r,g,b,a;..."）为 GLSL mix 链。
      */
     private static Expr gradientExpr(GraphNode node, String t) {
-        String stops = node.properties().getOrDefault("stops", "0.0:0,0,0,1;1.0:1,1,1,1");
-        List<float[]> parsed = parseStops(stops);
+        var stops = node.properties().getOrDefault("stops", "0.0:0,0,0,1;1.0:1,1,1,1");
+        var parsed = parseStops(stops);
         if (parsed.isEmpty()) {
             return new Expr("vec4(1.0)", ValueType.COLOR);
         }
-        String expr = colorLiteral(parsed.get(0));
-        for (int i = 1; i < parsed.size(); i++) {
-            float[] prev = parsed.get(i - 1);
-            float[] cur = parsed.get(i);
-            float span = cur[0] - prev[0];
-            String seg = span <= 0f ? "0.0" : "(clamp((" + t + " - " + prev[0] + ") / " + span + ", 0.0, 1.0))";
+        var expr = colorLiteral(parsed.get(0));
+        for (var i = 1; i < parsed.size(); i++) {
+            var prev = parsed.get(i - 1);
+            var cur = parsed.get(i);
+            var span = cur[0] - prev[0];
+            var seg = span <= 0f ? "0.0" : "(clamp((" + t + " - " + prev[0] + ") / " + span + ", 0.0, 1.0))";
             expr = "mix(" + expr + ", " + colorLiteral(cur) + ", " + seg + ")";
         }
         return new Expr(expr, ValueType.COLOR);
@@ -597,10 +597,10 @@ public final class ShaderNodes {
             var t = Float.parseFloat(parts[0].trim());
             var rgba = parts[1].split(",");
             if (rgba.length < 3) continue;
-            float r = Float.parseFloat(rgba[0].trim());
-            float g = Float.parseFloat(rgba[1].trim());
-            float b = Float.parseFloat(rgba[2].trim());
-            float a = rgba.length > 3 ? Float.parseFloat(rgba[3].trim()) : 1f;
+            var r = Float.parseFloat(rgba[0].trim());
+            var g = Float.parseFloat(rgba[1].trim());
+            var b = Float.parseFloat(rgba[2].trim());
+            var a = rgba.length > 3 ? Float.parseFloat(rgba[3].trim()) : 1f;
             list.add(new float[]{t, r, g, b, a});
         }
         return list;
@@ -652,10 +652,10 @@ public final class ShaderNodes {
 
     private static Expr colorLiteral(String csv) {
         var parts = csv.split(",");
-        float r = parts.length > 0 ? Float.parseFloat(parts[0].trim()) : 1f;
-        float g = parts.length > 1 ? Float.parseFloat(parts[1].trim()) : 1f;
-        float b = parts.length > 2 ? Float.parseFloat(parts[2].trim()) : 1f;
-        float a = parts.length > 3 ? Float.parseFloat(parts[3].trim()) : 1f;
+        var r = parts.length > 0 ? Float.parseFloat(parts[0].trim()) : 1f;
+        var g = parts.length > 1 ? Float.parseFloat(parts[1].trim()) : 1f;
+        var b = parts.length > 2 ? Float.parseFloat(parts[2].trim()) : 1f;
+        var a = parts.length > 3 ? Float.parseFloat(parts[3].trim()) : 1f;
         return GlslLiterals.of(Value.color(r, g, b, a));
     }
 }

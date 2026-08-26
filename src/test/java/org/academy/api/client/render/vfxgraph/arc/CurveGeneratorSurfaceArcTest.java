@@ -41,8 +41,8 @@ class CurveGeneratorSurfaceArcTest {
         assertEquals(2f, arc.y(0), 1e-3f, "start on surface plane");
         assertEquals(2f, arc.y(arc.size() - 1), 1e-3f, "end on surface plane");
         // 法线上拱：中间 y > 2（帐篷拱）
-        boolean above = false;
-        for (int i = 0; i < arc.size(); i++) {
+        var above = false;
+        for (var i = 0; i < arc.size(); i++) {
             if (arc.y(i) > 2.01f) {
                 above = true;
                 break;
@@ -65,8 +65,8 @@ class CurveGeneratorSurfaceArcTest {
         assertEquals(5f, arc.y(0), 1e-3f);
         assertEquals(5f, arc.y(arc.size() - 1), 1e-3f);
         // 基线中心 ≈ 表面点（两端中点）
-        float cx = (arc.x(0) + arc.x(arc.size() - 1)) * 0.5f;
-        float cz = (arc.z(0) + arc.z(arc.size() - 1)) * 0.5f;
+        var cx = (arc.x(0) + arc.x(arc.size() - 1)) * 0.5f;
+        var cz = (arc.z(0) + arc.z(arc.size() - 1)) * 0.5f;
         assertEquals(0f, cx, 1e-3f, "arch center x ≈ surface point");
         assertEquals(0f, cz, 1e-3f, "arch center z ≈ surface point");
     }
@@ -83,7 +83,7 @@ class CurveGeneratorSurfaceArcTest {
         CurveGenerator.generateSurfaceArc(b, 0, 0, 0, 0, 1, 0, 1.0f, 0.78f, 0.01f, 12,
                 1f, 1f, 1f, 1f, 1f, 42L);
         assertEquals(a.size(), b.size());
-        for (int i = 0; i < a.size(); i++) {
+        for (var i = 0; i < a.size(); i++) {
             assertEquals(a.x(i), b.x(i), 1e-6f);
             assertEquals(a.y(i), b.y(i), 1e-6f);
             assertEquals(a.z(i), b.z(i), 1e-6f);

@@ -164,7 +164,7 @@ public final class CommandPositioning extends Skill {
                 return;
             }
 
-            var destinationEntity = destination instanceof ControlDestination.Entity(UUID uuid)
+            var destinationEntity = destination instanceof ControlDestination.Entity(var uuid)
                     ? uuid
                     : null;
             var skipped = 0;
@@ -249,7 +249,7 @@ public final class CommandPositioning extends Skill {
                 boolean enabled
         ) {
             if (!enabled || !(destination instanceof ControlDestination.Position(
-                    net.minecraft.resources.Identifier dimension, Vec3 value
+                    var dimension, var value
             ))
                     || count <= 1) return destination;
             var spacing = Math.max(1.25, subject.getBbWidth() + 0.5);

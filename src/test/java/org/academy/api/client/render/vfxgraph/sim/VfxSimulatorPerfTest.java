@@ -50,10 +50,10 @@ class VfxSimulatorPerfTest {
         assertEquals(10000, sim.buffer().count());
 
         long worst = 0;
-        for (int i = 0; i < 60; i++) {
-            long start = System.nanoTime();
+        for (var i = 0; i < 60; i++) {
+            var start = System.nanoTime();
             sim.step(0.016f);
-            long elapsed = System.nanoTime() - start;
+            var elapsed = System.nanoTime() - start;
             worst = Math.max(worst, elapsed);
         }
         System.out.println("[perf] 10k particle steady-state worst step: " + worst / 1_000_000.0 + " ms");
@@ -70,11 +70,11 @@ class VfxSimulatorPerfTest {
                 node("age", "vfx.update_age", Map.of())
         ), vfxRegistry, 42L);
 
-        long start = System.nanoTime();
-        for (int i = 0; i < 600; i++) {
+        var start = System.nanoTime();
+        for (var i = 0; i < 600; i++) {
             sim.step(0.016f);
         }
-        long total = System.nanoTime() - start;
+        var total = System.nanoTime() - start;
         System.out.println("[perf] 10k particle churn 600 steps total: " + total / 1_000_000.0 + " ms");
         assertTrue(total < BURST_TOTAL_BUDGET_NS, "10k churn total exceeded budget: " + total + " ns");
     }

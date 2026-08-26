@@ -37,14 +37,14 @@ class FirePauseTest {
         VfxGraphManager.INSTANCE.registerAsset(assetId, json);
         var effect = VfxGraphManager.INSTANCE.spawn(assetId, new Vector3f());
         // 播放 60 帧
-        for (int i = 0; i < 60; i++) effect.tick(1f / 60f);
-        int before = effect.effect().buffer().count();
+        for (var i = 0; i < 60; i++) effect.tick(1f / 60f);
+        var before = effect.effect().buffer().count();
         assertTrue(before > 0, "fire should have live particles before pause");
-        float y0 = effect.effect().buffer().positionY(0);
+        var y0 = effect.effect().buffer().positionY(0);
         // 暂停 120 帧（dt=0）
-        for (int i = 0; i < 120; i++) effect.tick(0f);
-        int during = effect.effect().buffer().count();
-        float y1 = effect.effect().buffer().positionY(0);
+        for (var i = 0; i < 120; i++) effect.tick(0f);
+        var during = effect.effect().buffer().count();
+        var y1 = effect.effect().buffer().positionY(0);
         // 断言：粒子数不减少、位置冻结
         assertTrue(during >= before, "particles should not die during pause: before=" + before + " during=" + during);
         assertTrue(Math.abs(y1 - y0) < 1e-4f, "position should freeze during pause");

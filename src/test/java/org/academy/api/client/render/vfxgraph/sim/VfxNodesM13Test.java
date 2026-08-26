@@ -50,14 +50,14 @@ class VfxNodesM13Test {
                 Map.of("count", "40", "shape", "mesh", "mesh_scale", "2"))));
         sim.step(0.1f);
         assertEquals(40, sim.buffer().count());
-        float eps = 1e-3f;
-        for (int i = 0; i < sim.buffer().count(); i++) {
-            float x = sim.buffer().positionX(i);
-            float y = sim.buffer().positionY(i);
-            float z = sim.buffer().positionZ(i);
+        var eps = 1e-3f;
+        for (var i = 0; i < sim.buffer().count(); i++) {
+            var x = sim.buffer().positionX(i);
+            var y = sim.buffer().positionY(i);
+            var z = sim.buffer().positionZ(i);
             assertTrue(x >= -eps && x <= 2f + eps && y >= -eps && y <= 2f + eps && z >= -eps && z <= 2f + eps,
                     "inside scaled cube");
-            boolean onSurface = x < eps || x > 2f - eps || y < eps || y > 2f - eps || z < eps || z > 2f - eps;
+            var onSurface = x < eps || x > 2f - eps || y < eps || y > 2f - eps || z < eps || z > 2f - eps;
             assertTrue(onSurface, "on cube surface: " + x + "," + y + "," + z);
         }
     }
@@ -78,7 +78,7 @@ class VfxNodesM13Test {
                 node("life", "vfx.init_lifetime", Map.of("lifetime", "2"))
         ));
         sim.step(0.1f);
-        for (int i = 0; i < 3; i++) {
+        for (var i = 0; i < 3; i++) {
             assertEquals(2f, sim.buffer().lifetime(i));
         }
     }
@@ -103,7 +103,7 @@ class VfxNodesM13Test {
         ));
         sim.step(0.1f);
         var buffer = sim.buffer();
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             assertTrue(buffer.positionX(i) >= -1f && buffer.positionX(i) <= 1f);
             assertTrue(buffer.positionY(i) >= -1f && buffer.positionY(i) <= 1f);
             assertTrue(buffer.positionZ(i) >= -1f && buffer.positionZ(i) <= 1f);
@@ -190,8 +190,8 @@ class VfxNodesM13Test {
         sim.step(0.1f);
         var buffer = sim.buffer();
         assertEquals(2, buffer.count());
-        int fireIdx = buffer.layer(0) == 0 ? 0 : 1;
-        int smokeIdx = 1 - fireIdx;
+        var fireIdx = buffer.layer(0) == 0 ? 0 : 1;
+        var smokeIdx = 1 - fireIdx;
         // fire 层不受 layer=smoke 的曲线影响；smoke 层 alpha = 0.8 * 0.1
         assertEquals(0.8f, buffer.alpha(fireIdx), 1e-5f);
         assertEquals(0.08f, buffer.alpha(smokeIdx), 1e-5f);
@@ -213,8 +213,8 @@ class VfxNodesM13Test {
 
         sim.step(0.1f);
         var buffer = sim.buffer();
-        int fireIdx = buffer.layer(0) == 0 ? 0 : 1;
-        int smokeIdx = 1 - fireIdx;
+        var fireIdx = buffer.layer(0) == 0 ? 0 : 1;
+        var smokeIdx = 1 - fireIdx;
         assertEquals(0.3f, buffer.size(fireIdx), 1e-5f);
         assertEquals(1.0f, buffer.size(smokeIdx), 1e-5f);
     }

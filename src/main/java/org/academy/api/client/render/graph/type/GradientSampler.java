@@ -19,12 +19,12 @@ public final class GradientSampler {
         if (t <= stops.get(0).position()) return color(stops.get(0));
         var last = stops.get(stops.size() - 1);
         if (t >= last.position()) return color(last);
-        for (int i = 1; i < stops.size(); i++) {
+        for (var i = 1; i < stops.size(); i++) {
             var b = stops.get(i);
             if (t < b.position()) {
                 var a = stops.get(i - 1);
-                float span = b.position() - a.position();
-                float u = span <= 0f ? 1f : (t - a.position()) / span;
+                var span = b.position() - a.position();
+                var u = span <= 0f ? 1f : (t - a.position()) / span;
                 return new Vector4f(
                         a.r() + (b.r() - a.r()) * u,
                         a.g() + (b.g() - a.g()) * u,

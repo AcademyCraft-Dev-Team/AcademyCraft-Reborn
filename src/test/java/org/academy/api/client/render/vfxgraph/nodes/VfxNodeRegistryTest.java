@@ -31,13 +31,13 @@ class VfxNodeRegistryTest {
         var factory = registry.find("vfx.spawn_rate");
         var node = new GraphNode("n", "vfx.spawn_rate",
                 Map.of("rate", "10", "lifetime", "100", "shape", "point"), List.of(), 0f, 0f);
-        SimNode sim = factory.create(node);
+        var sim = factory.create(node);
         assertTrue(sim != null);
     }
 
     @Test
     void allParamNodesRegistered() {
-        for (String id : new String[]{
+        for (var id : new String[]{
                 "vfx.param_float", "vfx.param_vec3", "vfx.param_color",
                 "vfx.param_curve", "vfx.param_gradient"
         }) {

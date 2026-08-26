@@ -20,7 +20,7 @@ public final class CurveSampler {
         if (t <= kfs.get(0).time()) return kfs.get(0).value();
         var last = kfs.get(kfs.size() - 1);
         if (t >= last.time()) return last.value();
-        for (int i = 1; i < kfs.size(); i++) {
+        for (var i = 1; i < kfs.size(); i++) {
             var kf = kfs.get(i);
             if (t < kf.time()) {
                 return sampleSegment(kfs.get(i - 1), kf, t);
@@ -30,20 +30,20 @@ public final class CurveSampler {
     }
 
     private static float sampleSegment(Keyframe a, Keyframe b, float t) {
-        float dt = b.time() - a.time();
+        var dt = b.time() - a.time();
         if (dt <= 0f) return b.value();
-        float u = (t - a.time()) / dt;
+        var u = (t - a.time()) / dt;
         return switch (b.interpolation()) {
             case STEP -> a.value();
             case SMOOTH -> {
-                float s = u * u * (3f - 2f * u);
+                var s = u * u * (3f - 2f * u);
                 yield a.value() + (b.value() - a.value()) * s;
             }
             case BEZIER -> {
-                float m0 = a.outTangent() * dt;
-                float m1 = b.inTangent() * dt;
-                float u2 = u * u;
-                float u3 = u2 * u;
+                var m0 = a.outTangent() * dt;
+                var m1 = b.inTangent() * dt;
+                var u2 = u * u;
+                var u3 = u2 * u;
                 yield (2f * u3 - 3f * u2 + 1f) * a.value()
                         + (u3 - 2f * u2 + u) * m0
                         + (-2f * u3 + 3f * u2) * b.value()

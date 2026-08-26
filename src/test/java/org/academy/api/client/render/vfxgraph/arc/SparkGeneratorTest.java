@@ -57,7 +57,7 @@ class SparkGeneratorTest {
     void sparkDirectionIsNearNormal() {
         var arc = new ArcCurve();
         // Horizontal arc along X
-        for (int i = 0; i < 12; i++) {
+        for (var i = 0; i < 12; i++) {
             arc.addPoint(i * 0.1f, 0, 0, 0.01f, 0);
         }
         arc.setColor(1, 1, 1, 1);
@@ -67,10 +67,10 @@ class SparkGeneratorTest {
 
         // Sparks should fly roughly along the arc tangent (X direction)
         for (var s : sparks) {
-            float dx = s.endX() - s.startX();
-            float dy = s.endY() - s.startY();
-            float dz = s.endZ() - s.startZ();
-            float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            var dx = s.endX() - s.startX();
+            var dy = s.endY() - s.startY();
+            var dz = s.endZ() - s.startZ();
+            var len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (len < 1e-6f) continue;
             // Should have some X component (tangent direction)
             assertTrue(Math.abs(dx / len) > 0.1f || Math.abs(dy / len) > 0.1f,
@@ -89,7 +89,7 @@ class SparkGeneratorTest {
         var b = SparkGenerator.generate(arc, 0.5f, 0.005f, 0.05f, 0.5f, 99L);
 
         assertEquals(a.size(), b.size());
-        for (int i = 0; i < a.size(); i++) {
+        for (var i = 0; i < a.size(); i++) {
             assertEquals(a.get(i).startX(), b.get(i).startX(), 1e-6f);
             assertEquals(a.get(i).endY(), b.get(i).endY(), 1e-6f);
         }

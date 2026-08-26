@@ -15,14 +15,14 @@ class EmitterShapeMeshTest {
     void unitCubeSamplesStayOnSurface() {
         var shape = MeshShape.unitCube(0f, 0f, 0f, 1f);
         var out = new float[3];
-        for (int i = 0; i < 2000; i++) {
+        for (var i = 0; i < 2000; i++) {
             shape.sample(random, out);
             assertTrue(out[0] >= -1e-4f && out[0] <= 1f + 1e-4f, "x in cube");
             assertTrue(out[1] >= -1e-4f && out[1] <= 1f + 1e-4f, "y in cube");
             assertTrue(out[2] >= -1e-4f && out[2] <= 1f + 1e-4f, "z in cube");
             // 表面性：至少一维贴近立方体边界
-            float eps = 1e-3f;
-            boolean onSurface = out[0] < eps || out[0] > 1f - eps
+            var eps = 1e-3f;
+            var onSurface = out[0] < eps || out[0] > 1f - eps
                     || out[1] < eps || out[1] > 1f - eps
                     || out[2] < eps || out[2] > 1f - eps;
             assertTrue(onSurface, "point must be on cube surface: " + Arrays.toString(out));
@@ -38,16 +38,16 @@ class EmitterShapeMeshTest {
         };
         var shape = new MeshShape(0f, 0f, 0f, 1f, triangles);
         var out = new float[3];
-        int largeHits = 0;
-        int samples = 5000;
-        for (int i = 0; i < samples; i++) {
+        var largeHits = 0;
+        var samples = 5000;
+        for (var i = 0; i < samples; i++) {
             shape.sample(random, out);
             // 大三角形 z≈0，小三角形 z≈1
             if (out[2] < 0.5f) {
                 largeHits++;
             }
         }
-        float ratio = largeHits / (float) samples;
+        var ratio = largeHits / (float) samples;
         // 面积比 50:0.5 → 期望 ~0.99，宽松断言 > 0.9
         assertTrue(ratio > 0.9f, "large triangle hit ratio: " + ratio);
     }
@@ -56,7 +56,7 @@ class EmitterShapeMeshTest {
     void scaleAndOriginApplied() {
         var shape = MeshShape.unitCube(5f, 0f, -3f, 2f);
         var out = new float[3];
-        for (int i = 0; i < 500; i++) {
+        for (var i = 0; i < 500; i++) {
             shape.sample(random, out);
             assertTrue(out[0] >= 5f - 1e-4f && out[0] <= 5f + 2f + 1e-4f, "x scaled+offset");
             assertTrue(out[1] >= -1e-4f && out[1] <= 2f + 1e-4f, "y scaled");
@@ -78,7 +78,7 @@ class EmitterShapeMeshTest {
         assertEquals(18, triangles.length); // 一个四边形 → 2 三角形 → 18 float
         var shape = new MeshShape(0f, 0f, 0f, 1f, triangles);
         var out = new float[3];
-        for (int i = 0; i < 500; i++) {
+        for (var i = 0; i < 500; i++) {
             shape.sample(random, out);
             assertTrue(out[2] > -1e-4f && out[2] < 1e-4f, "sampled on quad plane");
             assertTrue(out[0] >= -1e-4f && out[0] <= 1f + 1e-4f);

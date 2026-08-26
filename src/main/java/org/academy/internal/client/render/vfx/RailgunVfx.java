@@ -33,7 +33,7 @@ public final class RailgunVfx implements Vfx {
         if (level == null) return;
         var roots = WingAvatarRegistry.entries();
 
-        for (Map.Entry<Integer, Matrix4f> entry : roots.entrySet()) {
+        for (var entry : roots.entrySet()) {
             var entity = level.getEntity(entry.getKey());
             if (!(entity instanceof Player player)) continue;
             if (minecraft.options.getCameraType().isFirstPerson() && player == minecraft.player) continue;

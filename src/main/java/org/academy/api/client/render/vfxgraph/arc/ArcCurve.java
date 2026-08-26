@@ -170,7 +170,7 @@ public final class ArcCurve {
      */
     public void addPoint(float x, float y, float z, float w, float generation, int segment) {
         if (size == px.length) {
-            int cap = px.length * 2;
+            var cap = px.length * 2;
             px = Arrays.copyOf(px, cap);
             py = Arrays.copyOf(py, cap);
             pz = Arrays.copyOf(pz, cap);
@@ -601,8 +601,8 @@ public final class ArcCurve {
      * 将指定范围的控制点拷贝到目标（供子弧生成等使用）；基准位置一并拷贝。
      */
     public void copyRange(ArcCurve target, int from, int to) {
-        for (int i = from; i < to; i++) {
-            int idx = target.size();
+        for (var i = from; i < to; i++) {
+            var idx = target.size();
             target.addPoint(px[i], py[i], pz[i], width[i], gen[i], seg[i]);
             target.bx[idx] = bx[i];
             target.by[idx] = by[i];

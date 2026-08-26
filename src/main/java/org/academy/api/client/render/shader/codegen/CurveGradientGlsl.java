@@ -17,17 +17,17 @@ public final class CurveGradientGlsl {
         var w = new StringBuilder();
         w.append("float ").append(curveName(id)).append("(float t) {\n");
         w.append("    if (t <= ").append(f(kfs.get(0).time())).append(") return ").append(f(kfs.get(0).value())).append(";\n");
-        for (int i = 1; i < kfs.size(); i++) {
+        for (var i = 1; i < kfs.size(); i++) {
             var a = kfs.get(i - 1);
             var b = kfs.get(i);
             if (b.time() <= a.time()) continue;
-            String u = "(t - " + f(a.time()) + ") / (" + f(b.time() - a.time()) + ")";
-            String interp = switch (b.interpolation()) {
+            var u = "(t - " + f(a.time()) + ") / (" + f(b.time() - a.time()) + ")";
+            var interp = switch (b.interpolation()) {
                 case STEP -> f(a.value());
                 case SMOOTH -> "mix(" + f(a.value()) + ", " + f(b.value()) + ", smoothstep(0.0, 1.0, " + u + "))";
                 case BEZIER -> {
-                    float m0 = a.outTangent() * (b.time() - a.time());
-                    float m1 = b.inTangent() * (b.time() - a.time());
+                    var m0 = a.outTangent() * (b.time() - a.time());
+                    var m1 = b.inTangent() * (b.time() - a.time());
                     yield "(2.0*pow(" + u + ",3.0) - 3.0*pow(" + u + ",2.0) + 1.0) * " + f(a.value())
                             + " + (pow(" + u + ",3.0) - 2.0*pow(" + u + ",2.0) + " + u + ") * " + f(m0)
                             + " + (-2.0*pow(" + u + ",3.0) + 3.0*pow(" + u + ",2.0)) * " + f(b.value())
@@ -48,11 +48,11 @@ public final class CurveGradientGlsl {
         var w = new StringBuilder();
         w.append("vec4 ").append(gradientName(id)).append("(float t) {\n");
         w.append("    if (t <= ").append(f(stops.get(0).position())).append(") return ").append(color(stops.get(0))).append(";\n");
-        for (int i = 1; i < stops.size(); i++) {
+        for (var i = 1; i < stops.size(); i++) {
             var a = stops.get(i - 1);
             var b = stops.get(i);
             if (b.position() <= a.position()) continue;
-            String u = "(t - " + f(a.position()) + ") / (" + f(b.position() - a.position()) + ")";
+            var u = "(t - " + f(a.position()) + ") / (" + f(b.position() - a.position()) + ")";
             w.append("    if (t < ").append(f(b.position())).append(") return mix(")
                     .append(color(a)).append(", ").append(color(b)).append(", clamp(").append(u).append(", 0.0, 1.0));\n");
         }

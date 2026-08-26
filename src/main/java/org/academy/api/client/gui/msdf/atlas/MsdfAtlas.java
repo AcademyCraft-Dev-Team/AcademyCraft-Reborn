@@ -185,7 +185,7 @@ public class MsdfAtlas {
     }
 
     private static boolean isCjk(int codepoint) {
-        Character.UnicodeScript script = Character.UnicodeScript.of(codepoint);
+        var script = Character.UnicodeScript.of(codepoint);
         return script == Character.UnicodeScript.HAN ||
                 script == Character.UnicodeScript.HIRAGANA ||
                 script == Character.UnicodeScript.KATAKANA ||

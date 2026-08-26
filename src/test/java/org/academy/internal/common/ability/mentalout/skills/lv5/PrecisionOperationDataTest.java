@@ -64,7 +64,7 @@ class PrecisionOperationDataTest {
     }
 
     private static void setField(Object target, String name, Object value) throws ReflectiveOperationException {
-        Field field = target.getClass().getDeclaredField(name);
+        var field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
     }

@@ -19,7 +19,7 @@ public final class GraphMigrations {
      */
     public static JsonObject apply(JsonObject json, List<GraphMigration> migrations) {
         var current = json;
-        int version = json.has(GraphSchemaVersion.VERSION_FIELD)
+        var version = json.has(GraphSchemaVersion.VERSION_FIELD)
                 ? json.get(GraphSchemaVersion.VERSION_FIELD).getAsInt()
                 : 0;
 

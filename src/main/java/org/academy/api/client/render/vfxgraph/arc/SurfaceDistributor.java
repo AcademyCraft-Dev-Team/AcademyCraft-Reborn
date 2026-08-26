@@ -32,8 +32,8 @@ public final class SurfaceDistributor {
         this.cumulativeArea = new float[triCount];
         this.normals = new float[triCount * 3];
 
-        float total = 0f;
-        for (int i = 0; i < triCount; i++) {
+        var total = 0f;
+        for (var i = 0; i < triCount; i++) {
             total += computeAreaAndNormal(i);
             cumulativeArea[i] = total;
         }
@@ -62,35 +62,35 @@ public final class SurfaceDistributor {
         if (totalArea < 1e-8f || density < 1e-6f) return result;
 
         // 期望点数 = 面积 × 密度
-        int expectedCount = Math.max(1, (int) (totalArea * density));
+        var expectedCount = Math.max(1, (int) (totalArea * density));
 
-        for (int i = 0; i < expectedCount; i++) {
+        for (var i = 0; i < expectedCount; i++) {
             // 概率过滤（复刻 Blender 的 Random Value + Delete Geometry）
             if (random.nextFloat() > probability) continue;
 
             // 面积加权采样一个三角形
-            float r = random.nextFloat() * totalArea;
-            int tri = pickTriangle(r);
+            var r = random.nextFloat() * totalArea;
+            var tri = pickTriangle(r);
 
             // 重心坐标取点（均匀分布，u+v<=1 翻转保证在三角形内）
-            float u = (float) Math.sqrt(random.nextFloat());
-            float v = random.nextFloat();
+            var u = (float) Math.sqrt(random.nextFloat());
+            var v = random.nextFloat();
             if (u + v > 1f) {
                 u = 1f - u;
                 v = 1f - v;
             }
-            float w = 1f - u - v;
+            var w = 1f - u - v;
 
-            int t9 = tri * 9;
-            float px = triangles[t9] * w + triangles[t9 + 3] * u + triangles[t9 + 6] * v;
-            float py = triangles[t9 + 1] * w + triangles[t9 + 4] * u + triangles[t9 + 7] * v;
-            float pz = triangles[t9 + 2] * w + triangles[t9 + 5] * u + triangles[t9 + 8] * v;
+            var t9 = tri * 9;
+            var px = triangles[t9] * w + triangles[t9 + 3] * u + triangles[t9 + 6] * v;
+            var py = triangles[t9 + 1] * w + triangles[t9 + 4] * u + triangles[t9 + 7] * v;
+            var pz = triangles[t9 + 2] * w + triangles[t9 + 5] * u + triangles[t9 + 8] * v;
 
             // 法线
-            int n3 = tri * 3;
-            float nx = normals[n3];
-            float ny = normals[n3 + 1];
-            float nz = normals[n3 + 2];
+            var n3 = tri * 3;
+            var nx = normals[n3];
+            var ny = normals[n3 + 1];
+            var nz = normals[n3 + 2];
 
             result.add(new Sample(px, py, pz, nx, ny, nz));
         }
@@ -142,30 +142,30 @@ public final class SurfaceDistributor {
      */
     public static float[] tangentDirection(float nx, float ny, float nz, float angle, Random random) {
         // 构建切平面基
-        float[] t1 = tangentBase(nx, ny, nz);
-        float[] t2 = cross(nx, ny, nz, t1[0], t1[1], t1[2]);
+        var t1 = tangentBase(nx, ny, nz);
+        var t2 = cross(nx, ny, nz, t1[0], t1[1], t1[2]);
 
         // 随机角度
-        float a = random.nextFloat() * (float) (Math.PI * 2);
-        float c = (float) Math.cos(a);
-        float s = (float) Math.sin(a);
+        var a = random.nextFloat() * (float) (Math.PI * 2);
+        var c = (float) Math.cos(a);
+        var s = (float) Math.sin(a);
 
         // 扰动角度
-        float da = (random.nextFloat() - 0.5f) * 2f * angle;
-        float dc = (float) Math.cos(da);
-        float ds = (float) Math.sin(da);
+        var da = (random.nextFloat() - 0.5f) * 2f * angle;
+        var dc = (float) Math.cos(da);
+        var ds = (float) Math.sin(da);
 
         // 组合：先绕法线旋转 a，再倾斜 da
-        float dx = t1[0] * c + t2[0] * s;
-        float dy = t1[1] * c + t2[1] * s;
-        float dz = t1[2] * c + t2[2] * s;
+        var dx = t1[0] * c + t2[0] * s;
+        var dy = t1[1] * c + t2[1] * s;
+        var dz = t1[2] * c + t2[2] * s;
 
         // 倾斜
-        float rx = dx * dc + nx * ds;
-        float ry = dy * dc + ny * ds;
-        float rz = dz * dc + nz * ds;
+        var rx = dx * dc + nx * ds;
+        var ry = dy * dc + ny * ds;
+        var rz = dz * dc + nz * ds;
 
-        float len = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
+        var len = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
         if (len < 1e-6f) return new float[]{nx, ny, nz};
         return new float[]{rx / len, ry / len, rz / len};
     }
@@ -175,7 +175,7 @@ public final class SurfaceDistributor {
     private int pickTriangle(float target) {
         int lo = 0, hi = triCount - 1;
         while (lo < hi) {
-            int mid = (lo + hi) >>> 1;
+            var mid = (lo + hi) >>> 1;
             if (cumulativeArea[mid] < target) {
                 lo = mid + 1;
             } else {
@@ -189,7 +189,7 @@ public final class SurfaceDistributor {
      * 计算三角形面积并预计算法线。返回面积。
      */
     private float computeAreaAndNormal(int tri) {
-        int t9 = tri * 9;
+        var t9 = tri * 9;
         float ax = triangles[t9], ay = triangles[t9 + 1], az = triangles[t9 + 2];
         float bx = triangles[t9 + 3], by = triangles[t9 + 4], bz = triangles[t9 + 5];
         float cx = triangles[t9 + 6], cy = triangles[t9 + 7], cz = triangles[t9 + 8];
@@ -197,12 +197,12 @@ public final class SurfaceDistributor {
         // AB × AC
         float abx = bx - ax, aby = by - ay, abz = bz - az;
         float acx = cx - ax, acy = cy - ay, acz = cz - az;
-        float nx = aby * acz - abz * acy;
-        float ny = abz * acx - abx * acz;
-        float nz = abx * acy - aby * acx;
-        float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        var nx = aby * acz - abz * acy;
+        var ny = abz * acx - abx * acz;
+        var nz = abx * acy - aby * acx;
+        var len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
 
-        int n3 = tri * 3;
+        var n3 = tri * 3;
         if (len < 1e-8f) {
             normals[n3] = 0;
             normals[n3 + 1] = 1;
@@ -218,9 +218,9 @@ public final class SurfaceDistributor {
 
     private static float[] tangentBase(float nx, float ny, float nz) {
         // 与法线不平行的参考向量
-        float[] ref = Math.abs(ny) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
-        float[] t = cross(nx, ny, nz, ref[0], ref[1], ref[2]);
-        float len = (float) Math.sqrt(t[0] * t[0] + t[1] * t[1] + t[2] * t[2]);
+        var ref = Math.abs(ny) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
+        var t = cross(nx, ny, nz, ref[0], ref[1], ref[2]);
+        var len = (float) Math.sqrt(t[0] * t[0] + t[1] * t[1] + t[2] * t[2]);
         return new float[]{t[0] / len, t[1] / len, t[2] / len};
     }
 

@@ -51,7 +51,7 @@ public final class ShaderGraphPipeline {
                         .build());
         if (samplerCount > 0) {
             var samplerLayout = BindGroupLayout.builder();
-            for (int i = 0; i < samplerCount; i++) {
+            for (var i = 0; i < samplerCount; i++) {
                 samplerLayout.withSampler(SamplerBinding.uniformName(i));
             }
             builder.withBindGroupLayout(samplerLayout.build());

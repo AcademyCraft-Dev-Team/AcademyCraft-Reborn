@@ -60,14 +60,14 @@ class VfxSpawnLifetimeTest {
         // Bug 修复：swap-remove 后槽位复用不得继承旧 lifetime
         var buffer = new ParticleBuffer();
         // 粒子 0：lifetime=10
-        int a = buffer.spawn();
+        var a = buffer.spawn();
         buffer.setLifetime(a, 10f);
         // 粒子 1：lifetime=0（默认）
         buffer.spawn();
         // 杀掉粒子 0（swap-remove：粒子 1 移入槽 0）
         buffer.kill(0);
         // 新 spawn：回到槽 0 或槽 1，lifetime 必须为 0 而非残留的 10
-        int b = buffer.spawn();
+        var b = buffer.spawn();
         assertEquals(0f, buffer.lifetime(b), 1e-5f);
         assertEquals(0f, buffer.age(b), 1e-5f);
     }
@@ -80,9 +80,9 @@ class VfxSpawnLifetimeTest {
                         "radius", "2", "cone_height", "3"))
         ), vfxRegistry, 42L, List.of());
         sim.step(0.1f);
-        boolean offOrigin = false;
-        for (int i = 0; i < sim.buffer().count(); i++) {
-            float xz = sim.buffer().positionX(i) * sim.buffer().positionX(i)
+        var offOrigin = false;
+        for (var i = 0; i < sim.buffer().count(); i++) {
+            var xz = sim.buffer().positionX(i) * sim.buffer().positionX(i)
                     + sim.buffer().positionZ(i) * sim.buffer().positionZ(i);
             if (xz > 0.01f) {
                 offOrigin = true;
@@ -99,9 +99,9 @@ class VfxSpawnLifetimeTest {
                         "radius", "2", "half_x", "0.3"))
         ), vfxRegistry, 42L, List.of());
         sim.step(0.1f);
-        boolean offOrigin = false;
-        for (int i = 0; i < sim.buffer().count(); i++) {
-            float xz = sim.buffer().positionX(i) * sim.buffer().positionX(i)
+        var offOrigin = false;
+        for (var i = 0; i < sim.buffer().count(); i++) {
+            var xz = sim.buffer().positionX(i) * sim.buffer().positionX(i)
                     + sim.buffer().positionZ(i) * sim.buffer().positionZ(i);
             if (xz > 0.01f) {
                 offOrigin = true;
@@ -117,9 +117,9 @@ class VfxSpawnLifetimeTest {
                 node("b", "vfx.spawn_burst", Map.of("count", "100", "shape", "circle_edge", "radius", "2"))
         ), vfxRegistry, 42L, List.of());
         sim.step(0.1f);
-        boolean offOrigin = false;
-        for (int i = 0; i < sim.buffer().count(); i++) {
-            float xz = sim.buffer().positionX(i) * sim.buffer().positionX(i)
+        var offOrigin = false;
+        for (var i = 0; i < sim.buffer().count(); i++) {
+            var xz = sim.buffer().positionX(i) * sim.buffer().positionX(i)
                     + sim.buffer().positionZ(i) * sim.buffer().positionZ(i);
             if (xz > 0.01f) {
                 offOrigin = true;

@@ -132,7 +132,7 @@ public final class DefaultGraphCompiler implements GraphCompiler {
             }
 
             Map<String, Value> inputs = new HashMap<>();
-            boolean allConst = true;
+            var allConst = true;
             for (var port : node.ports()) {
                 if (port.direction() != PortDirection.INPUT) continue;
                 var edge = inputEdges.get(node.id() + ':' + port.id());

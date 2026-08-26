@@ -190,10 +190,10 @@ public final class GraphEffect {
     }
 
     private GraphNode applyOverrides(GraphNode node) {
-        boolean any = false;
+        var any = false;
         var props = new HashMap<>(node.properties());
         for (var entry : overrides.entrySet()) {
-            int colon = entry.getKey().indexOf(':');
+            var colon = entry.getKey().indexOf(':');
             if (colon < 0) continue;
             if (entry.getKey().substring(0, colon).equals(node.id())) {
                 props.put(entry.getKey().substring(colon + 1), entry.getValue());

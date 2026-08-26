@@ -779,7 +779,7 @@ public final class AcademyCraftCommand {
 
         private static int snapshot(CommandContext<CommandSourceStack> ctx) {
             var snap = AcademyProfiler.snapshot();
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.append("§e[AC Profiler Snapshot]§r\n");
             var sampler = snap.getSampler();
             if (sampler != null) {
@@ -810,7 +810,7 @@ public final class AcademyCraftCommand {
             logsDir.mkdirs();
             var file = new File(logsDir, "academy-profile-" + ProfileDump.timestamp() + ".txt");
 
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.append("AcademyCraft Performance Profile\n");
             sb.append("Time: ").append(ProfileDump.timestamp()).append("\n\n");
             var sampler = snap.getSampler();

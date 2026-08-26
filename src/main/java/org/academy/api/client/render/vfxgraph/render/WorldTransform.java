@@ -30,16 +30,16 @@ public record WorldTransform(Vector3f position, Quaternionf rotation, float scal
      * 应用变换到局部坐标，写入 out[0..2]（world 坐标）。
      */
     public void apply(float x, float y, float z, float[] out) {
-        float sx = x * scale;
-        float sy = y * scale;
-        float sz = z * scale;
-        float qx = rotation.x;
-        float qy = rotation.y;
-        float qz = rotation.z;
-        float qw = rotation.w;
-        float tx = 2f * (qy * sz - qz * sy);
-        float ty = 2f * (qz * sx - qx * sz);
-        float tz = 2f * (qx * sy - qy * sx);
+        var sx = x * scale;
+        var sy = y * scale;
+        var sz = z * scale;
+        var qx = rotation.x;
+        var qy = rotation.y;
+        var qz = rotation.z;
+        var qw = rotation.w;
+        var tx = 2f * (qy * sz - qz * sy);
+        var ty = 2f * (qz * sx - qx * sz);
+        var tz = 2f * (qx * sy - qy * sx);
         out[0] = sx + qw * tx + (qy * tz - qz * ty) + position.x;
         out[1] = sy + qw * ty + (qz * tx - qx * tz) + position.y;
         out[2] = sz + qw * tz + (qx * ty - qy * tx) + position.z;
@@ -49,16 +49,16 @@ public record WorldTransform(Vector3f position, Quaternionf rotation, float scal
      * 变换方向向量（旋转 + 缩放，无平移），写入 out[0..2]（world 方向）。
      */
     public void applyDirection(float x, float y, float z, float[] out) {
-        float sx = x * scale;
-        float sy = y * scale;
-        float sz = z * scale;
-        float qx = rotation.x;
-        float qy = rotation.y;
-        float qz = rotation.z;
-        float qw = rotation.w;
-        float tx = 2f * (qy * sz - qz * sy);
-        float ty = 2f * (qz * sx - qx * sz);
-        float tz = 2f * (qx * sy - qy * sx);
+        var sx = x * scale;
+        var sy = y * scale;
+        var sz = z * scale;
+        var qx = rotation.x;
+        var qy = rotation.y;
+        var qz = rotation.z;
+        var qw = rotation.w;
+        var tx = 2f * (qy * sz - qz * sy);
+        var ty = 2f * (qz * sx - qx * sz);
+        var tz = 2f * (qx * sy - qy * sx);
         out[0] = sx + qw * tx + (qy * tz - qz * ty);
         out[1] = sy + qw * ty + (qz * tx - qx * tz);
         out[2] = sz + qw * tz + (qx * ty - qy * tx);

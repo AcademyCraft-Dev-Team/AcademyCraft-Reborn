@@ -268,7 +268,7 @@ public final class PlayerAttributeRuntime {
         if (source == null) return null;
         if (source.getEntity() instanceof Player player) return player;
         if (source.getDirectEntity() instanceof Player player) return player;
-        Entity direct = source.getDirectEntity();
+        var direct = source.getDirectEntity();
         if (direct instanceof Projectile projectile
                 && projectile.getOwner() instanceof Player player) return player;
         return null;
