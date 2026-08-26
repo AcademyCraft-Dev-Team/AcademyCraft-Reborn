@@ -9,6 +9,7 @@ import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("removal")
 final class HotSpotClassPointerAccess {
     static final String DISABLE_PROPERTY = "academy.vector_reflection.class_pointer.disable";
 
