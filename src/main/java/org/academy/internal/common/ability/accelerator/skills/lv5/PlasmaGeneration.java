@@ -179,9 +179,10 @@ public class PlasmaGeneration extends Skill {
             if (!Skills.PLASMA_GENERATION.get().isEnabled(player)) return;
             clearCharge(player);
             if (!(player.level() instanceof ServerLevel level)) return;
-            var spawnY = Mth.clamp(player.getY() + 15.0, level.getMinY() + 1.0, level.getMaxY() - 1.0);
             var plasma = new Plasma(EntityTypes.PLASMA.get(), level);
-            plasma.setPos(player.getX(), spawnY, player.getZ());
+            var focus = chargeFocus(player, level);
+            plasma.setPos(focus.x, focus.y, focus.z);
+            plasma.setOwnerEntityId(player.getId());
             plasma.setGatherProgress(0.01f);
             if (!level.addFreshEntity(plasma)) return;
             CHARGE_STATES.put(player.getUUID(), new ChargeState(
@@ -286,6 +287,25 @@ public class PlasmaGeneration extends Skill {
                     0.01f,
                     getChargeProgress(state.startTick(), player.level().getGameTime())
             ));
+            // The charge focus is captured once in handleStart. Keeping the entity at that
+            // position makes the whole charge composition independent from later player motion.
+            plasma.setDeltaMovement(Vec3.ZERO);
+        }
+
+        private static Vec3 chargeFocus(ServerPlayer player, ServerLevel level) {
+            var look = player.getLookAngle();
+            var horizontal = new Vec3(look.x, 0.0, look.z);
+            if (horizontal.lengthSqr() < 1.0E-6) {
+                horizontal = new Vec3(0.0, 0.0, 1.0);
+            } else {
+                horizontal = horizontal.normalize();
+            }
+            var y = Mth.clamp(player.getY() + 31.0, level.getMinY() + 1.0, level.getMaxY() - 1.0);
+            return new Vec3(
+                    player.getX() + horizontal.x * 6.0,
+                    y,
+                    player.getZ() + horizontal.z * 6.0
+            );
         }
 
         private static void clearCharge(ServerPlayer player) {

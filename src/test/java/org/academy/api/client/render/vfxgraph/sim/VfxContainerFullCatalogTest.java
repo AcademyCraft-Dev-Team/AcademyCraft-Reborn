@@ -20,7 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * M27 全量迁移验证：42 块 + 全部算子注册、复杂容器系统全链路模拟（spawn→init→update→collision→over-life→output）。
+ * 容器块完整目录 + 全部算子注册、复杂容器系统全链路模拟（spawn→init→update→collision→over-life→output）。
  */
 class VfxContainerFullCatalogTest {
     private VfxBlockRegistry blocks;
@@ -48,13 +48,15 @@ class VfxContainerFullCatalogTest {
     void fullBlockCatalogRegistered() {
         // M27：spawn 4 + init 8 + update 10 + collision 5 + over-life 4 + orient 4 + output 7 = 42 块；
         // M22：arc 3 发射块（spawn 类）+ output_arc 1 = 46 块；
-        // M29：arc_surface 重写 + arc_contact/arc_spark 新增 = 48 块
+        // M29：arc_surface 重写 + arc_contact/arc_spark 新增 = 48 块；
+        // 电浆炮：live follow + line tornado + volumetric tornado + plasma convergence + plasma shell + shockwave = 54 块。
         String[] expected = {
                 "vfx.block.spawn_rate", "vfx.block.spawn_burst", "vfx.block.spawn_periodic", "vfx.block.spawn_distance",
                 "vfx.block.init_position", "vfx.block.init_velocity", "vfx.block.init_color", "vfx.block.init_size",
                 "vfx.block.init_rotation", "vfx.block.init_lifetime", "vfx.block.init_mass", "vfx.block.init_randomize",
                 "vfx.block.update_velocity", "vfx.block.update_gravity", "vfx.block.update_force", "vfx.block.update_noise",
-                "vfx.block.update_turbulence", "vfx.block.update_vortex", "vfx.block.update_drag", "vfx.block.update_damping",
+                "vfx.block.update_turbulence", "vfx.block.update_vortex", "vfx.block.update_follow",
+                "vfx.block.update_drag", "vfx.block.update_damping",
                 "vfx.block.update_age", "vfx.block.update_fade",
                 "vfx.block.collision_ground", "vfx.block.collision_plane", "vfx.block.collision_sphere",
                 "vfx.block.bounds", "vfx.block.kill",
@@ -63,13 +65,14 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.output_point", "vfx.block.output_quad", "vfx.block.output_quad_additive", "vfx.block.output_quad_glow",
                 "vfx.block.output_mesh", "vfx.block.output_line", "vfx.block.output_ribbon",
                 "vfx.block.arc_bolt", "vfx.block.arc_orbit", "vfx.block.arc_surface", "vfx.block.output_arc",
-                "vfx.block.arc_contact", "vfx.block.arc_spark"
+                "vfx.block.arc_contact", "vfx.block.arc_spark", "vfx.block.arc_tornado", "vfx.block.tornado_volume",
+                "vfx.block.plasma_convergence", "vfx.block.arc_plasma_shell", "vfx.block.arc_shockwave"
         };
         for (String id : expected) {
             assertNotNull(blocks.find(id), "block should be registered: " + id);
         }
-        assertEquals(48, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
-        assertEquals(48, countBlocks());
+        assertEquals(54, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
+        assertEquals(54, countBlocks());
     }
 
     @Test

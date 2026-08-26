@@ -36,9 +36,8 @@ import org.academy.api.client.render.vfxgraph.sim.SimNode;
  * init 块只处理 {@code SimContext.incomingBatches}（由执行器按 flow 边注入）；
  * update/collision/over-life/orient 块处理全部存活粒子；output 块仅提供 RenderSpec（M21l 数据驱动）。</p>
  *
- * <p>M27 全量迁移：spawn 4 / init 8 / update 10 / collision 5 / over-life 4 / orient 4 / output 7 = 42 块
- * （param 系 5 算子见 {@code VfxOperators}），共 47 节点。块语义与 {@code VfxNodes} 对应节点一致，
- * 但用批次（emitBatch/incomingBatches）替代 {@code spawnStart} 单点耦合。</p>
+ * <p>基础块语义与 {@code VfxNodes} 对应节点一致，但用批次（emitBatch/incomingBatches）替代
+ * {@code spawnStart} 单点耦合；另含路径电弧和技能专用的连续几何块。</p>
  */
 public final class VfxBlocks {
     private VfxBlocks() {
@@ -58,6 +57,7 @@ public final class VfxBlocks {
     /** 发射形状属性（spawn/init_position 共用）。 */
     private static final List<PropertySpec> SHAPE_PROPS = List.of(
             prop("shape", ValueType.STRING, Value.string("point")),
+            prop("position_param", ValueType.STRING, Value.string("")),
             prop("origin_x", ValueType.FLOAT, Value.of(0f)),
             prop("origin_y", ValueType.FLOAT, Value.of(0f)),
             prop("origin_z", ValueType.FLOAT, Value.of(0f)),
@@ -263,9 +263,28 @@ public final class VfxBlocks {
         blocks.register("vfx.block.update_turbulence", VfxBlocks::updateTurbulence);
 
         metadata.register(type("vfx.block.update_vortex", "update", "Vortex",
-                List.of(prop("cx", ValueType.FLOAT, Value.of(0f)), prop("cz", ValueType.FLOAT, Value.of(0f)),
-                        prop("strength", ValueType.FLOAT, Value.of(1f)))));
+                List.of(prop("cx", ValueType.FLOAT, Value.of(0f)), prop("cy", ValueType.FLOAT, Value.of(0f)),
+                        prop("cz", ValueType.FLOAT, Value.of(0f)), prop("strength", ValueType.FLOAT, Value.of(1f)),
+                        prop("pull", ValueType.FLOAT, Value.of(0f)),
+                        prop("vertical_pull", ValueType.FLOAT, Value.of(0f)),
+                        prop("layer", ValueType.STRING, Value.string("")))));
         blocks.register("vfx.block.update_vortex", VfxBlocks::updateVortex);
+
+        metadata.register(type("vfx.block.update_follow", "update", "Follow Live Position",
+                List.of(
+                        prop("position_param", ValueType.STRING, Value.string("projectile_position")),
+                        prop("direction_param", ValueType.STRING, Value.string("projectile_direction")),
+                        prop("layer", ValueType.STRING, Value.string("")),
+                        prop("orbit_radius", ValueType.FLOAT, Value.of(0f)),
+                        prop("orbit_speed", ValueType.FLOAT, Value.of(0f)),
+                        prop("phase", ValueType.FLOAT, Value.of(0f)),
+                        prop("back_offset", ValueType.FLOAT, Value.of(0f)),
+                        prop("size_param", ValueType.STRING, Value.string("")),
+                        prop("size_min", ValueType.FLOAT, Value.of(1f)),
+                        prop("size_max", ValueType.FLOAT, Value.of(1f)),
+                        prop("size_power", ValueType.FLOAT, Value.of(1f))
+                )));
+        blocks.register("vfx.block.update_follow", VfxBlocks::updateFollow);
 
         metadata.register(type("vfx.block.update_drag", "update", "Drag",
                 List.of(prop("drag", ValueType.FLOAT, Value.of(0.1f)))));
@@ -364,14 +383,18 @@ public final class VfxBlocks {
 
         metadata.register(type("vfx.block.output_line", "output", "Output Line / Trail", OUTPUT_PROPERTIES));
         blocks.register("vfx.block.output_line", (n, p) -> (buf, ctx) -> {
+            byte filter = layerFilter(n);
             for (int i = 0; i < buf.count(); i++) {
+                if (filter >= 0 && buf.layer(i) != filter) continue;
                 buf.pushTrail(i, buf.positionX(i), buf.positionY(i), buf.positionZ(i));
             }
         });
 
         metadata.register(type("vfx.block.output_ribbon", "output", "Output Ribbon", OUTPUT_PROPERTIES));
         blocks.register("vfx.block.output_ribbon", (n, p) -> (buf, ctx) -> {
+            byte filter = layerFilter(n);
             for (int i = 0; i < buf.count(); i++) {
+                if (filter >= 0 && buf.layer(i) != filter) continue;
                 buf.pushTrail(i, buf.positionX(i), buf.positionY(i), buf.positionZ(i));
             }
         });
@@ -429,6 +452,140 @@ public final class VfxBlocks {
                 )));
         blocks.register("vfx.block.arc_orbit", VfxBlocks::arcOrbit);
 
+        metadata.register(type("vfx.block.arc_tornado", "spawn", "Compressed Wind Ring Tornado",
+                List.of(
+                        prop("expand_param", ValueType.STRING, Value.string("expand_rate")),
+                        prop("expand_min", ValueType.FLOAT, Value.of(0.5f)),
+                        prop("expand_max", ValueType.FLOAT, Value.of(3f)),
+                        prop("charge_param", ValueType.STRING, Value.string("charge_progress")),
+                        prop("emission_param", ValueType.STRING, Value.string("emission")),
+                        prop("focus_param", ValueType.STRING, Value.string("focus_offset")),
+                        prop("bottom_radius", ValueType.FLOAT, Value.of(15f)),
+                        prop("base_radius", ValueType.FLOAT, Value.of(15f)),
+                        prop("max_radius", ValueType.FLOAT, Value.of(96f)),
+                        prop("base_height", ValueType.FLOAT, Value.of(32f)),
+                        prop("max_height", ValueType.FLOAT, Value.of(128f)),
+                        prop("min_rings", ValueType.INT, Value.of(9)),
+                        prop("max_rings", ValueType.INT, Value.of(30)),
+                        prop("min_helices", ValueType.INT, Value.of(1)),
+                        prop("max_helices", ValueType.INT, Value.of(3)),
+                        prop("ring_segments", ValueType.INT, Value.of(88)),
+                        prop("helix_segments", ValueType.INT, Value.of(224)),
+                        prop("helix_turns", ValueType.FLOAT, Value.of(8.5f)),
+                        prop("width", ValueType.FLOAT, Value.of(0.12f)),
+                        prop("rotation_min", ValueType.FLOAT, Value.of(0.82f)),
+                        prop("rotation_max", ValueType.FLOAT, Value.of(5.2f)),
+                        prop("irregularity", ValueType.FLOAT, Value.of(0.095f)),
+                        prop("center_wander", ValueType.FLOAT, Value.of(0.055f)),
+                        prop("fragmentation", ValueType.FLOAT, Value.of(0.22f)),
+                        prop("tilt", ValueType.FLOAT, Value.of(0.075f)),
+                        prop("nested_radius", ValueType.FLOAT, Value.of(0.54f)),
+                        prop("nested_width", ValueType.FLOAT, Value.of(0.72f)),
+                        prop("collapse_start", ValueType.FLOAT, Value.of(0.8f)),
+                        prop("collapse_end", ValueType.FLOAT, Value.of(0.94f)),
+                        prop("lifetime", ValueType.FLOAT, Value.of(0.075f)),
+                        prop("color_dark", ValueType.COLOR, Value.color(0.28f, 0.3f, 0.34f, 0.32f)),
+                        prop("color_light", ValueType.COLOR, Value.color(0.58f, 0.61f, 0.66f, 0.42f)),
+                        prop("color_edge", ValueType.COLOR, Value.color(0.88f, 0.91f, 0.96f, 0.52f))
+                )));
+        blocks.register("vfx.block.arc_tornado", VfxBlocks::arcTornado);
+
+        metadata.register(type("vfx.block.tornado_volume", "spawn", "Volumetric Inverted Cone Tornado",
+                List.of(
+                        prop("expand_param", ValueType.STRING, Value.string("expand_rate")),
+                        prop("charge_param", ValueType.STRING, Value.string("charge_progress")),
+                        prop("emission_param", ValueType.STRING, Value.string("emission")),
+                        prop("focus_param", ValueType.STRING, Value.string("focus_offset")),
+                        prop("expand_min", ValueType.FLOAT, Value.of(0.5f)),
+                        prop("expand_max", ValueType.FLOAT, Value.of(3f)),
+                        prop("bottom_radius", ValueType.FLOAT, Value.of(15f)),
+                        prop("base_radius", ValueType.FLOAT, Value.of(15f)),
+                        prop("max_radius", ValueType.FLOAT, Value.of(96f)),
+                        prop("base_height", ValueType.FLOAT, Value.of(32f)),
+                        prop("max_height", ValueType.FLOAT, Value.of(128f)),
+                        prop("volume_count", ValueType.INT, Value.of(480)),
+                        prop("dust_count", ValueType.INT, Value.of(420)),
+                        prop("volume_size", ValueType.FLOAT, Value.of(5.4f)),
+                        prop("dust_size", ValueType.FLOAT, Value.of(0.8f)),
+                        prop("rotation_speed", ValueType.FLOAT, Value.of(3.4f)),
+                        prop("rise_speed", ValueType.FLOAT, Value.of(0.105f)),
+                        prop("inward_force", ValueType.FLOAT, Value.of(3.2f)),
+                        prop("turbulence", ValueType.FLOAT, Value.of(0.18f)),
+                        prop("drag", ValueType.FLOAT, Value.of(2.4f)),
+                        prop("volume_turns", ValueType.FLOAT, Value.of(3.8f)),
+                        prop("dust_turns", ValueType.FLOAT, Value.of(8.5f)),
+                        prop("volume_radius_scale", ValueType.FLOAT, Value.of(1.45f)),
+                        prop("dust_radius_scale", ValueType.FLOAT, Value.of(1.55f)),
+                        prop("collapse_start", ValueType.FLOAT, Value.of(0.8f)),
+                        prop("collapse_end", ValueType.FLOAT, Value.of(0.94f)),
+                        prop("lifetime", ValueType.FLOAT, Value.of(120f)),
+                        prop("volume_layer", ValueType.STRING, Value.string("wind_volume")),
+                        prop("dust_layer", ValueType.STRING, Value.string("wind_dust")),
+                        prop("volume_color", ValueType.COLOR, Value.color(0.70f, 0.73f, 0.76f, 0.40f)),
+                        prop("dust_color", ValueType.COLOR, Value.color(0.50f, 0.48f, 0.44f, 0.72f))
+                )));
+        blocks.register("vfx.block.tornado_volume", VfxBlocks::tornadoVolume);
+
+        metadata.register(type("vfx.block.plasma_convergence", "spawn", "Plasma Convergence Motes",
+                List.of(
+                        prop("progress_param", ValueType.STRING, Value.string("focus_progress")),
+                        prop("count", ValueType.INT, Value.of(72)),
+                        prop("arm_count", ValueType.INT, Value.of(4)),
+                        prop("turns", ValueType.FLOAT, Value.of(5.5f)),
+                        prop("stagger", ValueType.FLOAT, Value.of(0.28f)),
+                        prop("angular_acceleration", ValueType.FLOAT, Value.of(6.2f)),
+                        prop("irregularity", ValueType.FLOAT, Value.of(0.09f)),
+                        prop("start_radius", ValueType.FLOAT, Value.of(18f)),
+                        prop("start_height", ValueType.FLOAT, Value.of(12f)),
+                        prop("end_radius", ValueType.FLOAT, Value.of(0.24f)),
+                        prop("size_min", ValueType.FLOAT, Value.of(0.16f)),
+                        prop("size_max", ValueType.FLOAT, Value.of(0.88f)),
+                        prop("surface_bulges", ValueType.INT, Value.of(3)),
+                        prop("surface_radius", ValueType.FLOAT, Value.of(6.65f)),
+                        prop("surface_pulse", ValueType.FLOAT, Value.of(0.42f)),
+                        prop("lifetime", ValueType.FLOAT, Value.of(120f)),
+                        prop("layer", ValueType.STRING, Value.string("plasma_mote")),
+                        prop("color", ValueType.COLOR, Value.color(1f, 0.34f, 0.78f, 0.94f))
+                )));
+        blocks.register("vfx.block.plasma_convergence", VfxBlocks::plasmaConvergence);
+
+        metadata.register(type("vfx.block.arc_plasma_shell", "spawn", "Surface-Wrapped Segmented Lightning",
+                List.of(
+                        prop("position_param", ValueType.STRING, Value.string("")),
+                        prop("emission_param", ValueType.STRING, Value.string("")),
+                        prop("progress_param", ValueType.STRING, Value.string("")),
+                        prop("radius", ValueType.FLOAT, Value.of(8.45f)),
+                        prop("radius_min", ValueType.FLOAT, Value.of(0.42f)),
+                        prop("radius_max", ValueType.FLOAT, Value.of(8.45f)),
+                        prop("radius_power", ValueType.FLOAT, Value.of(2.3f)),
+                        prop("duration", ValueType.FLOAT, Value.of(0f)),
+                        prop("count", ValueType.INT, Value.of(3)),
+                        prop("segments", ValueType.INT, Value.of(72)),
+                        prop("rotation_speed", ValueType.FLOAT, Value.of(0.72f)),
+                        prop("jitter", ValueType.FLOAT, Value.of(0.022f)),
+                        prop("arc_span_min", ValueType.FLOAT, Value.of(0.16f)),
+                        prop("arc_span_max", ValueType.FLOAT, Value.of(0.38f)),
+                        prop("surface_offset", ValueType.FLOAT, Value.of(0.22f)),
+                        prop("flicker_rate", ValueType.FLOAT, Value.of(12f)),
+                        prop("width", ValueType.FLOAT, Value.of(0.045f)),
+                        prop("lifetime", ValueType.FLOAT, Value.of(0.025f)),
+                        prop("color", ValueType.COLOR, Value.color(0.66f, 0.9f, 1f, 0.98f))
+                )));
+        blocks.register("vfx.block.arc_plasma_shell", VfxBlocks::arcPlasmaShell);
+
+        metadata.register(type("vfx.block.arc_shockwave", "spawn", "Expanding Shock Rings",
+                List.of(
+                        prop("duration", ValueType.FLOAT, Value.of(1.25f)),
+                        prop("base_radius", ValueType.FLOAT, Value.of(1.5f)),
+                        prop("max_radius", ValueType.FLOAT, Value.of(28f)),
+                        prop("ring_count", ValueType.INT, Value.of(5)),
+                        prop("segments", ValueType.INT, Value.of(80)),
+                        prop("width", ValueType.FLOAT, Value.of(0.085f)),
+                        prop("lifetime", ValueType.FLOAT, Value.of(0.075f)),
+                        prop("color", ValueType.COLOR, Value.color(0.62f, 0.66f, 0.72f, 0.72f))
+                )));
+        blocks.register("vfx.block.arc_shockwave", VfxBlocks::arcShockwave);
+
         metadata.register(type("vfx.block.arc_surface", "spawn", "Arc Surface",
                 ARC_SURFACE_PROPS));
         blocks.register("vfx.block.arc_surface", VfxBlocks::arcSurface);
@@ -459,6 +616,7 @@ public final class VfxBlocks {
         float vz = propFloat(block, "vz", 0f);
         byte layer = layerOf(block);
         float rate = propFloat(block, "rate", 10f);
+        String positionParam = propString(block, "position_param", "");
         EmitterShape shape = buildShape(block);
         float[] acc = {0f};
         return (buf, ctx) -> {
@@ -471,6 +629,7 @@ public final class VfxBlocks {
             float[] p = new float[3];
             for (int k = 0; k < n; k++) {
                 shape.sample(ctx.random(), p);
+                applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
                 buf.setPosition(i, p[0], p[1], p[2]);
                 buf.setVelocity(i, vx, vy, vz);
@@ -493,6 +652,7 @@ public final class VfxBlocks {
         float vy = propFloat(block, "vy", 0f);
         float vz = propFloat(block, "vz", 0f);
         byte layer = layerOf(block);
+        String positionParam = propString(block, "position_param", "");
         EmitterShape shape = buildShape(block);
         boolean[] fired = {false};
         return (buf, ctx) -> {
@@ -502,6 +662,7 @@ public final class VfxBlocks {
             float[] p = new float[3];
             for (int k = 0; k < count; k++) {
                 shape.sample(ctx.random(), p);
+                applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
                 buf.setPosition(i, p[0], p[1], p[2]);
                 buf.setVelocity(i, vx, vy, vz);
@@ -525,6 +686,7 @@ public final class VfxBlocks {
         float vy = propFloat(block, "vy", 0f);
         float vz = propFloat(block, "vz", 0f);
         byte layer = layerOf(block);
+        String positionParam = propString(block, "position_param", "");
         EmitterShape shape = buildShape(block);
         float[] acc = {0f};
         return (buf, ctx) -> {
@@ -535,6 +697,7 @@ public final class VfxBlocks {
             float[] p = new float[3];
             for (int k = 0; k < count; k++) {
                 shape.sample(ctx.random(), p);
+                applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
                 buf.setPosition(i, p[0], p[1], p[2]);
                 buf.setVelocity(i, vx, vy, vz);
@@ -558,6 +721,7 @@ public final class VfxBlocks {
         float vy = propFloat(block, "vy", 0f);
         float vz = propFloat(block, "vz", 0f);
         byte layer = layerOf(block);
+        String positionParam = propString(block, "position_param", "");
         EmitterShape shape = buildShape(block);
         float[] acc = {0f};
         return (buf, ctx) -> {
@@ -569,6 +733,7 @@ public final class VfxBlocks {
             float[] p = new float[3];
             for (int k = 0; k < n; k++) {
                 shape.sample(ctx.random(), p);
+                applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
                 buf.setPosition(i, p[0], p[1], p[2]);
                 buf.setVelocity(i, vx, vy, vz);
@@ -586,10 +751,12 @@ public final class VfxBlocks {
 
     private static SimNode initPosition(VfxBlock block, PortValueSource ports) {
         EmitterShape shape = buildShape(block);
+        String positionParam = propString(block, "position_param", "");
         return (buf, ctx) -> {
             float[] p = new float[3];
             ctx.forEachIncoming(i -> {
                 shape.sample(ctx.random(), p);
+                applyPositionParam(p, positionParam, ctx);
                 buf.setPosition(i, p[0], p[1], p[2]);
             });
         };
@@ -780,20 +947,98 @@ public final class VfxBlocks {
 
     private static SimNode updateVortex(VfxBlock block, PortValueSource ports) {
         float cx = propFloat(block, "cx", 0f);
+        float cy = propFloat(block, "cy", 0f);
         float cz = propFloat(block, "cz", 0f);
         float strength = propFloat(block, "strength", 1f);
+        float pull = propFloat(block, "pull", 0f);
+        float verticalPull = propFloat(block, "vertical_pull", 0f);
+        byte layerFilter = ParticleBuffer.layerFilter(propString(block, "layer", ""));
         return (buf, ctx) -> {
             float dt = ctx.dt();
             for (int i = 0; i < buf.count(); i++) {
+                if (layerFilter >= 0 && buf.layer(i) != layerFilter) continue;
                 float dx = buf.positionX(i) - cx;
                 float dz = buf.positionZ(i) - cz;
                 float r2 = dx * dx + dz * dz;
                 if (r2 < 1e-6f) continue;
                 float inv = 1f / (float) Math.sqrt(r2);
+                float radialX = dx * inv;
+                float radialZ = dz * inv;
+                float vx = buf.velocityX(i);
+                float vz = buf.velocityZ(i);
+                float radialSpeed = vx * radialX + vz * radialZ;
+                float targetRadialSpeed = -pull;
+                if (radialSpeed > targetRadialSpeed) {
+                    float correction = radialSpeed - targetRadialSpeed;
+                    vx -= radialX * correction;
+                    vz -= radialZ * correction;
+                }
                 buf.setVelocity(i,
-                        buf.velocityX(i) - dz * inv * strength * dt,
-                        buf.velocityY(i),
-                        buf.velocityZ(i) + dx * inv * strength * dt);
+                        vx - radialZ * strength * dt,
+                        buf.velocityY(i) + (cy - buf.positionY(i)) * verticalPull * dt,
+                        vz + radialX * strength * dt);
+            }
+        };
+    }
+
+    private static SimNode updateFollow(VfxBlock block, PortValueSource ports) {
+        String positionParam = propString(block, "position_param", "projectile_position");
+        String directionParam = propString(block, "direction_param", "projectile_direction");
+        byte filter = layerFilter(block);
+        float orbitRadius = propFloat(block, "orbit_radius", 0f);
+        float orbitSpeed = propFloat(block, "orbit_speed", 0f);
+        float phase = propFloat(block, "phase", 0f);
+        float backOffset = propFloat(block, "back_offset", 0f);
+        String sizeParam = propString(block, "size_param", "");
+        float sizeMin = propFloat(block, "size_min", 1f);
+        float sizeMax = propFloat(block, "size_max", sizeMin);
+        float sizePower = Math.max(0.05f, propFloat(block, "size_power", 1f));
+        return (buf, ctx) -> {
+            float px = ctx.paramVec3(positionParam, 0, 0f);
+            float py = ctx.paramVec3(positionParam, 1, 0f);
+            float pz = ctx.paramVec3(positionParam, 2, 0f);
+            float fx = ctx.paramVec3(directionParam, 0, 0f);
+            float fy = ctx.paramVec3(directionParam, 1, 0f);
+            float fz = ctx.paramVec3(directionParam, 2, 1f);
+            float fl = (float) Math.sqrt(fx * fx + fy * fy + fz * fz);
+            if (fl < 1e-5f) {
+                fx = 0f;
+                fy = 0f;
+                fz = 1f;
+            } else {
+                fx /= fl;
+                fy /= fl;
+                fz /= fl;
+            }
+
+            float rx = -fz;
+            float ry = 0f;
+            float rz = fx;
+            float rl = (float) Math.sqrt(rx * rx + rz * rz);
+            if (rl < 1e-4f) {
+                rx = 1f;
+                rz = 0f;
+            } else {
+                rx /= rl;
+                rz /= rl;
+            }
+            float ux = ry * fz - rz * fy;
+            float uy = rz * fx - rx * fz;
+            float uz = rx * fy - ry * fx;
+            float sizeT = (float) Math.pow(clamp01(ctx.paramFloat(sizeParam, 0f)), sizePower);
+            float liveSize = lerp(sizeMin, sizeMax, smoothstep(sizeT));
+            for (int i = 0; i < buf.count(); i++) {
+                if (filter >= 0 && buf.layer(i) != filter) continue;
+                float angle = ctx.time() * orbitSpeed + phase + buf.seed(i) * 2.3999632f;
+                float cos = (float) Math.cos(angle);
+                float sin = (float) Math.sin(angle);
+                buf.setPosition(i,
+                        px - fx * backOffset + orbitRadius * (rx * cos + ux * sin),
+                        py - fy * backOffset + orbitRadius * (ry * cos + uy * sin),
+                        pz - fz * backOffset + orbitRadius * (rz * cos + uz * sin));
+                if (!sizeParam.isEmpty()) {
+                    buf.setSize(i, liveSize);
+                }
             }
         };
     }
@@ -1130,6 +1375,709 @@ public final class VfxBlocks {
         };
     }
 
+    /**
+     * 风之翼式压缩风环：粗环与内嵌副环快速扩张，随后整体压向固定充能点。
+     * 几何直接写入 ArcBuffer，避免 billboard 方块，同时保留非规则厚度、倾斜和半径起伏。
+     */
+    private static SimNode arcTornado(VfxBlock block, PortValueSource ports) {
+        String expandParam = propString(block, "expand_param", "expand_rate");
+        String chargeParam = propString(block, "charge_param", "charge_progress");
+        String emissionParam = propString(block, "emission_param", "emission");
+        String focusParam = propString(block, "focus_param", "focus_offset");
+        float expandMin = propFloat(block, "expand_min", 0.5f);
+        float expandMax = Math.max(expandMin + 0.001f, propFloat(block, "expand_max", 3f));
+        float bottomRadius = Math.max(0.1f, propFloat(block, "bottom_radius", 15f));
+        float baseRadius = propFloat(block, "base_radius", 15f);
+        float maxRadius = propFloat(block, "max_radius", 96f);
+        float baseHeight = propFloat(block, "base_height", 32f);
+        float maxHeight = propFloat(block, "max_height", 128f);
+        int minRings = propInt(block, "min_rings", 9);
+        int maxRings = propInt(block, "max_rings", 30);
+        int minHelices = Math.max(0, propInt(block, "min_helices", 1));
+        int maxHelices = Math.max(minHelices, propInt(block, "max_helices", 3));
+        int ringSegments = Math.max(16, propInt(block, "ring_segments", 88));
+        int helixSegments = Math.max(32, propInt(block, "helix_segments", 224));
+        float helixTurns = propFloat(block, "helix_turns", 8.5f);
+        float width = propFloat(block, "width", 0.12f);
+        float rotationMin = propFloat(block, "rotation_min", 0.82f);
+        float rotationMax = propFloat(block, "rotation_max", 5.2f);
+        float irregularity = Math.max(0f, propFloat(block, "irregularity", 0.095f));
+        float centerWander = Math.max(0f, propFloat(block, "center_wander", 0.055f));
+        float fragmentation = clamp01(propFloat(block, "fragmentation", 0.22f));
+        float tilt = Math.max(0f, propFloat(block, "tilt", 0.075f));
+        float nestedRadius = Math.max(0.1f, Math.min(0.9f, propFloat(block, "nested_radius", 0.54f)));
+        float nestedWidth = Math.max(0f, propFloat(block, "nested_width", 0.72f));
+        float collapseStart = Math.max(0f, Math.min(0.99f,
+                propFloat(block, "collapse_start", 0.8f)));
+        float collapseEnd = Math.max(collapseStart + 0.01f, Math.min(1f,
+                propFloat(block, "collapse_end", 0.94f)));
+        float lifetime = propFloat(block, "lifetime", 0.075f);
+        float[] dark = propColor(block, "color_dark");
+        float[] light = propColor(block, "color_light");
+        float[] edge = propColor(block, "color_edge");
+        long[] seed = {0L};
+        return (buf, ctx) -> {
+            float progress = clamp01(ctx.paramFloat(chargeParam, 0f));
+            float expandRate = Math.max(expandMin, Math.min(expandMax,
+                    ctx.paramFloat(expandParam, expandMin)));
+            float expansion = clamp01((expandRate - expandMin) / (expandMax - expandMin));
+            float collapse = smoothstep(clamp01((progress - collapseStart) / (collapseEnd - collapseStart)));
+            float collapseEase = collapse * collapse;
+            float emission = clamp01(ctx.paramFloat(emissionParam, 1f));
+            if (emission <= 0.001f || collapseEase >= 0.9995f) return;
+
+            float radius = lerp(baseRadius, maxRadius, expansion);
+            float height = lerp(baseHeight, maxHeight, expansion);
+            int ringCount = Math.max(2, Math.round(lerp(minRings, maxRings, expansion)));
+            int helixCount = Math.max(0, Math.round(lerp(minHelices, maxHelices, expansion)));
+            float rotationSpeed = lerp(rotationMin, rotationMax, expansion) * (1f + collapse * 2.65f);
+            float rotation = ctx.time() * rotationSpeed;
+            float focusX = ctx.paramVec3(focusParam, 0, 0f);
+            float focusY = ctx.paramVec3(focusParam, 1, 31f);
+            float focusZ = ctx.paramVec3(focusParam, 2, 6f);
+            float brightness = emission * lerp(0.54f, 1f, expansion);
+            float liveWidth = width * lerp(0.72f, 1.18f, expansion) * (1f + collapse * 0.18f);
+
+            for (int ring = 0; ring < ringCount; ring++) {
+                float u = ringCount == 1 ? 0f : (float) ring / (ringCount - 1);
+                float layerJitter = stableWave(ring, 1.71f) * height / Math.max(2f, ringCount) * 0.42f;
+                float ringRadius = lerp(bottomRadius, radius, (float) Math.pow(u, 0.62));
+                float ringY = Math.max(0f, Math.min(height, u * height + layerJitter));
+                float ringPhase = rotation * (0.66f + u * 0.62f + stableWave(ring, 3.2f) * 0.06f)
+                        + ring * 0.47f;
+                float wander = ringRadius * centerWander * (0.35f + u * 0.65f);
+                float centerX = (float) Math.sin(ring * 1.37f + ctx.time() * 0.19f) * wander;
+                float centerZ = (float) Math.cos(ring * 1.91f - ctx.time() * 0.15f) * wander;
+                float ellipse = 1f + stableWave(ring, 5.43f) * irregularity * 0.55f;
+                float tiltX = stableWave(ring, 6.31f) * tilt;
+                float tiltZ = stableWave(ring, 9.17f) * tilt;
+                float ringWidthScale = 0.74f + stableUnit(ring, 4.29f) * 0.52f;
+                float[] color = ring % 5 == 4 ? edge : ring % 2 == 0 ? light : dark;
+                boolean fragmented = stableUnit(ring, 8.17f) < fragmentation;
+                int fragmentCount = fragmented ? 2 + (ring % 4 == 3 ? 1 : 0) : 1;
+                for (int fragment = 0; fragment < fragmentCount; fragment++) {
+                    float startAngle;
+                    float span;
+                    if (fragmentCount == 1) {
+                        startAngle = 0f;
+                        span = (float) (Math.PI * 2.0);
+                    } else {
+                        startAngle = (float) (Math.PI * 2.0 * fragment / fragmentCount)
+                                + stableWave(ring * 7 + fragment, 2.93f) * 0.38f;
+                        float baseSpan = (float) (Math.PI * 2.0 / fragmentCount) * 0.78f;
+                        span = baseSpan * (0.82f + stableUnit(ring * 11 + fragment, 4.61f) * 0.34f);
+                    }
+                    int points = Math.max(12, Math.round(ringSegments * span / (float) (Math.PI * 2.0)));
+                    var arc = ctx.arcs().add();
+                    for (int point = 0; point <= points; point++) {
+                        float t = (float) point / points;
+                        float angle = startAngle + span * t + ringPhase;
+                        float harmonic = (float) Math.sin(angle * 2f + ring * 1.13f) * 0.48f
+                                + (float) Math.sin(angle * 5f - ring * 0.73f) * 0.31f
+                                + (float) Math.sin(angle * 9f + ring * 2.07f) * 0.16f;
+                        float ripple = 1f + irregularity * harmonic;
+                        float x = centerX + (float) Math.cos(angle) * ringRadius * ripple * ellipse;
+                        float z = centerZ + (float) Math.sin(angle) * ringRadius * ripple / ellipse;
+                        float y = ringY
+                                + (float) Math.cos(angle) * ringRadius * tiltX
+                                + (float) Math.sin(angle) * ringRadius * tiltZ
+                                + (float) Math.sin(angle + ring * 0.83f) * ringRadius * irregularity * 0.13f
+                                + (float) Math.sin(angle * 3f - ringPhase) * 0.09f * (1f + u);
+                        float widthRipple = 0.88f + 0.12f
+                                * (float) Math.sin(angle * 2f + ring * 1.61f);
+                        float pointWidth = liveWidth * ringWidthScale * widthRipple
+                                * (0.88f + 0.12f * (float) Math.sin(t * Math.PI));
+                        arc.addPoint(
+                                lerp(x, focusX, collapseEase),
+                                lerp(y, focusY, collapseEase),
+                                lerp(z, focusZ, collapseEase),
+                                pointWidth, 0f);
+                    }
+                    configureCleanArc(arc, color, brightness, lifetime, ++seed[0]);
+                }
+
+                // Wind Wing uses a smaller ring nested inside every primary ring. Rebuild the
+                // same broad silhouette procedurally here instead of reusing its old texture.
+                if (nestedWidth > 0.001f) {
+                    float innerRadius = ringRadius * nestedRadius
+                            * (0.96f + stableWave(ring, 7.77f) * irregularity * 0.22f);
+                    var innerArc = ctx.arcs().add();
+                    for (int point = 0; point <= ringSegments; point++) {
+                        float t = (float) point / ringSegments;
+                        float angle = t * (float) (Math.PI * 2.0) + ringPhase + 0.27f;
+                        float ripple = 1f + irregularity * 0.62f
+                                * ((float) Math.sin(angle * 3f - ring * 0.91f) * 0.7f
+                                + (float) Math.sin(angle * 7f + ring * 1.37f) * 0.3f);
+                        float x = centerX * 0.72f + (float) Math.cos(angle) * innerRadius * ripple * ellipse;
+                        float z = centerZ * 0.72f + (float) Math.sin(angle) * innerRadius * ripple / ellipse;
+                        float y = ringY
+                                + (float) Math.cos(angle) * innerRadius * tiltX
+                                + (float) Math.sin(angle) * innerRadius * tiltZ
+                                + (float) Math.sin(angle * 2f + ring) * innerRadius * irregularity * 0.08f;
+                        innerArc.addPoint(
+                                lerp(x, focusX, collapseEase),
+                                lerp(y, focusY, collapseEase),
+                                lerp(z, focusZ, collapseEase),
+                                liveWidth * ringWidthScale * nestedWidth
+                                        * (0.9f + 0.1f * (float) Math.sin(angle * 3f)),
+                                0f);
+                    }
+                    configureCleanArc(innerArc, dark, brightness * 0.62f, lifetime, ++seed[0]);
+                }
+            }
+
+            for (int helix = 0; helix < helixCount; helix++) {
+                float phase = rotation * (1.08f + stableWave(helix, 7.11f) * 0.09f)
+                        + (float) (Math.PI * 2.0 * helix / helixCount);
+                var arc = ctx.arcs().add();
+                for (int point = 0; point <= helixSegments; point++) {
+                    float u = (float) point / helixSegments;
+                    float localRadius = lerp(bottomRadius, radius, (float) Math.pow(u, 0.64));
+                    float radialNoise = 1f + irregularity * (
+                            (float) Math.sin(u * 17f + helix * 2.1f) * 0.52f
+                                    + (float) Math.sin(u * 43f - helix * 1.3f) * 0.22f);
+                    float angle = phase + u * helixTurns * (float) (Math.PI * 2.0)
+                            + irregularity * 1.35f * (float) Math.sin(u * 11f + helix);
+                    float helixWander = localRadius * centerWander * 0.58f;
+                    float x = (float) Math.cos(angle) * localRadius * radialNoise
+                            + (float) Math.sin(u * 8f + helix) * helixWander;
+                    float y = u * height
+                            + (float) Math.sin(u * 19f + helix * 1.7f) * height * irregularity * 0.012f;
+                    float z = (float) Math.sin(angle) * localRadius * radialNoise
+                            + (float) Math.cos(u * 7f - helix) * helixWander;
+                    arc.addPoint(
+                            lerp(x, focusX, collapseEase),
+                            lerp(y, focusY, collapseEase),
+                            lerp(z, focusZ, collapseEase),
+                            liveWidth * 0.34f * (1.04f + 0.12f * (float) Math.sin(u * Math.PI)), 0f);
+                }
+                float[] color = helix % 3 == 2 ? edge : light;
+                configureCleanArc(arc, color, brightness * 1.08f, lifetime, ++seed[0]);
+            }
+        };
+    }
+
+    /**
+     * Blender 力场式倒锥风暴：体积雾与尘粒是两个独立的圆柱侧面发射系统，各自积分
+     * 漩涡、向内约束、上升力、湍流和阻力。贝塞尔式漏斗曲线只定义力场边界，不再把粒子
+     * 硬排成规则螺旋；Start Size 与逐帧 Scale 仍直接乘 ExpandRate（0.5 → 3.0）。
+     */
+    private static SimNode tornadoVolume(VfxBlock block, PortValueSource ports) {
+        String expandParam = propString(block, "expand_param", "expand_rate");
+        String chargeParam = propString(block, "charge_param", "charge_progress");
+        String emissionParam = propString(block, "emission_param", "emission");
+        String focusParam = propString(block, "focus_param", "focus_offset");
+        float expandMin = propFloat(block, "expand_min", 0.5f);
+        float expandMax = Math.max(expandMin + 0.001f, propFloat(block, "expand_max", 3f));
+        float bottomRadius = Math.max(0.1f, propFloat(block, "bottom_radius", 15f));
+        float baseRadius = Math.max(bottomRadius, propFloat(block, "base_radius", 15f));
+        float maxRadius = Math.max(baseRadius, propFloat(block, "max_radius", 96f));
+        float baseHeight = Math.max(0.1f, propFloat(block, "base_height", 32f));
+        float maxHeight = Math.max(baseHeight, propFloat(block, "max_height", 128f));
+        int volumeCount = Math.max(24, propInt(block, "volume_count", 480));
+        int dustCount = Math.max(16, propInt(block, "dust_count", 420));
+        float volumeSize = Math.max(0.05f, propFloat(block, "volume_size", 5.4f));
+        float dustSize = Math.max(0.01f, propFloat(block, "dust_size", 0.8f));
+        float vortexStrength = propFloat(block, "rotation_speed", 3.4f);
+        float liftStrength = Math.max(0.001f, propFloat(block, "rise_speed", 0.105f));
+        float inwardForce = Math.max(0.05f, propFloat(block, "inward_force", 3.2f));
+        float turbulence = Math.max(0f, propFloat(block, "turbulence", 0.18f));
+        float drag = Math.max(0.05f, propFloat(block, "drag", 2.4f));
+        float volumeTurns = propFloat(block, "volume_turns", 3.8f);
+        float dustTurns = propFloat(block, "dust_turns", 8.5f);
+        float volumeRadiusScale = Math.max(1f, propFloat(block, "volume_radius_scale", 1.45f));
+        float dustRadiusScale = Math.max(1f, propFloat(block, "dust_radius_scale", 1.55f));
+        float collapseStart = Math.max(0f, Math.min(0.99f,
+                propFloat(block, "collapse_start", 0.8f)));
+        float collapseEnd = Math.max(collapseStart + 0.01f, Math.min(1f,
+                propFloat(block, "collapse_end", 0.94f)));
+        float lifetime = Math.max(1f, propFloat(block, "lifetime", 120f));
+        byte volumeLayer = ParticleBuffer.layerByte(propString(block, "volume_layer", "wind_volume"));
+        byte dustLayer = ParticleBuffer.layerByte(propString(block, "dust_layer", "wind_dust"));
+        float[] volumeColor = propColor(block, "volume_color");
+        float[] dustColor = propColor(block, "dust_color");
+
+        float[] volumeHeightState = new float[volumeCount];
+        float[] volumeDepthState = new float[volumeCount];
+        float[] volumeRadialVelocity = new float[volumeCount];
+        float[] volumeLiftVelocity = new float[volumeCount];
+        float[] volumeAngleState = new float[volumeCount];
+        float[] volumeAngularVelocity = new float[volumeCount];
+        float[] dustHeightState = new float[dustCount];
+        float[] dustDepthState = new float[dustCount];
+        float[] dustRadialVelocity = new float[dustCount];
+        float[] dustLiftVelocity = new float[dustCount];
+        float[] dustAngleState = new float[dustCount];
+        float[] dustAngularVelocity = new float[dustCount];
+        boolean[] fired = {false};
+        return (buf, ctx) -> {
+            float fullTurn = (float) (Math.PI * 2.0);
+            if (!fired[0]) {
+                fired[0] = true;
+                int start = buf.count();
+                for (int index = 0; index < volumeCount; index++) {
+                    float u = ((index + 0.5f) / volumeCount + stableUnit(index, 7.47f) * 0.08f) % 1f;
+                    volumeHeightState[index] = u;
+                    volumeDepthState[index] = 0.68f + stableUnit(index, 4.17f) * 0.30f;
+                    volumeRadialVelocity[index] = stableWave(index, 5.31f) * 0.025f;
+                    volumeLiftVelocity[index] = liftStrength * (0.78f + stableUnit(index, 2.31f) * 0.44f);
+                    volumeAngleState[index] = stableUnit(index, 1.19f) * fullTurn + u * volumeTurns * fullTurn;
+                    volumeAngularVelocity[index] = vortexStrength * (0.88f + stableUnit(index, 8.03f) * 0.24f);
+                    int particle = buf.spawn();
+                    buf.setPosition(particle, 0f, 0f, 0f);
+                    buf.setVelocity(particle, 0f, 0f, 0f);
+                    buf.setSize(particle, volumeSize);
+                    buf.setColor(particle,
+                            volumeColor[0], volumeColor[1], volumeColor[2], volumeColor[3]);
+                    buf.setLifetime(particle, lifetime);
+                    buf.setLayer(particle, volumeLayer);
+                }
+                for (int index = 0; index < dustCount; index++) {
+                    float u = ((index + 0.5f) / dustCount + stableUnit(index, 3.19f) * 0.05f) % 1f;
+                    dustHeightState[index] = u;
+                    dustDepthState[index] = 0.78f + stableUnit(index, 9.41f) * 0.21f;
+                    dustRadialVelocity[index] = stableWave(index, 4.73f) * 0.04f;
+                    dustLiftVelocity[index] = liftStrength * (1.72f + stableUnit(index, 6.23f) * 0.62f);
+                    dustAngleState[index] = stableUnit(index, 2.67f) * fullTurn + u * dustTurns * fullTurn;
+                    dustAngularVelocity[index] = vortexStrength * (1.18f + stableUnit(index, 5.29f) * 0.34f);
+                    int particle = buf.spawn();
+                    buf.setPosition(particle, 0f, 0f, 0f);
+                    buf.setVelocity(particle, 0f, 0f, 0f);
+                    buf.setSize(particle, dustSize);
+                    buf.setColor(particle, dustColor[0], dustColor[1], dustColor[2], dustColor[3]);
+                    buf.setLifetime(particle, lifetime);
+                    buf.setLayer(particle, dustLayer);
+                }
+                ctx.emitBatch(start, buf.count());
+            }
+
+            float expandRate = Math.max(expandMin, Math.min(expandMax,
+                    ctx.paramFloat(expandParam, expandMin)));
+            float expansion = clamp01((expandRate - expandMin) / (expandMax - expandMin));
+            float radius = lerp(baseRadius, maxRadius, expansion);
+            float height = lerp(baseHeight, maxHeight, expansion);
+            float progress = clamp01(ctx.paramFloat(chargeParam, 0f));
+            float collapse = smoothstep(clamp01((progress - collapseStart) / (collapseEnd - collapseStart)));
+            float collapseEase = collapse * collapse;
+            float emission = clamp01(ctx.paramFloat(emissionParam, 1f));
+            float focusX = ctx.paramVec3(focusParam, 0, 0f);
+            float focusY = ctx.paramVec3(focusParam, 1, 31f);
+            float focusZ = ctx.paramVec3(focusParam, 2, 6f);
+            float time = ctx.time();
+            float dt = Math.max(0f, Math.min(ctx.dt(), 0.05f));
+            float radialDamping = (float) Math.exp(-drag * dt);
+
+            int volumeIndex = 0;
+            for (int particle = 0; particle < buf.count(); particle++) {
+                if (buf.layer(particle) != volumeLayer) continue;
+                int index = volumeIndex++;
+                float particleSeed = buf.seed(particle);
+                float u = volumeHeightState[index];
+                float liftTarget = liftStrength * (0.78f + stableUnit(index, 2.31f) * 0.44f)
+                        * (1f + expansion * 0.16f);
+                float verticalNoise = (float) Math.sin(time * 0.83f + particleSeed * 1.37f)
+                        * turbulence * 0.025f;
+                volumeLiftVelocity[index] += ((liftTarget - volumeLiftVelocity[index]) * drag
+                        + verticalNoise) * dt;
+                u += volumeLiftVelocity[index] * dt;
+                if (u >= 1f) {
+                    u -= (float) Math.floor(u);
+                    volumeDepthState[index] = 0.68f + stableUnit(index + (int) time, 4.17f) * 0.30f;
+                    volumeRadialVelocity[index] = stableWave(index + (int) time, 5.31f) * 0.025f;
+                }
+                volumeHeightState[index] = u;
+
+                float angularTarget = vortexStrength * (1.22f - u * 0.42f)
+                        * (0.86f + stableUnit(index, 8.03f) * 0.28f);
+                float angularNoise = (float) Math.sin(time * 0.91f + particleSeed * 0.73f)
+                        * turbulence * 0.22f;
+                volumeAngularVelocity[index] += ((angularTarget - volumeAngularVelocity[index]) * drag * 0.82f
+                        + angularNoise) * dt;
+                volumeAngleState[index] += volumeAngularVelocity[index] * dt;
+
+                float targetDepth = 0.69f + stableUnit(index, 4.17f) * 0.27f;
+                float centrifugal = volumeAngularVelocity[index] * volumeAngularVelocity[index] * 0.0065f;
+                float radialNoise = (float) Math.sin(time * 1.07f + particleSeed * 1.91f + u * 11f)
+                        * turbulence * 0.18f;
+                float radialAcceleration = (targetDepth - volumeDepthState[index]) * inwardForce
+                        + centrifugal * (1f - u * 0.38f) + radialNoise;
+                volumeRadialVelocity[index] = (volumeRadialVelocity[index] + radialAcceleration * dt)
+                        * radialDamping;
+                volumeDepthState[index] = Math.max(0.58f, Math.min(1.08f,
+                        volumeDepthState[index] + volumeRadialVelocity[index] * dt));
+
+                float bezierHeight = u * u * (3f - 2f * u);
+                float coneRadius = lerp(bottomRadius, radius, (float) Math.pow(bezierHeight, 0.72f))
+                        * volumeRadiusScale;
+                float radial = coneRadius * volumeDepthState[index];
+                float angle = volumeAngleState[index];
+                float wander = coneRadius * 0.045f;
+                float x = (float) Math.cos(angle) * radial
+                        + (float) Math.sin(time * 0.37f + u * 8f) * wander;
+                float y = u * height
+                        + (float) Math.sin(angle * 0.46f + particleSeed) * height * 0.012f;
+                float z = (float) Math.sin(angle) * radial
+                        + (float) Math.cos(time * 0.31f - u * 7f) * wander;
+                buf.setPosition(particle,
+                        lerp(x, focusX, collapseEase),
+                        lerp(y, focusY, collapseEase),
+                        lerp(z, focusZ, collapseEase));
+                buf.setVelocity(particle,
+                        -(float) Math.sin(angle) * volumeAngularVelocity[index] * radial,
+                        volumeLiftVelocity[index] * height,
+                        (float) Math.cos(angle) * volumeAngularVelocity[index] * radial);
+                buf.setRotation(particle, angle + u * 0.7f);
+                buf.setAge(particle, time);
+                float endFade = smoothstep(clamp01(u / 0.11f))
+                        * smoothstep(clamp01((1f - u) / 0.14f));
+                float sizeVariation = 0.74f + stableUnit(index, 8.63f) * 0.52f;
+                buf.setSizeScaled(particle, buf.startSize(particle) * expandRate * sizeVariation
+                        * (0.82f + u * 0.34f) * (1f - collapseEase * 0.58f));
+                buf.setAlpha(particle, volumeColor[3] * emission * endFade
+                        * (0.62f + u * 0.38f) * (1f - collapseEase));
+            }
+
+            int dustIndex = 0;
+            for (int particle = 0; particle < buf.count(); particle++) {
+                if (buf.layer(particle) != dustLayer) continue;
+                int index = dustIndex++;
+                float particleSeed = buf.seed(particle);
+                float u = dustHeightState[index];
+                float liftTarget = liftStrength * (1.72f + stableUnit(index, 6.23f) * 0.62f)
+                        * (1f + expansion * 0.22f);
+                float verticalNoise = (float) Math.sin(time * 1.31f - particleSeed * 0.91f)
+                        * turbulence * 0.05f;
+                dustLiftVelocity[index] += ((liftTarget - dustLiftVelocity[index]) * drag * 0.9f
+                        + verticalNoise) * dt;
+                u += dustLiftVelocity[index] * dt;
+                if (u >= 1f) {
+                    u -= (float) Math.floor(u);
+                    dustDepthState[index] = 0.78f + stableUnit(index + (int) time, 9.41f) * 0.21f;
+                    dustRadialVelocity[index] = stableWave(index + (int) time, 4.73f) * 0.04f;
+                }
+                dustHeightState[index] = u;
+
+                float angularTarget = vortexStrength * (1.58f - u * 0.55f)
+                        * (0.9f + stableUnit(index, 5.29f) * 0.3f);
+                float angularNoise = (float) Math.sin(time * 1.47f + particleSeed * 1.17f)
+                        * turbulence * 0.36f;
+                dustAngularVelocity[index] += ((angularTarget - dustAngularVelocity[index]) * drag
+                        + angularNoise) * dt;
+                dustAngleState[index] += dustAngularVelocity[index] * dt;
+
+                float targetDepth = 0.78f + stableUnit(index, 9.41f) * 0.19f;
+                float centrifugal = dustAngularVelocity[index] * dustAngularVelocity[index] * 0.0045f;
+                float radialNoise = (float) Math.sin(time * 1.79f + particleSeed * 0.63f + u * 17f)
+                        * turbulence * 0.28f;
+                float radialAcceleration = (targetDepth - dustDepthState[index]) * inwardForce * 1.18f
+                        + centrifugal * (1f - u * 0.32f) + radialNoise;
+                dustRadialVelocity[index] = (dustRadialVelocity[index] + radialAcceleration * dt)
+                        * radialDamping;
+                dustDepthState[index] = Math.max(0.66f, Math.min(1.1f,
+                        dustDepthState[index] + dustRadialVelocity[index] * dt));
+
+                float bezierHeight = u * u * (3f - 2f * u);
+                float coneRadius = lerp(bottomRadius * 0.86f, radius * 0.96f,
+                        (float) Math.pow(bezierHeight, 0.69f)) * dustRadiusScale;
+                float radial = coneRadius * dustDepthState[index];
+                float angle = dustAngleState[index];
+                float x = (float) Math.cos(angle) * radial;
+                float y = u * height
+                        + (float) Math.sin(angle * 0.35f + particleSeed) * 0.38f;
+                float z = (float) Math.sin(angle) * radial;
+                buf.setPosition(particle,
+                        lerp(x, focusX, collapseEase),
+                        lerp(y, focusY, collapseEase),
+                        lerp(z, focusZ, collapseEase));
+                buf.setVelocity(particle,
+                        -(float) Math.sin(angle) * dustAngularVelocity[index] * radial,
+                        dustLiftVelocity[index] * height,
+                        (float) Math.cos(angle) * dustAngularVelocity[index] * radial);
+                buf.setRotation(particle, angle);
+                buf.setAge(particle, time);
+                float sizeVariation = 0.58f + stableUnit(index, 5.87f) * 0.82f;
+                buf.setSizeScaled(particle, buf.startSize(particle) * expandRate * sizeVariation
+                        * (1f - collapseEase * 0.72f));
+                float endFade = smoothstep(clamp01(u / 0.075f))
+                        * smoothstep(clamp01((1f - u) / 0.11f));
+                buf.setAlpha(particle, dustColor[3] * emission * endFade
+                        * (0.66f + u * 0.34f) * (1f - collapseEase));
+            }
+        };
+    }
+
+    /**
+     * 几何粒子式液态等离子凝聚：将实例粒子均匀铺在多条错相螺旋曲线上，沿曲线顺序收小
+     * 半径并提高角速度，而不是对每个粒子做直线吸附；末段保留少量缓慢凸出、收起的表面团块。
+     */
+    private static SimNode plasmaConvergence(VfxBlock block, PortValueSource ports) {
+        String progressParam = propString(block, "progress_param", "focus_progress");
+        int count = Math.max(8, propInt(block, "count", 72));
+        int armCount = Math.max(2, Math.min(8, propInt(block, "arm_count", 4)));
+        float turns = Math.max(0.5f, propFloat(block, "turns", 5.5f));
+        float stagger = Math.max(0f, Math.min(0.48f, propFloat(block, "stagger", 0.28f)));
+        float angularAcceleration = Math.max(0f, propFloat(block, "angular_acceleration", 6.2f));
+        float irregularity = Math.max(0f, Math.min(0.35f, propFloat(block, "irregularity", 0.09f)));
+        float startRadius = Math.max(0f, propFloat(block, "start_radius", 18f));
+        float startHeight = Math.max(0f, propFloat(block, "start_height", 12f));
+        float endRadius = Math.max(0f, propFloat(block, "end_radius", 0.24f));
+        float sizeMin = Math.max(0.01f, propFloat(block, "size_min", 0.16f));
+        float sizeMax = Math.max(sizeMin, propFloat(block, "size_max", 0.88f));
+        int surfaceBulges = Math.max(2, Math.min(3, propInt(block, "surface_bulges", 3)));
+        float surfaceRadius = Math.max(0.1f, propFloat(block, "surface_radius", 6.65f));
+        float surfacePulse = Math.max(0f, propFloat(block, "surface_pulse", 0.42f));
+        float lifetime = Math.max(1f, propFloat(block, "lifetime", 120f));
+        byte layer = ParticleBuffer.layerByte(propString(block, "layer", "plasma_mote"));
+        float[] color = propColor(block, "color");
+        boolean[] fired = {false};
+        return (buf, ctx) -> {
+            if (!fired[0]) {
+                fired[0] = true;
+                int start = buf.count();
+                for (int index = 0; index < count; index++) {
+                    int particle = buf.spawn();
+                    buf.setPosition(particle, 0f, 0f, 0f);
+                    buf.setVelocity(particle, 0f, 0f, 0f);
+                    buf.setSize(particle, sizeMin);
+                    buf.setColor(particle, color[0], color[1], color[2], color[3]);
+                    buf.setLifetime(particle, lifetime);
+                    buf.setAge(particle, 0f);
+                    buf.setLayer(particle, layer);
+                }
+                ctx.emitBatch(start, buf.count());
+            }
+
+            float progress = clamp01(ctx.paramFloat(progressParam, 0f));
+            float surfaceBlend = smoothstep(clamp01((progress - 0.60f) / 0.28f));
+            int stepsPerArm = Math.max(1, (count + armCount - 1) / armCount);
+            int moteIndex = 0;
+            for (int particle = 0; particle < buf.count(); particle++) {
+                if (buf.layer(particle) != layer) continue;
+                int localIndex = moteIndex++;
+                float particleSeed = buf.seed(particle);
+                int arm = localIndex % armCount;
+                int step = localIndex / armCount;
+                float pointOffset = 0.32f + stableUnit(localIndex, 9.37f) * 0.36f;
+                float pathU = clamp01((step + pointOffset) / stepsPerArm);
+                float localProgress = clamp01((progress * (1f + stagger * 2f) - pathU * stagger)
+                        / (1f + stagger));
+                float convergence = smoothstep(localProgress);
+                float radialCollapse = (float) Math.pow(convergence, 1.42f);
+                float absorption = smoothstep(clamp01((convergence - 0.80f) / 0.20f));
+
+                float armPhase = arm * (float) (Math.PI * 2.0 / armCount);
+                float pathPhase = pathU * turns * (float) (Math.PI * 2.0);
+                float seedWander = stableWave(localIndex, 3.71f) * irregularity;
+                float spinSpeed = 0.72f + angularAcceleration * convergence * convergence;
+                float orbit = armPhase + pathPhase + seedWander
+                        + ctx.time() * spinSpeed
+                        + convergence * (float) Math.PI * (2.4f + pathU * 1.8f);
+                float outerBand = 0.70f + pathU * 0.30f;
+                float radiusNoise = 1f + stableWave(localIndex, 5.13f) * irregularity
+                        * (1f - convergence * 0.74f);
+                float radius = lerp(startRadius * outerBand * radiusNoise,
+                        endRadius * (0.72f + stableUnit(localIndex, 7.19f) * 0.56f), radialCollapse);
+                float verticalEnvelope = (pathU * 2f - 1f) * startHeight;
+                float vertical = verticalEnvelope * (1f - (float) Math.pow(convergence, 0.82f));
+                float x = (float) Math.cos(orbit) * radius;
+                float z = (float) Math.sin(orbit) * radius;
+                float y = vertical + (float) Math.sin(orbit * 1.45f + particleSeed)
+                        * radius * irregularity * (1f - convergence * 0.68f);
+                boolean surfaceBulge = localIndex < surfaceBulges;
+                float bulgeWave = (float) Math.sin(ctx.time() * 0.72f + localIndex * 2.17f);
+                if (surfaceBulge) {
+                    float bulgeOrbit = ctx.time() * (0.14f + localIndex * 0.018f)
+                            + localIndex * (float) (Math.PI * 2.0 / surfaceBulges)
+                            + stableWave(localIndex, 8.43f) * 0.42f;
+                    float latitude = surfaceBulges == 2
+                            ? (localIndex == 0 ? -0.32f : 0.32f)
+                            : (localIndex - 1) * 0.39f;
+                    float liveSurfaceRadius = lerp(0.18f, surfaceRadius,
+                            (float) Math.pow(progress, 2.3));
+                    float protrusion = surfacePulse * bulgeWave * (0.28f + progress * 0.72f);
+                    float bulgeRadius = Math.max(0.08f, liveSurfaceRadius + protrusion);
+                    float latitudeRadius = (float) Math.cos(latitude) * bulgeRadius;
+                    float bulgeX = (float) Math.cos(bulgeOrbit) * latitudeRadius;
+                    float bulgeY = (float) Math.sin(latitude) * bulgeRadius;
+                    float bulgeZ = (float) Math.sin(bulgeOrbit) * latitudeRadius;
+                    x = lerp(x, bulgeX, surfaceBlend);
+                    y = lerp(y, bulgeY, surfaceBlend);
+                    z = lerp(z, bulgeZ, surfaceBlend);
+                    orbit = bulgeOrbit;
+                }
+                buf.setPosition(particle, x, y, z);
+                buf.setRotation(particle, orbit);
+                float sizeVariation = 0.68f + stableUnit(localIndex, 8.91f) * 0.54f;
+                float mergingSize = lerp(sizeMin, sizeMax, (float) Math.pow(convergence, 0.76f))
+                        * sizeVariation * (1f - absorption * 0.78f);
+                float bulgeSize = lerp(sizeMin * 0.92f, sizeMax * 0.82f, progress)
+                        * (1f + bulgeWave * 0.075f);
+                float liveSize = surfaceBulge
+                        ? lerp(mergingSize, bulgeSize, surfaceBlend)
+                        : mergingSize;
+                buf.setSizeScaled(particle, liveSize);
+                float mergingAlpha = color[3] * (0.58f + convergence * 0.42f) * (1f - absorption);
+                float liveAlpha = surfaceBulge
+                        ? lerp(mergingAlpha, color[3] * 0.9f, surfaceBlend)
+                        : mergingAlpha;
+                float heat = convergence * 0.30f;
+                buf.setColorRgb(particle,
+                        lerp(color[0], 1f, heat),
+                        lerp(color[1], 0.82f, heat),
+                        lerp(color[2], 1f, heat * 0.72f));
+                buf.setAlpha(particle, liveAlpha);
+            }
+        };
+    }
+
+    /**
+     * 球面环绕闪电：多条不同倾角的短弧贴着液态球外壳爬行。每个闪烁节拍都会重选
+     * 弧段起点、长度与折点，但基础轨道仍连续旋转，形成 Blender 几何曲线式的“绕球跳闪”，
+     * 不再出现规则、完整、恒定的发光圆环。
+     */
+    private static SimNode arcPlasmaShell(VfxBlock block, PortValueSource ports) {
+        String positionParam = propString(block, "position_param", "");
+        String emissionParam = propString(block, "emission_param", "");
+        String progressParam = propString(block, "progress_param", "");
+        float radius = propFloat(block, "radius", 8.45f);
+        float radiusMin = propFloat(block, "radius_min", 0.42f);
+        float radiusMax = propFloat(block, "radius_max", radius);
+        float radiusPower = Math.max(0.1f, propFloat(block, "radius_power", 2.3f));
+        float duration = propFloat(block, "duration", 0f);
+        int count = Math.max(1, propInt(block, "count", 7));
+        int segments = Math.max(8, propInt(block, "segments", 22));
+        float rotationSpeed = propFloat(block, "rotation_speed", 0.72f);
+        float jitter = Math.max(0f, propFloat(block, "jitter", 0.022f));
+        float arcSpanMin = Math.max(0.04f, propFloat(block, "arc_span_min", 0.16f));
+        float arcSpanMax = Math.max(arcSpanMin, propFloat(block, "arc_span_max", 0.38f));
+        float surfaceOffset = Math.max(0f, propFloat(block, "surface_offset", 0.22f));
+        float flickerRate = Math.max(1f, propFloat(block, "flicker_rate", 12f));
+        float width = propFloat(block, "width", 0.045f);
+        float lifetime = propFloat(block, "lifetime", 0.025f);
+        float[] color = propColor(block, "color");
+        long[] seed = {0L};
+        return (buf, ctx) -> {
+            float emission = clamp01(ctx.paramFloat(emissionParam, 1f));
+            if (duration > 0f) {
+                emission *= 1f - clamp01(ctx.time() / duration);
+            }
+            if (emission <= 0.001f) return;
+            float cx = ctx.paramVec3(positionParam, 0, 0f);
+            float cy = ctx.paramVec3(positionParam, 1, 0f);
+            float cz = ctx.paramVec3(positionParam, 2, 0f);
+            float shellProgress = clamp01(ctx.paramFloat(progressParam, 1f));
+            float liveRadius = progressParam.isEmpty()
+                    ? radius
+                    : lerp(radiusMin, radiusMax, (float) Math.pow(shellProgress, radiusPower));
+            float spin = ctx.time() * rotationSpeed;
+            float flickerFrame = (float) Math.floor(ctx.time() * flickerRate);
+            float shellRadius = liveRadius + surfaceOffset * (0.35f + shellProgress * 0.65f);
+            for (int index = 0; index < count; index++) {
+                if (hash(index + 0.71f, flickerFrame + 3.19f, 5.83f) < 0.16f) continue;
+
+                float normalY = lerp(-0.82f, 0.82f, hash(index + 1.7f, 19.3f, 2.1f));
+                float normalAngle = spin * (0.56f + index * 0.07f)
+                        + hash(index + 2.3f, 23.7f, 1.9f) * (float) (Math.PI * 2.0);
+                float normalHorizontal = (float) Math.sqrt(1f - normalY * normalY);
+                float nx = (float) Math.cos(normalAngle) * normalHorizontal;
+                float ny = normalY;
+                float nz = (float) Math.sin(normalAngle) * normalHorizontal;
+                float horizontalLength = Math.max(1.0e-4f, (float) Math.sqrt(nx * nx + nz * nz));
+                float ux = nz / horizontalLength;
+                float uy = 0f;
+                float uz = -nx / horizontalLength;
+                float vx = ny * uz;
+                float vy = nz * ux - nx * uz;
+                float vz = -ny * ux;
+                float spanFraction = lerp(arcSpanMin, arcSpanMax,
+                        hash(index + 7.1f, flickerFrame + 2.7f, 11.9f));
+                float arcSpan = (float) (Math.PI * 2.0) * spanFraction;
+                float startAngle = spin * (1.08f + index * 0.035f)
+                        + hash(index + 13.4f, flickerFrame + 0.43f, 17.2f)
+                        * (float) (Math.PI * 2.0);
+                int liveSegments = Math.max(7, Math.round(segments * spanFraction / arcSpanMax));
+                var arc = ctx.arcs().add();
+                for (int point = 0; point <= liveSegments; point++) {
+                    float u = (float) point / liveSegments;
+                    float angle = startAngle + arcSpan * u;
+                    float cos = (float) Math.cos(angle);
+                    float sin = (float) Math.sin(angle);
+                    float qx = ux * cos + vx * sin;
+                    float qy = uy * cos + vy * sin;
+                    float qz = uz * cos + vz * sin;
+                    float tx = -ux * sin + vx * cos;
+                    float ty = -uy * sin + vy * cos;
+                    float tz = -uz * sin + vz * cos;
+                    float tangentJolt = (hash(index * 31.7f + point, flickerFrame * 17.3f, 29.1f) * 2f - 1f)
+                            * jitter;
+                    float crossJolt = (hash(index * 43.1f + point, flickerFrame * 23.9f, 37.7f) * 2f - 1f)
+                            * jitter * 0.82f;
+                    float sx = qx + tx * tangentJolt + nx * crossJolt;
+                    float sy = qy + ty * tangentJolt + ny * crossJolt;
+                    float sz = qz + tz * tangentJolt + nz * crossJolt;
+                    float invLength = 1f / Math.max(1.0e-4f, (float) Math.sqrt(sx * sx + sy * sy + sz * sz));
+                    float radialCrackle = shellRadius * jitter * 0.055f
+                            * (hash(point + 5.2f, index + flickerFrame * 3.1f, 41.3f) * 2f - 1f);
+                    float taper = (float) Math.pow(Math.sin(u * Math.PI), 0.34);
+                    arc.addPoint(
+                            cx + sx * invLength * (shellRadius + radialCrackle),
+                            cy + sy * invLength * (shellRadius + radialCrackle),
+                            cz + sz * invLength * (shellRadius + radialCrackle),
+                            width * (0.18f + taper * 0.82f), 0f);
+                }
+                float flash = 0.78f + hash(index + 3.6f, flickerFrame + 8.2f, 47.5f) * 0.34f;
+                configureCleanArc(arc, color, emission * flash, lifetime, ++seed[0]);
+                arc.setNoiseStrength(jitter * 0.32f);
+            }
+        };
+    }
+
+    /** 命中时向外展开的多层灰色冲击环。 */
+    private static SimNode arcShockwave(VfxBlock block, PortValueSource ports) {
+        float duration = propFloat(block, "duration", 1.25f);
+        float baseRadius = propFloat(block, "base_radius", 1.5f);
+        float maxRadius = propFloat(block, "max_radius", 28f);
+        int ringCount = Math.max(1, propInt(block, "ring_count", 5));
+        int segments = Math.max(16, propInt(block, "segments", 80));
+        float width = propFloat(block, "width", 0.085f);
+        float lifetime = propFloat(block, "lifetime", 0.075f);
+        float[] color = propColor(block, "color");
+        long[] seed = {0L};
+        return (buf, ctx) -> {
+            if (ctx.time() > duration) return;
+            for (int ring = 0; ring < ringCount; ring++) {
+                float delay = ring * 0.075f;
+                float t = clamp01((ctx.time() / duration - delay) / Math.max(0.05f, 1f - delay));
+                if (t <= 0f || t >= 0.999f) continue;
+                float eased = 1f - (float) Math.pow(1f - t, 3f);
+                float radius = lerp(baseRadius, maxRadius * (1f - ring * 0.055f), eased);
+                float alpha = (1f - smoothstep(t)) * (1f - ring * 0.08f);
+                float tilt = (ring - (ringCount - 1) * 0.5f) * 0.11f;
+                var arc = ctx.arcs().add();
+                for (int point = 0; point <= segments; point++) {
+                    float angle = (float) (Math.PI * 2.0 * point / segments) + ring * 0.41f;
+                    float x = (float) Math.cos(angle) * radius;
+                    float z = (float) Math.sin(angle) * radius;
+                    float y = z * (float) Math.sin(tilt);
+                    z *= (float) Math.cos(tilt);
+                    arc.addPoint(x, y, z, width * (1f + (1f - t) * 0.8f), 0f);
+                }
+                configureCleanArc(arc, color, alpha, lifetime, ++seed[0]);
+            }
+        };
+    }
+
+    private static void configureCleanArc(
+            org.academy.api.client.render.vfxgraph.arc.ArcCurve arc,
+            float[] color, float emission, float lifetime, long seed
+    ) {
+        arc.setColor(color[0] * emission, color[1] * emission, color[2] * emission, color[3] * emission);
+        arc.setLifetime(lifetime);
+        arc.setSeed(seed);
+        arc.setNoiseStrength(0f);
+        arc.setDriftSpeed(0f);
+    }
+
     /** 表面电弧（M29，Blender「闪电附着」主流水线）：表面布点 + per-point 短弧 + 断续时序 + 端点吸附。 */
     private static SimNode arcSurface(VfxBlock block, PortValueSource ports) {
         float ox = propFloat(block, "origin_x", 0f);
@@ -1369,6 +2317,35 @@ public final class VfxBlocks {
 
     private static float jitter(SimContext ctx, float amp) {
         return amp * (ctx.random().nextFloat() * 2f - 1f);
+    }
+
+    private static void applyPositionParam(float[] position, String param, SimContext ctx) {
+        if (param.isEmpty()) return;
+        position[0] += ctx.paramVec3(param, 0, 0f);
+        position[1] += ctx.paramVec3(param, 1, 0f);
+        position[2] += ctx.paramVec3(param, 2, 0f);
+    }
+
+    /** 跨帧稳定的伪随机波形，避免空气流线和凝聚团出现逐帧跳动。 */
+    private static float stableWave(int index, float salt) {
+        return (float) Math.sin((index + 1) * 12.9898f + salt * 78.233f);
+    }
+
+    private static float stableUnit(int index, float salt) {
+        return stableWave(index, salt) * 0.5f + 0.5f;
+    }
+
+    private static float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
+    }
+
+    private static float lerp(float from, float to, float t) {
+        return from + (to - from) * t;
+    }
+
+    private static float smoothstep(float t) {
+        t = clamp01(t);
+        return t * t * (3f - 2f * t);
     }
 
     private static float hash(float x, float y, float z) {

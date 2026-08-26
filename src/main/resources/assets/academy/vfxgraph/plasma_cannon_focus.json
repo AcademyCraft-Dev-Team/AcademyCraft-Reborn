@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "plasma_cannon_focus",
+  "parameters": [
+    {
+      "id": "convergence_progress",
+      "name": "Spiral Convergence Progress",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 0.82 },
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "id": "formation_progress",
+      "name": "Plasma Formation Progress",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 0.55 },
+      "min": 0.0,
+      "max": 1.0
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Geometry Spiral Plasma Convergence",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_converging_motes",
+          "type": "vfx.block.plasma_convergence",
+          "properties": {
+            "progress_param": "convergence_progress", "count": "72",
+            "arm_count": "4", "turns": "5.5", "stagger": "0.28",
+            "angular_acceleration": "6.2", "irregularity": "0.09",
+            "start_radius": "18", "start_height": "12", "end_radius": "0.24",
+            "size_min": "0.16", "size_max": "0.88", "lifetime": "120",
+            "surface_bulges": "3", "surface_radius": "6.65", "surface_pulse": "0.42",
+            "layer": "plasma_mote", "color": "1.0,0.34,0.78,0.94"
+          }
+        },
+        {
+          "id": "spawn_focus_core",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "1", "lifetime": "120", "size": "0.08",
+            "color": "1.0,0.97,1.0,1.0", "layer": "plasma_core", "shape": "point"
+          }
+        },
+        {
+          "id": "spawn_focus_halo",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "1", "lifetime": "120", "size": "0.18",
+            "color": "0.58,0.30,1.0,0.34", "layer": "plasma_halo", "shape": "point"
+          }
+        },
+        {
+          "id": "spawn_focus_surface_lightning",
+          "type": "vfx.block.arc_plasma_shell",
+          "properties": {
+            "position_param": "", "emission_param": "formation_progress", "progress_param": "formation_progress",
+            "radius": "8.45", "radius_min": "0.42", "radius_max": "8.45", "radius_power": "2.3",
+            "count": "7", "segments": "22", "rotation_speed": "1.65", "jitter": "0.13",
+            "arc_span_min": "0.16", "arc_span_max": "0.38", "surface_offset": "0.22", "flicker_rate": "12",
+            "width": "0.055", "lifetime": "0.06", "color": "0.70,0.93,1.0,1.0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Stage Synchronized Spiral Absorption And Stable Growth",
+      "x": 520.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "follow_focus_core",
+          "type": "vfx.block.update_follow",
+          "properties": {
+            "position_param": "", "direction_param": "", "layer": "plasma_core",
+            "orbit_radius": "0", "size_param": "formation_progress", "size_min": "0.08", "size_max": "7.6", "size_power": "2.3"
+          }
+        },
+        {
+          "id": "follow_focus_halo",
+          "type": "vfx.block.update_follow",
+          "properties": {
+            "position_param": "", "direction_param": "", "layer": "plasma_halo",
+            "orbit_radius": "0", "size_param": "formation_progress", "size_min": "0.18", "size_max": "11.2", "size_power": "2.0"
+          }
+        },
+        { "id": "update_age", "type": "vfx.block.update_age", "properties": {} }
+      ]
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "Pink Liquid Core And Surface Wrapped Blue White Lightning",
+      "x": 1040.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_converging_motes",
+          "type": "vfx.block.output_quad_glow",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_plasma_sphere",
+            "shader": "academy:core/vfxgraph_plasma_liquid",
+            "blend": "glow", "layer": "plasma_mote"
+          }
+        },
+        {
+          "id": "out_focus_core",
+          "type": "vfx.block.output_quad_glow",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_plasma_sphere",
+            "shader": "academy:core/vfxgraph_plasma_sphere",
+            "blend": "glow", "layer": "plasma_core"
+          }
+        },
+        {
+          "id": "out_focus_halo",
+          "type": "vfx.block.output_quad_glow",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_plasma_halo",
+            "shader": "academy:core/vfxgraph_plasma_halo",
+            "blend": "glow", "layer": "plasma_halo"
+          }
+        },
+        {
+          "id": "out_focus_surface_lightning",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc", "shader": "academy:core/vfxgraph_arc",
+            "blend": "glow", "sparks": "0", "emission": "1.55",
+            "noise_strength": "0.06", "drift_speed": "2.4", "lifetime": "0.07",
+            "overall_scale": "1", "branch_depth": "0"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    { "from": "ctx_spawn", "to": "ctx_update" },
+    { "from": "ctx_update", "to": "ctx_output" }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_converging_motes", "out_focus_core", "out_focus_halo", "out_focus_surface_lightning" ]
+}

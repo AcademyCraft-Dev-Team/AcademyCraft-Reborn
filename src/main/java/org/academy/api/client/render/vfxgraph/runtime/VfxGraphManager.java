@@ -164,14 +164,18 @@ public final class VfxGraphManager {
                     continue;
                 }
             }
-            if (!budget.shouldRender(camera.position(), effect.position())) {
-                continue;
-            }
-            if (!budget.sphereInFrustum(camera.projection(), camera.viewRotation(), camera.position(), effect.position())) {
-                continue;
+            var effectCamera = effect.cameraForRendering(camera);
+            if (!effect.alwaysVisible()) {
+                if (!budget.shouldRender(effectCamera.position(), effect.position())) {
+                    continue;
+                }
+                if (!budget.sphereInFrustum(effectCamera.projection(), effectCamera.viewRotation(),
+                        effectCamera.position(), effect.position())) {
+                    continue;
+                }
             }
             var renderer = rendererPool.computeIfAbsent(effect.specs(), k -> new VfxGraphRenderer());
-            effect.render(target, depth, camera, renderer, false, false);
+            effect.render(target, depth, effectCamera, renderer, false, false);
         }
     }
 
@@ -191,14 +195,18 @@ public final class VfxGraphManager {
             if (!budget.canSpawnMore(effect.effect().buffer().count())) {
                 continue;
             }
-            if (!budget.shouldRender(camera.position(), effect.position())) {
-                continue;
-            }
-            if (!budget.sphereInFrustum(camera.projection(), camera.viewRotation(), camera.position(), effect.position())) {
-                continue;
+            var effectCamera = effect.cameraForRendering(camera);
+            if (!effect.alwaysVisible()) {
+                if (!budget.shouldRender(effectCamera.position(), effect.position())) {
+                    continue;
+                }
+                if (!budget.sphereInFrustum(effectCamera.projection(), effectCamera.viewRotation(),
+                        effectCamera.position(), effect.position())) {
+                    continue;
+                }
             }
             var renderer = rendererPool.computeIfAbsent(effect.specs(), k -> new VfxGraphRenderer());
-            effect.render(color, depth, camera, renderer, false, true);
+            effect.render(color, depth, effectCamera, renderer, false, true);
         }
     }
 

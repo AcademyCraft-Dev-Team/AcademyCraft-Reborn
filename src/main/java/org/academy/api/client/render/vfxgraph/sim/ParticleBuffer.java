@@ -7,7 +7,7 @@ import java.util.Arrays;
  *
  * <p>字段：position(x,y,z)、velocity(x,y,z)、color(r,g,b)、alpha/startAlpha、
  * size/startSize、age、lifetime、rotation、mass、seed（每粒子稳定随机种子）、
- * layer（0=fire additive，1=smoke alpha，供渲染按层拆分），以及每粒子环形 trail 历史
+     * layer（由 {@link #layerByte(String)} 统一编码，供渲染按层拆分），以及每粒子环形 trail 历史
  * （TRAIL_LENGTH 个最近位置，M13-07）。</p>
  */
 public final class ParticleBuffer {
@@ -194,9 +194,22 @@ public final class ParticleBuffer {
         this.layer[i] = layer;
     }
 
-    /** 粒子层编码（单一映射源，spawn/over-life 过滤/渲染层过滤共用）：{@code "smoke"} → 1，其余 → 0。 */
+    /** 粒子层编码（单一映射源，spawn/over-life 过滤/渲染层过滤共用）。 */
     public static byte layerByte(String layer) {
-        return "smoke".equals(layer) ? (byte) 1 : (byte) 0;
+        return switch (layer) {
+            case "smoke" -> 1;
+            case "plasma_core" -> 2;
+            case "plasma_halo" -> 3;
+            case "trail_white" -> 4;
+            case "trail_plasma" -> 5;
+            case "ion_spark" -> 6;
+            case "impact_core" -> 7;
+            case "plasma_mote" -> 8;
+            case "wind_volume" -> 9;
+            case "wind_dust" -> 10;
+            case "impact_mono" -> 11;
+            default -> 0;
+        };
     }
 
     /** 层过滤编码：{@code ""}（或 null）→ -1（全部），否则按 {@link #layerByte}。 */

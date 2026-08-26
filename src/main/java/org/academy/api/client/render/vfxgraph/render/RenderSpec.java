@@ -89,8 +89,8 @@ public record RenderSpec(
     public static RenderSpec fromOutputNode(GraphNode node) {
         var geometry = switch (node.type()) {
             case "vfx.output_mesh" -> Geometry.MESH;
-            case "vfx.output_line" -> Geometry.LINE;
-            case "vfx.output_ribbon" -> Geometry.RIBBON;
+            case "vfx.output_line", "vfx.block.output_line" -> Geometry.LINE;
+            case "vfx.output_ribbon", "vfx.block.output_ribbon" -> Geometry.RIBBON;
             case "vfx.output_arc", "vfx.block.output_arc" -> Geometry.ARC;
             default -> Geometry.QUAD;
         };

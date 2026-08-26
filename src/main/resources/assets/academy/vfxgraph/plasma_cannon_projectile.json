@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "plasma_cannon_projectile",
+  "parameters": [
+    {
+      "id": "projectile_position",
+      "name": "Projectile Local Position",
+      "type": "VEC3",
+      "default": { "type": "VEC3", "x": 0.0, "y": 0.0, "z": 0.0 }
+    },
+    {
+      "id": "projectile_direction",
+      "name": "Projectile Direction",
+      "type": "VEC3",
+      "default": { "type": "VEC3", "x": 0.0, "y": 0.0, "z": 1.0 }
+    },
+    {
+      "id": "smoke_alpha",
+      "name": "Smoke Dissolve",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          { "t": 0.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+          { "t": 0.12, "v": 0.34, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+          { "t": 0.62, "v": 0.18, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+          { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+        ]
+      }
+    },
+    {
+      "id": "smoke_size",
+      "name": "Smoke Expansion",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          { "t": 0.0, "v": 0.55, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+          { "t": 1.0, "v": 1.85, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Stable Liquid Projectile / Spiral Trails / Residue",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_core",
+          "type": "vfx.block.spawn_burst",
+          "properties": { "count": "1", "lifetime": "120", "size": "8.4", "color": "1.0,0.98,1.0,1.0", "layer": "plasma_core", "shape": "point" }
+        },
+        {
+          "id": "spawn_halo",
+          "type": "vfx.block.spawn_burst",
+          "properties": { "count": "1", "lifetime": "120", "size": "12.4", "color": "0.38,0.48,1.0,0.32", "layer": "plasma_halo", "shape": "point" }
+        },
+        {
+          "id": "spawn_white_trails",
+          "type": "vfx.block.spawn_burst",
+          "properties": { "count": "2", "lifetime": "120", "size": "0.32", "color": "1.0,0.96,1.0,0.94", "layer": "trail_white", "shape": "point" }
+        },
+        {
+          "id": "spawn_plasma_trails",
+          "type": "vfx.block.spawn_burst",
+          "properties": { "count": "3", "lifetime": "120", "size": "0.24", "color": "0.42,0.48,1.0,0.92", "layer": "trail_plasma", "shape": "point" }
+        },
+        {
+          "id": "spawn_smoke",
+          "type": "vfx.block.spawn_rate",
+          "properties": {
+            "rate": "34", "lifetime": "1.8", "size": "3.2", "color": "0.48,0.51,0.56,0.24",
+            "layer": "smoke", "shape": "sphere", "position_param": "projectile_position", "radius": "1.25"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_init",
+      "type": "INITIALIZE",
+      "name": "Smoke Residue Scatter",
+      "x": 500.0,
+      "y": 0.0,
+      "blocks": [
+        { "id": "init_smoke_velocity", "type": "vfx.block.init_velocity", "properties": { "vx": "0", "vy": "0.45", "vz": "0", "random": "0.9" } }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Head Follow And Residual Motion",
+      "x": 1000.0,
+      "y": 0.0,
+      "blocks": [
+        { "id": "update_turbulence", "type": "vfx.block.update_turbulence", "properties": { "amplitude": "0.8", "frequency": "0.4" } },
+        { "id": "update_drag", "type": "vfx.block.update_drag", "properties": { "drag": "0.75" } },
+        { "id": "update_velocity", "type": "vfx.block.update_velocity", "properties": {} },
+        {
+          "id": "follow_core", "type": "vfx.block.update_follow",
+          "properties": { "position_param": "projectile_position", "direction_param": "projectile_direction", "layer": "plasma_core", "orbit_radius": "0" }
+        },
+        {
+          "id": "follow_halo", "type": "vfx.block.update_follow",
+          "properties": { "position_param": "projectile_position", "direction_param": "projectile_direction", "layer": "plasma_halo", "orbit_radius": "0" }
+        },
+        {
+          "id": "follow_white", "type": "vfx.block.update_follow",
+          "properties": { "position_param": "projectile_position", "direction_param": "projectile_direction", "layer": "trail_white", "orbit_radius": "0.24", "orbit_speed": "3.8", "back_offset": "0.45" }
+        },
+        {
+          "id": "follow_plasma", "type": "vfx.block.update_follow",
+          "properties": { "position_param": "projectile_position", "direction_param": "projectile_direction", "layer": "trail_plasma", "orbit_radius": "1.18", "orbit_speed": "7.4", "back_offset": "1.0" }
+        },
+        { "id": "update_age", "type": "vfx.block.update_age", "properties": {} },
+        { "id": "life_smoke_alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "smoke_alpha", "layer": "smoke" } },
+        { "id": "life_smoke_size", "type": "vfx.block.life_size", "properties": { "curve": "smoke_size", "layer": "smoke" } }
+      ]
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "White Pink Liquid Plasma Cannon Without Internal Lines",
+      "x": 1500.0,
+      "y": 0.0,
+      "blocks": [
+        { "id": "out_core", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_sphere", "shader": "academy:core/vfxgraph_plasma_liquid", "blend": "glow", "layer": "plasma_core" } },
+        { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },
+        { "id": "out_white_trails", "type": "vfx.block.output_ribbon", "properties": { "vertex": "academy:core/vfxgraph_simple", "shader": "academy:core/vfxgraph_simple", "blend": "glow", "layer": "trail_white" } },
+        { "id": "out_plasma_trails", "type": "vfx.block.output_ribbon", "properties": { "vertex": "academy:core/vfxgraph_simple", "shader": "academy:core/vfxgraph_simple", "blend": "glow", "layer": "trail_plasma" } },
+        { "id": "out_smoke", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_plasma_smoke", "shader": "academy:core/vfxgraph_plasma_smoke", "blend": "translucent", "layer": "smoke" } }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    { "from": "ctx_spawn", "to": "ctx_init" },
+    { "from": "ctx_init", "to": "ctx_update" },
+    { "from": "ctx_update", "to": "ctx_output" }
+  ],
+  "blockFlows": [
+    { "from": "spawn_smoke", "to": "init_smoke_velocity" }
+  ],
+  "dataEdges": [],
+  "outputs": [ "out_core", "out_halo", "out_white_trails", "out_plasma_trails", "out_smoke" ]
+}

@@ -31,7 +31,8 @@ class SampleAssetsTest {
     @Test
     void packagedAssetsDecodeAndSpawn() {
         for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "skill_dirstrike", "minimal_burst", "demo_fire", "demo_arc",
-                "surface_arc", "contact_arc", "spark", "demo_blender_arc"}) {
+                "surface_arc", "contact_arc", "spark", "demo_blender_arc", "plasma_cannon_charge", "plasma_cannon_focus",
+                "plasma_cannon_projectile", "plasma_cannon_impact"}) {
             var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + name + ".json");
             assertNotNull(stream, "sample asset " + name + " should be packaged");
             var json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
@@ -46,6 +47,6 @@ class SampleAssetsTest {
                 effect.tick(1f / 60f);
             }
         }
-        assertTrue(VfxGraphManager.INSTANCE.effectCount() == 11);
+        assertTrue(VfxGraphManager.INSTANCE.effectCount() == 15);
     }
 }

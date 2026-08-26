@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "plasma_cannon_impact",
+  "parameters": [
+    {
+      "id": "flash_alpha", "name": "Flash Fade", "type": "CURVE",
+      "default": { "type": "CURVE", "curve": [
+        { "t": 0.0, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 0.16, "v": 0.92, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+      ] }
+    },
+    {
+      "id": "flash_size", "name": "Flash Expansion", "type": "CURVE",
+      "default": { "type": "CURVE", "curve": [
+        { "t": 0.0, "v": 0.12, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 0.22, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 1.0, "v": 1.45, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+      ] }
+    },
+    {
+      "id": "smoke_alpha", "name": "Blast Smoke Fade", "type": "CURVE",
+      "default": { "type": "CURVE", "curve": [
+        { "t": 0.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 0.18, "v": 0.42, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+      ] }
+    },
+    {
+      "id": "smoke_size", "name": "Blast Smoke Expansion", "type": "CURVE",
+      "default": { "type": "CURVE", "curve": [
+        { "t": 0.0, "v": 0.35, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 1.0, "v": 2.1, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+      ] }
+    },
+    {
+      "id": "spark_alpha", "name": "Blast Spark Fade", "type": "CURVE",
+      "default": { "type": "CURVE", "curve": [
+        { "t": 0.0, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+        { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+      ] }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn", "type": "SPAWN", "name": "Monochrome Impact Beat And White Blue Plasma Detonation", "x": 0.0, "y": 0.0,
+      "blocks": [
+        { "id": "spawn_mono_impact", "type": "vfx.block.spawn_burst", "properties": { "count": "1", "lifetime": "0.14", "size": "13.5", "color": "1.0,1.0,1.0,1.0", "layer": "impact_mono", "shape": "point" } },
+        { "id": "spawn_flash", "type": "vfx.block.spawn_burst", "properties": { "count": "1", "lifetime": "0.8", "size": "20", "color": "1.0,0.99,1.0,1.0", "layer": "impact_core", "shape": "point" } },
+        { "id": "spawn_halo", "type": "vfx.block.spawn_burst", "properties": { "count": "1", "lifetime": "1.25", "size": "34", "color": "0.34,0.48,1.0,0.46", "layer": "plasma_halo", "shape": "point" } },
+        { "id": "spawn_smoke", "type": "vfx.block.spawn_burst", "properties": { "count": "84", "lifetime": "2.5", "size": "4.8", "color": "0.42,0.45,0.5,0.38", "layer": "smoke", "shape": "sphere", "radius": "3.5" } },
+        { "id": "spawn_sparks", "type": "vfx.block.spawn_burst", "properties": { "count": "140", "lifetime": "1.15", "size": "0.32", "color": "0.72,0.82,1.0,1.0", "layer": "ion_spark", "shape": "sphere", "radius": "2.5" } },
+        { "id": "spawn_shock_rings", "type": "vfx.block.arc_shockwave", "properties": { "duration": "1.35", "base_radius": "1.5", "max_radius": "30", "ring_count": "6", "segments": "80", "width": "0.095", "lifetime": "0.075", "color": "0.58,0.62,0.69,0.76" } }
+      ]
+    },
+    {
+      "id": "ctx_init", "type": "INITIALIZE", "name": "Radial Debris Motion", "x": 500.0, "y": 0.0,
+      "blocks": [
+        { "id": "init_smoke_velocity", "type": "vfx.block.init_velocity", "properties": { "vx": "0", "vy": "1.8", "vz": "0", "random": "7.5" } },
+        { "id": "init_spark_velocity", "type": "vfx.block.init_velocity", "properties": { "vx": "0", "vy": "2.0", "vz": "0", "random": "18" } }
+      ]
+    },
+    {
+      "id": "ctx_update", "type": "UPDATE", "name": "Blast Expansion And Dissipation", "x": 1000.0, "y": 0.0,
+      "blocks": [
+        { "id": "update_turbulence", "type": "vfx.block.update_turbulence", "properties": { "amplitude": "1.2", "frequency": "0.22" } },
+        { "id": "update_gravity", "type": "vfx.block.update_gravity", "properties": { "gravity": "-2.4" } },
+        { "id": "update_drag", "type": "vfx.block.update_drag", "properties": { "drag": "0.82" } },
+        { "id": "update_velocity", "type": "vfx.block.update_velocity", "properties": {} },
+        { "id": "update_age", "type": "vfx.block.update_age", "properties": {} },
+        { "id": "life_flash_alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "flash_alpha", "layer": "impact_core" } },
+        { "id": "life_flash_size", "type": "vfx.block.life_size", "properties": { "curve": "flash_size", "layer": "impact_core" } },
+        { "id": "life_halo_alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "flash_alpha", "layer": "plasma_halo" } },
+        { "id": "life_halo_size", "type": "vfx.block.life_size", "properties": { "curve": "flash_size", "layer": "plasma_halo" } },
+        { "id": "life_smoke_alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "smoke_alpha", "layer": "smoke" } },
+        { "id": "life_smoke_size", "type": "vfx.block.life_size", "properties": { "curve": "smoke_size", "layer": "smoke" } },
+        { "id": "life_spark_alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "spark_alpha", "layer": "ion_spark" } }
+      ]
+    },
+    {
+      "id": "ctx_output", "type": "OUTPUT", "name": "Clean Flash Shock Rings Debris And Monochrome Impact Beat", "x": 1500.0, "y": 0.0,
+      "blocks": [
+        { "id": "out_flash", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_flash", "shader": "academy:core/vfxgraph_plasma_flash", "blend": "glow", "layer": "impact_core" } },
+        { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },
+        { "id": "out_smoke", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_plasma_smoke", "shader": "academy:core/vfxgraph_plasma_smoke", "blend": "translucent", "layer": "smoke" } },
+        { "id": "out_sparks", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_spark", "shader": "academy:core/vfxgraph_plasma_spark", "blend": "glow", "layer": "ion_spark" } },
+        { "id": "out_arcs", "type": "vfx.block.output_arc", "properties": { "vertex": "academy:core/vfxgraph_arc", "shader": "academy:core/vfxgraph_arc", "blend": "glow", "sparks": "0", "emission": "1.15", "noise_strength": "0.08", "lifetime": "0.1", "overall_scale": "1", "branch_depth": "0" } },
+        { "id": "out_mono_impact", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_impact_monochrome", "shader": "academy:core/vfxgraph_impact_monochrome", "blend": "translucent", "layer": "impact_mono" } }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    { "from": "ctx_spawn", "to": "ctx_init" },
+    { "from": "ctx_init", "to": "ctx_update" },
+    { "from": "ctx_update", "to": "ctx_output" }
+  ],
+  "blockFlows": [
+    { "from": "spawn_smoke", "to": "init_smoke_velocity" },
+    { "from": "spawn_sparks", "to": "init_spark_velocity" }
+  ],
+  "dataEdges": [],
+  "outputs": [ "out_flash", "out_halo", "out_smoke", "out_sparks", "out_arcs", "out_mono_impact" ]
+}
