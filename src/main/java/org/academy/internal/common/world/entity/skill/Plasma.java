@@ -70,14 +70,12 @@ public class Plasma extends RenderOnlyEntity {
                     y,
                     Mth.sin(angle) * horizontal
             );
-            LevelUtil.destroyBlocksAlongPath(
+            LevelUtil.destroyBlocksAlongPathSilently(
                     level,
                     center,
                     center.add(direction.scale(radius)),
                     0.7f,
                     3,
-                    false,
-                    true,
                     true,
                     false,
                     owner
