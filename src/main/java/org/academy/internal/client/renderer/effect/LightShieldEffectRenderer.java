@@ -1,4 +1,4 @@
-package org.academy.internal.client.render.vfx;
+package org.academy.internal.client.renderer.effect;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -8,16 +8,21 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.context.ContextKey;
 import org.academy.api.client.renderer.EffectRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
 
-public final class LightShieldFirstPersonBridge implements EffectRenderer {
-    public static final LightShieldFirstPersonBridge INSTANCE = new LightShieldFirstPersonBridge();
+import static org.academy.AcademyCraft.academy;
+
+public final class LightShieldEffectRenderer implements EffectRenderer {
+    public static final ContextKey<Boolean> CONTEXT_KEY = new ContextKey<>(academy("light_shield"));
+    public static final LightShieldEffectRenderer INSTANCE = new LightShieldEffectRenderer();
+    private static final float THIRD_PERSON_HALF_SIZE = 1.55f;
     private static final float FIRST_PERSON_HALF_SIZE = 2.25f;
 
-    private LightShieldFirstPersonBridge() {
+    private LightShieldEffectRenderer() {
     }
 
     private static void submitShield(PoseStack poseStack, SubmitNodeCollector collector,
@@ -62,8 +67,14 @@ public final class LightShieldFirstPersonBridge implements EffectRenderer {
 
     @Override
     public void render(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
-                       AvatarRenderState renderState, float yRot, float xRot) {
-        // Third-person light shield is rendered by LightShieldVfx through the Vfx pipeline.
+                       AvatarRenderState state, float yRot, float xRot) {
+        if (!state.getRenderDataOrDefault(CONTEXT_KEY, false)) return;
+        poseStack.pushPose();
+        poseStack.translate(0, -0.25, -1.4);
+        poseStack.mulPose(Axis.XP.rotationDegrees(-xRot));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(state.ageInTicks * 12.0f));
+        submitShield(poseStack, collector, packedLight, THIRD_PERSON_HALF_SIZE);
+        poseStack.popPose();
     }
 
     @Override

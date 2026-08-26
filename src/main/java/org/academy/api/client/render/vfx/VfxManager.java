@@ -19,6 +19,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * @deprecated use {@link org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager}
+ */
+@Deprecated(since = "0.0.4")
 public final class VfxManager {
     public static final VfxManager INSTANCE = new VfxManager();
 

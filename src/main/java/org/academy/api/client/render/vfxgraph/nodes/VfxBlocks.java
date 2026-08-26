@@ -2,6 +2,8 @@ package org.academy.api.client.render.vfxgraph.nodes;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+import net.minecraft.util.Mth;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
 import org.academy.api.client.render.graph.registry.PropertySpec;
@@ -40,6 +42,8 @@ import org.academy.api.client.render.vfxgraph.sim.SimNode;
  * {@code spawnStart} 单点耦合；另含路径电弧和技能专用的连续几何块。</p>
  */
 public final class VfxBlocks {
+    private static final AtomicLong NEXT_TRANSIENT_ARC_GROUP = new AtomicLong(1L);
+
     private VfxBlocks() {
     }
 
@@ -80,6 +84,7 @@ public final class VfxBlocks {
     private static final List<PropertySpec> OUTPUT_PROPERTIES = List.of(
             prop("vertex", ValueType.STRING, Value.string("")),
             prop("shader", ValueType.STRING, Value.string("")),
+            prop("texture", ValueType.STRING, Value.string("")),
             prop("blend", ValueType.STRING, Value.string("")),
             prop("layer", ValueType.STRING, Value.string(""))
     );
@@ -285,6 +290,18 @@ public final class VfxBlocks {
                         prop("size_power", ValueType.FLOAT, Value.of(1f))
                 )));
         blocks.register("vfx.block.update_follow", VfxBlocks::updateFollow);
+
+        metadata.register(type("vfx.block.update_live", "update", "Apply Live Attributes",
+                List.of(
+                        prop("layer", ValueType.STRING, Value.string("")),
+                        prop("size_param", ValueType.STRING, Value.string("")),
+                        prop("size_scale", ValueType.FLOAT, Value.of(1f)),
+                        prop("alpha_param", ValueType.STRING, Value.string("")),
+                        prop("alpha_scale", ValueType.FLOAT, Value.of(1f)),
+                        prop("rotation_param", ValueType.STRING, Value.string("")),
+                        prop("rotation_scale", ValueType.FLOAT, Value.of(1f))
+                )));
+        blocks.register("vfx.block.update_live", VfxBlocks::updateLive);
 
         metadata.register(type("vfx.block.update_drag", "update", "Drag",
                 List.of(prop("drag", ValueType.FLOAT, Value.of(0.1f)))));
@@ -585,6 +602,40 @@ public final class VfxBlocks {
                         prop("color", ValueType.COLOR, Value.color(0.62f, 0.66f, 0.72f, 0.72f))
                 )));
         blocks.register("vfx.block.arc_shockwave", VfxBlocks::arcShockwave);
+
+        metadata.register(type("vfx.block.arc_radial_ripple", "spawn", "Concentric Radial Ripple",
+                List.of(
+                        prop("duration", ValueType.FLOAT, Value.of(1f)),
+                        prop("duration_param", ValueType.STRING, Value.string("")),
+                        prop("intensity", ValueType.FLOAT, Value.of(1f)),
+                        prop("intensity_param", ValueType.STRING, Value.string("")),
+                        prop("radius", ValueType.FLOAT, Value.of(1.5f)),
+                        prop("ring_count", ValueType.INT, Value.of(8)),
+                        prop("segments", ValueType.INT, Value.of(32)),
+                        prop("width_scale", ValueType.FLOAT, Value.of(0.48f)),
+                        prop("lifetime", ValueType.FLOAT, Value.of(0.075f)),
+                        prop("core_color", ValueType.COLOR, Value.color(0.5f, 0.2f, 0.8f, 0.7f)),
+                        prop("core_color_param", ValueType.STRING, Value.string("")),
+                        prop("edge_color", ValueType.COLOR, Value.color(0.1f, 0f, 0.3f, 0f)),
+                        prop("edge_color_param", ValueType.STRING, Value.string(""))
+                )));
+        blocks.register("vfx.block.arc_radial_ripple", VfxBlocks::arcRadialRipple);
+
+        metadata.register(type("vfx.block.arc_collapsing_box", "spawn", "Collapsing Wireframe Box",
+                List.of(
+                        prop("progress_param", ValueType.STRING, Value.string("progress")),
+                        prop("width_param", ValueType.STRING, Value.string("width")),
+                        prop("height_param", ValueType.STRING, Value.string("height")),
+                        prop("yaw_param", ValueType.STRING, Value.string("yaw")),
+                        prop("width", ValueType.FLOAT, Value.of(1f)),
+                        prop("height", ValueType.FLOAT, Value.of(2f)),
+                        prop("yaw", ValueType.FLOAT, Value.of(0f)),
+                        prop("collapse_degrees", ValueType.FLOAT, Value.of(81f)),
+                        prop("line_width", ValueType.FLOAT, Value.of(0.02f)),
+                        prop("lifetime", ValueType.FLOAT, Value.of(0.075f)),
+                        prop("color", ValueType.COLOR, Value.color(0.8f, 0.85f, 1f, 1f))
+                )));
+        blocks.register("vfx.block.arc_collapsing_box", VfxBlocks::arcCollapsingBox);
 
         metadata.register(type("vfx.block.arc_surface", "spawn", "Arc Surface",
                 ARC_SURFACE_PROPS));
@@ -1038,6 +1089,37 @@ public final class VfxBlocks {
                         pz - fz * backOffset + orbitRadius * (rz * cos + uz * sin));
                 if (!sizeParam.isEmpty()) {
                     buf.setSize(i, liveSize);
+                }
+            }
+        };
+    }
+
+    /**
+     * 把运行时黑板标量直接写入已存在粒子的可视属性。该块与实体跟随解耦，
+     * 便于实体型旧 VFX 逐个迁移时保留尺寸、透明度与帧/旋转的实时语义。
+     */
+    private static SimNode updateLive(VfxBlock block, PortValueSource ports) {
+        byte filter = layerFilter(block);
+        String sizeParam = propString(block, "size_param", "");
+        float sizeScale = propFloat(block, "size_scale", 1f);
+        String alphaParam = propString(block, "alpha_param", "");
+        float alphaScale = propFloat(block, "alpha_scale", 1f);
+        String rotationParam = propString(block, "rotation_param", "");
+        float rotationScale = propFloat(block, "rotation_scale", 1f);
+        return (buf, ctx) -> {
+            float liveSize = Math.max(0f, ctx.paramFloat(sizeParam, 1f) * sizeScale);
+            float liveAlpha = clamp01(ctx.paramFloat(alphaParam, 1f) * alphaScale);
+            float liveRotation = ctx.paramFloat(rotationParam, 0f) * rotationScale;
+            for (int i = 0; i < buf.count(); i++) {
+                if (filter >= 0 && buf.layer(i) != filter) continue;
+                if (!sizeParam.isEmpty()) {
+                    buf.setSize(i, liveSize);
+                }
+                if (!alphaParam.isEmpty()) {
+                    buf.setAlpha(i, liveAlpha);
+                }
+                if (!rotationParam.isEmpty()) {
+                    buf.setRotation(i, liveRotation);
                 }
             }
         };
@@ -1956,7 +2038,11 @@ public final class VfxBlocks {
         float lifetime = propFloat(block, "lifetime", 0.025f);
         float[] color = propColor(block, "color");
         long[] seed = {0L};
+        long transientGroup = NEXT_TRANSIENT_ARC_GROUP.getAndIncrement();
         return (buf, ctx) -> {
+            // 环绕球体的电弧是当前帧几何，不是拖尾：先替换掉上一次采样。
+            // 否则球体半径/旋转变化时，旧弧会在 lifetime 内与新弧分离成多排副本。
+            ctx.arcs().removeGroup(transientGroup);
             float emission = clamp01(ctx.paramFloat(emissionParam, 1f));
             if (duration > 0f) {
                 emission *= 1f - clamp01(ctx.time() / duration);
@@ -1996,7 +2082,7 @@ public final class VfxBlocks {
                         + hash(index + 13.4f, flickerFrame + 0.43f, 17.2f)
                         * (float) (Math.PI * 2.0);
                 int liveSegments = Math.max(7, Math.round(segments * spanFraction / arcSpanMax));
-                var arc = ctx.arcs().add();
+                var arc = ctx.arcs().add(transientGroup);
                 for (int point = 0; point <= liveSegments; point++) {
                     float u = (float) point / liveSegments;
                     float angle = startAngle + arcSpan * u;
@@ -2063,6 +2149,142 @@ public final class VfxBlocks {
                     arc.addPoint(x, y, z, width * (1f + (1f - t) * 0.8f), 0f);
                 }
                 configureCleanArc(arc, color, alpha, lifetime, ++seed[0]);
+            }
+        };
+    }
+
+    /**
+     * 水平世界平面上的同心径向涟漪：前半段展开、后半段回收，多条管状弧覆盖从核心到边缘的圆盘。
+     * 寿命、强度和两端颜色可从运行时黑板覆盖，供一次性世界空间扭曲/冲击效果复用。
+     */
+    private static SimNode arcRadialRipple(VfxBlock block, PortValueSource ports) {
+        float duration = Math.max(0.001f, propFloat(block, "duration", 1f));
+        String durationParam = propString(block, "duration_param", "");
+        float intensity = Math.max(0f, propFloat(block, "intensity", 1f));
+        String intensityParam = propString(block, "intensity_param", "");
+        float maxRadius = Math.max(0f, propFloat(block, "radius", 1.5f));
+        int ringCount = Math.max(1, propInt(block, "ring_count", 8));
+        int segments = Math.max(16, propInt(block, "segments", 32));
+        float widthScale = Math.max(0.01f, propFloat(block, "width_scale", 0.48f));
+        float lifetime = Math.max(0.001f, propFloat(block, "lifetime", 0.075f));
+        float[] core = propColor(block, "core_color");
+        String coreParam = propString(block, "core_color_param", "");
+        float[] edge = propColor(block, "edge_color");
+        String edgeParam = propString(block, "edge_color_param", "");
+        long[] seed = {0L};
+        return (buf, ctx) -> {
+            float liveDuration = Math.max(0.001f, ctx.paramFloat(durationParam, duration));
+            float t = ctx.time() / liveDuration;
+            if (t < 0f || t >= 1f) return;
+            float liveIntensity = Math.max(0f, ctx.paramFloat(intensityParam, intensity));
+            float envelope = 1f - Math.abs(t * 2f - 1f);
+            if (envelope <= 1e-4f || liveIntensity <= 1e-4f) return;
+
+            float radius = maxRadius * envelope;
+            float halfWidth = Math.max(0.0025f, radius / ringCount * widthScale);
+            float coreR = ctx.paramColor(coreParam, 0, core[0]);
+            float coreG = ctx.paramColor(coreParam, 1, core[1]);
+            float coreB = ctx.paramColor(coreParam, 2, core[2]);
+            float coreA = ctx.paramColor(coreParam, 3, core[3]);
+            float edgeR = ctx.paramColor(edgeParam, 0, edge[0]);
+            float edgeG = ctx.paramColor(edgeParam, 1, edge[1]);
+            float edgeB = ctx.paramColor(edgeParam, 2, edge[2]);
+            float edgeA = ctx.paramColor(edgeParam, 3, edge[3]);
+            float alphaEnvelope = 0.8f * liveIntensity * envelope;
+
+            for (int ring = 0; ring < ringCount; ring++) {
+                float ringT = (ring + 0.5f) / ringCount;
+                float ringRadius = radius * ringT;
+                var arc = ctx.arcs().add();
+                for (int point = 0; point <= segments; point++) {
+                    float angle = Mth.TWO_PI * point / segments;
+                    arc.addPoint(
+                            Mth.cos(angle) * ringRadius,
+                            0f,
+                            Mth.sin(angle) * ringRadius,
+                            halfWidth,
+                            0f);
+                }
+                arc.setColor(
+                        lerp(coreR, edgeR, ringT),
+                        lerp(coreG, edgeG, ringT),
+                        lerp(coreB, edgeB, ringT),
+                        clamp01(lerp(coreA, edgeA, ringT) * alphaEnvelope));
+                arc.setLifetime(lifetime);
+                arc.setSeed(++seed[0]);
+                arc.setNoiseStrength(0f);
+                arc.setDriftSpeed(0f);
+            }
+        };
+    }
+
+    /**
+     * 由实时进度驱动的线框盒：先按实体偏航对齐，再在效果前 72% 中以三次缓动向下折叠，
+     * 末段渐隐。每条棱都产生一条无噪声短寿命弧，因此可直接走 Graph 电弧管线。
+     */
+    private static SimNode arcCollapsingBox(VfxBlock block, PortValueSource ports) {
+        String progressParam = propString(block, "progress_param", "progress");
+        String widthParam = propString(block, "width_param", "width");
+        String heightParam = propString(block, "height_param", "height");
+        String yawParam = propString(block, "yaw_param", "yaw");
+        float defaultWidth = Math.max(0.3f, propFloat(block, "width", 1f));
+        float defaultHeight = Math.max(0.5f, propFloat(block, "height", 2f));
+        float defaultYaw = propFloat(block, "yaw", 0f);
+        float collapseDegrees = propFloat(block, "collapse_degrees", 81f);
+        float lineWidth = Math.max(0.001f, propFloat(block, "line_width", 0.02f));
+        float lifetime = Math.max(0.001f, propFloat(block, "lifetime", 0.075f));
+        float[] color = propColor(block, "color");
+        int[][] edges = {
+                {0, 1}, {1, 2}, {2, 3}, {3, 0},
+                {4, 5}, {5, 6}, {6, 7}, {7, 4},
+                {0, 4}, {1, 5}, {2, 6}, {3, 7}
+        };
+        long[] seed = {0L};
+        return (buf, ctx) -> {
+            float progress = clamp01(ctx.paramFloat(progressParam, 0f));
+            if (progress >= 1f) return;
+            float width = Math.max(0.3f, ctx.paramFloat(widthParam, defaultWidth));
+            float height = Math.max(0.5f, ctx.paramFloat(heightParam, defaultHeight));
+            float entityYaw = ctx.paramFloat(yawParam, defaultYaw);
+            float collapseProgress = clamp01(progress / 0.72f);
+            float inverse = 1f - collapseProgress;
+            float pitch = collapseDegrees * (1f - inverse * inverse * inverse) * Mth.DEG_TO_RAD;
+            float yaw = (180f - entityYaw) * Mth.DEG_TO_RAD;
+            float cosY = Mth.cos(yaw);
+            float sinY = Mth.sin(yaw);
+            float cosX = Mth.cos(pitch);
+            float sinX = Mth.sin(pitch);
+            float half = Math.max(0.15f, width * 0.5f);
+            float[][] vertices = {
+                    {-half, 0f, -half}, {half, 0f, -half}, {half, 0f, half}, {-half, 0f, half},
+                    {-half, height, -half}, {half, height, -half}, {half, height, half}, {-half, height, half}
+            };
+            for (var vertex : vertices) {
+                float x = vertex[0];
+                float y = vertex[1];
+                float z = vertex[2];
+                float rotatedX = x * cosY - z * sinY;
+                float rotatedZ = x * sinY + z * cosY;
+                vertex[0] = rotatedX;
+                vertex[1] = y * cosX - rotatedZ * sinX;
+                vertex[2] = y * sinX + rotatedZ * cosX;
+            }
+
+            float flash = progress < 0.08f ? 1f - progress / 0.08f : 0f;
+            float alpha = progress > 0.7f ? clamp01(1f - (progress - 0.7f) / 0.3f) : 1f;
+            float red = clamp01(color[0] + (1f - color[0]) * flash);
+            float green = clamp01(color[1] + (1f - color[1]) * flash);
+            for (var edge : edges) {
+                var from = vertices[edge[0]];
+                var to = vertices[edge[1]];
+                var arc = ctx.arcs().add();
+                arc.addPoint(from[0], from[1], from[2], lineWidth, 0f);
+                arc.addPoint(to[0], to[1], to[2], lineWidth, 0f);
+                arc.setColor(red, green, color[2], color[3] * alpha);
+                arc.setLifetime(lifetime);
+                arc.setSeed(++seed[0]);
+                arc.setNoiseStrength(0f);
+                arc.setDriftSpeed(0f);
             }
         };
     }

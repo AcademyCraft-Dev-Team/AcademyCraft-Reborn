@@ -163,6 +163,48 @@ class VfxSystemSimulatorTest {
         assertEquals(-2.0f, sim.buffer().velocityY(0), 1e-5f);
     }
 
+    @Test
+    void updateLiveAppliesBoundVisualAttributes() {
+        var parameters = List.of(
+                new org.academy.api.client.render.graph.model.GraphParameter(
+                        "live_size", "Live Size", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                        org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty()),
+                new org.academy.api.client.render.graph.model.GraphParameter(
+                        "live_alpha", "Live Alpha", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                        org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty()),
+                new org.academy.api.client.render.graph.model.GraphParameter(
+                        "live_frame", "Live Frame", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                        org.academy.api.client.render.graph.type.Value.of(0f), java.util.Optional.empty()));
+        var system = new VfxSystem("live-attributes",
+                List.of(
+                        ctx("spawn", VfxContextType.SPAWN,
+                                block("bS", "vfx.block.spawn_burst",
+                                        Map.of("count", "1", "lifetime", "100", "layer", "smoke"))),
+                        ctx("update", VfxContextType.UPDATE,
+                                block("bL", "vfx.block.update_live", Map.of(
+                                        "layer", "smoke",
+                                        "size_param", "live_size",
+                                        "alpha_param", "live_alpha",
+                                        "rotation_param", "live_frame")))
+                ),
+                List.of(),
+                List.of(new VfxFlowEdge("spawn", "update")),
+                List.of(),
+                parameters,
+                List.of());
+
+        var sim = new VfxSystemSimulator(system, blocks, 42L, parameters);
+        sim.setLiveParam("live_size", org.academy.api.client.render.graph.type.Value.of(2.5f));
+        sim.setLiveParam("live_alpha", org.academy.api.client.render.graph.type.Value.of(0.4f));
+        sim.setLiveParam("live_frame", org.academy.api.client.render.graph.type.Value.of(3f));
+        sim.step(1f / 60f);
+
+        assertEquals(1, sim.buffer().count());
+        assertEquals(2.5f, sim.buffer().size(0), 1e-6f);
+        assertEquals(0.4f, sim.buffer().alpha(0), 1e-6f);
+        assertEquals(3f, sim.buffer().rotation(0), 1e-6f);
+    }
+
     /** 无 flow 的 init context：收到空批次，不处理任何粒子（不应误伤已有粒子）。 */
     @Test
     void initWithoutUpstreamSpawnDoesNothing() {

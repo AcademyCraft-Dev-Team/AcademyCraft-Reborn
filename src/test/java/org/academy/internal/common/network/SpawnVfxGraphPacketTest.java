@@ -18,7 +18,7 @@ class SpawnVfxGraphPacketTest {
     @Test
     void codecRoundTripsAllFields() {
         var packet = new SpawnVfxGraphPacket(
-                Identifier.fromNamespaceAndPath("academy", "vfxgraph/skill_dirstrike"),
+                Identifier.fromNamespaceAndPath("academy", "vfxgraph/minimal_burst"),
                 new Vec3(1.5, -2.0, 3.25), -1, 1.5f,
                 Map.of("size", 0.35f, "radius", 8f)
         );

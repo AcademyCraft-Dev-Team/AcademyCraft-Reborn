@@ -31,6 +31,11 @@ public final class ArcBuffer {
 
     /** 追加一条新弧线（返回可写引用，调用方填充数据后调用 {@link ArcCurve#setColor} 等）。 */
     public ArcCurve add() {
+        return add(0L);
+    }
+
+    /** 追加替换式瞬态弧；同组可在下一次采样前整批替换。 */
+    public ArcCurve add(long replacementGroup) {
         if (count == arcs.length) {
             int newCap = arcs.length * 2;
             var newArr = new ArcCurve[newCap];
@@ -44,8 +49,25 @@ public final class ArcBuffer {
         arc.setAge(0f);
         arc.setFresh(true);
         arc.resetSimState();
+        arc.setReplacementGroup(replacementGroup);
         count++;
         return arc;
+    }
+
+    /**
+     * 移除某个替换式瞬态组的旧采样。用于实时跟随的几何电弧，
+     * 避免参数变化时上一帧的寿命残留与当前帧分离。
+     */
+    public void removeGroup(long replacementGroup) {
+        if (replacementGroup == 0L) return;
+        int i = 0;
+        while (i < count) {
+            if (arcs[i].replacementGroup() == replacementGroup) {
+                swapRemove(i);
+            } else {
+                i++;
+            }
+        }
     }
 
     /** 每帧递增 age，删除过期弧线（swap-remove）。先清全量 fresh 标记（M29b-02）。 */

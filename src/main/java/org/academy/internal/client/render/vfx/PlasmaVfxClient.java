@@ -103,6 +103,14 @@ public final class PlasmaVfxClient {
 
     private static void spawnCharge(Plasma plasma) {
         var manager = VfxGraphManager.INSTANCE;
+        // 实体重新加入客户端世界时可能再次触发 join；先停止同一实体的旧图实例，
+        // 避免两套 focus 电弧同时存活。
+        var previous = EFFECTS.remove(plasma);
+        if (previous != null) {
+            stop(manager, previous.gather);
+            stop(manager, previous.focus);
+            stop(manager, previous.projectile);
+        }
         ActiveEffect gather = null;
         try {
             var fixedOrigin = chargeOrigin(plasma);

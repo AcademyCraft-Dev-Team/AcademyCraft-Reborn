@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "platinum_execution",
+  "parameters": [
+    {
+      "id": "progress",
+      "name": "Execution Progress",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 0.0 },
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "id": "width",
+      "name": "Target Width",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 1.0 },
+      "min": 0.3,
+      "max": 32.0
+    },
+    {
+      "id": "height",
+      "name": "Target Height",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 2.0 },
+      "min": 0.5,
+      "max": 32.0
+    },
+    {
+      "id": "yaw",
+      "name": "Target Yaw",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 0.0 },
+      "min": -360.0,
+      "max": 360.0
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Collapsing Target Wireframe",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_box",
+          "type": "vfx.block.arc_collapsing_box",
+          "properties": {
+            "progress_param": "progress",
+            "width_param": "width",
+            "height_param": "height",
+            "yaw_param": "yaw",
+            "collapse_degrees": "81",
+            "line_width": "0.02",
+            "lifetime": "0.075",
+            "color": "0.8,0.85,1.0,1.0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Live Execution State",
+      "x": 500.0,
+      "y": 0.0,
+      "blocks": []
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "Soft Blue White Wireframe",
+      "x": 1000.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_box",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_atmosphere_line",
+            "shader": "academy:core/vfxgraph_atmosphere_line",
+            "blend": "translucent",
+            "sparks": "0",
+            "emission": "1",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "lifetime": "0.075",
+            "segments": "4",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    { "from": "ctx_spawn", "to": "ctx_update" },
+    { "from": "ctx_update", "to": "ctx_output" }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_box" ]
+}

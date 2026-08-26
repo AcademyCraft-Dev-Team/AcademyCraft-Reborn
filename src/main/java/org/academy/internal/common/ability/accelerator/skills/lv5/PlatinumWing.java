@@ -42,7 +42,6 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.PlatinumExecutionVfx;
 import org.academy.internal.client.render.vfx.PlatinumExecutionVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -139,7 +138,7 @@ public final class PlatinumWing extends Skill {
 
         @SubscribePacket
         public static void handleExecutionVisual(ExecutionVisualPacket packet) {
-            PlatinumExecutionVfx.enqueue(
+            PlatinumExecutionVfxClient.enqueue(
                     packet.executionId,
                     packet.entityId,
                     packet.x,
@@ -307,7 +306,7 @@ public final class PlatinumWing extends Skill {
                     target.getYRot(),
                     target.getBbWidth(),
                     target.getBbHeight(),
-                    PlatinumExecutionVfx.DURATION_TICKS
+                    PlatinumExecutionVfxClient.DURATION_TICKS
             );
             for (var other : player.level().players()) {
                 if (other.distanceToSqr(player) <= 256.0 * 256.0) {

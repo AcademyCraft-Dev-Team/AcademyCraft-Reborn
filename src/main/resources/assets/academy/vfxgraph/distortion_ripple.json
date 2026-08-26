@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "distortion_ripple",
+  "parameters": [
+    {
+      "id": "duration",
+      "name": "Ripple Duration",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 1.0 },
+      "min": 0.05,
+      "max": 10.0
+    },
+    {
+      "id": "intensity",
+      "name": "Ripple Intensity",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 1.0 },
+      "min": 0.0,
+      "max": 4.0
+    },
+    {
+      "id": "core_color",
+      "name": "Core Color",
+      "type": "COLOR",
+      "default": { "type": "COLOR", "r": 0.5, "g": 0.2, "b": 0.8, "a": 0.7 }
+    },
+    {
+      "id": "edge_color",
+      "name": "Edge Color",
+      "type": "COLOR",
+      "default": { "type": "COLOR", "r": 0.1, "g": 0.0, "b": 0.3, "a": 0.0 }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Concentric Spatial Tear",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_ripple",
+          "type": "vfx.block.arc_radial_ripple",
+          "properties": {
+            "duration": "1",
+            "duration_param": "duration",
+            "intensity": "1",
+            "intensity_param": "intensity",
+            "radius": "1.5",
+            "ring_count": "8",
+            "segments": "32",
+            "width_scale": "0.48",
+            "lifetime": "0.075",
+            "core_color": "0.5,0.2,0.8,0.7",
+            "core_color_param": "core_color",
+            "edge_color": "0.1,0.0,0.3,0.0",
+            "edge_color_param": "edge_color"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Runtime Parameter Driven Envelope",
+      "x": 500.0,
+      "y": 0.0,
+      "blocks": []
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "Soft Translucent Radial Tubes",
+      "x": 1000.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_ripple",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_atmosphere_line",
+            "shader": "academy:core/vfxgraph_atmosphere_line",
+            "blend": "translucent",
+            "sparks": "0",
+            "emission": "1",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "lifetime": "0.075",
+            "segments": "4",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    { "from": "ctx_spawn", "to": "ctx_update" },
+    { "from": "ctx_update", "to": "ctx_output" }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_ripple" ]
+}

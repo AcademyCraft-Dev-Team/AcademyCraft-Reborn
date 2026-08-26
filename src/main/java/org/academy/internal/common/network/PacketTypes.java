@@ -20,6 +20,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorR
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
+import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrikeVisualPacket;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
@@ -447,6 +448,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DirStrike.ActionPacket>>
             DIR_STRIKE = PACKET_TYPES.register("dir_strike",
             () -> new PacketType<>(DirStrike.ActionPacket.class, DirStrike.ActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DirStrikeVisualPacket>>
+            DIR_STRIKE_VISUAL = PACKET_TYPES.register("dir_strike_visual",
+            () -> new PacketType<>(DirStrikeVisualPacket.class, DirStrikeVisualPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpawnVfxGraphPacket>>
             SPAWN_VFX_GRAPH = PACKET_TYPES.register("spawn_vfx_graph",
             () -> new PacketType<>(SpawnVfxGraphPacket.class, SpawnVfxGraphPacket.CODEC));

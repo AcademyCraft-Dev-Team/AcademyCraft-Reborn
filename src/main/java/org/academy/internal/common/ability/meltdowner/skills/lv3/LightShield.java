@@ -28,6 +28,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.renderer.RendererManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.resources.sounds.LoopingPlayerSoundInstance;
 import org.academy.api.client.util.ClientUtil;
@@ -40,7 +41,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.LightShieldVfxClient;
+import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -101,7 +102,7 @@ public final class LightShield extends Skill {
 
     @Override
     public void initClient() {
-        LightShieldVfxClient.register();
+        RendererManager.registerEffectRenderer(LightShieldEffectRenderer.INSTANCE);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
