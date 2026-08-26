@@ -16,9 +16,9 @@ public final class CurveSampler {
     public static float sample(Curve curve, float t) {
         var kfs = curve.keyframes();
         if (kfs.isEmpty()) return 0f;
-        if (kfs.size() == 1) return kfs.get(0).value();
-        if (t <= kfs.get(0).time()) return kfs.get(0).value();
-        var last = kfs.get(kfs.size() - 1);
+        if (kfs.size() == 1) return kfs.getFirst().value();
+        if (t <= kfs.getFirst().time()) return kfs.getFirst().value();
+        var last = kfs.getLast();
         if (t >= last.time()) return last.value();
         for (var i = 1; i < kfs.size(); i++) {
             var kf = kfs.get(i);

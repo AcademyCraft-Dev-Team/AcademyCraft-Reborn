@@ -1,11 +1,9 @@
 package org.academy.api.client.render.graph.serialize;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.academy.api.client.render.graph.model.*;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
-import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.Value;
@@ -177,7 +175,7 @@ public final class JsonGraphCodec implements GraphCodec {
         var o = new JsonObject();
         o.addProperty("type", v.type().name());
         switch (v.type()) {
-            case FLOAT -> o.addProperty("value", v.asFloat());
+            case FLOAT, TIME -> o.addProperty("value", v.asFloat());
             case INT -> o.addProperty("value", v.asInt());
             case BOOL -> o.addProperty("value", v.asBool());
             case VEC2 -> {
@@ -206,7 +204,6 @@ public final class JsonGraphCodec implements GraphCodec {
                 o.addProperty("a", x.w);
             }
             case SAMPLER -> o.addProperty("path", v.asSampler());
-            case TIME -> o.addProperty("value", v.asFloat());
             case CURVE -> o.add("curve", encodeCurve(v.asCurve()));
             case GRADIENT -> o.add("gradient", encodeGradient(v.asGradient()));
             case MESH -> o.addProperty("path", v.asMesh());
@@ -221,7 +218,7 @@ public final class JsonGraphCodec implements GraphCodec {
     public static Value decodeValue(JsonObject o) {
         var type = ValueType.valueOf(o.get("type").getAsString());
         return switch (type) {
-            case FLOAT -> Value.of(o.get("value").getAsFloat());
+            case FLOAT, TIME -> Value.of(o.get("value").getAsFloat());
             case INT -> Value.of(o.get("value").getAsInt());
             case BOOL -> Value.of(o.get("value").getAsBoolean());
             case VEC2 -> Value.of(new Vector2f(o.get("x").getAsFloat(), o.get("y").getAsFloat()));
@@ -234,7 +231,6 @@ public final class JsonGraphCodec implements GraphCodec {
                     o.get("r").getAsFloat(), o.get("g").getAsFloat(),
                     o.get("b").getAsFloat(), o.get("a").getAsFloat());
             case SAMPLER -> Value.sampler(o.get("path").getAsString());
-            case TIME -> Value.of(o.get("value").getAsFloat());
             case CURVE -> Value.curve(decodeCurve(o.getAsJsonArray("curve")));
             case GRADIENT -> Value.gradient(decodeGradient(o.getAsJsonArray("gradient")));
             case MESH -> Value.mesh(o.get("path").getAsString());

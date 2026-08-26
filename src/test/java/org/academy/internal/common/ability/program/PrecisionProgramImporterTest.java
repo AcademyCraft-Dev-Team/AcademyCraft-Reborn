@@ -1,12 +1,7 @@
 package org.academy.internal.common.ability.program;
 
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.junit.jupiter.api.Test;
 

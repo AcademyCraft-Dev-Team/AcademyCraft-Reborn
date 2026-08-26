@@ -155,7 +155,7 @@ public final class SkyStrikeVfx implements Vfx {
             arcTubes.add(new ArcTube());
         }
         while (arcTubes.size() > paths.size()) {
-            arcTubes.remove(arcTubes.size() - 1);
+            arcTubes.removeLast();
         }
         for (var i = 0; i < paths.size(); i++) {
             var tube = arcTubes.get(i);

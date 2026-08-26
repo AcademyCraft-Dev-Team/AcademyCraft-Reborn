@@ -21,10 +21,6 @@ public record Curve(List<Keyframe> keyframes) {
     }
 
     public record Keyframe(float time, float value, float inTangent, float outTangent, Interpolation interpolation) {
-        public Keyframe {
-            if (interpolation == null) interpolation = Interpolation.LINEAR;
-        }
-
         /**
          * 便捷构造：无切线、线性。
          */

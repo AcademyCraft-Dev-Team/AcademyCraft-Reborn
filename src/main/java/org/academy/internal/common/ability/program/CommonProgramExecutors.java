@@ -822,7 +822,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 List.of(raw(inputs, "value", domain.elementType()))
         ));
         put(result, domain.id("union"), (_, _, inputs) -> {
-            var values = new LinkedHashSet<Object>();
+            var values = new LinkedHashSet<>();
             values.addAll(collection(inputs, "left", domain));
             values.addAll(collection(inputs, "right", domain));
             return data("values", domain.collectionType(), List.copyOf(values));

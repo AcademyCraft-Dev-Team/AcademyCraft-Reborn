@@ -15,10 +15,6 @@ public record GraphParameter(
         Value defaultValue,
         Optional<Range> range
 ) {
-    public GraphParameter {
-        range = range == null ? Optional.empty() : range;
-    }
-
     public record Range(double min, double max) {
     }
 }

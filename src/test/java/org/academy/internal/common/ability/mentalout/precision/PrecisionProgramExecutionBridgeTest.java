@@ -100,7 +100,7 @@ class PrecisionProgramExecutionBridgeTest {
         var transaction = new ProgramActionTransaction();
         var caster = new Object();
         var view = new FakeView(caster);
-        var subjects = new ArrayList<Object>();
+        var subjects = new ArrayList<>();
 
         var replay = PrecisionProgramExecutionBridge.replay(
                 compiled.program(),

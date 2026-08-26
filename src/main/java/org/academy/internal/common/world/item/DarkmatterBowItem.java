@@ -17,7 +17,6 @@ import net.neoforged.neoforge.event.EventHooks;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.jspecify.annotations.Nullable;
 
-import java.util.List;
 import java.util.function.Predicate;
 
 public final class DarkmatterBowItem extends BowItem implements DarkmatterShapedItem {

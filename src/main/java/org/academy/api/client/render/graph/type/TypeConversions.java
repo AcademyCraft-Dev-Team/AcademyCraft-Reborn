@@ -49,13 +49,12 @@ public final class TypeConversions implements TypeConverter {
 
     private static float toFloat(Value v) {
         return switch (v.type()) {
-            case FLOAT -> v.asFloat();
+            case FLOAT, TIME -> v.asFloat();
             case INT -> v.asInt();
             case BOOL -> v.asBool() ? 1f : 0f;
             case VEC2 -> v.asVec2().x;
             case VEC3 -> v.asVec3().x;
             case VEC4, COLOR -> v.asVec4().x;
-            case TIME -> v.asFloat();
             default -> throw new IllegalArgumentException("not numeric: " + v.type());
         };
     }

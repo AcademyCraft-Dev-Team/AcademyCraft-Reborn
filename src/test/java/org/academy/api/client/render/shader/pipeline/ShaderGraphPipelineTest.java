@@ -14,7 +14,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class ShaderGraphPipelineTest {
     private SimpleNodeRegistry registry;
@@ -49,7 +50,7 @@ class ShaderGraphPipelineTest {
 
         assertNotNull(result.pipeline());
         assertNotNull(result.layout());
-        assertEquals("Time", result.layout().entries().get(0).name());
+        assertEquals("Time", result.layout().entries().getFirst().name());
         assertNotNull(result.pipeline().getLocation());
     }
 

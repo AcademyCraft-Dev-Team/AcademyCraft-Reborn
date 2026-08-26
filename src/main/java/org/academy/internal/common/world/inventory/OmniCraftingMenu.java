@@ -11,15 +11,11 @@ import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.BedBlock;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity;
-
-import java.util.Optional;
 
 public final class OmniCraftingMenu extends AbstractContainerMenu {
     public static final int SPECIAL_RECIPE_ENERGY = 4_000;

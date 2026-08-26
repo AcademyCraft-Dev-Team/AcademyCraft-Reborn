@@ -13,8 +13,6 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
-import java.util.Map;
-
 public final class LightShieldVfx implements Vfx {
     private static final float THIRD_PERSON_HALF_SIZE = 1.55f;
     private static final Vector2f UV0 = new Vector2f(0.0f, 0.0f);

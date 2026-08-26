@@ -1,7 +1,6 @@
 package org.academy.api.client.render.vfx.lightning;
 
 import net.minecraft.util.Mth;
-import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.ByteBuffer;

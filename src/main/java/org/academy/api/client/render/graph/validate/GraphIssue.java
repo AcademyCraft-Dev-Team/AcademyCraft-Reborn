@@ -6,10 +6,6 @@ import java.util.Optional;
  * 校验诊断（契约）。{@code nodeId} 为关联节点 id，全局问题时为空。
  */
 public record GraphIssue(Severity severity, String message, Optional<String> nodeId) {
-    public GraphIssue {
-        nodeId = nodeId == null ? Optional.empty() : nodeId;
-    }
-
     public enum Severity {
         ERROR,
         WARNING

@@ -37,11 +37,9 @@ public final class ClientUtil {
 
     public static void playDownSound() {
         var minecraft = Minecraft.getInstance();
-        if (minecraft != null) {
-            minecraft.getSoundManager().play(
-                    SimpleSoundInstance.forUI(SoundEvents.SELECT, 1.0F)
-            );
-        }
+        minecraft.getSoundManager().play(
+                SimpleSoundInstance.forUI(SoundEvents.SELECT, 1.0F)
+        );
     }
 
     public static ReentrantBlockableEventLoop<?> getRenderEventLoop() {

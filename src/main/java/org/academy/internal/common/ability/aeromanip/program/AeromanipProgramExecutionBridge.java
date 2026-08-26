@@ -2,11 +2,7 @@ package org.academy.internal.common.ability.aeromanip.program;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramValue;
-import org.academy.api.common.ability.program.ProgramValueType;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.program.*;
 
 import java.util.HashMap;

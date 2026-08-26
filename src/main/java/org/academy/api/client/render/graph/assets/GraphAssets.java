@@ -36,16 +36,16 @@ public final class GraphAssets {
             cache.put(key, graph);
             return graph;
         } catch (Exception exception) {
-            AcademyCraft.getLogger().error("Unable to decode vfx graph asset: " + key, exception);
+            AcademyCraft.getLogger().error("Unable to decode vfx graph asset: {}", key, exception);
             return null;
         }
     }
 
-    public Graph load(String key, String jsonText) {
+    public @Nullable Graph load(String key, String jsonText) {
         return load(key, gson.fromJson(jsonText, JsonObject.class));
     }
 
-    public Graph load(Path file) throws IOException {
+    public @Nullable Graph load(Path file) throws IOException {
         return load(file.toAbsolutePath().toString(), Files.readString(file));
     }
 

@@ -44,7 +44,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Moves every compatible roster member to the block or entity under the caster's crosshair.
