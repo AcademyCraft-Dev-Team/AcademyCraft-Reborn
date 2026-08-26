@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 public final class PrecisionGraphCodec {
     private static final int VERSION = 4;
-    private static final PrecisionGraph.NodeKind[] LEGACY_KINDS = java.util.Arrays.copyOf(
+    private static final PrecisionGraph.NodeKind[] LEGACY_KINDS = Arrays.copyOf(
             PrecisionGraph.NodeKind.values(),
             32
     );

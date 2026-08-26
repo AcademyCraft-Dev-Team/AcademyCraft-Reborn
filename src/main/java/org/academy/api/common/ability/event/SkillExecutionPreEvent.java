@@ -5,7 +5,9 @@ import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.academy.api.common.ability.Skill;
 
-/** Fired before a skill calculates or occupies CP. */
+/**
+ * Fired before a skill calculates or occupies CP.
+ */
 public final class SkillExecutionPreEvent extends Event implements ICancellableEvent {
     private final Skill skill;
     private final ServerPlayer player;

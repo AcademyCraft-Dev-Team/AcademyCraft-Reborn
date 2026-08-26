@@ -70,9 +70,7 @@ public final class FrameStats {
 
     private static long percentile(double q) {
         long[] arr = new long[size];
-        for (int i = 0; i < size; i++) {
-            arr[i] = frameTimesNs[i];
-        }
+        System.arraycopy(frameTimesNs, 0, arr, 0, size);
         Arrays.sort(arr);
         int pos = (int) ((arr.length - 1) * q);
         return arr[pos];

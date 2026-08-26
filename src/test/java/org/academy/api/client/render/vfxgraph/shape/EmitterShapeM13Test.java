@@ -1,9 +1,11 @@
 package org.academy.api.client.render.vfxgraph.shape;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EmitterShapeM13Test {
 
@@ -42,7 +44,7 @@ class EmitterShapeM13Test {
             shape.sample(random, out);
             float r = (float) Math.sqrt(out[0] * out[0] + out[2] * out[2]);
             assertTrue(Math.abs(r - 2f) < 1e-4f, "circle edge radius");
-            assertTrue(out[1] == 1f, "circle edge y");
+            assertEquals(1f, out[1], "circle edge y");
         }
     }
 }

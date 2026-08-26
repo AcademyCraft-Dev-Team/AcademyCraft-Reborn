@@ -1,36 +1,10 @@
 package org.academy.internal.common.ability.mentalout.precision;
 
 import net.minecraft.resources.Identifier;
-import org.academy.api.common.ability.program.ProgramBlockPosition;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramTargetResolver;
-import org.academy.api.common.ability.program.ProgramValue;
-import org.academy.api.common.ability.program.ProgramValueType;
-import org.academy.api.common.ability.program.ProgramValueTypes;
-import org.academy.api.common.ability.program.ProgramWorldPosition;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.CompiledProgram;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramActionTransaction;
-import org.academy.internal.common.ability.program.ProgramExecutionFrame;
-import org.academy.internal.common.ability.program.ProgramExecutorLookup;
-import org.academy.internal.common.ability.program.ProgramInputView;
-import org.academy.internal.common.ability.program.ProgramNodeExecutor;
-import org.academy.internal.common.ability.program.ProgramNodeStep;
-import org.academy.internal.common.ability.program.ProgramVm;
-import org.academy.internal.common.ability.program.ProgramVmContext;
-import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
-import org.academy.internal.common.ability.program.ProgramVmResult;
+import org.academy.api.common.ability.program.*;
+import org.academy.internal.common.ability.program.*;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Shared-VM execution gateway for Precision Operation.
@@ -43,6 +17,7 @@ final class PrecisionProgramExecutionBridge {
     private static final int MAX_FUEL = PrecisionGraph.MAX_NODES * PrecisionGraph.MAX_NODES + 1;
     private static final Map<Identifier, ProgramNodeExecutor<?>> PRECISION_EXECUTORS =
             createPrecisionExecutors();
+
     private PrecisionProgramExecutionBridge() {
     }
 
@@ -203,330 +178,311 @@ final class PrecisionProgramExecutionBridge {
         );
     }
 
-    private static final class TraceExecutor
-            implements ProgramNodeExecutor<PrecisionProgramNodeCatalog.PrecisionConfiguration> {
-        private final PrecisionGraph.NodeKind kind;
-
-        private TraceExecutor(PrecisionGraph.NodeKind kind) {
-            this.kind = kind;
-        }
+    private record TraceExecutor(PrecisionGraph.NodeKind kind)
+                implements ProgramNodeExecutor<PrecisionProgramNodeCatalog.PrecisionConfiguration> {
 
         @Override
-        public ProgramNodeStep execute(
-                ProgramVmContext context,
-                PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
-                ProgramInputView inputs
-        ) {
-            var frame = context.attachment(ProgramExecutionFrame.class).orElseThrow();
-            var nativeEnvironment = frame.environment(NativeEnvironment.class).orElse(null);
-            if (nativeEnvironment != null) {
+            public ProgramNodeStep execute(
+                    ProgramVmContext context,
+                    PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
+                    ProgramInputView inputs
+            ) {
+                var frame = context.attachment(ProgramExecutionFrame.class).orElseThrow();
+                var nativeEnvironment = frame.environment(NativeEnvironment.class).orElse(null);
+                if (nativeEnvironment != null) {
+                    if (kind == PrecisionGraph.NodeKind.CASTER) {
+                        return dataOutput(kind, nativeEnvironment.runtimeView.caster());
+                    }
+                    if (isNativeCollection(kind)) {
+                        return executeNativeCollection(kind, configuration, inputs);
+                    }
+                    if (isNativeWorldData(kind)) {
+                        return executeNativeWorldData(
+                                kind, configuration, inputs, nativeEnvironment.runtimeView);
+                    }
+                    if (kind.isConditionalBranch()) {
+                        var selected = executeNativeBranch(
+                                kind, configuration, inputs, nativeEnvironment.runtimeView);
+                        return ProgramNodeStep.next(Boolean.toString(selected));
+                    }
+                    return nativeEnvironment.nodeHandler.execute(
+                            context, kind, configuration, inputs);
+                }
+                var trace = frame.environment(Trace.class).orElseThrow();
+                var nodeId = context.nodeId();
                 if (kind == PrecisionGraph.NodeKind.CASTER) {
-                    return dataOutput(kind, nativeEnvironment.runtimeView.caster());
+                    return dataOutput(kind, trace.runtimeView.caster());
                 }
                 if (isNativeCollection(kind)) {
                     return executeNativeCollection(kind, configuration, inputs);
                 }
                 if (isNativeWorldData(kind)) {
-                    return executeNativeWorldData(
-                            kind, configuration, inputs, nativeEnvironment.runtimeView);
+                    return executeNativeWorldData(kind, configuration, inputs, trace.runtimeView);
                 }
-                if (kind.isConditionalBranch()) {
-                    var selected = executeNativeBranch(
-                            kind, configuration, inputs, nativeEnvironment.runtimeView);
-                    return ProgramNodeStep.next(selected ? "true" : "false");
+                if (kind.isAction()) {
+                    trace.visit(nodeId);
+                    if (kind.isConditionalBranch()) {
+                        var selected = executeNativeBranch(
+                                kind,
+                                configuration,
+                                inputs,
+                                trace.runtimeView
+                        );
+                        return ProgramNodeStep.next(Boolean.toString(selected));
+                    }
+                    if (!trace.values.containsKey(nodeId)) {
+                        throw new IllegalStateException("Missing action trace for node " + nodeId);
+                    }
+                    frame.stage(context, trace.action(nodeId, inputs));
+                    return ProgramNodeStep.next("flow");
                 }
-                return nativeEnvironment.nodeHandler.execute(
-                        context, kind, configuration, inputs);
-            }
-            var trace = frame.environment(Trace.class).orElseThrow();
-            var nodeId = context.nodeId();
-            if (kind == PrecisionGraph.NodeKind.CASTER) {
-                return dataOutput(kind, trace.runtimeView.caster());
-            }
-            if (isNativeCollection(kind)) {
-                return executeNativeCollection(kind, configuration, inputs);
-            }
-            if (isNativeWorldData(kind)) {
-                return executeNativeWorldData(kind, configuration, inputs, trace.runtimeView);
-            }
-            if (kind.isAction()) {
-                trace.visit(nodeId);
-                if (kind.isConditionalBranch()) {
-                    var selected = executeNativeBranch(
-                            kind,
-                            configuration,
-                            inputs,
-                            trace.runtimeView
-                    );
-                    return ProgramNodeStep.next(selected ? "true" : "false");
+
+                if (kind.outputDefinitions().size() != 1 || !trace.values.containsKey(nodeId)) {
+                    throw new IllegalStateException("Missing data trace for node " + nodeId);
                 }
-                if (!trace.values.containsKey(nodeId)) {
-                    throw new IllegalStateException("Missing action trace for node " + nodeId);
-                }
-                frame.stage(context, trace.action(nodeId, inputs));
-                return ProgramNodeStep.next("flow");
+                var value = trace.values.get(nodeId);
+                if (value == null) return ProgramNodeStep.data(Map.of());
+                var output = kind.outputDefinitions().getFirst();
+                return ProgramNodeStep.data(Map.of(
+                        output.key(),
+                        new ProgramValue<>(valueType(output.type()), value)
+                ));
             }
 
-            if (kind.outputDefinitions().size() != 1 || !trace.values.containsKey(nodeId)) {
-                throw new IllegalStateException("Missing data trace for node " + nodeId);
+            private static boolean isNativeCollection(PrecisionGraph.NodeKind kind) {
+                return switch (kind) {
+                    case ENTITY_TO_SET, UNION, INTERSECTION, SUBTRACT_SET, EXCLUDE, LIMIT -> true;
+                    default -> false;
+                };
             }
-            var value = trace.values.get(nodeId);
-            if (value == null) return ProgramNodeStep.data(Map.of());
-            var output = kind.outputDefinitions().getFirst();
-            return ProgramNodeStep.data(Map.of(
-                    output.key(),
-                    new ProgramValue<>(valueType(output.type()), value)
-            ));
-        }
 
-        private static boolean isNativeCollection(PrecisionGraph.NodeKind kind) {
-            return switch (kind) {
-                case ENTITY_TO_SET, UNION, INTERSECTION, SUBTRACT_SET, EXCLUDE, LIMIT -> true;
-                default -> false;
-            };
-        }
-
-        private static boolean isNativeWorldData(PrecisionGraph.NodeKind kind) {
-            return switch (kind) {
-                case NEARBY_ENTITIES, NEARBY_ALL_ENTITIES, NEARBY_ITEMS, NEARBY_PROJECTILES,
-                     ALIVE, DISTANCE, ALLIES, ENEMIES, TYPE_FILTER, HEALTH_FILTER,
-                     HEALTH_BELOW, HAS_TARGET, VISIBLE_FROM, NEAREST, FARTHEST,
-                     LOWEST_HEALTH, HIGHEST_HEALTH, SORT_BY_DISTANCE, RANDOM -> true;
-                default -> false;
-            };
-        }
-
-        private static ProgramNodeStep executeNativeCollection(
-                PrecisionGraph.NodeKind kind,
-                PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
-                ProgramInputView inputs
-        ) {
-            var result = switch (kind) {
-                case ENTITY_TO_SET -> List.of(input(
-                        inputs, "entity", ProgramValueTypes.ENTITY_REFERENCE));
-                case UNION -> union(collection(inputs, "left"), collection(inputs, "right"));
-                case INTERSECTION -> {
-                    var right = new HashSet<>(collection(inputs, "right"));
-                    yield collection(inputs, "left").stream().filter(right::contains).toList();
-                }
-                case SUBTRACT_SET -> {
-                    var right = new HashSet<>(collection(inputs, "right"));
-                    yield collection(inputs, "left").stream()
-                            .filter(value -> !right.contains(value)).toList();
-                }
-                case EXCLUDE -> {
-                    var excluded = input(inputs, "excluded", ProgramValueTypes.ENTITY_REFERENCE);
-                    yield collection(inputs, "entities").stream()
-                            .filter(value -> value != excluded).toList();
-                }
-                case LIMIT -> collection(inputs, "entities").stream()
-                        .limit((int) configuration.parameter()).toList();
-                default -> throw new IllegalStateException("Unsupported native collection node " + kind);
-            };
-            return dataOutput(kind, result);
-        }
-
-        private static ProgramNodeStep executeNativeWorldData(
-                PrecisionGraph.NodeKind kind,
-                PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
-                ProgramInputView inputs,
-                PrecisionProgramRuntimeView view
-        ) {
-            var parameter = configuration.parameter();
-            return switch (kind) {
-                case NEARBY_ENTITIES -> dataOutput(kind, view.nearbyLiving(parameter));
-                case NEARBY_ALL_ENTITIES -> dataOutput(kind, view.nearbyEntities(parameter));
-                case NEARBY_ITEMS -> dataOutput(kind, view.nearbyItems(parameter));
-                case NEARBY_PROJECTILES -> dataOutput(kind, view.nearbyProjectiles(parameter));
-                case ALIVE -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(view::alive).toList());
-                case DISTANCE -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(value -> view.withinDistance(value, parameter)).toList());
-                case ALLIES -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(view::ally).toList());
-                case ENEMIES -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(value -> value != view.caster() && !view.ally(value)).toList());
-                case TYPE_FILTER -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(value -> view.typeMatches((int) parameter, value)).toList());
-                case HEALTH_FILTER -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(value -> view.healthPercent(value) >= parameter).toList());
-                case HEALTH_BELOW -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(value -> view.healthPercent(value) <= parameter).toList());
-                case HAS_TARGET -> dataOutput(kind, collection(inputs, "entities").stream()
-                        .filter(view::hasTarget).toList());
-                case VISIBLE_FROM -> {
-                    var observer = input(inputs, "observer", ProgramValueTypes.ENTITY_REFERENCE);
-                    yield dataOutput(kind, collection(inputs, "entities").stream()
-                            .filter(value -> view.visibleFrom(observer, value)).toList());
-                }
-                case NEAREST -> selectedOutput(kind, collection(inputs, "entities").stream()
-                        .min(distanceComparator(view)).orElse(null));
-                case FARTHEST -> selectedOutput(kind, collection(inputs, "entities").stream()
-                        .min(farthestComparator(view)).orElse(null));
-                case LOWEST_HEALTH -> selectedOutput(kind, collection(inputs, "entities").stream()
-                        .filter(value -> !Double.isNaN(view.sortableHealthPercent(value)))
-                        .min(healthComparator(view, false)).orElse(null));
-                case HIGHEST_HEALTH -> selectedOutput(kind, collection(inputs, "entities").stream()
-                        .filter(value -> !Double.isNaN(view.sortableHealthPercent(value)))
-                        .min(healthComparator(view, true)).orElse(null));
-                case SORT_BY_DISTANCE -> {
-                    var comparator = parameter == 0.0
-                            ? distanceComparator(view)
-                            : farthestComparator(view);
-                    yield dataOutput(kind, collection(inputs, "entities").stream()
-                            .sorted(comparator).toList());
-                }
-                case RANDOM -> {
-                    var values = collection(inputs, "entities");
-                    yield selectedOutput(kind, values.isEmpty()
-                            ? null : values.get(view.randomIndex(values.size())));
-                }
-                default -> throw new IllegalStateException("Unsupported native world node " + kind);
-            };
-        }
-
-        private static boolean executeNativeBranch(
-                PrecisionGraph.NodeKind kind,
-                PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
-                ProgramInputView inputs,
-                PrecisionProgramRuntimeView view
-        ) {
-            var subject = input(inputs, "subject", ProgramValueTypes.ENTITY_REFERENCE);
-            return switch (kind) {
-                case HEALTH_RATIO_BRANCH ->
-                        view.healthPercent(subject) <= configuration.parameter();
-                case DISTANCE_BRANCH -> view.withinDistance(subject, configuration.parameter());
-                case ENTITY_TYPE_BRANCH ->
-                        view.typeMatches((int) configuration.parameter(), subject);
-                case STATUS_EFFECT_BRANCH -> view.hasStatusEffect(subject);
-                default -> throw new IllegalStateException("Unsupported native branch " + kind);
-            };
-        }
-
-        private static Object input(
-                ProgramInputView inputs,
-                String port,
-                ProgramValueType type
-        ) {
-            return inputs.requireCompatible(port, type).value();
-        }
-
-        private static List<?> collection(ProgramInputView inputs, String port) {
-            var value = input(inputs, port, ProgramValueTypes.ENTITY_SET);
-            if (!(value instanceof List<?> list)) {
-                throw new IllegalArgumentException("Entity-set input is not a list");
+            private static boolean isNativeWorldData(PrecisionGraph.NodeKind kind) {
+                return switch (kind) {
+                    case NEARBY_ENTITIES, NEARBY_ALL_ENTITIES, NEARBY_ITEMS, NEARBY_PROJECTILES,
+                         ALIVE, DISTANCE, ALLIES, ENEMIES, TYPE_FILTER, HEALTH_FILTER,
+                         HEALTH_BELOW, HAS_TARGET, VISIBLE_FROM, NEAREST, FARTHEST,
+                         LOWEST_HEALTH, HIGHEST_HEALTH, SORT_BY_DISTANCE, RANDOM -> true;
+                    default -> false;
+                };
             }
-            return list;
+
+            private static ProgramNodeStep executeNativeCollection(
+                    PrecisionGraph.NodeKind kind,
+                    PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
+                    ProgramInputView inputs
+            ) {
+                var result = switch (kind) {
+                    case ENTITY_TO_SET -> List.of(input(
+                            inputs, "entity", ProgramValueTypes.ENTITY_REFERENCE));
+                    case UNION -> union(collection(inputs, "left"), collection(inputs, "right"));
+                    case INTERSECTION -> {
+                        var right = new HashSet<>(collection(inputs, "right"));
+                        yield collection(inputs, "left").stream().filter(right::contains).toList();
+                    }
+                    case SUBTRACT_SET -> {
+                        var right = new HashSet<>(collection(inputs, "right"));
+                        yield collection(inputs, "left").stream()
+                                .filter(value -> !right.contains(value)).toList();
+                    }
+                    case EXCLUDE -> {
+                        var excluded = input(inputs, "excluded", ProgramValueTypes.ENTITY_REFERENCE);
+                        yield collection(inputs, "entities").stream()
+                                .filter(value -> value != excluded).toList();
+                    }
+                    case LIMIT -> collection(inputs, "entities").stream()
+                            .limit((int) configuration.parameter()).toList();
+                    default -> throw new IllegalStateException("Unsupported native collection node " + kind);
+                };
+                return dataOutput(kind, result);
+            }
+
+            private static ProgramNodeStep executeNativeWorldData(
+                    PrecisionGraph.NodeKind kind,
+                    PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
+                    ProgramInputView inputs,
+                    PrecisionProgramRuntimeView view
+            ) {
+                var parameter = configuration.parameter();
+                return switch (kind) {
+                    case NEARBY_ENTITIES -> dataOutput(kind, view.nearbyLiving(parameter));
+                    case NEARBY_ALL_ENTITIES -> dataOutput(kind, view.nearbyEntities(parameter));
+                    case NEARBY_ITEMS -> dataOutput(kind, view.nearbyItems(parameter));
+                    case NEARBY_PROJECTILES -> dataOutput(kind, view.nearbyProjectiles(parameter));
+                    case ALIVE -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(view::alive).toList());
+                    case DISTANCE -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(value -> view.withinDistance(value, parameter)).toList());
+                    case ALLIES -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(view::ally).toList());
+                    case ENEMIES -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(value -> value != view.caster() && !view.ally(value)).toList());
+                    case TYPE_FILTER -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(value -> view.typeMatches((int) parameter, value)).toList());
+                    case HEALTH_FILTER -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(value -> view.healthPercent(value) >= parameter).toList());
+                    case HEALTH_BELOW -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(value -> view.healthPercent(value) <= parameter).toList());
+                    case HAS_TARGET -> dataOutput(kind, collection(inputs, "entities").stream()
+                            .filter(view::hasTarget).toList());
+                    case VISIBLE_FROM -> {
+                        var observer = input(inputs, "observer", ProgramValueTypes.ENTITY_REFERENCE);
+                        yield dataOutput(kind, collection(inputs, "entities").stream()
+                                .filter(value -> view.visibleFrom(observer, value)).toList());
+                    }
+                    case NEAREST -> selectedOutput(kind, collection(inputs, "entities").stream()
+                            .min(distanceComparator(view)).orElse(null));
+                    case FARTHEST -> selectedOutput(kind, collection(inputs, "entities").stream()
+                            .min(farthestComparator(view)).orElse(null));
+                    case LOWEST_HEALTH -> selectedOutput(kind, collection(inputs, "entities").stream()
+                            .filter(value -> !Double.isNaN(view.sortableHealthPercent(value)))
+                            .min(healthComparator(view, false)).orElse(null));
+                    case HIGHEST_HEALTH -> selectedOutput(kind, collection(inputs, "entities").stream()
+                            .filter(value -> !Double.isNaN(view.sortableHealthPercent(value)))
+                            .min(healthComparator(view, true)).orElse(null));
+                    case SORT_BY_DISTANCE -> {
+                        var comparator = parameter == 0.0
+                                ? distanceComparator(view)
+                                : farthestComparator(view);
+                        yield dataOutput(kind, collection(inputs, "entities").stream()
+                                .sorted(comparator).toList());
+                    }
+                    case RANDOM -> {
+                        var values = collection(inputs, "entities");
+                        yield selectedOutput(kind, values.isEmpty()
+                                ? null : values.get(view.randomIndex(values.size())));
+                    }
+                    default -> throw new IllegalStateException("Unsupported native world node " + kind);
+                };
+            }
+
+            private static boolean executeNativeBranch(
+                    PrecisionGraph.NodeKind kind,
+                    PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
+                    ProgramInputView inputs,
+                    PrecisionProgramRuntimeView view
+            ) {
+                var subject = input(inputs, "subject", ProgramValueTypes.ENTITY_REFERENCE);
+                return switch (kind) {
+                    case HEALTH_RATIO_BRANCH -> view.healthPercent(subject) <= configuration.parameter();
+                    case DISTANCE_BRANCH -> view.withinDistance(subject, configuration.parameter());
+                    case ENTITY_TYPE_BRANCH -> view.typeMatches((int) configuration.parameter(), subject);
+                    case STATUS_EFFECT_BRANCH -> view.hasStatusEffect(subject);
+                    default -> throw new IllegalStateException("Unsupported native branch " + kind);
+                };
+            }
+
+            private static Object input(
+                    ProgramInputView inputs,
+                    String port,
+                    ProgramValueType type
+            ) {
+                return inputs.requireCompatible(port, type).value();
+            }
+
+            private static List<?> collection(ProgramInputView inputs, String port) {
+                var value = input(inputs, port, ProgramValueTypes.ENTITY_SET);
+                if (!(value instanceof List<?> list)) {
+                    throw new IllegalArgumentException("Entity-set input is not a list");
+                }
+                return list;
+            }
+
+            private static List<?> union(List<?> left, List<?> right) {
+                var result = new LinkedHashSet<Object>();
+                result.addAll(left);
+                result.addAll(right);
+                return List.copyOf(result);
+            }
+
+            private static Comparator<Object> distanceComparator(PrecisionProgramRuntimeView view) {
+                return Comparator.comparingDouble(view::distanceSqr).thenComparing(view::stableKey);
+            }
+
+            private static Comparator<Object> farthestComparator(PrecisionProgramRuntimeView view) {
+                return Comparator.comparingDouble((Object value) -> -view.distanceSqr(value))
+                        .thenComparing(view::stableKey);
+            }
+
+            private static Comparator<Object> healthComparator(
+                    PrecisionProgramRuntimeView view,
+                    boolean highest
+            ) {
+                return Comparator.comparingDouble((Object value) ->
+                                (highest ? -1.0 : 1.0) * view.sortableHealthPercent(value))
+                        .thenComparingDouble(view::distanceSqr)
+                        .thenComparing(view::stableKey);
+            }
+
+            private static ProgramNodeStep selectedOutput(
+                    PrecisionGraph.NodeKind kind,
+                    Object value
+            ) {
+                return value == null ? ProgramNodeStep.data(Map.of()) : dataOutput(kind, value);
+            }
+
+            private static ProgramNodeStep dataOutput(
+                    PrecisionGraph.NodeKind kind,
+                    Object value
+            ) {
+                var output = kind.outputDefinitions().getFirst();
+                return ProgramNodeStep.data(Map.of(
+                        output.key(),
+                        new ProgramValue<>(valueType(output.type()), value)
+                ));
+            }
         }
 
-        private static List<?> union(List<?> left, List<?> right) {
-            var result = new LinkedHashSet<Object>();
-            result.addAll(left);
-            result.addAll(right);
-            return List.copyOf(result);
-        }
-
-        private static Comparator<Object> distanceComparator(PrecisionProgramRuntimeView view) {
-            return Comparator.comparingDouble(view::distanceSqr).thenComparing(view::stableKey);
-        }
-
-        private static Comparator<Object> farthestComparator(PrecisionProgramRuntimeView view) {
-            return Comparator.comparingDouble((Object value) -> -view.distanceSqr(value))
-                    .thenComparing(view::stableKey);
-        }
-
-        private static Comparator<Object> healthComparator(
-                PrecisionProgramRuntimeView view,
-                boolean highest
-        ) {
-            return Comparator.comparingDouble((Object value) ->
-                            (highest ? -1.0 : 1.0) * view.sortableHealthPercent(value))
-                    .thenComparingDouble(view::distanceSqr)
-                    .thenComparing(view::stableKey);
-        }
-
-        private static ProgramNodeStep selectedOutput(
-                PrecisionGraph.NodeKind kind,
-                Object value
-        ) {
-            return value == null ? ProgramNodeStep.data(Map.of()) : dataOutput(kind, value);
-        }
-
-        private static ProgramNodeStep dataOutput(
-                PrecisionGraph.NodeKind kind,
-                Object value
-        ) {
-            var output = kind.outputDefinitions().getFirst();
-            return ProgramNodeStep.data(Map.of(
-                    output.key(),
-                    new ProgramValue<>(valueType(output.type()), value)
-            ));
-        }
-    }
-
-    private static final class NativeEnvironment implements ProgramTargetResolver {
-        private final PrecisionProgramRuntimeView runtimeView;
-        private final ProgramTargetResolver targetResolver;
-        private final NativeNodeHandler nodeHandler;
-
-        private NativeEnvironment(
-                PrecisionProgramRuntimeView runtimeView,
-                ProgramTargetResolver targetResolver,
-                NativeNodeHandler nodeHandler
-        ) {
-            this.runtimeView = runtimeView;
-            this.targetResolver = targetResolver;
-            this.nodeHandler = nodeHandler;
-        }
+    private record NativeEnvironment(PrecisionProgramRuntimeView runtimeView, ProgramTargetResolver targetResolver,
+                                     NativeNodeHandler nodeHandler) implements ProgramTargetResolver {
 
         @Override
-        public Object caster() {
-            return targetResolver.caster();
-        }
+            public Object caster() {
+                return targetResolver.caster();
+            }
 
-        @Override
-        public Optional<Object> lookTarget() {
-            return targetResolver.lookTarget();
-        }
+            @Override
+            public Optional<Object> lookTarget() {
+                return targetResolver.lookTarget();
+            }
 
-        @Override
-        public Optional<ProgramBlockPosition> lookBlockTarget() {
-            return targetResolver.lookBlockTarget();
-        }
+            @Override
+            public Optional<ProgramBlockPosition> lookBlockTarget() {
+                return targetResolver.lookBlockTarget();
+            }
 
-        @Override
-        public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
-            return targetResolver.positionOf(entityReference);
-        }
+            @Override
+            public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
+                return targetResolver.positionOf(entityReference);
+            }
 
-        @Override
-        public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
-            return targetResolver.lookDirectionOf(entityReference);
-        }
+            @Override
+            public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
+                return targetResolver.lookDirectionOf(entityReference);
+            }
 
-        @Override
-        public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
-            return targetResolver.entitiesAround(center, radius);
-        }
+            @Override
+            public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
+                return targetResolver.entitiesAround(center, radius);
+            }
 
-        @Override
-        public Optional<ProgramBlockPosition> raycastBlock(
-                ProgramWorldPosition origin,
-                ProgramDirection direction,
-                double maximumDistance
-        ) {
-            return targetResolver.raycastBlock(origin, direction, maximumDistance);
-        }
+            @Override
+            public Optional<ProgramBlockPosition> raycastBlock(
+                    ProgramWorldPosition origin,
+                    ProgramDirection direction,
+                    double maximumDistance
+            ) {
+                return targetResolver.raycastBlock(origin, direction, maximumDistance);
+            }
 
-        @Override
-        public Optional<Object> raycastEntity(
-                ProgramWorldPosition origin,
-                ProgramDirection direction,
-                double maximumDistance
-        ) {
-            return targetResolver.raycastEntity(origin, direction, maximumDistance);
+            @Override
+            public Optional<Object> raycastEntity(
+                    ProgramWorldPosition origin,
+                    ProgramDirection direction,
+                    double maximumDistance
+            ) {
+                return targetResolver.raycastEntity(origin, direction, maximumDistance);
+            }
         }
-    }
 
     private static final class Trace implements ProgramTargetResolver {
         private final Map<Integer, Object> values;

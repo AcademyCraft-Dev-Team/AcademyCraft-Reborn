@@ -8,13 +8,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.GameMasterBlock;
-import net.minecraft.world.level.block.Mirror;
-import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -25,12 +22,10 @@ import net.minecraft.world.ticks.TickPriority;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.AreaTeleportState;
-import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.mixin.common.LevelTicksAccessor;
@@ -43,6 +38,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class AreaTeleportStart {
     private static final int BLOCK_FLAGS = Block.UPDATE_CLIENTS;
@@ -172,13 +168,13 @@ public final class AreaTeleportStart {
                 write(level, destination, transformCells(sourceCells, source, destination, transform));
                 for (var frozen : sourceEntities) {
                     frozen.relocate(transformPosition(
-                            frozen.position, source, destination, transform),
+                                    frozen.position, source, destination, transform),
                             transformYaw(frozen.yRot, transform));
                 }
                 if (swap) {
                     for (var frozen : destinationEntities) {
                         frozen.relocate(transformPosition(
-                                frozen.position, destination, source, transform.inverse()),
+                                        frozen.position, destination, source, transform.inverse()),
                                 transformYaw(frozen.yRot, transform.inverse()));
                     }
                 }
@@ -243,7 +239,8 @@ public final class AreaTeleportStart {
                 }
                 case MIRROR_X -> transformedX = source.sizeX() - relativeX;
                 case MIRROR_Z -> transformedZ = source.sizeZ() - relativeZ;
-                default -> { }
+                default -> {
+                }
             }
             return new Vec3(
                     destination.min().getX() + transformedX,
@@ -279,7 +276,7 @@ public final class AreaTeleportStart {
                 AreaTeleportState.Region region
         ) {
             var snapshots = new ArrayList<ScheduledTickSnapshot<T>>();
-            var containers = ((LevelTicksAccessor<T>) (Object) ticks).academy$getAllContainers();
+            var containers = ((LevelTicksAccessor<T>) ticks).academy$getAllContainers();
             for (var container : containers.values()) {
                 container.getAll()
                         .filter(tick -> contains(region, tick.pos()))
@@ -383,7 +380,8 @@ public final class AreaTeleportStart {
                 }
                 case MIRROR_X -> transformedX = source.sizeX() - 1 - x;
                 case MIRROR_Z -> transformedZ = source.sizeZ() - 1 - z;
-                default -> { }
+                default -> {
+                }
             }
             return destination.min().offset(transformedX, y, transformedZ);
         }
@@ -417,7 +415,8 @@ public final class AreaTeleportStart {
                             }
                             case MIRROR_X -> transformedX = sourceSizeX - 1 - x;
                             case MIRROR_Z -> transformedZ = sourceSizeZ - 1 - z;
-                            default -> { }
+                            default -> {
+                            }
                         }
                         var destinationIndex = (transformedX * destination.sizeY() + y)
                                 * destination.sizeZ() + transformedZ;
@@ -535,12 +534,14 @@ public final class AreaTeleportStart {
             noGravity = entity.isNoGravity();
             noAi = entity instanceof Mob mob && mob.isNoAi();
         }
-        private void freeze(java.util.Set<Entity> included) {
+
+        private void freeze(Set<Entity> included) {
             if (vehicle != null && included.contains(vehicle)) entity.stopRiding();
             entity.setNoGravity(true);
             entity.setDeltaMovement(Vec3.ZERO);
             if (entity instanceof Mob mob) mob.setNoAi(true);
         }
+
         private void relocate(Vec3 destination, float destinationYaw) {
             if (!TeleportSync.teleportInstantly(entity, destination)) {
                 throw new IllegalStateException("Entity rejected area teleport: " + entity.getStringUUID());
@@ -550,6 +551,7 @@ public final class AreaTeleportStart {
             entity.setYHeadRot(destinationYaw);
             entity.resetFallDistance();
         }
+
         private void restorePosition() {
             TeleportSync.teleportInstantly(entity, position);
             entity.setYRot(yRot);
@@ -557,8 +559,9 @@ public final class AreaTeleportStart {
             entity.setYHeadRot(yRot);
             entity.resetFallDistance();
         }
+
         private void grantFallProtection(ServerPlayer player) {
-            if (entity instanceof net.minecraft.world.entity.LivingEntity) {
+            if (entity instanceof LivingEntity) {
                 TimedSkillEffectRuntime.put(
                         player,
                         entity.getUUID(),
@@ -569,6 +572,7 @@ public final class AreaTeleportStart {
                 );
             }
         }
+
         private void restore() {
             entity.setNoGravity(noGravity);
             if (entity instanceof Mob mob) mob.setNoAi(noAi);

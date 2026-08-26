@@ -2,13 +2,6 @@ package org.academy.internal.common.ability.darkmatter.skills.lv1;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Comparator;
-import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.RegistryAccess;
@@ -20,11 +13,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -56,13 +50,14 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
+import org.academy.internal.common.world.item.Items;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -70,6 +65,9 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.*;
+import java.util.function.Predicate;
 
 public final class DarkmatterDisassemble extends Skill {
     static final double RANGE = 32.0;
@@ -229,7 +227,7 @@ public final class DarkmatterDisassemble extends Skill {
                     || !canProgramDestroyBlock(player, position, maximumRange)) {
                 return false;
             }
-            var level = (ServerLevel) player.level();
+            var level = player.level();
             var destroyed = new boolean[1];
             var skill = Skills.DARKMATTER_DISASSEMBLE.get();
             var executed = skill.executeActive(player, _ -> baseCost, (context, _) -> {
@@ -396,7 +394,7 @@ public final class DarkmatterDisassemble extends Skill {
         }
 
         private static boolean hurtWithArmorPenetration(LivingEntity target, ServerLevel level,
-                                                        net.minecraft.world.damagesource.DamageSource source,
+                                                        DamageSource source,
                                                         float damage, float penetration) {
             var armor = target.getAttribute(Attributes.ARMOR);
             if (armor == null) return DarkmatterTargeting.hurt(level, target, source, damage);
@@ -721,7 +719,7 @@ public final class DarkmatterDisassemble extends Skill {
 
         public static ItemStack createLootTool(RegistryAccess access, int fortune) {
             var tool = new ItemStack(
-                    org.academy.internal.common.world.item.Items.DARKMATTER_TOOL.get());
+                    Items.DARKMATTER_TOOL.get());
             if (access != null && fortune > 0) {
                 DarkmatterItemUtil.setEnchantmentLevel(
                         access, tool, Enchantments.FORTUNE, fortune);

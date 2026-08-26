@@ -6,39 +6,38 @@ import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.pipeline.BindGroupLayout;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.*;
 import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.GpuDevice;
+import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.AddressMode;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuSampler;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.textures.*;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.resources.Identifier;
+import org.academy.api.client.compatibility.IrisIntegration;
+import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
+import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
+import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
+import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
+import org.academy.api.client.resources.R;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.jspecify.annotations.Nullable;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.system.MemoryStack;
+
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Random;
-import net.minecraft.resources.Identifier;
-import org.academy.api.client.compatibility.IrisIntegration;
-import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
-import org.academy.api.client.resources.R;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
-import org.jspecify.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
-import org.lwjgl.BufferUtils;
-import org.lwjgl.system.MemoryStack;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 自持 VFX 粒子渲染器（M13-07）：数据驱动，按 {@link RenderSpec} 动态构建/缓存管线。
@@ -60,16 +59,22 @@ public final class VfxGraphRenderer {
     private static final int INITIAL_INSTANCES = 4096;
     private static final int INITIAL_VERTICES = 16384;
     private static final int NOISE_SIZE = 256;
-    /** 旧 vfx 电弧管环分辨率（同 LightningRenderer/ArcTube 的 SEGMENT_RESOLUTION）。 */
+    /**
+     * 旧 vfx 电弧管环分辨率（同 LightningRenderer/ArcTube 的 SEGMENT_RESOLUTION）。
+     */
     private static final int ARC_SEGMENT_RESOLUTION = 4;
     private static final int ARC_LIGHTNING_UBO_SIZE = 16;
 
-    /** trail 顶点格式（M16-02：缓存避免每帧重建 VertexFormat）。 */
+    /**
+     * trail 顶点格式（M16-02：缓存避免每帧重建 VertexFormat）。
+     */
     private static final VertexFormat TRAIL_FORMAT = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
             .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
             .build();
-    /** 实例化顶点格式（billboard/mesh 共用；M21 增 InstanceSeed/InstanceAge）。 */
+    /**
+     * 实例化顶点格式（billboard/mesh 共用；M21 增 InstanceSeed/InstanceAge）。
+     */
     private static final VertexFormat INSTANCE_FORMAT = VertexFormat.builder(1)
             .addAttribute("InstancePos", GpuFormat.RGB32_FLOAT)
             .addAttribute("InstanceVel", GpuFormat.RGB32_FLOAT)
@@ -89,7 +94,9 @@ public final class VfxGraphRenderer {
     private static final BindGroupLayout CAMERA_BIND_GROUP = BindGroupLayout.builder()
             .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
             .build();
-    /** 旧 vfx 电弧管绑定组：GraphCamera + ArcLightning（基色/发射/参数，复刻 LightningRenderer）。 */
+    /**
+     * 旧 vfx 电弧管绑定组：GraphCamera + ArcLightning（基色/发射/参数，复刻 LightningRenderer）。
+     */
     private static final BindGroupLayout ARC_BIND_GROUP = BindGroupLayout.builder()
             .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
             .withUniform("ArcLightning", UniformType.UNIFORM_BUFFER)
@@ -99,9 +106,13 @@ public final class VfxGraphRenderer {
             .withSampler("Sampler0")
             .withSampler("Sampler1")
             .build();
-    /** 编辑器预览清屏：不透明深色，便于确认视口在渲染（运行时 clear=false 不受影响）。 */
+    /**
+     * 编辑器预览清屏：不透明深色，便于确认视口在渲染（运行时 clear=false 不受影响）。
+     */
     private static final Vector4f CLEAR_COLOR = new Vector4f(0.07f, 0.08f, 0.1f, 1f);
-    /** 复用的世界变换 scratch（M16-02：避免每粒子分配 float[3]）。 */
+    /**
+     * 复用的世界变换 scratch（M16-02：避免每粒子分配 float[3]）。
+     */
     private final float[] worldScratch = new float[3];
 
     /**
@@ -113,8 +124,10 @@ public final class VfxGraphRenderer {
     public record SurfaceMesh(float[] triangles, float r, float g, float b, float a) {
     }
 
-    /** 按 RenderSpec 缓存的管线（数据驱动，M21l）：着色器来自图数据，渲染器零着色器引用。 */
-    private final java.util.concurrent.ConcurrentHashMap<RenderSpec, RenderPipeline> pipelines = new java.util.concurrent.ConcurrentHashMap<>();
+    /**
+     * 按 RenderSpec 缓存的管线（数据驱动，M21l）：着色器来自图数据，渲染器零着色器引用。
+     */
+    private final ConcurrentHashMap<RenderSpec, RenderPipeline> pipelines = new ConcurrentHashMap<>();
     private final GpuBuffer quadBuffer;
     private final GpuBuffer cubeBuffer;
     private final GpuBuffer cameraUbo;
@@ -131,29 +144,39 @@ public final class VfxGraphRenderer {
     private GpuBuffer lineBuffer;
     private ByteBuffer lineData;
     private int lineCapacity;
-    private GpuBuffer arcLightningUbo;
+    private final GpuBuffer arcLightningUbo;
     // --- M22-Rev2 Blender 式电弧渲染 ---
-    /** 电弧管顶点格式（Position+Normal+UV+Color）：匹配 vfxgraph_arc 着色器。 */
+    /**
+     * 电弧管顶点格式（Position+Normal+UV+Color）：匹配 vfxgraph_arc 着色器。
+     */
     private static final VertexFormat ARC_TUBE_FORMAT = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
             .addAttribute("Normal", GpuFormat.RGB32_FLOAT)
             .addAttribute("UV0", GpuFormat.RG32_FLOAT)
             .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
             .build();
-    /** 电弧管管线缓存。 */
-    private final java.util.concurrent.ConcurrentHashMap<String, RenderPipeline> arcTubePipelines = new java.util.concurrent.ConcurrentHashMap<>();
-    /** 表面网格管线（M29b-03）：半透明平面/球三角面，编辑器预览场景。 */
+    /**
+     * 电弧管管线缓存。
+     */
+    private final ConcurrentHashMap<String, RenderPipeline> arcTubePipelines = new ConcurrentHashMap<>();
+    /**
+     * 表面网格管线（M29b-03）：半透明平面/球三角面，编辑器预览场景。
+     */
     private RenderPipeline surfacePipeline;
     private GpuBuffer surfaceBuffer;
     private ByteBuffer surfaceData;
     private int surfaceCapacity;
-    /** 电弧管顶点/索引缓冲（growable）。 */
+    /**
+     * 电弧管顶点/索引缓冲（growable）。
+     */
     private GpuBuffer arcTubeVertexBuffer;
     private GpuBuffer arcTubeIndexBuffer;
     private int arcTubeVertexCapacity;
     private int arcTubeIndexCapacity;
-    /** Blender 式电弧缓冲（由调用方在 render 前设置）。 */
-    private org.academy.api.client.render.vfxgraph.arc.ArcBuffer arcBuffer;
+    /**
+     * Blender 式电弧缓冲（由调用方在 render 前设置）。
+     */
+    private ArcBuffer arcBuffer;
 
     public VfxGraphRenderer() {
         var device = RenderSystem.getDevice();
@@ -242,8 +265,8 @@ public final class VfxGraphRenderer {
                     ? PrimitiveTopology.TRIANGLES
                     : PrimitiveTopology.QUADS;
             // pipeline location 需是合法 Identifier（[a-z0-9/._-]）：用安全字段拼名，不用 record toString
-            var locationName = "vfx_graph_" + s.geometry().name().toLowerCase(java.util.Locale.ROOT)
-                    + "_" + s.blend().name().toLowerCase(java.util.Locale.ROOT)
+            var locationName = "vfx_graph_" + s.geometry().name().toLowerCase(Locale.ROOT)
+                    + "_" + s.blend().name().toLowerCase(Locale.ROOT)
                     + "_" + s.vertexShader().getPath() + "_" + s.fragmentShader().getPath();
             var pipeline = buildPipeline(locationName, s.vertexShader(), s.fragmentShader(),
                     bindGroup, vertexFormat, instanceFormat, blend, topology);
@@ -252,7 +275,9 @@ public final class VfxGraphRenderer {
         });
     }
 
-    /** 电弧管管线：透明主 pass / additive bloom pass。 */
+    /**
+     * 电弧管管线：透明主 pass / additive bloom pass。
+     */
     private RenderPipeline arcTubePipeline(boolean bloomPass) {
         return arcTubePipelines.computeIfAbsent(bloomPass ? "bloom_v2" : "main_v2", k -> {
             var locationName = "vfx_graph_arc_tube" + (bloomPass ? "_bloom" : "");
@@ -265,7 +290,9 @@ public final class VfxGraphRenderer {
         });
     }
 
-    /** 表面网格管线（M29b-03）：SIMPLE_FORMAT（Position+Color）+ CAMERA_BIND_GROUP + TRIANGLES，半透明。 */
+    /**
+     * 表面网格管线（M29b-03）：SIMPLE_FORMAT（Position+Color）+ CAMERA_BIND_GROUP + TRIANGLES，半透明。
+     */
     private RenderPipeline surfacePipeline() {
         if (surfacePipeline == null) {
             surfacePipeline = buildPipeline("vfx_graph_surface",
@@ -277,7 +304,9 @@ public final class VfxGraphRenderer {
         return surfacePipeline;
     }
 
-    /** 写入旧式电弧渲染参数 UBO：仅渲染标量（aces 开关、发射增强），**无任何颜色常量**——电弧颜色全由图数据顶点色驱动。 */
+    /**
+     * 写入旧式电弧渲染参数 UBO：仅渲染标量（aces 开关、发射增强），**无任何颜色常量**——电弧颜色全由图数据顶点色驱动。
+     */
     private void writeArcLightning(GpuDevice device, float emission) {
         try (var stack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(stack, ARC_LIGHTNING_UBO_SIZE);
@@ -309,8 +338,10 @@ public final class VfxGraphRenderer {
         return builder.build();
     }
 
-    /** 设置 M22-Rev2 Blender 式电弧缓冲（render 前调用；null = 不渲染 arc2）。 */
-    public void setArcBuffer(org.academy.api.client.render.vfxgraph.arc.ArcBuffer buffer) {
+    /**
+     * 设置 M22-Rev2 Blender 式电弧缓冲（render 前调用；null = 不渲染 arc2）。
+     */
+    public void setArcBuffer(ArcBuffer buffer) {
         this.arcBuffer = buffer;
     }
 
@@ -409,23 +440,23 @@ public final class VfxGraphRenderer {
      * 接触弧 {@code TLight = FloatCurve.009(生命系数)}（直接，无 ×6）；自由弧无闪烁返回 1。
      * 返回 {rgb 乘数, alpha 乘数}，烘焙进管顶点色（UBO emission 仍由图数据 {@code output_arc} 驱动）。
      */
-    private static float[] arcLight(org.academy.api.client.render.vfxgraph.arc.ArcCurve arc) {
+    private static float[] arcLight(ArcCurve arc) {
         float lifetime = Math.max(1e-3f, arc.lifetime());
         float ageFrac = Math.max(0f, Math.min(1f, arc.age() / lifetime));
         // 粒子火花（Blender PLight = FloatCurve.003(生命系数)×粒子亮度 ×6）：随生命衰减熄灭
         if (arc.sparkVelocity() != null) {
-            float f = org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves.sample(
-                    org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves.PARTICLE_LIFE, ageFrac);
+            float f = BlenderArcCurves.sample(
+                    BlenderArcCurves.PARTICLE_LIFE, ageFrac);
             return new float[]{f, 1f};
         }
         if (arc.flatRadius()) {
-            float f = org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves.sample(
-                    org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves.CONTACT_RADIUS_AGE, ageFrac);
+            float f = BlenderArcCurves.sample(
+                    BlenderArcCurves.CONTACT_RADIUS_AGE, ageFrac);
             return new float[]{f, 1f};
         }
         if (arc.hasArchBase()) {
-            float f = org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves.sample(
-                    org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves.LIGHT, ageFrac) + 0.33f;
+            float f = BlenderArcCurves.sample(
+                    BlenderArcCurves.LIGHT, ageFrac) + 0.33f;
             return new float[]{f, 1f};
         }
         return new float[]{1f, 1f};
@@ -436,8 +467,8 @@ public final class VfxGraphRenderer {
      * Blender 对应：Curve to Mesh(Circle) → Set Material → 输出到 Join Geometry。
      */
     public void drawArcTubes(
-            com.mojang.blaze3d.systems.RenderPass pass,
-            org.academy.api.client.render.vfxgraph.arc.ArcBuffer arcBuffer,
+            RenderPass pass,
+            ArcBuffer arcBuffer,
             GraphCamera camera, WorldTransform transform, boolean bloomPass,
             RenderSpec.ArcRender arcRender
     ) {
@@ -448,7 +479,7 @@ public final class VfxGraphRenderer {
         // 收集所有弧线的管网格数据
         int totalVerts = 0;
         int totalIndices = 0;
-        var meshDataList = new java.util.ArrayList<org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder.MeshData>();
+        var meshDataList = new ArrayList<CurveToMeshBuilder.MeshData>();
 
         for (int a = 0; a < arcBuffer.count(); a++) {
             var arc = arcBuffer.arc(a);
@@ -456,7 +487,7 @@ public final class VfxGraphRenderer {
             // M30 age 亮度闪烁（Blender 材质 Emission）：表面弧 Light = FloatCurve.004(age)×亮度+0.33×亮度；
             // 接触弧 TLight = FloatCurve.009(生命系数)。烘焙进顶点色（UBO emission 保持图数据驱动）。
             float[] light = arcLight(arc);
-            var meshData = org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder.build(
+            var meshData = CurveToMeshBuilder.build(
                     arc, segRes,
                     arc.r() * light[0], arc.g() * light[0], arc.b() * light[0], arc.a() * light[1],
                     arcRender.branchBrightnessScale());
@@ -527,12 +558,12 @@ public final class VfxGraphRenderer {
      *
      * <p>顶点布局与 {@link CurveToMeshBuilder} 一致：Position(3) + Normal(3) + UV(2) + Color(4)。</p>
      */
-    static void transformArcTubeVertices(java.nio.ByteBuffer vertexData, int vertexCount,
+    static void transformArcTubeVertices(ByteBuffer vertexData, int vertexCount,
                                          Vector3f camPos, WorldTransform transform, float overallScale) {
         boolean identity = transform.isIdentity();
         float[] s = new float[3];
         for (int v = 0; v < vertexCount; v++) {
-            int base = v * org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
+            int base = v * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
             float x = vertexData.getFloat(base);
             float y = vertexData.getFloat(base + 4);
             float z = vertexData.getFloat(base + 8);
@@ -565,7 +596,9 @@ public final class VfxGraphRenderer {
         }
     }
 
-    /** 新式电弧管顶点缓冲扩容。 */
+    /**
+     * 新式电弧管顶点缓冲扩容。
+     */
     private void growArc2TubeBuffer(int requiredVertices) {
         var newCapacity = Math.max(requiredVertices, arcTubeVertexCapacity * 2);
         var old = arcTubeVertexBuffer;
@@ -577,7 +610,9 @@ public final class VfxGraphRenderer {
         old.close();
     }
 
-    /** 新式电弧管索引缓冲扩容。 */
+    /**
+     * 新式电弧管索引缓冲扩容。
+     */
     private void growArc2TubeIndexBuffer(int requiredIndices) {
         var newCapacity = Math.max(requiredIndices, arcTubeIndexCapacity * 2);
         var old = arcTubeIndexBuffer;
@@ -590,7 +625,7 @@ public final class VfxGraphRenderer {
     }
 
     private void drawInstanced(
-            com.mojang.blaze3d.systems.RenderPass pass,
+            RenderPass pass,
             ParticleBuffer buffer, GraphCamera camera, GpuBuffer shapeBuffer, WorldTransform transform,
             RenderSpec spec
     ) {
@@ -627,7 +662,7 @@ public final class VfxGraphRenderer {
     }
 
     private void drawInstancedPass(
-            com.mojang.blaze3d.systems.RenderPass pass, RenderPipeline pipeline, GpuBuffer shapeBuffer,
+            RenderPass pass, RenderPipeline pipeline, GpuBuffer shapeBuffer,
             GpuBufferSlice cameraSlice, GpuBufferSlice instanceSlice, int count,
             boolean billboard, GpuTextureView depthView
     ) {
@@ -681,7 +716,7 @@ public final class VfxGraphRenderer {
     }
 
     private void drawTrail(
-            com.mojang.blaze3d.systems.RenderPass pass,
+            RenderPass pass,
             ParticleBuffer buffer, GraphCamera camera, RenderSpec spec, PrimitiveTopology primitive,
             WorldTransform transform
     ) {
@@ -835,9 +870,11 @@ public final class VfxGraphRenderer {
         }
     }
 
-    /** 场景深度（soft particles 采样）仅在无 Iris shader pack 的 billboard 系下可用：
-     *  Iris shader pack 时主目标深度不是场景深度（世界深度在 Iris 内部 gbuffer），采样会令
-     *  depthDiff<0 → 粒子被 discard/alpha 灭掉，退回 farView（0.0）保证可见。 */
+    /**
+     * 场景深度（soft particles 采样）仅在无 Iris shader pack 的 billboard 系下可用：
+     * Iris shader pack 时主目标深度不是场景深度（世界深度在 Iris 内部 gbuffer），采样会令
+     * depthDiff<0 → 粒子被 discard/alpha 灭掉，退回 farView（0.0）保证可见。
+     */
     static boolean sceneDepthUsable(boolean shaderPackInUse, RenderSpec.Geometry geometry) {
         return geometry == RenderSpec.Geometry.QUAD && !shaderPackInUse;
     }
@@ -875,7 +912,7 @@ public final class VfxGraphRenderer {
      * 编辑器预览表面网格（M29b-03）：把 plane/sphere 三角面烘焙为相机相对坐标顶点
      * （视图纯旋转，平移写进顶点，同电弧/粒子），半透明材质色，TRIANGLES 绘制。
      */
-    private void drawSurfaces(com.mojang.blaze3d.systems.RenderPass pass, List<SurfaceMesh> surfaces, GraphCamera camera) {
+    private void drawSurfaces(RenderPass pass, List<SurfaceMesh> surfaces, GraphCamera camera) {
         int totalVerts = 0;
         for (var sm : surfaces) {
             totalVerts += sm.triangles().length / 3;
@@ -962,7 +999,9 @@ public final class VfxGraphRenderer {
         return out;
     }
 
-    /** 周期 = size 的双线性 value noise（可平铺）。 */
+    /**
+     * 周期 = size 的双线性 value noise（可平铺）。
+     */
     private static float valueNoise(float x, float y, int size, float[][] grid) {
         int xi = Math.floorMod((int) Math.floor(x), size);
         int yi = Math.floorMod((int) Math.floor(y), size);

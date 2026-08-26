@@ -442,7 +442,7 @@ public final class CurveGenerator {
 
         for (int bi = 0; bi < attachCount; bi++) {
             float t = 0.2f + 0.6f * (float) bi / Math.max(1, attachCount - 1);
-            int idx = Math.max(1, Math.min(total - 2, (int) Math.round(t * (total - 1))));
+            int idx = Math.max(1, Math.min(total - 2, Math.round(t * (total - 1))));
             int pointIdx = genPoints.get(idx)[0];
 
             float bx = arc.x(pointIdx);

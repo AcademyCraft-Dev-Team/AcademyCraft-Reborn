@@ -5,7 +5,6 @@ import com.mojang.blaze3d.PrimitiveTopology
 import com.mojang.blaze3d.buffers.GpuBuffer
 import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
-import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.pipeline.TextureTarget
 import com.mojang.blaze3d.resource.RenderTargetDescriptor
 import com.mojang.blaze3d.systems.RenderSystem
@@ -18,7 +17,7 @@ import org.academy.api.client.render.UniformBinding
 import org.joml.Vector2f
 import org.joml.Vector4f
 import org.lwjgl.system.MemoryStack
-import java.util.Optional
+import java.util.*
 import kotlin.math.floor
 import kotlin.math.log2
 import kotlin.math.max
@@ -122,19 +121,19 @@ object BackdropBlur {
             Render.BlurUniforms.writeBlurUniforms(vec2, 1f, 0f, radius)
             Render.runBlitPass(
                 swapView, depth, false, false, horizontalPipeline,
-                Render.Buffers.getInstance().getFSQuadVBNDC(), textures, uniforms
+                Render.Buffers.getInstance().fsQuadVBNDC, textures, uniforms
             )
             if (depth != null) {
                 Render.runBlitPass(
                     swapView, depth, false, false,
                     Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND_INVERSE_CUTOUT,
-                    Render.Buffers.getInstance().getFSQuadVBNDC(), textures, emptyList()
+                    Render.Buffers.getInstance().fsQuadVBNDC, textures, emptyList()
                 )
             }
             Render.BlurUniforms.writeBlurUniforms(vec2, 0f, 1f, radius)
             Render.runBlitPass(
                 output, depth, false, false, horizontalPipeline,
-                Render.Buffers.getInstance().getFSQuadVBNDC(),
+                Render.Buffers.getInstance().fsQuadVBNDC,
                 listOf(TextureBinding("Sampler0", swapView, gpuSampler)), uniforms
             )
         } finally {
@@ -183,7 +182,7 @@ class BackdropBlurEngine {
         Render.runBlitPass(
             l0, null, true, false,
             Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
-            Render.Buffers.getInstance().getFSQuadVBNDC(),
+            Render.Buffers.getInstance().fsQuadVBNDC,
             listOf(
                 TextureBinding(
                     "Sampler0", source,
@@ -249,7 +248,7 @@ class BackdropBlurEngine {
             rp.bindTexture("Sampler0", lo, sampler)
             rp.bindTexture("Sampler1", hi, sampler)
             rp.setUniform("BackdropInfo", requireUbo().slice())
-            rp.setVertexBuffer(0, Render.Buffers.getInstance().getFSQuadVBNDC().slice())
+            rp.setVertexBuffer(0, Render.Buffers.getInstance().fsQuadVBNDC.slice())
             val seq = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS)
             rp.setIndexBuffer(seq.getBuffer(6), seq.type())
             rp.enableScissor(sx, sy, sw, sh)
@@ -273,14 +272,14 @@ class BackdropBlurEngine {
             Render.runBlitPass(
                 swapView, null, true, false,
                 Render.RenderPipelines.GAUSSIAN_BLUR,
-                Render.Buffers.getInstance().getFSQuadVBNDC(),
+                Render.Buffers.getInstance().fsQuadVBNDC,
                 listOf(TextureBinding("Sampler0", source, sampler)), uniforms
             )
             Render.BlurUniforms.writeBlurUniforms(Vector2f(w.toFloat(), h.toFloat()), 0f, 1f, radius)
             Render.runBlitPass(
                 out.getColorTextureView()!!, null, true, false,
                 Render.RenderPipelines.GAUSSIAN_BLUR,
-                Render.Buffers.getInstance().getFSQuadVBNDC(),
+                Render.Buffers.getInstance().fsQuadVBNDC,
                 listOf(TextureBinding("Sampler0", swapView, sampler)), uniforms
             )
         } finally {

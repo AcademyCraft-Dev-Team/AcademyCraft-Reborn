@@ -2,7 +2,9 @@ package org.academy.api.client.render.vfxgraph.shape;
 
 import java.util.Random;
 
-/** 圆锥内均匀采样（底面半径随高度线性缩放，顶点朝上）。 */
+/**
+ * 圆锥内均匀采样（底面半径随高度线性缩放，顶点朝上）。
+ */
 public final class ConeShape implements EmitterShape {
     private final float cx;
     private final float cy;

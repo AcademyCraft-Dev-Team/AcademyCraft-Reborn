@@ -32,10 +32,10 @@ import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
-import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.jspecify.annotations.Nullable;
@@ -109,7 +109,7 @@ public final class SelfTeleport extends Skill {
             var returning = serverPlayer.isShiftKeyDown() && anchor != null && anchor.expiresAt >= now;
             Vec3 destination;
             if (returning) {
-                destination = org.academy.internal.common.ability.teleport.TeleportSafety.findSafe(
+                destination = TeleportSafety.findSafe(
                         serverPlayer, serverPlayer.level(), anchor.position);
             } else {
                 var distance = packet.getDistance();

@@ -3,6 +3,7 @@ package org.academy.api.client.gui.msdf.atlas;
 import lovely.cane.jmsdfgen.*;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
+import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.client.gui.msdf.atlas.allocator.Rect;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
@@ -161,7 +162,7 @@ public class MsdfAtlas {
                 var rgbaBuf = MemoryUtil.memAlloc(pixelCount * 4);
                 rgbaBuf.put(rgbaArray);
                 rgbaBuf.flip();
-                org.academy.api.client.gui.environment.UiEnvironment.get().runOnMainThread(() -> {
+                UiEnvironment.get().runOnMainThread(() -> {
                     finalPage.upload(upRect, rgbaBuf);
                     MemoryUtil.memFree(rgbaBuf);
                 });

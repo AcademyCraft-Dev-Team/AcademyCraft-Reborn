@@ -19,7 +19,7 @@ import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.desktop.platform.DesktopEnvironment
 import org.joml.Vector2f
 import org.joml.Vector4f
-import java.util.OptionalDouble
+import java.util.*
 
 /** One laid-out widget flattened into document space, used for picking and overlays. */
 class HitEntry(
@@ -49,6 +49,7 @@ private class DocumentHost : AbstractWidgetContainer() {
     override fun generateDefaultLayoutParams(): WidgetContainer.LayoutParams = FrameLayoutWidget.LayoutParams()
     override fun generateLayoutParams(p: WidgetContainer.LayoutParams): WidgetContainer.LayoutParams =
         FrameLayoutWidget.LayoutParams(p)
+
     override fun checkLayoutParams(p: WidgetContainer.LayoutParams): Boolean = p is FrameLayoutWidget.LayoutParams
 
     override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {

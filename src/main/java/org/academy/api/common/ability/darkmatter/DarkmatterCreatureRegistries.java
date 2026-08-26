@@ -3,13 +3,11 @@ package org.academy.api.common.ability.darkmatter;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
-/** Extensible registry used by blueprint validation, runtime stats and client model selection. */
+/**
+ * Extensible registry used by blueprint validation, runtime stats and client model selection.
+ */
 public final class DarkmatterCreatureRegistries {
     private static final Map<Identifier, DarkmatterCreaturePartType> PARTS = new LinkedHashMap<>();
     private static final Map<Identifier, DarkmatterCreatureModuleType> MODULES = new LinkedHashMap<>();
@@ -48,7 +46,10 @@ public final class DarkmatterCreatureRegistries {
                 (s, a, b) -> s.followRange += 3.0 * b));
         registerPart(new DarkmatterCreaturePartType(TORSO_WALK,
                 DarkmatterCreaturePartType.BodySlot.TORSO, 0,
-                (s, a, b) -> { s.armor += 1.5 * a; s.movementSpeed += 0.006 * b; }));
+                (s, a, b) -> {
+                    s.armor += 1.5 * a;
+                    s.movementSpeed += 0.006 * b;
+                }));
         registerPart(new DarkmatterCreaturePartType(TORSO_FLY,
                 DarkmatterCreaturePartType.BodySlot.TORSO, 1,
                 (s, a, b) -> s.movementSpeed += 0.012 * b));
@@ -84,7 +85,8 @@ public final class DarkmatterCreatureRegistries {
         registerModule(new DarkmatterCreatureModuleType(MODULE_FORMATION, 3, null));
     }
 
-    private DarkmatterCreatureRegistries() { }
+    private DarkmatterCreatureRegistries() {
+    }
 
     public static synchronized DarkmatterCreaturePartType registerPart(DarkmatterCreaturePartType type) {
         if (PARTS.putIfAbsent(type.id(), type) != null) {
@@ -108,8 +110,15 @@ public final class DarkmatterCreatureRegistries {
         return Optional.ofNullable(MODULES.get(id));
     }
 
-    public static Collection<DarkmatterCreaturePartType> parts() { return List.copyOf(PARTS.values()); }
-    public static Collection<DarkmatterCreatureModuleType> modules() { return List.copyOf(MODULES.values()); }
+    public static Collection<DarkmatterCreaturePartType> parts() {
+        return List.copyOf(PARTS.values());
+    }
 
-    private static Identifier id(String path) { return AcademyCraft.academy(path); }
+    public static Collection<DarkmatterCreatureModuleType> modules() {
+        return List.copyOf(MODULES.values());
+    }
+
+    private static Identifier id(String path) {
+        return AcademyCraft.academy(path);
+    }
 }

@@ -1,6 +1,5 @@
 package org.academy.desktop.grapheditor.app
 
-import org.academy.api.client.render.graph.model.Edge
 import org.academy.api.client.render.graph.model.Graph
 import org.academy.api.client.render.graph.model.GraphNode
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry
@@ -9,9 +8,7 @@ import org.academy.api.client.render.graph.type.ValueType
 import org.academy.api.client.render.shader.codegen.GlslNodeRegistry
 import org.academy.api.client.render.shader.nodes.ShaderNodes
 import org.academy.desktop.grapheditor.document.EditorMetadata
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotSame
-import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
@@ -114,14 +111,14 @@ class GraphEditorDocumentsTest {
         docs.openDoc(path, "a", graphWithNode("first"), EditorMetadata(), GraphMode.SHADER)
 
         val replaced = docs.reload(path, "a", graphWithNode("second"), EditorMetadata(), GraphMode.VFX)
-        org.junit.jupiter.api.Assertions.assertNotNull(replaced)
+        assertNotNull(replaced)
         // 就地替换：标签页数不变、同一索引，内容/模式已更新
         assertEquals(1, docs.list().size)
-        org.junit.jupiter.api.Assertions.assertSame(replaced, docs.list()[0])
+        assertSame(replaced, docs.list()[0])
         assertEquals("second", docs.current().model.nodes.keys.first())
         assertEquals(GraphMode.VFX, docs.current().mode)
         // 未打开的文件返回 null
-        org.junit.jupiter.api.Assertions.assertNull(
+        assertNull(
             docs.reload(Path.of("nope.json"), "nope", graphWithNode("x"), EditorMetadata(), GraphMode.SHADER)
         )
     }

@@ -5,18 +5,12 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ProgramBookCodecTest {
     @Test
@@ -105,7 +99,7 @@ class ProgramBookCodecTest {
                         new ProgramGraph.Node(
                                 9,
                                 PrecisionProgramNodeIds.id(
-                                        org.academy.internal.common.ability.mentalout.precision.PrecisionGraph
+                                        PrecisionGraph
                                                 .NodeKind.MENTAL_STUPOR
                                 ),
                                 1,

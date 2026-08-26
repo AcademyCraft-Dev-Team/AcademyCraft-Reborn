@@ -186,42 +186,42 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
     private record ForceTargetBinding(EnderDragon dragon, UUID targetId) implements ControlBinding {
 
         @Override
-            public void tick() {
-                if (MentalControlRuntime.isFrozen(dragon)
-                        || !(dragon.level() instanceof ServerLevel level)
-                        || !(level.getEntity(targetId) instanceof LivingEntity target)
-                        || !target.isAlive() || target.isRemoved()) return;
-                strafeTarget(dragon, target);
-            }
+        public void tick() {
+            if (MentalControlRuntime.isFrozen(dragon)
+                    || !(dragon.level() instanceof ServerLevel level)
+                    || !(level.getEntity(targetId) instanceof LivingEntity target)
+                    || !target.isAlive() || target.isRemoved()) return;
+            strafeTarget(dragon, target);
+        }
 
-            @Override
-            public void close() {
-                if (MentalControlRuntime.getForcedTarget(dragon) == null
-                        && dragon.getPhaseManager().getCurrentPhase().getPhase()
-                        == EnderDragonPhase.STRAFE_PLAYER) {
-                    dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
-                }
+        @Override
+        public void close() {
+            if (MentalControlRuntime.getForcedTarget(dragon) == null
+                    && dragon.getPhaseManager().getCurrentPhase().getPhase()
+                    == EnderDragonPhase.STRAFE_PLAYER) {
+                dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
             }
         }
+    }
 
     private record FreezeBinding(EnderDragon dragon) implements ControlBinding {
 
         @Override
-            public void tick() {
-                if (dragon.isDeadOrDying() || dragon.getHealth() <= 0.0F
-                        || dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.DYING) return;
-                dragon.setDeltaMovement(Vec3.ZERO);
-                setFlightTarget(dragon, dragon.position());
-            }
+        public void tick() {
+            if (dragon.isDeadOrDying() || dragon.getHealth() <= 0.0F
+                    || dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.DYING) return;
+            dragon.setDeltaMovement(Vec3.ZERO);
+            setFlightTarget(dragon, dragon.position());
+        }
 
-            @Override
-            public void close() {
-                if (!MentalControlRuntime.isFrozen(dragon)
-                        && dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.HOVERING) {
-                    dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
-                }
+        @Override
+        public void close() {
+            if (!MentalControlRuntime.isFrozen(dragon)
+                    && dragon.getPhaseManager().getCurrentPhase().getPhase() == EnderDragonPhase.HOVERING) {
+                dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
             }
         }
+    }
 
     private static final class MoveBinding implements ControlBinding {
         private final EnderDragon dragon;

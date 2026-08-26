@@ -1,8 +1,11 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import java.util.HashSet;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CurveToMeshBuilderTest {
 
@@ -92,7 +95,9 @@ class CurveToMeshBuilderTest {
         }
     }
 
-    /** 互不相连的分段（不同 segment）必须各自成 run，不得被缝成一根管（顶点连接问题回归）。 */
+    /**
+     * 互不相连的分段（不同 segment）必须各自成 run，不得被缝成一根管（顶点连接问题回归）。
+     */
     @Test
     void disconnectedSegmentsAreBuiltAsSeparateRuns() {
         var arc = new ArcCurve();
@@ -119,7 +124,9 @@ class CurveToMeshBuilderTest {
         }
     }
 
-    /** CurveGenerator 的每根分支应获得独立 segment id → 建管时分成独立 run。 */
+    /**
+     * CurveGenerator 的每根分支应获得独立 segment id → 建管时分成独立 run。
+     */
     @Test
     void generatorAssignsDistinctSegmentPerBranch() {
         var arc = new ArcCurve();
@@ -128,7 +135,7 @@ class CurveToMeshBuilderTest {
                 1, 2, 1.57f, 0.3f, 0.35f, 0.6f, 2.0f);
 
         // 主弧 + 2 分支 = 3 个不同 segment
-        var segments = new java.util.HashSet<Integer>();
+        var segments = new HashSet<Integer>();
         for (int i = 0; i < arc.size(); i++) {
             segments.add(arc.segment(i));
         }

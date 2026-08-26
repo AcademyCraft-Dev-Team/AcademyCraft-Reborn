@@ -45,7 +45,8 @@ class InputSystemMaintainedBindingTest {
                 BINDING,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
                         InputSystem.ANY_ACTION, 0),
-                _ -> {},
+                _ -> {
+                },
                 _ -> stops.incrementAndGet()
         );
 

@@ -5,9 +5,7 @@ import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.render.RenderContext
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class PagerLayoutWidgetTest {

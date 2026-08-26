@@ -1,9 +1,9 @@
 package org.academy.mixin.client;
 
-import net.minecraft.client.sounds.SoundEngine;
 import net.minecraft.client.resources.sounds.SoundInstance;
-import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
+import net.minecraft.client.sounds.SoundEngine;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

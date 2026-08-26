@@ -4,10 +4,7 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class LayoutV2Test {
@@ -194,8 +191,14 @@ class LayoutV2Test {
         val header = dock.children["header"]!!
         val sidebar = dock.children["sidebar"]!!
         val content = dock.children["content"]!!
-        assertEquals(0f, header.x); assertEquals(0f, header.y); assertEquals(100f, header.width); assertEquals(10f, header.height)
-        assertEquals(0f, sidebar.x); assertEquals(10f, sidebar.y); assertEquals(10f, sidebar.width); assertEquals(40f, sidebar.height)
+        assertEquals(0f, header.x); assertEquals(0f, header.y); assertEquals(100f, header.width); assertEquals(
+            10f,
+            header.height
+        )
+        assertEquals(0f, sidebar.x); assertEquals(10f, sidebar.y); assertEquals(10f, sidebar.width); assertEquals(
+            40f,
+            sidebar.height
+        )
         assertEquals(10f, content.x); assertEquals(10f, content.y)
         assertEquals(90f, content.width); assertEquals(40f, content.height)
     }
@@ -259,7 +262,7 @@ class LayoutV2Test {
 
         assertNotNull(info)
         assertEquals(child.width, info!!.width)
-        assertEquals(child.x, info!!.x)
+        assertEquals(child.x, info.x)
     }
 
     // ============ FrameLayout gravity/size regression (BUG-4) ============

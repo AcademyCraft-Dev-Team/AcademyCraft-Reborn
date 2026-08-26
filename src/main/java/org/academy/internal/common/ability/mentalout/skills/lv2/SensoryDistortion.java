@@ -1,7 +1,6 @@
 package org.academy.internal.common.ability.mentalout.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import java.util.List;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -21,6 +20,8 @@ import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntrusion;
 import org.misaka.MisakaNetworkClient;
+
+import java.util.List;
 
 public final class SensoryDistortion extends Skill {
     public SensoryDistortion() {

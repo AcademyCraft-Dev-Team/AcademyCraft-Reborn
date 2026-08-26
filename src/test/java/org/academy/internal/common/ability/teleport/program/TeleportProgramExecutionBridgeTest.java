@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.teleport.program;
 
 import com.google.gson.JsonObject;
+import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramGraph;
@@ -16,12 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TeleportProgramExecutionBridgeTest {
     @Test
@@ -186,7 +182,7 @@ class TeleportProgramExecutionBridgeTest {
 
     private static ProgramGraph.Node node(
             int id,
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             JsonObject configuration
     ) {
         var nodeType = AbilityProgramDefinitions.require(
@@ -197,7 +193,7 @@ class TeleportProgramExecutionBridgeTest {
 
     private static ProgramGraph.Node powerNode(
             int id,
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             int power
     ) {
         var configuration = new JsonObject();

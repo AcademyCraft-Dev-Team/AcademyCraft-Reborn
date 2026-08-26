@@ -12,7 +12,6 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
-import org.academy.internal.common.ability.darkmatter.DarkmatterStateData;
 import org.academy.internal.common.ability.darkmatter.SyncDarkmatterStatePacket;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.server.world.level.storage.Player;
@@ -20,13 +19,17 @@ import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
 
-/** Owns the natural/generated MP split, generated-MP CP debt and phase allocation. */
+/**
+ * Owns the natural/generated MP split, generated-MP CP debt and phase allocation.
+ */
 public final class DarkmatterResourceManager implements AbilitySubsystem, DarkmatterResourceService {
     private static final float EPSILON = 1.0e-4f;
     private static final float BASE_MATTER = 100.0f;
     private static final float MATTER_PER_LEVEL_SQUARED = 8.0f;
     private static final float NATURAL_RECOVERY_PER_SECOND = 1.0f;
-    /** The generation formula is clamped to at least one CP for every created MP. */
+    /**
+     * The generation formula is clamped to at least one CP for every created MP.
+     */
     private static final float MIN_CREATED_CP_PER_UNIT = 1.0f;
     private static final String GENERATION_SKILL_ID = "academy:darkmatter_generation";
     private static final AbilityResourceSpec RESOURCE = Darkmatter.MATTER_RESOURCE;
@@ -74,7 +77,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         return data == null
                 ? DarkmatterPhaseSnapshot.of(level, level * 25, false)
                 : data.getDarkmatterState().phaseSnapshot(
-                        level, DarkmatterSixWings.Server.isActive(player));
+                level, DarkmatterSixWings.Server.isActive(player));
     }
 
     public DarkmatterResourceView getView(ServerPlayer player) {
@@ -95,13 +98,25 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
                 ? 0.0f : snapshot.betaRatio() * 2.0f - 1.0f;
     }
 
-    public float getAlpha(ServerPlayer player) { return getPhaseSnapshot(player).alphaPower(); }
-    public float getBeta(ServerPlayer player) { return getPhaseSnapshot(player).betaPower(); }
-    public float getGamma(ServerPlayer player) { return getPhaseSnapshot(player).activeGammaPower(); }
+    public float getAlpha(ServerPlayer player) {
+        return getPhaseSnapshot(player).alphaPower();
+    }
+
+    public float getBeta(ServerPlayer player) {
+        return getPhaseSnapshot(player).betaPower();
+    }
+
+    public float getGamma(ServerPlayer player) {
+        return getPhaseSnapshot(player).activeGammaPower();
+    }
+
     public float getBaseCapacity(ServerPlayer player) {
         return baseCapacity(playerCPManager.getLevel(player.getUUID()));
     }
-    public float getEffectiveCapacity(ServerPlayer player) { return getView(player).effectiveCapacity(); }
+
+    public float getEffectiveCapacity(ServerPlayer player) {
+        return getView(player).effectiveCapacity();
+    }
 
     public boolean setAlphaPoints(ServerPlayer player, int points) {
         if (!supportsMatter(player)) return false;
@@ -123,7 +138,9 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         return true;
     }
 
-    /** Legacy normalized tuning entry retained for integrations compiled against the old API. */
+    /**
+     * Legacy normalized tuning entry retained for integrations compiled against the old API.
+     */
     public boolean tunePhase(ServerPlayer player, float delta) {
         var total = getPhaseSnapshot(player).totalPoints();
         return tuneAlphaPoints(player, -delta * total * 0.5f);
@@ -231,7 +248,9 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         if (player != null) scheduleAllSync(player);
     }
 
-    /** Controlled mutation used only by the operator debug command and automated game tests. */
+    /**
+     * Controlled mutation used only by the operator debug command and automated game tests.
+     */
     public boolean debugSetPools(ServerPlayer player, float natural, float created,
                                  float cpDebt, float reserved) {
         if (!supportsMatter(player) || !Float.isFinite(natural) || !Float.isFinite(created)

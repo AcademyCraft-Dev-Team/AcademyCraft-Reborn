@@ -1,8 +1,9 @@
 package org.academy.api.client.render.shader.codegen;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 节点类型 id → GLSL 生成器 的目录。

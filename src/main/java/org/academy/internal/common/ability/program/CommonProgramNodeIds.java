@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.program;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 
-/** Stable identifiers for the shared, ability-category-independent node algebra. */
+/**
+ * Stable identifiers for the shared, ability-category-independent node algebra.
+ */
 public final class CommonProgramNodeIds {
     public static final Identifier SCALAR_CONSTANT = id("value/scalar");
     public static final Identifier BOOLEAN_CONSTANT = id("value/boolean");

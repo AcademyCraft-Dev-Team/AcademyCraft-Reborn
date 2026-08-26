@@ -1,8 +1,5 @@
 package org.academy.api.client.render.vfxgraph.nodes;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
@@ -11,21 +8,15 @@ import org.academy.api.client.render.graph.type.CurveSampler;
 import org.academy.api.client.render.graph.type.GradientSampler;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.shape.BoxShape;
-import org.academy.api.client.render.vfxgraph.shape.CircleEdgeShape;
-import org.academy.api.client.render.vfxgraph.shape.ConeShape;
-import org.academy.api.client.render.vfxgraph.shape.CylinderShape;
-import org.academy.api.client.render.vfxgraph.shape.DiscShape;
-import org.academy.api.client.render.vfxgraph.shape.EmitterShape;
-import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
-import org.academy.api.client.render.vfxgraph.shape.MeshShape;
-import org.academy.api.client.render.vfxgraph.shape.PointShape;
-import org.academy.api.client.render.vfxgraph.shape.SphereShape;
-import org.academy.api.client.render.vfxgraph.shape.TorusShape;
+import org.academy.api.client.render.vfxgraph.shape.*;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
 import org.joml.Vector3f;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * VFX 节点目录：注册节点元数据（核心 NodeRegistry）与模拟工厂（VfxNodeRegistry）。
@@ -41,7 +32,9 @@ public final class VfxNodes {
 
     // ==================== 共享属性块（消除节点注册的重复穷举） ====================
 
-    /** 粒子基础属性：lifetime/size/color/初速度（spawn 系共用）。 */
+    /**
+     * 粒子基础属性：lifetime/size/color/初速度（spawn 系共用）。
+     */
     private static final List<PropertySpec> PARTICLE_BASIC_PROPS = List.of(
             prop("lifetime", ValueType.FLOAT, Value.of(1f)),
             prop("size", ValueType.FLOAT, Value.of(0.1f)),
@@ -51,7 +44,9 @@ public final class VfxNodes {
             prop("vz", ValueType.FLOAT, Value.of(0f))
     );
 
-    /** 发射形状属性：shape/origin/尺寸（spawn 尾块与 init_position 共用）。 */
+    /**
+     * 发射形状属性：shape/origin/尺寸（spawn 尾块与 init_position 共用）。
+     */
     private static final List<PropertySpec> SHAPE_PROPS = List.of(
             prop("shape", ValueType.STRING, Value.string("point")),
             prop("origin_x", ValueType.FLOAT, Value.of(0f)),
@@ -66,34 +61,44 @@ public final class VfxNodes {
             prop("mesh_scale", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** spawn_rate/burst/periodic 共享尾块：lifetime..layer。 */
+    /**
+     * spawn_rate/burst/periodic 共享尾块：lifetime..layer。
+     */
     private static final List<PropertySpec> SPAWN_TAIL_PROPS = props(
             PARTICLE_BASIC_PROPS,
             SHAPE_PROPS,
             List.of(prop("layer", ValueType.STRING, Value.string("fire")))
     );
 
-    /** update_noise/turbulence 共用：amplitude/frequency。 */
+    /**
+     * update_noise/turbulence 共用：amplitude/frequency。
+     */
     private static final List<PropertySpec> NOISE_PROPS = List.of(
             prop("amplitude", ValueType.FLOAT, Value.of(1f)),
             prop("frequency", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** over-life curve 系（alpha/size/velocity）共用：curve/layer。 */
+    /**
+     * over-life curve 系（alpha/size/velocity）共用：curve/layer。
+     */
     private static final List<PropertySpec> CURVE_LAYER_PROPS = List.of(
             prop("curve", ValueType.STRING, Value.string("")),
             prop("layer", ValueType.STRING, Value.string(""))
     );
 
-    /** collision_ground/plane 共用尾块：bounce/kill。 */
+    /**
+     * collision_ground/plane 共用尾块：bounce/kill。
+     */
     private static final List<PropertySpec> BOUNCE_KILL_PROPS = List.of(
             prop("bounce", ValueType.FLOAT, Value.of(0.5f)),
             prop("kill", ValueType.BOOL, Value.of(false))
     );
 
-    /** output 系节点共享属性默认（数据驱动，不按节点类型枚举）：
-     *  vertex/shader/blend 全部由图数据显式指定，此处仅中性兜底——**不写死具体 shader id**；
-     *  layer 过滤该输出负责渲染的粒子层（空串=全部，分层外观用多输出节点表达）。 */
+    /**
+     * output 系节点共享属性默认（数据驱动，不按节点类型枚举）：
+     * vertex/shader/blend 全部由图数据显式指定，此处仅中性兜底——**不写死具体 shader id**；
+     * layer 过滤该输出负责渲染的粒子层（空串=全部，分层外观用多输出节点表达）。
+     */
     private static final List<PropertySpec> OUTPUT_PROPERTIES = List.of(
             prop("vertex", ValueType.STRING, Value.string("")),
             prop("shader", ValueType.STRING, Value.string("")),
@@ -978,12 +983,16 @@ public final class VfxNodes {
         return amp * (ctx.random().nextFloat() * 2f - 1f);
     }
 
-    /** over-life 节点 layer 过滤：""=全部，否则只作用于指定层（-1=全部，0=fire，1=smoke）。 */
+    /**
+     * over-life 节点 layer 过滤：""=全部，否则只作用于指定层（-1=全部，0=fire，1=smoke）。
+     */
     private static byte layerFilter(GraphNode node) {
         return ParticleBuffer.layerFilter(propString(node, "layer", ""));
     }
 
-    /** spawn 节点 layer 属性（fire/smoke）→ 粒子层字节。 */
+    /**
+     * spawn 节点 layer 属性（fire/smoke）→ 粒子层字节。
+     */
     private static byte layerOf(GraphNode node) {
         return ParticleBuffer.layerByte(propString(node, "layer", "fire"));
     }
@@ -1003,7 +1012,8 @@ public final class VfxNodes {
             case "box" -> new BoxShape(ox, oy, oz,
                     propFloat(node, "half_x", 1f), propFloat(node, "half_y", 1f), propFloat(node, "half_z", 1f));
             case "cone" -> new ConeShape(ox, oy, oz, propFloat(node, "radius", 1f), propFloat(node, "cone_height", 2f));
-            case "cylinder" -> new CylinderShape(ox, oy, oz, propFloat(node, "radius", 1f), propFloat(node, "cone_height", 2f));
+            case "cylinder" ->
+                    new CylinderShape(ox, oy, oz, propFloat(node, "radius", 1f), propFloat(node, "cone_height", 2f));
             case "torus" -> new TorusShape(ox, oy, oz,
                     propFloat(node, "radius", 1f), propFloat(node, "half_x", 0.25f));
             case "circle_edge" -> new CircleEdgeShape(ox, oy, oz, propFloat(node, "radius", 1f));
@@ -1013,7 +1023,9 @@ public final class VfxNodes {
         };
     }
 
-    /** mesh 形状（A3）：按 {@code mesh} 属性查注册的三角形资产，未注册回退单位立方体。 */
+    /**
+     * mesh 形状（A3）：按 {@code mesh} 属性查注册的三角形资产，未注册回退单位立方体。
+     */
     private static EmitterShape meshShape(GraphNode node, float ox, float oy, float oz, float scale) {
         var id = propString(node, "mesh", "");
         var triangles = id.isEmpty() ? null : MeshAssets.triangles(id);
@@ -1061,7 +1073,9 @@ public final class VfxNodes {
         return new PropertySpec(id, id, type, def, Optional.empty());
     }
 
-    /** 拼接属性块（节点注册复用共享块，避免逐节点重复穷举）。 */
+    /**
+     * 拼接属性块（节点注册复用共享块，避免逐节点重复穷举）。
+     */
     @SafeVarargs
     private static List<PropertySpec> props(List<PropertySpec>... parts) {
         return Arrays.stream(parts).flatMap(List::stream).toList();

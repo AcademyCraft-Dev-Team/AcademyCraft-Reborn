@@ -27,15 +27,24 @@ public final class DarkmatterCrossbowItem extends CrossbowItem implements Darkma
         super(DarkmatterNativeItemSupport.equipmentProperties(properties));
     }
 
-    @Override public DarkmatterShape darkmatterShape() { return DarkmatterShape.CROSSBOW; }
-    @Override public Predicate<ItemStack> getSupportedHeldProjectiles() {
+    @Override
+    public DarkmatterShape darkmatterShape() {
+        return DarkmatterShape.CROSSBOW;
+    }
+
+    @Override
+    public Predicate<ItemStack> getSupportedHeldProjectiles() {
         return stack -> super.getSupportedHeldProjectiles().test(stack)
                 || DarkmatterNativeItemSupport.isSupportedArrow(stack);
     }
-    @Override public Predicate<ItemStack> getAllSupportedProjectiles() {
+
+    @Override
+    public Predicate<ItemStack> getAllSupportedProjectiles() {
         return DarkmatterNativeItemSupport::isSupportedArrow;
     }
-    @Override public ItemStack getDefaultCreativeAmmo(
+
+    @Override
+    public ItemStack getDefaultCreativeAmmo(
             @Nullable Player player, ItemStack projectileWeaponItem) {
         return DarkmatterNativeItemSupport.infiniteDarkmatterArrow(projectileWeaponItem);
     }
@@ -87,21 +96,50 @@ public final class DarkmatterCrossbowItem extends CrossbowItem implements Darkma
                 1.0f / (level.getRandom().nextFloat() * 0.5f + 1.0f) + 0.2f);
     }
 
-    @Override public boolean isCombineRepairable(ItemStack stack) { return false; }
-    @Override public float getXpRepairRatio(ItemStack stack) { return 0.0f; }
-    @Override public boolean canGrindstoneRepair(ItemStack stack) { return false; }
-    @Override public boolean isBarVisible(ItemStack stack) { return DarkmatterNativeItemSupport.isBarVisible(stack); }
-    @Override public int getBarWidth(ItemStack stack) { return DarkmatterNativeItemSupport.barWidth(stack); }
-    @Override public int getBarColor(ItemStack stack) { return DarkmatterNativeItemSupport.barColor(stack); }
-    @Override public boolean shouldCauseReequipAnimation(
+    @Override
+    public boolean isCombineRepairable(ItemStack stack) {
+        return false;
+    }
+
+    @Override
+    public float getXpRepairRatio(ItemStack stack) {
+        return 0.0f;
+    }
+
+    @Override
+    public boolean canGrindstoneRepair(ItemStack stack) {
+        return false;
+    }
+
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return DarkmatterNativeItemSupport.isBarVisible(stack);
+    }
+
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return DarkmatterNativeItemSupport.barWidth(stack);
+    }
+
+    @Override
+    public int getBarColor(ItemStack stack) {
+        return DarkmatterNativeItemSupport.barColor(stack);
+    }
+
+    @Override
+    public boolean shouldCauseReequipAnimation(
             ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
         return DarkmatterNativeItemSupport.shouldCauseReequipAnimation(
                 oldStack, newStack, slotChanged);
     }
-    @Override public boolean shouldCauseBlockBreakReset(ItemStack oldStack, ItemStack newStack) {
+
+    @Override
+    public boolean shouldCauseBlockBreakReset(ItemStack oldStack, ItemStack newStack) {
         return DarkmatterNativeItemSupport.shouldCauseBlockBreakReset(oldStack, newStack);
     }
-    @Override public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
+
+    @Override
+    public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
         return DarkmatterNativeItemSupport.supportsEnchantment(
                 stack, enchantment, super.supportsEnchantment(stack, enchantment));
     }

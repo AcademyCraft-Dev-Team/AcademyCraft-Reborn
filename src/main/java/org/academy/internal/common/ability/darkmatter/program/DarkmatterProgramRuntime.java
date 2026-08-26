@@ -8,7 +8,9 @@ import org.academy.internal.common.ability.program.ProgramActionTransaction;
 
 import java.util.Optional;
 
-/** Restricted server-owned environment exposed to Darkmatter programs. */
+/**
+ * Restricted server-owned environment exposed to Darkmatter programs.
+ */
 public interface DarkmatterProgramRuntime extends ProgramTargetResolver {
     Object caster();
 

@@ -1,9 +1,9 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * M16-02 ParticleBuffer 性能门禁（headless）：SoA spawn/kill（swap-remove）压力。

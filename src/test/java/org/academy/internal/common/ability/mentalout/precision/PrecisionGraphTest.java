@@ -70,7 +70,7 @@ class PrecisionGraphTest {
         assertTrue(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(5.0));
         assertTrue(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(6.0));
         assertTrue(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(7.0));
-        assertEquals(false, PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(8.0));
+        assertFalse(PrecisionGraph.NodeKind.TYPE_FILTER.isParameterValid(8.0));
     }
 
     @Test
@@ -98,7 +98,7 @@ class PrecisionGraphTest {
         assertEquals(50, PrecisionGraph.NodeKind.POSITION_OFFSET.wireId());
         assertTrue(PrecisionGraph.isPortCompatible(
                 PrecisionGraph.PortType.DIRECTION, PrecisionGraph.PortType.DIRECTION));
-        assertEquals(false, PrecisionGraph.isPortCompatible(
+        assertFalse(PrecisionGraph.isPortCompatible(
                 PrecisionGraph.PortType.ENTITY, PrecisionGraph.PortType.DIRECTION));
     }
 

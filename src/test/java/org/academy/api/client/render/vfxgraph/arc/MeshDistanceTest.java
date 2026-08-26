@@ -1,12 +1,14 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
 import org.junit.jupiter.api.Test;
 
-/** M29：点到网格最近距离工具单测（复刻 Blender Sample Nearest Surface + DISTANCE）。 */
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * M29：点到网格最近距离工具单测（复刻 Blender Sample Nearest Surface + DISTANCE）。
+ */
 class MeshDistanceTest {
 
     private static final float[] PLANE = MeshAssets.plane(2f);

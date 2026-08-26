@@ -1,27 +1,27 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.SurfaceConstraint;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** M29：容器执行器端点表面吸附接线单测（SurfaceConstraint 接入 VfxSystemSimulator.step）。 */
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
+/**
+ * M29：容器执行器端点表面吸附接线单测（SurfaceConstraint 接入 VfxSystemSimulator.step）。
+ */
 class VfxSystemSimulatorSurfaceSnapTest {
     private VfxBlockRegistry blocks;
     private VfxOperatorRegistry ops;
@@ -94,7 +94,7 @@ class VfxSystemSimulatorSurfaceSnapTest {
     @Test
     void constraintMovesOffPlaneEndpoint() {
         // 自由点远离平面 → 约束后应被拉回平面
-        var arc = new org.academy.api.client.render.vfxgraph.arc.ArcCurve();
+        var arc = new ArcCurve();
         arc.setLifetime(10f);
         arc.setSurface(MeshAssets.plane(2f));
         arc.addPoint(0, 5, 0, 0.01f, 0);

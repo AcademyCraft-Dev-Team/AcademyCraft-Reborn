@@ -45,7 +45,9 @@ class ProjectBrowserTest {
         browser.refresh()
 
         assertEquals(setOf("local.json"), browser.listedFiles.map { it.fileName.toString() }.toSet())
-        assertEquals(setOf("demo_fire.json", "demo_burst.json"),
-            browser.packagedAssets.map { it.fileName.toString() }.toSet())
+        assertEquals(
+            setOf("demo_fire.json", "demo_burst.json"),
+            browser.packagedAssets.map { it.fileName.toString() }.toSet()
+        )
     }
 }

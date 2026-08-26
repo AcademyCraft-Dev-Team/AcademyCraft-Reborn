@@ -1,10 +1,5 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.type.Curve;
@@ -12,6 +7,8 @@ import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
+
+import java.util.*;
 
 /**
  * CPU 粒子模拟器。把有序节点序列（spawn → init → update → …）逐帧执行到共享 [ParticleBuffer]。
@@ -56,7 +53,9 @@ public final class VfxSimulator {
         }
     }
 
-    /** 注入存活参数（不重建模拟器，M15-04）。 */
+    /**
+     * 注入存活参数（不重建模拟器，M15-04）。
+     */
     public void setLiveParam(String parameterId, Value value) {
         liveParams.put(parameterId, value);
     }
@@ -77,7 +76,9 @@ public final class VfxSimulator {
         return time;
     }
 
-    /** 设置累计时间（loop 重启时延续时间戳，避免 time 归零，M28b）。 */
+    /**
+     * 设置累计时间（loop 重启时延续时间戳，避免 time 归零，M28b）。
+     */
     public void setTime(float time) {
         this.time = time;
     }

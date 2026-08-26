@@ -1,25 +1,24 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** M29：arc_spark 块（Blender 粒子火花：弧→点 + 溅射 + 迷你管）容器端到端单测。 */
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * M29：arc_spark 块（Blender 粒子火花：弧→点 + 溅射 + 迷你管）容器端到端单测。
+ */
 class SparkArcBlockTest {
     private VfxBlockRegistry blocks;
     private VfxOperatorRegistry ops;
@@ -42,7 +41,9 @@ class SparkArcBlockTest {
         return new VfxContext(id, type, "", List.of(blocks), 0f, 0f);
     }
 
-    /** spark 依赖上游 arc_surface 提供带表面弧，自身产生迷你火花弧。 */
+    /**
+     * spark 依赖上游 arc_surface 提供带表面弧，自身产生迷你火花弧。
+     */
     private static VfxSystem sparkSystem(Map<String, String> sparkProps) {
         return new VfxSystem("sp",
                 List.of(

@@ -1,11 +1,9 @@
 package org.academy.api.client.render.graph.type;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class ValueTest {
     @Test
@@ -40,6 +38,6 @@ class ValueTest {
     @Test
     void equalValuesAreStructurallyEqual() {
         assertEquals(Value.of(new Vector3f(1f, 2f, 3f)), Value.of(new Vector3f(1f, 2f, 3f)));
-        assertTrue(Value.of(1f).equals(Value.of(1f)));
+        assertEquals(Value.of(1f), Value.of(1f));
     }
 }

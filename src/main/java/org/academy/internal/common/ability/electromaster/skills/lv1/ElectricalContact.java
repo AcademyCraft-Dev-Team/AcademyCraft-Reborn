@@ -39,6 +39,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Comparator;
+
 public class ElectricalContact extends Skill {
     public ElectricalContact() {
         super(Builder
@@ -213,10 +215,10 @@ public class ElectricalContact extends Skill {
             var chained = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(4.0),
                             candidate -> candidate != target && candidate != attacker && candidate.isAlive()
                                     && !attacker.isAlliedTo(candidate))
-                    .stream().min(java.util.Comparator.comparingDouble(target::distanceToSqr)).orElse(null);
+                    .stream().min(Comparator.comparingDouble(target::distanceToSqr)).orElse(null);
             if (chained != null) {
                 chained.hurtServer(level, SkillDamageSource.of(attacker, skillSource.getSkill(),
-                                org.academy.internal.common.world.damagesource.DamageTypes.ELECTRO_DAMAGE),
+                                DamageTypes.ELECTRO_DAMAGE),
                         event.getAmount() * 0.5f);
             }
         }

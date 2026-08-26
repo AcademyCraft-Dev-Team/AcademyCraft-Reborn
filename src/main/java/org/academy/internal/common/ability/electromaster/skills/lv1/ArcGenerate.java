@@ -3,11 +3,13 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -50,6 +52,8 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public final class ArcGenerate extends Skill {
@@ -74,7 +78,9 @@ public final class ArcGenerate extends Skill {
         return BASE_DAMAGE * Math.max(0, abilityPower) * Math.max(0, playerDamageMultiplier);
     }
 
-    /** Server-scaled base damage shared with bounded Electromaster program actions. */
+    /**
+     * Server-scaled base damage shared with bounded Electromaster program actions.
+     */
     public static float programDamage(float abilityPower, float playerDamageMultiplier) {
         return getDamage(abilityPower, playerDamageMultiplier);
     }
@@ -296,12 +302,12 @@ public final class ArcGenerate extends Skill {
             });
         }
 
-        private static void chainArc(net.minecraft.server.level.ServerPlayer player,
-                                     net.minecraft.server.level.ServerLevel level,
+        private static void chainArc(ServerPlayer player,
+                                     ServerLevel level,
                                      LinearAttackExecutor.ExecutionResult result,
                                      SkillDamageSource source,
                                      float damage) {
-            var hit = new java.util.LinkedHashSet<net.minecraft.world.entity.Entity>();
+            var hit = new LinkedHashSet<Entity>();
             hit.addAll(result.outboundHits());
             hit.addAll(result.returnHits());
             var origin = hit.stream().filter(LivingEntity.class::isInstance)
@@ -311,7 +317,7 @@ public final class ArcGenerate extends Skill {
                     origin.getBoundingBox().inflate(4.0),
                     target -> target != player && target.isAlive() && !hit.contains(target)
                             && !player.isAlliedTo(target));
-            candidates.sort(java.util.Comparator.comparingDouble(origin::distanceToSqr));
+            candidates.sort(Comparator.comparingDouble(origin::distanceToSqr));
             var factors = new float[]{0.5f, 0.3f};
             for (var index = 0; index < Math.min(2, candidates.size()); index++) {
                 var target = candidates.get(index);

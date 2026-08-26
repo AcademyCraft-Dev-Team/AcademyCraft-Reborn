@@ -2,20 +2,18 @@ package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
@@ -23,6 +21,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorP
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightDirection;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -42,6 +41,7 @@ final class WingFlightSupport {
     static final double FAN_COS_THRESHOLD = 0.35;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
     static final float FIXED_DAMAGE = 10.0f;
+
     private WingFlightSupport() {
     }
 
@@ -228,7 +228,7 @@ final class WingFlightSupport {
                         target.hurtServer(
                                 level,
                                 SkillDamageSource.of(player, skill,
-                                        org.academy.internal.common.world.damagesource.DamageTypes.VEC),
+                                        DamageTypes.VEC),
                                 damage * 0.3f
                         );
                         var pull = origin.subtract(targetCenter);

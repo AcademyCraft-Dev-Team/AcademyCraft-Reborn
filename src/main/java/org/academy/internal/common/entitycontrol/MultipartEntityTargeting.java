@@ -5,7 +5,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.entity.PartEntity;
 import org.jspecify.annotations.Nullable;
 
-/** Resolves a hit multipart body segment to the logical entity that owns it. */
+/**
+ * Resolves a hit multipart body segment to the logical entity that owns it.
+ */
 public final class MultipartEntityTargeting {
     private MultipartEntityTargeting() {
     }

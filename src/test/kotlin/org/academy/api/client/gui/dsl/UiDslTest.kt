@@ -2,11 +2,7 @@ package org.academy.api.client.gui.dsl
 
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.widget.ButtonWidget
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.ToggleButtonWidget
+import org.academy.api.client.gui.widget.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -66,7 +62,7 @@ class UiDslTest {
             }
         }
         val column = root.children["column"] as LinearLayoutWidget
-        val fill = column.children["fill"] as org.academy.api.client.gui.widget.FillWidget
+        val fill = column.children["fill"] as FillWidget
         root.measure(
             MeasureSpec(MeasureSpec.Mode.EXACTLY, 100f),
             MeasureSpec(MeasureSpec.Mode.EXACTLY, 100f)
@@ -95,7 +91,7 @@ class UiDslTest {
 
         val probe = textArea.children["probe"] as LinearLayoutWidget
         assertEquals(listOf("details"), probe.children.keys.toList(), "no phantom child should leak into parent")
-        val scroll = probe.children["details"] as org.academy.api.client.gui.widget.ScrollPanelWidget
+        val scroll = probe.children["details"] as ScrollPanelWidget
         assertEquals("content", scroll.children.keys.single(), "scrollPanel hosts exactly one content")
 
         textArea.measure(

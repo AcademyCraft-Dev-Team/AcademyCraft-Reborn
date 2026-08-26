@@ -1,21 +1,15 @@
 package org.academy.internal.common.ability.program;
 
 import com.google.gson.JsonObject;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramNodeRole;
+import net.minecraft.resources.Identifier;
+import org.academy.api.common.ability.program.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ProgramTriggersTest {
     @Test
@@ -133,7 +127,7 @@ class ProgramTriggersTest {
     }
 
     private static CompiledProgram compiled(
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             JsonObject configuration
     ) {
         var result = AbilityProgramDefinitions.mentalout()
@@ -143,7 +137,7 @@ class ProgramTriggersTest {
     }
 
     private static AbilityProgram program(
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             JsonObject configuration
     ) {
         return new AbilityProgram(
@@ -158,7 +152,7 @@ class ProgramTriggersTest {
 
     private static ProgramGraph.Node node(
             int id,
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             JsonObject configuration
     ) {
         return new ProgramGraph.Node(id, type, 1, configuration);

@@ -10,7 +10,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** Classifies program entry nodes and matches them against server-side trigger events. */
+/**
+ * Classifies program entry nodes and matches them against server-side trigger events.
+ */
 public final class ProgramTriggers {
     public static final int DEFAULT_LOOP_INTERVAL = 40;
     private static final Map<HealthLatchKey, Boolean> HEALTH_LATCHES = new HashMap<>();
@@ -116,7 +118,7 @@ public final class ProgramTriggers {
         return null;
     }
 
-    private static Type type(net.minecraft.resources.Identifier id) {
+    private static Type type(Identifier id) {
         if (id.equals(CommonProgramNodeIds.TRIGGER_HURT)) return Type.HURT;
         if (id.equals(CommonProgramNodeIds.TRIGGER_LOOP)) return Type.LOOP;
         if (id.equals(CommonProgramNodeIds.TRIGGER_MELEE)) return Type.MELEE;

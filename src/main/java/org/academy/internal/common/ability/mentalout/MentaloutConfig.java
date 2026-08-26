@@ -1,9 +1,9 @@
 package org.academy.internal.common.ability.mentalout;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.server.config.AbilityConfig;
-import net.minecraft.util.Mth;
 
 public final class MentaloutConfig {
     private MentaloutConfig() {

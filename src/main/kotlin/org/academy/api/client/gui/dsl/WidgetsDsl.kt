@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.dsl
 
-import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.widget.*
@@ -8,7 +7,11 @@ import org.academy.api.client.gui.widget.*
 // ============ 叶子控件工厂 ============
 
 /** 创建并加入一个 [LabelWidget]. */
-fun WidgetContainer.label(text: String, name: String = nextChildName("label"), init: LabelWidget.() -> Unit = {}): LabelWidget {
+fun WidgetContainer.label(
+    text: String,
+    name: String = nextChildName("label"),
+    init: LabelWidget.() -> Unit = {}
+): LabelWidget {
     val widget = LabelWidget(text)
     addChild(name, widget)
     widget.init()
@@ -28,7 +31,11 @@ fun WidgetContainer.image(
 }
 
 /** 创建并加入一个 [FillWidget]. */
-fun WidgetContainer.fill(color: Int, name: String = nextChildName("fill"), init: FillWidget.() -> Unit = {}): FillWidget {
+fun WidgetContainer.fill(
+    color: Int,
+    name: String = nextChildName("fill"),
+    init: FillWidget.() -> Unit = {}
+): FillWidget {
     val widget = FillWidget(color)
     addChild(name, widget)
     widget.init()
@@ -36,7 +43,11 @@ fun WidgetContainer.fill(color: Int, name: String = nextChildName("fill"), init:
 }
 
 /** 创建并加入一个磨砂玻璃面板 [BlurPanelWidget]. */
-fun WidgetContainer.blurPanel(radius: Float = 8f, name: String = nextChildName("blur_panel"), init: BlurPanelWidget.() -> Unit = {}): BlurPanelWidget {
+fun WidgetContainer.blurPanel(
+    radius: Float = 8f,
+    name: String = nextChildName("blur_panel"),
+    init: BlurPanelWidget.() -> Unit = {}
+): BlurPanelWidget {
     val widget = BlurPanelWidget(radius)
     addChild(name, widget)
     widget.init()
@@ -58,7 +69,7 @@ fun WidgetContainer.roundedRect(
 
 /** 创建并加入一个九宫格控件 [NineSliceWidget]. */
 fun WidgetContainer.nineSlice(
-    texture: net.minecraft.resources.Identifier,
+    texture: Identifier,
     left: Float = 0f,
     right: Float = 0f,
     top: Float = 0f,
@@ -94,7 +105,10 @@ fun WidgetContainer.toggle(
 }
 
 /** 创建并加入一个 [RadioButtonWidget]. */
-fun WidgetContainer.radio(name: String = nextChildName("radio"), init: RadioButtonWidget.() -> Unit = {}): RadioButtonWidget {
+fun WidgetContainer.radio(
+    name: String = nextChildName("radio"),
+    init: RadioButtonWidget.() -> Unit = {}
+): RadioButtonWidget {
     val widget = RadioButtonWidget()
     addChild(name, widget)
     widget.init()
@@ -102,7 +116,10 @@ fun WidgetContainer.radio(name: String = nextChildName("radio"), init: RadioButt
 }
 
 /** 创建并加入一个 [ProgressBarWidget]. */
-fun WidgetContainer.progress(name: String = nextChildName("progress"), init: ProgressBarWidget.() -> Unit = {}): ProgressBarWidget {
+fun WidgetContainer.progress(
+    name: String = nextChildName("progress"),
+    init: ProgressBarWidget.() -> Unit = {}
+): ProgressBarWidget {
     val widget = ProgressBarWidget()
     addChild(name, widget)
     widget.init()
@@ -110,7 +127,11 @@ fun WidgetContainer.progress(name: String = nextChildName("progress"), init: Pro
 }
 
 /** 创建并加入一个 [TextBoxWidget]. */
-fun WidgetContainer.textBox(maxLength: Int = 32, name: String = nextChildName("text_box"), init: TextBoxWidget.() -> Unit = {}): TextBoxWidget {
+fun WidgetContainer.textBox(
+    maxLength: Int = 32,
+    name: String = nextChildName("text_box"),
+    init: TextBoxWidget.() -> Unit = {}
+): TextBoxWidget {
     val widget = TextBoxWidget(maxLength)
     addChild(name, widget)
     widget.init()
@@ -118,7 +139,10 @@ fun WidgetContainer.textBox(maxLength: Int = 32, name: String = nextChildName("t
 }
 
 /** 创建并加入一个 [SeekBarWidget]. */
-fun WidgetContainer.seekBar(name: String = nextChildName("seek_bar"), init: SeekBarWidget.() -> Unit = {}): SeekBarWidget {
+fun WidgetContainer.seekBar(
+    name: String = nextChildName("seek_bar"),
+    init: SeekBarWidget.() -> Unit = {}
+): SeekBarWidget {
     val widget = SeekBarWidget()
     addChild(name, widget)
     widget.init()
@@ -178,7 +202,10 @@ fun WidgetContainer.row(
 }
 
 /** 锚点布局 (布局 v2). */
-fun WidgetContainer.anchor(name: String = nextChildName("anchor"), init: AnchorLayoutWidget.() -> Unit = {}): AnchorLayoutWidget {
+fun WidgetContainer.anchor(
+    name: String = nextChildName("anchor"),
+    init: AnchorLayoutWidget.() -> Unit = {}
+): AnchorLayoutWidget {
     val widget = AnchorLayoutWidget()
     addChild(name, widget)
     widget.init()
@@ -186,7 +213,10 @@ fun WidgetContainer.anchor(name: String = nextChildName("anchor"), init: AnchorL
 }
 
 /** 帧布局. */
-fun WidgetContainer.frame(name: String = nextChildName("frame"), init: FrameLayoutWidget.() -> Unit = {}): FrameLayoutWidget {
+fun WidgetContainer.frame(
+    name: String = nextChildName("frame"),
+    init: FrameLayoutWidget.() -> Unit = {}
+): FrameLayoutWidget {
     val widget = FrameLayoutWidget()
     addChild(name, widget)
     widget.init()
@@ -209,7 +239,10 @@ fun WidgetContainer.grid(
 }
 
 /** 流式换行布局. */
-fun WidgetContainer.wrap(name: String = nextChildName("wrap"), init: WrapLayoutWidget.() -> Unit = {}): WrapLayoutWidget {
+fun WidgetContainer.wrap(
+    name: String = nextChildName("wrap"),
+    init: WrapLayoutWidget.() -> Unit = {}
+): WrapLayoutWidget {
     val widget = WrapLayoutWidget()
     addChild(name, widget)
     widget.init()
@@ -217,7 +250,10 @@ fun WidgetContainer.wrap(name: String = nextChildName("wrap"), init: WrapLayoutW
 }
 
 /** 停靠布局. */
-fun WidgetContainer.dock(name: String = nextChildName("dock"), init: DockLayoutWidget.() -> Unit = {}): DockLayoutWidget {
+fun WidgetContainer.dock(
+    name: String = nextChildName("dock"),
+    init: DockLayoutWidget.() -> Unit = {}
+): DockLayoutWidget {
     val widget = DockLayoutWidget()
     addChild(name, widget)
     widget.init()
@@ -225,7 +261,10 @@ fun WidgetContainer.dock(name: String = nextChildName("dock"), init: DockLayoutW
 }
 
 /** 堆叠布局 (z-index). */
-fun WidgetContainer.stack(name: String = nextChildName("stack"), init: StackLayoutWidget.() -> Unit = {}): StackLayoutWidget {
+fun WidgetContainer.stack(
+    name: String = nextChildName("stack"),
+    init: StackLayoutWidget.() -> Unit = {}
+): StackLayoutWidget {
     val widget = StackLayoutWidget()
     addChild(name, widget)
     widget.init()

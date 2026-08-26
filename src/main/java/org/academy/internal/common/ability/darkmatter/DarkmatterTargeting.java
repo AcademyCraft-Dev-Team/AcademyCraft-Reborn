@@ -14,7 +14,9 @@ import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 
 import java.util.UUID;
 
-/** Shared dark-matter network membership, target selection, and damage admission rules. */
+/**
+ * Shared dark-matter network membership, target selection, and damage admission rules.
+ */
 public final class DarkmatterTargeting {
     private static final ThreadLocal<PvpBypass> PVP_BYPASS = new ThreadLocal<>();
 
@@ -39,7 +41,9 @@ public final class DarkmatterTargeting {
         return !(target instanceof TamableAnimal tame && tame.isOwnedBy(owner));
     }
 
-    /** Hostile-only automatic targeting: hostile mobs plus non-team players. */
+    /**
+     * Hostile-only automatic targeting: hostile mobs plus non-team players.
+     */
     public static boolean isEnemyTarget(ServerPlayer owner, LivingEntity target) {
         if (!isAttackableBy(owner, target)) return false;
         if (target instanceof Player) return true;

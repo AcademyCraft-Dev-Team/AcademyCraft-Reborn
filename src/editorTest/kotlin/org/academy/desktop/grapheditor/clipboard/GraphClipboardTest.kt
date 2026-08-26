@@ -2,10 +2,7 @@ package org.academy.desktop.grapheditor.clipboard
 
 import org.academy.desktop.grapheditor.EditorTestFixtures
 import org.academy.desktop.grapheditor.canvas.GraphEditorModel
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class GraphClipboardTest {
@@ -120,5 +117,6 @@ class GraphClipboardTest {
         assertNull(clipboardFrom(registry).decode(""))
     }
 
-    private fun clipboardFrom(registry: org.academy.api.client.render.graph.registry.NodeRegistry) = GraphClipboard(registry)
+    private fun clipboardFrom(registry: org.academy.api.client.render.graph.registry.NodeRegistry) =
+        GraphClipboard(registry)
 }

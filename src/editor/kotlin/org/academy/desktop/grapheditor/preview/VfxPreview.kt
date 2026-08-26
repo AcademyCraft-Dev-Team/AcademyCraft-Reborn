@@ -16,6 +16,7 @@ import org.academy.desktop.grapheditor.canvas.GraphEditorModel
 import org.academy.desktop.grapheditor.canvas.GraphEditorModelRef
 import org.academy.desktop.grapheditor.container.VfxContainerModel
 import org.academy.desktop.grapheditor.container.VfxContainerModelRef
+import org.academy.desktop.grapheditor.preview.VfxPreview.Companion.LOOP_RESTART_INTERVAL_NS
 import org.academy.desktop.grapheditor.viewport.EditorGlow
 
 /**
@@ -51,8 +52,9 @@ class VfxPreview(
         private set
 
     /** 当前粒子数 + 电弧数（供统计 overlay）。 */
-    val particleCount: Int get() = (systemSimulator?.buffer()?.count() ?: simulator?.buffer()?.count() ?: 0) +
-        (systemSimulator?.arcBuffer()?.count() ?: 0)
+    val particleCount: Int
+        get() = (systemSimulator?.buffer()?.count() ?: simulator?.buffer()?.count() ?: 0) +
+                (systemSimulator?.arcBuffer()?.count() ?: 0)
 
     /** 模拟已运行时间（供时间轴显示）。 */
     val time: Float get() = systemSimulator?.time() ?: simulator?.time() ?: 0f
@@ -74,7 +76,8 @@ class VfxPreview(
             // 容器模型优先（M26）：有 context 则走容器执行器
             if (containerModel.contexts.isNotEmpty() || containerModel.operators.isNotEmpty()) {
                 systemSimulator = VfxSystemSimulator(
-                    containerModel.toSystem(), blockRegistry, operatorRegistry, 42L, containerModel.parameters)
+                    containerModel.toSystem(), blockRegistry, operatorRegistry, 42L, containerModel.parameters
+                )
                 specs = systemSpecs(containerModel)
                 lastContainerModel = containerModel
                 lastContainerVersion = containerModel.version
@@ -99,8 +102,11 @@ class VfxPreview(
         for (ctx in containerModel.contexts.values) {
             for (block in ctx.blocks.values) {
                 if (block.typeId.startsWith("vfx.block.output_")) {
-                    out += RenderSpec.fromOutputNode(org.academy.api.client.render.graph.model.GraphNode(
-                        block.id, block.typeId, block.properties.toMap(), containerModel.portsFor(block.id), 0f, 0f))
+                    out += RenderSpec.fromOutputNode(
+                        org.academy.api.client.render.graph.model.GraphNode(
+                            block.id, block.typeId, block.properties.toMap(), containerModel.portsFor(block.id), 0f, 0f
+                        )
+                    )
                 }
             }
         }
@@ -120,6 +126,7 @@ class VfxPreview(
                     "vfx.block.arc_surface" -> {
                         meshSurface(block, "mesh", "origin_", BLENDER_PLANE_COLOR)?.let(out::add)
                     }
+
                     "vfx.block.arc_contact" -> {
                         meshSurface(block, "mesh", "origin_", BLENDER_PLANE_COLOR)?.let(out::add)
                         meshSurface(block, "contact_mesh", "contact_origin_", BLENDER_SPHERE_COLOR)?.let(out::add)
@@ -130,9 +137,14 @@ class VfxPreview(
         return out
     }
 
-    private fun meshSurface(block: VfxContainerModel.EdBlock, meshProp: String, originPrefix: String, color: FloatArray): SurfaceMesh? {
+    private fun meshSurface(
+        block: VfxContainerModel.EdBlock,
+        meshProp: String,
+        originPrefix: String,
+        color: FloatArray
+    ): SurfaceMesh? {
         val id = block.properties[meshProp] ?: return null
-        val tris = MeshAssets.resolve(id) ?: return null
+        val tris = MeshAssets.resolve(id)
         val ox = block.properties["${originPrefix}x"]?.toFloatOrNull() ?: 0f
         val oy = block.properties["${originPrefix}y"]?.toFloatOrNull() ?: 0f
         val oz = block.properties["${originPrefix}z"]?.toFloatOrNull() ?: 0f
@@ -164,7 +176,7 @@ class VfxPreview(
         if (container != null) {
             if (playing) {
                 container.step(dt)
-                val arcsEmpty = (container.arcBuffer()?.count() ?: 0) == 0
+                val arcsEmpty = (container.arcBuffer().count() ?: 0) == 0
                 if (loop && container.buffer().count() == 0 && arcsEmpty && container.time() > 0f && canLoopRestart()) {
                     // 重播但延续 time（避免编辑后粒子为 0 时每帧重建导致 time 归零、t 冻结）。
                     // 节流：避免每次重建把 spawn 累加器归零导致永远 spawn 不出粒子（渲染不可见）
@@ -179,7 +191,17 @@ class VfxPreview(
             val active = systemSimulator ?: return
             renderer!!.setArcBuffer(active.arcBuffer())
             val surfaces = collectSurfaces(containerModel)
-            renderer!!.render(color, depth, active.buffer(), camera, true, specs, WorldTransform.identity(), false, surfaces)
+            renderer!!.render(
+                color,
+                depth,
+                active.buffer(),
+                camera,
+                true,
+                specs,
+                WorldTransform.identity(),
+                false,
+                surfaces
+            )
             if (specs.any { it.blend() == RenderSpec.Blend.GLOW }) {
                 glow!!.render(color, active.buffer(), active.arcBuffer(), camera, specs, target.width, target.height)
             }

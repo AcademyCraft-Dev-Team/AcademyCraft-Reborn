@@ -2,14 +2,7 @@ package org.academy.internal.common.ability.program;
 
 import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
-import org.academy.api.common.ability.program.ProgramBlockPosition;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramTargetResolver;
-import org.academy.api.common.ability.program.ProgramValueTypes;
-import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.ability.program.*;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -17,10 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class CommonProgramNodesTest {
     private static final Identifier CATEGORY = PrecisionProgramNodeCatalog.MENTALOUT;

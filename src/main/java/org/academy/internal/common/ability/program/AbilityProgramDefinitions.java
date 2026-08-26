@@ -15,7 +15,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Built-in programmable ability-category definitions. */
+/**
+ * Built-in programmable ability-category definitions.
+ */
 public final class AbilityProgramDefinitions {
     private static final Map<Identifier, AbilityProgramDefinition> DEFINITIONS = index(List.of(
             ElectromasterProgramDefinition.create(),

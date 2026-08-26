@@ -1,8 +1,8 @@
 package org.academy.internal.common.ability.mentalout.precision;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -13,50 +13,26 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramBlockPosition;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramValue;
-import org.academy.api.common.ability.program.ProgramValueTypes;
-import org.academy.api.common.ability.program.ProgramWorldPosition;
-import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlApplyException;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.ControlHandle;
-import org.academy.api.common.entitycontrol.ControlRequest;
-import org.academy.api.common.entitycontrol.MentalControlApi;
-import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.common.ability.program.*;
+import org.academy.api.common.entitycontrol.*;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentaloutConfig;
-import org.academy.internal.common.ability.mentalout.MentaloutControlCost;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.MentaloutControlCost;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
-import org.academy.internal.common.ability.program.CompiledProgram;
-import org.academy.internal.common.ability.program.ProgramActionTransaction;
-import org.academy.internal.common.ability.program.ProgramExecutionFrame;
-import org.academy.internal.common.ability.program.ProgramInputView;
-import org.academy.internal.common.ability.program.ProgramNodeStep;
-import org.academy.internal.common.ability.program.ProgramVmContext;
-import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
-import org.academy.internal.common.ability.program.AbilityProgramManager;
+import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public final class PrecisionOperationRuntime {
     public static final int PRIORITY = 200;
@@ -163,7 +139,7 @@ public final class PrecisionOperationRuntime {
             slots[slot] = activeActions.isEmpty()
                     ? null : new ActiveContext(++nextContextSequence, activeActions, feedback);
             transaction.release();
-            if (java.util.Arrays.stream(slots).allMatch(java.util.Objects::isNull)) {
+            if (Arrays.stream(slots).allMatch(Objects::isNull)) {
                 ACTIVE.remove(player.getUUID());
             }
             return activeActions.isEmpty() ? ExecutionResult.completed() : ExecutionResult.started();
@@ -236,8 +212,7 @@ public final class PrecisionOperationRuntime {
                 );
                 requireSameEntity(action.entity, actionEntity(inputs, "hidden"), "hidden");
             }
-            case START_INTRUSION ->
-                    requireSameEntity(action.entity, actionEntity(inputs, "target"), "target");
+            case START_INTRUSION -> requireSameEntity(action.entity, actionEntity(inputs, "target"), "target");
             case PATH_TO, GUARD_MODE -> {
                 var actual = requireDestination(inputs.requireCompatible(
                         "destination",
@@ -443,7 +418,7 @@ public final class PrecisionOperationRuntime {
                             player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
                 }
             }
-            if (java.util.Arrays.stream(entry.getValue()).allMatch(java.util.Objects::isNull)) {
+            if (Arrays.stream(entry.getValue()).allMatch(Objects::isNull)) {
                 ACTIVE.remove(entry.getKey());
             }
         }
@@ -479,7 +454,7 @@ public final class PrecisionOperationRuntime {
                             player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
                 }
             }
-            if (java.util.Arrays.stream(entry.getValue()).allMatch(java.util.Objects::isNull)) {
+            if (Arrays.stream(entry.getValue()).allMatch(Objects::isNull)) {
                 ACTIVE.remove(entry.getKey());
             }
         }
@@ -526,7 +501,7 @@ public final class PrecisionOperationRuntime {
         public ProgramNodeStep execute(
                 ProgramVmContext context,
                 PrecisionGraph.NodeKind kind,
-                org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
+                PrecisionProgramNodeCatalog.PrecisionConfiguration configuration,
                 ProgramInputView inputs
         ) {
             try {
@@ -663,7 +638,7 @@ public final class PrecisionOperationRuntime {
                 case AFFECTED -> {
                     var rosterIds = MentaloutControlContext.subjects(player).stream()
                             .map(LivingEntity::getUUID)
-                            .collect(java.util.stream.Collectors.toSet());
+                            .collect(Collectors.toSet());
                     yield output(kind, setInput(inputs, "entities").stream()
                             .filter(LivingEntity.class::isInstance)
                             .filter(entity -> rosterIds.contains(entity.getUUID())
@@ -832,7 +807,7 @@ public final class PrecisionOperationRuntime {
         private static Object value(
                 ProgramInputView inputs,
                 String port,
-                org.academy.api.common.ability.program.ProgramValueType type
+                ProgramValueType type
         ) {
             return inputs.requireCompatible(port, type).value();
         }
@@ -883,7 +858,7 @@ public final class PrecisionOperationRuntime {
         var flowTrace = new ArrayList<Integer>();
         var uniqueSubjects = new HashSet<UUID>();
         var roster = livingSet(MentaloutControlContext.subjects(player));
-        var rosterIds = roster.stream().map(LivingEntity::getUUID).collect(java.util.stream.Collectors.toSet());
+        var rosterIds = roster.stream().map(LivingEntity::getUUID).collect(Collectors.toSet());
         var reachableActions = new HashSet<Integer>();
         if (!program.actionOrder().isEmpty()) {
             reachableActions.add(program.actionOrder().getFirst().id());
@@ -1346,9 +1321,9 @@ public final class PrecisionOperationRuntime {
             return new ControlDestination.Position(
                     entity.level().dimension().identifier(), entity.position());
         }
-        if (value instanceof ProgramWorldPosition position) {
+        if (value instanceof ProgramWorldPosition(Identifier dimension, double x, double y, double z)) {
             return new ControlDestination.Position(
-                    position.dimension(), new Vec3(position.x(), position.y(), position.z()));
+                    dimension, new Vec3(x, y, z));
         }
         if (value instanceof ProgramBlockPosition position) {
             var center = position.center();
@@ -1364,22 +1339,22 @@ public final class PrecisionOperationRuntime {
             requireUsable(entity);
             return new ResolvedPosition(entity.level().dimension().identifier(), entity.position());
         }
-        if (value instanceof ControlDestination.Position position) {
-            return new ResolvedPosition(position.dimension(), position.value());
+        if (value instanceof ControlDestination.Position(Identifier dimension1, Vec3 value1)) {
+            return new ResolvedPosition(dimension1, value1);
         }
-        if (value instanceof ProgramWorldPosition position) {
+        if (value instanceof ProgramWorldPosition(Identifier dimension, double x, double y, double z)) {
             return new ResolvedPosition(
-                    position.dimension(), new Vec3(position.x(), position.y(), position.z()));
+                    dimension, new Vec3(x, y, z));
         }
         if (value instanceof ProgramBlockPosition position) {
             var center = position.center();
             return new ResolvedPosition(
                     center.dimension(), new Vec3(center.x(), center.y(), center.z()));
         }
-        if (value instanceof ControlDestination.Entity entity) {
+        if (value instanceof ControlDestination.Entity(UUID uuid)) {
             Entity target = null;
             for (var level : player.level().getServer().getAllLevels()) {
-                target = level.getEntity(entity.uuid());
+                target = level.getEntity(uuid);
                 if (target != null) break;
             }
             if (target == null) throw new EvaluationFailure(PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE);
@@ -1395,8 +1370,8 @@ public final class PrecisionOperationRuntime {
     }
 
     private static Vec3 requireDirection(Object value) {
-        if (value instanceof ProgramDirection direction) {
-            return new Vec3(direction.x(), direction.y(), direction.z());
+        if (value instanceof ProgramDirection(double x, double y, double z)) {
+            return new Vec3(x, y, z);
         }
         if (!(value instanceof Vec3 direction) || direction.lengthSqr() <= 1.0e-8
                 || !Double.isFinite(direction.x) || !Double.isFinite(direction.y)
@@ -1446,7 +1421,7 @@ public final class PrecisionOperationRuntime {
         }
     }
 
-    private static void requireSkill(org.academy.api.common.ability.Skill skill, ServerPlayer player) {
+    private static void requireSkill(Skill skill, ServerPlayer player) {
         if (!skill.isEnabled(player)) {
             throw new EvaluationFailure(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
         }
@@ -1525,8 +1500,8 @@ public final class PrecisionOperationRuntime {
             List<LivingEntity> subjects,
             ControlDestination destination
     ) {
-        if (!(destination instanceof ControlDestination.Entity entity)) return subjects;
-        return subjects.stream().filter(subject -> !subject.getUUID().equals(entity.uuid())).toList();
+        if (!(destination instanceof ControlDestination.Entity(UUID uuid))) return subjects;
+        return subjects.stream().filter(subject -> !subject.getUUID().equals(uuid)).toList();
     }
 
     private static LivingEntity effectiveTarget(LivingEntity entity) {
@@ -1770,7 +1745,7 @@ public final class PrecisionOperationRuntime {
                     Skills.PRECISION_OPERATION.get()
             );
         }
-        if (java.util.Arrays.stream(slots).allMatch(java.util.Objects::isNull)) {
+        if (Arrays.stream(slots).allMatch(Objects::isNull)) {
             ACTIVE.remove(player.getUUID());
         }
     }
@@ -1799,8 +1774,8 @@ public final class PrecisionOperationRuntime {
         var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
         var shared = new HashSet<SharedCostKey>();
         var result = 0.0f;
-        var ordered = java.util.Arrays.stream(slots)
-                .filter(java.util.Objects::nonNull)
+        var ordered = Arrays.stream(slots)
+                .filter(Objects::nonNull)
                 .sorted(Comparator.comparingLong(context -> context.sequence))
                 .toList();
         for (var context : ordered) {
@@ -1832,7 +1807,7 @@ public final class PrecisionOperationRuntime {
         var sharedTimed = new HashSet<SharedCostKey>();
         var permanentCost = 0.0f;
         var timedCharges = new ArrayList<AbilitySystemServer.TimedOccupationCharge>();
-        var ordered = java.util.stream.IntStream.range(0, slots.length)
+        var ordered = IntStream.range(0, slots.length)
                 .filter(slot -> slot != replacedSlot && slots[slot] != null)
                 .mapToObj(slot -> slots[slot])
                 .sorted(Comparator.comparingLong(context -> context.sequence))
@@ -1968,7 +1943,7 @@ public final class PrecisionOperationRuntime {
             List<Integer> flowTrace
     ) {
         private Evaluation {
-            values = java.util.Collections.unmodifiableMap(new HashMap<>(values));
+            values = Collections.unmodifiableMap(new HashMap<>(values));
             flowTrace = List.copyOf(flowTrace);
         }
 
@@ -2048,87 +2023,83 @@ public final class PrecisionOperationRuntime {
         private Set<UUID> dependencyIds() {
             var result = new HashSet<UUID>();
             if (entity != null) result.add(entity.getUUID());
-            if (destination instanceof ControlDestination.Entity target) result.add(target.uuid());
+            if (destination instanceof ControlDestination.Entity(UUID uuid)) result.add(uuid);
             return Set.copyOf(result);
         }
     }
 
-    private static final class ActiveContext {
-        private final long sequence;
-        private final List<ActiveAction> actions;
-        private final boolean feedback;
-
-        private ActiveContext(long sequence, List<ActiveAction> actions, boolean feedback) {
-            this.sequence = sequence;
-            this.actions = new ArrayList<>(actions);
-            this.feedback = feedback;
-        }
-
-        private float cost() {
-            var total = 0.0f;
-            for (var action : actions) total += action.cost();
-            return total;
-        }
-
-        private void close(ServerPlayer player) {
-            actions.forEach(action -> action.close(player));
-            actions.clear();
-        }
-
-        private float releaseSubjects(Set<UUID> subjects) {
-            var released = 0.0f;
-            for (var action : actions) released += action.releaseSubjects(subjects);
-            actions.removeIf(ActiveAction::empty);
-            return released;
-        }
-
-        private float subjectCost(Set<UUID> subjects) {
-            var result = 0.0f;
-            for (var action : actions) result += action.subjectCost(subjects);
-            return result;
-        }
-
-        private boolean releaseEntity(ServerPlayer player, UUID entityId) {
-            var changed = false;
-            var iterator = actions.iterator();
-            while (iterator.hasNext()) {
-                var action = iterator.next();
-                if (!action.releaseEntity(player, entityId)) continue;
-                changed = true;
-                if (action.empty()) iterator.remove();
+    private record ActiveContext(long sequence, List<ActiveAction> actions, boolean feedback) {
+            private ActiveContext(long sequence, List<ActiveAction> actions, boolean feedback) {
+                this.sequence = sequence;
+                this.actions = new ArrayList<>(actions);
+                this.feedback = feedback;
             }
-            return changed;
-        }
 
-        private ContextTick tick(ServerPlayer player, long now) {
-            var changed = false;
-            var failures = new HashMap<FailureKey, Integer>();
-            var iterator = actions.iterator();
-            while (iterator.hasNext()) {
-                var action = iterator.next();
-                var tick = action.tick(player, now);
-                changed |= tick.changed();
-                for (var failure : tick.failures()) {
-                    failures.merge(
-                            new FailureKey(failure.diagnostic(), failure.nodeId()),
-                            failure.affectedCount(),
-                            Integer::sum
-                    );
+            private float cost() {
+                var total = 0.0f;
+                for (var action : actions) total += action.cost();
+                return total;
+            }
+
+            private void close(ServerPlayer player) {
+                actions.forEach(action -> action.close(player));
+                actions.clear();
+            }
+
+            private float releaseSubjects(Set<UUID> subjects) {
+                var released = 0.0f;
+                for (var action : actions) released += action.releaseSubjects(subjects);
+                actions.removeIf(ActiveAction::empty);
+                return released;
+            }
+
+            private float subjectCost(Set<UUID> subjects) {
+                var result = 0.0f;
+                for (var action : actions) result += action.subjectCost(subjects);
+                return result;
+            }
+
+            private boolean releaseEntity(ServerPlayer player, UUID entityId) {
+                var changed = false;
+                var iterator = actions.iterator();
+                while (iterator.hasNext()) {
+                    var action = iterator.next();
+                    if (!action.releaseEntity(player, entityId)) continue;
+                    changed = true;
+                    if (action.empty()) iterator.remove();
                 }
-                if (action.empty()) iterator.remove();
+                return changed;
             }
-            return new ContextTick(changed, failures.entrySet().stream()
-                    .map(entry -> new ActionFailure(
-                            entry.getKey().diagnostic(),
-                            entry.getKey().nodeId(),
-                            entry.getValue()
-                    )).toList());
-        }
 
-        private boolean empty() {
-            return actions.isEmpty();
+            private ContextTick tick(ServerPlayer player, long now) {
+                var changed = false;
+                var failures = new HashMap<FailureKey, Integer>();
+                var iterator = actions.iterator();
+                while (iterator.hasNext()) {
+                    var action = iterator.next();
+                    var tick = action.tick(player, now);
+                    changed |= tick.changed();
+                    for (var failure : tick.failures()) {
+                        failures.merge(
+                                new FailureKey(failure.diagnostic(), failure.nodeId()),
+                                failure.affectedCount(),
+                                Integer::sum
+                        );
+                    }
+                    if (action.empty()) iterator.remove();
+                }
+                return new ContextTick(changed, failures.entrySet().stream()
+                        .map(entry -> new ActionFailure(
+                                entry.getKey().diagnostic(),
+                                entry.getKey().nodeId(),
+                                entry.getValue()
+                        )).toList());
+            }
+
+            private boolean empty() {
+                return actions.isEmpty();
+            }
         }
-    }
 
     private static final class ActiveAction {
         private final int nodeId;
@@ -2185,7 +2156,7 @@ public final class PrecisionOperationRuntime {
                         .filter(ControlHandle.class::isInstance)
                         .map(ControlHandle.class::cast)
                         .map(ControlHandle::failureReason)
-                        .flatMap(java.util.Optional::stream)
+                        .flatMap(Optional::stream)
                         .findFirst()
                         .map(PrecisionOperationRuntime::diagnostic)
                         .orElse(null);

@@ -12,7 +12,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 
-/** Stores physical parameters that cannot be represented economically as block-state variants. */
+/**
+ * Stores physical parameters that cannot be represented economically as block-state variants.
+ */
 public final class DarkmatterBlockEntity extends BlockEntity {
     private DarkmatterBlockProfile profile = DarkmatterBlockProfile.DEFAULT;
 

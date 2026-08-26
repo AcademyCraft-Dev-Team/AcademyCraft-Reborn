@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.aeromanip;
 
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
@@ -10,7 +11,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
-import net.minecraft.util.Mth;
 
 public final class AeromanipTargeting {
     private static final double MAX_SPEED = 3.0;

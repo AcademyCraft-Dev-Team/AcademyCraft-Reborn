@@ -2,7 +2,9 @@ package org.academy.internal.client.animation;
 
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 
-/** Deterministic transition timeline for the five authored wing-flight clips. */
+/**
+ * Deterministic transition timeline for the five authored wing-flight clips.
+ */
 public final class WingFlightAnimationTimeline {
     private Phase phase = Phase.IDLE;
     private WingFlightPose.Pose target = WingFlightPose.Pose.IDLE;

@@ -6,11 +6,7 @@ import com.mojang.blaze3d.buffers.GpuBuffer
 import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.blaze3d.textures.AddressMode
-import com.mojang.blaze3d.textures.FilterMode
-import com.mojang.blaze3d.textures.GpuSampler
-import com.mojang.blaze3d.textures.GpuTexture
-import com.mojang.blaze3d.textures.GpuTextureView
+import com.mojang.blaze3d.textures.*
 import net.minecraft.resources.Identifier
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.graph.compile.DefaultGraphCompiler
@@ -25,8 +21,7 @@ import org.joml.Vector4f
 import org.lwjgl.system.MemoryStack
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.Optional
-import java.util.OptionalDouble
+import java.util.*
 
 /**
  * Shader 实时预览：把当前图编译为管线，渲染为全窗口背景（ImGui 编辑器浮层其上）。
@@ -73,7 +68,8 @@ class ShaderPreview(
         uniformBuffer?.close()
         uniformBuffer = null
         try {
-            val graph = org.academy.api.client.render.graph.subgraph.SubGraphFlattener.flatten(model.toGraph(), subGraphs)
+            val graph =
+                org.academy.api.client.render.graph.subgraph.SubGraphFlattener.flatten(model.toGraph(), subGraphs)
             // 空图（新建空白文档）不算错误：无输出可预览，但不弹错误条
             if (graph.nodes().isEmpty()) {
                 lastModel = model
@@ -121,7 +117,7 @@ class ShaderPreview(
                 for ((name, binding) in textureBindings) {
                     it.bindTexture(name, binding.first, binding.second)
                 }
-                it.setVertexBuffer(0, Render.Buffers.getInstance().getFSQuadVBNDC().slice())
+                it.setVertexBuffer(0, Render.Buffers.getInstance().fsQuadVBNDC.slice())
                 val seq = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS)
                 it.setIndexBuffer(seq.getBuffer(6), seq.type())
                 it.drawIndexed(6, 1, 0, 0, 0)

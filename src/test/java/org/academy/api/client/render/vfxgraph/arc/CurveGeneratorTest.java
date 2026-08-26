@@ -1,8 +1,11 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import java.util.HashSet;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CurveGeneratorTest {
 
@@ -130,9 +133,16 @@ class CurveGeneratorTest {
         for (int i = 0; i < arc.size(); i++) {
             float gen = arc.generation(i);
             float w = arc.width(i);
-            if (gen < 0.5f) { gen0Width += w; gen0Count++; }
-            else if (gen < 1.5f) { gen1Width += w; gen1Count++; }
-            else { gen2Width += w; gen2Count++; }
+            if (gen < 0.5f) {
+                gen0Width += w;
+                gen0Count++;
+            } else if (gen < 1.5f) {
+                gen1Width += w;
+                gen1Count++;
+            } else {
+                gen2Width += w;
+                gen2Count++;
+            }
         }
         if (gen0Count > 0 && gen1Count > 0) {
             float avg0 = gen0Width / gen0Count;
@@ -171,7 +181,9 @@ class CurveGeneratorTest {
         assertEquals(1.0f, arc.b(), 0.01f);
     }
 
-    /** from→to 两点电弧：端点固定，控制柄沿法线伸开，中部起拱。 */
+    /**
+     * from→to 两点电弧：端点固定，控制柄沿法线伸开，中部起拱。
+     */
     @Test
     void generateFromToArchKeepsEndpointsAndArches() {
         var arc = new ArcCurve();
@@ -194,7 +206,9 @@ class CurveGeneratorTest {
         assertTrue(midY > 1f + 0.05f, "Arc should arch above linear interpolation, midY=" + midY);
     }
 
-    /** 递归分支每根独立 segment（建管时分成独立 run，不缝合）。 */
+    /**
+     * 递归分支每根独立 segment（建管时分成独立 run，不缝合）。
+     */
     @Test
     void generateFromToBranchesDistinctSegments() {
         var arc = new ArcCurve();
@@ -203,7 +217,7 @@ class CurveGeneratorTest {
                 0.01f, 12, 1f, 1f, 1f, 1f, 1f, 42L,
                 1, 2, 1.57f, 0.3f, 0.35f, 0.6f);
         assertTrue(arc.size() > 12);
-        var segments = new java.util.HashSet<Integer>();
+        var segments = new HashSet<Integer>();
         for (int i = 0; i < arc.size(); i++) {
             segments.add(arc.segment(i));
         }

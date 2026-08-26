@@ -60,7 +60,7 @@ public final class PlatinumExecutionVfx implements Vfx {
 
         var camera = ctx.camera().pos();
         var currentTick = (double) minecraft.level.getGameTime() + ctx.partialTick();
-        var activeDeaths = DEATHS.entrySet().size();
+        var activeDeaths = DEATHS.size();
         ensureCapacity(activeDeaths * 12 * 24);
         vertexData.clear();
         var vertexCount = 0;
@@ -95,8 +95,8 @@ public final class PlatinumExecutionVfx implements Vfx {
             );
 
             var box = localVertices(localBounds);
-            var yaw = (float) ((180.0f - state.yRot) * Mth.DEG_TO_RAD);
-            var pitch = (float) (collapse * Mth.DEG_TO_RAD);
+            var yaw = (180.0f - state.yRot) * Mth.DEG_TO_RAD;
+            var pitch = collapse * Mth.DEG_TO_RAD;
             var sx = (float) (state.position.x - camera.x);
             var sy = (float) (state.position.y - camera.y);
             var sz = (float) (state.position.z - camera.z);
@@ -124,7 +124,7 @@ public final class PlatinumExecutionVfx implements Vfx {
         var requiredBytes = (long) requiredVertices * ColorMeshData.VERTEX_STRIDE;
         if (vertexData.capacity() >= requiredBytes) return;
         var newCapacity = Math.max(requiredVertices,
-                (int) (vertexData.capacity() / ColorMeshData.VERTEX_STRIDE) * 2);
+                (vertexData.capacity() / ColorMeshData.VERTEX_STRIDE) * 2);
         vertexData = BufferUtils.createByteBuffer(Math.toIntExact((long) newCapacity * ColorMeshData.VERTEX_STRIDE));
     }
 

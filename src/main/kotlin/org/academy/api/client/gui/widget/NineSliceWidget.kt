@@ -103,26 +103,44 @@ open class NineSliceWidget(
         context.drawOrder().push()
         run {
             context.drawOrder().advance()
-            submitPatch(context, textureView, sampler, finalAlpha,
-                0f, 0f, leftW, topH, 0f, 0f, leftU, topV)
-            submitPatch(context, textureView, sampler, finalAlpha,
-                leftW, 0f, midW, topH, leftU, 0f, rightU, topV)
-            submitPatch(context, textureView, sampler, finalAlpha,
-                leftW + midW, 0f, rightW, topH, rightU, 0f, 1f, topV)
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                0f, 0f, leftW, topH, 0f, 0f, leftU, topV
+            )
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                leftW, 0f, midW, topH, leftU, 0f, rightU, topV
+            )
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                leftW + midW, 0f, rightW, topH, rightU, 0f, 1f, topV
+            )
 
-            submitPatch(context, textureView, sampler, finalAlpha,
-                0f, topH, leftW, midH, 0f, topV, leftU, bottomV)
-            submitPatch(context, textureView, sampler, finalAlpha,
-                leftW, topH, midW, midH, leftU, topV, rightU, bottomV)
-            submitPatch(context, textureView, sampler, finalAlpha,
-                leftW + midW, topH, rightW, midH, rightU, topV, 1f, bottomV)
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                0f, topH, leftW, midH, 0f, topV, leftU, bottomV
+            )
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                leftW, topH, midW, midH, leftU, topV, rightU, bottomV
+            )
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                leftW + midW, topH, rightW, midH, rightU, topV, 1f, bottomV
+            )
 
-            submitPatch(context, textureView, sampler, finalAlpha,
-                0f, topH + midH, leftW, bottomH, 0f, bottomV, leftU, 1f)
-            submitPatch(context, textureView, sampler, finalAlpha,
-                leftW, topH + midH, midW, bottomH, leftU, bottomV, rightU, 1f)
-            submitPatch(context, textureView, sampler, finalAlpha,
-                leftW + midW, topH + midH, rightW, bottomH, rightU, bottomV, 1f, 1f)
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                0f, topH + midH, leftW, bottomH, 0f, bottomV, leftU, 1f
+            )
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                leftW, topH + midH, midW, bottomH, leftU, bottomV, rightU, 1f
+            )
+            submitPatch(
+                context, textureView, sampler, finalAlpha,
+                leftW + midW, topH + midH, rightW, bottomH, rightU, bottomV, 1f, 1f
+            )
         }
         context.drawOrder().pop()
         context.pose().popPose()

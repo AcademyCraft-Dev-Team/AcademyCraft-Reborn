@@ -1,7 +1,7 @@
 package org.academy.api.common.data;
 
-import org.academy.api.common.ability.AbilityLevel;
 import net.minecraft.util.Mth;
+import org.academy.api.common.ability.AbilityLevel;
 
 public class AbilityData {
     public static final int FIXED_MAX_SP = 1_000;
@@ -345,7 +345,7 @@ public class AbilityData {
         private final boolean isPermanent;
         private float amount;
         private int iterationTicks;
-        private String stackGroup;
+        private final String stackGroup;
 
         public CpOccupationData(float amount, int iterationTicks, String skillId, boolean isPermanent) {
             this(amount, iterationTicks, skillId, isPermanent, skillId);

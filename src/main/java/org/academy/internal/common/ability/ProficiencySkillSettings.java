@@ -3,6 +3,7 @@ package org.academy.internal.common.ability;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.player.Player;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -41,7 +42,7 @@ public final class ProficiencySkillSettings {
         if (enabled) values.remove(option);
         else values.put(option, false);
         player.setData(AttachmentTypes.SKILL_PROFICIENCY_OPTIONS.get(), values);
-        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+        if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.syncData(AttachmentTypes.SKILL_PROFICIENCY_OPTIONS.get());
         }
     }

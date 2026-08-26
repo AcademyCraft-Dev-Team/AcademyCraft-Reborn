@@ -18,37 +18,25 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramBook;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
+import org.academy.api.common.ability.program.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.internal.client.ability.mentalout.ModularProgramEditorSession;
 import org.academy.internal.client.ability.mentalout.ModularProgramScreen;
-import org.academy.internal.common.ability.AbilityCategoryNames;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.AbilityProgramManager;
-import org.academy.internal.common.ability.program.ProgramBookCodec;
-import org.academy.internal.common.ability.program.ProgramEditorDocument;
-import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
+import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.program.*;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
-/** Shared precision-operation entry and category program cache, including Mentalout routing. */
+/**
+ * Shared precision-operation entry and category program cache, including Mentalout routing.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class AbilityProgramEditorClient {
     public static final String CONFIG_KEY = "ability_program_editor";
@@ -184,7 +172,7 @@ public final class AbilityProgramEditorClient {
     public static void executeSelected() {
         var player = Minecraft.getInstance().player;
         var category = AbilitySystemClient.category;
-        if (player == null || category == null || !isSupportedCategory(category)) return;
+        if (player == null || !isSupportedCategory(category)) return;
         if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
             PrecisionOperationClient.executeSelected();
             return;
@@ -374,7 +362,7 @@ public final class AbilityProgramEditorClient {
             };
             notify(key, ChatFormatting.RED, slot + 1, Component.translatable(
                     "message.academy.program.execution.diagnostic."
-                            + vmDiagnostic.name().toLowerCase(java.util.Locale.ROOT)));
+                            + vmDiagnostic.name().toLowerCase(Locale.ROOT)));
         }
         var currentCategory = AbilitySystemClient.category;
         if (screen != null

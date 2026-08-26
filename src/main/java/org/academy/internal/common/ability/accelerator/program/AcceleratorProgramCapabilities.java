@@ -4,7 +4,9 @@ import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.SkillNames;
 
-/** Learned-skill capabilities required by vector-manipulation action nodes. */
+/**
+ * Learned-skill capabilities required by vector-manipulation action nodes.
+ */
 public final class AcceleratorProgramCapabilities {
     public static final Identifier APPLY_VECTOR =
             AcademyCraft.academy(SkillNames.VECTOR_ACCEL);

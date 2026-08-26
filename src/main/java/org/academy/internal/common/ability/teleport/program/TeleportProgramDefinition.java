@@ -8,7 +8,9 @@ import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
 
 import java.util.HashMap;
 
-/** Assembles Teleport nodes with the shared program algebra. */
+/**
+ * Assembles Teleport nodes with the shared program algebra.
+ */
 public final class TeleportProgramDefinition {
     private TeleportProgramDefinition() {
     }

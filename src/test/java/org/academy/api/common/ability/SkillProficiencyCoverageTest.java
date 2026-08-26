@@ -8,10 +8,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SkillProficiencyCoverageTest {
     @Test
@@ -72,7 +69,7 @@ class SkillProficiencyCoverageTest {
                     var key = "skill.academy." + path + ".proficiency." + threshold;
                     assertTrue(translations.has(key), language + " missing " + key);
                     var description = translations.get(key).getAsString();
-                    assertTrue(!description.isBlank(), language + " blank " + key);
+                    assertFalse(description.isBlank(), language + " blank " + key);
                     if (language.equals("en_us")) {
                         assertFalse(description.matches(".*unlocks its (first|second|final) proficiency enhancement.*"),
                                 language + " placeholder " + key);

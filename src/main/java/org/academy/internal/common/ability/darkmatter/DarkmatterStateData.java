@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.darkmatter;
 import com.google.gson.annotations.SerializedName;
 import org.academy.api.common.ability.darkmatter.DarkmatterPhaseSnapshot;
 
-/** Persistent, server-authoritative state shared by all dark-matter skills. */
+/**
+ * Persistent, server-authoritative state shared by all dark-matter skills.
+ */
 public final class DarkmatterStateData {
     private static final int CURRENT_SCHEMA = 2;
 
@@ -15,7 +17,9 @@ public final class DarkmatterStateData {
     private int pointCapacity;
     @SerializedName("phaseRemainder")
     private float phaseRemainder;
-    /** Kept only for migration from the normalized phase implementation. */
+    /**
+     * Kept only for migration from the normalized phase implementation.
+     */
     @SerializedName("phase")
     private Float legacyPhase;
 
@@ -81,7 +85,9 @@ public final class DarkmatterStateData {
         return changed;
     }
 
-    /** Applies a fractional point delta while keeping the serialized allocation integral. */
+    /**
+     * Applies a fractional point delta while keeping the serialized allocation integral.
+     */
     public boolean tuneAlphaPoints(int abilityLevel, float deltaPoints) {
         if (!Float.isFinite(deltaPoints) || deltaPoints == 0.0f) return false;
         reconcilePhase(abilityLevel);
@@ -102,7 +108,9 @@ public final class DarkmatterStateData {
         return true;
     }
 
-    public boolean isResourceInitialized() { return resourceInitialized; }
+    public boolean isResourceInitialized() {
+        return resourceInitialized;
+    }
 
     public void initializeResource(float natural, float created, float cpDebt) {
         naturalMatter = finiteNonNegative(natural);
@@ -111,20 +119,42 @@ public final class DarkmatterStateData {
         resourceInitialized = true;
     }
 
-    public float getNaturalMatter() { return finiteNonNegative(naturalMatter); }
-    public void setNaturalMatter(float value) { naturalMatter = finiteNonNegative(value); }
-    public float getCreatedMatter() { return finiteNonNegative(createdMatter); }
+    public float getNaturalMatter() {
+        return finiteNonNegative(naturalMatter);
+    }
+
+    public void setNaturalMatter(float value) {
+        naturalMatter = finiteNonNegative(value);
+    }
+
+    public float getCreatedMatter() {
+        return finiteNonNegative(createdMatter);
+    }
+
     public void setCreatedMatter(float value) {
         createdMatter = finiteNonNegative(value);
         if (createdMatter <= 0.0f) createdCpDebt = 0.0f;
     }
-    public float getCreatedCpDebt() { return finiteNonNegative(createdCpDebt); }
+
+    public float getCreatedCpDebt() {
+        return finiteNonNegative(createdCpDebt);
+    }
+
     public void setCreatedCpDebt(float value) {
         createdCpDebt = getCreatedMatter() <= 0.0f ? 0.0f : finiteNonNegative(value);
     }
-    public float getReservedMatter() { return finiteNonNegative(reservedMatter); }
-    public void setReservedMatter(float value) { reservedMatter = finiteNonNegative(value); }
-    public float totalMatter() { return getNaturalMatter() + getCreatedMatter(); }
+
+    public float getReservedMatter() {
+        return finiteNonNegative(reservedMatter);
+    }
+
+    public void setReservedMatter(float value) {
+        reservedMatter = finiteNonNegative(value);
+    }
+
+    public float totalMatter() {
+        return getNaturalMatter() + getCreatedMatter();
+    }
 
     public boolean repair() {
         var changed = false;
@@ -132,11 +162,26 @@ public final class DarkmatterStateData {
         var created = finiteNonNegative(createdMatter);
         var debt = created <= 0.0f ? 0.0f : finiteNonNegative(createdCpDebt);
         var reserved = finiteNonNegative(reservedMatter);
-        if (Float.compare(naturalMatter, natural) != 0) { naturalMatter = natural; changed = true; }
-        if (Float.compare(createdMatter, created) != 0) { createdMatter = created; changed = true; }
-        if (Float.compare(createdCpDebt, debt) != 0) { createdCpDebt = debt; changed = true; }
-        if (Float.compare(reservedMatter, reserved) != 0) { reservedMatter = reserved; changed = true; }
-        if (!Float.isFinite(phaseRemainder)) { phaseRemainder = 0.0f; changed = true; }
+        if (Float.compare(naturalMatter, natural) != 0) {
+            naturalMatter = natural;
+            changed = true;
+        }
+        if (Float.compare(createdMatter, created) != 0) {
+            createdMatter = created;
+            changed = true;
+        }
+        if (Float.compare(createdCpDebt, debt) != 0) {
+            createdCpDebt = debt;
+            changed = true;
+        }
+        if (Float.compare(reservedMatter, reserved) != 0) {
+            reservedMatter = reserved;
+            changed = true;
+        }
+        if (!Float.isFinite(phaseRemainder)) {
+            phaseRemainder = 0.0f;
+            changed = true;
+        }
         return changed;
     }
 

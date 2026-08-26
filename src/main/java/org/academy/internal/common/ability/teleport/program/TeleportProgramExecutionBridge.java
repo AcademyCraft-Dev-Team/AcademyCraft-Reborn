@@ -2,29 +2,17 @@ package org.academy.internal.common.ability.teleport.program;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramValue;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramValueTypes;
-import org.academy.api.common.ability.program.ProgramWorldPosition;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.CompiledProgram;
-import org.academy.internal.common.ability.program.ProgramActionTransaction;
-import org.academy.internal.common.ability.program.ProgramExecutionFrame;
-import org.academy.internal.common.ability.program.ProgramExecutorLookup;
-import org.academy.internal.common.ability.program.ProgramInputView;
-import org.academy.internal.common.ability.program.ProgramNodeExecutor;
-import org.academy.internal.common.ability.program.ProgramNodeStep;
-import org.academy.internal.common.ability.program.ProgramVm;
-import org.academy.internal.common.ability.program.ProgramVmContext;
-import org.academy.internal.common.ability.program.ProgramVmResult;
+import org.academy.api.common.ability.program.*;
+import org.academy.internal.common.ability.program.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Shared-VM execution gateway for Teleport programs. */
+/**
+ * Shared-VM execution gateway for Teleport programs.
+ */
 public final class TeleportProgramExecutionBridge {
     private static final int MAX_FUEL = ProgramLimits.DEFAULT.maxNodes()
             * ProgramLimits.DEFAULT.maxNodes() + 1;
@@ -159,11 +147,11 @@ public final class TeleportProgramExecutionBridge {
                 port, ProgramValueTypes.WORLD_POSITION).value();
     }
 
-    private static org.academy.api.common.ability.program.ProgramBlockPosition blockPosition(
+    private static ProgramBlockPosition blockPosition(
             ProgramInputView inputs,
             String port
     ) {
-        return (org.academy.api.common.ability.program.ProgramBlockPosition)
+        return (ProgramBlockPosition)
                 inputs.requireCompatible(port, ProgramValueTypes.BLOCK_POSITION).value();
     }
 
@@ -173,7 +161,7 @@ public final class TeleportProgramExecutionBridge {
 
     private static <T> ProgramNodeStep data(
             String port,
-            org.academy.api.common.ability.program.ProgramValueType type,
+            ProgramValueType type,
             T value
     ) {
         return ProgramNodeStep.data(Map.of(

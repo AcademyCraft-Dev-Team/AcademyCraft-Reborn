@@ -1,7 +1,5 @@
 package org.academy.internal.client.data;
 
-import java.util.List;
-
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.ModelProvider;
@@ -16,14 +14,17 @@ import net.minecraft.client.renderer.special.TridentSpecialRenderer;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.data.PackOutput;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
 import org.academy.api.client.resources.model.cuboid.CoinModelGenerator;
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
+
+import java.util.List;
 
 import static net.minecraft.client.data.models.model.TexturedModel.createDefault;
 import static org.academy.AcademyCraft.academy;
@@ -346,7 +347,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
     }
 
     private static ItemModel.Unbaked darkmatterStateModel(
-            ItemModelGenerators itemModels, net.minecraft.world.item.Item item,
+            ItemModelGenerators itemModels, Item item,
             String suffix, ModelTemplate template
     ) {
         var location = template.create(ModelLocationUtils.getModelLocation(item, suffix),

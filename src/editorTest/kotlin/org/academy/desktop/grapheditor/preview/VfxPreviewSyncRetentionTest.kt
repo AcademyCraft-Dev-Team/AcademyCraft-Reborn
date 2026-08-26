@@ -1,16 +1,12 @@
 package org.academy.desktop.grapheditor.preview
 
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry
-import org.academy.api.client.render.vfxgraph.model.VfxBlock
-import org.academy.api.client.render.vfxgraph.model.VfxContext
 import org.academy.api.client.render.vfxgraph.model.VfxContextType
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge
-import org.academy.api.client.render.vfxgraph.model.VfxSystem
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators
 import org.academy.desktop.grapheditor.canvas.GraphEditorModel
 import org.academy.desktop.grapheditor.canvas.GraphEditorModelRef
 import org.academy.desktop.grapheditor.container.VfxContainerModel

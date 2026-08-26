@@ -10,11 +10,7 @@ import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.gui.state.bindProgress
 import org.academy.api.client.gui.state.bindText
 import org.academy.api.client.gui.state.bindVisible
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.ProgressBarWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.api.client.gui.widget.*
 import java.nio.file.Files
 import java.nio.file.Path
 
