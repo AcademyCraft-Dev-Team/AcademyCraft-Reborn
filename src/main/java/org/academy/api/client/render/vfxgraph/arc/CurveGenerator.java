@@ -13,7 +13,9 @@ import java.util.Random;
  * 建管时按 segment 分 run 避免分支被缝成一根管）。</p>
  */
 public final class CurveGenerator {
-    /** 递归位移深度：控制锯齿细化层数。 */
+    /**
+     * 递归位移深度：控制锯齿细化层数。
+     */
     private static final int JAGGED_DEPTH = 4;
 
     private CurveGenerator() {
@@ -86,7 +88,16 @@ public final class CurveGenerator {
         float dot = refAxis[0] * nx + refAxis[1] * ny + refAxis[2] * nz;
         float t1x = refAxis[0] - dot * nx, t1y = refAxis[1] - dot * ny, t1z = refAxis[2] - dot * nz;
         float t1l = (float) Math.sqrt(t1x * t1x + t1y * t1y + t1z * t1z);
-        if (t1l < 1e-6f) { t1x = 1; t1y = 0; t1z = 0; t1l = 1; } else { t1x /= t1l; t1y /= t1l; t1z /= t1l; }
+        if (t1l < 1e-6f) {
+            t1x = 1;
+            t1y = 0;
+            t1z = 0;
+            t1l = 1;
+        } else {
+            t1x /= t1l;
+            t1y /= t1l;
+            t1z /= t1l;
+        }
         // 绕法线旋转 az：t1 旋转
         float c = (float) Math.cos(az), s = (float) Math.sin(az);
         float rx = t1x * c + (ny * t1z - nz * t1y) * s;
@@ -108,18 +119,6 @@ public final class CurveGenerator {
         sampleSurfaceArch(arc);
     }
 
-    /**
-     * 按当前 age 重采样弧拱（M30 复刻 Blender 每帧 Set Handle Positions + Resample）。
-     *
-     * <p>基线沿切平面方向 dx/dy/dz 从 {@code -half} 到 {@code +half} 展开（平躺表面），
-     * 两个控制柄沿法线方向各上推 {@code growth × randomScale × height × curve}（Blender 两个
-     * Set Handle Positions 都用同一 Offset），形成帐篷拱；重采样 cubic Bezier 到 segments 点。</p>
-     *
-     * <p>管半径剖面随 spline 与 age 变化（Blender FloatCurve.002 / .005）：端粗中细 +
-     * 随 age 衰减，存入每点 width 供 CurveToMeshBuilder 使用。</p>
-     *
-     * @param arc 目标弧线（读取 {@link ArcCurve#archBase()} 系列 + age/lifetime）
-     */
     public static void sampleSurfaceArch(ArcCurve arc) {
         float lifetime = Math.max(1e-3f, arc.lifetime());
         float ageFrac = Math.max(0f, Math.min(1f, arc.age() / lifetime));
@@ -174,7 +173,9 @@ public final class CurveGenerator {
         }
     }
 
-    /** M30：逐点噪声随机乘数（Blender Random Value.002[0.4..2.2]，ID 驱动 → 确定性）。 */
+    /**
+     * M30：逐点噪声随机乘数（Blender Random Value.002[0.4..2.2]，ID 驱动 → 确定性）。
+     */
     private static float paRandom(long seed, int i) {
         long h = seed * 0x9E3779B97F4A7C15L + i * 0xBF58476D1CE4E5B9L;
         h = (h ^ (h >>> 30)) * 0xBF58476D1CE4E5B9L;
@@ -183,7 +184,7 @@ public final class CurveGenerator {
         return 0.4f + 1.8f * ((h & 0xFFFFFFFFL) / (float) 0xFFFFFFFFL);
     }
 
-/**
+    /**
      * 生成一条**接触闪电弧**（M30 复刻 Blender 主组第二套系统）：
      * 从表面点 P 到接触表面最近点 N 的**直线弧**（无 Bezier 起拱），仅末端（N）吸附接触面。
      *
@@ -195,14 +196,14 @@ public final class CurveGenerator {
      * {@link #sampleSurfaceArch} 生成直线而非帐篷拱；{@code flatRadius} 使半径仅随 age 衰减
      * （Blender FloatCurve.009）；{@code pinStart} 使端点吸附只作用于末端 N（Blender End Size=1）。</p>
      *
-     * @param arc       目标弧线
-     * @param px,py,pz  表面附着点（起点，固定在表面）
+     * @param arc                           目标弧线
+     * @param px,py,pz                      表面附着点（起点，固定在表面）
      * @param contactNx,contactNy,contactNz 接触表面最近点（末端，吸附接触面）
-     * @param radius    管半径基准（Blender Curve Circle r=0.01 × 接触闪电半径 0.8）
-     * @param segments  重采样点数（Blender Resample Count=12）
-     * @param r,g,b,a   颜色
-     * @param lifetime  生命周期（接触闪电 6 帧）
-     * @param seed      随机种子
+     * @param radius                        管半径基准（Blender Curve Circle r=0.01 × 接触闪电半径 0.8）
+     * @param segments                      重采样点数（Blender Resample Count=12）
+     * @param r,g,b,a                       颜色
+     * @param lifetime                      生命周期（接触闪电 6 帧）
+     * @param seed                          随机种子
      */
     public static void generateContactArc(ArcCurve arc,
                                           float px, float py, float pz,
@@ -295,12 +296,28 @@ public final class CurveGenerator {
         float tx = dx / chordLen, ty = dy / chordLen, tz = dz / chordLen;
         // 找与切线不共线的参考轴
         float rx, ry, rz;
-        if (Math.abs(ty) < 0.9f) { rx = 0; ry = 1; rz = 0; } else { rx = 1; ry = 0; rz = 0; }
+        if (Math.abs(ty) < 0.9f) {
+            rx = 0;
+            ry = 1;
+            rz = 0;
+        } else {
+            rx = 1;
+            ry = 0;
+            rz = 0;
+        }
         // 参考轴去切向分量 → 切平面内的一根轴
         float dot = rx * tx + ry * ty + rz * tz;
         float ux = rx - dot * tx, uy = ry - dot * ty, uz = rz - dot * tz;
         float ulen = (float) Math.sqrt(ux * ux + uy * uy + uz * uz);
-        if (ulen < 1e-6f) { ux = 1; uy = 0; uz = 0; } else { ux /= ulen; uy /= ulen; uz /= ulen; }
+        if (ulen < 1e-6f) {
+            ux = 1;
+            uy = 0;
+            uz = 0;
+        } else {
+            ux /= ulen;
+            uy /= ulen;
+            uz /= ulen;
+        }
 
         // 递归中点位移生成锯齿点列
         var pts = new ArrayList<float[]>();
@@ -328,7 +345,9 @@ public final class CurveGenerator {
         }
     }
 
-    /** 递归中点位移：把 from→to 的线段在中点沿垂直方向随机偏移，深度递减。 */
+    /**
+     * 递归中点位移：把 from→to 的线段在中点沿垂直方向随机偏移，深度递减。
+     */
     private static void midpointDisplace(List<float[]> pts,
                                          float ax, float ay, float az,
                                          float bx, float by, float bz,
@@ -345,22 +364,32 @@ public final class CurveGenerator {
         float py = uy * (float) Math.cos(ang) + ny * 0.3f;
         float pz = uz * (float) Math.cos(ang) + nz * 0.3f;
         float plen = (float) Math.sqrt(px * px + py * py + pz * pz);
-        if (plen < 1e-6f) { px = ux; py = uy; pz = uz; } else { px /= plen; py /= plen; pz /= plen; }
+        if (plen < 1e-6f) {
+            px = ux;
+            py = uy;
+            pz = uz;
+        } else {
+            px /= plen;
+            py /= plen;
+            pz /= plen;
+        }
         float ox = mx + px * amp, oy = my + py * amp, oz = mz + pz * amp;
         midpointDisplace(pts, ax, ay, az, ox, oy, oz, ux, uy, uz, nx, ny, nz, chordLen, depth + 1, random);
         pts.add(new float[]{ox, oy, oz});
         midpointDisplace(pts, ox, oy, oz, bx, by, bz, ux, uy, uz, nx, ny, nz, chordLen, depth + 1, random);
     }
 
-    /** 沿点列按弧长参数 t 取点（简单折线线性插值）。 */
+    /**
+     * 沿点列按弧长参数 t 取点（简单折线线性插值）。
+     */
     private static float[] sampleAlong(List<float[]> pts, float t) {
         float total = 0f;
         float[] segLen = new float[Math.max(1, pts.size() - 1)];
         for (int i = 0; i < pts.size() - 1; i++) {
             float d = (float) Math.sqrt(
                     Math.pow(pts.get(i + 1)[0] - pts.get(i)[0], 2)
-                    + Math.pow(pts.get(i + 1)[1] - pts.get(i)[1], 2)
-                    + Math.pow(pts.get(i + 1)[2] - pts.get(i)[2], 2));
+                            + Math.pow(pts.get(i + 1)[1] - pts.get(i)[1], 2)
+                            + Math.pow(pts.get(i + 1)[2] - pts.get(i)[2], 2));
             segLen[i] = d;
             total += d;
         }
@@ -426,7 +455,15 @@ public final class CurveGenerator {
             float ty = arc.y(next) - arc.y(prev);
             float tz = arc.z(next) - arc.z(prev);
             float tlen = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
-            if (tlen < 1e-6f) { tx = 0; ty = 1; tz = 0; } else { tx /= tlen; ty /= tlen; tz /= tlen; }
+            if (tlen < 1e-6f) {
+                tx = 0;
+                ty = 1;
+                tz = 0;
+            } else {
+                tx /= tlen;
+                ty /= tlen;
+                tz /= tlen;
+            }
 
             float[] branchDir = SurfaceDistributor.tangentDirection(tx, ty, tz, branchAngle, random);
             float branchNx = branchDir[0], branchNy = branchDir[1], branchNz = branchDir[2];
