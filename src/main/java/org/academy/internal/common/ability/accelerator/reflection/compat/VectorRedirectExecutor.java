@@ -90,7 +90,7 @@ public final class VectorRedirectExecutor {
     public static int executeDamageFallback(VectorRedirectPlan plan) {
         if (!plan.kind().dealsRedirectedEntityDamage()) return 0;
         var target = plan.attack().attribution().originalAttacker();
-        LivingEntity living = target instanceof LivingEntity candidate && candidate.isAlive()
+        var living = target instanceof LivingEntity candidate && candidate.isAlive()
                 ? candidate
                 : null;
         if (living == null) {

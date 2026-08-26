@@ -1321,7 +1321,7 @@ public final class PrecisionOperationRuntime {
             return new ControlDestination.Position(
                     entity.level().dimension().identifier(), entity.position());
         }
-        if (value instanceof ProgramWorldPosition(Identifier dimension, double x, double y, double z)) {
+        if (value instanceof ProgramWorldPosition(var dimension, var x, var y, var z)) {
             return new ControlDestination.Position(
                     dimension, new Vec3(x, y, z));
         }
@@ -1339,10 +1339,10 @@ public final class PrecisionOperationRuntime {
             requireUsable(entity);
             return new ResolvedPosition(entity.level().dimension().identifier(), entity.position());
         }
-        if (value instanceof ControlDestination.Position(Identifier dimension1, Vec3 value1)) {
+        if (value instanceof ControlDestination.Position(var dimension1, var value1)) {
             return new ResolvedPosition(dimension1, value1);
         }
-        if (value instanceof ProgramWorldPosition(Identifier dimension, double x, double y, double z)) {
+        if (value instanceof ProgramWorldPosition(var dimension, var x, var y, var z)) {
             return new ResolvedPosition(
                     dimension, new Vec3(x, y, z));
         }
@@ -1351,7 +1351,7 @@ public final class PrecisionOperationRuntime {
             return new ResolvedPosition(
                     center.dimension(), new Vec3(center.x(), center.y(), center.z()));
         }
-        if (value instanceof ControlDestination.Entity(UUID uuid)) {
+        if (value instanceof ControlDestination.Entity(var uuid)) {
             Entity target = null;
             for (var level : player.level().getServer().getAllLevels()) {
                 target = level.getEntity(uuid);
@@ -1370,7 +1370,7 @@ public final class PrecisionOperationRuntime {
     }
 
     private static Vec3 requireDirection(Object value) {
-        if (value instanceof ProgramDirection(double x, double y, double z)) {
+        if (value instanceof ProgramDirection(var x, var y, var z)) {
             return new Vec3(x, y, z);
         }
         if (!(value instanceof Vec3 direction) || direction.lengthSqr() <= 1.0e-8
@@ -1500,7 +1500,7 @@ public final class PrecisionOperationRuntime {
             List<LivingEntity> subjects,
             ControlDestination destination
     ) {
-        if (!(destination instanceof ControlDestination.Entity(UUID uuid))) return subjects;
+        if (!(destination instanceof ControlDestination.Entity(var uuid))) return subjects;
         return subjects.stream().filter(subject -> !subject.getUUID().equals(uuid)).toList();
     }
 
@@ -2023,7 +2023,7 @@ public final class PrecisionOperationRuntime {
         private Set<UUID> dependencyIds() {
             var result = new HashSet<UUID>();
             if (entity != null) result.add(entity.getUUID());
-            if (destination instanceof ControlDestination.Entity(UUID uuid)) result.add(uuid);
+            if (destination instanceof ControlDestination.Entity(var uuid)) result.add(uuid);
             return Set.copyOf(result);
         }
     }

@@ -20,8 +20,8 @@ public final class DiscShape implements EmitterShape {
 
     @Override
     public void sample(Random random, float[] out) {
-        float angle = random.nextFloat() * 2f * (float) Math.PI;
-        float r = (float) Math.sqrt(random.nextFloat()) * radius;
+        var angle = random.nextFloat() * 2f * (float) Math.PI;
+        var r = (float) Math.sqrt(random.nextFloat()) * radius;
         out[0] = cx + (float) Math.cos(angle) * r;
         out[1] = cy;
         out[2] = cz + (float) Math.sin(angle) * r;

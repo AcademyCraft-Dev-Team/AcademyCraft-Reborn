@@ -178,7 +178,7 @@ public final class JsonVfxGraphCodec implements VfxGraphCodec {
             return List.of();
         }
         var ports = new ArrayList<Port>(type.ports().size());
-        for (PortSpec spec : type.ports()) {
+        for (var spec : type.ports()) {
             ports.add(new Port(spec.id(), spec.name(), spec.direction(), spec.type(), spec.defaultValue()));
         }
         return ports;
@@ -207,7 +207,7 @@ public final class JsonVfxGraphCodec implements VfxGraphCodec {
 
     private static List<GraphParameter> decodeParameters(JsonArray arr) {
         var out = new ArrayList<GraphParameter>();
-        for (JsonElement el : arr) {
+        for (var el : arr) {
             var o = el.getAsJsonObject();
             Optional<GraphParameter.Range> range = Optional.empty();
             if (o.has("min") && o.has("max")) {

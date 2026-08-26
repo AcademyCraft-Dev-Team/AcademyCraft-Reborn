@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 class ArcSimulatorTest {
 
     private static float[] unitCube() {
-        float[] tris = new float[12 * 9];
-        int t = 0;
+        var tris = new float[12 * 9];
+        var t = 0;
         t = tri(tris, t, 1, -1, -1, 1, -1, 1, 1, 1, 1);
         t = tri(tris, t, 1, 1, 1, 1, 1, -1, 1, -1, -1);
         t = tri(tris, t, -1, -1, 1, -1, -1, -1, -1, 1, -1);
@@ -47,7 +47,7 @@ class ArcSimulatorTest {
         arc.setAge(0f);
         arc.setColor(1, 1, 1, 1);
         // Add some points
-        for (int i = 0; i < 12; i++) {
+        for (var i = 0; i < 12; i++) {
             arc.addPoint(i * 0.1f, 0, 0, 0.01f, 0);
         }
 
@@ -73,11 +73,11 @@ class ArcSimulatorTest {
         arc.setLifetime(10f);
         arc.setAge(0f);
         arc.setColor(1, 1, 1, 1);
-        for (int i = 0; i < 12; i++) {
+        for (var i = 0; i < 12; i++) {
             arc.addPoint(0, i * 0.1f, 0, 0.01f, 0);
         }
 
-        float origX3 = arc.x(3);
+        var origX3 = arc.x(3);
 
         var dist = new SurfaceDistributor(unitCube());
         var sim = new ArcSimulator(buf, dist);

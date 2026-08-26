@@ -27,7 +27,7 @@ public final class SubGraphFlattener {
     }
 
     public static Graph flatten(Graph graph, SubGraphRegistry registry) {
-        boolean hasSub = graph.nodes().stream().anyMatch(n -> "subgraph".equals(n.type()));
+        var hasSub = graph.nodes().stream().anyMatch(n -> "subgraph".equals(n.type()));
         if (!hasSub || registry == null) return graph;
 
         var newNodes = new ArrayList<GraphNode>();
@@ -66,7 +66,7 @@ public final class SubGraphFlattener {
 
         // 参数 -> 父图源（被覆盖的参数）
         Map<String, Edge.PortRef> paramOverride = new HashMap<>();
-        for (int i = 0; i < sub.parameters().size(); i++) {
+        for (var i = 0; i < sub.parameters().size(); i++) {
             var pe = inEdges.get("in" + i);
             if (pe != null) paramOverride.put(sub.parameters().get(i).id(), pe.from());
         }

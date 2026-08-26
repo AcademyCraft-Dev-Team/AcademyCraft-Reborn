@@ -377,7 +377,7 @@ public final class VfxGraphRenderer {
                        List<SurfaceMesh> surfaces) {
         var device = RenderSystem.getDevice();
         var count = buffer.count();
-        boolean hasSurfaces = surfaces != null && !surfaces.isEmpty();
+        var hasSurfaces = surfaces != null && !surfaces.isEmpty();
 
         if (count == 0 && (arcBuffer == null || arcBuffer.count() == 0) && !hasSurfaces) {
             if (clear) clearTarget(device, target, depth);
@@ -390,10 +390,10 @@ public final class VfxGraphRenderer {
         // 清屏时先清深度到远平面 0.0（反向 Z），再拷贝，保证编辑器视口采样到"无遮挡"。
         // Iris shader pack 下主目标深度不是场景深度（世界深度在 Iris 内部 gbuffer），
         // 采样它会使 depthDiff<0 → 粒子被 discard/alpha 灭掉（不可见），改用 farView（0.0）兜底。
-        boolean preClearedDepth = false;
+        var preClearedDepth = false;
         // soft particles（仅 quad 系）：任一输出规格为 quad（billboard）才拷深度；Iris shader pack 下退回 farView。
-        boolean anyBillboard = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.QUAD);
-        boolean useSceneDepth = anyBillboard && sceneDepthUsable(IrisIntegration.isShaderPackInUse(), RenderSpec.Geometry.QUAD);
+        var anyBillboard = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.QUAD);
+        var useSceneDepth = anyBillboard && sceneDepthUsable(IrisIntegration.isShaderPackInUse(), RenderSpec.Geometry.QUAD);
         if (useSceneDepth && depth != null) {
             if (clear) {
                 encoder.clearDepthTexture(depth.texture(), 0.0);
@@ -413,7 +413,7 @@ public final class VfxGraphRenderer {
             }
             // 电弧无 layer 语义：整批电弧只画一次（首个 ARC 规格），避免多 ARC 输出重复叠加过曝。
             // bloom 输入（bloomPass=true）只画 GLOW 规格，同样只画一次。
-            boolean arcsDrawn = false;
+            var arcsDrawn = false;
             for (var spec : specs) {
                 if (bloomPass && !spec.feedsBloom()) continue;
                 switch (spec.geometry()) {
@@ -441,21 +441,21 @@ public final class VfxGraphRenderer {
      * 返回 {rgb 乘数, alpha 乘数}，烘焙进管顶点色（UBO emission 仍由图数据 {@code output_arc} 驱动）。
      */
     private static float[] arcLight(ArcCurve arc) {
-        float lifetime = Math.max(1e-3f, arc.lifetime());
-        float ageFrac = Math.max(0f, Math.min(1f, arc.age() / lifetime));
+        var lifetime = Math.max(1e-3f, arc.lifetime());
+        var ageFrac = Math.max(0f, Math.min(1f, arc.age() / lifetime));
         // 粒子火花（Blender PLight = FloatCurve.003(生命系数)×粒子亮度 ×6）：随生命衰减熄灭
         if (arc.sparkVelocity() != null) {
-            float f = BlenderArcCurves.sample(
+            var f = BlenderArcCurves.sample(
                     BlenderArcCurves.PARTICLE_LIFE, ageFrac);
             return new float[]{f, 1f};
         }
         if (arc.flatRadius()) {
-            float f = BlenderArcCurves.sample(
+            var f = BlenderArcCurves.sample(
                     BlenderArcCurves.CONTACT_RADIUS_AGE, ageFrac);
             return new float[]{f, 1f};
         }
         if (arc.hasArchBase()) {
-            float f = BlenderArcCurves.sample(
+            var f = BlenderArcCurves.sample(
                     BlenderArcCurves.LIGHT, ageFrac) + 0.33f;
             return new float[]{f, 1f};
         }
@@ -477,16 +477,16 @@ public final class VfxGraphRenderer {
         var device = RenderSystem.getDevice();
 
         // 收集所有弧线的管网格数据
-        int totalVerts = 0;
-        int totalIndices = 0;
+        var totalVerts = 0;
+        var totalIndices = 0;
         var meshDataList = new ArrayList<CurveToMeshBuilder.MeshData>();
 
-        for (int a = 0; a < arcBuffer.count(); a++) {
+        for (var a = 0; a < arcBuffer.count(); a++) {
             var arc = arcBuffer.arc(a);
-            int segRes = Math.max(3, Math.min(16, arcRender.segments()));
+            var segRes = Math.max(3, Math.min(16, arcRender.segments()));
             // M30 age 亮度闪烁（Blender 材质 Emission）：表面弧 Light = FloatCurve.004(age)×亮度+0.33×亮度；
             // 接触弧 TLight = FloatCurve.009(生命系数)。烘焙进顶点色（UBO emission 保持图数据驱动）。
-            float[] light = arcLight(arc);
+            var light = arcLight(arc);
             var meshData = CurveToMeshBuilder.build(
                     arc, segRes,
                     arc.r() * light[0], arc.g() * light[0], arc.b() * light[0], arc.a() * light[1],
@@ -501,8 +501,8 @@ public final class VfxGraphRenderer {
         if (totalVerts == 0) return;
 
         // 确保缓冲区足够大
-        long vertexBytes = (long) totalVerts * ARC_TUBE_FORMAT.getVertexSize();
-        long indexBytes = (long) totalIndices * 4;
+        var vertexBytes = (long) totalVerts * ARC_TUBE_FORMAT.getVertexSize();
+        var indexBytes = (long) totalIndices * 4;
         if (vertexBytes > arcTubeVertexBuffer.size()) {
             growArc2TubeBuffer(totalVerts);
         }
@@ -513,15 +513,15 @@ public final class VfxGraphRenderer {
         // 合并所有网格数据到单个顶点/索引缓冲
         var vertexData = BufferUtils.createByteBuffer(Math.toIntExact(vertexBytes));
         var indexData = BufferUtils.createByteBuffer(Math.toIntExact(indexBytes));
-        int vertexOffset = 0;
-        int indexOffset = 0;
+        var vertexOffset = 0;
+        var indexOffset = 0;
         for (var meshData : meshDataList) {
             // 顶点数据：直接拷贝（已经是 Position+Normal+UV+Color 格式）
             var srcVert = meshData.vertexBuffer().duplicate();
             vertexData.put(srcVert);
             // 索引数据：偏移后拷贝
             var srcIndices = meshData.indices();
-            for (int i = 0; i < srcIndices.length; i++) {
+            for (var i = 0; i < srcIndices.length; i++) {
                 indexData.putInt(srcIndices[i] + vertexOffset);
             }
             vertexOffset += meshData.vertexCount();
@@ -560,13 +560,13 @@ public final class VfxGraphRenderer {
      */
     static void transformArcTubeVertices(ByteBuffer vertexData, int vertexCount,
                                          Vector3f camPos, WorldTransform transform, float overallScale) {
-        boolean identity = transform.isIdentity();
-        float[] s = new float[3];
-        for (int v = 0; v < vertexCount; v++) {
-            int base = v * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
-            float x = vertexData.getFloat(base);
-            float y = vertexData.getFloat(base + 4);
-            float z = vertexData.getFloat(base + 8);
+        var identity = transform.isIdentity();
+        var s = new float[3];
+        for (var v = 0; v < vertexCount; v++) {
+            var base = v * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
+            var x = vertexData.getFloat(base);
+            var y = vertexData.getFloat(base + 4);
+            var z = vertexData.getFloat(base + 8);
             if (overallScale != 1f) {
                 x *= overallScale;
                 y *= overallScale;
@@ -582,11 +582,11 @@ public final class VfxGraphRenderer {
             vertexData.putFloat(base + 4, y - camPos.y);
             vertexData.putFloat(base + 8, z - camPos.z);
             if (!identity) {
-                float nx = vertexData.getFloat(base + 12);
-                float ny = vertexData.getFloat(base + 16);
-                float nz = vertexData.getFloat(base + 20);
+                var nx = vertexData.getFloat(base + 12);
+                var ny = vertexData.getFloat(base + 16);
+                var nz = vertexData.getFloat(base + 20);
                 transform.applyDirection(nx, ny, nz, s);
-                float len = (float) Math.sqrt(s[0] * s[0] + s[1] * s[1] + s[2] * s[2]);
+                var len = (float) Math.sqrt(s[0] * s[0] + s[1] * s[1] + s[2] * s[2]);
                 if (len > 1e-6f) {
                     vertexData.putFloat(base + 12, s[0] / len);
                     vertexData.putFloat(base + 16, s[1] / len);
@@ -631,8 +631,8 @@ public final class VfxGraphRenderer {
     ) {
         var count = buffer.count();
         // 只写该 spec 负责的层（layer 过滤，数据驱动）：分层外观由图上多输出节点表达，无 fire/smoke 硬编码。
-        int matched = 0;
-        for (int i = 0; i < count; i++) {
+        var matched = 0;
+        for (var i = 0; i < count; i++) {
             if (spec.matchesLayer(buffer.layer(i))) matched++;
         }
         if (matched == 0) return;
@@ -647,7 +647,7 @@ public final class VfxGraphRenderer {
         var camPos = camera.position();
         var identity = transform.isIdentity();
         instanceData.clear();
-        for (int i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
             writeInstance(buffer, i, camPos, identity, transform, instanceData);
         }
@@ -656,7 +656,7 @@ public final class VfxGraphRenderer {
 
         var depthView = sceneDepthUsable(IrisIntegration.isShaderPackInUse(), spec.geometry())
                 && sceneDepth.view() != null ? sceneDepth.view() : farView;
-        boolean billboard = spec.geometry() == RenderSpec.Geometry.QUAD;
+        var billboard = spec.geometry() == RenderSpec.Geometry.QUAD;
         drawInstancedPass(pass, pipelineFor(spec), shapeBuffer, cameraUbo.slice(),
                 instanceBuffer.slice(0, bytes), matched, billboard, depthView);
     }
@@ -680,9 +680,9 @@ public final class VfxGraphRenderer {
     }
 
     private void writeInstance(ParticleBuffer buffer, int i, Vector3f camPos, boolean identity, WorldTransform transform, ByteBuffer out) {
-        float px = buffer.positionX(i);
-        float py = buffer.positionY(i);
-        float pz = buffer.positionZ(i);
+        var px = buffer.positionX(i);
+        var py = buffer.positionY(i);
+        var pz = buffer.positionZ(i);
         if (!identity) {
             transform.apply(px, py, pz, worldScratch);
             px = worldScratch[0];
@@ -692,9 +692,9 @@ public final class VfxGraphRenderer {
         out.putFloat(px - camPos.x);
         out.putFloat(py - camPos.y);
         out.putFloat(pz - camPos.z);
-        float vx = buffer.velocityX(i);
-        float vy = buffer.velocityY(i);
-        float vz = buffer.velocityZ(i);
+        var vx = buffer.velocityX(i);
+        var vy = buffer.velocityY(i);
+        var vz = buffer.velocityZ(i);
         if (!identity) {
             transform.applyDirection(vx, vy, vz, worldScratch);
             vx = worldScratch[0];
@@ -711,7 +711,7 @@ public final class VfxGraphRenderer {
         out.putFloat(buffer.alpha(i));
         out.putFloat(buffer.rotation(i));
         out.putFloat(buffer.seed(i));
-        float life = buffer.lifetime(i);
+        var life = buffer.lifetime(i);
         out.putFloat(life > 0f ? Math.min(1f, buffer.age(i) / life) : 0f);
     }
 
@@ -720,7 +720,7 @@ public final class VfxGraphRenderer {
             ParticleBuffer buffer, GraphCamera camera, RenderSpec spec, PrimitiveTopology primitive,
             WorldTransform transform
     ) {
-        boolean line = spec.geometry() == RenderSpec.Geometry.LINE;
+        var line = spec.geometry() == RenderSpec.Geometry.LINE;
         var vertexCount = line
                 ? countLineVertices(buffer)
                 : countRibbonVertices(buffer);
@@ -752,18 +752,18 @@ public final class VfxGraphRenderer {
     }
 
     private static int countLineVertices(ParticleBuffer buffer) {
-        int total = 0;
-        for (int i = 0; i < buffer.count(); i++) {
-            int size = buffer.trailSize(i);
+        var total = 0;
+        for (var i = 0; i < buffer.count(); i++) {
+            var size = buffer.trailSize(i);
             if (size >= 2) total += (size - 1) * 2;
         }
         return total;
     }
 
     private static int countRibbonVertices(ParticleBuffer buffer) {
-        int total = 0;
-        for (int i = 0; i < buffer.count(); i++) {
-            int size = buffer.trailSize(i);
+        var total = 0;
+        for (var i = 0; i < buffer.count(); i++) {
+            var size = buffer.trailSize(i);
             if (size >= 2) total += (size - 1) * 4;
         }
         return total;
@@ -772,15 +772,15 @@ public final class VfxGraphRenderer {
     private void buildLineVertices(ParticleBuffer buffer, GraphCamera camera, ByteBuffer out, WorldTransform transform) {
         var camPos = camera.position();
         var identity = transform.isIdentity();
-        for (int i = 0; i < buffer.count(); i++) {
-            int size = buffer.trailSize(i);
-            for (int k = 0; k < size - 1; k++) {
-                float ax = buffer.trailX(i, k);
-                float ay = buffer.trailY(i, k);
-                float az = buffer.trailZ(i, k);
-                float bx = buffer.trailX(i, k + 1);
-                float by = buffer.trailY(i, k + 1);
-                float bz = buffer.trailZ(i, k + 1);
+        for (var i = 0; i < buffer.count(); i++) {
+            var size = buffer.trailSize(i);
+            for (var k = 0; k < size - 1; k++) {
+                var ax = buffer.trailX(i, k);
+                var ay = buffer.trailY(i, k);
+                var az = buffer.trailZ(i, k);
+                var bx = buffer.trailX(i, k + 1);
+                var by = buffer.trailY(i, k + 1);
+                var bz = buffer.trailZ(i, k + 1);
                 if (!identity) {
                     transform.apply(ax, ay, az, worldScratch);
                     ax = worldScratch[0];
@@ -803,19 +803,19 @@ public final class VfxGraphRenderer {
         var camPos = camera.position();
         var identity = transform.isIdentity();
         var view = camera.viewRotation();
-        float rx = view.m00();
-        float ry = view.m01();
-        float rz = view.m02();
-        for (int i = 0; i < buffer.count(); i++) {
-            int size = buffer.trailSize(i);
-            float half = buffer.size(i) * 0.5f;
-            for (int k = 0; k < size - 1; k++) {
-                float ax = buffer.trailX(i, k);
-                float ay = buffer.trailY(i, k);
-                float az = buffer.trailZ(i, k);
-                float bx = buffer.trailX(i, k + 1);
-                float by = buffer.trailY(i, k + 1);
-                float bz = buffer.trailZ(i, k + 1);
+        var rx = view.m00();
+        var ry = view.m01();
+        var rz = view.m02();
+        for (var i = 0; i < buffer.count(); i++) {
+            var size = buffer.trailSize(i);
+            var half = buffer.size(i) * 0.5f;
+            for (var k = 0; k < size - 1; k++) {
+                var ax = buffer.trailX(i, k);
+                var ay = buffer.trailY(i, k);
+                var az = buffer.trailZ(i, k);
+                var bx = buffer.trailX(i, k + 1);
+                var by = buffer.trailY(i, k + 1);
+                var bz = buffer.trailZ(i, k + 1);
                 if (!identity) {
                     transform.apply(ax, ay, az, worldScratch);
                     ax = worldScratch[0];
@@ -913,7 +913,7 @@ public final class VfxGraphRenderer {
      * （视图纯旋转，平移写进顶点，同电弧/粒子），半透明材质色，TRIANGLES 绘制。
      */
     private void drawSurfaces(RenderPass pass, List<SurfaceMesh> surfaces, GraphCamera camera) {
-        int totalVerts = 0;
+        var totalVerts = 0;
         for (var sm : surfaces) {
             totalVerts += sm.triangles().length / 3;
         }
@@ -929,8 +929,8 @@ public final class VfxGraphRenderer {
         var camPos = camera.position();
         surfaceData.clear();
         for (var sm : surfaces) {
-            float[] tris = sm.triangles();
-            for (int i = 0; i + 2 < tris.length; i += 3) {
+            var tris = sm.triangles();
+            for (var i = 0; i + 2 < tris.length; i += 3) {
                 putVertex(surfaceData, tris[i] - camPos.x, tris[i + 1] - camPos.y, tris[i + 2] - camPos.z,
                         sm.r(), sm.g(), sm.b(), sm.a());
             }
@@ -966,20 +966,20 @@ public final class VfxGraphRenderer {
         var rng = new Random(0xC0FFEEL);
         var grid = new float[size + 1][size + 1];
         for (var row : grid) {
-            for (int x = 0; x <= size; x++) {
+            for (var x = 0; x <= size; x++) {
                 row[x] = rng.nextFloat();
             }
         }
         var data = new float[size * size];
-        float min = Float.MAX_VALUE;
-        float max = -Float.MAX_VALUE;
-        for (int y = 0; y < size; y++) {
-            for (int x = 0; x < size; x++) {
-                float sum = 0f;
-                float amp = 0.5f;
+        var min = Float.MAX_VALUE;
+        var max = -Float.MAX_VALUE;
+        for (var y = 0; y < size; y++) {
+            for (var x = 0; x < size; x++) {
+                var sum = 0f;
+                var amp = 0.5f;
                 // 3 octaves（freq 1/2/4）：去掉最细 octave（32px 特征），避免小尺度采样混叠成边缘锯齿
-                for (int o = 0; o < 3; o++) {
-                    float freq = (float) (1 << o);
+                for (var o = 0; o < 3; o++) {
+                    var freq = (float) (1 << o);
                     sum += amp * valueNoise(x * freq, y * freq, size, grid);
                     amp *= 0.5f;
                 }
@@ -989,10 +989,10 @@ public final class VfxGraphRenderer {
             }
         }
         var out = BufferUtils.createByteBuffer(size * size * 4);
-        float range = Math.max(max - min, 1e-6f);
-        for (float value : data) {
-            int b = (int) ((value - min) / range * 255f);
-            byte channel = (byte) b;
+        var range = Math.max(max - min, 1e-6f);
+        for (var value : data) {
+            var b = (int) ((value - min) / range * 255f);
+            var channel = (byte) b;
             out.put(channel).put(channel).put(channel).put((byte) 255);
         }
         out.flip();
@@ -1003,18 +1003,18 @@ public final class VfxGraphRenderer {
      * 周期 = size 的双线性 value noise（可平铺）。
      */
     private static float valueNoise(float x, float y, int size, float[][] grid) {
-        int xi = Math.floorMod((int) Math.floor(x), size);
-        int yi = Math.floorMod((int) Math.floor(y), size);
-        float xf = x - (float) Math.floor(x);
-        float yf = y - (float) Math.floor(y);
-        int x1 = (xi + 1) % size;
-        int y1 = (yi + 1) % size;
-        float a = grid[yi][xi];
-        float b = grid[yi][x1];
-        float c = grid[y1][xi];
-        float d = grid[y1][x1];
-        float u = xf * xf * (3f - 2f * xf);
-        float v = yf * yf * (3f - 2f * yf);
+        var xi = Math.floorMod((int) Math.floor(x), size);
+        var yi = Math.floorMod((int) Math.floor(y), size);
+        var xf = x - (float) Math.floor(x);
+        var yf = y - (float) Math.floor(y);
+        var x1 = (xi + 1) % size;
+        var y1 = (yi + 1) % size;
+        var a = grid[yi][xi];
+        var b = grid[yi][x1];
+        var c = grid[y1][xi];
+        var d = grid[y1][x1];
+        var u = xf * xf * (3f - 2f * xf);
+        var v = yf * yf * (3f - 2f * yf);
         return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
     }
 

@@ -23,13 +23,13 @@ public record UniformLayout(List<Entry> entries, List<SamplerBinding> samplers, 
     public UniformLayout(List<GraphParameter> parameters, List<SamplerBinding> samplers) {
         var list = new ArrayList<Entry>();
         list.add(new Entry(GlslGenerator.TIME_MEMBER, ValueType.FLOAT, 0, 4));
-        int offset = 4;
+        var offset = 4;
         for (var p : parameters) {
             if (p.type() == ValueType.SAMPLER || p.type() == ValueType.CURVE || p.type() == ValueType.GRADIENT) {
                 continue; // 走纹理/内联函数，不进 std140
             }
-            int align = alignOf(p.type());
-            int size = sizeOf(p.type());
+            var align = alignOf(p.type());
+            var size = sizeOf(p.type());
             offset = alignUp(offset, align);
             list.add(new Entry(GlslNames.uniformName(p.id()), p.type(), offset, size));
             offset += size;

@@ -94,7 +94,7 @@ public final class ParticleBuffer {
             grow();
         }
         // Bug 修复：重置关键字段，防止 swap-remove 槽位复用时的残留数据泄漏
-        int i = count;
+        var i = count;
         lifetime[i] = 0f;
         age[i] = 0f;
         seed[i] = (float) (nextSeed++);
@@ -113,7 +113,7 @@ public final class ParticleBuffer {
      * swap-remove 删除索引 i 的粒子（末位粒子移入该槽）。
      */
     public void kill(int i) {
-        int last = --count;
+        var last = --count;
         if (i != last) {
             px[i] = px[last];
             seed[i] = seed[last];
@@ -142,7 +142,7 @@ public final class ParticleBuffer {
     }
 
     private void grow() {
-        int newCap = px.length * 2;
+        var newCap = px.length * 2;
         px = Arrays.copyOf(px, newCap);
         seed = Arrays.copyOf(seed, newCap);
         layer = Arrays.copyOf(layer, newCap);
@@ -360,8 +360,8 @@ public final class ParticleBuffer {
      * 把当前位置压入 trail（新样本在最前，k=0 最新）。
      */
     public void pushTrail(int i, float x, float y, float z) {
-        int size = Math.min(trailSize[i], TRAIL_LENGTH - 1);
-        int base = i * TRAIL_LENGTH;
+        var size = Math.min(trailSize[i], TRAIL_LENGTH - 1);
+        var base = i * TRAIL_LENGTH;
         System.arraycopy(trailX, base, trailX, base + 1, size);
         System.arraycopy(trailY, base, trailY, base + 1, size);
         System.arraycopy(trailZ, base, trailZ, base + 1, size);

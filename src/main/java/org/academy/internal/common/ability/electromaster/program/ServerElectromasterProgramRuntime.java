@@ -368,7 +368,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     }
 
     private BlockPos requireLocalBlock(Object value) {
-        if (!(value instanceof ProgramBlockPosition(net.minecraft.resources.Identifier dimension, int x, int y, int z))
+        if (!(value instanceof ProgramBlockPosition(var dimension, var x, var y, var z))
                 || !dimension.equals(targets.level().dimension().identifier())) {
             throw new IllegalArgumentException("Block target is in another dimension");
         }

@@ -26,14 +26,14 @@ class VfxFireLayerTest {
         var system = new JsonVfxGraphCodec(metadata).decode(json);
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, system.parameters());
         // 跑 1 秒：4 层 spawn，每层应有不同 vy（core≈1.2 / flame≈0.9 / ember≈1.6 / smoke≈0.45）
-        for (int f = 0; f < 60; f++) sim.step(1f / 60f);
+        for (var f = 0; f < 60; f++) sim.step(1f / 60f);
         var buf = sim.buffer();
         System.out.println("count=" + buf.count());
         // 收集每粒子 vy（经过浮力/湍流扰动，但初始 vy 应分层）
         // 验证至少存在两类明显不同的 vy 初始量级（>1.0 与 <1.0 并存）
         float minVy = Float.MAX_VALUE, maxVy = -Float.MAX_VALUE;
-        for (int i = 0; i < buf.count(); i++) {
-            float v = buf.velocityY(i);
+        for (var i = 0; i < buf.count(); i++) {
+            var v = buf.velocityY(i);
             minVy = Math.min(minVy, v);
             maxVy = Math.max(maxVy, v);
         }

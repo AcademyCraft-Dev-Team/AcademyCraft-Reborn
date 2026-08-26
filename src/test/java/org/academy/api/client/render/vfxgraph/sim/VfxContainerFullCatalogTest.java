@@ -66,7 +66,7 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.arc_bolt", "vfx.block.arc_orbit", "vfx.block.arc_surface", "vfx.block.output_arc",
                 "vfx.block.arc_contact", "vfx.block.arc_spark"
         };
-        for (String id : expected) {
+        for (var id : expected) {
             assertNotNull(blocks.find(id), "block should be registered: " + id);
         }
         assertEquals(48, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
@@ -83,7 +83,7 @@ class VfxContainerFullCatalogTest {
                 "vfx.op.add", "vfx.op.sub", "vfx.op.mul", "vfx.op.div",
                 "vfx.op.curve", "vfx.op.gradient", "vfx.op.param_curve", "vfx.op.param_gradient"
         };
-        for (String id : expected) {
+        for (var id : expected) {
             assertNotNull(ops.find(id), "operator should be registered: " + id);
         }
     }
@@ -119,18 +119,18 @@ class VfxContainerFullCatalogTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 每帧 1/60s，跑 3 秒
-        for (int i = 0; i < 180; i++) {
+        for (var i = 0; i < 180; i++) {
             sim.step(1f / 60f);
         }
         var buffer = sim.buffer();
         // 粒子在重力+反弹下应保留在地面附近且 y>=0
         assertTrue(buffer.count() > 0);
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             assertTrue(buffer.positionY(i) >= -1e-4f, "particle must stay above ground");
             assertTrue(buffer.alpha(i) >= 0f, "alpha must not go negative");
         }
         // 粒子位置在有限范围内（积分稳定，无 NaN）
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             assertTrue(Float.isFinite(buffer.positionX(i)));
             assertTrue(Float.isFinite(buffer.positionY(i)));
             assertTrue(Float.isFinite(buffer.positionZ(i)));
@@ -175,7 +175,7 @@ class VfxContainerFullCatalogTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of(curveParam, gradientParam));
         // 跑 0.5s（寿命 1s → t=0.5 → alpha≈0.5, size≈0.5）
-        for (int i = 0; i < 30; i++) {
+        for (var i = 0; i < 30; i++) {
             sim.step(1f / 60f);
         }
         var buffer = sim.buffer();
@@ -217,14 +217,14 @@ class VfxContainerFullCatalogTest {
         var arc = sim.arcBuffer().arc(0);
         assertTrue(arc.size() > 0);
         // 主弧 from=(2,3,4) to=(2,5,4)，曲线落在 from/to 之间（噪声会轻微漂移 x/z，故不精确断言 x/z）
-        for (int i = 0; i < arc.size(); i++) {
-            float dy = arc.y(i);
+        for (var i = 0; i < arc.size(); i++) {
+            var dy = arc.y(i);
             assertTrue(dy >= 2.9f && dy <= 5.6f, "arc point y out of range: " + dy);
         }
     }
 
     private int countBlocks() {
-        int n = 0;
+        var n = 0;
         for (var type : metadata.all()) {
             if (type.id().startsWith("vfx.block.")) n++;
         }

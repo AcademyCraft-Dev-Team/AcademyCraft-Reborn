@@ -16,18 +16,18 @@ class ParticleBufferPerfTest {
     @Test
     void tenThousandSpawnAndKillChurn() {
         var buffer = new ParticleBuffer(64);
-        for (int i = 0; i < 10000; i++) {
+        for (var i = 0; i < 10000; i++) {
             buffer.spawn();
         }
         assertEquals(10000, buffer.count());
         assertEquals(16384, buffer.capacity()); // 64 → 128 → ... → 16384
 
-        long start = System.nanoTime();
+        var start = System.nanoTime();
         // swap-remove 全量删除
         while (buffer.count() > 0) {
             buffer.kill(0);
         }
-        long elapsed = System.nanoTime() - start;
+        var elapsed = System.nanoTime() - start;
         System.out.println("[perf] 10k spawn + swap-remove kill: " + elapsed / 1_000_000.0 + " ms");
         assertEquals(0, buffer.count());
         assertTrue(elapsed < TEN_K_KILL_BUDGET_NS, "10k kill exceeded budget: " + elapsed + " ns");
@@ -36,8 +36,8 @@ class ParticleBufferPerfTest {
     @Test
     void trailPushWritesHistory() {
         var buffer = new ParticleBuffer(16);
-        int i = buffer.spawn();
-        for (int k = 0; k < ParticleBuffer.TRAIL_LENGTH + 2; k++) {
+        var i = buffer.spawn();
+        for (var k = 0; k < ParticleBuffer.TRAIL_LENGTH + 2; k++) {
             buffer.pushTrail(i, k, k, k);
         }
         assertEquals(ParticleBuffer.TRAIL_LENGTH, buffer.trailSize(i));

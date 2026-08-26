@@ -33,7 +33,7 @@ class ArcCurveTest {
     @Test
     void expansionDoublesCapacity() {
         var curve = new ArcCurve();
-        for (int i = 0; i < 20; i++) {
+        for (var i = 0; i < 20; i++) {
             curve.addPoint(i, i, i, 0.1f, 0);
         }
         assertEquals(20, curve.size());

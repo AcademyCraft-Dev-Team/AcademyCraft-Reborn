@@ -66,14 +66,14 @@ class ArcBufferTest {
     @Test
     void expansionDoublesCapacity() {
         var buf = new ArcBuffer();
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
             var a = buf.add();
             a.setLifetime(100f);
             a.setAge(0f);
         }
         assertEquals(10, buf.count());
         // All should still be accessible
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
             assertNotNull(buf.arc(i));
         }
     }

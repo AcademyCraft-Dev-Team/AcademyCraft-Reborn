@@ -61,10 +61,10 @@ public final class EffectBudget {
      * 发射器原点与相机距离超上限则跳过渲染。
      */
     public boolean shouldRender(Vector3f cameraPos, Vector3f effectPos) {
-        float dx = effectPos.x - cameraPos.x;
-        float dy = effectPos.y - cameraPos.y;
-        float dz = effectPos.z - cameraPos.z;
-        float dist2 = dx * dx + dy * dy + dz * dz;
+        var dx = effectPos.x - cameraPos.x;
+        var dy = effectPos.y - cameraPos.y;
+        var dz = effectPos.z - cameraPos.z;
+        var dist2 = dx * dx + dy * dy + dz * dz;
         return dist2 <= maxRenderDistance * maxRenderDistance;
     }
 

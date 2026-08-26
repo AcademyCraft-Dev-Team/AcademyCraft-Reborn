@@ -114,12 +114,12 @@ public final class BlenderArcCurves {
     public static float sample(float[][] points, float x) {
         if (points.length == 0) return 0f;
         if (x <= points[0][0]) return points[0][1];
-        int n = points.length;
+        var n = points.length;
         if (x >= points[n - 1][0]) return points[n - 1][1];
-        for (int i = 0; i < n - 1; i++) {
+        for (var i = 0; i < n - 1; i++) {
             if (x >= points[i][0] && x <= points[i + 1][0]) {
-                float span = points[i + 1][0] - points[i][0];
-                float t = span <= 1e-6f ? 0f : (x - points[i][0]) / span;
+                var span = points[i + 1][0] - points[i][0];
+                var t = span <= 1e-6f ? 0f : (x - points[i][0]) / span;
                 return points[i][1] + (points[i + 1][1] - points[i][1]) * t;
             }
         }

@@ -558,7 +558,7 @@ class PrecisionProgramExecutionBridgeTest {
 
         @Override
         public String stableKey(Object value) {
-            return value instanceof FakeEntity(String key) ? key : String.valueOf(value);
+            return value instanceof FakeEntity(var key) ? key : String.valueOf(value);
         }
 
         @Override

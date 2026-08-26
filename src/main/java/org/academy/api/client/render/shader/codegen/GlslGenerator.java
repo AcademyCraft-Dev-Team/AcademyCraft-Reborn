@@ -108,7 +108,7 @@ public final class GlslGenerator {
             }
         }
 
-        Expr color = new Expr("vec4(0.0)", ValueType.VEC4);
+        var color = new Expr("vec4(0.0)", ValueType.VEC4);
         if (!outputIds.isEmpty()) {
             var outNode = byId.get(graph.outputs().get(0));
             if (outNode != null) {

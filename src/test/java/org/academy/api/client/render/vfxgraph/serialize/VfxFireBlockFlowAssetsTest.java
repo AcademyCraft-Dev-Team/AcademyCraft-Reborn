@@ -40,11 +40,11 @@ class VfxFireBlockFlowAssetsTest {
 
         // 模拟：各层速度独立（spawn_core 1.2 / flame 0.9 / ember 1.6 / smoke 0.45）
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, system.parameters());
-        for (int i = 0; i < 120; i++) sim.step(1f / 60f);
+        for (var i = 0; i < 120; i++) sim.step(1f / 60f);
         var buf = sim.buffer();
         assertTrue(buf.count() > 0, "fire should spawn particles");
         float minVy = Float.MAX_VALUE, maxVy = -Float.MAX_VALUE;
-        for (int i = 0; i < buf.count(); i++) {
+        for (var i = 0; i < buf.count(); i++) {
             minVy = Math.min(minVy, buf.velocityY(i));
             maxVy = Math.max(maxVy, buf.velocityY(i));
         }

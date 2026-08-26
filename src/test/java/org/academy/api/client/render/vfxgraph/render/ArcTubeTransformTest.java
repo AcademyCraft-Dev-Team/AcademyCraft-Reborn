@@ -31,12 +31,12 @@ class ArcTubeTransformTest {
      * 顶点 i 的位置（读取烘焙后的 buffer）。
      */
     private static float[] pos(ByteBuffer buf, int vertex) {
-        int base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
+        var base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
         return new float[]{buf.getFloat(base), buf.getFloat(base + 4), buf.getFloat(base + 8)};
     }
 
     private static float[] normal(ByteBuffer buf, int vertex) {
-        int base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
+        var base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
         return new float[]{buf.getFloat(base + 12), buf.getFloat(base + 16), buf.getFloat(base + 20)};
     }
 
@@ -123,7 +123,7 @@ class ArcTubeTransformTest {
                 new Vector3f(), t, 1f);
         var expected = new float[3];
         t.applyDirection(beforeN[0], beforeN[1], beforeN[2], expected);
-        float len = (float) Math.sqrt(expected[0] * expected[0] + expected[1] * expected[1] + expected[2] * expected[2]);
+        var len = (float) Math.sqrt(expected[0] * expected[0] + expected[1] * expected[1] + expected[2] * expected[2]);
         expected[0] /= len;
         expected[1] /= len;
         expected[2] /= len;

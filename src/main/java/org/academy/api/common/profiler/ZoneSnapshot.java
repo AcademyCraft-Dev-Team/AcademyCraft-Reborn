@@ -34,7 +34,7 @@ public class ZoneSnapshot {
 
     public List<ZoneSlice> childrenOf(String path) {
         List<ZoneSlice> children = new ArrayList<>();
-        for (ZoneSlice slice : slices.values()) {
+        for (var slice : slices.values()) {
             if (isDirectChild(path, slice.path())) {
                 children.add(slice);
             }
@@ -45,7 +45,7 @@ public class ZoneSnapshot {
 
     public List<ZoneSlice> topSlices(int limit, boolean excludeRoot) {
         List<ZoneSlice> top = new ArrayList<>();
-        for (ZoneSlice slice : slices.values()) {
+        for (var slice : slices.values()) {
             if (excludeRoot && slice.path().equals(ZoneProfiler.ROOT)) {
                 continue;
             }
@@ -56,9 +56,9 @@ public class ZoneSnapshot {
     }
 
     public double parentPercent(ZoneSlice slice) {
-        String parentPath = parentPathOf(slice.path());
-        ZoneSlice parent = slices.get(parentPath);
-        long parentTotal = parent != null ? parent.totalNs() : rootTotalNs;
+        var parentPath = parentPathOf(slice.path());
+        var parent = slices.get(parentPath);
+        var parentTotal = parent != null ? parent.totalNs() : rootTotalNs;
         return parentTotal > 0 ? slice.totalNs() * 100.0 / parentTotal : 0.0;
     }
 
@@ -66,7 +66,7 @@ public class ZoneSnapshot {
         if (path.equals(ZoneProfiler.ROOT)) {
             return ZoneProfiler.ROOT;
         }
-        int idx = path.lastIndexOf(ZoneProfiler.PATH_SEPARATOR);
+        var idx = path.lastIndexOf(ZoneProfiler.PATH_SEPARATOR);
         return idx < 0 ? ZoneProfiler.ROOT : path.substring(0, idx);
     }
 
@@ -74,11 +74,11 @@ public class ZoneSnapshot {
         if (path.equals(parentPath)) {
             return false;
         }
-        String prefix = parentPath + ZoneProfiler.PATH_SEPARATOR;
+        var prefix = parentPath + ZoneProfiler.PATH_SEPARATOR;
         if (!path.startsWith(prefix)) {
             return false;
         }
-        String rest = path.substring(prefix.length());
+        var rest = path.substring(prefix.length());
         return rest.indexOf(ZoneProfiler.PATH_SEPARATOR) < 0;
     }
 }

@@ -160,28 +160,28 @@ public final class VfxSystemSimulator {
         // 电弧：复刻 Blender 每帧从基线几何求值——弧拱重采样（Set Handle Positions + Resample，
         // 随 age 成长）+ 噪声位移 + 端点表面吸附 + 火花粒子速度/重力积分，然后老化。
         if (arcBuffer.count() > 0) {
-            for (int i = 0; i < arcBuffer.count(); i++) {
+            for (var i = 0; i < arcBuffer.count(); i++) {
                 var arc = arcBuffer.arc(i);
                 // 火花粒子：位置 += 速度×dt，速度 += 重力×dt（Blender Simulation Input.001 速度积分，
                 // 重力 Combine XYZ(0,0,重力G)）。迷你管整体平移，方向保持速度方向。
                 if (arc.sparkVelocity() != null) {
-                    float[] v = arc.sparkVelocity();
+                    var v = arc.sparkVelocity();
                     float gx = 0f, gy = 0f, gz = -0.9f;
-                    float vx = v[0] + gx * dt;
-                    float vy = v[1] + gy * dt;
-                    float vz = v[2] + gz * dt;
+                    var vx = v[0] + gx * dt;
+                    var vy = v[1] + gy * dt;
+                    var vz = v[2] + gz * dt;
                     v[0] = vx;
                     v[1] = vy;
                     v[2] = vz;
-                    float len = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
-                    float ux = len < 1e-6f ? 0f : vx / len;
-                    float uy = len < 1e-6f ? 1f : vy / len;
-                    float uz = len < 1e-6f ? 0f : vz / len;
+                    var len = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
+                    var ux = len < 1e-6f ? 0f : vx / len;
+                    var uy = len < 1e-6f ? 1f : vy / len;
+                    var uz = len < 1e-6f ? 0f : vz / len;
                     // 迷你管当前半长（按原两点距离）
-                    float half = arc.size() >= 2 ? 0.5f * dist(arc, 0, 1) : 0f;
-                    float cx = (arc.x(0) + arc.x(arc.size() - 1)) * 0.5f;
-                    float cy = (arc.y(0) + arc.y(arc.size() - 1)) * 0.5f;
-                    float cz = (arc.z(0) + arc.z(arc.size() - 1)) * 0.5f;
+                    var half = arc.size() >= 2 ? 0.5f * dist(arc, 0, 1) : 0f;
+                    var cx = (arc.x(0) + arc.x(arc.size() - 1)) * 0.5f;
+                    var cy = (arc.y(0) + arc.y(arc.size() - 1)) * 0.5f;
+                    var cz = (arc.z(0) + arc.z(arc.size() - 1)) * 0.5f;
                     cx += vx * dt;
                     cy += vy * dt;
                     cz += vz * dt;
@@ -197,7 +197,7 @@ public final class VfxSystemSimulator {
                     wanderArcBase(arc, random);
                     CurveGenerator.sampleSurfaceArch(arc);
                 }
-                float strength = arc.hasNoiseStrength() ? arc.noiseStrength() : arcNoiseStrength;
+                var strength = arc.hasNoiseStrength() ? arc.noiseStrength() : arcNoiseStrength;
                 if (strength > 1e-6f) {
                     // 每弧独立噪声种子（Blender 唯一ID 子组：Index×100+SceneTime×100 → 每弧/每帧稳定唯一 ID），
                     // 否则全部电弧共用同一噪声场 → 一起同向形变/同飘，观感"都长一个样"。
@@ -405,9 +405,9 @@ public final class VfxSystemSimulator {
     }
 
     private static float dist(ArcCurve arc, int a, int b) {
-        float dx = arc.x(b) - arc.x(a);
-        float dy = arc.y(b) - arc.y(a);
-        float dz = arc.z(b) - arc.z(a);
+        var dx = arc.x(b) - arc.x(a);
+        var dy = arc.y(b) - arc.y(a);
+        var dz = arc.z(b) - arc.z(a);
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
@@ -419,9 +419,9 @@ public final class VfxSystemSimulator {
      */
     private void wanderArcBase(ArcCurve arc, Random random) {
         float nx = arc.archNx(), ny = arc.archNy(), nz = arc.archNz();
-        float rl = 0f;
+        var rl = 0f;
         float rx = 0f, ry = 0f, rz = 0f;
-        for (int guard = 0; guard < 4; guard++) {
+        for (var guard = 0; guard < 4; guard++) {
             rx = random.nextFloat() * 2f - 1f;
             ry = random.nextFloat() * 2f - 1f;
             rz = random.nextFloat() * 2f - 1f;
@@ -433,16 +433,16 @@ public final class VfxSystemSimulator {
         ry /= rl;
         rz /= rl;
         // cross(r, normal) → 切平面方向
-        float cx = ry * nz - rz * ny;
-        float cy = rz * nx - rx * nz;
-        float cz = rx * ny - ry * nx;
-        float cl = (float) Math.sqrt(cx * cx + cy * cy + cz * cz);
+        var cx = ry * nz - rz * ny;
+        var cy = rz * nx - rx * nz;
+        var cz = rx * ny - ry * nx;
+        var cl = (float) Math.sqrt(cx * cx + cy * cy + cz * cz);
         if (cl < 1e-6f) return;
         cx /= cl;
         cy /= cl;
         cz /= cl;
         // Random[0.01..0.03] × 游离速度
-        float step = (0.01f + 0.02f * random.nextFloat())
+        var step = (0.01f + 0.02f * random.nextFloat())
                 * (arc.hasDriftSpeed() ? arc.driftSpeed() : arcDriftSpeed);
         arc.accumulateWander(cx * step, cy * step, cz * step);
     }

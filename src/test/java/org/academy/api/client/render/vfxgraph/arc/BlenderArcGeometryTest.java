@@ -28,9 +28,9 @@ class BlenderArcGeometryTest {
         assertEquals(0f, arc.y(0), 1e-4f, "start endpoint on plane");
         assertEquals(0f, arc.y(arc.size() - 1), 1e-4f, "end endpoint on plane");
         // 基线跨度 = 电弧高度 × 实例随机跨度缩放（M30：Blender Instance Scale = Random[0.4..1.2]×电弧宽度）
-        float dx = arc.x(0) - arc.x(arc.size() - 1);
-        float dz = arc.z(0) - arc.z(arc.size() - 1);
-        float span = (float) Math.sqrt(dx * dx + dz * dz);
+        var dx = arc.x(0) - arc.x(arc.size() - 1);
+        var dz = arc.z(0) - arc.z(arc.size() - 1);
+        var span = (float) Math.sqrt(dx * dx + dz * dz);
         assertTrue(span >= 0.4f, "horizontal span ≥ 0.4×height (instance random scale), got " + span);
         assertTrue(span <= 1.2f, "horizontal span ≤ 1.2×height (instance random scale), got " + span);
     }
@@ -46,10 +46,10 @@ class BlenderArcGeometryTest {
                 1.0f, 0.78f, 0.006f, 12,
                 1f, 1f, 1f, 1f, BlenderArcReference.ARC_LIFETIME, 42L);
 
-        float apexAge0 = maxY(arc);
+        var apexAge0 = maxY(arc);
         arc.setAge(BlenderArcReference.ARC_LIFETIME);
         CurveGenerator.sampleSurfaceArch(arc);
-        float apexFull = maxY(arc);
+        var apexFull = maxY(arc);
 
         assertTrue(apexFull > apexAge0, "arch grows with age: " + apexAge0 + " -> " + apexFull);
         // 满拱顶点高度应接近 0.5×height（实测 Blender apex≈0.51）：growth(1.0)=1.0 × random × height × curve
@@ -69,8 +69,8 @@ class BlenderArcGeometryTest {
                 1.0f, 0.78f, 0.01f, 12,
                 1f, 1f, 1f, 1f, 20f, 42L);
 
-        float end = arc.width(0);
-        float mid = arc.width(arc.size() / 2);
+        var end = arc.width(0);
+        var mid = arc.width(arc.size() / 2);
         assertTrue(end > mid, "ends should be thicker than middle: end=" + end + " mid=" + mid);
 
         // 满龄半径衰减：出生 radius=width×profile(0.93)，临终 width×profile×0（FloatCurve.005→0）
@@ -125,12 +125,12 @@ class BlenderArcGeometryTest {
      */
     @Test
     void archMatchesMeasuredBlenderGeometry() {
-        boolean apexOk = false;
-        boolean spanOk = false;
-        boolean radiusOk = false;
+        var apexOk = false;
+        var spanOk = false;
+        var radiusOk = false;
         int apexMin = Integer.MAX_VALUE, apexMax = Integer.MIN_VALUE;
         float spanMin = 1e9f, spanMax = -1e9f;
-        for (long seed : new long[]{1, 42, 931, 777, 12345, 99991}) {
+        for (var seed : new long[]{1, 42, 931, 777, 12345, 99991}) {
             var arc = new ArcCurve();
             CurveGenerator.generateSurfaceArc(arc,
                     0, 0, 0, 0, 1, 0,
@@ -138,9 +138,9 @@ class BlenderArcGeometryTest {
                     1f, 1f, 1f, 1f, 20f, seed);
             arc.setAge(20f);
             CurveGenerator.sampleSurfaceArch(arc);
-            float maxY = maxY(arc);
-            float span = span(arc);
-            int apexPct = Math.round(maxY * 100f);
+            var maxY = maxY(arc);
+            var span = span(arc);
+            var apexPct = Math.round(maxY * 100f);
             apexMin = Math.min(apexMin, apexPct);
             apexMax = Math.max(apexMax, apexPct);
             spanMin = Math.min(spanMin, span);
@@ -163,14 +163,14 @@ class BlenderArcGeometryTest {
     }
 
     private static float span(ArcCurve arc) {
-        float dx = arc.x(0) - arc.x(arc.size() - 1);
-        float dz = arc.z(0) - arc.z(arc.size() - 1);
+        var dx = arc.x(0) - arc.x(arc.size() - 1);
+        var dz = arc.z(0) - arc.z(arc.size() - 1);
         return (float) Math.sqrt(dx * dx + dz * dz);
     }
 
     private static float maxY(ArcCurve arc) {
-        float m = -1e9f;
-        for (int i = 0; i < arc.size(); i++) {
+        var m = -1e9f;
+        for (var i = 0; i < arc.size(); i++) {
             m = Math.max(m, arc.y(i));
         }
         return m;

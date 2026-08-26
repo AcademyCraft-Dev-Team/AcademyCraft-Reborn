@@ -31,8 +31,8 @@ public final class BeamVfx implements Vfx {
     ) {
         var direction = end.subtract(start);
         var length = direction.length();
-        float yRot = 0.0f;
-        float xRot = 0.0f;
+        var yRot = 0.0f;
+        var xRot = 0.0f;
         if (direction.lengthSqr() > DIRECTION_EPSILON_SQUARED && Double.isFinite(length)) {
             var horizontalLength = Mth.sqrt((float) (direction.x * direction.x + direction.z * direction.z));
             yRot = (float) (Mth.atan2(-direction.x, direction.z)) * Mth.RAD_TO_DEG;
