@@ -58,4 +58,16 @@ class ReflectionFilterTest {
 
         assertTrue(data.copy().isForcedMovementProtectionEnabled());
     }
+
+    @Test
+    void detectsOnlyEffectiveConfigurationChanges() {
+        var original = data("POSITIVE_FILTER", "[\"minecraft:speed\"]", "[]");
+        var same = original.copy();
+        var changedList = data("POSITIVE_FILTER", "[]", "[\"minecraft:speed\"]");
+        var changedMode = data("NEUTRAL_FILTER", "[\"minecraft:speed\"]", "[]");
+
+        assertTrue(ReflectionFilter.hasSameConfiguration(original, same));
+        assertFalse(ReflectionFilter.hasSameConfiguration(original, changedList));
+        assertFalse(ReflectionFilter.hasSameConfiguration(original, changedMode));
+    }
 }

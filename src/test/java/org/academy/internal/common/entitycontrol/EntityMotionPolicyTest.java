@@ -46,4 +46,11 @@ class EntityMotionPolicyTest {
                 false, false, false, true, false, false
         ));
     }
+
+    @Test
+    void forcedMovementProtectionBlocksExternalEquipmentManipulation() {
+        assertTrue(EntityMotionPolicy.shouldBlockExternalManipulation(true, false));
+        assertFalse(EntityMotionPolicy.shouldBlockExternalManipulation(true, true));
+        assertFalse(EntityMotionPolicy.shouldBlockExternalManipulation(false, false));
+    }
 }

@@ -94,7 +94,18 @@ public final class EntityMotionGuard {
                 false
         );
         return !shouldProtect
-                || !VectorReflection.Server.tryProtectForcedMovement((ServerPlayer) target);
+                || !tryProtectForcedMovement((ServerPlayer) target);
+    }
+
+    public static boolean canManipulateEquipmentFrom(Entity source, LivingEntity target) {
+        if (target == null) return false;
+        if (target.level().isClientSide()) return true;
+        var protectedPlayer = hasForcedMovementProtection(target);
+        var shouldProtect = EntityMotionPolicy.shouldBlockExternalManipulation(
+                protectedPlayer,
+                source == target
+        );
+        return !shouldProtect || !tryProtectForcedMovement((ServerPlayer) target);
     }
 
     public static boolean canBeImprisoned(LivingEntity entity) {
@@ -300,13 +311,24 @@ public final class EntityMotionGuard {
                 fallbackSelfSource
         );
         return shouldProtect
-                && VectorReflection.Server.tryProtectForcedMovement((ServerPlayer) entity);
+                && tryProtectForcedMovement((ServerPlayer) entity);
     }
 
     private static boolean hasForcedMovementProtection(Entity entity) {
         return entity instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
+                && (VectorReflection.Server.isActive(player)
+                || VectorDeviation.Server.isActive(player))
                 && ReflectionFilter.isForcedMovementProtectionEnabled(player);
+    }
+
+    private static boolean tryProtectForcedMovement(ServerPlayer player) {
+        if (VectorReflection.Server.isActive(player)) {
+            return VectorReflection.Server.tryProtectForcedMovement(player);
+        }
+        if (VectorDeviation.Server.isActive(player)) {
+            return VectorDeviation.Server.tryProtectForcedMovement(player);
+        }
+        return false;
     }
 
     private static boolean ignoresImprisonment(LivingEntity entity) {
