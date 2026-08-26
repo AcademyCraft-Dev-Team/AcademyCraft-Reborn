@@ -1,8 +1,9 @@
 package org.academy.api.client.render.vfxgraph.nodes;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 节点类型 id → VFX 节点工厂 的目录。

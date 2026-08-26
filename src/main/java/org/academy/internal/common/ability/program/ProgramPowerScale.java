@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.program;
 
-/** Shared continuous power semantics for configurable ability-program actions. */
+/**
+ * Shared continuous power semantics for configurable ability-program actions.
+ */
 public final class ProgramPowerScale {
     public static final float MIN = 0.0f;
     public static final float DEFAULT = 1.0f;
@@ -16,18 +18,24 @@ public final class ProgramPowerScale {
         return power;
     }
 
-    /** Damage varies linearly from zero to twice the original skill damage. */
+    /**
+     * Damage varies linearly from zero to twice the original skill damage.
+     */
     public static float damageMultiplier(float power) {
         return require(power);
     }
 
-    /** CP follows the programmable-action cubic curve; power 1 preserves the original skill cost. */
+    /**
+     * CP follows the programmable-action cubic curve; power 1 preserves the original skill cost.
+     */
     public static float cost(float baseCost, float power) {
         var checked = require(power);
         return baseCost * (0.5f + checked * checked * checked * 0.5f);
     }
 
-    /** Continuously interpolates non-damage effects through the former three power tiers. */
+    /**
+     * Continuously interpolates non-damage effects through the former three power tiers.
+     */
     public static double interpolate(
             float power,
             double controlled,

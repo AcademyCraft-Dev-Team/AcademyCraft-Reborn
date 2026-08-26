@@ -4,7 +4,9 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Objects;
 
-/** An integral block position whose dimension cannot be lost through an implicit conversion. */
+/**
+ * An integral block position whose dimension cannot be lost through an implicit conversion.
+ */
 public record ProgramBlockPosition(Identifier dimension, int x, int y, int z) {
     public ProgramBlockPosition {
         Objects.requireNonNull(dimension, "dimension");

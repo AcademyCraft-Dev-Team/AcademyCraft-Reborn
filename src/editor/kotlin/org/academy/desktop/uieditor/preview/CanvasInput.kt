@@ -85,14 +85,14 @@ class CanvasInput(private val document: () -> UiEditorDocument) {
         val io = ImGui.getIO()
         viewportW = win.w / guiScale
         viewportH = win.h / guiScale
-        val mx = io.getMousePosX()
-        val my = io.getMousePosY()
+        val mx = io.mousePosX
+        val my = io.mousePosY
         val inside = win.contains(mx, my)
         val lx = (mx - win.x) / guiScale
         val ly = (my - win.y) / guiScale
 
-        if (drag == null && inside && io.getMouseWheel() != 0f && !io.getWantCaptureKeyboard()) {
-            val factor = 1.15.pow(io.getMouseWheel().toDouble()).toFloat()
+        if (drag == null && inside && io.mouseWheel != 0f && !io.wantCaptureKeyboard) {
+            val factor = 1.15.pow(io.mouseWheel.toDouble()).toFloat()
             transform = transform.zoomAt(lx, ly, factor)
         }
 
@@ -100,7 +100,7 @@ class CanvasInput(private val document: () -> UiEditorDocument) {
         if (current == null) {
             hoveredPath = if (inside && !ImGui.isAnyItemHovered()) pick(lx, ly)?.path else null
             if (inside && !ImGui.isAnyItemHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
-                onPress(lx, ly, io.getKeyMods())
+                onPress(lx, ly, io.keyMods)
             }
         } else {
             if (ImGui.isMouseReleased(ImGuiMouseButton.Left)) {
@@ -187,7 +187,11 @@ class CanvasInput(private val document: () -> UiEditorDocument) {
     private fun onDrag(d: Drag, lx: Float, ly: Float) {
         when (d) {
             is Drag.Pan -> {
-                transform = CanvasTransform(transform.scale, d.startOriginX + lx - d.grabViewX, d.startOriginY + ly - d.grabViewY)
+                transform = CanvasTransform(
+                    transform.scale,
+                    d.startOriginX + lx - d.grabViewX,
+                    d.startOriginY + ly - d.grabViewY
+                )
                 d.moved = d.moved || abs(lx - d.grabViewX) + abs(ly - d.grabViewY) > MOVE_EPSILON_PX
             }
 

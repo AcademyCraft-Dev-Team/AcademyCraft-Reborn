@@ -1,8 +1,8 @@
 package org.academy.internal.common.ability.meltdowner.program;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.GameMasterBlock;
@@ -18,18 +18,20 @@ import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeed
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Authoritative Minecraft-server adapter for Meltdowner programs. */
+/**
+ * Authoritative Minecraft-server adapter for Meltdowner programs.
+ */
 public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRuntime {
     public static final double MAX_QUERY_RANGE = 48.0;
     public static final int MAX_QUERY_RESULTS = 128;

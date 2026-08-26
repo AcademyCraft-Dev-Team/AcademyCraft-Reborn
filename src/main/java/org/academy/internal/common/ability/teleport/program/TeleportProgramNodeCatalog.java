@@ -5,22 +5,20 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramNodePurity;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeScope;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.program.ProgramNodeLookup;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
-/** Strongly typed Teleport target and action schemas. */
+/**
+ * Strongly typed Teleport target and action schemas.
+ */
 public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
     public static final Identifier TELEPORT = AcademyCraft.academy(AbilityCategoryNames.TELEPORT);
     public static final TeleportProgramNodeCatalog INSTANCE = new TeleportProgramNodeCatalog();
@@ -129,7 +127,7 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
     private static ProgramNodeSchema blockItemTeleportSchema(
             BlockItemTeleportConfiguration configuration
     ) {
-        var inputs = new java.util.ArrayList<ProgramPortDefinition>();
+        var inputs = new ArrayList<ProgramPortDefinition>();
         inputs.add(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW));
         inputs.add(ProgramPortDefinition.requiredInput(
                 "position", ProgramValueTypes.BLOCK_POSITION));
@@ -208,7 +206,7 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
     public record BlockItemTeleportConfiguration(BlockItemTeleportMode mode) {
         public static final Codec<BlockItemTeleportConfiguration> CODEC =
                 BlockItemTeleportMode.CODEC.optionalFieldOf(
-                        "mode", BlockItemTeleportMode.PLACE)
+                                "mode", BlockItemTeleportMode.PLACE)
                         .xmap(BlockItemTeleportConfiguration::new,
                                 BlockItemTeleportConfiguration::mode)
                         .codec();
@@ -244,18 +242,26 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
                 TargetType::byName, TargetType::wireName);
         private final String wireName;
         private final String port;
-        private final org.academy.api.common.ability.program.ProgramValueType valueType;
+        private final ProgramValueType valueType;
 
         TargetType(String wireName, String port,
-                   org.academy.api.common.ability.program.ProgramValueType valueType) {
+                   ProgramValueType valueType) {
             this.wireName = wireName;
             this.port = port;
             this.valueType = valueType;
         }
 
-        public String wireName() { return wireName; }
-        public String port() { return port; }
-        public org.academy.api.common.ability.program.ProgramValueType valueType() { return valueType; }
+        public String wireName() {
+            return wireName;
+        }
+
+        public String port() {
+            return port;
+        }
+
+        public ProgramValueType valueType() {
+            return valueType;
+        }
 
         private static TargetType byName(String value) {
             for (var type : values()) if (type.wireName.equals(value)) return type;
@@ -287,7 +293,7 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
 
     private record DynamicNodeType<C>(
             Codec<C> configurationCodec,
-            java.util.function.Function<C, ProgramNodeSchema> schemaFactory,
+            Function<C, ProgramNodeSchema> schemaFactory,
             ProgramNodeRole role,
             ProgramNodePurity purity,
             ProgramNodeScope scope

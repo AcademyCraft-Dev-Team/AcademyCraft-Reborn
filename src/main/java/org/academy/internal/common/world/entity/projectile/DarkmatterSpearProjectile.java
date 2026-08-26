@@ -4,7 +4,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -25,7 +25,9 @@ import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShapi
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.world.item.Items;
 
-/** Server-authoritative shaped spear projection; gamma launches return after impact. */
+/**
+ * Server-authoritative shaped spear projection; gamma launches return after impact.
+ */
 public final class DarkmatterSpearProjectile extends AbstractArrow implements ItemSupplier {
     private static final Identifier PENETRATION_ID =
             AcademyCraft.academy("darkmatter_spear_projectile_penetration");
@@ -78,7 +80,8 @@ public final class DarkmatterSpearProjectile extends AbstractArrow implements It
         }
         super.tick();
         if (!returning && tickCount >= maximumLifetime) {
-            if (gammaPower > 0.0f) beginReturn(); else discard();
+            if (gammaPower > 0.0f) beginReturn();
+            else discard();
         } else if (returning && tickCount >= maximumLifetime + 40) {
             discard();
         }
@@ -102,7 +105,8 @@ public final class DarkmatterSpearProjectile extends AbstractArrow implements It
     @Override
     protected void onHitBlock(BlockHitResult result) {
         if (level().isClientSide()) return;
-        if (gammaPower > 0.0f) beginReturn(); else discard();
+        if (gammaPower > 0.0f) beginReturn();
+        else discard();
     }
 
     private void beginReturn() {
@@ -112,7 +116,7 @@ public final class DarkmatterSpearProjectile extends AbstractArrow implements It
     }
 
     private void pursueNearby(ServerLevel level, ServerPlayer owner, LivingEntity primary,
-                              net.minecraft.world.damagesource.DamageSource source) {
+                              DamageSource source) {
         var shapingGamma = DarkmatterShaping.Server.gammaShapingMultiplier(shapingMilestone);
         var count = 1 + (int) Math.floor(gammaPower * shapingGamma);
         var damageMultiplier = DarkmatterSixWings.Server.gammaMagnitudeMultiplier(sixWingsMilestone);
@@ -129,7 +133,7 @@ public final class DarkmatterSpearProjectile extends AbstractArrow implements It
     }
 
     private static boolean hurtWithPenetration(ServerLevel level, LivingEntity target,
-                                               net.minecraft.world.damagesource.DamageSource source,
+                                               DamageSource source,
                                                float damage, float penetration) {
         var armor = target.getAttribute(Attributes.ARMOR);
         if (armor == null || penetration <= 0.0f) {

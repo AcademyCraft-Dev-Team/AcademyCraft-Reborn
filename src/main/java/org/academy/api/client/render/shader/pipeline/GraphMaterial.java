@@ -1,12 +1,13 @@
 package org.academy.api.client.render.shader.pipeline;
 
 import com.mojang.blaze3d.buffers.Std140Builder;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 运行时材质：持有图参数值（默认值初始化，可逐项覆盖），可写入 std140 uniform 块。
@@ -47,7 +48,9 @@ public final class GraphMaterial {
         return layout;
     }
 
-    /** 图所需的纹理绑定槽位（来自布局，含 texture.sample 属性与 SAMPLER 参数）。 */
+    /**
+     * 图所需的纹理绑定槽位（来自布局，含 texture.sample 属性与 SAMPLER 参数）。
+     */
     public List<SamplerBinding> samplerBindings() {
         return layout.samplers();
     }

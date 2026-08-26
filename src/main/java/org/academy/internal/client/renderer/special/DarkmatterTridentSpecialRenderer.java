@@ -16,7 +16,9 @@ import java.util.function.Consumer;
 
 import static org.academy.AcademyCraft.academy;
 
-/** Vanilla trident geometry rendered with Academy's animated dark-matter material. */
+/**
+ * Vanilla trident geometry rendered with Academy's animated dark-matter material.
+ */
 public final class DarkmatterTridentSpecialRenderer implements NoDataSpecialModelRenderer {
     /**
      * Entity-model textures are resolved as complete texture paths, unlike item

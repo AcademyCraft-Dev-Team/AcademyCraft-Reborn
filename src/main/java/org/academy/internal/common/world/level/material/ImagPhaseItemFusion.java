@@ -1,8 +1,8 @@
 package org.academy.internal.common.world.level.material;
 
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
@@ -16,7 +16,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-/** Converts dropped item batches that remain submerged in imag phase fluid. */
+/**
+ * Converts dropped item batches that remain submerged in imag phase fluid.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class ImagPhaseItemFusion {
     private static final String PROGRESS_TAG = "academy.imag_phase_fusion_ticks";
@@ -38,7 +40,9 @@ public final class ImagPhaseItemFusion {
     private ImagPhaseItemFusion() {
     }
 
-    /** JEI-facing immutable views generated from the same rules used by the world ticker. */
+    /**
+     * JEI-facing immutable views generated from the same rules used by the world ticker.
+     */
     public static List<DisplayRecipe> displayRecipes() {
         return RULES.stream().map(rule -> {
             var input = new ItemStack(rule.input().get().asItem(), rule.inputCount());

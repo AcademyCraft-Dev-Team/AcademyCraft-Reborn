@@ -29,7 +29,8 @@ public final class RecipeSerializers {
 
     static final StreamCodec<RegistryFriendlyByteBuf, DarkmatterCoatingRecipe>
             DARKMATTER_COATING_STREAM_CODEC = StreamCodec.of(
-            (_, _) -> { },
+            (_, _) -> {
+            },
             _ -> new DarkmatterCoatingRecipe());
 
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<DarkmatterCoatingRecipe>>

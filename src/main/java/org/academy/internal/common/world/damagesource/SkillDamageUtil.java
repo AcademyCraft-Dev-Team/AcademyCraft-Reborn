@@ -12,8 +12,8 @@ import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
 import org.jspecify.annotations.Nullable;
 

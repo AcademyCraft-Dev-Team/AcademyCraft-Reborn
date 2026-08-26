@@ -11,6 +11,7 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
+import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeIds;
 import org.junit.jupiter.api.Test;
@@ -182,7 +183,7 @@ class ProgramConfigurationOptionsTest {
     }
 
     private static int precisionOptions(
-            org.academy.internal.common.ability.program.ProgramEditorNodeCatalog catalog,
+            ProgramEditorNodeCatalog catalog,
             PrecisionGraph.NodeKind kind
     ) {
         return ProgramConfigurationOptions.options(

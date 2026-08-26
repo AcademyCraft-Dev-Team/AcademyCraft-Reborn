@@ -4,13 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramNodePurity;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeScope;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.program.ProgramNodeLookup;
 
@@ -19,7 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Strongly typed Aeromanip target and action schemas. */
+/**
+ * Strongly typed Aeromanip target and action schemas.
+ */
 public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
     public static final Identifier AEROMANIP = AcademyCraft.academy(AbilityCategoryNames.AEROMANIP);
     public static final AeromanipProgramNodeCatalog INSTANCE = new AeromanipProgramNodeCatalog();

@@ -1,11 +1,12 @@
 package org.academy.api.client.render.graph.subgraph;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
-import java.util.List;
 import org.academy.api.client.render.graph.model.Graph;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class SubGraphRegistryTest {
     @Test

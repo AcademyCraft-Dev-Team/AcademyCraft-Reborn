@@ -1,15 +1,17 @@
 package org.academy.internal.common.ability.program;
 
 import com.google.gson.JsonObject;
-import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Deterministic, one-way import from the original Precision Operation graph format.
@@ -37,7 +39,9 @@ public final class PrecisionProgramImporter {
         return importNormalizedGraph(validation.normalized());
     }
 
-    /** Converts an in-progress legacy canvas without requiring all inputs or flow links yet. */
+    /**
+     * Converts an in-progress legacy canvas without requiring all inputs or flow links yet.
+     */
     public static ImportResult importEditableGraph(PrecisionGraph source) {
         if (source == null || source.nodes().isEmpty()) {
             return new ImportResult(
@@ -104,10 +108,10 @@ public final class PrecisionProgramImporter {
                             == PrecisionGraph.PortType.FLOW;
                 })
                 .map(PrecisionGraph.Edge::toNode)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         var firstAction = graph.nodes().stream()
                 .filter(node -> node.kind().isAction() && !flowTargets.contains(node.id()))
-                .min(java.util.Comparator.comparingInt(PrecisionGraph.Node::id))
+                .min(Comparator.comparingInt(PrecisionGraph.Node::id))
                 .orElse(null);
         if (firstAction != null) {
             edges.add(new ProgramGraph.Edge(
@@ -135,7 +139,7 @@ public final class PrecisionProgramImporter {
 
     private static ProgramEditorLayout.NodePosition entryPosition(
             List<PrecisionGraph.Node> nodes,
-            PrecisionGraph.@org.jspecify.annotations.Nullable Node firstAction
+            PrecisionGraph.@Nullable Node firstAction
     ) {
         var minX = nodes.stream().mapToDouble(PrecisionGraph.Node::x).min().orElse(0.0);
         var y = firstAction == null

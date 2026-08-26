@@ -1,20 +1,17 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VfxSystemSimulatorTest {
     private VfxBlockRegistry blocks;
@@ -33,7 +30,9 @@ class VfxSystemSimulatorTest {
         return new VfxContext(id, type, "", List.of(blocks), 0f, 0f);
     }
 
-    /** 单 spawn → 单 init → update 的最小流水线。 */
+    /**
+     * 单 spawn → 单 init → update 的最小流水线。
+     */
     @Test
     void spawnInitUpdatePipelineProducesMovedParticles() {
         var system = new VfxSystem("demo",
@@ -63,7 +62,9 @@ class VfxSystemSimulatorTest {
         assertEquals(0.6f, buffer.positionY(0), 1e-5f);
     }
 
-    /** 核心：两个独立 spawn→init 链路，init 只处理自己上游 spawn 的批次（互不干扰）。 */
+    /**
+     * 核心：两个独立 spawn→init 链路，init 只处理自己上游 spawn 的批次（互不干扰）。
+     */
     @Test
     void multiSpawnInitsAreIndependent() {
         var system = new VfxSystem("multi",
@@ -107,7 +108,9 @@ class VfxSystemSimulatorTest {
         assertEquals(0.3f, buffer.positionX(green), 1e-5f);
     }
 
-    /** 暂停（dt=0）：spawn 不产粒子，init 空跑，已有粒子不受影响。 */
+    /**
+     * 暂停（dt=0）：spawn 不产粒子，init 空跑，已有粒子不受影响。
+     */
     @Test
     void pauseFreezesSimulation() {
         var system = new VfxSystem("pause",
@@ -138,7 +141,9 @@ class VfxSystemSimulatorTest {
         assertEquals(x, buffer.positionX(0), 1e-6f);
     }
 
-    /** gravity 阶段在 update 内按序应用。 */
+    /**
+     * gravity 阶段在 update 内按序应用。
+     */
     @Test
     void appliesGravityInUpdatePhase() {
         var system = new VfxSystem("grav",
@@ -163,7 +168,9 @@ class VfxSystemSimulatorTest {
         assertEquals(-2.0f, sim.buffer().velocityY(0), 1e-5f);
     }
 
-    /** 无 flow 的 init context：收到空批次，不处理任何粒子（不应误伤已有粒子）。 */
+    /**
+     * 无 flow 的 init context：收到空批次，不处理任何粒子（不应误伤已有粒子）。
+     */
     @Test
     void initWithoutUpstreamSpawnDoesNothing() {
         var system = new VfxSystem("orphan-init",
@@ -208,7 +215,9 @@ class VfxSystemSimulatorTest {
         }
     }
 
-    /** 多个 spawn context 喂同一个 init：批次并集被 init 一次性处理。 */
+    /**
+     * 多个 spawn context 喂同一个 init：批次并集被 init 一次性处理。
+     */
     @Test
     void multipleSpawnsFeedSingleInit() {
         var system = new VfxSystem("fan-in",
@@ -241,7 +250,9 @@ class VfxSystemSimulatorTest {
         }
     }
 
-    /** M28b 回归：loop 重启经 setTime 延续时间戳——编辑后粒子为 0 不再导致 t 冻结。 */
+    /**
+     * M28b 回归：loop 重启经 setTime 延续时间戳——编辑后粒子为 0 不再导致 t 冻结。
+     */
     @Test
     void setTimeContinuesAcrossRestart() {
         var system = new VfxSystem("loop-time",

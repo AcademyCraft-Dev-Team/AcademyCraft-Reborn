@@ -4,17 +4,20 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
+import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
+import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
-import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
-import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeIds;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
-/** Finite node-configuration choices rendered as inspector step buttons. */
+/**
+ * Finite node-configuration choices rendered as inspector step buttons.
+ */
 public final class ProgramConfigurationOptions {
     private static final List<String> VARIABLE_TYPE_PATHS = List.of(
             "boolean",
@@ -219,7 +222,9 @@ public final class ProgramConfigurationOptions {
                 && currentValue.getAsJsonPrimitive().isBoolean();
     }
 
-    /** Returns the adjacent option, wrapping in both directions. */
+    /**
+     * Returns the adjacent option, wrapping in both directions.
+     */
     public static Option step(List<Option> options, JsonElement currentValue, int direction) {
         if (options.isEmpty()) throw new IllegalArgumentException("Options must not be empty");
         var currentIndex = 0;
@@ -270,7 +275,7 @@ public final class ProgramConfigurationOptions {
     }
 
     private static List<Option> stringOptions(String translationPrefix, String... values) {
-        return java.util.Arrays.stream(values)
+        return Arrays.stream(values)
                 .map(value -> option(value, translationPrefix + value))
                 .toList();
     }

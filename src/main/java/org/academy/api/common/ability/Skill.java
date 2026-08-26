@@ -3,7 +3,6 @@ package org.academy.api.common.ability;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
-import java.util.*;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
@@ -16,11 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.api.client.resources.R;
-import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
-import org.academy.api.common.ability.event.SkillExecutionCostEvent;
-import org.academy.api.common.ability.event.SkillExecutionFinishEvent;
-import org.academy.api.common.ability.event.SkillExecutionPreEvent;
-import org.academy.api.common.ability.event.SkillExecutionStartEvent;
+import org.academy.api.common.ability.event.*;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.L10nUtil;
@@ -34,10 +29,14 @@ import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.*;
+
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
     public static final int MAX_CP_ITERATION_TICKS = 20;
-    /** Keep disabled until the skill stack system is redesigned and verified. */
+    /**
+     * Keep disabled until the skill stack system is redesigned and verified.
+     */
     public static final boolean STACK_LIMITS_ENABLED = false;
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);

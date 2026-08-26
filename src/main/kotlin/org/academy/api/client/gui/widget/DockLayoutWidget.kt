@@ -67,11 +67,13 @@ open class DockLayoutWidget : AbstractWidgetContainer() {
                     consumedW += child.measuredWidth
                     consumedH = max(consumedH, child.measuredHeight)
                 }
+
                 Dock.TOP, Dock.BOTTOM -> {
                     remainingH = max(0f, remainingH - child.measuredHeight)
                     consumedW = max(consumedW, child.measuredWidth)
                     consumedH += child.measuredHeight
                 }
+
                 else -> {}
             }
         }
@@ -84,10 +86,22 @@ open class DockLayoutWidget : AbstractWidgetContainer() {
                 if ((child.layoutParams as LayoutParams).dock == Dock.FILL) {
                     val lp = child.layoutParams
                     val fillWidthSpec = if (hasWidth)
-                        getChildMeasureSpec(MeasureSpec(MeasureSpec.Mode.AT_MOST, max(0f, fillW)), lp.marginLeft + lp.marginRight, lp.width, lp.widthMode, lp.widthPercent)
+                        getChildMeasureSpec(
+                            MeasureSpec(MeasureSpec.Mode.AT_MOST, max(0f, fillW)),
+                            lp.marginLeft + lp.marginRight,
+                            lp.width,
+                            lp.widthMode,
+                            lp.widthPercent
+                        )
                     else MeasureSpec(MeasureSpec.Mode.UNSPECIFIED, 0f)
                     val fillHeightSpec = if (hasHeight)
-                        getChildMeasureSpec(MeasureSpec(MeasureSpec.Mode.AT_MOST, max(0f, fillH)), lp.marginTop + lp.marginBottom, lp.height, lp.heightMode, lp.heightPercent)
+                        getChildMeasureSpec(
+                            MeasureSpec(MeasureSpec.Mode.AT_MOST, max(0f, fillH)),
+                            lp.marginTop + lp.marginBottom,
+                            lp.height,
+                            lp.heightMode,
+                            lp.heightPercent
+                        )
                     else MeasureSpec(MeasureSpec.Mode.UNSPECIFIED, 0f)
                     child.measure(fillWidthSpec, fillHeightSpec)
                     consumedW = max(consumedW, child.measuredWidth)
@@ -120,18 +134,22 @@ open class DockLayoutWidget : AbstractWidgetContainer() {
                     child.layout(left, top, left + childW, bottom)
                     left += childW
                 }
+
                 Dock.TOP -> {
                     child.layout(left, top, right, top + childH)
                     top += childH
                 }
+
                 Dock.END -> {
                     child.layout(right - childW, top, right, bottom)
                     right -= childW
                 }
+
                 Dock.BOTTOM -> {
                     child.layout(left, bottom - childH, right, bottom)
                     bottom -= childH
                 }
+
                 Dock.FILL -> {
                     child.layout(left, top, right, bottom)
                 }

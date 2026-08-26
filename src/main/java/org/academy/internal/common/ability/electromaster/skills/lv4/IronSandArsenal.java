@@ -9,6 +9,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
@@ -51,7 +52,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.util.Mth;
 
 public class IronSandArsenal extends Skill {
     public static final float PROXIMITY_DAMAGE = 4.0f;

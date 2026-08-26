@@ -50,12 +50,16 @@ public final class EffectBudget {
         this.effectRadius = effectRadius;
     }
 
-    /** 粒子数达到上限时不再 tick 产粒（保留已有粒子渲染）。 */
+    /**
+     * 粒子数达到上限时不再 tick 产粒（保留已有粒子渲染）。
+     */
     public boolean canSpawnMore(int particleCount) {
         return particleCount < maxParticlesPerEffect;
     }
 
-    /** 发射器原点与相机距离超上限则跳过渲染。 */
+    /**
+     * 发射器原点与相机距离超上限则跳过渲染。
+     */
     public boolean shouldRender(Vector3f cameraPos, Vector3f effectPos) {
         float dx = effectPos.x - cameraPos.x;
         float dy = effectPos.y - cameraPos.y;

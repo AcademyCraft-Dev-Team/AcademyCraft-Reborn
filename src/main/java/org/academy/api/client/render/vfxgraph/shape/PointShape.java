@@ -2,7 +2,9 @@ package org.academy.api.client.render.vfxgraph.shape;
 
 import java.util.Random;
 
-/** 点发射：恒定原点。 */
+/**
+ * 点发射：恒定原点。
+ */
 public final class PointShape implements EmitterShape {
     private final float x;
     private final float y;

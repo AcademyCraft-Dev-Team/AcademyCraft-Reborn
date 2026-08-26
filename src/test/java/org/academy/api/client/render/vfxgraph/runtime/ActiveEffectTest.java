@@ -1,11 +1,5 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
@@ -17,6 +11,11 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class ActiveEffectTest {
     private VfxNodeRegistry vfxRegistry;
@@ -95,7 +94,7 @@ class ActiveEffectTest {
         // 重载 → 换图，位置/绑定保留
         effect.reload(burstGraph("0"));
         assertEquals(5f, effect.position().x, 1e-5f);
-        assertTrue(effect.worldTransform() instanceof WorldTransform);
+        assertInstanceOf(WorldTransform.class, effect.worldTransform());
         for (int i = 0; i < 2; i++) {
             effect.tick(0.1f);
         }

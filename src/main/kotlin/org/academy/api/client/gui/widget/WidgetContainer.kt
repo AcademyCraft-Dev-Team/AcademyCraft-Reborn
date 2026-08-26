@@ -65,6 +65,7 @@ interface WidgetContainer : Widget {
         var stretchY: Boolean = false
         var anchorX: Float = 0f
         var anchorY: Float = 0f
+
         /** 拉伸的另一端锚点；<0 视为伸到内容区右/下边缘。 */
         var anchorX2: Float = -1f
         var anchorY2: Float = -1f

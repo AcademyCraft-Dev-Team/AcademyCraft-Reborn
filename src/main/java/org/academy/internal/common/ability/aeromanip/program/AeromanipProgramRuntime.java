@@ -6,7 +6,9 @@ import org.academy.internal.common.ability.program.ProgramActionTransaction;
 
 import java.util.Optional;
 
-/** Restricted server-owned environment exposed to Aeromanip programs. */
+/**
+ * Restricted server-owned environment exposed to Aeromanip programs.
+ */
 public interface AeromanipProgramRuntime extends ProgramTargetResolver {
     Object caster();
 

@@ -7,11 +7,7 @@ import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.systems.CommandEncoder
 import com.mojang.blaze3d.systems.RenderPass
 import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.blaze3d.textures.AddressMode
-import com.mojang.blaze3d.textures.FilterMode
-import com.mojang.blaze3d.textures.GpuSampler
-import com.mojang.blaze3d.textures.GpuTexture
-import com.mojang.blaze3d.textures.GpuTextureView
+import com.mojang.blaze3d.textures.*
 import imgui.ImDrawData
 import imgui.ImGui
 import imgui.ImVec4
@@ -27,8 +23,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.util.Optional
-import java.util.OptionalDouble
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**

@@ -1,9 +1,9 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * M30：Blender「闪电附着」几何复刻验证——生成的表面弧应与实测 Blender 弧同构：
@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
  */
 class BlenderArcGeometryTest {
 
-    /** 弧平躺在表面：两端 y=0（平面法线 +Y），切平面（x/z）方向展开。 */
+    /**
+     * 弧平躺在表面：两端 y=0（平面法线 +Y），切平面（x/z）方向展开。
+     */
     @Test
     void surfaceArcLiesFlatOnPlane() {
         var arc = new ArcCurve();
@@ -33,7 +35,9 @@ class BlenderArcGeometryTest {
         assertTrue(span <= 1.2f, "horizontal span ≤ 1.2×height (instance random scale), got " + span);
     }
 
-    /** 弧拱成长：age=0 近平展（FloatCurve.001(0)=0.112），age=lifetime 满拱。 */
+    /**
+     * 弧拱成长：age=0 近平展（FloatCurve.001(0)=0.112），age=lifetime 满拱。
+     */
     @Test
     void surfaceArcArchGrowsWithAge() {
         var arc = new ArcCurve();
@@ -54,7 +58,9 @@ class BlenderArcGeometryTest {
         assertTrue(apexFull < 1.2f, "full arch apex bounded, got " + apexFull);
     }
 
-    /** 管半径剖面：端粗中细（Blender FloatCurve.002），随 age 衰减（FloatCurve.005）。 */
+    /**
+     * 管半径剖面：端粗中细（Blender FloatCurve.002），随 age 衰减（FloatCurve.005）。
+     */
     @Test
     void surfaceArcRadiusProfileEndThickMiddleThin() {
         var arc = new ArcCurve();
@@ -79,7 +85,9 @@ class BlenderArcGeometryTest {
                 "radius shrinks as arc ages");
     }
 
-    /** 表面弧携带表面（端点吸附用）且基线可逐帧重采样。 */
+    /**
+     * 表面弧携带表面（端点吸附用）且基线可逐帧重采样。
+     */
     @Test
     void surfaceArcCarriesArchBase() {
         var arc = new ArcCurve();
@@ -96,7 +104,9 @@ class BlenderArcGeometryTest {
         assertEquals(0f, arc.archNz(), 1e-6f);
     }
 
-    /** 曲线采样：FloatCurve 插值（BlenderArcCurves）。 */
+    /**
+     * 曲线采样：FloatCurve 插值（BlenderArcCurves）。
+     */
     @Test
     void curveSampling() {
         assertEquals(0.112f, BlenderArcCurves.sample(BlenderArcCurves.ARCH_GROWTH, 0f), 1e-4f);
@@ -130,7 +140,7 @@ class BlenderArcGeometryTest {
             CurveGenerator.sampleSurfaceArch(arc);
             float maxY = maxY(arc);
             float span = span(arc);
-            int apexPct = (int) Math.round(maxY * 100f);
+            int apexPct = Math.round(maxY * 100f);
             apexMin = Math.min(apexMin, apexPct);
             apexMax = Math.max(apexMax, apexPct);
             spanMin = Math.min(spanMin, span);

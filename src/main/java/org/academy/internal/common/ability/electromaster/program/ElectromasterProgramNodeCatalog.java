@@ -5,13 +5,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramNodePurity;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeScope;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.program.ProgramNodeLookup;
 
@@ -19,8 +13,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
-/** Strongly typed Electromaster target and action schemas. */
+/**
+ * Strongly typed Electromaster target and action schemas.
+ */
 public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup {
     public static final Identifier ELECTROMASTER =
             AcademyCraft.academy(AbilityCategoryNames.ELECTROMASTER);
@@ -142,7 +139,7 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
 
     private static <C> ProgramNodeType<C> dynamicType(
             Codec<C> codec,
-            java.util.function.Function<C, ProgramNodeSchema> schema,
+            Function<C, ProgramNodeSchema> schema,
             ProgramNodeRole role,
             ProgramNodePurity purity,
             ProgramNodeScope scope
@@ -211,7 +208,7 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
         public static final Codec<EnergyDetectionConfiguration> CODEC =
                 RecordCodecBuilder.create(instance -> instance.group(
                         EnergyTargetType.CODEC.optionalFieldOf(
-                                "target_type", EnergyTargetType.ENTITY)
+                                        "target_type", EnergyTargetType.ENTITY)
                                 .forGetter(EnergyDetectionConfiguration::targetType),
                         ComparisonMode.CODEC.optionalFieldOf("mode", ComparisonMode.BELOW)
                                 .forGetter(EnergyDetectionConfiguration::mode),
@@ -248,7 +245,7 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                         Codec.floatRange(0.0f, 2.0f).fieldOf("power")
                                 .forGetter(MagneticConfiguration::power),
                         EnergyTargetType.CODEC.optionalFieldOf(
-                                "target_type", EnergyTargetType.ENTITY)
+                                        "target_type", EnergyTargetType.ENTITY)
                                 .forGetter(MagneticConfiguration::targetType),
                         MagneticMode.CODEC.optionalFieldOf("mode", MagneticMode.PULL)
                                 .forGetter(MagneticConfiguration::mode)
@@ -263,18 +260,26 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                 EnergyTargetType::byName, EnergyTargetType::wireName);
         private final String wireName;
         private final String port;
-        private final org.academy.api.common.ability.program.ProgramValueType valueType;
+        private final ProgramValueType valueType;
 
         EnergyTargetType(String wireName, String port,
-                         org.academy.api.common.ability.program.ProgramValueType valueType) {
+                         ProgramValueType valueType) {
             this.wireName = wireName;
             this.port = port;
             this.valueType = valueType;
         }
 
-        public String wireName() { return wireName; }
-        public String port() { return port; }
-        public org.academy.api.common.ability.program.ProgramValueType valueType() { return valueType; }
+        public String wireName() {
+            return wireName;
+        }
+
+        public String port() {
+            return port;
+        }
+
+        public ProgramValueType valueType() {
+            return valueType;
+        }
 
         private static EnergyTargetType byName(String value) {
             for (var type : values()) if (type.wireName.equals(value)) return type;
@@ -287,8 +292,15 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
         private static final Codec<ComparisonMode> CODEC = Codec.STRING.xmap(
                 ComparisonMode::byName, ComparisonMode::wireName);
         private final String wireName;
-        ComparisonMode(String wireName) { this.wireName = wireName; }
-        public String wireName() { return wireName; }
+
+        ComparisonMode(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
         private static ComparisonMode byName(String value) {
             for (var mode : values()) if (mode.wireName.equals(value)) return mode;
             throw new IllegalArgumentException("Unknown comparison mode " + value);
@@ -300,8 +312,15 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
         private static final Codec<MagneticMode> CODEC = Codec.STRING.xmap(
                 MagneticMode::byName, MagneticMode::wireName);
         private final String wireName;
-        MagneticMode(String wireName) { this.wireName = wireName; }
-        public String wireName() { return wireName; }
+
+        MagneticMode(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
         private static MagneticMode byName(String value) {
             for (var mode : values()) if (mode.wireName.equals(value)) return mode;
             throw new IllegalArgumentException("Unknown magnetic mode " + value);
@@ -332,7 +351,7 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
 
     private record DynamicNodeType<C>(
             Codec<C> configurationCodec,
-            java.util.function.Function<C, ProgramNodeSchema> schemaFactory,
+            Function<C, ProgramNodeSchema> schemaFactory,
             ProgramNodeRole role,
             ProgramNodePurity purity,
             ProgramNodeScope scope

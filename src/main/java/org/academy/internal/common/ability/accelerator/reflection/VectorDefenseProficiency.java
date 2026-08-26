@@ -4,7 +4,9 @@ import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 
-/** Shared finite-damage CP calculation for vector reflection and vector reduction. */
+/**
+ * Shared finite-damage CP calculation for vector reflection and vector reduction.
+ */
 public final class VectorDefenseProficiency {
     private static final float[] DAMAGE_COST_MULTIPLIERS = {2.0f, 1.0f, 0.5f, 0.5f};
 

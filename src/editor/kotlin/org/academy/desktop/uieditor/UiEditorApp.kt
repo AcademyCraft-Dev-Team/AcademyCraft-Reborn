@@ -3,12 +3,7 @@ package org.academy.desktop.uieditor
 import com.google.gson.JsonObject
 import com.mojang.blaze3d.pipeline.RenderTarget
 import imgui.ImGui
-import imgui.flag.ImGuiDockNodeFlags
-import imgui.flag.ImGuiDir
-import imgui.flag.ImGuiKey
-import imgui.flag.ImGuiStyleVar
-import imgui.flag.ImGuiWindowFlags
-import imgui.internal.ImGui as ImGuiDock
+import imgui.flag.*
 import imgui.type.ImInt
 import imgui.type.ImString
 import org.academy.api.client.gui.editor.UiEditorDocument
@@ -24,6 +19,7 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.util.tinyfd.TinyFileDialogs
 import java.nio.file.Files
 import java.nio.file.Path
+import imgui.internal.ImGui as ImGuiDock
 
 /**
  * Out-of-game UI layout editor, mirroring [org.academy.desktop.grapheditor.app.GraphEditorApp]:
@@ -81,8 +77,8 @@ class UiEditorApp(
         ensureImGuiIni()
 
         val io = ImGui.getIO()
-        val displayW = io.getDisplaySizeX()
-        val displayH = io.getDisplaySizeY()
+        val displayW = io.displaySizeX
+        val displayH = io.displaySizeY
 
         renderMenuBar()
         val menuH = ImGui.getFrameHeightWithSpacing()
@@ -107,7 +103,7 @@ class UiEditorApp(
         if (showPreview) renderPreviewWindow()
 
         renderStatus()
-        if (!ImGui.getIO().getWantCaptureKeyboard()) shortcuts.handle()
+        if (!ImGui.getIO().wantCaptureKeyboard) shortcuts.handle()
     }
 
     // ============ menus ============
@@ -160,9 +156,24 @@ class UiEditorApp(
             if (ImGui.menuItem("Overlays", null, preview.showOverlays)) preview.showOverlays = !preview.showOverlays
             if (ImGui.menuItem("Rulers", null, preview.showRulers)) preview.showRulers = !preview.showRulers
             if (ImGui.menuItem("Preview Grid", null, preview.gridShown)) preview.setGrid(!preview.gridShown)
-            if (ImGui.menuItem("Preview Background: Dark", null, preview.artboardColor == PreviewPane.ARTBOARD_DARK)) preview.setArtboard(PreviewPane.ARTBOARD_DARK)
-            if (ImGui.menuItem("Preview Background: Gray", null, preview.artboardColor == PreviewPane.ARTBOARD_GRAY)) preview.setArtboard(PreviewPane.ARTBOARD_GRAY)
-            if (ImGui.menuItem("Preview Background: White", null, preview.artboardColor == PreviewPane.ARTBOARD_WHITE)) preview.setArtboard(PreviewPane.ARTBOARD_WHITE)
+            if (ImGui.menuItem(
+                    "Preview Background: Dark",
+                    null,
+                    preview.artboardColor == PreviewPane.ARTBOARD_DARK
+                )
+            ) preview.setArtboard(PreviewPane.ARTBOARD_DARK)
+            if (ImGui.menuItem(
+                    "Preview Background: Gray",
+                    null,
+                    preview.artboardColor == PreviewPane.ARTBOARD_GRAY
+                )
+            ) preview.setArtboard(PreviewPane.ARTBOARD_GRAY)
+            if (ImGui.menuItem(
+                    "Preview Background: White",
+                    null,
+                    preview.artboardColor == PreviewPane.ARTBOARD_WHITE
+                )
+            ) preview.setArtboard(PreviewPane.ARTBOARD_WHITE)
             ImGui.endMenu()
         }
         if (ImGui.beginMenu("Insert")) {
@@ -173,7 +184,8 @@ class UiEditorApp(
         }
         if (ImGui.beginMenu("Help")) {
             if (ImGui.menuItem("About")) hint = "AcademyCraft UI Editor (out-of-game desktop tool)"
-            if (ImGui.menuItem("Shortcuts")) hint = "Ctrl+Z/Y undo/redo · Ctrl+C/V copy/paste · Ctrl+D duplicate · Del delete · Alt+Up/Down move · Ctrl+O/S open/save · Ctrl+=/-/0 zoom"
+            if (ImGui.menuItem("Shortcuts")) hint =
+                "Ctrl+Z/Y undo/redo · Ctrl+C/V copy/paste · Ctrl+D duplicate · Del delete · Alt+Up/Down move · Ctrl+O/S open/save · Ctrl+=/-/0 zoom"
             ImGui.endMenu()
         }
         ImGui.sameLine()
@@ -190,8 +202,8 @@ class UiEditorApp(
         if (iniConfigured) return
         iniConfigured = true
         val io = ImGui.getIO()
-        io.setIniFilename(iniFile().toString())
-        io.setConfigWindowsMoveFromTitleBarOnly(true)
+        io.iniFilename = iniFile().toString()
+        io.configWindowsMoveFromTitleBarOnly = true
     }
 
     private fun renderDockHost(menuH: Float, displayW: Float, displayH: Float) {
@@ -250,8 +262,8 @@ class UiEditorApp(
 
     private fun renderStatus() {
         if (doc.error == null && !doc.dirty && hint == null) return
-        ImGui.setNextWindowPos(0f, ImGui.getIO().getDisplaySizeY() - 40f)
-        ImGui.setNextWindowSize(ImGui.getIO().getDisplaySizeX(), 40f)
+        ImGui.setNextWindowPos(0f, ImGui.getIO().displaySizeY - 40f)
+        ImGui.setNextWindowSize(ImGui.getIO().displaySizeX, 40f)
         ImGui.begin("##uistatus", FLAG_NO_MOVE_RESIZE)
         when {
             doc.error != null -> ImGui.textColored(1f, 0.35f, 0.35f, 1f, "Error: ${doc.error}")
@@ -260,6 +272,7 @@ class UiEditorApp(
                 ImGui.sameLine()
                 hint?.let { ImGui.textColored(1f, 1f, 1f, 1f, it) }
             }
+
             else -> hint?.let { ImGui.textColored(1f, 1f, 1f, 1f, it) }
         }
         ImGui.end()
@@ -298,10 +311,11 @@ class UiEditorApp(
     }
 
     private fun openLayout(name: String) {
-        val newDoc = UiEditorDocument("", WidgetNode("frame_layout", "root")).loadFrom(environment.layoutDir(), name) ?: run {
-            hint = "Failed to load $name"
-            return
-        }
+        val newDoc =
+            UiEditorDocument("", WidgetNode("frame_layout", "root")).loadFrom(environment.layoutDir(), name) ?: run {
+                hint = "Failed to load $name"
+                return
+            }
         switchDoc(newDoc)
         title = "AcademyCraft UI Editor — ${doc.fileName}"
     }
@@ -343,10 +357,12 @@ class UiEditorApp(
     }
 
     private fun reload() {
-        val newDoc = UiEditorDocument("", WidgetNode("frame_layout", "root")).loadFrom(environment.layoutDir(), doc.fileName) ?: run {
-            hint = "No file on disk yet"
-            return
-        }
+        val newDoc =
+            UiEditorDocument("", WidgetNode("frame_layout", "root")).loadFrom(environment.layoutDir(), doc.fileName)
+                ?: run {
+                    hint = "No file on disk yet"
+                    return
+                }
         switchDoc(newDoc)
         title = "AcademyCraft UI Editor — ${doc.fileName}"
     }
@@ -472,10 +488,10 @@ class UiEditorApp(
         const val PANEL_JSON = "JSON"
 
         private val FLAG_NO_MOVE_RESIZE = ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove or
-            ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoTitleBar or ImGuiWindowFlags.NoBringToFrontOnFocus
+                ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoTitleBar or ImGuiWindowFlags.NoBringToFrontOnFocus
         private val FLAG_DOCK_HOST = ImGuiWindowFlags.NoDocking or ImGuiWindowFlags.NoTitleBar or
-            ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove or
-            ImGuiWindowFlags.NoBringToFrontOnFocus or ImGuiWindowFlags.NoNavFocus
+                ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove or
+                ImGuiWindowFlags.NoBringToFrontOnFocus or ImGuiWindowFlags.NoNavFocus
         private val FLAG_CANVAS = ImGuiWindowFlags.NoScrollbar or ImGuiWindowFlags.NoScrollWithMouse
         private val FLAG_NO_DOCK = 0
     }

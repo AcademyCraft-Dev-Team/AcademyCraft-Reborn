@@ -18,7 +18,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Shared bounded world-query implementation for server-owned ability program runtimes. */
+/**
+ * Shared bounded world-query implementation for server-owned ability program runtimes.
+ */
 public final class ServerProgramTargetResolver implements ProgramTargetResolver {
     private final ServerPlayer player;
     private final double maximumRange;
@@ -188,10 +190,12 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
     }
 
     public ServerLevel level() {
-        return (ServerLevel) player.level();
+        return player.level();
     }
 
-    /** Uses the same spherical distance rule as range-limited program actions. */
+    /**
+     * Uses the same spherical distance rule as range-limited program actions.
+     */
     public static boolean isWithinRadius(Vec3 center, Vec3 position, double radius) {
         return center != null
                 && position != null

@@ -3,17 +3,7 @@ package org.academy.api.client.render.graph.serialize;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import org.academy.api.client.render.graph.model.Edge;
-import org.academy.api.client.render.graph.model.Graph;
-import org.academy.api.client.render.graph.model.GraphNode;
-import org.academy.api.client.render.graph.model.GraphParameter;
-import org.academy.api.client.render.graph.model.Port;
+import org.academy.api.client.render.graph.model.*;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.type.Curve;
@@ -23,6 +13,8 @@ import org.academy.api.client.render.graph.type.ValueType;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+
+import java.util.*;
 
 /**
  * 基于 Gson 的图编解码器（契约实现）。
@@ -178,7 +170,9 @@ public final class JsonGraphCodec implements GraphCodec {
         return new Edge.PortRef(o.get("nodeId").getAsString(), o.get("portId").getAsString());
     }
 
-    /** 共享值编码（供 VFX 容器图 codec 复用，M23）。 */
+    /**
+     * 共享值编码（供 VFX 容器图 codec 复用，M23）。
+     */
     public static JsonObject encodeValue(Value v) {
         var o = new JsonObject();
         o.addProperty("type", v.type().name());
@@ -221,7 +215,9 @@ public final class JsonGraphCodec implements GraphCodec {
         return o;
     }
 
-    /** 共享值解码（供 VFX 容器图 codec 复用，M23）。 */
+    /**
+     * 共享值解码（供 VFX 容器图 codec 复用，M23）。
+     */
     public static Value decodeValue(JsonObject o) {
         var type = ValueType.valueOf(o.get("type").getAsString());
         return switch (type) {

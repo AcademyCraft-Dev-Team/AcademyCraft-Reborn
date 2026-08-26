@@ -2,7 +2,7 @@ package org.academy.internal.common.ability.darkmatter.skills.lv4;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class DarkmatterRepairTest {
     @Test
@@ -30,7 +30,7 @@ class DarkmatterRepairTest {
             assertEquals(pulse == 5,
                     DarkmatterRepair.Server.removesHarmfulEffect(pulse, 3));
         }
-        assertEquals(true, DarkmatterRepair.Server.removesHarmfulEffect(10, 3));
-        assertEquals(false, DarkmatterRepair.Server.removesHarmfulEffect(5, 2));
+        assertTrue(DarkmatterRepair.Server.removesHarmfulEffect(10, 3));
+        assertFalse(DarkmatterRepair.Server.removesHarmfulEffect(5, 2));
     }
 }

@@ -64,7 +64,9 @@ public final class SparkGenerator {
         return sparks;
     }
 
-    /** 提取弧线端点（每个分支最后一个控制点）。 */
+    /**
+     * 提取弧线端点（每个分支最后一个控制点）。
+     */
     private static List<Endpoint> extractEndpoints(ArcCurve arc) {
         var endpoints = new ArrayList<Endpoint>();
         if (arc.size() < 2) return endpoints;
@@ -96,22 +98,30 @@ public final class SparkGenerator {
         float tlen = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
         float nx, ny, nz;
         if (tlen < 1e-6f) {
-            nx = 0; ny = 1; nz = 0;
+            nx = 0;
+            ny = 1;
+            nz = 0;
         } else {
-            nx = tx / tlen; ny = ty / tlen; nz = tz / tlen;
+            nx = tx / tlen;
+            ny = ty / tlen;
+            nz = tz / tlen;
         }
         endpoints.add(new Endpoint(arc.x(idx), arc.y(idx), arc.z(idx), nx, ny, nz,
                 arc.r(), arc.g(), arc.b(), arc.a()));
     }
 
-    /** 火花数据。 */
+    /**
+     * 火花数据。
+     */
     public record SparkData(
             float startX, float startY, float startZ,
             float endX, float endY, float endZ,
             float radius, float lifetime,
             float r, float g, float b, float a
     ) {
-        /** 转为 ArcCurve（供 CurveToMeshBuilder 使用）。 */
+        /**
+         * 转为 ArcCurve（供 CurveToMeshBuilder 使用）。
+         */
         public ArcCurve toArcCurve() {
             var arc = new ArcCurve();
             arc.addPoint(startX, startY, startZ, radius, 0);
@@ -122,7 +132,9 @@ public final class SparkGenerator {
         }
     }
 
-    /** 端点数据。 */
+    /**
+     * 端点数据。
+     */
     private record Endpoint(float x, float y, float z, float nx, float ny, float nz,
                             float r, float g, float b, float a) {
     }

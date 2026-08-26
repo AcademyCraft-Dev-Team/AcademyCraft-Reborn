@@ -16,13 +16,11 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
-/** Guides program-displaced blocks with the same homing profile as Magnet Manipulation. */
+/**
+ * Guides program-displaced blocks with the same homing profile as Magnet Manipulation.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AcceleratorBlockDisplacementRuntime {
     private static final int BLOCK_UPDATE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS;

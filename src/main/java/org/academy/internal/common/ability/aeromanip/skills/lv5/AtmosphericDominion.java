@@ -2,8 +2,6 @@ package org.academy.internal.common.ability.aeromanip.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -31,11 +29,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
-import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
-import org.academy.internal.common.ability.aeromanip.AirflowField;
+import org.academy.internal.common.ability.aeromanip.*;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.VortexPull;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.AtmosphereBlastGun;
 import org.academy.internal.common.network.PacketTypes;
@@ -46,6 +40,9 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
+import java.util.UUID;
 
 public final class AtmosphericDominion extends Skill {
     public AtmosphericDominion() {
@@ -117,7 +114,7 @@ public final class AtmosphericDominion extends Skill {
                 var durationTicks = context.milestone() >= 2 ? 480 : 400;
                 var duration = Math.max(1, Math.round(durationTicks * AeromanipConfig.durationMultiplier(player, SkillNames.ATMOSPHERIC_DOMINION)));
                 var radius = context.milestone() >= 2 ? 26.0 : 22.0;
-                var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.ATMOSPHERIC_DOMINION,
+                var field = new AirflowField(UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.ATMOSPHERIC_DOMINION,
                         AirflowField.Shape.SPHERE, player.position(), player.getLookAngle(), radius * range, 0, 1.0f, duration, context.milestone());
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });

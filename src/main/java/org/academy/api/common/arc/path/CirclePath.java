@@ -3,6 +3,7 @@ package org.academy.api.common.arc.path;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.Mth;
 import org.academy.api.common.arc.BasePath;
 import org.academy.api.common.arc.PathType;
 import org.academy.api.common.arc.data.PathData;
@@ -17,7 +18,6 @@ import org.joml.Vector3fc;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public record CirclePath(Vector3fc center, Vector3fc normal, float radius) implements BasePath {
     public static final StreamCodec<ByteBuf, CirclePath> CODEC = StreamCodec.composite(

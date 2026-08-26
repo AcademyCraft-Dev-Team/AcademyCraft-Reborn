@@ -11,7 +11,8 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.ScissorRect
 import org.academy.api.client.util.ClientUtil
-import kotlin.math.*
+import kotlin.math.max
+import kotlin.math.round
 
 /**
  * A wheel picker widget that hosts arbitrary widgets as its items.

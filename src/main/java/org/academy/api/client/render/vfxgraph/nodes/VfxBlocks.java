@@ -1,33 +1,29 @@
 package org.academy.api.client.render.vfxgraph.nodes;
 
-import java.util.List;
-import java.util.Optional;
+import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
+import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.registry.PropertySpec;
 import org.academy.api.client.render.graph.type.CurveSampler;
 import org.academy.api.client.render.graph.type.GradientSampler;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
 import org.academy.api.client.render.vfxgraph.arc.CurveGenerator;
 import org.academy.api.client.render.vfxgraph.arc.MeshDistance;
 import org.academy.api.client.render.vfxgraph.arc.SurfaceDistributor;
-import org.academy.api.client.render.vfxgraph.shape.BoxShape;
-import org.academy.api.client.render.vfxgraph.shape.CircleEdgeShape;
-import org.academy.api.client.render.vfxgraph.shape.ConeShape;
-import org.academy.api.client.render.vfxgraph.shape.CylinderShape;
-import org.academy.api.client.render.vfxgraph.shape.DiscShape;
-import org.academy.api.client.render.vfxgraph.shape.EmitterShape;
-import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
-import org.academy.api.client.render.vfxgraph.shape.MeshShape;
-import org.academy.api.client.render.vfxgraph.shape.PointShape;
-import org.academy.api.client.render.vfxgraph.shape.SphereShape;
-import org.academy.api.client.render.vfxgraph.shape.TorusShape;
+import org.academy.api.client.render.vfxgraph.model.VfxBlock;
+import org.academy.api.client.render.vfxgraph.shape.*;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * VFX 容器块目录（M24–M27）：注册块元数据（核心 NodeRegistry）与块工厂（VfxBlockRegistry）。
@@ -44,7 +40,9 @@ public final class VfxBlocks {
     private VfxBlocks() {
     }
 
-    /** spawn/init 块共享的基础属性。 */
+    /**
+     * spawn/init 块共享的基础属性。
+     */
     private static final List<PropertySpec> PARTICLE_BASIC = List.of(
             prop("lifetime", ValueType.FLOAT, Value.of(1f)),
             prop("size", ValueType.FLOAT, Value.of(0.1f)),
@@ -55,7 +53,9 @@ public final class VfxBlocks {
             prop("layer", ValueType.STRING, Value.string("fire"))
     );
 
-    /** 发射形状属性（spawn/init_position 共用）。 */
+    /**
+     * 发射形状属性（spawn/init_position 共用）。
+     */
     private static final List<PropertySpec> SHAPE_PROPS = List.of(
             prop("shape", ValueType.STRING, Value.string("point")),
             prop("origin_x", ValueType.FLOAT, Value.of(0f)),
@@ -70,13 +70,17 @@ public final class VfxBlocks {
             prop("mesh_scale", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** spawn 尾块：PARTICLE_BASIC + SHAPE_PROPS。 */
-    private static final List<PropertySpec> SPAWN_TAIL = java.util.stream.Stream.concat(
+    /**
+     * spawn 尾块：PARTICLE_BASIC + SHAPE_PROPS。
+     */
+    private static final List<PropertySpec> SPAWN_TAIL = Stream.concat(
             PARTICLE_BASIC.stream(), SHAPE_PROPS.stream()).toList();
 
-    /** output 块共享属性默认（数据驱动，M21l）：着色器/混合值**不写死具体 shader id**，
-     *  一律空串中性默认，由图上显式指定（缺失时渲染层兜底 billboard/translucent）；
-     *  layer 过滤该输出负责渲染的粒子层（空串=全部，分层外观用多输出块表达）。 */
+    /**
+     * output 块共享属性默认（数据驱动，M21l）：着色器/混合值**不写死具体 shader id**，
+     * 一律空串中性默认，由图上显式指定（缺失时渲染层兜底 billboard/translucent）；
+     * layer 过滤该输出负责渲染的粒子层（空串=全部，分层外观用多输出块表达）。
+     */
     private static final List<PropertySpec> OUTPUT_PROPERTIES = List.of(
             prop("vertex", ValueType.STRING, Value.string("")),
             prop("shader", ValueType.STRING, Value.string("")),
@@ -84,7 +88,9 @@ public final class VfxBlocks {
             prop("layer", ValueType.STRING, Value.string(""))
     );
 
-    /** arc_surface/arc_contact 共享属性（M29，Blender 表面电弧：布点 + 短弧 + 噪声 + 端点吸附）。 */
+    /**
+     * arc_surface/arc_contact 共享属性（M29，Blender 表面电弧：布点 + 短弧 + 噪声 + 端点吸附）。
+     */
     private static final List<PropertySpec> ARC_SURFACE_PROPS = List.of(
             prop("mesh", ValueType.STRING, Value.string("builtin:plane")),
             prop("density", ValueType.FLOAT, Value.of(3.8f)),
@@ -106,7 +112,9 @@ public final class VfxBlocks {
             prop("origin_z", ValueType.FLOAT, Value.of(0f))
     );
 
-    /** arc_contact 专属属性：接触对象（MeshAssets id）+ 距离剔除阈值 + 接触对象位移。 */
+    /**
+     * arc_contact 专属属性：接触对象（MeshAssets id）+ 距离剔除阈值 + 接触对象位移。
+     */
     private static final List<PropertySpec> ARC_CONTACT_PROPS = List.of(
             prop("contact_mesh", ValueType.STRING, Value.string("builtin:sphere")),
             prop("contact_range", ValueType.FLOAT, Value.of(4.1f)),
@@ -115,7 +123,9 @@ public final class VfxBlocks {
             prop("contact_origin_z", ValueType.FLOAT, Value.of(0f))
     );
 
-    /** arc_spark 粒子火花属性（M30，Blender 粒子系统：弧→点 + 溅射 + 重力 + 迷你管）。 */
+    /**
+     * arc_spark 粒子火花属性（M30，Blender 粒子系统：弧→点 + 溅射 + 重力 + 迷你管）。
+     */
     private static final List<PropertySpec> ARC_SPARK_PROPS = List.of(
             prop("probability", ValueType.FLOAT, Value.of(0.48f)),
             prop("max_sparks", ValueType.INT, Value.of(10)),
@@ -128,7 +138,9 @@ public final class VfxBlocks {
             prop("emission", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** output_arc 的 ARC 观感参数（数据驱动，M22-Rev2）：Blender 式参数 + 火花参数。 */
+    /**
+     * output_arc 的 ARC 观感参数（数据驱动，M22-Rev2）：Blender 式参数 + 火花参数。
+     */
     private static final List<PropertySpec> ARC_OUTPUT_PROPERTIES = List.of(
             prop("sparks", ValueType.INT, Value.of(8)),
             prop("spark_speed", ValueType.FLOAT, Value.of(2.2f)),
@@ -150,19 +162,25 @@ public final class VfxBlocks {
             prop("branch_brightness_scale", ValueType.FLOAT, Value.of(0.6f))
     );
 
-    /** over-life curve 系共享（curve/layer）。 */
+    /**
+     * over-life curve 系共享（curve/layer）。
+     */
     private static final List<PropertySpec> CURVE_LAYER = List.of(
             prop("curve", ValueType.STRING, Value.string("")),
             prop("layer", ValueType.STRING, Value.string(""))
     );
 
-    /** noise/turbulence 共享（amplitude/frequency）。 */
+    /**
+     * noise/turbulence 共享（amplitude/frequency）。
+     */
     private static final List<PropertySpec> NOISE = List.of(
             prop("amplitude", ValueType.FLOAT, Value.of(1f)),
             prop("frequency", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** collision_ground/plane 共享尾块（bounce/kill）。 */
+    /**
+     * collision_ground/plane 共享尾块（bounce/kill）。
+     */
     private static final List<PropertySpec> BOUNCE_KILL = List.of(
             prop("bounce", ValueType.FLOAT, Value.of(0.5f)),
             prop("kill", ValueType.BOOL, Value.of(false))
@@ -434,7 +452,7 @@ public final class VfxBlocks {
         blocks.register("vfx.block.arc_surface", VfxBlocks::arcSurface);
 
         metadata.register(type("vfx.block.arc_contact", "spawn", "Arc Contact",
-                java.util.stream.Stream.concat(ARC_SURFACE_PROPS.stream(), ARC_CONTACT_PROPS.stream()).toList()));
+                Stream.concat(ARC_SURFACE_PROPS.stream(), ARC_CONTACT_PROPS.stream()).toList()));
         blocks.register("vfx.block.arc_contact", VfxBlocks::arcContact);
 
         metadata.register(type("vfx.block.arc_spark", "spawn", "Arc Spark",
@@ -443,7 +461,7 @@ public final class VfxBlocks {
 
         // output_arc：OUTPUT_PROPERTIES（vertex/shader/blend/layer）+ ARC 观感参数（数据驱动，M22g）
         metadata.register(type("vfx.block.output_arc", "output", "Output Arc",
-                java.util.stream.Stream.concat(OUTPUT_PROPERTIES.stream(), ARC_OUTPUT_PROPERTIES.stream()).toList()));
+                Stream.concat(OUTPUT_PROPERTIES.stream(), ARC_OUTPUT_PROPERTIES.stream()).toList()));
         blocks.register("vfx.block.output_arc", (n, p) -> (buf, ctx) -> {
         });
     }
@@ -1040,7 +1058,9 @@ public final class VfxBlocks {
 
     // ==================== arc（M22，路径驱动，CPU spine + GPU 观感，无线程） ====================
 
-    /** 两点电弧（Blender 式：from→to + 表面法线起拱 + 递归分支 + 噪声动画）。 */
+    /**
+     * 两点电弧（Blender 式：from→to + 表面法线起拱 + 递归分支 + 噪声动画）。
+     */
     private static SimNode arcBolt(VfxBlock block, PortValueSource ports) {
         float ox = propFloat(block, "origin_x", 0f);
         float oy = propFloat(block, "origin_y", 0f);
@@ -1067,7 +1087,15 @@ public final class VfxBlocks {
         float vx = toX - fromX, vy = toY - fromY, vz = toZ - fromZ;
         float vlen = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
         float nx, ny, nz;
-        if (vlen < 1e-6f) { nx = 0; ny = 1; nz = 0; } else { nx = vx / vlen; ny = vy / vlen; nz = vz / vlen; }
+        if (vlen < 1e-6f) {
+            nx = 0;
+            ny = 1;
+            nz = 0;
+        } else {
+            nx = vx / vlen;
+            ny = vy / vlen;
+            nz = vz / vlen;
+        }
         long[] seed = {0L};
         // 每 N 秒生成一条电弧（低频，避免每帧生成导致几十上百条累积）；interval=0 则每帧概率生成
         float interval = propFloat(block, "interval", 0f);
@@ -1082,7 +1110,7 @@ public final class VfxBlocks {
             seed[0]++;
             if (ctx.random().nextFloat() > probability) return;
             var arc = ctx.arcs().add();
-            org.academy.api.client.render.vfxgraph.arc.CurveGenerator.generateFromTo(
+            CurveGenerator.generateFromTo(
                     arc, fromX, fromY, fromZ, toX, toY, toZ,
                     nx, ny, nz,
                     width, segments,
@@ -1093,7 +1121,9 @@ public final class VfxBlocks {
         };
     }
 
-    /** 环绕电弧。 */
+    /**
+     * 环绕电弧。
+     */
     private static SimNode arcOrbit(VfxBlock block, PortValueSource ports) {
         float ox = propFloat(block, "origin_x", 0f);
         float oy = propFloat(block, "origin_y", 0f);
@@ -1120,7 +1150,7 @@ public final class VfxBlocks {
             float x = ox + (float) Math.cos(angle[0]) * radius;
             float z = oz + (float) Math.sin(angle[0]) * radius;
             var arc = ctx.arcs().add();
-            org.academy.api.client.render.vfxgraph.arc.CurveGenerator.generate(
+            CurveGenerator.generate(
                     arc, x, oy, z, 0, 1, 0,
                     width, segments,
                     color[0] * emission, color[1] * emission, color[2] * emission, color[3],
@@ -1130,7 +1160,9 @@ public final class VfxBlocks {
         };
     }
 
-    /** 表面电弧（M29，Blender「闪电附着」主流水线）：表面布点 + per-point 短弧 + 断续时序 + 端点吸附。 */
+    /**
+     * 表面电弧（M29，Blender「闪电附着」主流水线）：表面布点 + per-point 短弧 + 断续时序 + 端点吸附。
+     */
     private static SimNode arcSurface(VfxBlock block, PortValueSource ports) {
         float ox = propFloat(block, "origin_x", 0f);
         float oy = propFloat(block, "origin_y", 0f);
@@ -1186,7 +1218,9 @@ public final class VfxBlocks {
         };
     }
 
-    /** 接触闪电（M30，复刻 Blender 主组第二套系统）：源面布点 + 到接触对象距离剔除 + 直线弧末端吸附接触面。 */
+    /**
+     * 接触闪电（M30，复刻 Blender 主组第二套系统）：源面布点 + 到接触对象距离剔除 + 直线弧末端吸附接触面。
+     */
     private static SimNode arcContact(VfxBlock block, PortValueSource ports) {
         float ox = propFloat(block, "origin_x", 0f);
         float oy = propFloat(block, "origin_y", 0f);
@@ -1251,7 +1285,9 @@ public final class VfxBlocks {
         };
     }
 
-    /** 粒子火花（M30，复刻 Blender 主组第三套系统）：弧→点 + 概率删减 + 溅射方向+重力 + 迷你管对齐速度。 */
+    /**
+     * 粒子火花（M30，复刻 Blender 主组第三套系统）：弧→点 + 概率删减 + 溅射方向+重力 + 迷你管对齐速度。
+     */
     private static SimNode arcSpark(VfxBlock block, PortValueSource ports) {
         float probability = propFloat(block, "probability", 0.5f);
         int maxSparks = propInt(block, "max_sparks", 3);
@@ -1310,7 +1346,7 @@ public final class VfxBlocks {
                     spark.addPoint(ex, ey, ez, radius * 0.3f, 0, 0);
                     spark.setColor(color[0] * emission, color[1] * emission, color[2] * emission, color[3]);
                     spark.setLifetime(lifetime);
-                    spark.setSeed(seed[0] * 131 + a * 17 + i);
+                    spark.setSeed(seed[0] * 131 + a * 17L + i);
                     spark.setSparkVelocity(vx, vy, vz);
                     spawned++;
                 }
@@ -1318,8 +1354,10 @@ public final class VfxBlocks {
         };
     }
 
-    /** 估算弧线第 i 控制点的表面切向（相邻点差，供火花方向参考）。 */
-    private static float[] surfaceTangent(org.academy.api.client.render.vfxgraph.arc.ArcCurve arc, int i) {
+    /**
+     * 估算弧线第 i 控制点的表面切向（相邻点差，供火花方向参考）。
+     */
+    private static float[] surfaceTangent(ArcCurve arc, int i) {
         int prev = Math.max(0, i - 1);
         int next = Math.min(arc.size() - 1, i + 1);
         float tx = arc.x(next) - arc.x(prev);
@@ -1330,7 +1368,9 @@ public final class VfxBlocks {
         return new float[]{tx / len, ty / len, tz / len};
     }
 
-    /** 平移三角形网格（每 3 个浮点 +x、+y、+z），返回新数组。 */
+    /**
+     * 平移三角形网格（每 3 个浮点 +x、+y、+z），返回新数组。
+     */
     private static float[] offsetTriangles(float[] tris, float ox, float oy, float oz) {
         if (tris.length == 0) return tris;
         var out = tris.clone();
@@ -1344,7 +1384,9 @@ public final class VfxBlocks {
 
     // ==================== 辅助 ====================
 
-    /** 端口求值：有数据流绑定返回算子值（逐粒子），否则返回属性默认。 */
+    /**
+     * 端口求值：有数据流绑定返回算子值（逐粒子），否则返回属性默认。
+     */
     private static float portFloat(PortValueSource ports, String portId, int particleIndex,
                                    ParticleBuffer buffer, SimContext ctx, float fallback) {
         var v = ports.eval(portId, particleIndex, buffer, ctx);
@@ -1356,7 +1398,9 @@ public final class VfxBlocks {
         return ParticleBuffer.layerByte(propString(block, "layer", "fire"));
     }
 
-    /** over-life layer 过滤：""=全部，fire=0，smoke=1。 */
+    /**
+     * over-life layer 过滤：""=全部，fire=0，smoke=1。
+     */
     private static byte layerFilter(VfxBlock block) {
         return ParticleBuffer.layerFilter(propString(block, "layer", ""));
     }
@@ -1385,9 +1429,12 @@ public final class VfxBlocks {
             case "sphere" -> new SphereShape(ox, oy, oz, propFloat(block, "radius", 1f));
             case "box" -> new BoxShape(ox, oy, oz,
                     propFloat(block, "half_x", 1f), propFloat(block, "half_y", 1f), propFloat(block, "half_z", 1f));
-            case "cone" -> new ConeShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
-            case "cylinder" -> new CylinderShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
-            case "torus" -> new TorusShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "half_x", 0.25f));
+            case "cone" ->
+                    new ConeShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
+            case "cylinder" ->
+                    new CylinderShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
+            case "torus" ->
+                    new TorusShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "half_x", 0.25f));
             case "circle_edge" -> new CircleEdgeShape(ox, oy, oz, propFloat(block, "radius", 1f));
             case "disc" -> new DiscShape(ox, oy, oz, propFloat(block, "radius", 1f));
             case "mesh" -> meshShape(block, ox, oy, oz, scale);
@@ -1439,29 +1486,29 @@ public final class VfxBlocks {
     }
 
     private static NodeType type(String id, String category, String name, List<PropertySpec> head, List<PropertySpec> tail) {
-        var props = new java.util.ArrayList<PropertySpec>(head.size() + tail.size());
+        var props = new ArrayList<PropertySpec>(head.size() + tail.size());
         props.addAll(head);
         props.addAll(tail);
         return new NodeType(id, category, name, List.of(), List.copyOf(props));
     }
 
-    private static NodeType typeWithPorts(String id, String category, String name, List<org.academy.api.client.render.graph.registry.PortSpec> ports,
+    private static NodeType typeWithPorts(String id, String category, String name, List<PortSpec> ports,
                                           List<PropertySpec> props) {
         return new NodeType(id, category, name, List.copyOf(ports), List.copyOf(props));
     }
 
-    private static NodeType typeWithPorts(String id, String category, String name, List<org.academy.api.client.render.graph.registry.PortSpec> ports,
+    private static NodeType typeWithPorts(String id, String category, String name, List<PortSpec> ports,
                                           List<PropertySpec> head, List<PropertySpec> tail) {
-        var props = new java.util.ArrayList<PropertySpec>(head.size() + tail.size());
+        var props = new ArrayList<PropertySpec>(head.size() + tail.size());
         props.addAll(head);
         props.addAll(tail);
         return new NodeType(id, category, name, List.copyOf(ports), List.copyOf(props));
     }
 
-    private static org.academy.api.client.render.graph.registry.PortSpec in(
+    private static PortSpec in(
             String id, String name, ValueType type) {
-        return new org.academy.api.client.render.graph.registry.PortSpec(
-                id, name, org.academy.api.client.render.graph.model.PortDirection.INPUT, type,
+        return new PortSpec(
+                id, name, PortDirection.INPUT, type,
                 switch (type) {
                     case FLOAT, TIME, INT -> Value.of(0f);
                     case COLOR -> Value.color(1f, 1f, 1f, 1f);

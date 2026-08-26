@@ -6,11 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ProfilerSampler {
@@ -196,7 +192,7 @@ public final class ProfilerSampler {
         }
         long totalSamples = 0;
         for (SampledThreadView view : perThread.values()) {
-            totalSamples += view.getSamples();
+            totalSamples += view.samples();
         }
         return new SamplerSnapshot(perThread, totalSamples, elapsedSeconds());
     }

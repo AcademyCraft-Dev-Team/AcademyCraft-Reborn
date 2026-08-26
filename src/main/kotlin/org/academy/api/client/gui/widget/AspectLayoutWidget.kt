@@ -114,8 +114,10 @@ open class AspectLayoutWidget(aspectRatio: Float = 1f) : AbstractWidgetContainer
         val containerLp = layoutParams
         val childWidth = child.measuredWidth
         val childHeight = child.measuredHeight
-        val left = containerLp.paddingLeft + (width - containerLp.paddingLeft - containerLp.paddingRight - childWidth) / 2.0f
-        val top = containerLp.paddingTop + (height - containerLp.paddingTop - containerLp.paddingBottom - childHeight) / 2.0f
+        val left =
+            containerLp.paddingLeft + (width - containerLp.paddingLeft - containerLp.paddingRight - childWidth) / 2.0f
+        val top =
+            containerLp.paddingTop + (height - containerLp.paddingTop - containerLp.paddingBottom - childHeight) / 2.0f
         child.layout(left, top, left + childWidth, top + childHeight)
     }
 

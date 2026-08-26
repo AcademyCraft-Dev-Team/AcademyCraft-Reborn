@@ -2,14 +2,7 @@ package org.academy.internal.common.ability.mentalout.precision;
 
 import org.academy.api.common.entitycontrol.ControlCapability;
 
-import java.util.ArrayList;
-import java.util.ArrayDeque;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
     public static final int MAX_NODES = 32;
@@ -163,7 +156,7 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
             }
         }
 
-        var ready = new java.util.PriorityQueue<Integer>();
+        var ready = new PriorityQueue<Integer>();
         indegree.forEach((id, degree) -> {
             if (degree == 0) ready.add(id);
         });
@@ -695,7 +688,7 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         INVALID_DIRECTION;
 
         public String translationKey() {
-            return "message.academy.precision_operation." + name().toLowerCase(java.util.Locale.ROOT);
+            return "message.academy.precision_operation." + name().toLowerCase(Locale.ROOT);
         }
     }
 

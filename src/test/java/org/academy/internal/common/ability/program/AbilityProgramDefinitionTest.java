@@ -1,26 +1,20 @@
 package org.academy.internal.common.ability.program;
 
 import com.google.gson.JsonObject;
+import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramNodeRole;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AbilityProgramDefinitionTest {
     @Test
@@ -28,7 +22,7 @@ class AbilityProgramDefinitionTest {
         var definition = AbilityProgramDefinitions.mentalout();
 
         assertEquals(PrecisionProgramNodeCatalog.MENTALOUT, definition.category());
-        assertEquals(org.academy.api.common.ability.program.ProgramLimits.DEFAULT, definition.limits());
+        assertEquals(ProgramLimits.DEFAULT, definition.limits());
         assertSame(
                 PrecisionProgramNodeCatalog.INSTANCE.find(PrecisionProgramNodeIds.ON_CAST),
                 definition.nodeLookup().find(PrecisionProgramNodeIds.ON_CAST)
@@ -118,9 +112,9 @@ class AbilityProgramDefinitionTest {
         );
         assertEquals(expected, AbilityProgramDefinitions.all().stream()
                 .map(AbilityProgramDefinition::category)
-                .collect(java.util.stream.Collectors.toSet()));
+                .collect(Collectors.toSet()));
 
-        var entryIds = new java.util.HashSet<net.minecraft.resources.Identifier>();
+        var entryIds = new HashSet<Identifier>();
         for (var category : expected) {
             var definition = AbilityProgramDefinitions.require(category);
             var entries = definition.categoryNodeTypes().entrySet().stream()

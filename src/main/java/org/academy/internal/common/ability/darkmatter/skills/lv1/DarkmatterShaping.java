@@ -7,9 +7,9 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.item.ItemStack;
@@ -23,11 +23,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingRegistries;
+import org.academy.api.common.ability.darkmatter.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -36,6 +32,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.item.DarkmatterBlockItem;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.common.world.item.Items;
 import org.academy.mixin.client.AbstractContainerScreenAccessor;
@@ -106,7 +103,8 @@ public final class DarkmatterShaping extends Skill {
         public static final String KEY_NAME_CAST = SkillNames.DARKMATTER_SHAPING + "_cast";
         public static Config CONFIG = new Config();
 
-        private Client() { }
+        private Client() {
+        }
 
         private static void cast() {
             if (!AbilitySystemClient.canUseSkill(Skills.DARKMATTER_SHAPING.get())) return;
@@ -142,15 +140,26 @@ public final class DarkmatterShaping extends Skill {
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() { }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
 
     public static final class Server {
-        private Server() { }
+        private Server() {
+        }
 
         @SubscribePacket
         public static void handle(CastPacket packet) {
@@ -235,7 +244,7 @@ public final class DarkmatterShaping extends Skill {
                 case ARMOR -> throw new IllegalStateException("Armor handled above");
             }, shape.outputCount());
             if (shape == DarkmatterShape.BLOCK) {
-                org.academy.internal.common.world.item.DarkmatterBlockItem.setProfile(
+                DarkmatterBlockItem.setProfile(
                         stack, blockProfile);
             }
             output.add(profile(stack, profile));
@@ -305,7 +314,7 @@ public final class DarkmatterShaping extends Skill {
             var stack = new ItemStack(Items.DARKMATTER.get());
             var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
             if (!resource.consume(player, shapingCost(MATERIAL_MATTER_COST,
-                    skill.getEffectiveProficiencyMilestone(player)), skill,
+                            skill.getEffectiveProficiencyMilestone(player)), skill,
                     skill.getIterationTicks(player))) return Result.INSUFFICIENT_MP;
             inventory.setItem(slotIndex, stack);
             inventory.setChanged();
@@ -358,17 +367,32 @@ public final class DarkmatterShaping extends Skill {
             var alpha = finitePower(alphaPower);
             return Math.round(1.5f * alpha + 0.1f * alpha * alpha);
         }
-        public static int toolFortune(float betaPower) { return Math.round(finitePower(betaPower)); }
+
+        public static int toolFortune(float betaPower) {
+            return Math.round(finitePower(betaPower));
+        }
+
         public static float miningSpeedBonus(float alphaPower) {
             var efficiency = toolEfficiency(alphaPower);
             return efficiency <= 0 ? 0.0f : efficiency * efficiency + 1.0f;
         }
-        public static float spearDamage(float alphaPower) { return 5.0f + 2.0f * finitePower(alphaPower); }
-        public static float spearRange(float alphaPower) { return 8.0f + 2.0f * finitePower(alphaPower); }
-        public static float spearSpeed(float betaPower) { return 1.5f + 0.2f * finitePower(betaPower); }
+
+        public static float spearDamage(float alphaPower) {
+            return 5.0f + 2.0f * finitePower(alphaPower);
+        }
+
+        public static float spearRange(float alphaPower) {
+            return 8.0f + 2.0f * finitePower(alphaPower);
+        }
+
+        public static float spearSpeed(float betaPower) {
+            return 1.5f + 0.2f * finitePower(betaPower);
+        }
+
         public static float spearPenetration(float betaPower) {
             return Math.min(0.50f, 0.10f * finitePower(betaPower));
         }
+
         public static float directDamage(DarkmatterShape shape, float alphaPower) {
             var base = switch (shape) {
                 case TOOL -> 6.0f;
@@ -382,32 +406,45 @@ public final class DarkmatterShaping extends Skill {
             };
             return base + phaseDamageBonus(alphaPower);
         }
+
         public static float phaseDamageBonus(float alphaPower) {
             return 2.0f * finitePower(alphaPower);
         }
+
         public static float penetration(DarkmatterShape shape, float betaPower) {
             var scale = shape == DarkmatterShape.SPEAR || shape == DarkmatterShape.TRIDENT
                     ? 0.10f : 0.08f;
             return Math.min(shape == DarkmatterShape.SPEAR || shape == DarkmatterShape.TRIDENT
                     ? 0.50f : 0.40f, scale * finitePower(betaPower));
         }
+
         public static float armorReduction(float alphaPower) {
             return Math.min(0.20f, 0.04f * finitePower(alphaPower));
         }
+
         public static int armorWeaknessTicks(float betaPower) {
             return 20 + Math.round(10.0f * finitePower(betaPower));
         }
+
         private static float finitePower(float power) {
             return Float.isFinite(power) ? Math.max(0.0f, power) : 0.0f;
         }
+
         static float shapingCost(float base, int milestone) {
             return Math.max(0.0f, base) * (Math.clamp(milestone, 0, 3) >= 1 ? 0.9f : 1.0f);
         }
+
         public static float gammaShapingMultiplier(int milestone) {
             return Math.clamp(milestone, 0, 3) >= 3 ? 1.25f : 1.0f;
         }
-        static boolean repairsOnEnchant(int milestone) { return false; }
-        static boolean unlocksAutoRepair(int milestone) { return false; }
+
+        static boolean repairsOnEnchant(int milestone) {
+            return false;
+        }
+
+        static boolean unlocksAutoRepair(int milestone) {
+            return false;
+        }
 
         public record ModifierValidation(boolean valid, Map<String, Integer> modifiers,
                                          int usedPoints, int budget, List<String> errors) {
@@ -418,7 +455,8 @@ public final class DarkmatterShaping extends Skill {
     }
 
     public static final class ClientPackets {
-        private ClientPackets() { }
+        private ClientPackets() {
+        }
 
         @SubscribePacket
         public static void handle(ResultPacket packet) {
@@ -452,7 +490,7 @@ public final class DarkmatterShaping extends Skill {
         }
     }
 
-    public enum Usage { SHAPE, MATERIAL_SLOT }
+    public enum Usage {SHAPE, MATERIAL_SLOT}
 
     @PacketTarget(ThreadType.SERVER)
     public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
@@ -462,7 +500,7 @@ public final class DarkmatterShaping extends Skill {
                     ByteBufCodecs.STRING_UTF8.encode(buffer, packet.shape.id());
                     ByteBufCodecs.VAR_INT.encode(buffer, packet.alphaPercent);
                     ByteBufCodecs.map(LinkedHashMap::new,
-                            ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)
+                                    ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)
                             .encode(buffer, new LinkedHashMap<>(packet.modifiers));
                     DarkmatterBlockProfile.STREAM_CODEC.encode(buffer, packet.blockProfile);
                     ByteBufCodecs.VAR_INT.encode(buffer, packet.slotIndex);
@@ -500,22 +538,42 @@ public final class DarkmatterShaping extends Skill {
                                        Map<String, Integer> modifiers) {
             return shape(shape, alphaPercent, modifiers, DarkmatterBlockProfile.DEFAULT);
         }
+
         public static CastPacket shape(DarkmatterShape shape, int alphaPercent,
                                        Map<String, Integer> modifiers,
                                        DarkmatterBlockProfile blockProfile) {
             return new CastPacket(Usage.SHAPE, shape, alphaPercent, modifiers,
                     blockProfile, -1);
         }
+
         public static CastPacket material(int slotIndex) {
             return new CastPacket(Usage.MATERIAL_SLOT, DarkmatterShape.TOOL,
                     50, Map.of(), DarkmatterBlockProfile.DEFAULT, slotIndex);
         }
-        public Usage usage() { return usage; }
-        public DarkmatterShape shape() { return shape; }
-        public int alphaPercent() { return alphaPercent; }
-        public Map<String, Integer> modifiers() { return modifiers; }
-        public DarkmatterBlockProfile blockProfile() { return blockProfile; }
-        public int slotIndex() { return slotIndex; }
+
+        public Usage usage() {
+            return usage;
+        }
+
+        public DarkmatterShape shape() {
+            return shape;
+        }
+
+        public int alphaPercent() {
+            return alphaPercent;
+        }
+
+        public Map<String, Integer> modifiers() {
+            return modifiers;
+        }
+
+        public DarkmatterBlockProfile blockProfile() {
+            return blockProfile;
+        }
+
+        public int slotIndex() {
+            return slotIndex;
+        }
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {

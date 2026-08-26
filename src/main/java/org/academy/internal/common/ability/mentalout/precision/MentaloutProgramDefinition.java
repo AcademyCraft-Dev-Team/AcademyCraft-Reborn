@@ -1,17 +1,16 @@
 package org.academy.internal.common.ability.mentalout.precision;
 
 import com.google.gson.JsonObject;
+import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.internal.common.ability.program.AbilityProgramDefinition;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
-import org.academy.internal.common.ability.program.PrecisionProgramAliases;
-import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.*;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Locale;
 
-/** Assembles Mentalout-specific nodes with the shared program algebra. */
+/**
+ * Assembles Mentalout-specific nodes with the shared program algebra.
+ */
 public final class MentaloutProgramDefinition {
     private MentaloutProgramDefinition() {
     }
@@ -47,7 +46,7 @@ public final class MentaloutProgramDefinition {
     }
 
     private static ProgramEditorNodeCatalog.Group group(
-            net.minecraft.resources.Identifier id,
+            Identifier id,
             PrecisionGraph.@Nullable NodeKind kind
     ) {
         if (id.equals(PrecisionProgramNodeIds.ON_CAST)) return ProgramEditorNodeCatalog.Group.FLOW;

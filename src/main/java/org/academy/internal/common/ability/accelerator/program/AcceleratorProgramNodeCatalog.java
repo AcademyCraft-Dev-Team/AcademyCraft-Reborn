@@ -6,23 +6,19 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramNodePurity;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeScope;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
-import org.academy.internal.common.ability.program.ProgramNodeLookup;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
+import org.academy.internal.common.ability.program.ProgramNodeLookup;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Strongly typed vector-manipulation program node schemas. */
+/**
+ * Strongly typed vector-manipulation program node schemas.
+ */
 public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
     public static final Identifier ACCELERATOR =
             AcademyCraft.academy(AbilityCategoryNames.ACCELERATOR);
@@ -203,7 +199,9 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
         }
     }
 
-    /** Continuous custom shockwave controls with a decoder for legacy saved graphs. */
+    /**
+     * Continuous custom shockwave controls with a decoder for legacy saved graphs.
+     */
     public record ShockwaveConfiguration(
             float power,
             boolean destroyBlocks,
@@ -211,17 +209,17 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
     ) {
         private static final Codec<ShockwaveConfiguration> CURRENT_CODEC =
                 RecordCodecBuilder.create(instance ->
-                instance.group(
-                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
-                                .forGetter(ShockwaveConfiguration::power),
-                        Codec.BOOL.optionalFieldOf("destroy_blocks", false)
-                                .forGetter(ShockwaveConfiguration::destroyBlocks),
-                        Codec.intRange(
-                                        KineticEnergyApplied.MIN_PROGRAM_RADIUS,
-                                        KineticEnergyApplied.MAX_PROGRAM_RADIUS)
-                                .fieldOf("radius")
-                                .forGetter(ShockwaveConfiguration::radius)
-                ).apply(instance, ShockwaveConfiguration::new));
+                        instance.group(
+                                Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                        .forGetter(ShockwaveConfiguration::power),
+                                Codec.BOOL.optionalFieldOf("destroy_blocks", false)
+                                        .forGetter(ShockwaveConfiguration::destroyBlocks),
+                                Codec.intRange(
+                                                KineticEnergyApplied.MIN_PROGRAM_RADIUS,
+                                                KineticEnergyApplied.MAX_PROGRAM_RADIUS)
+                                        .fieldOf("radius")
+                                        .forGetter(ShockwaveConfiguration::radius)
+                        ).apply(instance, ShockwaveConfiguration::new));
 
         public static final Codec<ShockwaveConfiguration> CODEC = Codec.either(
                 CURRENT_CODEC,

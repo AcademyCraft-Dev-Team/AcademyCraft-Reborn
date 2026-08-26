@@ -3,10 +3,13 @@ package org.academy.api.common.ability.darkmatter;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 
-/** Persistent 0..1 structural integrity of native dark-matter equipment. */
+/**
+ * Persistent 0..1 structural integrity of native dark-matter equipment.
+ */
 public record DarkmatterIntegrity(float value, float decayRemainder) {
     public static final DarkmatterIntegrity FULL = new DarkmatterIntegrity(1.0f, 0.0f);
     public static final DarkmatterIntegrity EMPTY = new DarkmatterIntegrity(0.0f, 0.0f);
@@ -16,10 +19,12 @@ public record DarkmatterIntegrity(float value, float decayRemainder) {
                     Codec.FLOAT.optionalFieldOf("decay_remainder", 0.0f)
                             .forGetter(DarkmatterIntegrity::decayRemainder)
             ).apply(instance, DarkmatterIntegrity::new));
-    /** Accepts the former scalar component and writes the new remainder-aware structure. */
+    /**
+     * Accepts the former scalar component and writes the new remainder-aware structure.
+     */
     public static final Codec<DarkmatterIntegrity> CODEC = Codec.either(CURRENT_CODEC, Codec.FLOAT)
             .xmap(value -> value.map(integrity -> integrity, DarkmatterIntegrity::new), Either::left);
-    public static final StreamCodec<io.netty.buffer.ByteBuf, DarkmatterIntegrity> STREAM_CODEC =
+    public static final StreamCodec<ByteBuf, DarkmatterIntegrity> STREAM_CODEC =
             StreamCodec.composite(
                     ByteBufCodecs.FLOAT, DarkmatterIntegrity::value,
                     ByteBufCodecs.FLOAT, DarkmatterIntegrity::decayRemainder,

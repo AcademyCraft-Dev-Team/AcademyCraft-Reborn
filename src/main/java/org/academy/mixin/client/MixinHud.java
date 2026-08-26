@@ -3,6 +3,7 @@ package org.academy.mixin.client;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
+import net.minecraft.util.Mth;
 import org.academy.api.client.hud.terminal.TerminalHud;
 import org.academy.internal.client.ability.mentalout.ControlledPlayerHudRenderer;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
@@ -11,7 +12,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import net.minecraft.util.Mth;
 
 @Mixin(Hud.class)
 public abstract class MixinHud {

@@ -1,11 +1,14 @@
 package org.academy.api.client.render.shader.codegen;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class GlslGenContextTest {
     @Test
@@ -21,8 +24,8 @@ class GlslGenContextTest {
             }
         };
         assertEquals("u_foo", ctx.parameterUniform("foo"));
-        assertEquals(null, ctx.curve("foo"));
-        assertEquals(null, ctx.gradient("foo"));
+        assertNull(ctx.curve("foo"));
+        assertNull(ctx.gradient("foo"));
     }
 
     @Test
@@ -42,8 +45,8 @@ class GlslGenContextTest {
     @Test
     void curveAndGradientAreUsableData() {
         // 确认数据类可构造（黄金测试与采样器消费它们的通路）
-        var curve = new Curve(java.util.List.of(new Curve.Keyframe(0f, 0f, 0f, 0f, Curve.Interpolation.LINEAR)));
-        var gradient = new Gradient(java.util.List.of(new Gradient.ColorStop(0f, 1f, 0f, 0f, 1f)));
+        var curve = new Curve(List.of(new Curve.Keyframe(0f, 0f, 0f, 0f, Curve.Interpolation.LINEAR)));
+        var gradient = new Gradient(List.of(new Gradient.ColorStop(0f, 1f, 0f, 0f, 1f)));
         assertEquals(1, curve.keyframes().size());
         assertEquals(1, gradient.stops().size());
     }

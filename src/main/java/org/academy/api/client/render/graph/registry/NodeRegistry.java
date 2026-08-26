@@ -1,7 +1,8 @@
 package org.academy.api.client.render.graph.registry;
 
-import java.util.Collection;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Collection;
 
 /**
  * 节点目录（契约）。注册/查询 {@link NodeType}，供编辑器与编译期使用。

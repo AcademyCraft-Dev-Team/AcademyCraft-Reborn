@@ -1,11 +1,11 @@
 package org.academy.internal.common.world.entity.skill;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
-import net.minecraft.util.Mth;
 
 public class Smoke extends RenderOnlyEntity {
     private static final int DEFAULT_LIFETIME_TICKS = 80;

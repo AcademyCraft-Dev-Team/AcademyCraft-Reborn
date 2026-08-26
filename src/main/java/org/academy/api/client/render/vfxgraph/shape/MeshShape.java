@@ -39,7 +39,9 @@ public final class MeshShape implements EmitterShape {
         this.totalArea = total;
     }
 
-    /** 单位立方体（0..1 范围，6 面 × 2 三角形），与 {@code vfx.output_mesh} 渲染一致。 */
+    /**
+     * 单位立方体（0..1 范围，6 面 × 2 三角形），与 {@code vfx.output_mesh} 渲染一致。
+     */
     public static MeshShape unitCube(float ox, float oy, float oz, float scale) {
         float[] cube = new float[6 * 2 * FLOATS_PER_TRIANGLE];
         int t = 0;
@@ -53,9 +55,15 @@ public final class MeshShape implements EmitterShape {
     }
 
     private static int pushTriangle(float[] out, int t, float[] a, float[] b, float[] c) {
-        out[t++] = a[0]; out[t++] = a[1]; out[t++] = a[2];
-        out[t++] = b[0]; out[t++] = b[1]; out[t++] = b[2];
-        out[t++] = c[0]; out[t++] = c[1]; out[t++] = c[2];
+        out[t++] = a[0];
+        out[t++] = a[1];
+        out[t++] = a[2];
+        out[t++] = b[0];
+        out[t++] = b[1];
+        out[t++] = b[2];
+        out[t++] = c[0];
+        out[t++] = c[1];
+        out[t++] = c[2];
         return t;
     }
 
@@ -109,11 +117,11 @@ public final class MeshShape implements EmitterShape {
 
     // 单位立方体 6 面（每面 4 顶点，逆时针）
     private static final float[][][] CUBE_FACES = {
-            { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 } }, // -Z
-            { { 0, 0, 1 }, { 0, 1, 1 }, { 1, 1, 1 }, { 1, 0, 1 } }, // +Z
-            { { 0, 0, 0 }, { 0, 1, 0 }, { 0, 1, 1 }, { 0, 0, 1 } }, // -X
-            { { 1, 0, 0 }, { 1, 0, 1 }, { 1, 1, 1 }, { 1, 1, 0 } }, // +X
-            { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 0, 1 }, { 0, 0, 1 } }, // -Y
-            { { 0, 1, 0 }, { 0, 1, 1 }, { 1, 1, 1 }, { 1, 1, 0 } }, // +Y
+            {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}, // -Z
+            {{0, 0, 1}, {0, 1, 1}, {1, 1, 1}, {1, 0, 1}}, // +Z
+            {{0, 0, 0}, {0, 1, 0}, {0, 1, 1}, {0, 0, 1}}, // -X
+            {{1, 0, 0}, {1, 0, 1}, {1, 1, 1}, {1, 1, 0}}, // +X
+            {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}}, // -Y
+            {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}, {1, 1, 0}}, // +Y
     };
 }

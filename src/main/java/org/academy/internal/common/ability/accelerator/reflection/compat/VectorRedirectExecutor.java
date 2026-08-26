@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.accelerator.reflection.compat;
 
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;

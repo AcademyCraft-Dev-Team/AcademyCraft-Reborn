@@ -1,24 +1,13 @@
 package org.academy.api.client.render.shader.codegen;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.academy.api.client.render.graph.compile.CompiledGraph;
-import org.academy.api.client.render.graph.model.Edge;
-import org.academy.api.client.render.graph.model.Graph;
-import org.academy.api.client.render.graph.model.GraphNode;
-import org.academy.api.client.render.graph.model.Port;
-import org.academy.api.client.render.graph.model.PortDirection;
+import org.academy.api.client.render.graph.model.*;
 import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Gradient;
-import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.shader.pipeline.SamplerBinding;
+
+import java.util.*;
 
 /**
  * GLSL 代码生成器。把编译后的图翻译为片段着色器（配固定全屏顶点着色器）。
@@ -178,7 +167,7 @@ public final class GlslGenerator {
     }
 
     private static String assembleFragment(Map<String, Uniform> paramUniforms, Set<String> helpers,
-            GlslWriter body, List<SamplerBinding> samplers) {
+                                           GlslWriter body, List<SamplerBinding> samplers) {
         var w = new GlslWriter();
         w.line("#version 330");
         w.blank();
@@ -210,53 +199,45 @@ public final class GlslGenerator {
     private record Uniform(String name, ValueType type) {
     }
 
-    private static final class Context implements GlslGenContext {
-        private final Map<String, Uniform> paramUniforms;
-        private final Map<String, Curve> curves;
-        private final Map<String, Gradient> gradients;
-        private final Map<String, String> samplerNames;
-        private final Set<String> helpers;
-
-        Context(Map<String, Uniform> paramUniforms, Map<String, Curve> curves, Map<String, Gradient> gradients,
-                Set<String> helpers, Map<String, String> samplerNames) {
-            this.paramUniforms = paramUniforms;
-            this.curves = curves;
-            this.gradients = gradients;
-            this.helpers = helpers;
-            this.samplerNames = samplerNames;
-        }
-
-        @Override
-        public String parameterUniform(String parameterId) {
-            var u = paramUniforms.get(parameterId);
-            if (u == null) {
-                throw new IllegalStateException("unknown parameter: " + parameterId);
+    private record Context(Map<String, Uniform> paramUniforms, Map<String, Curve> curves,
+                           Map<String, Gradient> gradients, Map<String, String> samplerNames,
+                           Set<String> helpers) implements GlslGenContext {
+            Context(Map<String, Uniform> paramUniforms, Map<String, Curve> curves, Map<String, Gradient> gradients,
+                    Set<String> helpers, Map<String, String> samplerNames) {
+                this(paramUniforms, curves, gradients, samplerNames, helpers);
             }
-            return u.name();
-        }
 
-        @Override
-        public void addHelper(String functionSource) {
-            helpers.add(functionSource);
-        }
-
-        @Override
-        public Curve curve(String parameterId) {
-            return curves.get(parameterId);
-        }
-
-        @Override
-        public Gradient gradient(String parameterId) {
-            return gradients.get(parameterId);
-        }
-
-        @Override
-        public String samplerName(String identifier) {
-            var name = samplerNames.get(identifier);
-            if (name == null) {
-                throw new IllegalStateException("no sampler binding for texture: " + identifier);
+            @Override
+            public String parameterUniform(String parameterId) {
+                var u = paramUniforms.get(parameterId);
+                if (u == null) {
+                    throw new IllegalStateException("unknown parameter: " + parameterId);
+                }
+                return u.name();
             }
-            return name;
+
+            @Override
+            public void addHelper(String functionSource) {
+                helpers.add(functionSource);
+            }
+
+            @Override
+            public Curve curve(String parameterId) {
+                return curves.get(parameterId);
+            }
+
+            @Override
+            public Gradient gradient(String parameterId) {
+                return gradients.get(parameterId);
+            }
+
+            @Override
+            public String samplerName(String identifier) {
+                var name = samplerNames.get(identifier);
+                if (name == null) {
+                    throw new IllegalStateException("no sampler binding for texture: " + identifier);
+                }
+                return name;
+            }
         }
-    }
 }

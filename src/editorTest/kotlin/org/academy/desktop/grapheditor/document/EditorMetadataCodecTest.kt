@@ -11,7 +11,8 @@ class EditorMetadataCodecTest {
         val meta = EditorMetadata()
         meta.frames["f0"] = FrameData("f0", "My Group", EditorMetadata.DEFAULT_FRAME_COLOR, 10f, 20f, 200f, 150f)
         meta.frames["f1"] = FrameData("f1", "Render", 0xFF0000AA.toInt(), -5f, 0f, 120f, 80f)
-        meta.notes["n0"] = NoteData("n0", "TODO", "fix the shader", EditorMetadata.DEFAULT_NOTE_COLOR, 1f, 2f, 180f, 120f)
+        meta.notes["n0"] =
+            NoteData("n0", "TODO", "fix the shader", EditorMetadata.DEFAULT_NOTE_COLOR, 1f, 2f, 180f, 120f)
         meta.cameraZoom = 1.5f
         meta.cameraPanX = -10f
         meta.cameraPanY = 5f

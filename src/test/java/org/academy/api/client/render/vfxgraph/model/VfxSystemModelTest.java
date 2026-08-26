@@ -1,12 +1,14 @@
 package org.academy.api.client.render.vfxgraph.model;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class VfxSystemModelTest {
     @Test
@@ -41,18 +43,18 @@ class VfxSystemModelTest {
 
     @Test
     void particleAttributeTypesMatchParticleBufferSemantics() {
-        assertEquals(org.academy.api.client.render.graph.type.ValueType.VEC3, ParticleAttribute.POSITION.valueType());
-        assertEquals(org.academy.api.client.render.graph.type.ValueType.VEC3, ParticleAttribute.VELOCITY.valueType());
-        assertEquals(org.academy.api.client.render.graph.type.ValueType.FLOAT, ParticleAttribute.SIZE.valueType());
-        assertEquals(org.academy.api.client.render.graph.type.ValueType.COLOR, ParticleAttribute.COLOR.valueType());
-        assertEquals(org.academy.api.client.render.graph.type.ValueType.FLOAT, ParticleAttribute.ALPHA.valueType());
+        assertEquals(ValueType.VEC3, ParticleAttribute.POSITION.valueType());
+        assertEquals(ValueType.VEC3, ParticleAttribute.VELOCITY.valueType());
+        assertEquals(ValueType.FLOAT, ParticleAttribute.SIZE.valueType());
+        assertEquals(ValueType.COLOR, ParticleAttribute.COLOR.valueType());
+        assertEquals(ValueType.FLOAT, ParticleAttribute.ALPHA.valueType());
         assertEquals(3, ParticleAttribute.POSITION.channels());
         assertEquals(1, ParticleAttribute.LIFETIME.channels());
     }
 
     @Test
     void defensiveCopiesAreImmutable() {
-        var block = new VfxBlock("b1", "t", new java.util.HashMap<>(Map.of("rate", "10")), new java.util.ArrayList<>());
+        var block = new VfxBlock("b1", "t", new HashMap<>(Map.of("rate", "10")), new ArrayList<>());
         assertEquals(1, block.properties().size());
         // Map.copyOf/List.copyOf 是防御拷贝：对返回的不可变视图修改必须抛异常
         assertThrows(UnsupportedOperationException.class, () -> block.properties().put("x", "1"));

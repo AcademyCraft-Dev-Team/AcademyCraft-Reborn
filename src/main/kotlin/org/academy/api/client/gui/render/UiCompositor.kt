@@ -51,7 +51,7 @@ object UiCompositor {
         Render.runBlitPass(
             target, null, false, false,
             Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,
-            Render.Buffers.getInstance().getFSQuadVBNDC(),
+            Render.Buffers.getInstance().fsQuadVBNDC,
             listOf(
                 TextureBinding(
                     "Sampler0", source,

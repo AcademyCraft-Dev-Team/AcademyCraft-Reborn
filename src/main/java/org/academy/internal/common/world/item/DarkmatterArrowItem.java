@@ -8,6 +8,13 @@ public final class DarkmatterArrowItem extends ArrowItem implements DarkmatterSh
         super(DarkmatterNativeItemSupport.ammunitionProperties(properties));
     }
 
-    @Override public DarkmatterShape darkmatterShape() { return DarkmatterShape.ARROW; }
-    @Override public boolean usesDarkmatterIntegrity() { return false; }
+    @Override
+    public DarkmatterShape darkmatterShape() {
+        return DarkmatterShape.ARROW;
+    }
+
+    @Override
+    public boolean usesDarkmatterIntegrity() {
+        return false;
+    }
 }

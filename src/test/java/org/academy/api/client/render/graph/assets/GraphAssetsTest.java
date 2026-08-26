@@ -1,18 +1,15 @@
 package org.academy.api.client.render.graph.assets;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.google.gson.JsonObject;
-import java.util.List;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.serialize.GraphMigration;
 import org.academy.api.client.render.graph.serialize.GraphSchemaVersion;
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class GraphAssetsTest {
     private static final String GRAPH_JSON = """

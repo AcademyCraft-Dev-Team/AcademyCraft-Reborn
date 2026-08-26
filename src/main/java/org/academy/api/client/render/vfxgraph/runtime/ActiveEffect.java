@@ -1,9 +1,6 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
 import com.mojang.blaze3d.textures.GpuTextureView;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.function.Supplier;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.type.Value;
@@ -18,6 +15,12 @@ import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 运行时 VFX 图效果实例（M15-03）：包装 [GraphEffect] + 世界变换 + 实体跟随 + 参数绑定 + 生命周期。
@@ -36,7 +39,7 @@ public final class ActiveEffect {
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
     private GraphEffect effect;
     private float scale = 1f;
-    private @org.jspecify.annotations.Nullable Entity followEntity;
+    private @Nullable Entity followEntity;
     private boolean stopped;
 
     ActiveEffect(String assetKey, Graph graph, VfxNodeRegistry registry, Vector3f position) {
@@ -48,7 +51,9 @@ public final class ActiveEffect {
         this.effect = new GraphEffect(graph, registry);
     }
 
-    /** 容器模型构造（M27）：VfxSystem → GraphEffect.container（批次 flow + 数据流算子）。 */
+    /**
+     * 容器模型构造（M27）：VfxSystem → GraphEffect.container（批次 flow + 数据流算子）。
+     */
     ActiveEffect(String assetKey, VfxSystem system, VfxNodeRegistry registry,
                  VfxBlockRegistry blockRegistry, VfxOperatorRegistry operatorRegistry, Vector3f position) {
         this.assetKey = assetKey;
@@ -71,8 +76,10 @@ public final class ActiveEffect {
         return effect.spec();
     }
 
-    /** 全部输出规格（M21n 多输出，供渲染器池/glow 判定）。 */
-    public java.util.List<RenderSpec> specs() {
+    /**
+     * 全部输出规格（M21n 多输出，供渲染器池/glow 判定）。
+     */
+    public List<RenderSpec> specs() {
         return effect.specs();
     }
 
@@ -100,7 +107,9 @@ public final class ActiveEffect {
         this.scale = scale;
     }
 
-    /** 跟随实体：每 tick 把发射器原点对齐实体位置。 */
+    /**
+     * 跟随实体：每 tick 把发射器原点对齐实体位置。
+     */
     public void follow(Entity entity) {
         this.followEntity = entity;
         if (entity != null) {
@@ -123,7 +132,9 @@ public final class ActiveEffect {
         return stopped;
     }
 
-    /** tick 并返回是否应移除（显式 stop 或跟随实体已移除）。 */
+    /**
+     * tick 并返回是否应移除（显式 stop 或跟随实体已移除）。
+     */
     public boolean tick(float dt) {
         if (stopped) {
             return true;
@@ -149,17 +160,19 @@ public final class ActiveEffect {
         return new WorldTransform(position, rotation, scale);
     }
 
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth,
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth,
                        GraphCamera camera, VfxGraphRenderer renderer, boolean clear) {
         render(target, depth, camera, renderer, clear, false);
     }
 
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth,
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth,
                        GraphCamera camera, VfxGraphRenderer renderer, boolean clear, boolean bloomPass) {
         effect.render(target, depth, camera, renderer, clear, worldTransform(), bloomPass);
     }
 
-    /** 资产重载（M15-05）：用新解码的图重建效果，保留位置/绑定。 */
+    /**
+     * 资产重载（M15-05）：用新解码的图重建效果，保留位置/绑定。
+     */
     void reload(Graph graph) {
         effect = new GraphEffect(graph, registry);
         for (var entry : bindings.entrySet()) {
@@ -170,7 +183,9 @@ public final class ActiveEffect {
         }
     }
 
-    /** 容器资产重载（M27）：用新解码的 VfxSystem 重建效果，保留位置/绑定。 */
+    /**
+     * 容器资产重载（M27）：用新解码的 VfxSystem 重建效果，保留位置/绑定。
+     */
     void reload(VfxSystem system) {
         effect = GraphEffect.container(system, blockRegistry, operatorRegistry, system.parameters());
         for (var entry : bindings.entrySet()) {

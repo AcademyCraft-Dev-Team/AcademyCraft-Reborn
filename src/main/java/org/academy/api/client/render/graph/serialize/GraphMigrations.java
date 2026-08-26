@@ -1,6 +1,7 @@
 package org.academy.api.client.render.graph.serialize;
 
 import com.google.gson.JsonObject;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

@@ -1,12 +1,16 @@
 package org.academy.api.client.render.graph.model;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.academy.api.client.render.graph.GraphFixtures;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.academy.api.client.render.graph.GraphFixtures;
-import org.junit.jupiter.api.Test;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GraphModelTest {
     @Test
@@ -21,11 +25,11 @@ class GraphModelTest {
     @Test
     void nodeCopiesPortsAndProperties() {
         var ports = new ArrayList<Port>();
-        var node = new GraphNode("n1", "t", java.util.Map.of("k", "v"), ports, 1f, 2f);
+        var node = new GraphNode("n1", "t", Map.of("k", "v"), ports, 1f, 2f);
 
         ports.add(new Port("p", "P", PortDirection.INPUT,
-                org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(0f)));
+                ValueType.FLOAT,
+                Value.of(0f)));
 
         assertTrue(node.ports().isEmpty());
         assertEquals("v", node.properties().get("k"));
@@ -34,8 +38,8 @@ class GraphModelTest {
     @Test
     void parameterRangeDefaultsToEmpty() {
         var p = new GraphParameter("id", "name",
-                org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(1f), null);
+                ValueType.FLOAT,
+                Value.of(1f), null);
 
         assertTrue(p.range().isEmpty());
     }

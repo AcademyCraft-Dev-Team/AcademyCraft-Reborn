@@ -1,8 +1,9 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SparkGeneratorTest {
 

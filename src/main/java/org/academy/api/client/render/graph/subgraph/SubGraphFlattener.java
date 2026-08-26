@@ -1,13 +1,14 @@
 package org.academy.api.client.render.graph.subgraph;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 子图内联展开器（M12-05）：把图中的 `subgraph` 节点替换为其引用的子图节点/边，ID 重映射。

@@ -3,7 +3,9 @@ package org.academy.api.common.ability.event;
 import net.neoforged.bus.api.Event;
 import org.academy.api.common.ability.Skill;
 
-/** Fired after the skill action, including when the action throws. */
+/**
+ * Fired after the skill action, including when the action throws.
+ */
 public final class SkillExecutionFinishEvent extends Event {
     private final Skill.ActiveExecutionContext context;
     private final boolean continuous;

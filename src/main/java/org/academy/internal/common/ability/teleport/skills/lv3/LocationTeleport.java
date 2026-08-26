@@ -2,14 +2,6 @@ package org.academy.internal.common.ability.teleport.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
@@ -48,13 +40,14 @@ import org.academy.internal.client.gui.screen.LocationTeleportScreen;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
+import org.academy.internal.common.ability.teleport.TeleportSafety;
+import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
 import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.skilldata.LocationTeleportData.Mark;
 import org.academy.internal.common.skilldata.LocationTeleportData;
+import org.academy.internal.common.skilldata.LocationTeleportData.Mark;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -62,6 +55,10 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public final class LocationTeleport extends Skill {
     public static final int MAX_MARKS = 32;
@@ -279,7 +276,7 @@ public final class LocationTeleport extends Skill {
                         (int) Math.floor(anchor.position.z), "location_return_" + player.getStringUUID());
             }
             var destination = returning
-                    ? org.academy.internal.common.ability.teleport.TeleportSafety.findSafe(player, level, anchor.position)
+                    ? TeleportSafety.findSafe(player, level, anchor.position)
                     : safeDestination(player, level, mark);
             if (destination == null) return;
 

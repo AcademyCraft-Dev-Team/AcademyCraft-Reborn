@@ -1,23 +1,14 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.GraphParameter;
+import org.academy.api.client.render.graph.type.Curve;
+import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
-import org.academy.api.client.render.vfxgraph.arc.CurveGenerator;
-import org.academy.api.client.render.vfxgraph.arc.NoiseAnimator;
-import org.academy.api.client.render.vfxgraph.arc.SurfaceConstraint;
+import org.academy.api.client.render.vfxgraph.arc.*;
 import org.academy.api.client.render.vfxgraph.model.VfxContext;
 import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxNode;
 import org.academy.api.client.render.vfxgraph.model.VfxOperatorNode;
 import org.academy.api.client.render.vfxgraph.model.VfxSystem;
 import org.academy.api.client.render.vfxgraph.nodes.PortValueSource;
@@ -25,6 +16,9 @@ import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.operator.OperatorContext;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperator;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+
+import java.util.*;
+
 /**
  * 容器 VFX 模拟器（M24–M25）：按 Context 阶段 + flow 边批次驱动共享 [ParticleBuffer]；
  * 数据边（算子→块）经 [VfxOperator] 求值驱动块输入端口。
@@ -46,28 +40,38 @@ public final class VfxSystemSimulator {
     private final SurfaceConstraint surfaceConstraint = new SurfaceConstraint();
     private float arcDriftSpeed = 1.5f;
     private float arcNoiseStrength = 0.27f;
-    private float arcNoiseScale = 2.0f;
-    private long arcNoiseSeed = 42L;
+    private final float arcNoiseScale = 2.0f;
+    private final long arcNoiseSeed = 42L;
     private final Map<String, List<BlockNode>> spawnBlocks = new LinkedHashMap<>();
     private final Map<String, List<BlockNode>> initBlocks = new LinkedHashMap<>();
     private final Map<String, List<BlockNode>> updateBlocks = new LinkedHashMap<>();
-    /** init context → 其上游（flow 直接相连的）SPAWN context id 列表。 */
+    /**
+     * init context → 其上游（flow 直接相连的）SPAWN context id 列表。
+     */
     private final Map<String, List<String>> initUpstreamSpawns = new LinkedHashMap<>();
-    /** init 块 id → 其块级 flow 上游 spawn 块 id 列表（M28b）。 */
+    /**
+     * init 块 id → 其块级 flow 上游 spawn 块 id 列表（M28b）。
+     */
     private final Map<String, List<String>> initUpstreamSpawnBlocks = new LinkedHashMap<>();
-    /** 全图是否存在块级 flow：存在则进入「精确配对模式」（未配对 init 块收空批次），否则回退 context 级。 */
+    /**
+     * 全图是否存在块级 flow：存在则进入「精确配对模式」（未配对 init 块收空批次），否则回退 context 级。
+     */
     private boolean hasBlockFlows;
-    /** 各阶段的 context 执行顺序（flow 拓扑序，保持 DAG 内相对顺序）。 */
+    /**
+     * 各阶段的 context 执行顺序（flow 拓扑序，保持 DAG 内相对顺序）。
+     */
     private final List<String> spawnOrder = new ArrayList<>();
     private final List<String> initOrder = new ArrayList<>();
     private final List<String> updateOrder = new ArrayList<>();
     private final Map<String, Value> liveParams = new LinkedHashMap<>();
-    private final Map<String, org.academy.api.client.render.graph.type.Curve> curves = new LinkedHashMap<>();
-    private final Map<String, org.academy.api.client.render.graph.type.Gradient> gradients = new LinkedHashMap<>();
+    private final Map<String, Curve> curves = new LinkedHashMap<>();
+    private final Map<String, Gradient> gradients = new LinkedHashMap<>();
     private final Random random;
     private float time;
 
-    /** 块执行节点：保留块 id 以便按块收集批次（块级 flow，M28b）。 */
+    /**
+     * 块执行节点：保留块 id 以便按块收集批次（块级 flow，M28b）。
+     */
     private record BlockNode(String blockId, SimNode node) {
     }
 
@@ -85,12 +89,16 @@ public final class VfxSystemSimulator {
         buildPlan(system, blockRegistry, operatorRegistry);
     }
 
-    /** 无算子注册的缺省构造（M24 兼容：数据边恒无绑定）。 */
+    /**
+     * 无算子注册的缺省构造（M24 兼容：数据边恒无绑定）。
+     */
     public VfxSystemSimulator(VfxSystem system, VfxBlockRegistry blockRegistry, long seed, List<GraphParameter> parameters) {
         this(system, blockRegistry, new VfxOperatorRegistry(), seed, parameters);
     }
 
-    /** 注入存活参数（不重建模拟器，M15-04）。 */
+    /**
+     * 注入存活参数（不重建模拟器，M15-04）。
+     */
     public void setLiveParam(String parameterId, Value value) {
         liveParams.put(parameterId, value);
     }
@@ -218,7 +226,9 @@ public final class VfxSystemSimulator {
         return time;
     }
 
-    /** 设置累计时间（loop 重启时延续时间戳，避免 time 归零导致 UI 冻结，M28b）。 */
+    /**
+     * 设置累计时间（loop 重启时延续时间戳，避免 time 归零导致 UI 冻结，M28b）。
+     */
     public void setTime(float time) {
         this.time = time;
     }
@@ -249,7 +259,7 @@ public final class VfxSystemSimulator {
         }
 
         // 递归构建算子（含算子间连接），环检测
-        var building = new java.util.HashSet<String>();
+        var building = new HashSet<String>();
         for (var opId : operatorById.keySet()) {
             buildOperator(opId, operatorById, operatorInputs, operators, building, operatorRegistry);
         }
@@ -268,7 +278,7 @@ public final class VfxSystemSimulator {
             adjacency.get(from).add(to);
             inDegree.merge(to, 1, Integer::sum);
         }
-        var queue = new java.util.ArrayDeque<String>();
+        var queue = new ArrayDeque<String>();
         for (var entry : inDegree.entrySet()) {
             if (entry.getValue() == 0) queue.add(entry.getKey());
         }
@@ -338,7 +348,7 @@ public final class VfxSystemSimulator {
 
     private void buildOperator(String opId, Map<String, VfxOperatorNode> operatorById,
                                Map<String, Map<String, Edge.PortRef>> operatorInputs,
-                               Map<String, VfxOperator> out, java.util.Set<String> building,
+                               Map<String, VfxOperator> out, Set<String> building,
                                VfxOperatorRegistry registry) {
         if (out.containsKey(opId)) return;
         if (!building.add(opId)) {
@@ -394,7 +404,7 @@ public final class VfxSystemSimulator {
         }
     }
 
-    private static float dist(org.academy.api.client.render.vfxgraph.arc.ArcCurve arc, int a, int b) {
+    private static float dist(ArcCurve arc, int a, int b) {
         float dx = arc.x(b) - arc.x(a);
         float dy = arc.y(b) - arc.y(a);
         float dz = arc.z(b) - arc.z(a);
@@ -403,7 +413,7 @@ public final class VfxSystemSimulator {
 
     /**
      * M30 仿真区爬行（复刻 Blender 仿真区 {@code Set Position}）：
-     * 弧基座沿表面切平面随机滑移，偏移累积到 {@link org.academy.api.client.render.vfxgraph.arc.ArcCurve#accumulateWander}。
+     * 弧基座沿表面切平面随机滑移，偏移累积到 {@link ArcCurve#accumulateWander}。
      * 偏移 = {@code cross(normalize(Random[±1]³), 表面法线) × Random[0.01..0.03] × 游离速度}。
      * 端点随后被表面吸附拉回（复刻 Set Position.002），形成「电弧群游走/爬行」。
      */

@@ -2,23 +2,20 @@ package org.academy.internal.common.ability.darkmatter.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.Identifier;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -39,10 +36,10 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
-import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
@@ -55,6 +52,10 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public final class DarkmatterCut extends Skill {
     static final double RADIUS = 5.0;
@@ -259,24 +260,24 @@ public final class DarkmatterCut extends Skill {
                             var mirroredTargets = List.copyOf(hitTargets);
                             TimedSkillEffectRuntime.schedule(player,
                                     context.milestone() >= 3 ? 4 : 8, () -> {
-                                if (!player.isAlive() || player.level() != level) return;
-                                spawnSlash(level, player, visualDirection.scale(-1.0),
-                                        1.5f);
-                                for (var targetId : mirroredTargets) {
-                                    if (!(level.getEntity(targetId) instanceof LivingEntity target)
-                                            || !DarkmatterTargeting.isAttackableBy(player, target)) continue;
-                                    target.invulnerableTime = 0;
-                                    var detonation = DarkmatterLawMark.detonate(player, target);
-                                    if (detonation > 0.0f) {
-                                        SkillDamageUtil.applyDirect(
-                                                level, target, source, detonation);
-                                        target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
-                                        target.invulnerableTime = 0;
-                                    }
-                                    hurtWithPhase(level, target, source,
-                                            damage * delayedDamageMultiplier, phase.beta());
-                                }
-                            });
+                                        if (!player.isAlive() || player.level() != level) return;
+                                        spawnSlash(level, player, visualDirection.scale(-1.0),
+                                                1.5f);
+                                        for (var targetId : mirroredTargets) {
+                                            if (!(level.getEntity(targetId) instanceof LivingEntity target)
+                                                    || !DarkmatterTargeting.isAttackableBy(player, target)) continue;
+                                            target.invulnerableTime = 0;
+                                            var detonation = DarkmatterLawMark.detonate(player, target);
+                                            if (detonation > 0.0f) {
+                                                SkillDamageUtil.applyDirect(
+                                                        level, target, source, detonation);
+                                                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
+                                                target.invulnerableTime = 0;
+                                            }
+                                            hurtWithPhase(level, target, source,
+                                                    damage * delayedDamageMultiplier, phase.beta());
+                                        }
+                                    });
                         }
                     });
             return executed && applied[0];
@@ -285,7 +286,7 @@ public final class DarkmatterCut extends Skill {
         private static boolean hurtWithPhase(
                 ServerLevel level,
                 LivingEntity target,
-                net.minecraft.world.damagesource.DamageSource source,
+                DamageSource source,
                 float damage,
                 float beta
         ) {

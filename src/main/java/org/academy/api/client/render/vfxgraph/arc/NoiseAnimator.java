@@ -72,7 +72,9 @@ public final class NoiseAnimator {
         return value / 0.75f;
     }
 
-    /** 3D value noise：哈希 + 平滑三线性插值，确定性（同 seed 同结果）。 */
+    /**
+     * 3D value noise：哈希 + 平滑三线性插值，确定性（同 seed 同结果）。
+     */
     private static float noise3D(float x, float y, float z, long seed) {
         int xi = floor(x);
         int yi = floor(y);
@@ -103,7 +105,9 @@ public final class NoiseAnimator {
         return lerp(n0, n1, w);
     }
 
-    /** 哈希：整数坐标 → [0,1) 浮点，确定性。 */
+    /**
+     * 哈希：整数坐标 → [0,1) 浮点，确定性。
+     */
     private static float hash3D(int x, int y, int z, long seed) {
         long h = seed;
         h = h * 374761393L + x * 668265263L;

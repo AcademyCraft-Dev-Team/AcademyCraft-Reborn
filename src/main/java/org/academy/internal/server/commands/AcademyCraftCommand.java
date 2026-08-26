@@ -21,18 +21,19 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import org.academy.AcademyCraftServer;
 import org.academy.AcademyCraft;
+import org.academy.AcademyCraftServer;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.profiler.ProfileDump;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatProfileRegistry;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityDiagnostics;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityMode;
-import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 
 import java.io.File;
@@ -550,7 +551,7 @@ public final class AcademyCraftCommand {
             var id = IdentifierArgument.getId(ctx, "skill");
             var value = FloatArgumentType.getFloat(ctx, "value");
             var skill = Registries.SKILLS.get(id).map(reference -> reference.value()).orElse(null);
-            if (skill == null || skill.getCategory() != org.academy.internal.common.ability.AbilityCategories.DARKMATTER.get()
+            if (skill == null || skill.getCategory() != AbilityCategories.DARKMATTER.get()
                     || !CommandUtils.getSystem(ctx).setPlayerSkillProficiency(player.getUUID(), skill, value)) {
                 ctx.getSource().sendFailure(Component.literal("Unable to set darkmatter proficiency for " + id));
                 return 0;
@@ -782,8 +783,8 @@ public final class AcademyCraftCommand {
             sb.append("§e[AC Profiler Snapshot]§r\n");
             var sampler = snap.getSampler();
             if (sampler != null) {
-                sb.append("Sampler: ").append(sampler.getTotalSamples()).append(" samples, ")
-                        .append(String.format("%.1f s", sampler.getDurationSeconds())).append("\n");
+                sb.append("Sampler: ").append(sampler.totalSamples()).append(" samples, ")
+                        .append(String.format("%.1f s", sampler.durationSeconds())).append("\n");
             } else {
                 sb.append("Sampler: off (use /academy profile start)\n");
             }
@@ -792,10 +793,10 @@ public final class AcademyCraftCommand {
                 for (var entry : zones.entrySet()) {
                     sb.append("-- ").append(entry.getKey()).append(" --\n");
                     for (var slice : entry.getValue().topSlices(10, true)) {
-                        sb.append("  ").append(slice.getName())
+                        sb.append("  ").append(slice.name())
                                 .append(" - ").append(String.format("%.2f%%", slice.getGlobalPercent()))
                                 .append(" - ").append(String.format("%.2f ms", slice.getTotalMs()))
-                                .append(" - ").append(slice.getCount()).append(" calls\n");
+                                .append(" - ").append(slice.count()).append(" calls\n");
                     }
                 }
             }

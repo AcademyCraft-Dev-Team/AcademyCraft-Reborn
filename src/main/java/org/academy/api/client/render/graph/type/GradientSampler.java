@@ -9,7 +9,9 @@ public final class GradientSampler {
     private GradientSampler() {
     }
 
-    /** 采样 [0,1] 内 t；越界返回首/末停靠颜色。 */
+    /**
+     * 采样 [0,1] 内 t；越界返回首/末停靠颜色。
+     */
     public static Vector4f sample(Gradient gradient, float t) {
         var stops = gradient.stops();
         if (stops.isEmpty()) return new Vector4f(1f);

@@ -46,12 +46,16 @@ public final class ArcSimulator {
         buffer.advance(dt, new Random(noiseSeed));
     }
 
-    /** 获取当前模拟时间。 */
+    /**
+     * 获取当前模拟时间。
+     */
     public float time() {
         return time;
     }
 
-    /** 获取弧线缓冲区。 */
+    /**
+     * 获取弧线缓冲区。
+     */
     public ArcBuffer buffer() {
         return buffer;
     }

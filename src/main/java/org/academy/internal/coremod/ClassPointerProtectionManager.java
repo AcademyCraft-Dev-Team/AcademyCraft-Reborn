@@ -1,6 +1,7 @@
 package org.academy.internal.coremod;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import org.academy.AcademyCraft;
 
 import java.util.ArrayList;
@@ -166,7 +167,7 @@ public final class ClassPointerProtectionManager {
     }
 
     private static UUID playerId(Object player) {
-        if (player instanceof net.minecraft.world.entity.player.Player actual) {
+        if (player instanceof Player actual) {
             return actual.getUUID();
         }
         return new UUID(0L, System.identityHashCode(player));

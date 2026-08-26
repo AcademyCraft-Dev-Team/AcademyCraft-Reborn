@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.accelerator.reflection;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -17,7 +18,6 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.util.Mth;
 
 public final class LinearReflectionResolver {
     public static final double RETURN_EPSILON = 1.0E-4;

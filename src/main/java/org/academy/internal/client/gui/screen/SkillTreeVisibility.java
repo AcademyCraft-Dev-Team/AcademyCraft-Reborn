@@ -2,7 +2,9 @@ package org.academy.internal.client.gui.screen;
 
 import org.academy.api.common.ability.SkillScope;
 
-/** Visibility policy for nodes in the ability developer skill tree. */
+/**
+ * Visibility policy for nodes in the ability developer skill tree.
+ */
 public final class SkillTreeVisibility {
     private SkillTreeVisibility() {
     }

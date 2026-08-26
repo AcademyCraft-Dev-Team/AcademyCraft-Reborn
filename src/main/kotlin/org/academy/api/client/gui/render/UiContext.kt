@@ -66,7 +66,14 @@ open class UiContext {
     }
 
     @MainThread
-    fun perform(rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float, logicalW: Float, logicalH: Float) {
+    fun perform(
+        rootWidget: WidgetContainer,
+        mouseX: Double,
+        mouseY: Double,
+        partialTick: Float,
+        logicalW: Float,
+        logicalH: Float
+    ) {
         if (closed.get() || closing.get()) return
 
         if (performedRoot !== rootWidget) {
@@ -224,9 +231,9 @@ open class UiContext {
 
         var atlas = itemAtlas
         val canReuse = atlas != null &&
-            itemAtlasSlotSize == slotSize &&
-            atlas.textureSize() == textureSize &&
-            atlas.tryPrepareFor(identities)
+                itemAtlasSlotSize == slotSize &&
+                atlas.textureSize() == textureSize &&
+                atlas.tryPrepareFor(identities)
         if (!canReuse) {
             atlas?.close()
             atlas = GuiItemAtlas(

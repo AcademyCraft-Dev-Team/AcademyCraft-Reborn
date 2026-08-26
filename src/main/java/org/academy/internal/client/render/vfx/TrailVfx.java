@@ -69,7 +69,7 @@ public final class TrailVfx implements Vfx {
     private void grow(int requiredVertices) {
         var requiredBytes = (long) requiredVertices * ColorMeshData.VERTEX_STRIDE;
         var newCapacity = Math.max(requiredVertices,
-                (int) (vertexData.capacity() / ColorMeshData.VERTEX_STRIDE) * 2);
+                (vertexData.capacity() / ColorMeshData.VERTEX_STRIDE) * 2);
         vertexData = BufferUtils.createByteBuffer(Math.toIntExact(Math.max(requiredBytes, (long) newCapacity * ColorMeshData.VERTEX_STRIDE)));
     }
 

@@ -1,9 +1,8 @@
 package org.academy.api.client.gui.serialize
 
 import com.google.gson.JsonObject
-import org.academy.api.client.gui.widget.LinearLayoutWidget
 import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.api.client.gui.widget.LinearLayoutWidget
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test

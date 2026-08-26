@@ -5,11 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.CubeDeformation;
-import net.minecraft.client.model.geom.builders.CubeListBuilder;
-import net.minecraft.client.model.geom.builders.LayerDefinition;
-import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.Mth;
@@ -55,7 +51,7 @@ public final class DarkmatterSixWingsVfx implements Vfx {
             // Avatar render roots are camera-relative. Prepend the camera translation to recover
             // world space; post-multiplying would rotate/scale the camera vector with the model.
             var root = new Matrix4f()
-                    .translation((float) camera.x, (float) camera.y, (float) camera.z)
+                    .translation(camera.x, camera.y, camera.z)
                     .mul(entry.getValue());
             poseStack.mulPose(root);
             poseStack.mulPose(BASE_MATRIX);
@@ -88,7 +84,7 @@ public final class DarkmatterSixWingsVfx implements Vfx {
         var requiredBytes = (long) requiredVertices * VERTEX_STRIDE;
         if (vertexData.capacity() >= requiredBytes) return;
         var newCapacity = Math.max(requiredVertices,
-                (int) (vertexData.capacity() / VERTEX_STRIDE) * 2);
+                (vertexData.capacity() / VERTEX_STRIDE) * 2);
         vertexData = BufferUtils.createByteBuffer(Math.toIntExact((long) newCapacity * VERTEX_STRIDE));
     }
 

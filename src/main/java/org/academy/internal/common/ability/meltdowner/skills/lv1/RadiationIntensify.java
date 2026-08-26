@@ -1,9 +1,10 @@
 package org.academy.internal.common.ability.meltdowner.skills.lv1;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -98,11 +99,12 @@ public final class RadiationIntensify extends Skill {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        private Events() { }
+        private Events() {
+        }
 
         @SubscribeEvent
         public static void onDeath(LivingDeathEvent event) {
-            if (!(event.getEntity().level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+            if (!(event.getEntity().level() instanceof ServerLevel level)) return;
             var skill = Skills.RADIATION_INTENSIFY.get();
             var now = level.getGameTime();
             var sourceId = TimedSkillEffectRuntime.sourceForTarget(event.getEntity().getUUID(), skill,

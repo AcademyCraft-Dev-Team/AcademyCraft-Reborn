@@ -18,7 +18,9 @@ public final class SurfaceDistributor {
     private final float totalArea;
     private final int triCount;
 
-    /** 临时存储每个三角形的法线（构造时预计算）。 */
+    /**
+     * 临时存储每个三角形的法线（构造时预计算）。
+     */
     private final float[] normals;
 
     public SurfaceDistributor(float[] triangles) {
@@ -95,27 +97,37 @@ public final class SurfaceDistributor {
         return result;
     }
 
-    /** 获取三角形数量。 */
+    /**
+     * 获取三角形数量。
+     */
     public int triCount() {
         return triCount;
     }
 
-    /** 获取原始三角形数据。 */
+    /**
+     * 获取原始三角形数据。
+     */
     public float[] triangles() {
         return triangles;
     }
 
-    /** 获取预计算的法线数组。 */
+    /**
+     * 获取预计算的法线数组。
+     */
     public float[] normals() {
         return normals;
     }
 
-    /** 获取累计面积数组。 */
+    /**
+     * 获取累计面积数组。
+     */
     public float[] cumulativeArea() {
         return cumulativeArea;
     }
 
-    /** 获取总面积。 */
+    /**
+     * 获取总面积。
+     */
     public float totalArea() {
         return totalArea;
     }
@@ -173,7 +185,9 @@ public final class SurfaceDistributor {
         return lo;
     }
 
-    /** 计算三角形面积并预计算法线。返回面积。 */
+    /**
+     * 计算三角形面积并预计算法线。返回面积。
+     */
     private float computeAreaAndNormal(int tri) {
         int t9 = tri * 9;
         float ax = triangles[t9], ay = triangles[t9 + 1], az = triangles[t9 + 2];
@@ -214,7 +228,9 @@ public final class SurfaceDistributor {
         return new float[]{ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx};
     }
 
-    /** 表面采样结果。 */
+    /**
+     * 表面采样结果。
+     */
     public record Sample(float x, float y, float z, float nx, float ny, float nz) {
     }
 }

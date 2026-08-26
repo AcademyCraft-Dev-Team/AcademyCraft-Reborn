@@ -1,11 +1,12 @@
 package org.academy.api.client.render.graph.serialize;
 
+import com.google.gson.JsonObject;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import com.google.gson.JsonObject;
-import java.util.List;
-import org.junit.jupiter.api.Test;
 
 class GraphMigrationsTest {
     @Test

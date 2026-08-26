@@ -4,13 +4,8 @@ import com.mojang.blaze3d.GpuFormat
 import com.mojang.blaze3d.pipeline.TextureTarget
 import com.mojang.blaze3d.platform.Window
 import com.mojang.blaze3d.platform.WindowEventHandler
-import org.academy.api.client.gui.event.CharTypedEvent
-import org.academy.api.client.gui.event.EventType
-import org.academy.api.client.gui.event.KeyEvent
-import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.event.ScrollEvent
+import org.academy.api.client.gui.event.*
 import org.academy.api.client.gui.render.UiContext
-import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.internal.client.gui.imgui.ImGuiBackend
 import org.lwjgl.glfw.GLFW
@@ -62,7 +57,14 @@ class DesktopUiHost(
         GLFW.glfwSetCursorPosCallback(window.handle()) { _, x, y -> onCursorPos(x, y) }
         GLFW.glfwSetMouseButtonCallback(window.handle()) { _, button, action, _ -> onMouseButton(button, action) }
         GLFW.glfwSetScrollCallback(window.handle()) { _, x, y -> onScroll(x, y) }
-        GLFW.glfwSetKeyCallback(window.handle()) { _, key, scancode, action, mods -> onKey(key, scancode, action, mods) }
+        GLFW.glfwSetKeyCallback(window.handle()) { _, key, scancode, action, mods ->
+            onKey(
+                key,
+                scancode,
+                action,
+                mods
+            )
+        }
         GLFW.glfwSetCharCallback(window.handle()) { _, codepoint -> onChar(codepoint) }
         // 同步实际 GLFW framebuffer 尺寸：环境 + 离屏 target 必须在首帧前与真实
         // framebuffer 对齐（framebuffer-size 回调因 old==new 不会在启动时触发），否则

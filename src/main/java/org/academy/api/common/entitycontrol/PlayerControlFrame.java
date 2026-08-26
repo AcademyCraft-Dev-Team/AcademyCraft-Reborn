@@ -1,7 +1,8 @@
 package org.academy.api.common.entitycontrol;
 
-import java.util.Objects;
 import net.minecraft.util.Mth;
+
+import java.util.Objects;
 
 /**
  * A single authorized input frame for a controlled player. Frames describe input, never a

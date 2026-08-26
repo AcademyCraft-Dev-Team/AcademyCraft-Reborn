@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.dsl
 
 import org.academy.api.client.gui.event.OnClickListener
-import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.ButtonWidget
 import org.academy.api.client.gui.widget.ToggleButtonWidget

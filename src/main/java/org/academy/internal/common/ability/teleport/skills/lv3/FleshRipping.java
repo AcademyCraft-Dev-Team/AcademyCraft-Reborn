@@ -2,12 +2,12 @@ package org.academy.internal.common.ability.teleport.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -52,6 +52,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
 
 public final class FleshRipping extends Skill {
     private static final double MAX_RANGE = 64.0;
@@ -248,7 +250,7 @@ public final class FleshRipping extends Skill {
             });
         }
 
-        private static void applyArmorRend(net.minecraft.server.level.ServerPlayer owner, LivingEntity target) {
+        private static void applyArmorRend(ServerPlayer owner, LivingEntity target) {
             var armor = target.getAttribute(Attributes.ARMOR);
             if (armor == null) return;
             if (armor.getModifier(FLESH_RIPPING_ARMOR_ID) != null) {

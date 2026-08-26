@@ -1,20 +1,33 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonParser;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import net.minecraft.resources.Identifier;
+import org.joml.Vector3f;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 回归：游戏暂停（dt=0 多帧）时火焰粒子应冻结而非消失/抖动（M21d spawnStart 修复 + 暂停冻结）。
  */
 class FirePauseTest {
-    @BeforeEach void setUp() { var m = VfxGraphManager.INSTANCE; m.init(); m.clearEffects(); m.invalidateAll(); }
-    @AfterEach void tearDown() { VfxGraphManager.INSTANCE.close(); }
+    @BeforeEach
+    void setUp() {
+        var m = VfxGraphManager.INSTANCE;
+        m.init();
+        m.clearEffects();
+        m.invalidateAll();
+    }
+
+    @AfterEach
+    void tearDown() {
+        VfxGraphManager.INSTANCE.close();
+    }
 
     @Test
     void fireSurvivesPauseFrames() {
@@ -22,7 +35,7 @@ class FirePauseTest {
         var json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
         var assetId = Identifier.fromNamespaceAndPath("academy", "vfxgraph/demo_fire");
         VfxGraphManager.INSTANCE.registerAsset(assetId, json);
-        var effect = VfxGraphManager.INSTANCE.spawn(assetId, new org.joml.Vector3f());
+        var effect = VfxGraphManager.INSTANCE.spawn(assetId, new Vector3f());
         // 播放 60 帧
         for (int i = 0; i < 60; i++) effect.tick(1f / 60f);
         int before = effect.effect().buffer().count();

@@ -38,7 +38,10 @@ class BlurDrawOrderTest {
             .filter { it.drawOrder < blurOrder }
             .map { it.drawOrder }
         assertTrue(belowOrders.isNotEmpty())
-        assertTrue(belowOrders.all { it < blurOrder }, "below commands (drawOrder=$belowOrders) must be < blur ($blurOrder)")
+        assertTrue(
+            belowOrders.all { it < blurOrder },
+            "below commands (drawOrder=$belowOrders) must be < blur ($blurOrder)"
+        )
         val aboveOrders = context.commands
             .filter { it.drawOrder >= blurOrder }
             .map { it.drawOrder }

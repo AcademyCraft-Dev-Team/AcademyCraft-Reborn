@@ -1,6 +1,7 @@
 package org.academy.internal.client.render.vfx;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
@@ -12,7 +13,6 @@ import org.joml.Vector4f;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class SkyStrikeVfx implements Vfx {
     private static final int MAX_DETAILED_EFFECTS = 12;
@@ -250,7 +250,7 @@ public final class SkyStrikeVfx implements Vfx {
 
     private float flashCurve(float age) {
         var initial = age < profile.flashDurationTicks()
-                ? (float) Mth.square(1.0f - age / profile.flashDurationTicks())
+                ? Mth.square(1.0f - age / profile.flashDurationTicks())
                 : 0.0f;
         if (!profile.restrike()) return initial;
         var restrike = Math.max(0.0f, 1.0f - Math.abs(age - 3.0f) / 0.65f) * 0.45f;

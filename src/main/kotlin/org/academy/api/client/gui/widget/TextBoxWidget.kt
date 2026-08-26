@@ -2,6 +2,7 @@ package org.academy.api.client.gui.widget
 
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.PreeditEvent
+import net.minecraft.util.Mth
 import net.neoforged.bus.api.Event
 import net.neoforged.bus.api.ICancellableEvent
 import net.neoforged.neoforge.common.NeoForge
@@ -20,7 +21,6 @@ import java.util.function.Consumer
 import java.util.function.Predicate
 import kotlin.math.max
 import kotlin.math.min
-import net.minecraft.util.Mth
 
 open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     protected val stringBuilder: StringBuilder = StringBuilder()

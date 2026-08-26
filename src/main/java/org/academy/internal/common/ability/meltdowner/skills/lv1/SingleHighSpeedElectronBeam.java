@@ -6,6 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -35,7 +36,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";

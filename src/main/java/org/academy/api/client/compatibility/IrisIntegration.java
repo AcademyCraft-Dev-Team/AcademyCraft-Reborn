@@ -1,7 +1,6 @@
 package org.academy.api.client.compatibility;
 
 import net.irisshaders.iris.api.v0.IrisApi;
-import net.irisshaders.iris.vertices.ImmediateState;
 import net.neoforged.fml.loading.FMLLoader;
 import org.academy.AcademyCraft;
 import org.jspecify.annotations.Nullable;
@@ -9,7 +8,9 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Centralized Iris render integration. */
+/**
+ * Centralized Iris render integration.
+ */
 public final class IrisIntegration {
     private static final ThreadLocal<ArrayDeque<Boolean>> BYPASS_STATES =
             ThreadLocal.withInitial(ArrayDeque::new);

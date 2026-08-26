@@ -8,13 +8,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec2;
+import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.entitycontrol.PlayerControlFrame;
 import org.academy.api.common.entitycontrol.PlayerMovementMode;
-import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.input.InputSystem;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.mixin.client.ClientInputAccessor;
 import org.misaka.MisakaNetworkClient;
@@ -367,7 +366,7 @@ public final class PlayerControlClientState {
         pendingSneak = false;
     }
 
-    private static void captureInventoryActions(net.minecraft.client.Options options) {
+    private static void captureInventoryActions(Options options) {
         var hotbarMask = 0;
         for (var slot = 0; slot < options.keyHotbarSlots.length; slot++) {
             if (raw(options.keyHotbarSlots[slot])) hotbarMask |= 1 << slot;

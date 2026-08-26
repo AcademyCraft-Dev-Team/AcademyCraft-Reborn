@@ -1,16 +1,17 @@
 package org.academy.internal.client.gui.screen
 
+import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
-import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.Minecraft
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.core.BlockPos
 import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
+import net.minecraft.util.Mth
 import net.minecraft.world.InteractionHand
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
@@ -34,13 +35,12 @@ import org.academy.api.common.wireless.GetCurrentNodePacket
 import org.academy.internal.common.ability.AbilityDevelopmentAccess
 import org.academy.internal.common.ability.ProficiencyPolicy
 import org.academy.internal.common.ability.level0.Level0
-import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity
 import org.academy.internal.common.world.item.AbilityControlTabletItem
 import org.academy.internal.common.world.item.Items
+import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity
 import org.apache.commons.lang3.RandomStringUtils
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
-import net.minecraft.util.Mth
 
 internal enum class PropsConfirmationAnswer {
     ACCEPT,
@@ -671,7 +671,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 DevState.DEVELOPING -> {
                     progressLabel.text =
                         L10n["academy.ability_developer.progress"] + " " +
-                            (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
+                                (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
                     consoleScrollPanel.pollNextFrame { poll() }
                 }
 
@@ -1511,9 +1511,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                 reached -> {
                                     label.setRed(0.35f); label.setGreen(0.95f); label.setBlue(1.0f)
                                 }
+
                                 next -> {
                                     label.setRed(1.0f); label.setGreen(0.78f); label.setBlue(0.25f)
                                 }
+
                                 else -> {
                                     label.setRed(0.55f); label.setGreen(0.58f); label.setBlue(0.63f)
                                 }
@@ -1639,7 +1641,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
                                     AbilitySystemClient.getDevState() == DevState.DEVELOPING ->
                                         L10n["academy.ability_developer.progress"] + " " +
-                                            (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
+                                                (AbilitySystemClient.getDevProgress() * 100).toInt() + "%"
 
                                     AbilitySystemClient.getDevState() == DevState.DONE ->
                                         L10n["academy.ability_developer.dev_successful"]

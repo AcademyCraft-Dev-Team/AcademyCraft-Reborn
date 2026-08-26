@@ -1,10 +1,10 @@
 package org.academy.api.common.ability;
 
+import net.minecraft.util.Mth;
 import org.academy.api.common.registries.Registries;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class LearningHelper {
     public static final int DEVELOPER_CPS = 700;

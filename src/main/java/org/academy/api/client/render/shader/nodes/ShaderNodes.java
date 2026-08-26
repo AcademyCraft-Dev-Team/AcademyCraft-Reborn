@@ -1,8 +1,5 @@
 package org.academy.api.client.render.shader.nodes;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
@@ -11,21 +8,21 @@ import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.registry.PropertySpec;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.shader.codegen.CurveGradientGlsl;
-import org.academy.api.client.render.shader.codegen.Expr;
-import org.academy.api.client.render.shader.codegen.GlslGenerator;
-import org.academy.api.client.render.shader.codegen.GlslLiterals;
-import org.academy.api.client.render.shader.codegen.GlslNodeGenerator;
-import org.academy.api.client.render.shader.codegen.GlslNodeRegistry;
+import org.academy.api.client.render.shader.codegen.*;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Shader 节点目录：注册节点元数据（核心 NodeRegistry）与 GLSL 生成器（GlslNodeRegistry）。
  *
  * <p>纹理采样（M11-01/A1，ADR-021）：{@code texture.sample} 按 {@code texture} 属性经
- * {@link org.academy.api.client.render.shader.codegen.GlslGenContext#samplerName} 解析为
+ * {@link GlslGenContext#samplerName} 解析为
  * {@code Sampler0..SamplerN-1}（多样本动态绑定）；坐标/几何输入（M11-07）目前为全屏 quad 预览的近似实现。</p>
  */
 public final class ShaderNodes {
@@ -547,7 +544,9 @@ public final class ShaderNodes {
                 (n, i, c) -> Map.of("out", new Expr("(" + i.get("a").code() + " " + op + " " + i.get("b").code() + ")", ValueType.VEC3)));
     }
 
-    /** 一元浮点函数：`fn(x)`；fn 为 null 时用自定义模板（reciprocal/saturate/smoothstep 等）。 */
+    /**
+     * 一元浮点函数：`fn(x)`；fn 为 null 时用自定义模板（reciprocal/saturate/smoothstep 等）。
+     */
     private static void registerUnaryFloat(NodeRegistry metadata, GlslNodeRegistry codegen, String id, String name, String fn) {
         var body = switch (id) {
             case "math.reciprocal" -> "(1.0 / {x})";
@@ -570,7 +569,9 @@ public final class ShaderNodes {
                 (n, i, c) -> Map.of("out", new Expr(fn + "(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
     }
 
-    /** 解析渐变 stops（"t:r,g,b,a;t:r,g,b,a;..."）为 GLSL mix 链。 */
+    /**
+     * 解析渐变 stops（"t:r,g,b,a;t:r,g,b,a;..."）为 GLSL mix 链。
+     */
     private static Expr gradientExpr(GraphNode node, String t) {
         String stops = node.properties().getOrDefault("stops", "0.0:0,0,0,1;1.0:1,1,1,1");
         List<float[]> parsed = parseStops(stops);
@@ -589,7 +590,7 @@ public final class ShaderNodes {
     }
 
     private static List<float[]> parseStops(String stops) {
-        var list = new java.util.ArrayList<float[]>();
+        var list = new ArrayList<float[]>();
         for (var stop : stops.split(";")) {
             var parts = stop.split(":");
             if (parts.length != 2) continue;

@@ -1,11 +1,13 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Test;
-
-/** M29：表面短弧生成器（Blender Curve Line + Bezier 起拱 + Resample）单测。 */
+/**
+ * M29：表面短弧生成器（Blender Curve Line + Bezier 起拱 + Resample）单测。
+ */
 class CurveGeneratorSurfaceArcTest {
 
     @Test
@@ -24,7 +26,9 @@ class CurveGeneratorSurfaceArcTest {
         assertEquals(42L, arc.seed());
     }
 
-    /** 弧沿切平面展开（平躺表面），法线方向上拱（Blender Align axis=X：local X→法线、local Z 落切平面）。 */
+    /**
+     * 弧沿切平面展开（平躺表面），法线方向上拱（Blender Align axis=X：local X→法线、local Z 落切平面）。
+     */
     @Test
     void generateSurfaceArcLiesOnSurfaceAndArches() {
         var arc = new ArcCurve();
@@ -39,12 +43,17 @@ class CurveGeneratorSurfaceArcTest {
         // 法线上拱：中间 y > 2（帐篷拱）
         boolean above = false;
         for (int i = 0; i < arc.size(); i++) {
-            if (arc.y(i) > 2.01f) above = true;
+            if (arc.y(i) > 2.01f) {
+                above = true;
+                break;
+            }
         }
         assertTrue(above, "Arc should arch above surface plane (y>2)");
     }
 
-    /** 端点应落在表面点附近（吸附后端点贴面）；基线中心在表面点。 */
+    /**
+     * 端点应落在表面点附近（吸附后端点贴面）；基线中心在表面点。
+     */
     @Test
     void generateSurfaceArcEndpointsNearSurface() {
         var arc = new ArcCurve();
@@ -62,7 +71,9 @@ class CurveGeneratorSurfaceArcTest {
         assertEquals(0f, cz, 1e-3f, "arch center z ≈ surface point");
     }
 
-    /** 确定性：同种子同参数结果一致。 */
+    /**
+     * 确定性：同种子同参数结果一致。
+     */
     @Test
     void generateSurfaceArcDeterministic() {
         var a = new ArcCurve();

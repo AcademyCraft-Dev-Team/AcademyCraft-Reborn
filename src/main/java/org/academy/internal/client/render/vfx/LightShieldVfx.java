@@ -1,6 +1,7 @@
 package org.academy.internal.client.render.vfx;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
@@ -8,7 +9,6 @@ import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.api.client.resources.R;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
-import net.minecraft.util.Mth;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;

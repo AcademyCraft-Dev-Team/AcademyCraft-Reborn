@@ -8,11 +8,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -44,8 +44,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.List;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -236,7 +237,7 @@ public class LightningStorm extends Skill {
                                     new AABB(center, center).inflate(radius), target -> target != player
                                             && target.isAlive() && !player.isAlliedTo(target)
                                             && !struckTargets.contains(target.getUUID()))
-                            .stream().min(java.util.Comparator.comparingDouble(target -> target.distanceToSqr(center)))
+                            .stream().min(Comparator.comparingDouble(target -> target.distanceToSqr(center)))
                             .orElse(null);
                     if (fresh != null) {
                         strikeX = fresh.getX();

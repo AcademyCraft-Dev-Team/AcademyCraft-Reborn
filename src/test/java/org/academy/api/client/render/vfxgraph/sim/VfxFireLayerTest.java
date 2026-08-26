@@ -1,16 +1,17 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
 import com.google.gson.JsonParser;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 class VfxFireLayerTest {
     @Test
@@ -38,7 +39,7 @@ class VfxFireLayerTest {
         }
         System.out.println("vy range: " + minVy + " .. " + maxVy);
         // 存在高速层(ember 1.6)与低速层(smoke 0.45)：vy 至少跨 1.0 以上
-        org.junit.jupiter.api.Assertions.assertTrue(maxVy - minVy > 1.0f,
+        Assertions.assertTrue(maxVy - minVy > 1.0f,
                 "fire layers should have distinct velocities, range=" + (maxVy - minVy));
     }
 }

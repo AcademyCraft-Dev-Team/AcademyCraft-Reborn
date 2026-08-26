@@ -3,6 +3,7 @@ package org.academy.internal.server.ability;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.DevelopmentSource;
 import org.academy.api.common.wireless.WirelessUser;
@@ -10,6 +11,8 @@ import org.academy.internal.common.world.item.AbilityControlTabletItem;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Optional;
 
 public final class AbilityDeveloperSources {
     private AbilityDeveloperSources() {
@@ -78,11 +81,11 @@ public final class AbilityDeveloperSources {
             return tablet().isPresent() ? AbilityControlTabletItem.ENERGY_CAPACITY : 0;
         }
 
-        private java.util.Optional<net.minecraft.world.item.ItemStack> tablet() {
+        private Optional<ItemStack> tablet() {
             var stack = player.getItemInHand(hand);
             return stack.is(Items.ABILITY_CONTROL_TABLET.get())
-                    ? java.util.Optional.of(stack)
-                    : java.util.Optional.empty();
+                    ? Optional.of(stack)
+                    : Optional.empty();
         }
     }
 }

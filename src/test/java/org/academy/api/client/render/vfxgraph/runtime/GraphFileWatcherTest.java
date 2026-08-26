@@ -1,22 +1,23 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec;
+import org.joml.Vector3f;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class GraphFileWatcherTest {
     @TempDir
@@ -50,7 +51,7 @@ class GraphFileWatcherTest {
 
         var manager = VfxGraphManager.INSTANCE;
         manager.reloadFromFile(Identifier.fromNamespaceAndPath("academy", "vfxgraph/demo"), file);
-        var effect = manager.spawn(Identifier.fromNamespaceAndPath("academy", "vfxgraph/demo"), new org.joml.Vector3f());
+        var effect = manager.spawn(Identifier.fromNamespaceAndPath("academy", "vfxgraph/demo"), new Vector3f());
         assertNotNull(effect);
         for (int i = 0; i < 3; i++) {
             manager.tick(0.1f);

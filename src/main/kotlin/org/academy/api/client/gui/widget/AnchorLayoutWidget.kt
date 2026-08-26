@@ -75,6 +75,7 @@ open class AnchorLayoutWidget : AbstractWidgetContainer() {
                         MeasureSpec.Mode.EXACTLY,
                         max(0f, parentW - lp.marginLeft - lp.marginRight)
                     )
+
                     else -> getChildMeasureSpec(
                         parentWidthSpec,
                         lp.marginLeft + lp.marginRight,
@@ -86,6 +87,7 @@ open class AnchorLayoutWidget : AbstractWidgetContainer() {
                         MeasureSpec.Mode.EXACTLY,
                         max(0f, parentH - lp.marginTop - lp.marginBottom)
                     )
+
                     else -> getChildMeasureSpec(
                         parentHeightSpec,
                         lp.marginTop + lp.marginBottom,

@@ -30,7 +30,6 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.render.Render
 import org.academy.api.client.resources.R
-import kotlin.math.ceil
 
 abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructor(
     menu: T,
@@ -169,7 +168,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
-        val renderTarget: RenderTarget = ScreenDispatcher.getRenderTarget() ?: return
+        val renderTarget: RenderTarget = ScreenDispatcher.getRenderTarget()
         val colorTextureView = renderTarget.getColorTextureView() ?: return
 
         graphics.innerBlit(

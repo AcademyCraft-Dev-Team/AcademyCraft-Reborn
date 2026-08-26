@@ -1,10 +1,12 @@
 package org.academy.api.client.render.vfxgraph.shape;
 
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Random;
-import org.junit.jupiter.api.Test;
 
 class EmitterShapeMeshTest {
     private final Random random = new Random(11L);
@@ -23,7 +25,7 @@ class EmitterShapeMeshTest {
             boolean onSurface = out[0] < eps || out[0] > 1f - eps
                     || out[1] < eps || out[1] > 1f - eps
                     || out[2] < eps || out[2] > 1f - eps;
-            assertTrue(onSurface, "point must be on cube surface: " + java.util.Arrays.toString(out));
+            assertTrue(onSurface, "point must be on cube surface: " + Arrays.toString(out));
         }
     }
 

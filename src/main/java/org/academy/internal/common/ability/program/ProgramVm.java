@@ -5,12 +5,7 @@ import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Resumable, fuel-metered interpreter. Exhausting a time slice never blocks the server tick.

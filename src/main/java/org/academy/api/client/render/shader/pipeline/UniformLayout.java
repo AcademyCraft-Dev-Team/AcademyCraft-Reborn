@@ -1,23 +1,20 @@
 package org.academy.api.client.render.shader.pipeline;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.shader.codegen.GlslGenerator;
 import org.academy.api.client.render.shader.codegen.GlslNames;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 图参数 std140 uniform 块布局。成员顺序：固定首成员 {@code Time}，随后各参数按声明序。
  * SAMPLER/CURVE/GRADIENT 不进 std140；SAMPLER 参数登记为 {@link #samplers()} 纹理绑定槽位。
  */
-public final class UniformLayout {
+public record UniformLayout(List<Entry> entries, List<SamplerBinding> samplers, int totalSize) {
     public record Entry(String name, ValueType type, int offset, int size) {
     }
-
-    private final List<Entry> entries;
-    private final List<SamplerBinding> samplers;
-    private final int totalSize;
 
     public UniformLayout(List<GraphParameter> parameters) {
         this(parameters, deriveSamplerBindings(parameters));
@@ -37,9 +34,7 @@ public final class UniformLayout {
             list.add(new Entry(GlslNames.uniformName(p.id()), p.type(), offset, size));
             offset += size;
         }
-        this.entries = List.copyOf(list);
-        this.samplers = List.copyOf(samplers);
-        this.totalSize = alignUp(offset, 16);
+        this(List.copyOf(list), List.copyOf(samplers), alignUp(offset, 16));
     }
 
     private static List<SamplerBinding> deriveSamplerBindings(List<GraphParameter> parameters) {
@@ -55,17 +50,12 @@ public final class UniformLayout {
         return List.copyOf(bindings);
     }
 
-    public List<Entry> entries() {
-        return entries;
-    }
-
-    /** 图使用的 sampler 绑定槽位（uniform 名 → 纹理标识），与生成 GLSL 的 sampler 声明一致。 */
+    /**
+     * 图使用的 sampler 绑定槽位（uniform 名 → 纹理标识），与生成 GLSL 的 sampler 声明一致。
+     */
+    @Override
     public List<SamplerBinding> samplers() {
         return samplers;
-    }
-
-    public int totalSize() {
-        return totalSize;
     }
 
     public static int alignOf(ValueType t) {

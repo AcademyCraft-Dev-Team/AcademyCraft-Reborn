@@ -2,7 +2,9 @@ package org.academy.internal.common.ability;
 
 import org.academy.api.common.ability.DevelopmentSource;
 
-/** Shared access policy for portable and full-size ability developers. */
+/**
+ * Shared access policy for portable and full-size ability developers.
+ */
 public final class AbilityDevelopmentAccess {
     public static final int PORTABLE_MIN_SKILL_LEVEL = 1;
     public static final int PORTABLE_MAX_SKILL_LEVEL = 3;

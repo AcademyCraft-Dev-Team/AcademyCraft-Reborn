@@ -37,7 +37,6 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.util.L10n
 import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
-import org.academy.internal.common.ability.Skills
 import org.joml.Vector3f
 import kotlin.math.abs
 import kotlin.math.max
@@ -637,7 +636,8 @@ class AbilityInfoHud private constructor() {
         }
 
         private fun updateCpText() {
-            val text = "${AbilitySystemClient.getAvailableCP().roundToInt()} / ${AbilitySystemClient.getMaxCP().roundToInt()}"
+            val text =
+                "${AbilitySystemClient.getAvailableCP().roundToInt()} / ${AbilitySystemClient.getMaxCP().roundToInt()}"
             if (cpTextState.value != text) cpTextState.value = text
         }
 

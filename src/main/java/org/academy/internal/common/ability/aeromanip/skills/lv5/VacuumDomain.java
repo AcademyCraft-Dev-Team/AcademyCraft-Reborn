@@ -9,13 +9,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.tags.EntityTypeTags;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.AreaEffectCloud;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.golem.AbstractGolem;
-import net.minecraft.tags.EntityTypeTags;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
@@ -36,9 +34,9 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
@@ -54,7 +52,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.util.Mth;
 
 public final class VacuumDomain extends Skill {
     static final double RADIUS = 12.0;
@@ -194,7 +191,7 @@ public final class VacuumDomain extends Skill {
                 var center = resolveTargetPoint(level, player, context.milestone());
                 var baseRadius = context.milestone() >= 2 ? 14.0 : RADIUS;
                 var range = baseRadius * AeromanipConfig.rangeMultiplier(player, SkillNames.VACUUM_DOMAIN);
-                var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(),
+                var field = new AirflowField(UUID.randomUUID(), player.getUUID(), level.dimension(),
                         AirflowField.Type.VACUUM, AirflowField.Shape.SPHERE, center, player.getLookAngle(),
                         range, 0.0, 1.0f, Integer.MAX_VALUE, context.milestone());
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);

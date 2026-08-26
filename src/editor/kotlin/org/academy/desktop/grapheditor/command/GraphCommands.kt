@@ -66,7 +66,8 @@ class RemoveNodeCommand(
             model.edges["${edge.toNode}:${edge.toPort}"] = edge
         }
         if (wasOutput) {
-            val index = if (outputIndex >= 0) outputIndex.coerceAtMost(model.outputNodeIds.size) else model.outputNodeIds.size
+            val index =
+                if (outputIndex >= 0) outputIndex.coerceAtMost(model.outputNodeIds.size) else model.outputNodeIds.size
             model.outputNodeIds.add(index, nodeId)
         }
     }

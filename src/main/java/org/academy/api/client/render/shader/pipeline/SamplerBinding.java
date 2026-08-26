@@ -8,7 +8,9 @@ package org.academy.api.client.render.shader.pipeline;
  * （如 {@code minecraft:textures/block/stone.png}），空串表示未指定（绑定兜底纹理）。</p>
  */
 public record SamplerBinding(String uniformName, String identifier) {
-    /** 槽位索引 → uniform 名（{@code Sampler0} 起）。 */
+    /**
+     * 槽位索引 → uniform 名（{@code Sampler0} 起）。
+     */
     public static String uniformName(int index) {
         return "Sampler" + index;
     }

@@ -4,17 +4,19 @@ import com.mojang.blaze3d.GpuFormat
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.pipeline.TextureTarget
 import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
 import net.neoforged.bus.api.SubscribeEvent
+import net.neoforged.neoforge.client.event.ScreenEvent
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.gui.environment.UiEnvironment
+import org.academy.api.client.gui.imgui.ImGuiUIDebugger
+import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.gui.render.BlurRegion
 import org.academy.api.client.gui.render.UiCompositor
 import org.academy.api.client.gui.render.UiContext
-import org.academy.api.client.gui.imgui.ImGuiUIDebugger
-import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.render.post.BackdropBlurEngine
 import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.RenderLoopEvent
@@ -22,8 +24,6 @@ import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.client.vanilla.WorldCompositeEvent
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost
 import org.academy.internal.client.gui.debug.UiDebugSession
-import net.minecraft.network.chat.Component
-import net.neoforged.neoforge.client.event.ScreenEvent
 
 class ScreenDispatcher private constructor() {
     private val renderTarget: RenderTarget

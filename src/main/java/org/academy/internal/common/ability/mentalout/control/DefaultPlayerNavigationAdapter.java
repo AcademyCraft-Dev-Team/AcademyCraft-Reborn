@@ -1,11 +1,9 @@
 package org.academy.internal.common.ability.mentalout.control;
 
-import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
@@ -21,6 +19,8 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+
+import java.util.*;
 
 /**
  * Built-in bounded navigation for vanilla player movement, water, flight, and ridden vehicles.
@@ -801,23 +801,23 @@ public final class DefaultPlayerNavigationAdapter implements PlayerNavigationAda
     private record FailedBinding(ControlFailureReason reason) implements ControlBinding {
 
         @Override
-            public void tick() {
-            }
-
-            @Override
-            public boolean isComplete() {
-                return true;
-            }
-
-            @Override
-            public Optional<ControlFailureReason> failureReason() {
-                return Optional.of(reason);
-            }
-
-            @Override
-            public void close() {
-            }
+        public void tick() {
         }
+
+        @Override
+        public boolean isComplete() {
+            return true;
+        }
+
+        @Override
+        public Optional<ControlFailureReason> failureReason() {
+            return Optional.of(reason);
+        }
+
+        @Override
+        public void close() {
+        }
+    }
 
     private record NodeKey(BlockPos pos, PlayerMovementMode mode) {
     }

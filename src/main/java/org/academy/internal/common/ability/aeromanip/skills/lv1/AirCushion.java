@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
@@ -15,13 +16,9 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.*;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 
 import java.util.List;
 
@@ -104,7 +101,7 @@ public final class AirCushion extends Skill {
                             || AeromanipTargeting.canAffectNegatively(owner, entity)))) {
                 if (handled++ >= cap) break;
                 var direction = entity.getBoundingBox().getCenter().subtract(center);
-                if (direction.lengthSqr() <= 1.0e-8) direction = new net.minecraft.world.phys.Vec3(0, 1, 0);
+                if (direction.lengthSqr() <= 1.0e-8) direction = new Vec3(0, 1, 0);
                 entity.setDeltaMovement(direction.normalize().scale(entity instanceof Projectile ? 0.8 : 0.55)
                         .add(0, 0.18, 0));
                 entity.hurtMarked = true;

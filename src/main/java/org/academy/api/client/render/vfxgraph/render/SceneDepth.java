@@ -18,7 +18,9 @@ public final class SceneDepth {
     private int height;
     private GpuFormat format;
 
-    /** 把深度附件拷贝到 scratch（大小/格式变化时重建）。必须在 render pass 外调用。 */
+    /**
+     * 把深度附件拷贝到 scratch（大小/格式变化时重建）。必须在 render pass 外调用。
+     */
     public void copyFrom(GpuTextureView depth) {
         var source = depth.texture();
         int w = source.getWidth(0);

@@ -24,7 +24,9 @@ public final class GlslType {
         };
     }
 
-    /** 把表达式转换到目标类型，插入必要的构造器/swizzle。 */
+    /**
+     * 把表达式转换到目标类型，插入必要的构造器/swizzle。
+     */
     public static Expr convert(Expr e, ValueType to) {
         if (e.type() == to) return e;
         return switch (to) {

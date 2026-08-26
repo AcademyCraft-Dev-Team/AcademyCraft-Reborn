@@ -13,6 +13,7 @@ import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.event.EventHooks;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.jspecify.annotations.Nullable;
 
@@ -24,11 +25,18 @@ public final class DarkmatterBowItem extends BowItem implements DarkmatterShaped
         super(DarkmatterNativeItemSupport.equipmentProperties(properties));
     }
 
-    @Override public DarkmatterShape darkmatterShape() { return DarkmatterShape.BOW; }
-    @Override public Predicate<ItemStack> getAllSupportedProjectiles() {
+    @Override
+    public DarkmatterShape darkmatterShape() {
+        return DarkmatterShape.BOW;
+    }
+
+    @Override
+    public Predicate<ItemStack> getAllSupportedProjectiles() {
         return DarkmatterNativeItemSupport::isSupportedArrow;
     }
-    @Override public ItemStack getDefaultCreativeAmmo(
+
+    @Override
+    public ItemStack getDefaultCreativeAmmo(
             @Nullable Player player, ItemStack projectileWeaponItem) {
         return DarkmatterNativeItemSupport.infiniteDarkmatterArrow(projectileWeaponItem);
     }
@@ -37,7 +45,7 @@ public final class DarkmatterBowItem extends BowItem implements DarkmatterShaped
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         var weapon = player.getItemInHand(hand);
         var foundProjectile = !player.getProjectile(weapon).isEmpty();
-        var result = net.neoforged.neoforge.event.EventHooks.onArrowNock(
+        var result = EventHooks.onArrowNock(
                 weapon, level, player, hand, foundProjectile);
         if (result != null) return result;
         player.startUsingItem(hand);
@@ -53,7 +61,7 @@ public final class DarkmatterBowItem extends BowItem implements DarkmatterShaped
             projectile = DarkmatterNativeItemSupport.infiniteDarkmatterArrow(weapon);
         }
         var timeHeld = getUseDuration(weapon, entity) - remainingTime;
-        timeHeld = net.neoforged.neoforge.event.EventHooks.onArrowLoose(
+        timeHeld = EventHooks.onArrowLoose(
                 weapon, level, player, timeHeld, true);
         if (timeHeld < 0) return false;
         var power = getPowerForTime(timeHeld);
@@ -70,21 +78,50 @@ public final class DarkmatterBowItem extends BowItem implements DarkmatterShaped
         return true;
     }
 
-    @Override public boolean isCombineRepairable(ItemStack stack) { return false; }
-    @Override public float getXpRepairRatio(ItemStack stack) { return 0.0f; }
-    @Override public boolean canGrindstoneRepair(ItemStack stack) { return false; }
-    @Override public boolean isBarVisible(ItemStack stack) { return DarkmatterNativeItemSupport.isBarVisible(stack); }
-    @Override public int getBarWidth(ItemStack stack) { return DarkmatterNativeItemSupport.barWidth(stack); }
-    @Override public int getBarColor(ItemStack stack) { return DarkmatterNativeItemSupport.barColor(stack); }
-    @Override public boolean shouldCauseReequipAnimation(
+    @Override
+    public boolean isCombineRepairable(ItemStack stack) {
+        return false;
+    }
+
+    @Override
+    public float getXpRepairRatio(ItemStack stack) {
+        return 0.0f;
+    }
+
+    @Override
+    public boolean canGrindstoneRepair(ItemStack stack) {
+        return false;
+    }
+
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return DarkmatterNativeItemSupport.isBarVisible(stack);
+    }
+
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return DarkmatterNativeItemSupport.barWidth(stack);
+    }
+
+    @Override
+    public int getBarColor(ItemStack stack) {
+        return DarkmatterNativeItemSupport.barColor(stack);
+    }
+
+    @Override
+    public boolean shouldCauseReequipAnimation(
             ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
         return DarkmatterNativeItemSupport.shouldCauseReequipAnimation(
                 oldStack, newStack, slotChanged);
     }
-    @Override public boolean shouldCauseBlockBreakReset(ItemStack oldStack, ItemStack newStack) {
+
+    @Override
+    public boolean shouldCauseBlockBreakReset(ItemStack oldStack, ItemStack newStack) {
         return DarkmatterNativeItemSupport.shouldCauseBlockBreakReset(oldStack, newStack);
     }
-    @Override public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
+
+    @Override
+    public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
         return DarkmatterNativeItemSupport.supportsEnchantment(
                 stack, enchantment, super.supportsEnchantment(stack, enchantment));
     }

@@ -105,7 +105,7 @@ final class DispatchSubclassFactory {
     }
 
     private static GenerationResult validateGenerated(Class<?> generated, Class<?> originalType,
-                                                       GeneratedSupport support) {
+                                                      GeneratedSupport support) {
         if (generated == null || generated.getSuperclass() != originalType) {
             return GenerationResult.failure("generated dispatch class has the wrong superclass");
         }

@@ -10,7 +10,9 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.util.Mth;
 import org.academy.internal.client.renderer.entity.state.DarkmatterCreatureRenderState;
 
-/** One complete model tree containing every built-in head, torso, limb and additional branch. */
+/**
+ * One complete model tree containing every built-in head, torso, limb and additional branch.
+ */
 public final class DarkmatterCreatureModel extends EntityModel<DarkmatterCreatureRenderState> {
     private final ModelPart[] heads = new ModelPart[3];
     private final ModelPart[] torsos = new ModelPart[3];

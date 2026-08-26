@@ -98,8 +98,7 @@ public abstract class MixinServerPlayer extends Player implements ImagineBreaker
         }
         var remainingDamage = pair.getRight();
         if (!(remainingDamage > 0.0f) || !Float.isFinite(remainingDamage)) return false;
-        return VectorReflection.Server.isVectorDefenseActive((ServerPlayer) (Object) this)
-                ? false : super.hurtServer(level, source, remainingDamage);
+        return !VectorReflection.Server.isVectorDefenseActive((ServerPlayer) (Object) this) && super.hurtServer(level, source, remainingDamage);
     }
 
     @Redirect(

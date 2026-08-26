@@ -1,10 +1,9 @@
 package org.academy.desktop.grapheditor.container
 
-import imgui.ImGui
 import imgui.ImDrawList
+import imgui.ImGui
 import imgui.flag.ImDrawFlags
 import imgui.flag.ImGuiMouseButton
-import org.academy.api.client.render.graph.model.PortDirection
 import org.academy.api.client.render.vfxgraph.model.VfxContextType
 import org.academy.desktop.grapheditor.canvas.Camera2D
 
@@ -154,6 +153,7 @@ class VfxContainerCanvas(
                 "spawn" -> if (!isArc(block.typeId)) {
                     drawBatchPort(drawList, block.id, x + w, blockY + blockH / 2f, "@batchOut")
                 }
+
                 "init" -> drawBatchPort(drawList, block.id, x, blockY + blockH / 2f + 7f, "@batchIn")
                 else -> Unit
             }
@@ -215,8 +215,10 @@ class VfxContainerCanvas(
         val from = flowPortPos(edge.fromContext, isOutput = true) ?: return
         val to = flowPortPos(edge.toContext, isOutput = false) ?: return
         val highlighted = edge.fromContext in selectedContext || edge.toContext in selectedContext
-        drawBezier(drawList, from.first, from.second, to.first, to.second,
-            if (highlighted) flowHighlightColor() else flowColor(), if (highlighted) 4f else 2f)
+        drawBezier(
+            drawList, from.first, from.second, to.first, to.second,
+            if (highlighted) flowHighlightColor() else flowColor(), if (highlighted) 4f else 2f
+        )
     }
 
     /** 块级批次 flow 连线（M28b）：spawn 块批次输出 → init 块批次输入。 */
@@ -224,11 +226,21 @@ class VfxContainerCanvas(
         val from = blockBatchPortPos(edge.fromBlock, "@batchOut") ?: return
         val to = blockBatchPortPos(edge.toBlock, "@batchIn") ?: return
         val highlighted = edge.fromBlock in selected || edge.toBlock in selected
-        drawBezier(drawList, from.first, from.second, to.first, to.second,
-            if (highlighted) flowHighlightColor() else flowColor(), if (highlighted) 4f else 2f)
+        drawBezier(
+            drawList, from.first, from.second, to.first, to.second,
+            if (highlighted) flowHighlightColor() else flowColor(), if (highlighted) 4f else 2f
+        )
     }
 
-    private fun drawBezier(drawList: ImDrawList, x1: Float, y1: Float, x2: Float, y2: Float, color: Int, thickness: Float = 2f) {
+    private fun drawBezier(
+        drawList: ImDrawList,
+        x1: Float,
+        y1: Float,
+        x2: Float,
+        y2: Float,
+        color: Int,
+        thickness: Float = 2f
+    ) {
         val dx = (x2 - x1) * 0.5f
         drawList.addBezierCubic(x1, y1, x1 + dx, y1, x2 - dx, y2, x2, y2, color, thickness, 20)
     }
@@ -314,10 +326,10 @@ class VfxContainerCanvas(
         if (!canvasHovered) return
         val io = ImGui.getIO()
         if (ImGui.isMouseDragging(ImGuiMouseButton.Right) || ImGui.isMouseDragging(ImGuiMouseButton.Middle)) {
-            camera.panX += io.getMouseDeltaX()
-            camera.panY += io.getMouseDeltaY()
+            camera.panX += io.mouseDeltaX
+            camera.panY += io.mouseDeltaY
         }
-        val wheel = io.getMouseWheel()
+        val wheel = io.mouseWheel
         if (wheel != 0f) {
             val factor = if (wheel > 0) 1.1f else 1f / 1.1f
             val mouseX = ImGui.getMousePosX()
@@ -344,9 +356,11 @@ class VfxContainerCanvas(
         val minY = ys.min() - 20f
         val maxX = (model.contexts.values.map { it.x + 200f } + model.operators.values.map { it.x + 160f }).max() + 20f
         val maxY = (model.contexts.values.map { it.y + 120f } + model.operators.values.map { it.y + 40f }).max() + 20f
-        camera.frameToBounds(minX, minY, maxX, maxY,
+        camera.frameToBounds(
+            minX, minY, maxX, maxY,
             ImGui.getWindowPosX(), ImGui.getWindowPosY() + topInset,
-            ImGui.getWindowSizeX(), ImGui.getWindowSizeY() - topInset)
+            ImGui.getWindowSizeX(), ImGui.getWindowSizeY() - topInset
+        )
     }
 
     private fun handleInteraction(canvasHovered: Boolean, mouseX: Float, mouseY: Float) {
@@ -501,6 +515,7 @@ class VfxContainerCanvas(
                     contextRequest = null
                 }
             }
+
             ContextRequest.Kind.BLOCK -> {
                 if (ImGui.beginPopup(POPUP_BLOCK)) {
                     val blockId = req.nodeId ?: return
@@ -520,6 +535,7 @@ class VfxContainerCanvas(
                     contextRequest = null
                 }
             }
+
             ContextRequest.Kind.NODE -> {
                 if (ImGui.beginPopup(POPUP_NODE)) {
                     val nodeId = req.nodeId ?: return
@@ -532,6 +548,7 @@ class VfxContainerCanvas(
                     contextRequest = null
                 }
             }
+
             ContextRequest.Kind.CONTEXT -> {
                 if (ImGui.beginPopup(POPUP_CONTEXT)) {
                     val ctxId = req.contextId ?: return
@@ -544,6 +561,7 @@ class VfxContainerCanvas(
                     contextRequest = null
                 }
             }
+
             ContextRequest.Kind.CANVAS -> {
                 if (ImGui.beginPopup(POPUP_CANVAS)) {
                     canvasPalette?.invoke()
@@ -607,11 +625,13 @@ class VfxContainerCanvas(
                 val target = hitFlowPort(mouseX, mouseY, isOutput = false)
                 if (target != null) model.connectFlow(c.contextId ?: return, target)
             }
+
             DragKind.BLOCK_FLOW -> {
                 // spawn 块批次输出（c.nodeId）→ init 块批次输入
                 val target = hitBlockBatchPort(mouseX, mouseY, "@batchIn")
                 if (target != null) model.connectBlockFlow(c.nodeId, target)
             }
+
             DragKind.DATA_FROM -> {
                 // 算子输出端口（c.nodeId）→ 块输入端口：源/目标均解析真实端口 id
                 val target = hitBlockPort(mouseX, mouseY)
@@ -621,6 +641,7 @@ class VfxContainerCanvas(
                     model.connectData(c.nodeId, sourcePort, target, targetPort)
                 }
             }
+
             DragKind.DATA_TO -> {
                 // 块输入端口不再启动连线（仅作落点），此分支不应触发
             }
@@ -739,10 +760,16 @@ class VfxContainerCanvas(
                 val cat = blockCategory(block.typeId)
                 if (cat == "spawn" && !isArc(block.typeId)) {
                     val pos = blockBatchPortPos(block.id, "@batchOut")
-                    if (pos != null && dist(mouseX, mouseY, pos.first, pos.second) <= 8f) return Pair(block.id, "@batchOut")
+                    if (pos != null && dist(mouseX, mouseY, pos.first, pos.second) <= 8f) return Pair(
+                        block.id,
+                        "@batchOut"
+                    )
                 } else if (cat == "init") {
                     val pos = blockBatchPortPos(block.id, "@batchIn")
-                    if (pos != null && dist(mouseX, mouseY, pos.first, pos.second) <= 8f) return Pair(block.id, "@batchIn")
+                    if (pos != null && dist(mouseX, mouseY, pos.first, pos.second) <= 8f) return Pair(
+                        block.id,
+                        "@batchIn"
+                    )
                 }
                 if (model.firstInputPort(block.id) == null) continue
                 val pos = blockPortPos(block.id)
@@ -781,7 +808,8 @@ class VfxContainerCanvas(
         if (hp.second == "@in") {
             val block = model.findBlock(hp.first)
             val contextId = block?.let { model.contextOf(it.id) }
-            val upstream = contextId?.let { c -> model.flowEdges.filter { it.toContext == c }.map { it.fromContext } } ?: emptyList()
+            val upstream = contextId?.let { c -> model.flowEdges.filter { it.toContext == c }.map { it.fromContext } }
+                ?: emptyList()
             val port = block?.let { model.firstInputPort(it.id) }
             val source = model.dataEdges.firstOrNull { it.toNode == hp.first }?.fromNode
             val sourceName = source?.let { s ->
@@ -790,7 +818,13 @@ class VfxContainerCanvas(
             }
             ImGui.setTooltip(
                 (if (sourceName != null) "Input '$port' ← $sourceName" else "Input '$port' (property default)") +
-                    (if (upstream.isNotEmpty()) "\nContext receives particles from: ${upstream.joinToString { nameOfContext(it) }}" else "")
+                        (if (upstream.isNotEmpty()) "\nContext receives particles from: ${
+                            upstream.joinToString {
+                                nameOfContext(
+                                    it
+                                )
+                            }
+                        }" else "")
             )
             return
         }
@@ -850,9 +884,9 @@ class VfxContainerCanvas(
 
     private fun col(r: Float, g: Float, b: Float, a: Float): Int {
         return (((a * 255).toInt() and 0xFF) shl 24) or
-            (((r * 255).toInt() and 0xFF) shl 16) or
-            (((g * 255).toInt() and 0xFF) shl 8) or
-            ((b * 255).toInt() and 0xFF)
+                (((r * 255).toInt() and 0xFF) shl 16) or
+                (((g * 255).toInt() and 0xFF) shl 8) or
+                ((b * 255).toInt() and 0xFF)
     }
 
     private fun edgeColor(): Int = col(0.7f, 0.7f, 0.75f, 0.9f)

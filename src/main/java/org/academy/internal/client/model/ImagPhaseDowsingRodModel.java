@@ -32,9 +32,9 @@ public final class ImagPhaseDowsingRodModel extends Model<ImagPhaseDowsingRodRen
                         (float) Math.toRadians(-25.0)));
 
         var frame = handle.addOrReplaceChild("frame", CubeListBuilder.create()
-                .texOffs(1, 17).addBox(-7.0F, -9.75F, -1.5F, 10.0F, 1.0F, 3.0F, new CubeDeformation(0.0F))
-                .texOffs(0, 0).addBox(-13.0F, -12.75F, -1.5F, 17.0F, 3.0F, 3.0F, new CubeDeformation(0.0F))
-                .texOffs(0, 23).addBox(-12.0F, -14.75F, -1.5F, 15.0F, 2.0F, 3.0F, new CubeDeformation(0.0F)),
+                        .texOffs(1, 17).addBox(-7.0F, -9.75F, -1.5F, 10.0F, 1.0F, 3.0F, new CubeDeformation(0.0F))
+                        .texOffs(0, 0).addBox(-13.0F, -12.75F, -1.5F, 17.0F, 3.0F, 3.0F, new CubeDeformation(0.0F))
+                        .texOffs(0, 23).addBox(-12.0F, -14.75F, -1.5F, 15.0F, 2.0F, 3.0F, new CubeDeformation(0.0F)),
                 PartPose.ZERO);
 
         frame.addOrReplaceChild("frame_support", CubeListBuilder.create()

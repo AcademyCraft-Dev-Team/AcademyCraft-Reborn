@@ -2,37 +2,17 @@ package org.academy.internal.common.ability.accelerator.program;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramBlockPosition;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramValue;
-import org.academy.api.common.ability.program.ProgramValueTypes;
-import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.ability.program.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.CompiledProgram;
-import org.academy.internal.common.ability.program.ProgramCompileResult;
-import org.academy.internal.common.ability.program.ProgramActionTransaction;
-import org.academy.internal.common.ability.program.ProgramExecutionFrame;
-import org.academy.internal.common.ability.program.ProgramExecutorLookup;
-import org.academy.internal.common.ability.program.ProgramInputView;
-import org.academy.internal.common.ability.program.ProgramNodeExecutor;
-import org.academy.internal.common.ability.program.ProgramNodeStep;
-import org.academy.internal.common.ability.program.ProgramVm;
-import org.academy.internal.common.ability.program.ProgramVmContext;
-import org.academy.internal.common.ability.program.ProgramVmResult;
+import org.academy.internal.common.ability.program.*;
+import org.academy.internal.server.world.level.storage.Player;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
-/** Shared-VM execution gateway for vector-manipulation programs. */
+/**
+ * Shared-VM execution gateway for vector-manipulation programs.
+ */
 public final class AcceleratorProgramExecutionBridge {
     private static final int MAX_FUEL = ProgramLimits.DEFAULT.maxNodes()
             * ProgramLimits.DEFAULT.maxNodes() + 1;
@@ -45,7 +25,9 @@ public final class AcceleratorProgramExecutionBridge {
         return EXECUTORS::get;
     }
 
-    /** Compiles against the player's learned accelerator skills. */
+    /**
+     * Compiles against the player's learned accelerator skills.
+     */
     public static ProgramCompileResult compileFor(ServerPlayer player, ProgramGraph graph) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(graph, "graph");
@@ -59,7 +41,9 @@ public final class AcceleratorProgramExecutionBridge {
                 .compile(graph, Set.copyOf(capabilities));
     }
 
-    /** Executes, validates and atomically commits a compiled program on the server. */
+    /**
+     * Executes, validates and atomically commits a compiled program on the server.
+     */
     public static ServerExecutionResult executeServer(
             CompiledProgram program,
             ServerPlayer player
@@ -240,7 +224,7 @@ public final class AcceleratorProgramExecutionBridge {
 
     private static <T> ProgramNodeStep data(
             String port,
-            org.academy.api.common.ability.program.ProgramValueType type,
+            ProgramValueType type,
             T value
     ) {
         return ProgramNodeStep.data(Map.of(
@@ -260,7 +244,7 @@ public final class AcceleratorProgramExecutionBridge {
     }
 
     private static void addLearnedCapability(
-            org.academy.internal.server.world.level.storage.Player data,
+            Player data,
             Set<Identifier> capabilities,
             String skillId
     ) {

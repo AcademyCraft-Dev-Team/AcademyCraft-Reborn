@@ -65,8 +65,8 @@ public final class PrecisionProgramBookMigrator {
         if (!imported.valid()) return new ImportProgramResult(null, imported.diagnostic());
         var programId = existing == null
                 ? UUID.nameUUIDFromBytes((
-                        "academy:precision_operation:" + ownerId + ":" + slot
-                ).getBytes(StandardCharsets.UTF_8))
+                "academy:precision_operation:" + ownerId + ":" + slot
+        ).getBytes(StandardCharsets.UTF_8))
                 : existing.id();
         return new ImportProgramResult(new AbilityProgram(
                 AbilityProgram.CURRENT_SCHEMA_VERSION,

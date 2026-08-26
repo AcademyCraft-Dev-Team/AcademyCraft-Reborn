@@ -11,12 +11,16 @@ public interface GlslGenContext {
 
     void addHelper(String functionSource);
 
-    /** 返回参数对应的曲线数据；参数非 CURVE 或不存在返回 null。 */
+    /**
+     * 返回参数对应的曲线数据；参数非 CURVE 或不存在返回 null。
+     */
     default Curve curve(String parameterId) {
         return null;
     }
 
-    /** 返回参数对应的渐变数据；参数非 GRADIENT 或不存在返回 null。 */
+    /**
+     * 返回参数对应的渐变数据；参数非 GRADIENT 或不存在返回 null。
+     */
     default Gradient gradient(String parameterId) {
         return null;
     }

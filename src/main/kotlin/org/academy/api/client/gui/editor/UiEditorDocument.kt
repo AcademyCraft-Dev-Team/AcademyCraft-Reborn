@@ -1,15 +1,10 @@
 package org.academy.api.client.gui.editor
 
 import com.google.gson.JsonObject
-import org.academy.api.client.gui.serialize.PropType
-import org.academy.api.client.gui.serialize.UiJson
-import org.academy.api.client.gui.serialize.WidgetCodecRegistry
-import org.academy.api.client.gui.serialize.WidgetNode
-import org.academy.api.client.gui.serialize.WidgetSerializer
-import org.academy.api.client.gui.serialize.setValue
+import org.academy.api.client.gui.serialize.*
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.ArrayDeque
+import java.util.*
 
 /**
  * 布局编辑器的文档模型：中性的 [WidgetNode] 树 + 选中状态 + undo/redo，与渲染宿主解耦。
@@ -277,8 +272,7 @@ class UiEditorDocument(
 
     /** The root frame is always a container; other nodes only if their codec says so. */
     private fun canHostChildren(node: WidgetNode): Boolean {
-        if (node === root) return true
-        return WidgetCodecRegistry.isContainerType(node.type)
+        return node === root || WidgetCodecRegistry.isContainerType(node.type)
     }
 
     private fun uniqueName(parent: WidgetNode, base: String): String {

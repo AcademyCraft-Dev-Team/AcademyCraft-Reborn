@@ -7,12 +7,13 @@ import org.academy.api.common.ability.program.ProgramValueTypes;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public final class ProgramInputView {
     private final Map<String, List<ProgramValue<?>>> values;
 
     ProgramInputView(Map<String, List<ProgramValue<?>>> values) {
-        this.values = values.entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+        this.values = values.entrySet().stream().collect(Collectors.toUnmodifiableMap(
                 Map.Entry::getKey,
                 entry -> List.copyOf(entry.getValue())
         ));

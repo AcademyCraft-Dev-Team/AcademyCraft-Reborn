@@ -20,11 +20,13 @@ class MinecraftUiEnvironment : UiEnvironment {
     override val physicalHeight: Int get() = mc.window.height
     override val gameDirectory: Path get() = mc.gameDirectory.toPath()
     override fun runOnMainThread(task: Runnable) = mc.execute(task)
-    override fun frameDeltaTicks(): Float = mc.getDeltaTracker().getGameTimeDeltaTicks()
+    override fun frameDeltaTicks(): Float = mc.deltaTracker.gameTimeDeltaTicks
     override fun openResource(namespace: String, path: String): InputStream? =
         mc.resourceManager.getResource(Identifier.fromNamespaceAndPath(namespace, path)).map { it.open() }.orElse(null)
+
     override fun loadTexture(identifier: Identifier): GpuTextureView =
         mc.textureManager.getTexture(identifier).getTextureView()
+
     override fun clipboard(): String = mc.keyboardHandler.clipboard
     override fun setClipboard(text: String) {
         mc.keyboardHandler.clipboard = text

@@ -1,9 +1,10 @@
 package org.academy.api.client.render.graph.registry;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 内存节点目录（契约实现）。按 id 去重，重复注册抛异常。

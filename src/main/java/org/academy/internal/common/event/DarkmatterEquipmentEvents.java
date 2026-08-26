@@ -1,48 +1,49 @@
 package org.academy.internal.common.event;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.resources.Identifier;
-import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.AnvilUpdateEvent;
 import net.neoforged.neoforge.event.enchanting.EnchantedBlockLootEvent;
 import net.neoforged.neoforge.event.enchanting.EnchantedEntityLootEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.minecraft.world.item.enchantment.Enchantments;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
+import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
-import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.DarkmatterAbsorption;
+import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.DarkmatterModifierRuntime;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.attribute.BlockLootPlayerContext;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
-import net.minecraft.util.Mth;
+import org.academy.internal.common.world.item.Items;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DarkmatterEquipmentEvents {
@@ -53,7 +54,9 @@ public final class DarkmatterEquipmentEvents {
     private static final Map<AttackPair, Long> NEXT_CORROSION_TICK = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> NEXT_GAMMA_ARMOR_TICK = new ConcurrentHashMap<>();
 
-    private record AttackPair(UUID defender, UUID attacker) { }
+    private record AttackPair(UUID defender, UUID attacker) {
+    }
+
     private DarkmatterEquipmentEvents() {
     }
 
@@ -84,7 +87,8 @@ public final class DarkmatterEquipmentEvents {
         return new MatterConversionPlan(converted, remaining);
     }
 
-    record MatterConversionPlan(float consumedMatter, float remainingDamage) { }
+    record MatterConversionPlan(float consumedMatter, float remainingDamage) {
+    }
 
     static int integrityLifetimeTicks(int shapingMilestone) {
         return Math.clamp(shapingMilestone, 0, 3) >= 3 ? 18_000
@@ -124,7 +128,7 @@ public final class DarkmatterEquipmentEvents {
                     damage, DarkmatterShaping.Server.penetration(shape, beta));
             if (nativeEffects && shape != DarkmatterShape.MACE) event.setCanceled(true);
             if (nativeEffects || coating) DarkmatterModifierRuntime.applyMelee(player, target, held);
-            if (held.is(org.academy.internal.common.world.item.Items.DARKMATTER_SPEAR.get())
+            if (held.is(Items.DARKMATTER_SPEAR.get())
                     && phase.gamma() > 0.0f) {
                 var source = SkillDamageSource.of(player, Skills.DARKMATTER_SHAPING.get());
                 var shapingMilestone = Skills.DARKMATTER_SHAPING.get()
@@ -157,7 +161,7 @@ public final class DarkmatterEquipmentEvents {
                     || !CONVERTED_DAMAGE_EVENTS.add(event)) return;
             var system = AbilitySystemServer.getSystem(player);
             if (system.getPlayerAbilityCategory(player.getUUID())
-                    != org.academy.internal.common.ability.AbilityCategories.DARKMATTER.get()) return;
+                    != AbilityCategories.DARKMATTER.get()) return;
             var level = system.getPlayerLevel(player.getUUID());
             var rawDamage = event.getAmount();
             var manager = system.getDarkmatterResourceManager();
@@ -206,7 +210,7 @@ public final class DarkmatterEquipmentEvents {
             }
             var extra = DarkmatterShaping.Server.toolFortune(beta)
                     + DarkmatterItemUtil.modifierLevel(held,
-                    org.academy.api.common.ability.darkmatter.DarkmatterModifiers.LUCKY);
+                    DarkmatterModifiers.LUCKY);
             if (extra > 0) event.setEnchantmentLevel(event.getEnchantmentLevel() + extra);
         }
 
@@ -220,7 +224,7 @@ public final class DarkmatterEquipmentEvents {
             if (DarkmatterItemUtil.hasNativeItemEffects(held)
                     || !DarkmatterItemUtil.hasCoating(held)) return;
             var extra = DarkmatterItemUtil.modifierLevel(
-                    held, org.academy.api.common.ability.darkmatter.DarkmatterModifiers.LUCKY);
+                    held, DarkmatterModifiers.LUCKY);
             if (extra > 0) event.setEnchantmentLevel(event.getEnchantmentLevel() + extra);
         }
 
@@ -338,7 +342,7 @@ public final class DarkmatterEquipmentEvents {
 
         private static void attractGammaToolDrops(ServerPlayer player, int shapingMilestone) {
             var held = player.getMainHandItem();
-            if (!held.is(org.academy.internal.common.world.item.Items.DARKMATTER_TOOL.get())
+            if (!held.is(Items.DARKMATTER_TOOL.get())
                     || !DarkmatterItemUtil.isOperational(held)) return;
             var phase = DarkmatterPhase.snapshot(player);
             if (!(phase.activeGammaPower() > 0.0f)) return;
@@ -347,7 +351,7 @@ public final class DarkmatterEquipmentEvents {
             var gamma = phase.activeGammaPower()
                     * DarkmatterShaping.Server.gammaShapingMultiplier(shapingMilestone);
             var range = (2.0 + gamma) * DarkmatterSixWings.Server.areaMultiplier(sixMilestone);
-            for (var item : ((ServerLevel) player.level()).getEntitiesOfClass(ItemEntity.class,
+            for (var item : player.level().getEntitiesOfClass(ItemEntity.class,
                     player.getBoundingBox().inflate(range), candidate -> candidate.isAlive())) {
                 var delta = player.getEyePosition().subtract(item.position());
                 if (delta.lengthSqr() < 0.04) continue;
@@ -367,7 +371,7 @@ public final class DarkmatterEquipmentEvents {
         }
 
         private static boolean tickNativeStack(ServerPlayer player,
-                                               net.minecraft.world.item.ItemStack stack,
+                                               ItemStack stack,
                                                int lifetimeTicks) {
             if (!DarkmatterItemUtil.isNativeEquipment(stack)) return false;
             var changed = DarkmatterItemUtil.absorbVanillaDurabilityDamage(stack);
@@ -380,7 +384,7 @@ public final class DarkmatterEquipmentEvents {
         private static boolean hurtWithPenetration(
                 ServerLevel level,
                 LivingEntity target,
-                net.minecraft.world.damagesource.DamageSource source,
+                DamageSource source,
                 float damage,
                 float penetration
         ) {

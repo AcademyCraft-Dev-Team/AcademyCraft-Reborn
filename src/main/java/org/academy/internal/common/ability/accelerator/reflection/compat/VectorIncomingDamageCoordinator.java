@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.accelerator.reflection.compat;
 
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;

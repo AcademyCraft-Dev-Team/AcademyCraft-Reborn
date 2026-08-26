@@ -2,6 +2,7 @@ package org.academy.internal.client.render.vfx;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ParticleStatus;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.phys.Vec3;
@@ -16,7 +17,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import net.minecraft.util.Mth;
 
 public final class MagneticWeaponBladeArcVfx implements Vfx {
     private static final long REMOVAL_FADE_NANOS = 150_000_000L;

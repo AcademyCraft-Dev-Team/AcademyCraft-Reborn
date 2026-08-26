@@ -1,11 +1,10 @@
 package org.academy.api.client.render.vfxgraph.render;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class WorldTransformTest {
     @Test
@@ -64,8 +63,8 @@ class WorldTransformTest {
     @Test
     void identityDetection() {
         assertTrue(WorldTransform.identity().isIdentity());
-        assertTrue(!new WorldTransform(new Vector3f(1f, 0f, 0f), new Quaternionf(), 1f).isIdentity());
-        assertTrue(!new WorldTransform(new Vector3f(), new Quaternionf(), 0.5f).isIdentity());
+        assertFalse(new WorldTransform(new Vector3f(1f, 0f, 0f), new Quaternionf(), 1f).isIdentity());
+        assertFalse(new WorldTransform(new Vector3f(), new Quaternionf(), 0.5f).isIdentity());
     }
 
     @Test

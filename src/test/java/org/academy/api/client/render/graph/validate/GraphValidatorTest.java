@@ -1,13 +1,14 @@
 package org.academy.api.client.render.graph.validate;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
 import org.academy.api.client.render.graph.GraphFixtures;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GraphValidatorTest {
     private final SimpleNodeRegistry registry = new SimpleNodeRegistry();

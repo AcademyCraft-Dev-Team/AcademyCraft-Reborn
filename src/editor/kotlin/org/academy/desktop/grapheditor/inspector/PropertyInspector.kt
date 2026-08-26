@@ -11,7 +11,7 @@ import org.academy.desktop.grapheditor.canvas.GraphEditorModelRef
 import org.joml.Vector2f
 import org.joml.Vector3f
 import org.joml.Vector4f
-import java.util.Optional
+import java.util.*
 
 /**
  * 属性面板：编辑选中节点的属性与黑板参数。
@@ -21,6 +21,7 @@ class PropertyInspector(
     private val modelRef: GraphEditorModelRef,
 ) {
     private val model: GraphEditorModel get() = modelRef.model
+
     /** 黑板参数分组（引用宿主 EditorMetadata.paramGroups，随加载/新建替换）。 */
     var paramGroups: MutableMap<String, String> = mutableMapOf()
 
@@ -73,14 +74,17 @@ class PropertyInspector(
             val v = floatArrayOf(current.toFloatOrNull() ?: 0f)
             if (ImGui.dragFloat(label, v, 0.01f)) v[0].toString() else null
         }
+
         ValueType.VEC2 -> {
             val arr = parseVec2(current)
             if (ImGui.dragFloat2(label, arr)) "${arr[0]},${arr[1]}" else null
         }
+
         ValueType.COLOR -> {
             val arr = parseColor(current)
             if (ImGui.colorEdit4(label, arr)) "${arr[0]},${arr[1]},${arr[2]},${arr[3]}" else null
         }
+
         else -> {
             val buf = ImString(current, 128)
             if (ImGui.inputText(label, buf)) buf.get() else null
@@ -109,9 +113,11 @@ class PropertyInspector(
                 ValueType.CURVE -> {
                     if (ImGui.button("Edit Curve...##$i")) onEditCurve?.invoke(p.id())
                 }
+
                 ValueType.GRADIENT -> {
                     if (ImGui.button("Edit Gradient...##$i")) onEditGradient?.invoke(p.id())
                 }
+
                 ValueType.FLOAT -> {
                     val updated = editValue("##param_${i}_${p.id()}", p.defaultValue())
                     if (updated != null) {
@@ -119,6 +125,7 @@ class PropertyInspector(
                     }
                     renderRangeEdit(i, p)
                 }
+
                 else -> {
                     val updated = editValue("##param_${i}_${p.id()}", p.defaultValue())
                     if (updated != null) {
@@ -141,18 +148,24 @@ class PropertyInspector(
                 ValueType.VEC4 -> Value.of(Vector4f(0f))
                 ValueType.COLOR -> Value.color(1f, 1f, 1f, 1f)
                 ValueType.SAMPLER -> Value.sampler("minecraft:textures/block/stone.png")
-                ValueType.CURVE -> Value.curve(org.academy.api.client.render.graph.type.Curve(
-                    listOf(
-                        org.academy.api.client.render.graph.type.Curve.Keyframe.linear(0f, 0f),
-                        org.academy.api.client.render.graph.type.Curve.Keyframe.linear(1f, 1f),
+                ValueType.CURVE -> Value.curve(
+                    org.academy.api.client.render.graph.type.Curve(
+                        listOf(
+                            org.academy.api.client.render.graph.type.Curve.Keyframe.linear(0f, 0f),
+                            org.academy.api.client.render.graph.type.Curve.Keyframe.linear(1f, 1f),
+                        )
                     )
-                ))
-                ValueType.GRADIENT -> Value.gradient(org.academy.api.client.render.graph.type.Gradient(
-                    listOf(
-                        org.academy.api.client.render.graph.type.Gradient.ColorStop(0f, 0f, 0f, 0f, 1f),
-                        org.academy.api.client.render.graph.type.Gradient.ColorStop(1f, 1f, 1f, 1f, 1f),
+                )
+
+                ValueType.GRADIENT -> Value.gradient(
+                    org.academy.api.client.render.graph.type.Gradient(
+                        listOf(
+                            org.academy.api.client.render.graph.type.Gradient.ColorStop(0f, 0f, 0f, 0f, 1f),
+                            org.academy.api.client.render.graph.type.Gradient.ColorStop(1f, 1f, 1f, 1f, 1f),
+                        )
                     )
-                ))
+                )
+
                 else -> Value.of(0f)
             }
             model.addParameter(GraphParameter(id, name, type, def, Optional.empty()))
@@ -166,7 +179,10 @@ class PropertyInspector(
             range.map { it.max().toFloat() }.orElse(1f),
         )
         if (ImGui.dragFloat2("Range##range_$index", arr, 0.1f)) {
-            model.replaceParameter(index, p.withRange(Optional.of(GraphParameter.Range(arr[0].toDouble(), arr[1].toDouble()))))
+            model.replaceParameter(
+                index,
+                p.withRange(Optional.of(GraphParameter.Range(arr[0].toDouble(), arr[1].toDouble())))
+            )
         }
     }
 
@@ -175,26 +191,32 @@ class PropertyInspector(
             val v = floatArrayOf(value.asFloat())
             if (ImGui.dragFloat(label, v, 0.01f)) Value.of(v[0]) else null
         }
+
         ValueType.VEC2 -> {
             val v = floatArrayOf(value.asVec2().x, value.asVec2().y)
             if (ImGui.dragFloat2(label, v, 0.01f)) Value.of(Vector2f(v[0], v[1])) else null
         }
+
         ValueType.VEC3 -> {
             val v = floatArrayOf(value.asVec3().x, value.asVec3().y, value.asVec3().z)
             if (ImGui.dragFloat3(label, v, 0.01f)) Value.of(Vector3f(v[0], v[1], v[2])) else null
         }
+
         ValueType.VEC4 -> {
             val v = floatArrayOf(value.asVec4().x, value.asVec4().y, value.asVec4().z, value.asVec4().w)
             if (ImGui.dragFloat4(label, v, 0.01f)) Value.of(Vector4f(v[0], v[1], v[2], v[3])) else null
         }
+
         ValueType.COLOR -> {
             val v = floatArrayOf(value.asColor().x, value.asColor().y, value.asColor().z, value.asColor().w)
             if (ImGui.colorEdit4(label, v)) Value.color(v[0], v[1], v[2], v[3]) else null
         }
+
         ValueType.SAMPLER -> {
             val buf = ImString(value.asSampler(), 256)
             if (ImGui.inputText(label, buf)) Value.sampler(buf.get()) else null
         }
+
         else -> null
     }
 
@@ -205,6 +227,7 @@ class PropertyInspector(
             val c = value.asColor()
             "${c.x},${c.y},${c.z},${c.w}"
         }
+
         else -> ""
     }
 

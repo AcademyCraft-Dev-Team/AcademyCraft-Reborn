@@ -1,6 +1,8 @@
 package org.academy.internal.server.ability;
 
+import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.DevelopAction;
+import org.academy.api.common.wireless.WirelessUser;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,8 +27,8 @@ class DevelopDataTest {
             }
 
             @Override
-            public void onComplete(net.minecraft.server.level.ServerPlayer player,
-                                   org.academy.api.common.wireless.WirelessUser developer) {
+            public void onComplete(ServerPlayer player,
+                                   WirelessUser developer) {
             }
 
             @Override

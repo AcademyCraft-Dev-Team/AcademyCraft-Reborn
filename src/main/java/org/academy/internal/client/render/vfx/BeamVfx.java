@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
@@ -7,7 +8,6 @@ import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.internal.client.renderer.entity.ReflectedBeamVisualGeometry;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.joml.Vector3f;
-import net.minecraft.util.Mth;
 
 public final class BeamVfx implements Vfx {
     private static final Vec3 WORLD_UP = new Vec3(0.0, 1.0, 0.0);

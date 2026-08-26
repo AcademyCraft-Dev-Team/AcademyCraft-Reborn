@@ -1,19 +1,22 @@
 package org.academy.api.client.render.graph.serialize;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.GraphFixtures;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
+import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JsonGraphCodecTest {
     private final SimpleNodeRegistry registry = new SimpleNodeRegistry();
@@ -65,10 +68,10 @@ class JsonGraphCodecTest {
     @Test
     void roundTripPreservesCurveTangentsAndInterpolation() {
         var codec = new JsonGraphCodec(registry);
-        var curve = new org.academy.api.client.render.graph.type.Curve(List.of(
-                new org.academy.api.client.render.graph.type.Curve.Keyframe(
-                        0f, 1f, 2f, 3f, org.academy.api.client.render.graph.type.Curve.Interpolation.BEZIER),
-                org.academy.api.client.render.graph.type.Curve.Keyframe.step(1f, 5f)
+        var curve = new Curve(List.of(
+                new Curve.Keyframe(
+                        0f, 1f, 2f, 3f, Curve.Interpolation.BEZIER),
+                Curve.Keyframe.step(1f, 5f)
         ));
         var graph = new Graph(
                 "g",
@@ -84,9 +87,9 @@ class JsonGraphCodecTest {
         assertEquals(0f, back.keyframes().get(0).time());
         assertEquals(2f, back.keyframes().get(0).inTangent());
         assertEquals(3f, back.keyframes().get(0).outTangent());
-        assertEquals(org.academy.api.client.render.graph.type.Curve.Interpolation.BEZIER,
+        assertEquals(Curve.Interpolation.BEZIER,
                 back.keyframes().get(0).interpolation());
-        assertEquals(org.academy.api.client.render.graph.type.Curve.Interpolation.STEP,
+        assertEquals(Curve.Interpolation.STEP,
                 back.keyframes().get(1).interpolation());
     }
 
@@ -95,14 +98,14 @@ class JsonGraphCodecTest {
         var json = new JsonObject();
         json.addProperty(GraphSchemaVersion.VERSION_FIELD, GraphSchemaVersion.CURRENT);
         json.addProperty("id", "g");
-        var params = new com.google.gson.JsonArray();
+        var params = new JsonArray();
         var p = new JsonObject();
         p.addProperty("id", "c");
         p.addProperty("name", "C");
         p.addProperty("type", "CURVE");
         var def = new JsonObject();
         def.addProperty("type", "CURVE");
-        var curveArr = new com.google.gson.JsonArray();
+        var curveArr = new JsonArray();
         var kf = new JsonObject();
         kf.addProperty("t", 0.25f);
         kf.addProperty("v", 4f);
@@ -111,15 +114,15 @@ class JsonGraphCodecTest {
         p.add("default", def);
         params.add(p);
         json.add("parameters", params);
-        json.add("nodes", new com.google.gson.JsonArray());
-        json.add("edges", new com.google.gson.JsonArray());
-        json.add("outputs", new com.google.gson.JsonArray());
+        json.add("nodes", new JsonArray());
+        json.add("edges", new JsonArray());
+        json.add("outputs", new JsonArray());
 
         var decoded = new JsonGraphCodec(registry).decode(json);
         var kfs = decoded.parameters().get(0).defaultValue().asCurve().keyframes();
         assertEquals(1, kfs.size());
         assertEquals(0f, kfs.get(0).inTangent());
-        assertEquals(org.academy.api.client.render.graph.type.Curve.Interpolation.LINEAR, kfs.get(0).interpolation());
+        assertEquals(Curve.Interpolation.LINEAR, kfs.get(0).interpolation());
     }
 
     @Test

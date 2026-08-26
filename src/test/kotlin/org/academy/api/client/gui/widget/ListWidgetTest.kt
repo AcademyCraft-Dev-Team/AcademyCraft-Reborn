@@ -1,6 +1,8 @@
 package org.academy.api.client.gui.widget
 
-import org.academy.api.client.gui.dsl.*
+import org.academy.api.client.gui.dsl.fill
+import org.academy.api.client.gui.dsl.lp
+import org.academy.api.client.gui.dsl.matchWidth
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -25,8 +27,14 @@ class ListWidgetTest {
         }
         panel.setContent(list)
         panel.measure(
-            org.academy.api.client.gui.layout.MeasureSpec(org.academy.api.client.gui.layout.MeasureSpec.Mode.EXACTLY, 100f),
-            org.academy.api.client.gui.layout.MeasureSpec(org.academy.api.client.gui.layout.MeasureSpec.Mode.EXACTLY, 200f)
+            org.academy.api.client.gui.layout.MeasureSpec(
+                org.academy.api.client.gui.layout.MeasureSpec.Mode.EXACTLY,
+                100f
+            ),
+            org.academy.api.client.gui.layout.MeasureSpec(
+                org.academy.api.client.gui.layout.MeasureSpec.Mode.EXACTLY,
+                200f
+            )
         )
         panel.layout(0f, 0f, 100f, 200f)
         return panel to list

@@ -3,23 +3,15 @@ package org.academy.internal.common.ability.mentalout.control;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.entitycontrol.ControlBinding;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlContext;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlFailureReason;
-import org.academy.api.common.entitycontrol.PlayerControlFrame;
-import org.academy.api.common.entitycontrol.PlayerMovementMode;
-import org.academy.api.common.entitycontrol.ControlSupport;
-import org.academy.api.common.entitycontrol.ControlRejectionReason;
-import org.academy.api.common.entitycontrol.MentalControlAdapter;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 
 import java.util.Optional;
 import java.util.UUID;
 
-/** Adapts lease arbitration to a player input session instead of a mob AI controller. */
+/**
+ * Adapts lease arbitration to a player input session instead of a mob AI controller.
+ */
 public final class ServerPlayerMentalControlAdapter implements MentalControlAdapter {
     @Override
     public boolean matches(LivingEntity subject) {
@@ -54,11 +46,11 @@ public final class ServerPlayerMentalControlAdapter implements MentalControlAdap
         if (directive instanceof ControlDirective.MoveTo moveTo) {
             return PlayerNavigationRuntime.activate(context, subject, moveTo);
         }
-        if (directive instanceof ControlDirective.ForceTarget(java.util.UUID targetUuid)) {
+        if (directive instanceof ControlDirective.ForceTarget(UUID targetUuid)) {
             return new PlayerForcedTargetBinding(context, subject, targetUuid);
         }
-        if (directive instanceof ControlDirective.LookAt lookAt && context.controller() == subject) {
-            return new SelfViewBinding(context, subject, lookAt.targetUuid());
+        if (directive instanceof ControlDirective.LookAt(UUID targetUuid) && context.controller() == subject) {
+            return new SelfViewBinding(context, subject, targetUuid);
         }
         return ControlBinding.noop();
     }

@@ -2,13 +2,20 @@ package org.academy.internal.common.ability.meltdowner.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.Map;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -51,6 +58,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.List;
+import java.util.Map;
+
 public final class MiningBeam extends Skill {
     static final int CP_INTERVAL_TICKS = 20;
     static final int BREAK_INTERVAL_TICKS = 3;
@@ -60,6 +70,7 @@ public final class MiningBeam extends Skill {
     static final float BASE_DAMAGE = 12.0f;
     static final float BREAK_RADIUS = 0.35f;
     static final int MINING_TIER = 4;
+
     public MiningBeam() {
         super(Builder
                 .of(AbilityCategories.MELTDOWNER.get())
@@ -216,7 +227,7 @@ public final class MiningBeam extends Skill {
             visual.setPos(start);
             if (ticks % CP_INTERVAL_TICKS == 0
                     && !skill.executeContinuous(player, (_, _) -> {
-                    }, false)) {
+            }, false)) {
                 end();
                 return;
             }
@@ -342,9 +353,9 @@ public final class MiningBeam extends Skill {
 
     public static boolean dropRefinedResources(
             ServerLevel level,
-            net.minecraft.core.BlockPos pos,
-            net.minecraft.world.level.block.state.BlockState state,
-            net.minecraft.world.level.block.entity.BlockEntity blockEntity,
+            BlockPos pos,
+            BlockState state,
+            BlockEntity blockEntity,
             ServerPlayer player
     ) {
         var skill = Skills.MINING_BEAM.get();
@@ -352,28 +363,28 @@ public final class MiningBeam extends Skill {
                 || !ProficiencyPolicy.server(player).allowMiningBeamSmelting()) {
             return false;
         }
-        var drops = net.minecraft.world.level.block.Block.getDrops(
-                state, level, pos, blockEntity, player, net.minecraft.world.item.ItemStack.EMPTY);
+        var drops = Block.getDrops(
+                state, level, pos, blockEntity, player, ItemStack.EMPTY);
         if (drops.isEmpty()) return false;
         var refinedAny = false;
         for (var drop : drops) {
-            var input = new net.minecraft.world.item.crafting.SingleRecipeInput(drop.copyWithCount(1));
+            var input = new SingleRecipeInput(drop.copyWithCount(1));
             var recipe = level.getServer().getRecipeManager().getRecipeFor(
-                    net.minecraft.world.item.crafting.RecipeType.SMELTING, input, level).orElse(null);
+                    RecipeType.SMELTING, input, level).orElse(null);
             if (recipe == null) {
-                net.minecraft.world.level.block.Block.popResource(level, pos, drop);
+                Block.popResource(level, pos, drop);
                 continue;
             }
             var output = recipe.value().assemble(input);
             if (output.isEmpty()) {
-                net.minecraft.world.level.block.Block.popResource(level, pos, drop);
+                Block.popResource(level, pos, drop);
                 continue;
             }
             output.setCount(output.getCount() * drop.getCount());
-            net.minecraft.world.level.block.Block.popResource(level, pos, output);
+            Block.popResource(level, pos, output);
             var experience = Math.round(recipe.value().experience() * drop.getCount());
-            if (experience > 0) net.minecraft.world.entity.ExperienceOrb.award(level,
-                    net.minecraft.world.phys.Vec3.atCenterOf(pos), experience);
+            if (experience > 0) ExperienceOrb.award(level,
+                    Vec3.atCenterOf(pos), experience);
             refinedAny = true;
         }
         return true;

@@ -4,7 +4,9 @@ import net.minecraft.world.item.Item;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
 
-/** Configured consumable that transfers its phase profile onto another item in crafting. */
+/**
+ * Configured consumable that transfers its phase profile onto another item in crafting.
+ */
 public final class DarkmatterCoatingItem extends Item implements DarkmatterShapedItem {
     public DarkmatterCoatingItem(Properties properties) {
         super(properties.stacksTo(1).component(

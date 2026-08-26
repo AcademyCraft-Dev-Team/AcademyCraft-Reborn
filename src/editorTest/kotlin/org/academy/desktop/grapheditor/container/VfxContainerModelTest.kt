@@ -4,11 +4,9 @@ import org.academy.api.client.render.graph.registry.SimpleNodeRegistry
 import org.academy.api.client.render.vfxgraph.model.VfxContextType
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class VfxContainerModelTest {

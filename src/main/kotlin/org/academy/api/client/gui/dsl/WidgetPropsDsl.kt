@@ -3,20 +3,7 @@ package org.academy.api.client.gui.dsl
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.animation.TimeInterpolator
-import org.academy.api.client.gui.widget.DragBarWidget
-import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.PagerLayoutWidget
-import org.academy.api.client.gui.widget.ParallaxImageWidget
-import org.academy.api.client.gui.widget.ProgressBarWidget
-import org.academy.api.client.gui.widget.RoundedRectWidget
-import org.academy.api.client.gui.widget.ScrollBarWidget
-import org.academy.api.client.gui.widget.ScrollPanelWidget
-import org.academy.api.client.gui.widget.SeekBarWidget
-import org.academy.api.client.gui.widget.TextBoxWidget
-import org.academy.api.client.gui.widget.ToggleButtonWidget
-import org.academy.api.client.gui.widget.WheelPickerWidget
-import org.academy.api.client.gui.widget.Widget
+import org.academy.api.client.gui.widget.*
 import java.util.function.Consumer
 
 /**

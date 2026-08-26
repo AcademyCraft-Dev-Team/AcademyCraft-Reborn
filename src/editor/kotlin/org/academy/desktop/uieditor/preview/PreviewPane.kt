@@ -137,8 +137,8 @@ class PreviewPane(
 
     private fun buildModel(): OverlayModel {
         val io = ImGui.getIO()
-        val mx = io.getMousePosX()
-        val my = io.getMousePosY()
+        val mx = io.mousePosX
+        val my = io.mousePosY
         val inside = win.contains(mx, my)
         val gs = environment.guiScale
         return OverlayModel(

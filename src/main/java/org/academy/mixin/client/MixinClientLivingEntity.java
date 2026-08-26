@@ -1,7 +1,7 @@
 package org.academy.mixin.client;
 
-import net.minecraft.core.Holder;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;

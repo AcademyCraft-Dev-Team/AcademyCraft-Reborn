@@ -5,22 +5,20 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramNodePurity;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeScope;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.program.ProgramNodeLookup;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
-/** Strongly typed Meltdowner target and action schemas. */
+/**
+ * Strongly typed Meltdowner target and action schemas.
+ */
 public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
     public static final Identifier MELTDOWNER =
             AcademyCraft.academy(AbilityCategoryNames.MELTDOWNER);
@@ -70,7 +68,7 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
         var aim = configuration.aimMode() == AimMode.DIRECTION
                 ? ProgramPortDefinition.requiredInput("direction", ProgramValueTypes.DIRECTION)
                 : ProgramPortDefinition.requiredInput(
-                        "target_position", ProgramValueTypes.WORLD_POSITION);
+                "target_position", ProgramValueTypes.WORLD_POSITION);
         return new ProgramNodeSchema(
                 List.of(
                         ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
@@ -82,7 +80,7 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
     }
 
     private static ProgramNodeSchema miningBeamSchema(MiningBeamConfiguration configuration) {
-        var inputs = new java.util.ArrayList<ProgramPortDefinition>();
+        var inputs = new ArrayList<ProgramPortDefinition>();
         inputs.add(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW));
         inputs.add(ProgramPortDefinition.optionalInput("origin", ProgramValueTypes.WORLD_POSITION));
         if (configuration.aimMode() == AimMode.DIRECTION) {
@@ -125,7 +123,7 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
 
     private static <C> ProgramNodeType<C> beamType(
             Codec<C> codec,
-            java.util.function.Function<C, ProgramNodeSchema> schema,
+            Function<C, ProgramNodeSchema> schema,
             Identifier capability
     ) {
         return new FixedNodeType<>(
@@ -237,7 +235,7 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
 
     private record FixedNodeType<C>(
             Codec<C> configurationCodec,
-            java.util.function.Function<C, ProgramNodeSchema> schemaFactory,
+            Function<C, ProgramNodeSchema> schemaFactory,
             ProgramNodeRole role,
             ProgramNodePurity purity,
             ProgramNodeScope scope

@@ -51,7 +51,7 @@ public final class ObjMeshParser {
         if (parts.length < 4) {
             throw new IllegalArgumentException("obj line " + (lineIndex + 1) + ": malformed v record");
         }
-        return new float[] { Float.parseFloat(parts[1]), Float.parseFloat(parts[2]), Float.parseFloat(parts[3]) };
+        return new float[]{Float.parseFloat(parts[1]), Float.parseFloat(parts[2]), Float.parseFloat(parts[3])};
     }
 
     private static void appendFace(List<float[]> vertices, String[] parts, List<float[]> triangles, int lineIndex) {
@@ -73,7 +73,7 @@ public final class ObjMeshParser {
             var a = vertices.get(idx[0]);
             var b = vertices.get(idx[i]);
             var c = vertices.get(idx[i + 1]);
-            triangles.add(new float[] { a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2] });
+            triangles.add(new float[]{a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]});
         }
     }
 }

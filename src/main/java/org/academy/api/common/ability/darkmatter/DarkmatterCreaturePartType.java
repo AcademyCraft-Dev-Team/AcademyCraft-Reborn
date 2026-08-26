@@ -4,7 +4,9 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Objects;
 
-/** Public descriptor for a body part that can participate in a dark-matter creature blueprint. */
+/**
+ * Public descriptor for a body part that can participate in a dark-matter creature blueprint.
+ */
 public record DarkmatterCreaturePartType(
         Identifier id,
         BodySlot slot,
@@ -18,7 +20,9 @@ public record DarkmatterCreaturePartType(
         if (clientModelId < 0) throw new IllegalArgumentException("clientModelId must be non-negative");
     }
 
-    /** Stable client localization key; extension mods can provide the same key in their lang files. */
+    /**
+     * Stable client localization key; extension mods can provide the same key in their lang files.
+     */
     public String translationKey() {
         return "darkmatter_creature.part." + id.getNamespace() + "." + id.getPath();
     }
@@ -36,12 +40,15 @@ public record DarkmatterCreaturePartType(
 
     @FunctionalInterface
     public interface StatProcessor {
-        StatProcessor NONE = (_, _, _) -> { };
+        StatProcessor NONE = (_, _, _) -> {
+        };
 
         void apply(MutableStats stats, float alphaPower, float betaPower);
     }
 
-    /** Mutable construction-time values exposed to extension part processors. */
+    /**
+     * Mutable construction-time values exposed to extension part processors.
+     */
     public static final class MutableStats {
         public double maxHealth;
         public double attackDamage;

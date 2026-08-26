@@ -9,6 +9,7 @@ import org.academy.api.client.render.graph.model.Port;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec;
+import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.model.*;
 
 import java.util.*;
@@ -215,7 +216,7 @@ public final class JsonVfxGraphCodec implements VfxGraphCodec {
             out.add(new GraphParameter(
                     o.get("id").getAsString(),
                     o.get("name").getAsString(),
-                    org.academy.api.client.render.graph.type.ValueType.valueOf(o.get("type").getAsString()),
+                    ValueType.valueOf(o.get("type").getAsString()),
                     JsonGraphCodec.decodeValue(o.getAsJsonObject("default")),
                     range));
         }

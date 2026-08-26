@@ -1,11 +1,11 @@
 package org.academy.internal.client.render.vfx;
 
+import net.minecraft.util.Mth;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.internal.common.world.entity.skill.Smoke;
 import org.joml.Vector3f;
-import net.minecraft.util.Mth;
 
 public final class SmokeVfx implements Vfx {
     private final Smoke smoke;

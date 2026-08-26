@@ -2,7 +2,9 @@ package org.academy.api.client.render.vfxgraph.shape;
 
 import java.util.Random;
 
-/** 球面内均匀采样。 */
+/**
+ * 球面内均匀采样。
+ */
 public final class SphereShape implements EmitterShape {
     private final float cx;
     private final float cy;

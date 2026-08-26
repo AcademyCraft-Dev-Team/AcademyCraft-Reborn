@@ -1,8 +1,9 @@
 package org.academy.api.client.render.vfxgraph.operator;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 算子类型 id → 算子工厂 的目录（M25）。

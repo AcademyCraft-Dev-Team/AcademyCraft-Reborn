@@ -16,28 +16,17 @@ import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
-import org.academy.internal.common.ability.program.AbilityProgramManager;
-import org.academy.internal.common.ability.program.PrecisionProgramExporter;
-import org.academy.internal.common.ability.program.PrecisionProgramImporter;
-import org.academy.internal.common.ability.program.ProgramEditorDocument;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.*;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.OptionalInt;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public final class PrecisionOperationScreen extends UiScreen implements SerializedUiDebugHost {
     static final int NODE_W = 80;
@@ -602,7 +591,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                 formatParameter(node)).getString(), x, y, TEXT, width);
         if (kind == PrecisionGraph.ParameterKind.DURATION_SECONDS
                 || kind == PrecisionGraph.ParameterKind.RANGE) {
-            return;
         } else if (kind == PrecisionGraph.ParameterKind.HEALTH_PERCENT) {
             var min = 1.0;
             var max = 100.0;
@@ -986,7 +974,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         }
         if (moved) {
             var candidates = compatibleKinds(connection.endpoint).stream().limit(12).toList();
-            if (!candidates.isEmpty()) quickInsert = new QuickInsert((int) mouseX, (int) mouseY, candidates, connection.endpoint);
+            if (!candidates.isEmpty())
+                quickInsert = new QuickInsert((int) mouseX, (int) mouseY, candidates, connection.endpoint);
             connection = null;
         }
     }
@@ -1077,7 +1066,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         return node;
     }
 
-    private java.util.Optional<PrecisionGraph.Node> tailAction() {
+    private Optional<PrecisionGraph.Node> tailAction() {
         var sources = graph.edges().stream()
                 .filter(edge -> {
                     var source = node(edge.fromNode());
@@ -1085,7 +1074,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
                             && source.kind().outputDefinitions().get(edge.fromPort()).type() == PrecisionGraph.PortType.FLOW;
                 })
                 .map(PrecisionGraph.Edge::fromNode)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         return graph.nodes().stream().filter(node -> node.kind().isAction())
                 .filter(node -> !sources.contains(node.id()))
                 .min(Comparator.comparingInt(PrecisionGraph.Node::id));
@@ -1100,7 +1089,8 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         if (selected.kind().isAction()) {
             for (var edge : graph.edges()) {
                 if (edge.toNode() == selected.id() && edge.toPort() == selected.kind().flowInputPort()) before = edge;
-                if (edge.fromNode() == selected.id() && edge.fromPort() == selected.kind().flowOutputPort()) after = edge;
+                if (edge.fromNode() == selected.id() && edge.fromPort() == selected.kind().flowOutputPort())
+                    after = edge;
             }
         }
         var edges = new ArrayList<>(graph.edges().stream().filter(edge ->
@@ -1169,7 +1159,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private List<PrecisionGraph.Node> orderedActions() {
         var validation = graph.validate();
         if (validation.valid()) {
-            var byId = graph.nodes().stream().collect(java.util.stream.Collectors.toMap(
+            var byId = graph.nodes().stream().collect(Collectors.toMap(
                     PrecisionGraph.Node::id, node -> node));
             return validation.actionOrder().stream().map(byId::get).toList();
         }
@@ -1207,7 +1197,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
         var kind = node.kind().parameterKind();
         var max = switch (kind) {
             case COUNT -> 8;
-            case CAPABILITY -> org.academy.api.common.entitycontrol.ControlCapability.values().length - 1;
+            case CAPABILITY -> ControlCapability.values().length - 1;
             case SORT_DIRECTION -> 1;
             case ENTITY_TYPE -> 7;
             case OFFSET_DISTANCE -> 32;
@@ -1335,20 +1325,20 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private List<PrecisionGraph.NodeKind> visibleKinds() {
         var query = search == null ? "" : search.getValue().strip().toLowerCase(Locale.ROOT);
-        return java.util.Arrays.stream(PrecisionGraph.NodeKind.values())
+        return Arrays.stream(PrecisionGraph.NodeKind.values())
                 .filter(kind -> !kind.isConditionalBranch() || branchUnlocked())
                 .filter(kind -> {
-            if (query.isEmpty()) return kind.group() == selectedGroup;
-            var label = nodeLabel(kind).getString().toLowerCase(Locale.ROOT);
-            var description = Component.translatable(nodeDescriptionKey(kind)).getString().toLowerCase(Locale.ROOT);
-            var group = Component.translatable(groupKey(kind.group())).getString().toLowerCase(Locale.ROOT);
-            return label.contains(query) || description.contains(query) || group.contains(query)
-                    || kind.name().toLowerCase(Locale.ROOT).contains(query);
-        }).toList();
+                    if (query.isEmpty()) return kind.group() == selectedGroup;
+                    var label = nodeLabel(kind).getString().toLowerCase(Locale.ROOT);
+                    var description = Component.translatable(nodeDescriptionKey(kind)).getString().toLowerCase(Locale.ROOT);
+                    var group = Component.translatable(groupKey(kind.group())).getString().toLowerCase(Locale.ROOT);
+                    return label.contains(query) || description.contains(query) || group.contains(query)
+                            || kind.name().toLowerCase(Locale.ROOT).contains(query);
+                }).toList();
     }
 
     private List<PrecisionGraph.NodeKind> compatibleKinds(Endpoint anchor) {
-        return java.util.Arrays.stream(PrecisionGraph.NodeKind.values())
+        return Arrays.stream(PrecisionGraph.NodeKind.values())
                 .filter(kind -> !kind.isConditionalBranch() || branchUnlocked())
                 .filter(kind -> anchor.input
                         ? kind.outputDefinitions().stream().anyMatch(port ->
@@ -1913,7 +1903,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private static <T> List<T> reversed(List<T> values) {
         var result = new ArrayList<>(values);
-        java.util.Collections.reverse(result);
+        Collections.reverse(result);
         return result;
     }
 

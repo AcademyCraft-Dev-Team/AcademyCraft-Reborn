@@ -33,7 +33,9 @@ public final class MeshDistance {
             float nz = ex1 * ey2 - ey1 * ex2;
             float nlen = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
             if (nlen < 1e-12f) continue;
-            nx /= nlen; ny /= nlen; nz /= nlen;
+            nx /= nlen;
+            ny /= nlen;
+            nz /= nlen;
 
             // 点到平面有符号距离 + 投影点
             float dx = px - ax, dy = py - ay, dz = pz - az;
@@ -52,7 +54,8 @@ public final class MeshDistance {
             float denom = d00 * d11 - d01 * d01;
             float u, v;
             if (Math.abs(denom) < 1e-12f) {
-                u = 0; v = 0;
+                u = 0;
+                v = 0;
             } else {
                 u = (d11 * d20 - d01 * d21) / denom;
                 v = (d00 * d21 - d01 * d20) / denom;
@@ -69,7 +72,9 @@ public final class MeshDistance {
         return best;
     }
 
-    /** 点到三角形最近距离的平方（Closest Point on Triangle，Ericson 实现）。 */
+    /**
+     * 点到三角形最近距离的平方（Closest Point on Triangle，Ericson 实现）。
+     */
     private static float nearestToTriangleSq(float px, float py, float pz,
                                              float ax, float ay, float az,
                                              float bx, float by, float bz,
@@ -129,7 +134,9 @@ public final class MeshDistance {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    /** 调试辅助（包内）：返回第 t 个三角形上最近点。 */
+    /**
+     * 调试辅助（包内）：返回第 t 个三角形上最近点。
+     */
     static float[] closestPointOnTriangleAt(float[] triangles, int t, float px, float py, float pz) {
         int base = t * 9;
         float ax = triangles[base], ay = triangles[base + 1], az = triangles[base + 2];
@@ -156,7 +163,9 @@ public final class MeshDistance {
             float d = distSq(px, py, pz, q[0], q[1], q[2]);
             if (d < best) {
                 best = d;
-                bx = q[0]; by = q[1]; bz = q[2];
+                bx = q[0];
+                by = q[1];
+                bz = q[2];
             }
         }
         return new float[]{bx, by, bz};

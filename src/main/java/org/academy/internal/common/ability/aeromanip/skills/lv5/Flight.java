@@ -2,9 +2,6 @@ package org.academy.internal.common.ability.aeromanip.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -45,6 +42,10 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class Flight extends Skill {
     private static final Identifier FLIGHT_SOURCE =

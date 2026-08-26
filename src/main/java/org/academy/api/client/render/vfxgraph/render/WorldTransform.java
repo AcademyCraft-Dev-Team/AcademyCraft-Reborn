@@ -9,12 +9,8 @@ import org.joml.Vector3f;
  * <p>{@code world = position + rotation * (scale * local)}。纯数学，供渲染器在写实例/轨迹顶点时
  * 逐粒子应用，亦供运行时效果实例持有。恒等变换由 [GraphEffect] 编辑器路径保持零改动。</p>
  */
-public final class WorldTransform {
+public record WorldTransform(Vector3f position, Quaternionf rotation, float scale) {
     private static final WorldTransform IDENTITY = new WorldTransform(new Vector3f(), new Quaternionf(), 1f);
-
-    private final Vector3f position;
-    private final Quaternionf rotation;
-    private final float scale;
 
     public WorldTransform(Vector3f position, Quaternionf rotation, float scale) {
         this.position = new Vector3f(position);
@@ -24,18 +20,6 @@ public final class WorldTransform {
 
     public static WorldTransform identity() {
         return IDENTITY;
-    }
-
-    public Vector3f position() {
-        return position;
-    }
-
-    public Quaternionf rotation() {
-        return rotation;
-    }
-
-    public float scale() {
-        return scale;
     }
 
     public boolean isIdentity() {

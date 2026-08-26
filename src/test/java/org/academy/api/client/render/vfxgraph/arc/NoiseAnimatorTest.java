@@ -1,8 +1,9 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NoiseAnimatorTest {
 
@@ -26,8 +27,8 @@ class NoiseAnimatorTest {
         boolean moved = false;
         for (int i = 0; i < arc.size(); i++) {
             if (Math.abs(arc.x(i) - origX0) > 1e-6f ||
-                Math.abs(arc.y(i) - origY0) > 1e-6f ||
-                Math.abs(arc.z(i) - origZ0) > 1e-6f) {
+                    Math.abs(arc.y(i) - origY0) > 1e-6f ||
+                    Math.abs(arc.z(i) - origZ0) > 1e-6f) {
                 moved = true;
                 break;
             }
@@ -74,7 +75,9 @@ class NoiseAnimatorTest {
         }
     }
 
-    /** M29b 修复：噪声位移相对**基准位置**，反复动画不累积漂移（旧实现逐帧叠加 → 全弧同向飞走/拉长）。 */
+    /**
+     * M29b 修复：噪声位移相对**基准位置**，反复动画不累积漂移（旧实现逐帧叠加 → 全弧同向飞走/拉长）。
+     */
     @Test
     void repeatedAnimationDoesNotDrift() {
         var arc = new ArcCurve();

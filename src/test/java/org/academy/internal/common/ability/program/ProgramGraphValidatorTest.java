@@ -5,17 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramNodePurity;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeScope;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -247,7 +237,7 @@ class ProgramGraphValidatorTest {
         );
     }
 
-    private static org.academy.api.common.ability.program.ProgramValidationResult validate(
+    private static ProgramValidationResult validate(
             ProgramGraph graph,
             Map<Identifier, ProgramNodeType<?>> types,
             Identifier category,
@@ -261,7 +251,7 @@ class ProgramGraphValidatorTest {
     }
 
     private static void assertHas(
-            List<org.academy.api.common.ability.program.ProgramDiagnostic> diagnostics,
+            List<ProgramDiagnostic> diagnostics,
             ProgramDiagnosticCode code
     ) {
         assertTrue(diagnostics.stream().anyMatch(diagnostic -> diagnostic.code() == code),

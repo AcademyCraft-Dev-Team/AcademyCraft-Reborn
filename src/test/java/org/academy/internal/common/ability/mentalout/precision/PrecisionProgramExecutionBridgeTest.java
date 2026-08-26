@@ -2,31 +2,13 @@ package org.academy.internal.common.ability.mentalout.precision;
 
 import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
-import org.academy.api.common.ability.program.ProgramBlockPosition;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramTargetResolver;
-import org.academy.api.common.ability.program.ProgramValueTypes;
-import org.academy.api.common.ability.program.ProgramWorldPosition;
-import org.academy.internal.common.ability.program.CommonProgramNodeIds;
-import org.academy.internal.common.ability.program.PrecisionProgramCompilation;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramActionTransaction;
-import org.academy.internal.common.ability.program.ProgramExecutionFrame;
-import org.academy.internal.common.ability.program.ProgramNodeStep;
+import org.academy.api.common.ability.program.*;
+import org.academy.internal.common.ability.program.*;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PrecisionProgramExecutionBridgeTest {
     private static final Identifier OVERWORLD = Identifier.parse("minecraft:overworld");
@@ -455,39 +437,34 @@ class PrecisionProgramExecutionBridgeTest {
     private record FakeEntity(String key) {
     }
 
-    private static final class FakeTargetResolver implements ProgramTargetResolver {
-        private final Object caster;
-
-        private FakeTargetResolver(Object caster) {
-            this.caster = caster;
-        }
+    private record FakeTargetResolver(Object caster) implements ProgramTargetResolver {
 
         @Override
-        public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
-            return entityReference == caster
-                    ? Optional.of(new ProgramWorldPosition(OVERWORLD, 0.0, 64.0, 0.0))
-                    : Optional.empty();
-        }
+            public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
+                return entityReference == caster
+                        ? Optional.of(new ProgramWorldPosition(OVERWORLD, 0.0, 64.0, 0.0))
+                        : Optional.empty();
+            }
 
-        @Override
-        public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
-            return Optional.empty();
-        }
+            @Override
+            public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
+                return Optional.empty();
+            }
 
-        @Override
-        public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
-            return List.of();
-        }
+            @Override
+            public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
+                return List.of();
+            }
 
-        @Override
-        public Optional<ProgramBlockPosition> raycastBlock(
-                ProgramWorldPosition origin,
-                ProgramDirection direction,
-                double maximumDistance
-        ) {
-            return Optional.empty();
+            @Override
+            public Optional<ProgramBlockPosition> raycastBlock(
+                    ProgramWorldPosition origin,
+                    ProgramDirection direction,
+                    double maximumDistance
+            ) {
+                return Optional.empty();
+            }
         }
-    }
 
     private static final class FakeView implements PrecisionProgramRuntimeView {
         private final Object caster;
@@ -581,7 +558,7 @@ class PrecisionProgramExecutionBridgeTest {
 
         @Override
         public String stableKey(Object value) {
-            return value instanceof FakeEntity entity ? entity.key() : String.valueOf(value);
+            return value instanceof FakeEntity(String key) ? key : String.valueOf(value);
         }
 
         @Override

@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.aeromanip.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
@@ -50,6 +49,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
 
 public final class LaminarCutter extends Skill {
     private static final double BLADE_LENGTH = 5.0;
@@ -150,7 +151,7 @@ public final class LaminarCutter extends Skill {
             var normalizedDirection = direction.normalize();
             return skill.executeActive(player, context -> (baseCost < 0.0f
                             ? skill.getCpCost(context.level()) : baseCost)
-                    * AeromanipConfig.cpMultiplier(player, SkillNames.LAMINAR_CUTTER),
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.LAMINAR_CUTTER),
                     (context, _) -> executeCut(
                             player,
                             normalizedDirection,
@@ -242,9 +243,9 @@ public final class LaminarCutter extends Skill {
             }
         }
 
-        private static void clearSoftBlocks(net.minecraft.server.level.ServerPlayer player, ServerLevel level,
-                                             Vec3 start, Vec3 end, Vec3 direction,
-                                             Vec3 bladeRight, Vec3 bladeNormal, int milestone) {
+        private static void clearSoftBlocks(ServerPlayer player, ServerLevel level,
+                                            Vec3 start, Vec3 end, Vec3 direction,
+                                            Vec3 bladeRight, Vec3 bladeNormal, int milestone) {
             var settings = AeromanipConfig.settings(player);
             if (!settings.allowSoftBlockInteraction
                     || !DestroyBlocksSetting.canDestroyBlocks(player, Skills.LAMINAR_CUTTER.get())) return;
@@ -284,7 +285,7 @@ public final class LaminarCutter extends Skill {
             }
         }
 
-        private static void applyFracture(net.minecraft.server.level.ServerPlayer owner, LivingEntity target) {
+        private static void applyFracture(ServerPlayer owner, LivingEntity target) {
             var armor = target.getAttribute(Attributes.ARMOR);
             if (armor == null) return;
             var amount = target instanceof Player ? -0.1 : -0.2;

@@ -1,8 +1,9 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class ArcSimulatorTest {
 
@@ -25,10 +26,16 @@ class ArcSimulatorTest {
     }
 
     private static int tri(float[] out, int t, float ax, float ay, float az,
-                            float bx, float by, float bz, float cx, float cy, float cz) {
-        out[t++] = ax; out[t++] = ay; out[t++] = az;
-        out[t++] = bx; out[t++] = by; out[t++] = bz;
-        out[t++] = cx; out[t++] = cy; out[t++] = cz;
+                           float bx, float by, float bz, float cx, float cy, float cz) {
+        out[t++] = ax;
+        out[t++] = ay;
+        out[t++] = az;
+        out[t++] = bx;
+        out[t++] = by;
+        out[t++] = bz;
+        out[t++] = cx;
+        out[t++] = cy;
+        out[t++] = cz;
         return t;
     }
 

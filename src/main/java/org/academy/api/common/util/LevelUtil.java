@@ -10,8 +10,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -19,12 +19,13 @@ import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
@@ -246,8 +247,8 @@ public class LevelUtil {
                 var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
 
                 if (dropBlock) {
-                    var refined = breaker != null && level instanceof net.minecraft.server.level.ServerLevel serverLevel
-                            && org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam
+                    var refined = breaker != null && level instanceof ServerLevel serverLevel
+                            && MiningBeam
                             .dropRefinedResources(serverLevel, pos, blockState, blockEntity, breaker);
                     if (!refined) Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
                 }

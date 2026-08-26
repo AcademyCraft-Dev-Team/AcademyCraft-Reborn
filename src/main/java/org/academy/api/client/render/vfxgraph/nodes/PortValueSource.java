@@ -21,7 +21,9 @@ public interface PortValueSource {
      */
     Value eval(String portId, int particleIndex, ParticleBuffer buffer, SimContext ctx);
 
-    /** 无绑定的空实现：所有端口恒返回 null（块用属性默认值）。 */
+    /**
+     * 无绑定的空实现：所有端口恒返回 null（块用属性默认值）。
+     */
     static PortValueSource none() {
         return (portId, particleIndex, buffer, ctx) -> null;
     }
