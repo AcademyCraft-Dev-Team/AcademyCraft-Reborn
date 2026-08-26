@@ -36,6 +36,8 @@ public final class ActiveEffect {
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
     private GraphEffect effect;
     private float scale = 1f;
+    private float minimumFarPlane;
+    private boolean alwaysVisible;
     private @org.jspecify.annotations.Nullable Entity followEntity;
     private boolean stopped;
 
@@ -98,6 +100,28 @@ public final class ActiveEffect {
 
     public void setScale(float scale) {
         this.scale = scale;
+    }
+
+    /**
+     * 跳过管理器的距离与视锥剔除。适用于范围远大于发射器包围球、或本身输出屏幕空间画面的效果。
+     */
+    public void setAlwaysVisible(boolean alwaysVisible) {
+        this.alwaysVisible = alwaysVisible;
+    }
+
+    public boolean alwaysVisible() {
+        return alwaysVisible;
+    }
+
+    /**
+     * 为超大世界空间效果提供独立的最小远裁剪面，不受客户端区块视距降低影响。
+     */
+    public void setMinimumFarPlane(float minimumFarPlane) {
+        this.minimumFarPlane = Math.max(0f, minimumFarPlane);
+    }
+
+    GraphCamera cameraForRendering(GraphCamera camera) {
+        return minimumFarPlane > 0f ? camera.withMinimumFarPlane(minimumFarPlane) : camera;
     }
 
     /** 跟随实体：每 tick 把发射器原点对齐实体位置。 */

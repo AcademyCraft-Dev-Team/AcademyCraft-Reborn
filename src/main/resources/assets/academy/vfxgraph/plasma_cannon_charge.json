@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "plasma_cannon_charge",
+  "parameters": [
+    {
+      "id": "emission",
+      "name": "Atmospheric Compression",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 0.75 },
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "id": "charge_progress",
+      "name": "Charge Progress",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 0.15 },
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "id": "expand_rate",
+      "name": "Expand Rate (0.5 to 3.0 / 2s)",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 3.0 },
+      "min": 0.5,
+      "max": 3.0
+    },
+    {
+      "id": "focus_offset",
+      "name": "Front Upper Focus",
+      "type": "VEC3",
+      "default": { "type": "VEC3", "x": 0.0, "y": 31.0, "z": 6.0 }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Inverted Cone Volume Wind And Rising Dust",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_tornado_volume",
+          "type": "vfx.block.tornado_volume",
+          "properties": {
+            "expand_param": "expand_rate",
+            "charge_param": "charge_progress",
+            "emission_param": "emission",
+            "focus_param": "focus_offset",
+            "expand_min": "0.5",
+            "expand_max": "3.0",
+            "bottom_radius": "15",
+            "base_radius": "15",
+            "max_radius": "96",
+            "base_height": "32",
+            "max_height": "128",
+            "volume_count": "480",
+            "dust_count": "420",
+            "volume_size": "5.4",
+            "dust_size": "0.80",
+            "rotation_speed": "3.8",
+            "rise_speed": "0.11",
+            "inward_force": "3.4",
+            "turbulence": "0.22",
+            "drag": "2.6",
+            "volume_turns": "4.2",
+            "dust_turns": "9.5",
+            "volume_radius_scale": "1.45",
+            "dust_radius_scale": "1.55",
+            "collapse_start": "0.80",
+            "collapse_end": "0.94",
+            "lifetime": "120",
+            "volume_layer": "wind_volume",
+            "dust_layer": "wind_dust",
+            "volume_color": "0.70,0.73,0.76,0.40",
+            "dust_color": "0.50,0.48,0.44,0.72"
+          }
+        },
+        {
+          "id": "spawn_dynamic_wind_bands",
+          "type": "vfx.block.arc_tornado",
+          "properties": {
+            "expand_param": "expand_rate",
+            "expand_min": "0.5",
+            "expand_max": "3.0",
+            "charge_param": "charge_progress",
+            "emission_param": "emission",
+            "focus_param": "focus_offset",
+            "bottom_radius": "15",
+            "base_radius": "15",
+            "max_radius": "96",
+            "base_height": "32",
+            "max_height": "128",
+            "min_rings": "8",
+            "max_rings": "20",
+            "min_helices": "2",
+            "max_helices": "4",
+            "ring_segments": "88",
+            "helix_segments": "224",
+            "helix_turns": "9.5",
+            "width": "0.055",
+            "rotation_min": "1.2",
+            "rotation_max": "6.8",
+            "irregularity": "0.165",
+            "center_wander": "0.08",
+            "fragmentation": "0.58",
+            "tilt": "0.09",
+            "nested_radius": "0.54",
+            "nested_width": "0",
+            "collapse_start": "0.80",
+            "collapse_end": "0.94",
+            "lifetime": "0.055",
+            "color_dark": "0.44,0.46,0.48,0.18",
+            "color_light": "0.70,0.73,0.76,0.28",
+            "color_edge": "0.80,0.82,0.84,0.36"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "ExpandRate Driven Wind Motion",
+      "x": 500.0,
+      "y": 0.0,
+      "blocks": []
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "Volumetric Fog Dust And Dynamic Wind Bands",
+      "x": 1000.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_dynamic_wind_bands",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_atmosphere_line",
+            "shader": "academy:core/vfxgraph_atmosphere_line",
+            "blend": "translucent",
+            "layer": "",
+            "sparks": "0",
+            "emission": "0.55",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "lifetime": "0.055",
+            "segments": "4",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0"
+          }
+        },
+        {
+          "id": "out_tornado_volume",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_tornado_volume",
+            "shader": "academy:core/vfxgraph_tornado_volume",
+            "blend": "translucent",
+            "layer": "wind_volume"
+          }
+        },
+        {
+          "id": "out_tornado_dust",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_tornado_dust",
+            "shader": "academy:core/vfxgraph_tornado_dust",
+            "blend": "translucent",
+            "layer": "wind_dust"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    { "from": "ctx_spawn", "to": "ctx_update" },
+    { "from": "ctx_update", "to": "ctx_output" }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_dynamic_wind_bands", "out_tornado_volume", "out_tornado_dust" ]
+}

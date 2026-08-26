@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.entity.skill;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -32,7 +31,11 @@ public class Plasma extends RenderOnlyEntity {
     private static final EntityDataAccessor<Boolean> LAUNCHED = SynchedEntityData.defineId(
             Plasma.class, EntityDataSerializers.BOOLEAN
     );
+    private static final EntityDataAccessor<Integer> OWNER_ENTITY_ID = SynchedEntityData.defineId(
+            Plasma.class, EntityDataSerializers.INT
+    );
     private static final int MAX_LIFETIME = 20 * 30;
+    private static final int LAUNCH_DELAY_TICKS = 4;
 
     private @Nullable UUID ownerUUID;
     private @Nullable Vec3 targetPosition;
@@ -42,6 +45,7 @@ public class Plasma extends RenderOnlyEntity {
     private float explosionPower;
     private boolean destroyBlocks;
     private int proficiencyMilestone;
+    private int launchDelayTicks;
 
     public Plasma(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -85,6 +89,7 @@ public class Plasma extends RenderOnlyEntity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(GATHER_PROGRESS, 0.0f);
         builder.define(LAUNCHED, false);
+        builder.define(OWNER_ENTITY_ID, 0);
     }
 
     @Override
@@ -98,6 +103,11 @@ public class Plasma extends RenderOnlyEntity {
         if (!isLaunched()) return;
         if (targetPosition == null) {
             discard();
+            return;
+        }
+        if (launchDelayTicks > 0) {
+            launchDelayTicks--;
+            setDeltaMovement(Vec3.ZERO);
             return;
         }
 
@@ -126,6 +136,7 @@ public class Plasma extends RenderOnlyEntity {
         this.explosionPower = Math.max(0.0f, explosionPower);
         this.destroyBlocks = destroyBlocks;
         this.proficiencyMilestone = Math.clamp(proficiencyMilestone, 0, 3);
+        this.launchDelayTicks = LAUNCH_DELAY_TICKS;
         setGatherProgress(1.0f);
         entityData.set(LAUNCHED, true);
     }
@@ -137,8 +148,6 @@ public class Plasma extends RenderOnlyEntity {
                 ? null
                 : level.getServer().getPlayerList().getPlayer(ownerUUID);
 
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                impact.x, impact.y, impact.z, 1, 0, 0, 0, 0);
         level.playSound(null, impact.x, impact.y, impact.z,
                 SoundEvents.PLASMA_GENERATION_BOOM.get(), SoundSource.PLAYERS, 1.0f, 1.0f);
 
@@ -190,6 +199,14 @@ public class Plasma extends RenderOnlyEntity {
 
     public boolean isLaunched() {
         return entityData.get(LAUNCHED);
+    }
+
+    public int getOwnerEntityId() {
+        return entityData.get(OWNER_ENTITY_ID);
+    }
+
+    public void setOwnerEntityId(int entityId) {
+        entityData.set(OWNER_ENTITY_ID, entityId);
     }
 
     @Override

@@ -16,7 +16,7 @@ import org.academy.api.client.render.vfxgraph.validate.VfxGraphValidator;
 import org.junit.jupiter.api.Test;
 
 /**
- * M27：打包的 6 个 VFX 资产均为容器 schema（kind:"vfx"），解码 + 校验通过。
+ * 打包的主 VFX 资产均为容器 schema（kind:"vfx"），解码 + 校验通过。
  */
 class VfxContainerAssetsTest {
     @Test
@@ -29,7 +29,8 @@ class VfxContainerAssetsTest {
         var codec = new JsonVfxGraphCodec(metadata);
         var validator = new VfxGraphValidator(metadata);
 
-        for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "skill_dirstrike", "minimal_burst", "demo_fire"}) {
+        for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "skill_dirstrike", "minimal_burst", "demo_fire",
+                "plasma_cannon_charge", "plasma_cannon_focus", "plasma_cannon_projectile", "plasma_cannon_impact"}) {
             var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + name + ".json");
             assertTrue(stream != null, "asset should exist: " + name);
             var json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
