@@ -53,7 +53,7 @@ class GraphFileWatcherTest {
         manager.reloadFromFile(Identifier.fromNamespaceAndPath("academy", "vfxgraph/demo"), file);
         var effect = manager.spawn(Identifier.fromNamespaceAndPath("academy", "vfxgraph/demo"), new Vector3f());
         assertNotNull(effect);
-        for (int i = 0; i < 3; i++) {
+        for (var i = 0; i < 3; i++) {
             manager.tick(0.1f);
         }
         assertEquals(3, effect.effect().buffer().count());

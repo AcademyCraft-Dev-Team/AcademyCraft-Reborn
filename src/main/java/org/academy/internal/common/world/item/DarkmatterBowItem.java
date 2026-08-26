@@ -66,7 +66,7 @@ public final class DarkmatterBowItem extends BowItem implements DarkmatterShaped
         if (timeHeld < 0) return false;
         var power = getPowerForTime(timeHeld);
         if (power < 0.1f) return false;
-        List<ItemStack> firedProjectiles = draw(weapon, projectile, player);
+        var firedProjectiles = draw(weapon, projectile, player);
         if (level instanceof ServerLevel serverLevel && !firedProjectiles.isEmpty()) {
             shoot(serverLevel, player, player.getUsedItemHand(), weapon,
                     firedProjectiles, power * 3.0f, 1.0f, power == 1.0f, null);

@@ -162,9 +162,9 @@ public final class VfxGraphManager {
             return;
         }
         lastCamera = camera;
-        boolean paused = Minecraft.getInstance().isPaused();
-        long now = System.nanoTime();
-        float dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
+        var paused = Minecraft.getInstance().isPaused();
+        var now = System.nanoTime();
+        var dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
         lastRenderNanos = now;
         var iterator = effects.iterator();
         while (iterator.hasNext()) {

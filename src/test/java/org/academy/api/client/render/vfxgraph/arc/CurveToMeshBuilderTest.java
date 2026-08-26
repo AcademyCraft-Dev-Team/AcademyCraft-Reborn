@@ -55,14 +55,14 @@ class CurveToMeshBuilderTest {
 
         // Read first vertex: position should be near origin
         var buf = mesh.vertexBuffer();
-        float px = buf.getFloat(0);
-        float py = buf.getFloat(4);
-        float pz = buf.getFloat(8);
+        var px = buf.getFloat(0);
+        var py = buf.getFloat(4);
+        var pz = buf.getFloat(8);
         // Normal should be near unit length
-        float nx = buf.getFloat(12);
-        float ny = buf.getFloat(16);
-        float nz = buf.getFloat(20);
-        float nlen = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        var nx = buf.getFloat(12);
+        var ny = buf.getFloat(16);
+        var nz = buf.getFloat(20);
+        var nlen = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
         assertEquals(1.0f, nlen, 0.01f, "Normal should be unit length");
     }
 
@@ -89,7 +89,7 @@ class CurveToMeshBuilderTest {
 
         var mesh = CurveToMeshBuilder.build(arc, 4, 1, 1, 1, 1, 0.6f);
 
-        for (int i = 0; i < mesh.indexCount(); i++) {
+        for (var i = 0; i < mesh.indexCount(); i++) {
             assertTrue(mesh.indices()[i] >= 0 && mesh.indices()[i] < mesh.vertexCount(),
                     "Index out of range: " + mesh.indices()[i]);
         }
@@ -114,11 +114,11 @@ class CurveToMeshBuilderTest {
         assertEquals(48, mesh.indexCount());
 
         // 前 24 个索引只引用 run0 顶点 [0,8)，后 24 个只引用 run1 顶点 [8,16)
-        for (int i = 0; i < 24; i++) {
+        for (var i = 0; i < 24; i++) {
             assertTrue(mesh.indices()[i] >= 0 && mesh.indices()[i] < 8,
                     "run0 索引越界: " + mesh.indices()[i]);
         }
-        for (int i = 24; i < 48; i++) {
+        for (var i = 24; i < 48; i++) {
             assertTrue(mesh.indices()[i] >= 8 && mesh.indices()[i] < 16,
                     "run1 索引越界: " + mesh.indices()[i]);
         }
@@ -136,7 +136,7 @@ class CurveToMeshBuilderTest {
 
         // 主弧 + 2 分支 = 3 个不同 segment
         var segments = new HashSet<Integer>();
-        for (int i = 0; i < arc.size(); i++) {
+        for (var i = 0; i < arc.size(); i++) {
             segments.add(arc.segment(i));
         }
         assertEquals(3, segments.size());

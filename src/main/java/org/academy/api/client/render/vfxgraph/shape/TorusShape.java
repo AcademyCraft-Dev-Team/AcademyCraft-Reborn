@@ -22,9 +22,9 @@ public final class TorusShape implements EmitterShape {
 
     @Override
     public void sample(Random random, float[] out) {
-        float u = random.nextFloat() * 2f * (float) Math.PI;
-        float v = random.nextFloat() * 2f * (float) Math.PI;
-        float r = majorRadius + minorRadius * (float) Math.cos(v);
+        var u = random.nextFloat() * 2f * (float) Math.PI;
+        var v = random.nextFloat() * 2f * (float) Math.PI;
+        var r = majorRadius + minorRadius * (float) Math.cos(v);
         out[0] = cx + r * (float) Math.cos(u);
         out[1] = cy + minorRadius * (float) Math.sin(v);
         out[2] = cz + r * (float) Math.sin(u);

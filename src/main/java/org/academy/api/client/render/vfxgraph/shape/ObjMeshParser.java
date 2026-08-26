@@ -23,7 +23,7 @@ public final class ObjMeshParser {
         var vertices = new ArrayList<float[]>();
         var triangles = new ArrayList<float[]>();
         var lines = obj.split("\r?\n");
-        for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
             var line = lines[lineIndex].trim();
             if (line.isEmpty() || line.startsWith("#")) {
                 continue;
@@ -41,7 +41,7 @@ public final class ObjMeshParser {
             throw new IllegalArgumentException("obj has no faces");
         }
         var out = new float[triangles.size() * 9];
-        for (int i = 0; i < triangles.size(); i++) {
+        for (var i = 0; i < triangles.size(); i++) {
             System.arraycopy(triangles.get(i), 0, out, i * 9, 9);
         }
         return out;
@@ -60,16 +60,16 @@ public final class ObjMeshParser {
         }
         var count = vertices.size();
         var idx = new int[parts.length - 1];
-        for (int i = 1; i < parts.length; i++) {
+        for (var i = 1; i < parts.length; i++) {
             var raw = parts[i].indexOf('/') >= 0 ? parts[i].substring(0, parts[i].indexOf('/')) : parts[i];
             var parsed = Integer.parseInt(raw);
-            int v = parsed > 0 ? parsed - 1 : count + parsed;
+            var v = parsed > 0 ? parsed - 1 : count + parsed;
             if (v < 0 || v >= count) {
                 throw new IllegalArgumentException("obj line " + (lineIndex + 1) + ": vertex index out of range: " + parts[i]);
             }
             idx[i - 1] = v;
         }
-        for (int i = 1; i + 1 < idx.length; i++) {
+        for (var i = 1; i + 1 < idx.length; i++) {
             var a = vertices.get(idx[0]);
             var b = vertices.get(idx[i]);
             var c = vertices.get(idx[i + 1]);

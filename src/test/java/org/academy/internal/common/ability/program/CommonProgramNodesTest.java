@@ -281,7 +281,7 @@ class CommonProgramNodesTest {
     @Test
     void commonCasterLookTargetAndDistanceFilterComposeAcrossCategories() {
         var center = new ProgramWorldPosition(OVERWORLD, 0.0, 64.0, 0.0);
-        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+        var resolver = new ProgramTargetResolver() {
             @Override
             public Object caster() {
                 return "caster";
@@ -366,7 +366,7 @@ class CommonProgramNodesTest {
     @Test
     void casterLookTargetCanSwitchToBlockPositionOutput() {
         var block = new ProgramBlockPosition(OVERWORLD, 4, 70, -3);
-        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+        var resolver = new ProgramTargetResolver() {
             @Override
             public Optional<ProgramBlockPosition> lookBlockTarget() {
                 return Optional.of(block);
@@ -416,7 +416,7 @@ class CommonProgramNodesTest {
 
     @Test
     void randomEntitySelectsTheOnlyEntityInASet() {
-        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+        var resolver = new ProgramTargetResolver() {
             @Override
             public Object caster() {
                 return "only";
@@ -470,7 +470,7 @@ class CommonProgramNodesTest {
 
     @Test
     void nearestEntityToPositionSelectsTheClosestValidEntity() {
-        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+        var resolver = new ProgramTargetResolver() {
             @Override
             public Object caster() {
                 return "far";
@@ -726,7 +726,7 @@ class CommonProgramNodesTest {
                         edge(7, "done", 16, "flow")
                 )
         );
-        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+        var resolver = new ProgramTargetResolver() {
             @Override
             public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
                 return Optional.empty();
@@ -804,7 +804,7 @@ class CommonProgramNodesTest {
         var targetPosition = new ProgramWorldPosition(OVERWORLD, 2.0, 64.0, 0.0);
         var targetDirection = new ProgramDirection(0.0, -1.0, 0.0);
         var targetBlock = new ProgramBlockPosition(OVERWORLD, 2, 63, 0);
-        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+        var resolver = new ProgramTargetResolver() {
             @Override
             public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
                 return entityReference.equals("target")

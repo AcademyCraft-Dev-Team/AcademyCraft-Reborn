@@ -198,8 +198,8 @@ public final class EnergyChargeHelper {
     }
 
     public static OptionalDouble blockEnergyFraction(Level level, BlockPos pos) {
-        long stored = 0L;
-        long capacity = 0L;
+        var stored = 0L;
+        var capacity = 0L;
         var seen = Collections.newSetFromMap(
                 new IdentityHashMap<EnergyHandler, Boolean>());
         for (var side : Direction.values()) {
@@ -218,8 +218,8 @@ public final class EnergyChargeHelper {
     }
 
     public static OptionalDouble entityEnergyFraction(LivingEntity entity) {
-        long stored = 0L;
-        long capacity = 0L;
+        var stored = 0L;
+        var capacity = 0L;
         var handlers = new ArrayList<EnergyHandler>();
         var entityHandler = entity.getCapability(Capabilities.Energy.ENTITY, null);
         if (entityHandler != null) handlers.add(entityHandler);

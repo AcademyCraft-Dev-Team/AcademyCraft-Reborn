@@ -144,7 +144,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
             if (minecraft.level == null) return;
             try {
                 var manager = VfxGraphManager.INSTANCE;
-                Entity follow = packet.followEntityId >= 0 ? minecraft.level.getEntity(packet.followEntityId) : null;
+                var follow = packet.followEntityId >= 0 ? minecraft.level.getEntity(packet.followEntityId) : null;
                 ActiveEffect effect;
                 if (follow != null) {
                     effect = manager.spawnFollow(packet.assetId, follow);

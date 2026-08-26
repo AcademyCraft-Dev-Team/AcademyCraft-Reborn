@@ -87,7 +87,7 @@ public final class DarkmatterCrossbowItem extends CrossbowItem implements Darkma
         if (projectile.isEmpty()) {
             projectile = DarkmatterNativeItemSupport.infiniteDarkmatterArrow(weapon);
         }
-        List<ItemStack> drawn = draw(weapon, projectile, entity);
+        var drawn = draw(weapon, projectile, entity);
         if (drawn.isEmpty()) return;
         weapon.set(DataComponents.CHARGED_PROJECTILES,
                 ChargedProjectiles.ofNonEmpty(drawn));

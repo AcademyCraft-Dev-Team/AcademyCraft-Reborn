@@ -52,7 +52,7 @@ public final class VfxOperators {
                 List.of(out("out", "Out", ValueType.FLOAT, Value.of(0f))),
                 List.of(prop("value", "Value", ValueType.FLOAT, Value.of(0f)))));
         ops.register("vfx.op.constant", (node, inputs) -> ctx -> {
-            float value = propFloat(node, "value", 0f);
+            var value = propFloat(node, "value", 0f);
             // 常量：编译期可折叠，但保持统一求值路径
             return Value.of(value);
         });
@@ -64,8 +64,8 @@ public final class VfxOperators {
                 List.of(prop("param", "Parameter", ValueType.STRING, Value.string("")),
                         prop("value", "Value", ValueType.FLOAT, Value.of(0f)))));
         ops.register("vfx.op.param_float", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            float fallback = propFloat(node, "value", 0f);
+            var param = propString(node, "param", "");
+            var fallback = propFloat(node, "value", 0f);
             return Value.of(ctx.simContext() == null ? fallback : ctx.simContext().paramFloat(param, fallback));
         });
 
@@ -76,10 +76,10 @@ public final class VfxOperators {
                         prop("y", "Y", ValueType.FLOAT, Value.of(0f)),
                         prop("z", "Z", ValueType.FLOAT, Value.of(0f)))));
         ops.register("vfx.op.param_vec3", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            float fx = propFloat(node, "x", 0f);
-            float fy = propFloat(node, "y", 0f);
-            float fz = propFloat(node, "z", 0f);
+            var param = propString(node, "param", "");
+            var fx = propFloat(node, "x", 0f);
+            var fy = propFloat(node, "y", 0f);
+            var fz = propFloat(node, "z", 0f);
             if (ctx.simContext() == null) return Value.of(new Vector3f(fx, fy, fz));
             return Value.of(new Vector3f(
                     ctx.simContext().paramVec3(param, 0, fx),
@@ -95,11 +95,11 @@ public final class VfxOperators {
                         prop("b", "B", ValueType.FLOAT, Value.of(1f)),
                         prop("a", "A", ValueType.FLOAT, Value.of(1f)))));
         ops.register("vfx.op.param_color", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            float fr = propFloat(node, "r", 1f);
-            float fg = propFloat(node, "g", 1f);
-            float fb = propFloat(node, "b", 1f);
-            float fa = propFloat(node, "a", 1f);
+            var param = propString(node, "param", "");
+            var fr = propFloat(node, "r", 1f);
+            var fg = propFloat(node, "g", 1f);
+            var fb = propFloat(node, "b", 1f);
+            var fa = propFloat(node, "a", 1f);
             if (ctx.simContext() == null) return Value.color(fr, fg, fb, fa);
             return Value.color(
                     ctx.simContext().paramColor(param, 0, fr),
@@ -122,10 +122,10 @@ public final class VfxOperators {
                         out("out", "Out", ValueType.FLOAT, Value.of(0f))),
                 List.of(prop("curve", "Curve", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.curve", (node, inputs) -> {
-            String curveId = propString(node, "curve", "");
+            var curveId = propString(node, "curve", "");
             var tIn = inputs.get("t");
             return ctx -> {
-                float t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
+                var t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
                         : ctx.simContext() != null ? ctx.simContext().time() : 0f;
                 var curve = ctx.simContext() != null ? ctx.simContext().curve(curveId) : null;
                 if (curve == null) return Value.of(0f);
@@ -138,10 +138,10 @@ public final class VfxOperators {
                         out("out", "Out", ValueType.COLOR, Value.color(1f, 1f, 1f, 1f))),
                 List.of(prop("gradient", "Gradient", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.gradient", (node, inputs) -> {
-            String gradientId = propString(node, "gradient", "");
+            var gradientId = propString(node, "gradient", "");
             var tIn = inputs.get("t");
             return ctx -> {
-                float t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
+                var t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
                         : ctx.simContext() != null ? ctx.simContext().time() : 0f;
                 var gradient = ctx.simContext() != null ? ctx.simContext().gradient(gradientId) : null;
                 if (gradient == null) return Value.color(1f, 1f, 1f, 1f);
@@ -159,7 +159,7 @@ public final class VfxOperators {
                 List.of(prop("param", "Parameter", ValueType.STRING, Value.string("")),
                         prop("curve", "Source Curve", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.param_curve", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
+            var param = propString(node, "param", "");
             var empty = Value.curve(new Curve(List.of()));
             if (param.isEmpty() || ctx.simContext() == null) return empty;
             var existing = ctx.simContext().curve(param);
@@ -178,7 +178,7 @@ public final class VfxOperators {
                 List.of(prop("param", "Parameter", ValueType.STRING, Value.string("")),
                         prop("gradient", "Source Gradient", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.param_gradient", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
+            var param = propString(node, "param", "");
             if (param.isEmpty() || ctx.simContext() == null)
                 return Value.gradient(new Gradient(
                         List.of(new Gradient.ColorStop(0f, 1f, 1f, 1f, 1f))));

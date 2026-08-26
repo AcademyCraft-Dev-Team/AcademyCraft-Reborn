@@ -84,7 +84,7 @@ public final class ElectromasterWeaponVfx implements Vfx {
         var roots = WingAvatarRegistry.entries();
         if (roots.isEmpty()) return;
 
-        for (Map.Entry<Integer, Matrix4f> entry : roots.entrySet()) {
+        for (var entry : roots.entrySet()) {
             var entity = level.getEntity(entry.getKey());
             if (!(entity instanceof Player player)) continue;
             var ironSand = player.getData(AttachmentTypes.IRON_SAND_DATA.get());

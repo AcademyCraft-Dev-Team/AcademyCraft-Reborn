@@ -11,8 +11,8 @@ class SurfaceConstraintTest {
      * 单位立方体三角形。
      */
     private static float[] unitCube() {
-        float[] tris = new float[12 * 9];
-        int t = 0;
+        var tris = new float[12 * 9];
+        var t = 0;
         t = tri(tris, t, 1, -1, -1, 1, -1, 1, 1, 1, 1);
         t = tri(tris, t, 1, 1, 1, 1, 1, -1, 1, -1, -1);
         t = tri(tris, t, -1, -1, 1, -1, -1, -1, -1, 1, -1);
@@ -57,8 +57,8 @@ class SurfaceConstraintTest {
         constraint.constrain(arc);
 
         // 端点（0 和 2）被拉到最近表面（x=1 或 z=1）
-        float d0 = Math.max(Math.abs(arc.x(0)), Math.max(Math.abs(arc.y(0)), Math.abs(arc.z(0))));
-        float d2 = Math.max(Math.abs(arc.x(2)), Math.max(Math.abs(arc.y(2)), Math.abs(arc.z(2))));
+        var d0 = Math.max(Math.abs(arc.x(0)), Math.max(Math.abs(arc.y(0)), Math.abs(arc.z(0))));
+        var d2 = Math.max(Math.abs(arc.x(2)), Math.max(Math.abs(arc.y(2)), Math.abs(arc.z(2))));
         assertTrue(d0 <= 1.02f, "Endpoint 0 should be on surface: " + arc.x(0) + "," + arc.y(0) + "," + arc.z(0));
         assertTrue(d2 <= 1.02f, "Endpoint 2 should be on surface: " + arc.x(2) + "," + arc.y(2) + "," + arc.z(2));
         // 中间点（1）保留原位置（参考只约束 Endpoint，中间点保持拱起/漂浮形态）

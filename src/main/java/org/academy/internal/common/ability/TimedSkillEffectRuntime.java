@@ -151,7 +151,7 @@ public final class TimedSkillEffectRuntime {
     }
 
     private static void purgeExpired(long now) {
-        for (Iterator<Map.Entry<Key, Entry>> iterator = EFFECTS.entrySet().iterator(); iterator.hasNext(); ) {
+        for (var iterator = EFFECTS.entrySet().iterator(); iterator.hasNext(); ) {
             if (iterator.next().getValue().expiresAt() <= now) iterator.remove();
         }
     }

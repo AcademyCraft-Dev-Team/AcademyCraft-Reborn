@@ -16,7 +16,7 @@ public final class ArcBuffer {
 
     public ArcBuffer() {
         arcs = new ArcCurve[INITIAL_CAPACITY];
-        for (int i = 0; i < INITIAL_CAPACITY; i++) {
+        for (var i = 0; i < INITIAL_CAPACITY; i++) {
             arcs[i] = new ArcCurve();
         }
     }
@@ -34,9 +34,9 @@ public final class ArcBuffer {
      */
     public ArcCurve add() {
         if (count == arcs.length) {
-            int newCap = arcs.length * 2;
+            var newCap = arcs.length * 2;
             var newArr = new ArcCurve[newCap];
-            for (int i = 0; i < newCap; i++) {
+            for (var i = 0; i < newCap; i++) {
                 newArr[i] = i < arcs.length ? arcs[i] : new ArcCurve();
             }
             arcs = newArr;
@@ -54,10 +54,10 @@ public final class ArcBuffer {
      * 每帧递增 age，删除过期弧线（swap-remove）。先清全量 fresh 标记（M29b-02）。
      */
     public void advance(float dt, Random random) {
-        for (int i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++) {
             arcs[i].setFresh(false);
         }
-        int i = 0;
+        var i = 0;
         while (i < count) {
             var arc = arcs[i];
             arc.setAge(arc.age() + dt);

@@ -60,7 +60,7 @@ class VfxGraphManagerTest {
         assertEquals(1, VfxGraphManager.INSTANCE.effectCount());
         assertEquals(1f, effect.position().x, 1e-5f);
 
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
             VfxGraphManager.INSTANCE.tick(0.1f);
         }
         assertEquals(5, effect.effect().buffer().count());
@@ -96,7 +96,7 @@ class VfxGraphManagerTest {
     void reloadReplacesLiveEffectGraph() {
         registerAsset(burstGraph());
         var effect = VfxGraphManager.INSTANCE.spawn(ASSET, new Vector3f());
-        for (int i = 0; i < 2; i++) {
+        for (var i = 0; i < 2; i++) {
             VfxGraphManager.INSTANCE.tick(0.1f);
         }
         assertEquals(2, effect.effect().buffer().count());
@@ -110,7 +110,7 @@ class VfxGraphManagerTest {
                 ),
                 List.of(), List.of(), List.of("out"));
         registerAsset(reloaded);
-        for (int i = 0; i < 2; i++) {
+        for (var i = 0; i < 2; i++) {
             VfxGraphManager.INSTANCE.tick(0.1f);
         }
         assertEquals(0, effect.effect().buffer().count());
@@ -131,7 +131,7 @@ class VfxGraphManagerTest {
         VfxGraphManager.INSTANCE.budget().setMaxParticlesPerEffect(5);
 
         var effect = VfxGraphManager.INSTANCE.spawn(assetId, new Vector3f());
-        for (int i = 0; i < 50; i++) {
+        for (var i = 0; i < 50; i++) {
             VfxGraphManager.INSTANCE.tick(0.1f);
         }
         // 达到上限 5 后不再增长
@@ -175,7 +175,7 @@ class VfxGraphManagerTest {
 
         var effect = VfxGraphManager.INSTANCE.spawn(containerAsset, new Vector3f(1f, 2f, 3f));
         assertNotNull(effect);
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
             VfxGraphManager.INSTANCE.tick(0.1f);
         }
         assertEquals(5, effect.effect().buffer().count());

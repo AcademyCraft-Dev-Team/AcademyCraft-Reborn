@@ -101,7 +101,7 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
             result = new ItemStack(Items.ABILITY_DEVELOPER.get());
         } else {
             var input = craftSlots.asCraftInput();
-            Optional<RecipeHolder<CraftingRecipe>> recipe = level.getServer().getRecipeManager()
+            var recipe = level.getServer().getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, input, level);
             if (recipe.isPresent() && resultSlots.setRecipeUsed(player, recipe.get())) {
                 var assembled = recipe.get().value().assemble(input);

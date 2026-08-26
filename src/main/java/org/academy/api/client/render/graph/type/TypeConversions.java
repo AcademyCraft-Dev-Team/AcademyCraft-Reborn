@@ -71,16 +71,16 @@ public final class TypeConversions implements TypeConverter {
     private static Vector2f toVec2(Value v) {
         return switch (v.type()) {
             case FLOAT, INT, BOOL, TIME -> {
-                float f = toFloat(v);
+                var f = toFloat(v);
                 yield new Vector2f(f, f);
             }
             case VEC2 -> v.asVec2();
             case VEC3 -> {
-                Vector3f x = v.asVec3();
+                var x = v.asVec3();
                 yield new Vector2f(x.x, x.y);
             }
             case VEC4, COLOR -> {
-                Vector4f x = v.asVec4();
+                var x = v.asVec4();
                 yield new Vector2f(x.x, x.y);
             }
             default -> throw new IllegalArgumentException("not numeric: " + v.type());
@@ -90,16 +90,16 @@ public final class TypeConversions implements TypeConverter {
     private static Vector3f toVec3(Value v) {
         return switch (v.type()) {
             case FLOAT, INT, BOOL, TIME -> {
-                float f = toFloat(v);
+                var f = toFloat(v);
                 yield new Vector3f(f, f, f);
             }
             case VEC2 -> {
-                Vector2f x = v.asVec2();
+                var x = v.asVec2();
                 yield new Vector3f(x.x, x.y, 0f);
             }
             case VEC3 -> v.asVec3();
             case VEC4, COLOR -> {
-                Vector4f x = v.asVec4();
+                var x = v.asVec4();
                 yield new Vector3f(x.x, x.y, x.z);
             }
             default -> throw new IllegalArgumentException("not numeric: " + v.type());
@@ -109,15 +109,15 @@ public final class TypeConversions implements TypeConverter {
     private static Vector4f toVec4(Value v) {
         return switch (v.type()) {
             case FLOAT, INT, BOOL, TIME -> {
-                float f = toFloat(v);
+                var f = toFloat(v);
                 yield new Vector4f(f, f, f, f);
             }
             case VEC2 -> {
-                Vector2f x = v.asVec2();
+                var x = v.asVec2();
                 yield new Vector4f(x.x, x.y, 0f, 1f);
             }
             case VEC3 -> {
-                Vector3f x = v.asVec3();
+                var x = v.asVec3();
                 yield new Vector4f(x.x, x.y, x.z, 1f);
             }
             case VEC4 -> v.asVec4();
@@ -127,7 +127,7 @@ public final class TypeConversions implements TypeConverter {
     }
 
     private static Value toColor(Value v) {
-        Vector4f x = toVec4(v);
+        var x = toVec4(v);
         return Value.color(x.x, x.y, x.z, x.w);
     }
 }

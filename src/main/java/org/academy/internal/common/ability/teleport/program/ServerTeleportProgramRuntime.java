@@ -680,7 +680,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
 
     private ProgramWorldPosition destinationPosition(Object value) {
         if (value instanceof ProgramWorldPosition world) return world;
-        if (value instanceof ProgramBlockPosition(net.minecraft.resources.Identifier dimension, int x, int y, int z)) {
+        if (value instanceof ProgramBlockPosition(var dimension, var x, var y, var z)) {
             return new ProgramWorldPosition(
                     dimension, x + 0.5, y, z + 0.5);
         }
@@ -705,7 +705,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     }
 
     private BlockPos requireLocalBlock(Object value) {
-        if (!(value instanceof ProgramBlockPosition(net.minecraft.resources.Identifier dimension, int x, int y, int z))
+        if (!(value instanceof ProgramBlockPosition(var dimension, var x, var y, var z))
                 || !dimension.equals(targets.level().dimension().identifier())) {
             throw new IllegalArgumentException("Teleport block is in another dimension");
         }

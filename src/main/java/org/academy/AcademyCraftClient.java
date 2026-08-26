@@ -306,7 +306,7 @@ public final class AcademyCraftClient {
                                                                 builder
                                                         ))
                                                         .executes(ctx -> {
-                                                            String file = StringArgumentType.getString(ctx, "file");
+                                                            var file = StringArgumentType.getString(ctx, "file");
                                                             UiLayoutEditor.INSTANCE.open(file);
                                                             return 1;
                                                         })
@@ -496,7 +496,7 @@ public final class AcademyCraftClient {
                             {245, 144, 144}, {178, 232, 243}, {209, 170, 225},
                             {243, 182, 224}, {196, 238, 156}
                     };
-                    int[] color = colors[random.nextInt(colors.length)];
+                    var color = colors[random.nextInt(colors.length)];
                     particle.setColor(
                             Math.max(0, Math.min(255, color[0] + random.nextInt(-20, 20))) / 255.0F,
                             Math.max(0, Math.min(255, color[1] + random.nextInt(-20, 20))) / 255.0F,

@@ -33,7 +33,7 @@ class GraphMigrationsTest {
     void migrationsAppliedInFromVersionOrder() {
         var json = new JsonObject();
         json.addProperty(GraphSchemaVersion.VERSION_FIELD, 0);
-        StringBuilder order = new StringBuilder();
+        var order = new StringBuilder();
         var m1 = new GraphMigration() {
             @Override
             public int fromVersion() {

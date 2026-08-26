@@ -68,8 +68,8 @@ class VfxBlockFlowTest {
         var buffer = sim.buffer();
         // 每 frame 两个 spawn 各产 1 粒子 → 2 粒子：A 的 vx=3（x=0.3），B 的 vx=1（x=0.1）
         assertEquals(2, buffer.count());
-        float x0 = buffer.positionX(0);
-        float x1 = buffer.positionX(1);
+        var x0 = buffer.positionX(0);
+        var x1 = buffer.positionX(1);
         assertTrue(Math.max(x0, x1) - Math.min(x0, x1) > 0.1f, "A/B must have distinct velocities: " + x0 + "," + x1);
         // 精确值：0.3 与 0.1（顺序不定）
         assertTrue((Math.abs(x0 - 0.3f) < 1e-4f && Math.abs(x1 - 0.1f) < 1e-4f)
@@ -132,8 +132,8 @@ class VfxBlockFlowTest {
         var buffer = sim.buffer();
         assertEquals(2, buffer.count());
         // iA 只处理 sA 的批次（vx=3 → x=0.3）；iU 无块级上游 → 空批次不处理；sB 的粒子保持 spawn 默认 vx=0（x=0）
-        float x0 = buffer.positionX(0);
-        float x1 = buffer.positionX(1);
+        var x0 = buffer.positionX(0);
+        var x1 = buffer.positionX(1);
         // 其中一个 x≈0.3（sA 经 iA），另一个 x≈0（sB 未配 init）
         assertTrue((Math.abs(x0 - 0.3f) < 1e-4f && Math.abs(x1) < 1e-4f)
                         || (Math.abs(x0) < 1e-4f && Math.abs(x1 - 0.3f) < 1e-4f),

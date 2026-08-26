@@ -31,7 +31,7 @@ class SampleAssetsTest {
 
     @Test
     void packagedAssetsDecodeAndSpawn() {
-        for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "skill_dirstrike", "minimal_burst", "demo_fire", "demo_arc",
+        for (var name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "skill_dirstrike", "minimal_burst", "demo_fire", "demo_arc",
                 "surface_arc", "contact_arc", "spark", "demo_blender_arc"}) {
             var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + name + ".json");
             assertNotNull(stream, "sample asset " + name + " should be packaged");
@@ -43,7 +43,7 @@ class SampleAssetsTest {
             assertNotNull(effect);
             assertNotNull(effect.spec());
             // 步进若干帧：确保曲线/渐变参数、多层 spawn、over-life 节点全链路可模拟
-            for (int i = 0; i < 30; i++) {
+            for (var i = 0; i < 30; i++) {
                 effect.tick(1f / 60f);
             }
         }
