@@ -203,6 +203,30 @@ public final class ProgramEditorDocument {
         return success(replace(program.graph(), positions));
     }
 
+    public EditResult translateNodes(Set<Integer> nodeIds, double deltaX, double deltaY) {
+        if (nodeIds == null || nodeIds.isEmpty()
+                || !Double.isFinite(deltaX) || !Double.isFinite(deltaY)) {
+            return failure(ProgramDiagnosticCode.INVALID_NODE, -1, null);
+        }
+        for (var nodeId : nodeIds) {
+            if (nodeId == null || node(nodeId) == null) {
+                return failure(ProgramDiagnosticCode.INVALID_NODE,
+                        nodeId == null ? -1 : nodeId, null);
+            }
+        }
+        var positions = new HashMap<>(program.editorLayout().nodePositions());
+        for (var nodeId : nodeIds) {
+            var position = positions.get(nodeId);
+            var x = (position == null ? 0.0 : position.x()) + deltaX;
+            var y = (position == null ? 0.0 : position.y()) + deltaY;
+            if (!Double.isFinite(x) || !Double.isFinite(y)) {
+                return failure(ProgramDiagnosticCode.INVALID_NODE, nodeId, null);
+            }
+            positions.put(nodeId, new ProgramEditorLayout.NodePosition(x, y));
+        }
+        return success(replace(program.graph(), positions));
+    }
+
     public EditResult configureNode(int nodeId, JsonElement configuration) {
         var existing = node(nodeId);
         if (existing == null || configuration == null) {
