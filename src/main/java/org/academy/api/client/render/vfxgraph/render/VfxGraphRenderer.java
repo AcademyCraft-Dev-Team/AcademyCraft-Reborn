@@ -253,10 +253,14 @@ public final class VfxGraphRenderer {
     }
 
     /** 电弧管管线：透明主 pass / additive bloom pass。 */
-    private RenderPipeline arcTubePipeline(boolean bloomPass) {
-        return arcTubePipelines.computeIfAbsent(bloomPass ? "bloom_v2" : "main_v2", k -> {
-            var locationName = "vfx_graph_arc_tube" + (bloomPass ? "_bloom" : "");
-            var pipeline = buildPipeline(locationName, R.shaders.core.vfxgraph_arc, R.shaders.core.vfxgraph_arc,
+    private RenderPipeline arcTubePipeline(RenderSpec spec, boolean bloomPass) {
+        var key = (bloomPass ? "bloom_" : "main_")
+                + spec.vertexShader() + "_" + spec.fragmentShader();
+        return arcTubePipelines.computeIfAbsent(key, k -> {
+            var shaderSuffix = (spec.vertexShader().getPath() + "_" + spec.fragmentShader().getPath())
+                    .replace('/', '_');
+            var locationName = "vfx_graph_arc_tube_" + (bloomPass ? "bloom_" : "main_") + shaderSuffix;
+            var pipeline = buildPipeline(locationName, spec.vertexShader(), spec.fragmentShader(),
                     ARC_BIND_GROUP, ARC_TUBE_FORMAT, null,
                     bloomPass ? BlendFunction.ADDITIVE : BlendFunction.TRANSLUCENT,
                     PrimitiveTopology.TRIANGLES);
@@ -391,7 +395,7 @@ public final class VfxGraphRenderer {
                     case RIBBON -> drawTrail(renderPass, buffer, camera, spec, PrimitiveTopology.QUADS, transform);
                     case ARC -> {
                         if (!arcsDrawn && arcBuffer != null && arcBuffer.count() > 0) {
-                            drawArcTubes(renderPass, arcBuffer, camera, transform, bloomPass, spec.arc());
+                            drawArcTubes(renderPass, arcBuffer, camera, transform, bloomPass, spec);
                             arcsDrawn = true;
                         }
                     }
@@ -439,11 +443,12 @@ public final class VfxGraphRenderer {
             com.mojang.blaze3d.systems.RenderPass pass,
             org.academy.api.client.render.vfxgraph.arc.ArcBuffer arcBuffer,
             GraphCamera camera, WorldTransform transform, boolean bloomPass,
-            RenderSpec.ArcRender arcRender
+            RenderSpec spec
     ) {
         if (arcBuffer == null || arcBuffer.count() == 0) return;
 
         var device = RenderSystem.getDevice();
+        var arcRender = spec.arc();
 
         // 收集所有弧线的管网格数据
         int totalVerts = 0;
@@ -512,11 +517,14 @@ public final class VfxGraphRenderer {
         writeArcLightning(device, arcRender.emission());
 
         // 绘制
-        var pipeline = arcTubePipeline(bloomPass);
+        var pipeline = arcTubePipeline(spec, bloomPass);
         pass.setPipeline(pipeline);
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setUniform("ArcLightning", arcLightningUbo.slice());
         pass.setVertexBuffer(0, arcTubeVertexBuffer.slice(0, vertexBytes));
+        // 同一 RenderPass 中较早的 billboard/mesh 输出会在槽 1 留下实例缓冲；
+        // ARC 管线只有槽 0，必须显式解绑，否则 OpenGL VAO 缓存会用 null VertexFormat 解读槽 1。
+        pass.setVertexBuffer(1, null);
         pass.setIndexBuffer(arcTubeIndexBuffer, IndexType.INT);
         pass.drawIndexed(totalIndices, 1, 0, 0, 0);
     }
@@ -687,8 +695,8 @@ public final class VfxGraphRenderer {
     ) {
         boolean line = spec.geometry() == RenderSpec.Geometry.LINE;
         var vertexCount = line
-                ? countLineVertices(buffer)
-                : countRibbonVertices(buffer);
+                ? countLineVertices(buffer, spec)
+                : countRibbonVertices(buffer, spec);
         if (vertexCount == 0) return;
 
         var neededBytes = (long) TRAIL_FORMAT.getVertexSize() * vertexCount;
@@ -700,9 +708,9 @@ public final class VfxGraphRenderer {
         }
         lineData.clear();
         if (line) {
-            buildLineVertices(buffer, camera, lineData, transform);
+            buildLineVertices(buffer, camera, lineData, transform, spec);
         } else {
-            buildRibbonVertices(buffer, camera, lineData, transform);
+            buildRibbonVertices(buffer, camera, lineData, transform, spec);
         }
         lineData.flip();
         RenderSystem.getDevice().createCommandEncoder().writeToBuffer(lineBuffer.slice(0, neededBytes), lineData);
@@ -710,34 +718,40 @@ public final class VfxGraphRenderer {
         pass.setPipeline(pipelineFor(spec));
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setVertexBuffer(0, lineBuffer.slice(0, neededBytes));
+        // LINE/RIBBON 同样是单缓冲管线，清理前一个实例化输出留下的槽 1。
+        pass.setVertexBuffer(1, null);
         var sequential = RenderSystem.getSequentialBuffer(primitive);
         var indices = sequential.getBuffer(vertexCount);
         pass.setIndexBuffer(indices, sequential.type());
         pass.drawIndexed(vertexCount, 1, 0, 0, 0);
     }
 
-    private static int countLineVertices(ParticleBuffer buffer) {
+    private static int countLineVertices(ParticleBuffer buffer, RenderSpec spec) {
         int total = 0;
         for (int i = 0; i < buffer.count(); i++) {
+            if (!spec.matchesLayer(buffer.layer(i))) continue;
             int size = buffer.trailSize(i);
             if (size >= 2) total += (size - 1) * 2;
         }
         return total;
     }
 
-    private static int countRibbonVertices(ParticleBuffer buffer) {
+    private static int countRibbonVertices(ParticleBuffer buffer, RenderSpec spec) {
         int total = 0;
         for (int i = 0; i < buffer.count(); i++) {
+            if (!spec.matchesLayer(buffer.layer(i))) continue;
             int size = buffer.trailSize(i);
             if (size >= 2) total += (size - 1) * 4;
         }
         return total;
     }
 
-    private void buildLineVertices(ParticleBuffer buffer, GraphCamera camera, ByteBuffer out, WorldTransform transform) {
+    private void buildLineVertices(ParticleBuffer buffer, GraphCamera camera, ByteBuffer out,
+                                   WorldTransform transform, RenderSpec spec) {
         var camPos = camera.position();
         var identity = transform.isIdentity();
         for (int i = 0; i < buffer.count(); i++) {
+            if (!spec.matchesLayer(buffer.layer(i))) continue;
             int size = buffer.trailSize(i);
             for (int k = 0; k < size - 1; k++) {
                 float ax = buffer.trailX(i, k);
@@ -764,7 +778,8 @@ public final class VfxGraphRenderer {
         }
     }
 
-    private void buildRibbonVertices(ParticleBuffer buffer, GraphCamera camera, ByteBuffer out, WorldTransform transform) {
+    private void buildRibbonVertices(ParticleBuffer buffer, GraphCamera camera, ByteBuffer out,
+                                     WorldTransform transform, RenderSpec spec) {
         var camPos = camera.position();
         var identity = transform.isIdentity();
         var view = camera.viewRotation();
@@ -772,6 +787,7 @@ public final class VfxGraphRenderer {
         float ry = view.m01();
         float rz = view.m02();
         for (int i = 0; i < buffer.count(); i++) {
+            if (!spec.matchesLayer(buffer.layer(i))) continue;
             int size = buffer.trailSize(i);
             float half = buffer.size(i) * 0.5f;
             for (int k = 0; k < size - 1; k++) {
@@ -904,6 +920,7 @@ public final class VfxGraphRenderer {
         pass.setPipeline(surfacePipeline());
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setVertexBuffer(0, surfaceBuffer.slice(0, bytes));
+        pass.setVertexBuffer(1, null);
         var sequential = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES);
         var indices = sequential.getBuffer(totalVerts);
         pass.setIndexBuffer(indices, sequential.type());
