@@ -50,12 +50,13 @@ class VfxContainerFullCatalogTest {
         // M22：arc 3 发射块（spawn 类）+ output_arc 1 = 46 块；
         // M29：arc_surface 重写 + arc_contact/arc_spark 新增 = 48 块；
         // 电浆炮：live follow + line tornado + volumetric tornado + plasma convergence + plasma shell + shockwave = 54 块。
+        // 旧 VFX 迁移：存活属性同步 + 径向涟漪 + 收缩线框盒 = 57 块。
         String[] expected = {
                 "vfx.block.spawn_rate", "vfx.block.spawn_burst", "vfx.block.spawn_periodic", "vfx.block.spawn_distance",
                 "vfx.block.init_position", "vfx.block.init_velocity", "vfx.block.init_color", "vfx.block.init_size",
                 "vfx.block.init_rotation", "vfx.block.init_lifetime", "vfx.block.init_mass", "vfx.block.init_randomize",
                 "vfx.block.update_velocity", "vfx.block.update_gravity", "vfx.block.update_force", "vfx.block.update_noise",
-                "vfx.block.update_turbulence", "vfx.block.update_vortex", "vfx.block.update_follow",
+                "vfx.block.update_turbulence", "vfx.block.update_vortex", "vfx.block.update_follow", "vfx.block.update_live",
                 "vfx.block.update_drag", "vfx.block.update_damping",
                 "vfx.block.update_age", "vfx.block.update_fade",
                 "vfx.block.collision_ground", "vfx.block.collision_plane", "vfx.block.collision_sphere",
@@ -66,13 +67,14 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.output_mesh", "vfx.block.output_line", "vfx.block.output_ribbon",
                 "vfx.block.arc_bolt", "vfx.block.arc_orbit", "vfx.block.arc_surface", "vfx.block.output_arc",
                 "vfx.block.arc_contact", "vfx.block.arc_spark", "vfx.block.arc_tornado", "vfx.block.tornado_volume",
-                "vfx.block.plasma_convergence", "vfx.block.arc_plasma_shell", "vfx.block.arc_shockwave"
+                "vfx.block.plasma_convergence", "vfx.block.arc_plasma_shell", "vfx.block.arc_shockwave",
+                "vfx.block.arc_radial_ripple", "vfx.block.arc_collapsing_box"
         };
         for (String id : expected) {
             assertNotNull(blocks.find(id), "block should be registered: " + id);
         }
-        assertEquals(54, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
-        assertEquals(54, countBlocks());
+        assertEquals(57, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
+        assertEquals(57, countBlocks());
     }
 
     @Test
@@ -216,6 +218,156 @@ class VfxContainerFullCatalogTest {
         for (int i = 0; i < arc.size(); i++) {
             float dy = arc.y(i);
             assertTrue(dy >= 2.9f && dy <= 5.6f, "arc point y out of range: " + dy);
+        }
+    }
+
+    @Test
+    void radialRippleUsesLiveDurationIntensityAndColors() {
+        var duration = new org.academy.api.client.render.graph.model.GraphParameter(
+                "duration", "Duration", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty());
+        var intensity = new org.academy.api.client.render.graph.model.GraphParameter(
+                "intensity", "Intensity", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty());
+        var core = new org.academy.api.client.render.graph.model.GraphParameter(
+                "core", "Core", org.academy.api.client.render.graph.type.ValueType.COLOR,
+                org.academy.api.client.render.graph.type.Value.color(1f, 0f, 0f, 1f), java.util.Optional.empty());
+        var edge = new org.academy.api.client.render.graph.model.GraphParameter(
+                "edge", "Edge", org.academy.api.client.render.graph.type.ValueType.COLOR,
+                org.academy.api.client.render.graph.type.Value.color(0f, 0f, 1f, 0f), java.util.Optional.empty());
+        var parameters = List.of(duration, intensity, core, edge);
+        var system = new VfxSystem("radial-ripple",
+                List.of(
+                        ctx("spawn", VfxContextType.SPAWN,
+                                block("bR", "vfx.block.arc_radial_ripple", Map.ofEntries(
+                                        Map.entry("duration_param", "duration"),
+                                        Map.entry("intensity_param", "intensity"),
+                                        Map.entry("core_color_param", "core"),
+                                        Map.entry("edge_color_param", "edge"),
+                                        Map.entry("radius", "2"),
+                                        Map.entry("ring_count", "4"),
+                                        Map.entry("segments", "16"),
+                                        Map.entry("lifetime", "0.2")))),
+                        ctx("out", VfxContextType.OUTPUT,
+                                block("bO", "vfx.block.output_arc", Map.of()))
+                ),
+                List.of(),
+                List.of(new VfxFlowEdge("spawn", "out")),
+                List.of(),
+                parameters,
+                List.of("bO"));
+
+        var sim = new VfxSystemSimulator(system, blocks, ops, 42L, parameters);
+        sim.setLiveParam("duration", org.academy.api.client.render.graph.type.Value.of(0.5f));
+        sim.setLiveParam("intensity", org.academy.api.client.render.graph.type.Value.of(0.75f));
+        sim.step(0.25f);
+        sim.step(0.01f);
+
+        assertEquals(4, sim.arcBuffer().count());
+        var inner = sim.arcBuffer().arc(0);
+        var outer = sim.arcBuffer().arc(3);
+        assertEquals(17, inner.size());
+        assertTrue(inner.r() > outer.r(), "core-to-edge red channel should decrease");
+        assertTrue(inner.b() < outer.b(), "core-to-edge blue channel should increase");
+        assertTrue(inner.a() > outer.a(), "edge alpha should fade out");
+        assertEquals(0f, outer.y(0), 1e-6f, "ripple must remain on the horizontal world plane");
+    }
+
+    @Test
+    void collapsingBoxUsesLiveDimensionsYawAndProgress() {
+        var progress = new org.academy.api.client.render.graph.model.GraphParameter(
+                "progress", "Progress", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                org.academy.api.client.render.graph.type.Value.of(0f), java.util.Optional.empty());
+        var width = new org.academy.api.client.render.graph.model.GraphParameter(
+                "width", "Width", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty());
+        var height = new org.academy.api.client.render.graph.model.GraphParameter(
+                "height", "Height", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                org.academy.api.client.render.graph.type.Value.of(2f), java.util.Optional.empty());
+        var yaw = new org.academy.api.client.render.graph.model.GraphParameter(
+                "yaw", "Yaw", org.academy.api.client.render.graph.type.ValueType.FLOAT,
+                org.academy.api.client.render.graph.type.Value.of(0f), java.util.Optional.empty());
+        var parameters = List.of(progress, width, height, yaw);
+        var system = new VfxSystem("collapsing-box",
+                List.of(
+                        ctx("spawn", VfxContextType.SPAWN,
+                                block("bB", "vfx.block.arc_collapsing_box", Map.of(
+                                        "progress_param", "progress",
+                                        "width_param", "width",
+                                        "height_param", "height",
+                                        "yaw_param", "yaw",
+                                        "lifetime", "0.2"))),
+                        ctx("out", VfxContextType.OUTPUT,
+                                block("bO", "vfx.block.output_arc", Map.of()))
+                ),
+                List.of(),
+                List.of(new VfxFlowEdge("spawn", "out")),
+                List.of(),
+                parameters,
+                List.of("bO"));
+
+        var sim = new VfxSystemSimulator(system, blocks, ops, 42L, parameters);
+        sim.setLiveParam("progress", org.academy.api.client.render.graph.type.Value.of(0.5f));
+        sim.setLiveParam("width", org.academy.api.client.render.graph.type.Value.of(2f));
+        sim.setLiveParam("height", org.academy.api.client.render.graph.type.Value.of(3f));
+        sim.setLiveParam("yaw", org.academy.api.client.render.graph.type.Value.of(35f));
+        sim.step(0.01f);
+
+        assertEquals(12, sim.arcBuffer().count(), "wireframe box should have twelve edges");
+        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+            var edge = sim.arcBuffer().arc(i);
+            assertEquals(2, edge.size());
+            assertTrue(Float.isFinite(edge.x(0)) && Float.isFinite(edge.y(0)) && Float.isFinite(edge.z(0)));
+            assertTrue(edge.width(0) > 0f);
+            assertEquals(1f, edge.a(), 1e-6f);
+        }
+    }
+
+    @Test
+    void plasmaShellReplacesPreviousGeometryInsteadOfLeavingSeparatedCopies() {
+        var system = new VfxSystem("plasma-shell-replacement",
+                List.of(
+                        ctx("spawn", VfxContextType.SPAWN,
+                                block("bS", "vfx.block.arc_plasma_shell", Map.ofEntries(
+                                        Map.entry("progress_param", "formation"),
+                                        Map.entry("emission_param", "emission"),
+                                        Map.entry("radius_min", "1"),
+                                        Map.entry("radius_max", "10"),
+                                        Map.entry("radius_power", "1"),
+                                        Map.entry("surface_offset", "0"),
+                                        Map.entry("count", "32"),
+                                        Map.entry("segments", "8"),
+                                        Map.entry("jitter", "0"),
+                                        Map.entry("lifetime", "1")))),
+                        ctx("out", VfxContextType.OUTPUT,
+                                block("bO", "vfx.block.output_arc", Map.of()))
+                ),
+                List.of(),
+                List.of(new VfxFlowEdge("spawn", "out")),
+                List.of(),
+                List.of(),
+                List.of("bO"));
+
+        var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
+        sim.setLiveParam("emission", org.academy.api.client.render.graph.type.Value.of(1f));
+        sim.setLiveParam("formation", org.academy.api.client.render.graph.type.Value.of(0.1f));
+        sim.step(0.01f);
+        assertTrue(sim.arcBuffer().count() > 0 && sim.arcBuffer().count() <= 32);
+
+        sim.setLiveParam("formation", org.academy.api.client.render.graph.type.Value.of(1f));
+        sim.step(0.01f);
+        assertTrue(sim.arcBuffer().count() > 0 && sim.arcBuffer().count() <= 32,
+                "only the current plasma-shell generation may remain alive");
+        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+            var arc = sim.arcBuffer().arc(i);
+            for (int point = 0; point < arc.size(); point++) {
+                float distance = (float) Math.sqrt(
+                        arc.x(point) * arc.x(point)
+                                + arc.y(point) * arc.y(point)
+                                + arc.z(point) * arc.z(point));
+                assertEquals(10f, distance, 1e-3f,
+                        "no point from the previous smaller shell may survive");
+            }
         }
     }
 

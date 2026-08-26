@@ -30,6 +30,8 @@ public final class ArcCurve {
     private float age;
     private float lifetime;
     private long seed;
+    /** 替换式瞬态组；0 表示普通寿命电弧。 */
+    private long replacementGroup;
 
     /** 可选的端点吸附表面（三角形 xyz*3/三角形；null = 自由弧不做表面吸附）。 */
     private float[] surface;
@@ -98,6 +100,7 @@ public final class ArcCurve {
         this.surface = null;
         this.noiseStrength = Float.NaN;
         this.driftSpeed = Float.NaN;
+        this.replacementGroup = 0L;
         this.archRandom = 1f;
         this.archHeight = 1f;
         this.archHalf = 0.5f;
@@ -105,6 +108,14 @@ public final class ArcCurve {
         this.archCurve = 0.78f;
         this.archWidth = 0.01f;
         this.archSegments = 12;
+    }
+
+    long replacementGroup() {
+        return replacementGroup;
+    }
+
+    void setReplacementGroup(long replacementGroup) {
+        this.replacementGroup = replacementGroup;
     }
 
     /** 追加一个控制点（segment 默认 0 = 单段连续折线）。 */

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Random;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
@@ -631,18 +632,24 @@ public final class VfxGraphRenderer {
                 && sceneDepth.view() != null ? sceneDepth.view() : farView;
         boolean billboard = spec.geometry() == RenderSpec.Geometry.QUAD;
         drawInstancedPass(pass, pipelineFor(spec), shapeBuffer, cameraUbo.slice(),
-                instanceBuffer.slice(0, bytes), matched, billboard, depthView);
+                instanceBuffer.slice(0, bytes), matched, billboard, depthView, spec);
     }
 
     private void drawInstancedPass(
             com.mojang.blaze3d.systems.RenderPass pass, RenderPipeline pipeline, GpuBuffer shapeBuffer,
             GpuBufferSlice cameraSlice, GpuBufferSlice instanceSlice, int count,
-            boolean billboard, GpuTextureView depthView
+            boolean billboard, GpuTextureView depthView, RenderSpec spec
     ) {
         pass.setPipeline(pipeline);
         pass.setUniform("GraphCamera", cameraSlice);
         if (billboard) {
-            pass.bindTexture("Sampler0", noiseView, noiseSampler);
+            var textureId = spec.texture();
+            if (textureId == null) {
+                pass.bindTexture("Sampler0", noiseView, noiseSampler);
+            } else {
+                var texture = Minecraft.getInstance().getTextureManager().getTexture(textureId);
+                pass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());
+            }
             pass.bindTexture("Sampler1", depthView, depthSampler);
         }
         pass.setVertexBuffer(0, shapeBuffer.slice());

@@ -86,6 +86,7 @@ import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
 import org.academy.internal.client.render.vfx.*;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
+import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
@@ -468,6 +469,10 @@ public final class AcademyCraftClient {
                 renderState.setRenderData(
                         ElectromasterWeaponVfx.IRON_SAND_CONTEXT,
                         avatar.getData(AttachmentTypes.IRON_SAND_DATA)
+                );
+                renderState.setRenderData(
+                        LightShieldEffectRenderer.CONTEXT_KEY,
+                        avatar.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE)
                 );
             }
         });

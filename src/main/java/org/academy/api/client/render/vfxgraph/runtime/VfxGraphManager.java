@@ -44,9 +44,6 @@ import org.jspecify.annotations.Nullable;
 public final class VfxGraphManager {
     public static final VfxGraphManager INSTANCE = new VfxGraphManager();
 
-    /** DirStrike 技能替换用图资产（M20，A4）；缺失时 spawn 抛异常被客户端兜底忽略。 */
-    public static final Identifier DIR_STRIKE_ASSET = Identifier.fromNamespaceAndPath("academy", "vfxgraph/skill_dirstrike");
-
     private final SimpleNodeRegistry metadata = new SimpleNodeRegistry();
     private final VfxNodeRegistry vfxRegistry = new VfxNodeRegistry();
     private final VfxBlockRegistry blockRegistry = new VfxBlockRegistry();

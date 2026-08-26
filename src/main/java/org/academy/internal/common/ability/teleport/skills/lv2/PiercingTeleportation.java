@@ -27,7 +27,6 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.DistortionVfx;
 import org.academy.internal.client.render.vfx.DistortionVfxClient;
 import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -129,7 +128,7 @@ public final class PiercingTeleportation extends Skill {
                 MisakaNetworkClient.send(new TeleportPacket(distance, useDefaultTarget));
                 var player = Minecraft.getInstance().player;
                 if (player != null) {
-                    DistortionVfx.INSTANCE.trigger(
+                    DistortionVfxClient.trigger(
                             (float) player.getX(), (float) player.getY() + 1.0f, (float) player.getZ(),
                             1.0f, 1.0f,
                             0.5f, 0.2f, 0.8f, 0.7f,

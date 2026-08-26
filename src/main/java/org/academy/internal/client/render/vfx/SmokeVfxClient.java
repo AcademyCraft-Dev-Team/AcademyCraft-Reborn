@@ -5,18 +5,20 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.client.render.vfx.VfxManager;
-import org.academy.api.client.render.vfx.VfxPhase;
-import org.academy.api.client.render.vfx.VfxRegistry;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.common.world.entity.skill.Smoke;
+import net.minecraft.resources.Identifier;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SmokeVfxClient {
+    private static final Identifier SMOKE_ASSET = AcademyCraft.academy("vfxgraph/entity_smoke");
+
     private SmokeVfxClient() {
     }
 
     public static void register() {
-        VfxRegistry.register(SmokeData.class, VfxPhase.WORLD_TRANSLUCENT, new SmokeRenderer());
+        // Graph 资产和通用渲染器由 VfxGraphManager 统一注册。
     }
 
     @SubscribeEvent
@@ -24,7 +26,14 @@ public final class SmokeVfxClient {
         if (!event.getLevel().isClientSide()) return;
         var entity = event.getEntity();
         if (entity instanceof Smoke smoke) {
-            VfxManager.INSTANCE.spawn(new SmokeVfx(smoke));
+            try {
+                var effect = VfxGraphManager.INSTANCE.spawnFollow(SMOKE_ASSET, smoke);
+                effect.bind("smoke_size", () -> Value.of(smoke.size));
+                effect.bind("smoke_alpha", () -> Value.of(smoke.getAlpha()));
+                effect.bind("smoke_frame", () -> Value.of((float) smoke.frame));
+            } catch (RuntimeException exception) {
+                AcademyCraft.getLogger().warn("Unable to spawn smoke VFX graph", exception);
+            }
         }
     }
 }

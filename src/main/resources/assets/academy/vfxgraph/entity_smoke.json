@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "entity_smoke",
+  "parameters": [
+    {
+      "id": "smoke_size",
+      "name": "Entity Smoke Size",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 1.0 },
+      "min": 0.0,
+      "max": 16.0
+    },
+    {
+      "id": "smoke_alpha",
+      "name": "Entity Smoke Alpha",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 1.0 },
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "id": "smoke_frame",
+      "name": "Entity Smoke Atlas Frame",
+      "type": "FLOAT",
+      "default": { "type": "FLOAT", "value": 0.0 },
+      "min": 0.0,
+      "max": 3.0
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "One Persistent Smoke Billboard",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_smoke",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "1",
+            "lifetime": "3600",
+            "size": "1",
+            "color": "1,1,1,1",
+            "layer": "smoke",
+            "shape": "point"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Live Entity Size Alpha And Atlas Frame",
+      "x": 500.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "update_live_smoke",
+          "type": "vfx.block.update_live",
+          "properties": {
+            "layer": "smoke",
+            "size_param": "smoke_size",
+            "alpha_param": "smoke_alpha",
+            "rotation_param": "smoke_frame"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "Textured Smoke Atlas Billboard",
+      "x": 1000.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_smoke",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_smoke_atlas",
+            "shader": "academy:core/vfxgraph_smoke_atlas",
+            "texture": "academy:textures/ability/generic/effect/smokes.png",
+            "blend": "translucent",
+            "layer": "smoke"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    { "from": "ctx_spawn", "to": "ctx_update" },
+    { "from": "ctx_update", "to": "ctx_output" }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_smoke" ]
+}
