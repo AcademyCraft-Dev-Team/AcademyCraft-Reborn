@@ -1,5 +1,6 @@
 package org.academy.api.common.util;
 
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.shapes.Shapes;
 import org.junit.jupiter.api.Test;
 
@@ -23,5 +24,12 @@ class LevelUtilTest {
         assertTrue(LevelUtil.isUnrestrictedMiningLevel(4));
         assertFalse(LevelUtil.isUnrestrictedMiningLevel(2));
         assertFalse(LevelUtil.isUnrestrictedMiningLevel(-1));
+    }
+
+    @Test
+    void silentBlockUpdatesSuppressAutomaticShapeDestruction() {
+        assertTrue((LevelUtil.SILENT_BLOCK_UPDATE_FLAGS & Block.UPDATE_CLIENTS) != 0);
+        assertTrue((LevelUtil.SILENT_BLOCK_UPDATE_FLAGS & Block.UPDATE_KNOWN_SHAPE) != 0);
+        assertFalse((LevelUtil.SILENT_BLOCK_UPDATE_FLAGS & Block.UPDATE_NEIGHBORS) != 0);
     }
 }

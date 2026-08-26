@@ -2,6 +2,7 @@ package org.academy.api.common.util;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,12 +31,15 @@ import org.academy.internal.common.world.entity.EntityTypes;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class LevelUtil {
+    static final int SILENT_BLOCK_UPDATE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
     public static double getValidViewDistance(Entity entity, double targetDistance) {
         var startPos = entity.getEyePosition();
         var direction = Vec3.directionFromRotation(entity.getXRot(), entity.getYRot()).scale(targetDistance);
@@ -118,8 +122,75 @@ public class LevelUtil {
             @Nullable ServerPlayer breaker,
             @Nullable BlockDropHandler dropHandler
     ) {
+        return destroyBlocksAlongPathInternal(
+                level,
+                start,
+                end,
+                radius,
+                miningLevel,
+                dropBlock,
+                spawnParticles,
+                canBlock,
+                simulate,
+                breaker,
+                dropHandler,
+                false,
+                false
+        );
+    }
+
+    public static Pair<Boolean, Double> destroyBlocksAlongPathSilently(
+            ServerLevel level,
+            Vec3 start,
+            Vec3 end,
+            float radius,
+            int miningLevel,
+            boolean canBlock,
+            boolean simulate,
+            @Nullable ServerPlayer breaker
+    ) {
+        return destroyBlocksAlongPathInternal(
+                level,
+                start,
+                end,
+                radius,
+                miningLevel,
+                false,
+                false,
+                canBlock,
+                simulate,
+                breaker,
+                null,
+                true,
+                true
+        );
+    }
+
+    private static Pair<Boolean, Double> destroyBlocksAlongPathInternal(
+            Level level,
+            Vec3 start,
+            Vec3 end,
+            float radius,
+            int miningLevel,
+            boolean dropBlock,
+            boolean spawnParticles,
+            boolean canBlock,
+            boolean simulate,
+            @Nullable ServerPlayer breaker,
+            @Nullable BlockDropHandler dropHandler,
+            boolean removeUnsupportedBlocksSilently,
+            boolean includeFluids
+    ) {
         var pathLength = start.distanceTo(end);
-        var collectedBlocks = collectBlocksOptimized(level, start, end, radius, miningLevel, canBlock);
+        var collectedBlocks = collectBlocksOptimized(
+                level,
+                start,
+                end,
+                radius,
+                miningLevel,
+                canBlock,
+                includeFluids
+        );
 
         var breakableBlocks = collectedBlocks.getLeft();
         var unbreakableBlocks = collectedBlocks.getRight();
@@ -137,15 +208,24 @@ public class LevelUtil {
                     dropBlock,
                     spawnParticles,
                     breaker,
-                    dropHandler
+                    dropHandler,
+                    removeUnsupportedBlocksSilently
             );
         }
         return Pair.of(minBlockedDist < pathLength, minBlockedDist);
     }
 
-    private static Pair<List<BlockPos>, List<BlockPos>> collectBlocksOptimized(Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock) {
+    private static Pair<List<BlockPos>, List<BlockPos>> collectBlocksOptimized(
+            Level level,
+            Vec3 start,
+            Vec3 end,
+            float radius,
+            int miningLevel,
+            boolean canBlock,
+            boolean includeFluids
+    ) {
         var context = new BlockCollectionContext(
-                level, start, end, radius, miningLevel, canBlock,
+                level, start, end, radius, miningLevel, canBlock, includeFluids,
                 new ArrayList<>(), new ArrayList<>(),
                 new LongOpenHashSet(), new BlockPos.MutableBlockPos()
         );
@@ -206,12 +286,15 @@ public class LevelUtil {
     private static void checkAndCollectBlock(BlockCollectionContext ctx, BlockState state, int x, int y, int z) {
         ctx.mutablePos.set(x, y, z);
         var shape = getAbilityInteractionShape(state, ctx.level, ctx.mutablePos);
-        if (shape.isEmpty()) return;
+        var fluidVolume = shape.isEmpty() && !state.getFluidState().isEmpty();
+        if (shape.isEmpty() && (!ctx.includeFluids || !fluidVolume)) return;
 
-        var blockAABB = shape.bounds().move(x, y, z);
+        var blockAABB = shape.isEmpty()
+                ? new AABB(x, y, z, x + 1.0, y + 1.0, z + 1.0)
+                : shape.bounds().move(x, y, z);
         // Sphere-AABB intersection check meow
         if (getIntersectionT(ctx.start, ctx.end, blockAABB.inflate(ctx.radius)) <= 1.0) {
-            if (canBreakBlock(state, ctx.miningLevel)) {
+            if (fluidVolume || canBreakBlock(state, ctx.miningLevel)) {
                 ctx.breakable.add(ctx.mutablePos.immutable());
             } else if (ctx.canBlock) {
                 ctx.unbreakable.add(ctx.mutablePos.immutable());
@@ -260,7 +343,8 @@ public class LevelUtil {
             boolean dropBlock,
             boolean spawnParticles,
             @Nullable ServerPlayer breaker,
-            @Nullable BlockDropHandler dropHandler
+            @Nullable BlockDropHandler dropHandler,
+            boolean removeUnsupportedBlocksSilently
     ) {
         var air = Blocks.AIR.defaultBlockState();
         for (var pos : breakableBlocks) {
@@ -282,11 +366,60 @@ public class LevelUtil {
                             && dropHandler.drop(serverLevel, pos, blockState, blockEntity, breaker);
                     if (!handled) Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
                 }
-                level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
-                if (spawnParticles) {
-                    level.levelEvent(2001, pos, Block.getId(blockState));
+                if (removeUnsupportedBlocksSilently) {
+                    removeBlockAndUnsupportedNeighbors(level, pos, blockState, air, breaker);
+                } else {
+                    level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                    if (spawnParticles) {
+                        level.levelEvent(2001, pos, Block.getId(blockState));
+                    }
                 }
             }
+        }
+    }
+
+    private static void removeBlockAndUnsupportedNeighbors(
+            Level level,
+            BlockPos pos,
+            BlockState state,
+            BlockState air,
+            @Nullable ServerPlayer breaker
+    ) {
+        var removedBlocks = new ArrayList<RemovedBlock>();
+        var pending = new ArrayDeque<BlockPos>();
+        var visited = new LongOpenHashSet();
+
+        // Suppress automatic shape propagation here. Otherwise an unsupported plant is routed
+        // through Block.updateOrDestroy -> Level.destroyBlock, which emits event 2001.
+        if (level.setBlock(pos, air, SILENT_BLOCK_UPDATE_FLAGS)) {
+            removedBlocks.add(new RemovedBlock(pos, state.getBlock()));
+            enqueueNeighbors(pos, pending, visited);
+        }
+
+        while (!pending.isEmpty()) {
+            var candidate = pending.removeFirst();
+            var candidateState = level.getBlockState(candidate);
+            if (candidateState.isAir() || candidateState.canSurvive(level, candidate)) continue;
+            if (!canAbilityBreak(level, candidate, candidateState, breaker)) continue;
+            if (!level.setBlock(candidate, air, SILENT_BLOCK_UPDATE_FLAGS)) continue;
+
+            removedBlocks.add(new RemovedBlock(candidate, candidateState.getBlock()));
+            enqueueNeighbors(candidate, pending, visited);
+        }
+
+        for (var removed : removedBlocks) {
+            level.updateNeighborsAt(removed.pos, removed.block);
+        }
+    }
+
+    private static void enqueueNeighbors(
+            BlockPos pos,
+            ArrayDeque<BlockPos> pending,
+            LongOpenHashSet visited
+    ) {
+        for (var direction : Direction.values()) {
+            var neighbor = pos.relative(direction);
+            if (visited.add(neighbor.asLong())) pending.addLast(neighbor);
         }
     }
 
@@ -416,9 +549,13 @@ public class LevelUtil {
     // Context object to avoid passing 10+ arguments meow
     private record BlockCollectionContext(
             Level level, Vec3 start, Vec3 end, float radius, int miningLevel, boolean canBlock,
+            boolean includeFluids,
             List<BlockPos> breakable, List<BlockPos> unbreakable,
             LongOpenHashSet visited, BlockPos.MutableBlockPos mutablePos
     ) {
+    }
+
+    private record RemovedBlock(BlockPos pos, Block block) {
     }
 
     @FunctionalInterface
