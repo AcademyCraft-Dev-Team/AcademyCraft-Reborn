@@ -82,10 +82,10 @@ class JsonGraphCodecTest {
         );
 
         var decoded = codec.decode(codec.encode(graph));
-        var back = decoded.parameters().get(0).defaultValue().asCurve();
+        var back = decoded.parameters().getFirst().defaultValue().asCurve();
         assertEquals(2, back.keyframes().size());
-        assertEquals(0f, back.keyframes().get(0).time());
-        assertEquals(2f, back.keyframes().get(0).inTangent());
+        assertEquals(0f, back.keyframes().getFirst().time());
+        assertEquals(2f, back.keyframes().getFirst().inTangent());
         assertEquals(3f, back.keyframes().get(0).outTangent());
         assertEquals(Curve.Interpolation.BEZIER,
                 back.keyframes().get(0).interpolation());
@@ -119,10 +119,10 @@ class JsonGraphCodecTest {
         json.add("outputs", new JsonArray());
 
         var decoded = new JsonGraphCodec(registry).decode(json);
-        var kfs = decoded.parameters().get(0).defaultValue().asCurve().keyframes();
+        var kfs = decoded.parameters().getFirst().defaultValue().asCurve().keyframes();
         assertEquals(1, kfs.size());
-        assertEquals(0f, kfs.get(0).inTangent());
-        assertEquals(Curve.Interpolation.LINEAR, kfs.get(0).interpolation());
+        assertEquals(0f, kfs.getFirst().inTangent());
+        assertEquals(Curve.Interpolation.LINEAR, kfs.getFirst().interpolation());
     }
 
     @Test

@@ -16,7 +16,6 @@ import net.minecraft.world.level.Level;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.jspecify.annotations.Nullable;
 
-import java.util.List;
 import java.util.function.Predicate;
 
 public final class DarkmatterCrossbowItem extends CrossbowItem implements DarkmatterShapedItem {

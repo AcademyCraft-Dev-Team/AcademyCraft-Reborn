@@ -110,7 +110,7 @@ public final class GlslGenerator {
 
         var color = new Expr("vec4(0.0)", ValueType.VEC4);
         if (!outputIds.isEmpty()) {
-            var outNode = byId.get(graph.outputs().get(0));
+            var outNode = byId.get(graph.outputs().getFirst());
             if (outNode != null) {
                 color = inputExpr(outNode, requirePort(outNode, OUTPUT_PORT), inputEdges, outputExprs);
                 color = GlslType.convert(color, ValueType.VEC4);

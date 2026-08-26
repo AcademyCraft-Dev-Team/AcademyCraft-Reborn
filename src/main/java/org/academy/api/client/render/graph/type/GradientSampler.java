@@ -15,9 +15,9 @@ public final class GradientSampler {
     public static Vector4f sample(Gradient gradient, float t) {
         var stops = gradient.stops();
         if (stops.isEmpty()) return new Vector4f(1f);
-        if (stops.size() == 1) return color(stops.get(0));
-        if (t <= stops.get(0).position()) return color(stops.get(0));
-        var last = stops.get(stops.size() - 1);
+        if (stops.size() == 1) return color(stops.getFirst());
+        if (t <= stops.getFirst().position()) return color(stops.getFirst());
+        var last = stops.getLast();
         if (t >= last.position()) return color(last);
         for (var i = 1; i < stops.size(); i++) {
             var b = stops.get(i);

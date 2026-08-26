@@ -81,9 +81,9 @@ class JsonVfxGraphCodecTest {
 
         assertEquals(system, decoded);
         // 端口由目录重建（与核心 GraphNode 同约定）
-        assertEquals(1, decoded.contexts().get(0).blocks().get(0).ports().size());
-        assertEquals("Rate", decoded.contexts().get(0).blocks().get(0).ports().get(0).name());
-        assertEquals(1, decoded.operators().get(0).ports().size());
+        assertEquals(1, decoded.contexts().getFirst().blocks().getFirst().ports().size());
+        assertEquals("Rate", decoded.contexts().getFirst().blocks().getFirst().ports().getFirst().name());
+        assertEquals(1, decoded.operators().getFirst().ports().size());
     }
 
     /**
@@ -112,11 +112,11 @@ class JsonVfxGraphCodecTest {
                 List.of());
 
         var decoded = codec.decode(codec.encode(system));
-        var back = decoded.parameters().get(0).defaultValue().asCurve();
+        var back = decoded.parameters().getFirst().defaultValue().asCurve();
         assertEquals(1, back.keyframes().size());
-        assertEquals(2f, back.keyframes().get(0).inTangent());
+        assertEquals(2f, back.keyframes().getFirst().inTangent());
         assertEquals(Curve.Interpolation.BEZIER,
-                back.keyframes().get(0).interpolation());
+                back.keyframes().getFirst().interpolation());
     }
 
     @Test

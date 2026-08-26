@@ -14,8 +14,6 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
-import java.util.Map;
-
 import static org.academy.internal.common.ability.electromaster.skills.lv4.Railgun.CHARGE_TIME;
 import static org.academy.internal.common.ability.electromaster.skills.lv4.Railgun.RELEASE_VISUAL_TICKS;
 

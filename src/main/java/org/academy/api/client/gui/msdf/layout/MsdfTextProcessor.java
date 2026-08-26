@@ -155,7 +155,7 @@ public final class MsdfTextProcessor {
             ));
         }
 
-        var lastLine = lines.get(lines.size() - 1);
+        var lastLine = lines.getLast();
         var blockHeight = rawBaselines[lines.size() - 1] + yShift + lastLine.maxDescender;
         if (maxY + yShift > blockHeight) blockHeight = maxY + yShift;
         if (blockHeight < 0) blockHeight = 0f;

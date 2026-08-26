@@ -104,7 +104,7 @@ public final class GraphEffect {
      * 主输出规格（首个，兼容单输出调用方）。
      */
     public RenderSpec spec() {
-        return specs.get(0);
+        return specs.getFirst();
     }
 
     /**

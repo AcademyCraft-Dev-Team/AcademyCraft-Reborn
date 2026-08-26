@@ -105,7 +105,7 @@ class GraphMaterialTest {
         ));
         var bindings = material.samplerBindings();
         assertEquals(1, bindings.size());
-        assertEquals("Sampler0", bindings.get(0).uniformName());
-        assertEquals("minecraft:textures/block/stone.png", bindings.get(0).identifier());
+        assertEquals("Sampler0", bindings.getFirst().uniformName());
+        assertEquals("minecraft:textures/block/stone.png", bindings.getFirst().identifier());
     }
 }

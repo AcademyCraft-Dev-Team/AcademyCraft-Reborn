@@ -648,7 +648,7 @@ public final class DarkmatterDisassemble extends Skill {
                     origin, limit,
                     neighborOrder.subList(0, Direction.values().length - 2), matches);
             if (surface.size() >= limit) return surface;
-            var result = new LinkedHashSet<BlockPos>(surface);
+            var result = new LinkedHashSet<>(surface);
             result.addAll(traverseConnected(origin, limit, neighborOrder, matches));
             return result.stream().limit(limit).toList();
         }
