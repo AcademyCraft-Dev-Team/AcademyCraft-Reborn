@@ -137,6 +137,21 @@ public final class ReflectionFilter extends Skill {
         return data;
     }
 
+    static boolean hasSameConfiguration(Data first, Data second) {
+        if (first == null || second == null) return first == second;
+        return first.getMode() == second.getMode()
+                && first.getWhitelist().equals(second.getWhitelist())
+                && first.getBlacklist().equals(second.getBlacklist())
+                && first.isForcedMovementProtectionEnabled()
+                == second.isForcedMovementProtectionEnabled();
+    }
+
+    static void reportEffectActivity(ServerPlayer player, boolean reflected) {
+        if (player == null) return;
+        var skill = Skills.REFLECTION_FILTER.get();
+        if (skill.isEnabled(player)) skill.reportActivity(player, reflected);
+    }
+
     private static List<String> normalizeEffectIds(List<String> input, List<String> excluded) {
         var result = new LinkedHashSet<String>();
         if (input != null) {
@@ -308,8 +323,10 @@ public final class ReflectionFilter extends Skill {
         @SubscribePacket
         public static void handleUpdate(UpdatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (!Skills.REFLECTION_FILTER.get().isEnabled(player)) return;
+            var skill = Skills.REFLECTION_FILTER.get();
+            if (!skill.isEnabled(player)) return;
             var data = getOrCreateData(player);
+            var previous = data.copy();
             data.mode = Mode.byName(packet.mode).name();
             data.whitelist = normalizeEffectIds(packet.whitelist, null);
             data.blacklist = normalizeEffectIds(packet.blacklist, null);
@@ -321,6 +338,7 @@ public final class ReflectionFilter extends Skill {
             if (Skills.VECTOR_REFLECTION.get().isEnabled(player)) {
                 VectorReflection.Server.purgeProtectedEffects(player);
             }
+            if (!hasSameConfiguration(previous, data)) skill.reportTrigger(player);
         }
 
         public static Data getOrCreateData(ServerPlayer player) {

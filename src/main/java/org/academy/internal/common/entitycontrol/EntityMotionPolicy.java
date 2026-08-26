@@ -17,4 +17,18 @@ final class EntityMotionPolicy {
         if (!forcedMovementProtection) return false;
         return hasExplicitSource ? !sourceIsTarget : !fallbackIsSelfSource;
     }
+
+    static boolean shouldBlockExternalManipulation(
+            boolean forcedMovementProtection,
+            boolean sourceIsTarget
+    ) {
+        return shouldBlock(
+                false,
+                false,
+                forcedMovementProtection,
+                true,
+                sourceIsTarget,
+                false
+        );
+    }
 }
