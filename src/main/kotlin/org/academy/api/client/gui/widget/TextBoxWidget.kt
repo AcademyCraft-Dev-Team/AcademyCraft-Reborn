@@ -31,6 +31,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     var allowLineBreak: Boolean = false
         protected set
     protected var whenEnter: Consumer<String>? = null
+    protected var onTextChanged: Consumer<String>? = null
     protected var onFocusLostCallback: Runnable? = null
     protected var clearWhenEnter: Boolean = true
     protected var inputValidator: Predicate<String>? = null
@@ -55,6 +56,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     private var mouseDragging = false
     private var dragStartPos = 0
     private var preeditText = ""
+    private var lastNotifiedText = ""
 
     /** Shown in gray when the box is empty and not focused. Not written back to the model. */
     var placeholder: String = ""
@@ -417,12 +419,17 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         if (preeditText.isEmpty() || !isFocused) {
             composedText = stringBuilder.toString()
             super.text = composedText
-            return
+        } else {
+            composedText = StringBuilder(stringBuilder)
+                .insert(getCodeUnitIndexForCodePoint(caretPos), preeditText)
+                .toString()
+            super.text = composedText
         }
-        composedText = StringBuilder(stringBuilder)
-            .insert(getCodeUnitIndexForCodePoint(caretPos), preeditText)
-            .toString()
-        super.text = composedText
+        val committedText = stringBuilder.toString()
+        if (committedText != lastNotifiedText) {
+            lastNotifiedText = committedText
+            onTextChanged?.accept(committedText)
+        }
     }
 
     private fun updatePreedit(event: PreeditEvent?): Boolean {
@@ -698,6 +705,12 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
 
     fun setWhenEnter(callback: Consumer<String>?): TextBoxWidget {
         whenEnter = callback
+        return this
+    }
+
+    /** Invoked after the committed text changes; IME preedit-only updates are ignored. */
+    fun setOnTextChanged(callback: Consumer<String>?): TextBoxWidget {
+        onTextChanged = callback
         return this
     }
 

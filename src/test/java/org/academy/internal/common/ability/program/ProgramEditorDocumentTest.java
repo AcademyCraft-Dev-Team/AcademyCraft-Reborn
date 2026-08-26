@@ -95,6 +95,22 @@ class ProgramEditorDocumentTest {
     }
 
     @Test
+    void translatesMultipleNodesWithoutChangingTheirRelativePositions() {
+        var document = emptyDocument();
+        document = document.addNode(CommonProgramNodeIds.BOOLEAN_CONSTANT, 2.0, 3.0).orElseThrow();
+        document = document.addNode(CommonProgramNodeIds.BOOLEAN_NOT, 80.0, -5.0).orElseThrow();
+        var programId = document.program().id();
+
+        document = document.translateNodes(Set.of(0, 1), 12.5, -8.0).orElseThrow();
+
+        assertEquals(programId, document.program().id());
+        assertEquals(new ProgramEditorLayout.NodePosition(14.5, -5.0),
+                document.program().editorLayout().nodePositions().get(0));
+        assertEquals(new ProgramEditorLayout.NodePosition(92.5, -13.0),
+                document.program().editorLayout().nodePositions().get(1));
+    }
+
+    @Test
     void rejectsTypeMismatchAndConnectionLimitWithoutDamagingTheDocument() {
         var document = emptyDocument();
         document = document.addNode(CommonProgramNodeIds.BOOLEAN_CONSTANT, 0, 0).orElseThrow();

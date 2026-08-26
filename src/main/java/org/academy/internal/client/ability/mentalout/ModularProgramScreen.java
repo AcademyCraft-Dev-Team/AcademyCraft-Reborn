@@ -3,8 +3,8 @@ package org.academy.internal.client.ability.mentalout;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -15,9 +15,13 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.environment.UiEnvironment;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.screen.UiScreen;
+import org.academy.api.client.gui.widget.AbstractWidget;
 import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
+import org.academy.api.client.gui.widget.LabelWidget;
+import org.academy.api.client.gui.widget.TextBoxWidget;
 import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramDiagnostic;
@@ -66,7 +70,6 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private static final int MIN_NODE_H = 26;
     private static final double MIN_ZOOM = 0.5;
     private static final double MAX_ZOOM = 1.6;
-    private static final float SMALL_TEXT_SCALE = 0.75f;
     private static final int PANEL_BACKGROUND = 0x10000000;
     private static final int SECTION_BACKGROUND = 0x14000000;
     private static final int CANVAS_BACKGROUND = 0x28000000;
@@ -89,6 +92,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private static final int DEFAULT_ACCENT = 0xFF1177D6;
     private static final int TEXT = 0xFFFFFFFF;
     private static final int DIM = 0xBFFFFFFF;
+    private static final int NODE_SECONDARY_TEXT = 0xE6FFFFFF;
     private static final int DISABLED = 0x33FFFFFF;
     private static final int ERROR = 0xFFFF5A66;
     private static final int ERROR_BACKGROUND = 0xB030090D;
@@ -135,8 +139,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private boolean compactRight;
     private boolean leftDrawerOpen;
     private boolean rightDrawerOpen;
-    private EditBox search;
-    private final Map<String, EditBox> configurationInputs = new HashMap<>();
+    private TextBoxWidget search;
+    private final Map<String, TextBoxWidget> configurationInputs = new HashMap<>();
     private final Map<String, Boolean> configurationInputValidity = new HashMap<>();
     private int configurationNode = -1;
     private boolean updatingConfigurationInput;
@@ -166,6 +170,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private Widget inspectorLayout;
     private FrameLayoutWidget serializedLayout;
     private String serializedLayoutId;
+    private EditorSurface editorSurface;
+    private FrameLayoutWidget inputLayer;
+    private TooltipSurface tooltipSurface;
 
     public ModularProgramScreen(ModularProgramEditorSession session) {
         super(session.title());
@@ -214,13 +221,35 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         canvasLayout = SerializedUiLayout.INSTANCE.require(serializedLayout, "canvas");
         inspectorLayout = SerializedUiLayout.INSTANCE.require(serializedLayout, "inspector");
 
-        search = new EditBox(font, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y,
-                paletteWidth() - 8, 15, Component.empty());
-        search.setHint(Component.translatable("screen.academy.precision_operation.search"));
-        search.setMaxLength(64);
-        search.setBordered(false);
-        search.setTextColor(TEXT);
-        search.visible = paletteVisible();
+        editorSurface = new EditorSurface();
+        editorSurface.setCoverAllPrev(true);
+        editorSurface.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT));
+        getRoot().addChild("editor_surface", editorSurface);
+
+        inputLayer = new FrameLayoutWidget();
+        inputLayer.setCoverAllPrev(true);
+        inputLayer.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT));
+        getRoot().addChild("input_layer", inputLayer);
+
+        search = new TextBoxWidget(64);
+        search.setBaseFontSize(ProgramUiGraphics.BODY_FONT_SIZE);
+        search.setPlaceholder(Component.translatable(
+                "screen.academy.precision_operation.search").getString());
+        search.setBackground(null);
+        search.setCoverAllPrev(true);
+        setTextColor(search, TEXT);
+        setTextBoxBounds(search, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y,
+                paletteWidth() - 8, 15);
+        search.setVisibility(paletteVisible() ? Widget.Visibility.VISIBLE : Widget.Visibility.GONE);
+        inputLayer.addChild("search_input", search);
+
+        tooltipSurface = new TooltipSurface();
+        tooltipSurface.setCoverAllPrev(true);
+        tooltipSurface.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT));
+        getRoot().addChild("tooltip_surface", tooltipSurface);
 
         clearConfigurationInputs();
         if (initialView) {
@@ -341,28 +370,48 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             int mouseY,
             float partialTick
     ) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         syncSerializedLayout();
-        renderStructure(graphics);
-        renderTopBar(graphics, mouseX, mouseY);
-        renderCanvas(graphics, mouseX, mouseY);
-        renderDrawers(graphics);
-        renderRails(graphics, mouseX, mouseY);
-        if (paletteVisible()) renderPalette(graphics, mouseX, mouseY);
-        if (search.visible) search.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        if (inspectorVisible()) renderInspector(graphics, mouseX, mouseY);
         syncConfigurationInputs();
-        for (var input : configurationInputs.values()) {
-            if (!input.visible) continue;
-            renderInput(graphics, input.getX(), input.getY(),
-                    input.getWidth(), 15, input.isFocused());
-            input.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        }
-        renderStatus(graphics);
-        renderQuickInsert(graphics, mouseX, mouseY);
+        if (editorSurface != null) editorSurface.invalidate();
+        if (tooltipSurface != null) tooltipSurface.invalidate();
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void renderStructure(GuiGraphicsExtractor graphics) {
+    private final class EditorSurface extends AbstractWidget {
+        @Override
+        protected void renderInternal(RenderContext context) {
+            super.renderInternal(context);
+            syncSerializedLayout();
+            var minecraft = Minecraft.getInstance();
+            var window = minecraft.getWindow();
+            var mouseX = (int) Math.round(minecraft.mouseHandler.getScaledXPos(window));
+            var mouseY = (int) Math.round(minecraft.mouseHandler.getScaledYPos(window));
+            var graphics = new ProgramUiGraphics(context);
+            renderStructure(graphics);
+            renderTopBar(graphics, mouseX, mouseY);
+            renderCanvas(graphics, mouseX, mouseY);
+            renderDrawers(graphics);
+            renderRails(graphics, mouseX, mouseY);
+            if (paletteVisible()) renderPalette(graphics, mouseX, mouseY);
+            if (inspectorVisible()) renderInspector(graphics, mouseX, mouseY);
+            renderStatus(graphics);
+            renderQuickInsert(graphics, mouseX, mouseY);
+        }
+    }
+
+    private final class TooltipSurface extends AbstractWidget {
+        @Override
+        protected void renderInternal(RenderContext context) {
+            super.renderInternal(context);
+            var minecraft = Minecraft.getInstance();
+            var window = minecraft.getWindow();
+            var mouseX = (int) Math.round(minecraft.mouseHandler.getScaledXPos(window));
+            var mouseY = (int) Math.round(minecraft.mouseHandler.getScaledYPos(window));
+            renderTooltip(new ProgramUiGraphics(context), mouseX, mouseY);
+        }
+    }
+
+    private void renderStructure(ProgramUiGraphics graphics) {
         graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL_BACKGROUND);
         renderInstrumentFrame(graphics, panelX, panelY, panelW, panelH);
         graphics.fill(panelX + 7, panelY + TOP_H, panelX + panelW - 7, panelY + TOP_H + 1, DIVIDER);
@@ -373,7 +422,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (!compactRight) renderSection(graphics, inspectorX(), canvasY, inspectorWidth(), canvasH);
     }
 
-    private void renderDrawers(GuiGraphicsExtractor graphics) {
+    private void renderDrawers(ProgramUiGraphics graphics) {
         if (compactLeft && leftDrawerOpen) {
             renderSection(graphics, paletteX(), canvasY, paletteWidth(), canvasH);
         }
@@ -382,10 +431,10 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
     }
 
-    private void renderTopBar(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderTopBar(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         var x = panelX + 4;
         if (panelW >= 620) {
-            smallText(graphics, title.getString(), panelX + 12, panelY + 6, TEXT, 84);
+            headingText(graphics, title.getString(), panelX + 12, panelY + 5, TEXT, 84);
             x += 96;
         }
         var slotWidth = slotTabWidth(x);
@@ -399,15 +448,11 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         for (var index = 0; index < TOOL_LABELS.length; index++) {
             var disabled = index == 9 && (!document.validation().valid() || !configurationInputsValid());
             iconButton(graphics, toolsX, panelY + 3, TOOL_GLYPHS[index], mouseX, mouseY, disabled);
-            if (inside(mouseX, mouseY, toolsX, panelY + 3, TOOL_SIZE, TOOL_SIZE)) {
-                graphics.setTooltipForNextFrame(Component.translatable(
-                        "screen.academy.precision_operation." + TOOL_LABELS[index]), mouseX, mouseY);
-            }
             toolsX += TOOL_SIZE + 2;
         }
     }
 
-    private void renderRails(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderRails(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         if (compactLeft) {
             button(graphics, leftX + 1, canvasY + 2, 16, 16, Component.literal("N"),
                     mouseX, mouseY, leftDrawerOpen, false);
@@ -418,11 +463,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
     }
 
-    private void renderPalette(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderPalette(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         var x = paletteX();
         var width = paletteWidth();
-        smallText(graphics, Component.translatable("screen.academy.precision_operation.nodes").getString(),
-                x + 4, canvasY + 4, DIM, width - 8);
+        headingText(graphics, Component.translatable(
+                        "screen.academy.precision_operation.nodes").getString(),
+                x + 4, canvasY + 3, DIM, width - 8);
         var groups = ProgramEditorNodeCatalog.Group.values();
         var tabY = canvasY + PALETTE_TAB_OFFSET_Y;
         var tabW = Math.max(11, (width - 8) / groups.length);
@@ -431,11 +477,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             button(graphics, x + 4 + index * tabW, tabY, tabW - 1, 12,
                     Component.literal(groupGlyph(group)), mouseX, mouseY,
                     group == selectedGroup, false);
-            if (inside(mouseX, mouseY, x + 4 + index * tabW, tabY, tabW - 1, 12)) {
-                graphics.setTooltipForNextFrame(Component.translatable(groupKey(group)), mouseX, mouseY);
-            }
         }
-        renderInput(graphics, search.getX(), search.getY(), search.getWidth(), 15, search.isFocused());
+        renderInput(graphics, Math.round(search.getX()), Math.round(search.getY()),
+                Math.round(search.getWidth()), 15, search.isFocused());
         var entries = visibleEntries();
         var listY = canvasY + PALETTE_LIST_OFFSET_Y;
         var listBottom = canvasY + canvasH - 3;
@@ -458,10 +502,6 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 smallText(graphics, categoryGlyph(entry), x + width - 13, y + 3,
                         accentColor, 8);
             }
-            if (hover) {
-                graphics.setComponentTooltipForNextFrame(
-                        font, nodeTooltip(entry), mouseX, mouseY);
-            }
         }
         if (entries.size() > visibleRows) {
             var trackH = listBottom - listY;
@@ -473,25 +513,24 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
     }
 
-    private void renderCanvas(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderCanvas(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         graphics.enableScissor(canvasX, canvasY, canvasX + canvasW, canvasY + canvasH);
         renderCanvasGrid(graphics);
         var pose = graphics.pose();
-        pose.pushMatrix();
+        pose.pushPose();
         pose.translate((float) (canvasX + panX), (float) (canvasY + panY));
         pose.scale((float) zoom, (float) zoom);
         for (var edge : document.program().graph().edges()) renderEdge(graphics, edge);
-        for (var node : nodes()) renderNode(graphics, node, mouseX, mouseY);
-        pose.popMatrix();
+        for (var node : nodes()) renderNode(graphics, node);
+        pose.popPose();
         renderSelectionDrag(graphics);
         renderConnectionPreview(graphics, mouseX, mouseY);
-        renderPortTooltip(graphics, mouseX, mouseY);
         graphics.disableScissor();
         smallText(graphics, Math.round(zoom * 100.0) + "%",
                 canvasX + 3, canvasY + canvasH - 10, DIM, 40);
     }
 
-    private void renderEdge(GuiGraphicsExtractor graphics, ProgramGraph.Edge edge) {
+    private void renderEdge(ProgramUiGraphics graphics, ProgramGraph.Edge edge) {
         var from = node(edge.from().nodeId());
         var to = node(edge.to().nodeId());
         if (from == null || to == null) return;
@@ -507,7 +546,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 portColor(type));
     }
 
-    private void renderNode(GuiGraphicsExtractor graphics, NodeView node, int mouseX, int mouseY) {
+    private void renderNode(ProgramUiGraphics graphics, NodeView node) {
         var x = (int) Math.round(node.x);
         var y = (int) Math.round(node.y);
         var height = nodeHeight(node);
@@ -540,7 +579,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             smallText(graphics,
                     configurationFieldLabel(field).getString() + ": "
                             + configurationDisplayValue(node, field, value).getString(),
-                    x + 4, configurationY, DIM, NODE_W - 8);
+                    x + 4, configurationY, NODE_SECONDARY_TEXT, NODE_W - 8);
             configurationY += NODE_CONFIGURATION_ROW_H;
         }
         for (var index = 0; index < node.schema.inputs().size(); index++) {
@@ -557,13 +596,6 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             renderPort(graphics, x + NODE_W, y + portOffsetY(node, index), color,
                     port.type().equals(ProgramValueTypes.FLOW) && !endpointConnected(endpoint));
         }
-        if (insideNode(mouseX, mouseY, node)) {
-            var lines = nodeTooltip(node.entry);
-            if (hasError) lines.add(localError == null
-                    ? Component.translatable(serverDiagnostic.translationKey()).withColor(ERROR)
-                    : localDiagnostic(node, localError));
-            graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
-        }
     }
 
     private Component localDiagnostic(NodeView node, ProgramDiagnostic diagnostic) {
@@ -578,7 +610,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static void renderPort(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int centerX,
             int centerY,
             int color,
@@ -588,7 +620,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (openEnd) graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2, 0xFF111111);
     }
 
-    private void renderSelectionDrag(GuiGraphicsExtractor graphics) {
+    private void renderSelectionDrag(ProgramUiGraphics graphics) {
         if (selectionDrag == null) return;
         var bounds = selectionDrag.bounds();
         if (!bounds.exceeds(SELECTION_DRAG_THRESHOLD)) return;
@@ -601,7 +633,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 Math.max(1, right - left), Math.max(1, bottom - top), accentColor);
     }
 
-    private void renderConnectionPreview(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderConnectionPreview(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         if (connection == null) return;
         var anchor = endpointScreen(connection.endpoint);
         var target = snappedEndpoint(mouseX, mouseY, connection.endpoint);
@@ -611,24 +643,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         orthogonalLine(graphics, anchor.x, anchor.y, end.x, end.y, color);
     }
 
-    private void renderPortTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        var endpoint = endpointAt(mouseX, mouseY);
-        if (endpoint == null) return;
-        var type = endpoint.type.id().getPath().replace("program_type/", "");
-        var owner = node(endpoint.nodeId);
-        var label = owner == null
-                ? Component.literal(endpoint.port)
-                : portLabel(owner.entry, endpoint.port);
-        graphics.setComponentTooltipForNextFrame(font, List.of(
-                Component.empty().append(endpoint.input ? "< " : "> ").append(label),
-                Component.literal(type).withColor(DIM)), mouseX, mouseY);
-    }
-
-    private void renderInspector(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderInspector(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         var x = inspectorX();
         var width = inspectorWidth();
-        smallText(graphics, Component.translatable("screen.academy.precision_operation.inspector").getString(),
-                x + 5, canvasY + 5, DIM, width - 10);
+        headingText(graphics, Component.translatable(
+                        "screen.academy.precision_operation.inspector").getString(),
+                x + 5, canvasY + 4, DIM, width - 10);
         var selected = node(selectedNode);
         if (selected == null) {
             var status = selectedNodes.size() > 1
@@ -640,7 +660,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                     x + 5, canvasY + 22, DIM, width - 10);
             return;
         }
-        smallText(graphics, nodeLabel(selected.entry).getString(), x + 5, canvasY + 22, TEXT, width - 10);
+        headingText(graphics, nodeLabel(selected.entry).getString(),
+                x + 5, canvasY + 21, TEXT, width - 10);
         if (selected.entry.categoryRestricted()) {
             smallText(graphics, categoryScopeLabel(selected.entry).getString(),
                     x + 5, canvasY + 33, accentColor, width - 10);
@@ -651,8 +672,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var configY = canvasY + inspectorConfigurationOffset(selected.entry, descriptionHeight);
         renderConfigurationEditor(graphics, selected, x + 5, configY, width - 10, mouseX, mouseY);
         var portsY = configY + configurationEditorHeight(selected);
-        smallText(graphics, Component.translatable("screen.academy.precision_operation.ports").getString(),
-                x + 5, portsY, DIM, width - 10);
+        headingText(graphics, Component.translatable(
+                        "screen.academy.precision_operation.ports").getString(),
+                x + 5, portsY - 1, DIM, width - 10);
         var y = portsY + 11;
         for (var port : selected.schema.inputs()) {
             smallText(graphics, "< " + portLabel(selected.entry, port.name()).getString(),
@@ -667,7 +689,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private void renderConfigurationEditor(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             NodeView node,
             int x,
             int y,
@@ -723,11 +745,15 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 var selected = ProgramConfigurationOptions.selected(options, currentValue);
                 smallText(graphics, selected.label().getString(), x + TOOL_SIZE + 5, valueY + 4,
                         TEXT, width - TOOL_SIZE * 2 - 10);
+            } else {
+                var input = configurationInputs.get(field);
+                renderInput(graphics, x, rowY + 11, width, 15,
+                        input != null && input.isFocused());
             }
         }
     }
 
-    private void renderStatus(GuiGraphicsExtractor graphics) {
+    private void renderStatus(ProgramUiGraphics graphics) {
         var local = firstDiagnostic();
         var shown = System.currentTimeMillis() < transientUntil ? transientDiagnostic
                 : serverDiagnostic != PrecisionGraph.Diagnostic.OK ? serverDiagnostic
@@ -740,7 +766,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 shown == PrecisionGraph.Diagnostic.OK ? DIM : ERROR, panelW - 8);
     }
 
-    private void renderQuickInsert(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderQuickInsert(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         if (quickInsert == null) return;
         var rows = Math.min(12, quickInsert.entries.size());
         var width = 122;
@@ -759,25 +785,136 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
     }
 
+    private void renderTooltip(ProgramUiGraphics graphics, int mouseX, int mouseY) {
+        var tooltip = hoveredTooltip(mouseX, mouseY);
+        if (tooltip.isEmpty()) return;
+        var expanded = new ArrayList<TooltipLine>();
+        var contentWidth = 0.0f;
+        for (var line : tooltip) {
+            for (var wrapped : ProgramUiGraphics.wrap(
+                    line.text(), 176, ProgramUiGraphics.BODY_FONT_SIZE)) {
+                expanded.add(new TooltipLine(wrapped, line.color()));
+                contentWidth = Math.max(contentWidth,
+                        LabelWidget.Companion.getTextWidth(
+                                wrapped, ProgramUiGraphics.BODY_FONT_SIZE));
+            }
+        }
+        var tooltipWidth = Math.max(32, Math.round(contentWidth) + 10);
+        var tooltipHeight = expanded.size() * 9 + 8;
+        var x = mouseX + 10;
+        var y = mouseY + 8;
+        if (x + tooltipWidth > width - 4) x = mouseX - tooltipWidth - 10;
+        if (y + tooltipHeight > height - 4) y = mouseY - tooltipHeight - 8;
+        x = Math.clamp(x, 4, Math.max(4, width - tooltipWidth - 4));
+        y = Math.clamp(y, 4, Math.max(4, height - tooltipHeight - 4));
+        graphics.fill(x, y, x + tooltipWidth, y + tooltipHeight, POPUP_BACKGROUND);
+        border(graphics, x, y, tooltipWidth, tooltipHeight, BORDER);
+        graphics.fill(x + 1, y + 1, x + 3, y + tooltipHeight - 1, accentColor);
+        for (var index = 0; index < expanded.size(); index++) {
+            var line = expanded.get(index);
+            graphics.text(line.text(), x + 6, y + 4 + index * 9,
+                    line.color(), ProgramUiGraphics.BODY_FONT_SIZE, tooltipWidth - 10);
+        }
+    }
+
+    private List<TooltipLine> hoveredTooltip(int mouseX, int mouseY) {
+        var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
+        for (var index = 0; index < TOOL_LABELS.length; index++) {
+            if (inside(mouseX, mouseY, toolsX, panelY + 3, TOOL_SIZE, TOOL_SIZE)) {
+                return List.of(new TooltipLine(Component.translatable(
+                        "screen.academy.precision_operation." + TOOL_LABELS[index]).getString(), TEXT));
+            }
+            toolsX += TOOL_SIZE + 2;
+        }
+        if (compactLeft && inside(mouseX, mouseY, leftX + 1, canvasY + 2, 16, 16)) {
+            return List.of(new TooltipLine(Component.translatable(
+                    "screen.academy.precision_operation.nodes").getString(), TEXT));
+        }
+        if (compactRight && inside(mouseX, mouseY, rightX + 1, canvasY + 2, 16, 16)) {
+            return List.of(new TooltipLine(Component.translatable(
+                    "screen.academy.precision_operation.inspector").getString(), TEXT));
+        }
+        if (paletteVisible()) {
+            var x = paletteX();
+            var paletteWidth = paletteWidth();
+            var groups = ProgramEditorNodeCatalog.Group.values();
+            var tabY = canvasY + PALETTE_TAB_OFFSET_Y;
+            var tabW = Math.max(11, (paletteWidth - 8) / groups.length);
+            for (var index = 0; index < groups.length; index++) {
+                if (inside(mouseX, mouseY, x + 4 + index * tabW, tabY, tabW - 1, 12)) {
+                    return List.of(new TooltipLine(
+                            Component.translatable(groupKey(groups[index])).getString(), TEXT));
+                }
+            }
+            var entries = visibleEntries();
+            var listY = canvasY + PALETTE_LIST_OFFSET_Y;
+            var listBottom = canvasY + canvasH - 3;
+            var visibleRows = Math.max(1, (listBottom - listY) / ROW_H);
+            for (var row = 0; row < visibleRows && paletteScroll + row < entries.size(); row++) {
+                if (!inside(mouseX, mouseY, x + 3, listY + row * ROW_H,
+                        paletteWidth - 6, ROW_H - 1)) continue;
+                return tooltipLines(entries.get(paletteScroll + row), null);
+            }
+        }
+        if (!inside(mouseX, mouseY, canvasX, canvasY, canvasW, canvasH)) return List.of();
+        var endpoint = endpointAt(mouseX, mouseY);
+        if (endpoint != null) {
+            var owner = node(endpoint.nodeId);
+            var label = owner == null
+                    ? Component.literal(endpoint.port)
+                    : portLabel(owner.entry, endpoint.port);
+            var type = endpoint.type.id().getPath().replace("program_type/", "");
+            return List.of(
+                    new TooltipLine((endpoint.input ? "< " : "> ") + label.getString(), TEXT),
+                    new TooltipLine(type, DIM)
+            );
+        }
+        var localError = firstDiagnostic();
+        var errorNode = serverDiagnostic != PrecisionGraph.Diagnostic.OK
+                ? serverDiagnosticNode : localError == null ? -1 : localError.nodeId();
+        for (var node : reversed(nodes())) {
+            if (!insideNode(mouseX, mouseY, node)) continue;
+            var error = node.id() != errorNode ? null : localError == null
+                    ? Component.translatable(serverDiagnostic.translationKey()).getString()
+                    : localDiagnostic(node, localError).getString();
+            return tooltipLines(node.entry, error);
+        }
+        return List.of();
+    }
+
+    private List<TooltipLine> tooltipLines(
+            ProgramEditorNodeCatalog.Entry entry,
+            String error
+    ) {
+        var lines = new ArrayList<TooltipLine>();
+        lines.add(new TooltipLine(nodeLabel(entry).getString(), TEXT));
+        if (entry.categoryRestricted()) {
+            lines.add(new TooltipLine(categoryScopeLabel(entry).getString(), accentColor));
+        }
+        lines.add(new TooltipLine(nodeDescription(entry).getString(), DIM));
+        if (error != null) lines.add(new TooltipLine(error, ERROR));
+        return List.copyOf(lines);
+    }
+
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         syncSerializedLayout();
         var x = event.x();
         var y = event.y();
         if (event.button() == 0) {
-            if (search != null && search.visible
+            if (search != null && search.isVisible()
                     && inside(x, y, search.getX(), search.getY(), search.getWidth(), 15)) {
                 unfocusConfigurationInputs();
-                search.setFocused(true);
-                search.mouseClicked(event, doubleClick);
+                getRoot().dispatchEvent(org.academy.api.client.gui.event.MouseEvent.Companion.createPressEvent(
+                        event.x(), event.y(), event.button()));
                 return true;
             }
             var configurationInput = configurationInputAt(x, y);
             if (configurationInput != null) {
                 search.setFocused(false);
                 unfocusConfigurationInputs();
-                configurationInput.setFocused(true);
-                configurationInput.mouseClicked(event, doubleClick);
+                getRoot().dispatchEvent(org.academy.api.client.gui.event.MouseEvent.Companion.createPressEvent(
+                        event.x(), event.y(), event.button()));
                 return true;
             }
             search.setFocused(false);
@@ -815,12 +952,10 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             return true;
         }
         if (draggingNode != null) {
-            var selected = node(draggingNode);
-            if (selected != null) {
-                var result = document.moveNode(selected.id(),
-                        selected.x + dragX / zoom, selected.y + dragY / zoom);
-                if (result.successful()) install(result.document(), false);
-            }
+            var nodesToMove = selectedNodes.contains(draggingNode)
+                    ? Set.copyOf(selectedNodes) : Set.of(draggingNode);
+            var result = document.translateNodes(nodesToMove, dragX / zoom, dragY / zoom);
+            if (result.successful()) install(result.document(), false);
             return true;
         }
         if (panning) {
@@ -875,12 +1010,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (search != null && search.isFocused()) {
-            search.keyPressed(event);
+            dispatchTextInputKey(event);
             return true;
         }
         var configurationInput = focusedConfigurationInput();
         if (configurationInput != null) {
-            configurationInput.keyPressed(event);
+            dispatchTextInputKey(event);
             return true;
         }
         if (event.key() == InputConstants.KEY_SPACE) {
@@ -932,15 +1067,23 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     @Override
     public boolean charTyped(CharacterEvent event) {
         if (search != null && search.isFocused()) {
-            search.charTyped(event);
+            getRoot().dispatchEvent(new org.academy.api.client.gui.event.CharTypedEvent(
+                    event.codepoint()));
             return true;
         }
         var configurationInput = focusedConfigurationInput();
         if (configurationInput != null) {
-            configurationInput.charTyped(event);
+            getRoot().dispatchEvent(new org.academy.api.client.gui.event.CharTypedEvent(
+                    event.codepoint()));
             return true;
         }
         return super.charTyped(event);
+    }
+
+    private void dispatchTextInputKey(KeyEvent event) {
+        getRoot().dispatchEvent(new org.academy.api.client.gui.event.KeyEvent(
+                org.academy.api.client.gui.event.EventType.KEY_PRESSED,
+                event.key(), event.scancode(), event.modifiers()));
     }
 
     @Override
@@ -1068,8 +1211,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var fields = configurationFields(selected);
         if (fields.isEmpty()) return false;
         var width = inspectorWidth() - 10;
-        var descriptionHeight = (int) Math.ceil(font.wordWrapHeight(
-                nodeDescription(selected.entry), (int) (width / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
+        var descriptionHeight = ProgramUiGraphics.wrappedHeight(
+                nodeDescription(selected.entry).getString(), width,
+                ProgramUiGraphics.BODY_FONT_SIZE, 9.0f);
         var y = canvasY + inspectorConfigurationOffset(selected.entry, descriptionHeight);
         var x = inspectorX() + 5;
         for (var index = 0; index < fields.size(); index++) {
@@ -1183,7 +1327,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
         for (var node : reversed(nodes())) {
             if (insideHeader(mouseX, mouseY, node)) {
-                selectNode(node.id());
+                if (!selectedNodes.contains(node.id())) selectNode(node.id());
                 pushUndo();
                 draggingNode = node.id();
                 return true;
@@ -1593,7 +1737,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private List<ProgramEditorNodeCatalog.Entry> visibleEntries() {
-        var query = search == null ? "" : search.getValue().strip().toLowerCase(Locale.ROOT);
+        var query = search == null ? "" : search.getText().strip().toLowerCase(Locale.ROOT);
         var hasEntry = nodes().stream().anyMatch(node ->
                 node.entry.type().role() == ProgramNodeRole.ENTRY);
         return catalog.entries().stream()
@@ -1809,11 +1953,39 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private void updateSearchBounds() {
         if (search == null) return;
-        search.visible = paletteVisible();
-        if (!search.visible) search.setFocused(false);
-        search.setX(paletteX() + 4);
-        search.setY(canvasY + PALETTE_SEARCH_OFFSET_Y);
-        search.setWidth(paletteWidth() - 8);
+        search.setVisibility(paletteVisible() ? Widget.Visibility.VISIBLE : Widget.Visibility.GONE);
+        if (!search.isVisible()) search.setFocused(false);
+        setTextBoxBounds(search, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y,
+                paletteWidth() - 8, 15);
+    }
+
+    private static void setTextBoxBounds(
+            TextBoxWidget input,
+            int x,
+            int y,
+            int width,
+            int height
+    ) {
+        if (Math.round(input.getAbsoluteX()) == x
+                && Math.round(input.getAbsoluteY()) == y
+                && Math.round(input.getWidth()) == width
+                && Math.round(input.getHeight()) == height) return;
+        input.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .size(width, height)
+                .gravity(Gravity.TOP_LEFT)
+                .margin(x, y, 0, 0)
+                .padding(4, 3, 2, 2));
+    }
+
+    private static void setTextColor(LabelWidget label, int color) {
+        label.setRed((color >>> 16 & 0xFF) / 255.0f);
+        label.setGreen((color >>> 8 & 0xFF) / 255.0f);
+        label.setBlue((color & 0xFF) / 255.0f);
+        label.setAlpha((color >>> 24 & 0xFF) / 255.0f);
+    }
+
+    private static String configurationInputName(String field) {
+        return "configuration_input_" + field;
     }
 
     private void syncConfigurationInputs() {
@@ -1829,8 +2001,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             configurationNode = selected.id();
         }
         var width = inspectorWidth() - 10;
-        var descriptionHeight = (int) Math.ceil(font.wordWrapHeight(
-                nodeDescription(selected.entry), (int) (width / SMALL_TEXT_SCALE)) * SMALL_TEXT_SCALE);
+        var descriptionHeight = ProgramUiGraphics.wrappedHeight(
+                nodeDescription(selected.entry).getString(), width,
+                ProgramUiGraphics.BODY_FONT_SIZE, 9.0f);
         var configurationY = canvasY + inspectorConfigurationOffset(selected.entry, descriptionHeight);
         for (var index = 0; index < fields.size(); index++) {
             var field = fields.get(index);
@@ -1839,33 +2012,42 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             if (ProgramConfigurationOptions.isPowerSlider(field, currentValue)
                     || !options.isEmpty()) {
                 var removed = configurationInputs.remove(field);
-                if (removed != null) removed.setFocused(false);
+                if (removed != null) {
+                    removed.setFocused(false);
+                    inputLayer.removeChild(configurationInputName(field));
+                }
                 configurationInputValidity.remove(field);
                 continue;
             }
             var input = configurationInputs.computeIfAbsent(field, ignored -> createConfigurationInput(field));
-            input.visible = true;
-            input.setX(inspectorX() + 5);
-            input.setY(configurationY + index * CONFIGURATION_ROW_H + 11);
-            input.setWidth(width);
+            input.setVisibility(Widget.Visibility.VISIBLE);
+            setTextBoxBounds(input, inspectorX() + 5,
+                    configurationY + index * CONFIGURATION_ROW_H + 11, width, 15);
             var expected = currentValue.getAsString();
-            if (!input.isFocused() && !input.getValue().equals(expected)) {
+            if (!input.isFocused() && !input.getText().equals(expected)) {
                 updatingConfigurationInput = true;
-                input.setValue(expected);
+                input.setText(expected);
                 updatingConfigurationInput = false;
                 configurationInputValidity.put(field, true);
-                input.setTextColor(TEXT);
+                setTextColor(input, TEXT);
             }
         }
-        configurationInputs.keySet().removeIf(field -> !fields.contains(field));
+        for (var field : List.copyOf(configurationInputs.keySet())) {
+            if (fields.contains(field)) continue;
+            configurationInputs.remove(field).setFocused(false);
+            inputLayer.removeChild(configurationInputName(field));
+            configurationInputValidity.remove(field);
+        }
     }
 
-    private EditBox createConfigurationInput(String field) {
-        var input = new EditBox(font, 0, 0, 80, 15, Component.empty());
-        input.setMaxLength(field.equals("selectors") ? 512 : 128);
-        input.setBordered(false);
-        input.setTextColor(TEXT);
-        input.setResponder(value -> configurationInputChanged(field, value));
+    private TextBoxWidget createConfigurationInput(String field) {
+        var input = new TextBoxWidget(field.equals("selectors") ? 512 : 128);
+        input.setBaseFontSize(ProgramUiGraphics.BODY_FONT_SIZE);
+        input.setBackground(null);
+        input.setCoverAllPrev(true);
+        setTextColor(input, TEXT);
+        input.setOnTextChanged(value -> configurationInputChanged(field, value));
+        inputLayer.addChild(configurationInputName(field), input);
         configurationInputValidity.put(field, true);
         return input;
     }
@@ -1894,30 +2076,31 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             }
         } catch (RuntimeException exception) {
             configurationInputValidity.put(field, false);
-            input.setTextColor(ERROR);
+            setTextColor(input, ERROR);
             return;
         }
         object.add(field, replacement);
         var result = document.configureNode(selected.id(), object);
         configurationInputValidity.put(field, result.successful());
-        input.setTextColor(result.successful() ? TEXT : ERROR);
+        setTextColor(input, result.successful() ? TEXT : ERROR);
         if (!result.successful()) return;
         pushUndo();
         install(result.document(), true);
     }
 
-    private EditBox configurationInputAt(double x, double y) {
+    private TextBoxWidget configurationInputAt(double x, double y) {
         for (var input : configurationInputs.values()) {
-            if (input.visible && inside(x, y, input.getX(), input.getY(), input.getWidth(), 15)) {
+            if (input.isVisible() && inside(x, y,
+                    input.getX(), input.getY(), input.getWidth(), input.getHeight())) {
                 return input;
             }
         }
         return null;
     }
 
-    private EditBox focusedConfigurationInput() {
+    private TextBoxWidget focusedConfigurationInput() {
         return configurationInputs.values().stream()
-                .filter(EditBox::isFocused)
+                .filter(TextBoxWidget::isFocused)
                 .findFirst()
                 .orElse(null);
     }
@@ -1928,6 +2111,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private void clearConfigurationInputs() {
         unfocusConfigurationInputs();
+        for (var field : List.copyOf(configurationInputs.keySet())) {
+            inputLayer.removeChild(configurationInputName(field));
+        }
         configurationInputs.clear();
         configurationInputValidity.clear();
         configurationNode = -1;
@@ -2052,16 +2238,6 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         return Component.translatable(entry.descriptionTranslationKey());
     }
 
-    private ArrayList<Component> nodeTooltip(ProgramEditorNodeCatalog.Entry entry) {
-        var lines = new ArrayList<Component>();
-        lines.add(nodeLabel(entry));
-        if (entry.categoryRestricted()) {
-            lines.add(categoryScopeLabel(entry).copy().withColor(accentColor));
-        }
-        lines.add(nodeDescription(entry).copy().withColor(DIM));
-        return lines;
-    }
-
     private static Component categoryScopeLabel(ProgramEditorNodeCatalog.Entry entry) {
         var category = entry.exclusiveCategory().orElse(null);
         if (category == null) {
@@ -2164,7 +2340,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         };
     }
 
-    private void renderCanvasGrid(GuiGraphicsExtractor graphics) {
+    private void renderCanvasGrid(ProgramUiGraphics graphics) {
         var firstColumn = (int) Math.floor(screenToGraphX(canvasX) / 16.0);
         var lastColumn = (int) Math.ceil(screenToGraphX(canvasX + canvasW) / 16.0);
         for (var column = firstColumn; column <= lastColumn; column++) {
@@ -2182,45 +2358,46 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private void smallText(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             String value,
             int x,
             int y,
             int color,
             int maxWidth
     ) {
-        var clipped = font.plainSubstrByWidth(
-                value, Math.max(1, (int) (maxWidth / SMALL_TEXT_SCALE)));
-        var pose = graphics.pose();
-        pose.pushMatrix();
-        pose.translate(x, y);
-        pose.scale(SMALL_TEXT_SCALE, SMALL_TEXT_SCALE);
-        graphics.text(font, clipped, 0, 0, color, false);
-        pose.popMatrix();
+        graphics.text(value, x, y, color, ProgramUiGraphics.BODY_FONT_SIZE, maxWidth);
+    }
+
+    private static void headingText(
+            ProgramUiGraphics graphics,
+            String value,
+            int x,
+            int y,
+            int color,
+            int maxWidth
+    ) {
+        graphics.text(value, x, y, color, ProgramUiGraphics.HEADING_FONT_SIZE, maxWidth);
     }
 
     private int smallWrappedText(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             Component value,
             int x,
             int y,
             int color,
             int maxWidth
     ) {
-        var lines = font.split(value, Math.max(1, (int) (maxWidth / SMALL_TEXT_SCALE)));
-        var pose = graphics.pose();
-        pose.pushMatrix();
-        pose.translate(x, y);
-        pose.scale(SMALL_TEXT_SCALE, SMALL_TEXT_SCALE);
+        var lines = ProgramUiGraphics.wrap(
+                value.getString(), maxWidth, ProgramUiGraphics.BODY_FONT_SIZE);
         for (var index = 0; index < lines.size(); index++) {
-            graphics.text(font, lines.get(index), 0, index * 9, color, false);
+            graphics.text(lines.get(index), x, y + index * 9, color,
+                    ProgramUiGraphics.BODY_FONT_SIZE, maxWidth);
         }
-        pose.popMatrix();
-        return (int) Math.ceil(lines.size() * 9 * SMALL_TEXT_SCALE);
+        return lines.size() * 9;
     }
 
     private void button(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x,
             int y,
             int width,
@@ -2234,12 +2411,13 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var hover = inside(mouseX, mouseY, x, y, width, height);
         renderControl(graphics, x, y, width, height, true, selected, hover);
         if (small) smallText(graphics, label.getString(), x + 3, y + 5, TEXT, width - 6);
-        else graphics.centeredText(font, font.plainSubstrByWidth(label.getString(), width - 3),
-                x + width / 2, y + Math.max(1, (height - 8) / 2), TEXT);
+        else graphics.centeredText(label.getString(), x + width / 2.0f,
+                y + Math.max(1, (height - 8) / 2.0f), TEXT,
+                ProgramUiGraphics.BODY_FONT_SIZE, width - 3);
     }
 
     private void iconButton(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x,
             int y,
             String glyph,
@@ -2254,7 +2432,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static void renderInstrumentFrame(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x,
             int y,
             int width,
@@ -2269,7 +2447,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static void renderSection(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x,
             int y,
             int width,
@@ -2281,7 +2459,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private void renderInput(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x,
             int y,
             int width,
@@ -2295,7 +2473,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private void renderControl(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x,
             int y,
             int width,
@@ -2318,7 +2496,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static void orthogonalLine(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x1,
             int y1,
             int x2,
@@ -2332,7 +2510,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static void line(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x1,
             int y1,
             int x2,
@@ -2344,7 +2522,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static void border(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             int x,
             int y,
             int width,
@@ -2381,6 +2559,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var result = new ArrayList<>(values);
         java.util.Collections.reverse(result);
         return result;
+    }
+
+    private record TooltipLine(String text, int color) {
     }
 
     private record NodeView(
