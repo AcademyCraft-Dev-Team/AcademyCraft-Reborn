@@ -388,7 +388,7 @@ final class PrecisionProgramExecutionBridge {
             }
 
             private static List<?> union(List<?> left, List<?> right) {
-                var result = new LinkedHashSet<Object>();
+                var result = new LinkedHashSet<>();
                 result.addAll(left);
                 result.addAll(right);
                 return List.copyOf(result);

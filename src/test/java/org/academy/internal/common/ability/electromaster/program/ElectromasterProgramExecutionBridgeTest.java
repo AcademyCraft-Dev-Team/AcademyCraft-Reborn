@@ -12,11 +12,7 @@ import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramVmResult;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 

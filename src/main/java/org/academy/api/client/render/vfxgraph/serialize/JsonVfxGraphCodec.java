@@ -1,13 +1,11 @@
 package org.academy.api.client.render.vfxgraph.serialize;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.model.Port;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
-import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.model.*;

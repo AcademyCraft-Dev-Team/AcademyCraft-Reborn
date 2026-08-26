@@ -7,6 +7,7 @@ import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.type.TypeConversions;
 import org.academy.api.client.render.graph.type.TypeConverter;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -131,7 +132,7 @@ public final class DefaultGraphValidator implements GraphValidator {
         return false;
     }
 
-    private static Port findPort(GraphNode node, String portId) {
+    private static @Nullable Port findPort(GraphNode node, String portId) {
         for (var port : node.ports()) {
             if (port.id().equals(portId)) return port;
         }

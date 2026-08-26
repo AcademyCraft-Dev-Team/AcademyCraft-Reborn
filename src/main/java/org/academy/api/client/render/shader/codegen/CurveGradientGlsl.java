@@ -16,7 +16,7 @@ public final class CurveGradientGlsl {
         if (kfs.isEmpty()) return "float " + curveName(id) + "(float t) { return 0.0; }";
         var w = new StringBuilder();
         w.append("float ").append(curveName(id)).append("(float t) {\n");
-        w.append("    if (t <= ").append(f(kfs.get(0).time())).append(") return ").append(f(kfs.get(0).value())).append(";\n");
+        w.append("    if (t <= ").append(f(kfs.getFirst().time())).append(") return ").append(f(kfs.getFirst().value())).append(";\n");
         for (var i = 1; i < kfs.size(); i++) {
             var a = kfs.get(i - 1);
             var b = kfs.get(i);
@@ -37,7 +37,7 @@ public final class CurveGradientGlsl {
             };
             w.append("    if (t < ").append(f(b.time())).append(") return ").append(interp).append(";\n");
         }
-        w.append("    return ").append(f(kfs.get(kfs.size() - 1).value())).append(";\n");
+        w.append("    return ").append(f(kfs.getLast().value())).append(";\n");
         w.append("}\n");
         return w.toString();
     }
@@ -47,7 +47,7 @@ public final class CurveGradientGlsl {
         if (stops.isEmpty()) return "vec4 " + gradientName(id) + "(float t) { return vec4(1.0); }";
         var w = new StringBuilder();
         w.append("vec4 ").append(gradientName(id)).append("(float t) {\n");
-        w.append("    if (t <= ").append(f(stops.get(0).position())).append(") return ").append(color(stops.get(0))).append(";\n");
+        w.append("    if (t <= ").append(f(stops.getFirst().position())).append(") return ").append(color(stops.getFirst())).append(";\n");
         for (var i = 1; i < stops.size(); i++) {
             var a = stops.get(i - 1);
             var b = stops.get(i);
@@ -56,7 +56,7 @@ public final class CurveGradientGlsl {
             w.append("    if (t < ").append(f(b.position())).append(") return mix(")
                     .append(color(a)).append(", ").append(color(b)).append(", clamp(").append(u).append(", 0.0, 1.0));\n");
         }
-        w.append("    return ").append(color(stops.get(stops.size() - 1))).append(";\n");
+        w.append("    return ").append(color(stops.getLast())).append(";\n");
         w.append("}\n");
         return w.toString();
     }

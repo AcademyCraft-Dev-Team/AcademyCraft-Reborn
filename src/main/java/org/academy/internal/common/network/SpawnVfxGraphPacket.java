@@ -7,7 +7,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.graph.type.Value;

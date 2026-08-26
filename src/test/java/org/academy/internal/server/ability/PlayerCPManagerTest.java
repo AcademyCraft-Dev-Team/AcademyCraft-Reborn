@@ -158,7 +158,7 @@ class PlayerCPManagerTest {
 
         assertTrue(PlayerCPManager.advanceTimedOccupationIterations(occupations, 10));
 
-        assertEquals(0, occupations.get(0).getIterationTicks());
+        assertEquals(0, occupations.getFirst().getIterationTicks());
         for (var stack = 1; stack < occupations.size(); stack++) {
             assertEquals(stack, occupations.get(stack).getIterationTicks());
         }

@@ -8,7 +8,7 @@ public final class GlslWriter {
     private int indent;
 
     public GlslWriter line(String line) {
-        sb.append("    ".repeat(indent)).append(line).append('\n');
+        sb.repeat("    ", indent).append(line).append('\n');
         return this;
     }
 

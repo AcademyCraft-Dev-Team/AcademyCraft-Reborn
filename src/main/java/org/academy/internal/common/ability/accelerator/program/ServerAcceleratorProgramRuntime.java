@@ -30,11 +30,7 @@ import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Authoritative Minecraft-server adapter for vector-manipulation programs.

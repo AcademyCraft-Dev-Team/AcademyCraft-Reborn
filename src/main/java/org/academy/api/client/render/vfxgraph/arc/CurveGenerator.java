@@ -393,7 +393,7 @@ public final class CurveGenerator {
             segLen[i] = d;
             total += d;
         }
-        if (total < 1e-6f) return pts.get(0);
+        if (total < 1e-6f) return pts.getFirst();
         var target = t * total;
         var acc = 0f;
         for (var i = 0; i < segLen.length; i++) {
@@ -408,7 +408,7 @@ public final class CurveGenerator {
             }
             acc += segLen[i];
         }
-        return pts.get(pts.size() - 1);
+        return pts.getLast();
     }
 
     /**

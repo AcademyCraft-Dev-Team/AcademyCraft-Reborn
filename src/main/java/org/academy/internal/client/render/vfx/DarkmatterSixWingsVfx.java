@@ -21,7 +21,6 @@ import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Map;
 
 public final class DarkmatterSixWingsVfx implements Vfx {
     static final int VERTEX_STRIDE = 5 * Float.BYTES;

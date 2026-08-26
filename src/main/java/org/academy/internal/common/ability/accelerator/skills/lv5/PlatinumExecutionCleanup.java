@@ -78,7 +78,7 @@ final class PlatinumExecutionCleanup {
     }
 
     private static Graph scan(Entity target) {
-        var objects = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
+        var objects = Collections.newSetFromMap(new IdentityHashMap<>());
         var bossEvents = Collections.newSetFromMap(new IdentityHashMap<ServerBossEvent, Boolean>());
         var controllerBacked = false;
         var queue = new ArrayDeque<Node>();
