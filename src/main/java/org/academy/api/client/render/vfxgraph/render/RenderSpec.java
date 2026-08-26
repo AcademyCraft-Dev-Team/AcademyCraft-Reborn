@@ -23,6 +23,7 @@ import org.academy.api.client.resources.R;
  * @param blend               混合与后处理（GLOW 会额外渲进 bloom 输入）
  * @param vertexShader        顶点着色器资源 id（如 {@code academy:core/vfxgraph_particle}）
  * @param fragmentShader      片元着色器资源 id（如 {@code academy:core/vfxgraph_fire}）
+ * @param texture             可选的 {@code Sampler0} 纹理资源；空值使用图渲染器的可平铺程序噪声
  * @param layer               该规格负责渲染的粒子层（空串 = 全部；否则与粒子 {@code layer} 属性精确匹配）
  * @param arc                 ARC 观感参数（仅 {@link Geometry#ARC} 使用；其余几何用 {@link ArcRender#DEFAULT}）
  */
@@ -31,6 +32,7 @@ public record RenderSpec(
         Blend blend,
         Identifier vertexShader,
         Identifier fragmentShader,
+        @org.jspecify.annotations.Nullable Identifier texture,
         String layer,
         ArcRender arc
 ) {
@@ -38,7 +40,7 @@ public record RenderSpec(
     /** 缺省规格：中性软圆斑 quad、全部层（仅"未指定"时的中性兜底，非按类型枚举）。 */
     public static final RenderSpec DEFAULT = new RenderSpec(
             Geometry.QUAD, Blend.TRANSLUCENT,
-            R.shaders.core.vfxgraph_particle, R.shaders.core.vfxgraph_particle, "",
+            R.shaders.core.vfxgraph_particle, R.shaders.core.vfxgraph_particle, null, "",
             ArcRender.DEFAULT);
 
     public enum Geometry {
@@ -103,9 +105,10 @@ public record RenderSpec(
         // 中性兜底按几何结构（非外观枚举）：ARC 顶点格式与 particle 不兼容，缺省走 arc 辉光光带 shader
         var vertex = id(node, "vertex", geometry == Geometry.ARC ? R.shaders.core.vfxgraph_arc : R.shaders.core.vfxgraph_particle);
         var fragment = id(node, "shader", geometry == Geometry.ARC ? R.shaders.core.vfxgraph_arc : R.shaders.core.vfxgraph_particle);
+        var texture = optionalId(node, "texture");
         var layer = node.properties().getOrDefault("layer", "").trim();
         var arc = arcRender(node);
-        return new RenderSpec(geometry, blend, vertex, fragment, layer, arc);
+        return new RenderSpec(geometry, blend, vertex, fragment, texture, layer, arc);
     }
 
     /** ARC 观感参数解析（数据驱动，M22-Rev2）。 */
@@ -159,6 +162,11 @@ public record RenderSpec(
     private static Identifier id(GraphNode node, String key, Identifier fallback) {
         var v = node.properties().getOrDefault(key, "").trim();
         return v.isEmpty() ? fallback : Identifier.parse(v);
+    }
+
+    private static @org.jspecify.annotations.Nullable Identifier optionalId(GraphNode node, String key) {
+        var value = node.properties().getOrDefault(key, "").trim();
+        return value.isEmpty() ? null : Identifier.parse(value);
     }
 
     /** 该规格是否渲染指定粒子：{@code layer} 空串（全部）或与粒子层字节匹配。 */

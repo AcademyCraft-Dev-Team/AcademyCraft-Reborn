@@ -7,6 +7,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
+/**
+ * @deprecated register graph blocks/assets through {@code vfxgraph} instead
+ */
+@Deprecated(since = "0.0.4")
 public final class VfxRegistry {
     private static final Map<Class<?>, Registration<?>> REGISTRATIONS = new HashMap<>();
 

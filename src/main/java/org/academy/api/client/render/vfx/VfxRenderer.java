@@ -6,6 +6,11 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 
 import java.util.List;
 
+/**
+ * @deprecated author an output block and shader for
+ * {@link org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer}
+ */
+@Deprecated(since = "0.0.4")
 public interface VfxRenderer<T extends VfxRenderData> {
     void init(GpuDevice device);
 

@@ -29,8 +29,9 @@ class VfxContainerAssetsTest {
         var codec = new JsonVfxGraphCodec(metadata);
         var validator = new VfxGraphValidator(metadata);
 
-        for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "skill_dirstrike", "minimal_burst", "demo_fire",
-                "plasma_cannon_charge", "plasma_cannon_focus", "plasma_cannon_projectile", "plasma_cannon_impact"}) {
+        for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "minimal_burst", "demo_fire",
+                "plasma_cannon_charge", "plasma_cannon_focus", "plasma_cannon_projectile", "plasma_cannon_impact", "entity_smoke",
+                "distortion_ripple", "platinum_execution"}) {
             var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + name + ".json");
             assertTrue(stream != null, "asset should exist: " + name);
             var json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
