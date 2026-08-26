@@ -571,6 +571,19 @@ public class VectorDeviation extends Skill {
             return executed;
         }
 
+        public static boolean tryProtectForcedMovement(ServerPlayer player) {
+            if (!isActive(player)) return false;
+            var skill = Skills.VECTOR_DEVIATION.get();
+            var executed = skill.executeContinuous(
+                    player,
+                    _ -> VectorReflection.Server.projectileReflectionCost(0.0),
+                    (_, _) -> VectorReflection.Server.playReflectionSound(player),
+                    true
+            );
+            if (executed) VectorReflection.Server.deactivateAfterVectorChargeIfNeeded(player);
+            return executed;
+        }
+
         private static boolean isFiniteVector(Vec3 value) {
             return value != null
                     && Double.isFinite(value.x)

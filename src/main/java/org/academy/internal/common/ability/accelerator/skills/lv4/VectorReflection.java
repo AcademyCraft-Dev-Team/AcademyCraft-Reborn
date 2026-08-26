@@ -257,11 +257,14 @@ public class VectorReflection extends Skill {
         }
 
         public static void purgeProtectedEffects(ServerPlayer player) {
+            var reflected = false;
             for (var effect : new ArrayList<>(player.getActiveEffects())) {
                 if (ReflectionFilter.shouldReflectEffect(player, effect)) {
                     player.removeEffect(effect.getEffect());
+                    reflected = true;
                 }
             }
+            if (reflected) ReflectionFilter.reportEffectActivity(player, true);
         }
 
         public static boolean shouldReflection(Player player, DamageSource damageSource) {
@@ -536,7 +539,7 @@ public class VectorReflection extends Skill {
             return executed;
         }
 
-        static float projectileReflectionCost(double speed) {
+        public static float projectileReflectionCost(double speed) {
             if (!Double.isFinite(speed)) return 1.5f;
             return Math.max(1.5f, (float) Math.max(0.0, speed));
         }
@@ -822,9 +825,11 @@ public class VectorReflection extends Skill {
         public static void onEffectApplicable(MobEffectEvent.Applicable event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             if (!Skills.VECTOR_REFLECTION.get().isEnabled(player)) return;
-            if (ReflectionFilter.shouldReflectEffect(player, event.getEffectInstance())) {
+            var reflected = ReflectionFilter.shouldReflectEffect(player, event.getEffectInstance());
+            if (reflected) {
                 event.setResult(MobEffectEvent.Applicable.Result.DO_NOT_APPLY);
             }
+            ReflectionFilter.reportEffectActivity(player, reflected);
         }
     }
 
