@@ -3,9 +3,7 @@ package org.academy.api.common.util;
 import net.minecraft.world.phys.shapes.Shapes;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class LevelUtilTest {
     @Test

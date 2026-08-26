@@ -1,11 +1,7 @@
 package org.academy.internal.common.world.item;
 
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.MaceItem;
-import net.minecraft.world.item.ToolMaterial;
-import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.item.*;
 import net.minecraft.world.item.equipment.ArmorType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

@@ -26,7 +26,7 @@ open class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
         val anchorX = getAbsoluteX() + width / 2.0f
         val anchorY = getAbsoluteY() + height / 2.0f
 
-        val mc: Minecraft? = Minecraft.getInstance()
+        val mc: Minecraft = Minecraft.getInstance()
         val motionX: Float
         val motionY: Float
         if (mc != null) {

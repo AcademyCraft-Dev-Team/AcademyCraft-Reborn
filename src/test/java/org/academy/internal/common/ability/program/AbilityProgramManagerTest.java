@@ -1,12 +1,9 @@
 package org.academy.internal.common.ability.program;
 
 import io.netty.buffer.Unpooled;
+import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramBook;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
+import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.skilldata.CommonSkillData;
@@ -14,12 +11,10 @@ import org.academy.internal.server.world.level.storage.Player;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AbilityProgramManagerTest {
     @Test
@@ -61,7 +56,7 @@ class AbilityProgramManagerTest {
 
         var capabilities = AbilityProgramManager.learnedCapabilities(player);
 
-        assertEquals(java.util.Set.of(vectorAccel), capabilities);
+        assertEquals(Set.of(vectorAccel), capabilities);
     }
 
     @Test
@@ -147,7 +142,7 @@ class AbilityProgramManagerTest {
         assertFalse(AbilityProgramManager.isSupportedCategory(null));
     }
 
-    private static AbilityProgram program(net.minecraft.resources.Identifier category) {
+    private static AbilityProgram program(Identifier category) {
         return new AbilityProgram(
                 AbilityProgram.CURRENT_SCHEMA_VERSION,
                 UUID.fromString("10000000-0000-0000-0000-000000000001"),

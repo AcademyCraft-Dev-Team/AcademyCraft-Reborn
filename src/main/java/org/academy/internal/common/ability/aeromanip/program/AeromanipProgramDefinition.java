@@ -8,7 +8,9 @@ import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
 
 import java.util.HashMap;
 
-/** Assembles Aeromanip nodes with the shared program algebra. */
+/**
+ * Assembles Aeromanip nodes with the shared program algebra.
+ */
 public final class AeromanipProgramDefinition {
     private AeromanipProgramDefinition() {
     }

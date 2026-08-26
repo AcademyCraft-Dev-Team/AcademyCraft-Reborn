@@ -10,8 +10,8 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import org.academy.api.common.entitycontrol.PerceptionDecision;
-import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 
 import java.util.*;
 

@@ -205,7 +205,7 @@ public final class BioelectricOperation extends Skill {
             syncModifier(player.getAttribute(Attributes.MOVEMENT_SPEED),
                     0.1 * nonDamageScale + (overload ? 0.015 : 0.0), enabled);
             syncModifier(player.getAttribute(Attributes.STEP_HEIGHT), 0.4 * nonDamageScale, enabled);
-            syncModifier(player.getAttribute(Attributes.MOVEMENT_EFFICIENCY), 1.0 * nonDamageScale, enabled);
+            syncModifier(player.getAttribute(Attributes.MOVEMENT_EFFICIENCY), nonDamageScale, enabled);
             syncModifier(player.getAttribute(Attributes.JUMP_STRENGTH), 0.58 * nonDamageScale, enabled);
             syncModifier(player.getAttribute(Attributes.ATTACK_SPEED),
                     2.4 * nonDamageScale + (overload ? 0.36 : 0.0), enabled);

@@ -4,12 +4,9 @@ import org.academy.api.client.render.graph.model.GraphParameter
 import org.academy.api.client.render.graph.type.Value
 import org.academy.api.client.render.graph.type.ValueType
 import org.academy.desktop.grapheditor.EditorTestFixtures
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.util.Optional
+import java.util.*
 
 /**
  * 模型命令化端到端测试：所有公开 mutation 均可撤销/重做，且 undo 后 toGraph 与操作前一致。

@@ -237,6 +237,7 @@ public final class R {
         public static final Identifier ICON_PAUSE = academy(MUSIC + "pause.png");
         public static final Identifier ICON_PLAY = academy(MUSIC + "play.png");
         public static final Identifier ICON_VOLUME = academy(MUSIC + "volume.png");
+
         private textures() {
         }
 

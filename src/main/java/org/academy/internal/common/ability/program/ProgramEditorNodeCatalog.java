@@ -10,12 +10,7 @@ import org.academy.api.common.ability.program.ProgramNodeType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Editor-facing metadata for the shared algebra and one ability category.
@@ -61,7 +56,9 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         return entry == null ? null : decodeSchema(entry.type(), configuration);
     }
 
-    /** Decodes and re-encodes configuration so codecs can migrate and discard legacy fields. */
+    /**
+     * Decodes and re-encodes configuration so codecs can migrate and discard legacy fields.
+     */
     public @Nullable JsonElement normalizeConfiguration(
             Identifier id,
             JsonElement configuration

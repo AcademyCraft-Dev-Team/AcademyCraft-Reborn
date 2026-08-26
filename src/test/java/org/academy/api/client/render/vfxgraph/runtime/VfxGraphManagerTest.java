@@ -1,29 +1,23 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.google.gson.JsonObject;
-import java.util.List;
-import java.util.Map;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.serialize.GraphSchemaVersion;
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class VfxGraphManagerTest {
     private static final Identifier ASSET = Identifier.fromNamespaceAndPath("academy", "vfxgraph/test_burst");
@@ -153,10 +147,12 @@ class VfxGraphManagerTest {
         VfxGraphManager.INSTANCE.registerAsset(ASSET, wrapper);
         var graph = VfxGraphManager.INSTANCE.assets().get(ASSET.toString());
         assertNotNull(graph);
-        assertTrue(graph.nodes().size() == 2);
+        assertEquals(2, graph.nodes().size());
     }
 
-    /** M27 容器资产路径：kind:"vfx" 经 VfxGraphManager spawn 走容器执行器。 */
+    /**
+     * M27 容器资产路径：kind:"vfx" 经 VfxGraphManager spawn 走容器执行器。
+     */
     @Test
     void spawnContainerAssetThroughManager() {
         var system = new VfxSystem("test_container",

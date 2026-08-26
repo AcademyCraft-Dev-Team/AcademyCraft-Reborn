@@ -75,7 +75,7 @@ public final class CurveGradientGlsl {
 
     private static String f(float v) {
         if (v == Math.floor(v) && !Float.isInfinite(v) && Math.abs(v) < 1e7f) {
-            return String.valueOf((long) v) + ".0";
+            return (long) v + ".0";
         }
         return Float.toString(v);
     }

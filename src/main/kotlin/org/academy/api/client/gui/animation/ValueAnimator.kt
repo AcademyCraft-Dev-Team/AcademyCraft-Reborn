@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.animation
 
-import java.util.function.Consumer
 import net.minecraft.util.Mth
+import java.util.function.Consumer
 
 open class ValueAnimator protected constructor() : Animator() {
     private var startValue = 0f

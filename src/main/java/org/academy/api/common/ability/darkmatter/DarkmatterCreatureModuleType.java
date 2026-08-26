@@ -1,10 +1,14 @@
 package org.academy.api.common.ability.darkmatter;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Mob;
 
 import java.util.Objects;
 
-/** Public descriptor for an independently budgeted creature AI/utility module. */
+/**
+ * Public descriptor for an independently budgeted creature AI/utility module.
+ */
 public record DarkmatterCreatureModuleType(
         Identifier id,
         int budgetCost,
@@ -16,7 +20,9 @@ public record DarkmatterCreatureModuleType(
         handler = handler == null ? ModuleHandler.NONE : handler;
     }
 
-    /** Stable client localization key; extension mods can provide the same key in their lang files. */
+    /**
+     * Stable client localization key; extension mods can provide the same key in their lang files.
+     */
     public String translationKey() {
         return "darkmatter_creature.module." + id.getNamespace() + "." + id.getPath();
     }
@@ -27,10 +33,11 @@ public record DarkmatterCreatureModuleType(
 
     @FunctionalInterface
     public interface ModuleHandler {
-        ModuleHandler NONE = (_, _, _) -> { };
+        ModuleHandler NONE = (_, _, _) -> {
+        };
 
-        void tick(net.minecraft.world.entity.Mob creature,
-                  net.minecraft.server.level.ServerPlayer owner,
+        void tick(Mob creature,
+                  ServerPlayer owner,
                   float valueMultiplier);
     }
 }

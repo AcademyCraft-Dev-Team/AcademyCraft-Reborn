@@ -1,8 +1,9 @@
 package org.academy.api.client.render.vfxgraph.model;
 
+import org.academy.api.client.render.graph.model.Port;
+
 import java.util.List;
 import java.util.Map;
-import org.academy.api.client.render.graph.model.Port;
 
 /**
  * VFX 容器图节点（块或算子）的公共视图（M23）：id/type/属性/端口。

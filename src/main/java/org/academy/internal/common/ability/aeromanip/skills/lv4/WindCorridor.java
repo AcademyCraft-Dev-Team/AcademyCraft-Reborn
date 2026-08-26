@@ -25,14 +25,10 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AirflowField;
-import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
-import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
+import org.academy.internal.common.ability.aeromanip.*;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -120,7 +116,7 @@ public final class WindCorridor extends Skill {
                 var duration = Math.max(1, Math.round(durationTicks * AeromanipConfig.durationMultiplier(player, SkillNames.WIND_CORRIDOR)));
                 if (redirect) duration = Math.max(1, duration / 2);
                 var length = context.milestone() >= 2 ? 30.0 : 24.0;
-                var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.WIND_CORRIDOR,
+                var field = new AirflowField(UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.WIND_CORRIDOR,
                         AirflowField.Shape.CAPSULE, center, direction, 2.5 * range, length * range, 1.0f, duration, context.milestone());
                 AeromanipFieldManager.activate(player, skill, field, Server::tick);
             });

@@ -9,7 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.ToDoubleFunction;
 
-/** Pure scoring and tie handling for P.R.O.P.S initial ability prediction. */
+/**
+ * Pure scoring and tie handling for P.R.O.P.S initial ability prediction.
+ */
 public final class InitialAbilitySelector {
     private static final double SCORE_EPSILON = 1.0E-9;
 

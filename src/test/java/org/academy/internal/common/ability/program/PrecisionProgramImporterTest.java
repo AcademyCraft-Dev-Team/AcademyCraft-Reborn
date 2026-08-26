@@ -4,19 +4,15 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramCompileContext;
 import org.academy.api.common.ability.program.ProgramDiagnosticCode;
+import org.academy.api.common.ability.program.ProgramEditorLayout;
+import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.api.common.ability.program.ProgramLimits;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PrecisionProgramImporterTest {
     @Test
@@ -35,11 +31,11 @@ class PrecisionProgramImporterTest {
         assertEquals(3, imported.graph().nodes().size());
         assertTrue(imported.graph().nodes().stream().anyMatch(node ->
                 node.id() == 0 && node.type().equals(PrecisionProgramNodeIds.ON_CAST)));
-        assertTrue(imported.graph().edges().contains(new org.academy.api.common.ability.program.ProgramGraph.Edge(
-                new org.academy.api.common.ability.program.ProgramGraph.Endpoint(0, "flow"),
-                new org.academy.api.common.ability.program.ProgramGraph.Endpoint(3, "flow")
+        assertTrue(imported.graph().edges().contains(new ProgramGraph.Edge(
+                new ProgramGraph.Endpoint(0, "flow"),
+                new ProgramGraph.Endpoint(3, "flow")
         )));
-        assertEquals(new org.academy.api.common.ability.program.ProgramEditorLayout.NodePosition(-80.0, 20.0),
+        assertEquals(new ProgramEditorLayout.NodePosition(-80.0, 20.0),
                 imported.editorLayout().nodePositions().get(0));
     }
 

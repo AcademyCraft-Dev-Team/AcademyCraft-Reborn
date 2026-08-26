@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.BedBlock;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.inventory.OmniCraftingMenu;
@@ -99,7 +100,7 @@ public final class OmniCraftingRecipeCategory
             IRecipeLayoutBuilder builder,
             int column,
             int row,
-            net.minecraft.world.level.ItemLike item
+            ItemLike item
     ) {
         builder.addInputSlot(3 + column * 18, 3 + row * 18)
                 .setStandardSlotBackground()

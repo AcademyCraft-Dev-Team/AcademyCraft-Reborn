@@ -65,7 +65,6 @@ public class Disarm extends Skill {
     }
 
 
-
     @Override
     public void initClient() {
         var key = getKey();
@@ -183,6 +182,7 @@ public class Disarm extends Skill {
             }
         }
     }
+
     private static ItemEntity disarmTarget(LivingEntity target, boolean delayedPickup) {
         var level = target.level();
         var rng = new Random();

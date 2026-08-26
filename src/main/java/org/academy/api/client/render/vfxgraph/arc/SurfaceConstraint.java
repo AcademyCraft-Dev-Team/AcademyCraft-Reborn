@@ -22,12 +22,16 @@ public final class SurfaceConstraint {
     private final SurfaceDistributor fixed;
     private final Map<float[], SurfaceDistributor> cache = new IdentityHashMap<>();
 
-    /** 逐弧表面：约束目标取自 {@link ArcCurve#surface()}。 */
+    /**
+     * 逐弧表面：约束目标取自 {@link ArcCurve#surface()}。
+     */
     public SurfaceConstraint() {
         this.fixed = null;
     }
 
-    /** 固定表面：对构造时给定的表面约束（旧 {@link ArcSimulator} 路径）。 */
+    /**
+     * 固定表面：对构造时给定的表面约束（旧 {@link ArcSimulator} 路径）。
+     */
     public SurfaceConstraint(SurfaceDistributor distributor) {
         this.fixed = distributor;
     }

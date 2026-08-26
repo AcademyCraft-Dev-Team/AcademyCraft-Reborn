@@ -1,12 +1,16 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class SurfaceDistributorTest {
 
-    /** 单位立方体三角形数据（6面×2三角形=12三角形，108 floats）。 */
+    /**
+     * 单位立方体三角形数据（6面×2三角形=12三角形，108 floats）。
+     */
     private static float[] unitCubeTriangles() {
         float[] tris = new float[12 * 9];
         int t = 0;
@@ -32,10 +36,16 @@ class SurfaceDistributorTest {
     }
 
     private static int tri(float[] out, int t, float ax, float ay, float az,
-                            float bx, float by, float bz, float cx, float cy, float cz) {
-        out[t++] = ax; out[t++] = ay; out[t++] = az;
-        out[t++] = bx; out[t++] = by; out[t++] = bz;
-        out[t++] = cx; out[t++] = cy; out[t++] = cz;
+                           float bx, float by, float bz, float cx, float cy, float cz) {
+        out[t++] = ax;
+        out[t++] = ay;
+        out[t++] = az;
+        out[t++] = bx;
+        out[t++] = by;
+        out[t++] = bz;
+        out[t++] = cx;
+        out[t++] = cy;
+        out[t++] = cz;
         return t;
     }
 
@@ -96,14 +106,16 @@ class SurfaceDistributorTest {
 
     @Test
     void tangentDirectionReturnsUnitVector() {
-        var random = new java.util.Random(42);
+        var random = new Random(42);
         for (int i = 0; i < 100; i++) {
             float nx = random.nextFloat() * 2 - 1;
             float ny = random.nextFloat() * 2 - 1;
             float nz = random.nextFloat() * 2 - 1;
             float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
             if (len < 1e-6f) continue;
-            nx /= len; ny /= len; nz /= len;
+            nx /= len;
+            ny /= len;
+            nz /= len;
 
             var dir = SurfaceDistributor.tangentDirection(nx, ny, nz, (float) Math.PI / 4, random);
             float dlen = (float) Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);

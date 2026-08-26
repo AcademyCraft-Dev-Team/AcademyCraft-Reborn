@@ -2,11 +2,13 @@ package org.academy.internal.common.ability.aeromanip;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -20,7 +22,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Server-authoritative lifecycle data for client-side field visuals. */
+/**
+ * Server-authoritative lifecycle data for client-side field visuals.
+ */
 @PacketTarget(ThreadType.CLIENT)
 public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener, AeromanipFieldSyncPacket> {
     public static final StreamCodec<ByteBuf, AeromanipFieldSyncPacket> CODEC = StreamCodec.of(
@@ -93,7 +97,8 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
         var center = field.center();
         for (var viewer : server.getPlayerList().getPlayers()) {
             if (viewer != owner && !viewer.level().dimension().equals(field.dimension())) continue;
-            if (viewer == owner || viewer.distanceToSqr(center) <= trackingRadius * trackingRadius) packet.sendTo(viewer);
+            if (viewer == owner || viewer.distanceToSqr(center) <= trackingRadius * trackingRadius)
+                packet.sendTo(viewer);
         }
     }
 
@@ -101,9 +106,9 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
         var safeType = Math.max(0, Math.min(AirflowField.Type.values().length - 1, type));
         var safeShape = Math.max(0, Math.min(AirflowField.Shape.values().length - 1, shape));
         return new AirflowField(fieldId, ownerId,
-                ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, Identifier.parse(dimension)),
+                ResourceKey.create(Registries.DIMENSION, Identifier.parse(dimension)),
                 AirflowField.Type.values()[safeType], AirflowField.Shape.values()[safeShape],
-                new net.minecraft.world.phys.Vec3(x, y, z), new net.minecraft.world.phys.Vec3(dx, dy, dz),
+                new Vec3(x, y, z), new Vec3(dx, dy, dz),
                 radius, length, strength, durationTicks, proficiencyMilestone);
     }
 
@@ -124,9 +129,14 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
         ByteBufCodecs.STRING_UTF8.encode(buf, packet.dimension);
         ByteBufCodecs.VAR_INT.encode(buf, packet.type);
         ByteBufCodecs.VAR_INT.encode(buf, packet.shape);
-        buf.writeDouble(packet.x); buf.writeDouble(packet.y); buf.writeDouble(packet.z);
-        buf.writeDouble(packet.dx); buf.writeDouble(packet.dy); buf.writeDouble(packet.dz);
-        buf.writeDouble(packet.radius); buf.writeDouble(packet.length);
+        buf.writeDouble(packet.x);
+        buf.writeDouble(packet.y);
+        buf.writeDouble(packet.z);
+        buf.writeDouble(packet.dx);
+        buf.writeDouble(packet.dy);
+        buf.writeDouble(packet.dz);
+        buf.writeDouble(packet.radius);
+        buf.writeDouble(packet.length);
         buf.writeFloat(packet.strength);
         ByteBufCodecs.VAR_INT.encode(buf, packet.durationTicks);
         ByteBufCodecs.VAR_INT.encode(buf, packet.proficiencyMilestone);

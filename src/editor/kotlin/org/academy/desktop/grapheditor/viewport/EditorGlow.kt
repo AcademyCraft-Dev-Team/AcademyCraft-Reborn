@@ -19,7 +19,6 @@ import org.academy.api.client.render.vfxgraph.render.RenderSpec
 import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer
 import org.academy.api.client.render.vfxgraph.render.WorldTransform
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer
-import org.joml.Vector2f
 import org.joml.Vector4f
 import org.lwjgl.system.MemoryStack
 
@@ -55,7 +54,7 @@ class EditorGlow(
         viewportWidth: Int,
         viewportHeight: Int,
     ) {
-        if (buffer.count() == 0 && (arcBuffer == null || arcBuffer!!.count() == 0)) return
+        if (buffer.count() == 0 && (arcBuffer == null || arcBuffer.count() == 0)) return
         val device = RenderSystem.getDevice()
         if (glowUbo == null) {
             glowUbo = device.createBuffer(
@@ -82,7 +81,7 @@ class EditorGlow(
         val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
         Render.runBlitPass(
             viewport, Render.RenderPipelines.GLOW_BLEND,
-            Render.Buffers.getInstance().getFSQuadVBNDC(),
+            Render.Buffers.getInstance().fsQuadVBNDC,
             listOf(
                 TextureBinding("Sampler0", viewport, sampler),
                 TextureBinding("BlurTexture1", blurBView, sampler),
@@ -109,7 +108,8 @@ class EditorGlow(
             { "EditorGlow Black" }, GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_TEXTURE_BINDING,
             GpuFormat.RGBA8_UNORM, 1, 1, 1, 1,
         )
-        val bytes = java.nio.ByteBuffer.allocateDirect(4).put(0.toByte()).put(0.toByte()).put(0.toByte()).put(0.toByte())
+        val bytes =
+            java.nio.ByteBuffer.allocateDirect(4).put(0.toByte()).put(0.toByte()).put(0.toByte()).put(0.toByte())
         bytes.flip()
         device.createCommandEncoder().writeToTexture(texture, bytes, 0, 0, 0, 0, 1, 1)
         blackTexture = texture

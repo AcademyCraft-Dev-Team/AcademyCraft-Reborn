@@ -7,7 +7,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.InteractionHand;
 import org.jspecify.annotations.Nullable;
 
-/** Identifies the energy source backing an ability-development session. */
+/**
+ * Identifies the energy source backing an ability-development session.
+ */
 public record DevelopmentSource(@Nullable BlockPos blockPos, @Nullable InteractionHand hand) {
     public static final StreamCodec<ByteBuf, DevelopmentSource> CODEC = StreamCodec.of(
             (buffer, source) -> {

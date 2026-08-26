@@ -153,16 +153,16 @@ public final class GraphEffect {
     /**
      * 自持渲染（编辑器路径：私有渲染器 + 恒等变换 + 清屏）。
      */
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth, GraphCamera camera) {
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera) {
         render(target, depth, camera, null, true, WorldTransform.identity(), false);
     }
 
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth, GraphCamera camera,
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera,
                        VfxGraphRenderer sharedRenderer, boolean clear, WorldTransform transform) {
         render(target, depth, camera, sharedRenderer, clear, transform, false);
     }
 
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth, GraphCamera camera,
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera,
                        VfxGraphRenderer sharedRenderer, boolean clear, WorldTransform transform, boolean bloomPass) {
         if (dirty) {
             rebuild();

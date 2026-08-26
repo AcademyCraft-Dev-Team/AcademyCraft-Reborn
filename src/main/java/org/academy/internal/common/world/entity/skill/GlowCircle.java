@@ -5,8 +5,8 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
-import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
+import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 public class GlowCircle extends RenderOnlyEntity {
     public static final float LIFE_TICKS = 10.0f;

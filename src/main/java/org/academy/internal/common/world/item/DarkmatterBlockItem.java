@@ -16,7 +16,9 @@ import org.academy.internal.common.world.level.block.entity.DarkmatterBlockEntit
 
 import javax.annotation.Nullable;
 
-/** Block item carrying the per-placement physical profile selected in the shaping editor. */
+/**
+ * Block item carrying the per-placement physical profile selected in the shaping editor.
+ */
 public final class DarkmatterBlockItem extends BlockItem implements DarkmatterShapedItem {
     public DarkmatterBlockItem(DarkmatterConfigurableBlock block, Properties properties) {
         super(block, properties

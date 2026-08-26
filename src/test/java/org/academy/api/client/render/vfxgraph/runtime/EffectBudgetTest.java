@@ -1,11 +1,11 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EffectBudgetTest {
     private static final Vector3f ORIGIN = new Vector3f(0f, 0f, 0f);

@@ -1,5 +1,6 @@
 package org.academy.internal.server.ability;
 
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -9,14 +10,10 @@ import net.minecraft.stats.Stats;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -36,17 +33,15 @@ import org.academy.api.common.attribute.AbilityFactor;
 import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.internal.common.attribute.PropsMath;
 import org.academy.internal.common.attribute.PropsPackets;
+import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.PropsData;
 import org.misaka.MisakaNetworkServer;
 
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-/** Server-authoritative acquisition and synchronization for P.R.O.P.S factors. */
+/**
+ * Server-authoritative acquisition and synchronization for P.R.O.P.S factors.
+ */
 public final class PropsManager implements AbilitySubsystem {
     public static final TagKey<Item> REDSTONE_COMPONENTS = TagKey.create(
             Registries.ITEM, AcademyCraft.academy("props/neural_redstone_components")
@@ -328,7 +323,7 @@ public final class PropsManager implements AbilitySubsystem {
         if (!(event.getTarget() instanceof ZombieVillager zombieVillager)) return;
         if (zombieVillager.isConverting()
                 || !event.getItemStack().is(Items.GOLDEN_APPLE)
-                || !zombieVillager.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS)) return;
+                || !zombieVillager.hasEffect(MobEffects.WEAKNESS)) return;
         curingPlayers.put(zombieVillager.getUUID(), new CureAttribution(
                 player.getUUID(), player.level().getGameTime() + 12_000
         ));
@@ -400,7 +395,7 @@ public final class PropsManager implements AbilitySubsystem {
         return health;
     }
 
-    private static net.minecraft.core.Holder<Attribute> attribute(AbilityFactor factor) {
+    private static Holder<Attribute> attribute(AbilityFactor factor) {
         return switch (factor) {
             case MUSCLE_STRENGTH -> PlayerAttributes.MUSCLE_STRENGTH;
             case ENDURANCE -> PlayerAttributes.ENDURANCE;
@@ -412,7 +407,7 @@ public final class PropsManager implements AbilitySubsystem {
 
     private void mirrorAttributes(
             ServerPlayer player,
-            org.academy.internal.server.world.level.storage.Player storedPlayer
+            Player storedPlayer
     ) {
         var data = storedPlayer.getPropsData();
         var category = playerDataManager.getPlayerAbilityCategory(player.getUUID());

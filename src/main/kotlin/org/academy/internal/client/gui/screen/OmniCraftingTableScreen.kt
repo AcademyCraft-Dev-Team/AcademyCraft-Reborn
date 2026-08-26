@@ -8,13 +8,7 @@ import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
 import org.academy.api.client.gui.util.WirelessPanelUtil.create
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.RadioButtonWidget
-import org.academy.api.client.gui.widget.RadioGroupWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.OmniCraftingMenu

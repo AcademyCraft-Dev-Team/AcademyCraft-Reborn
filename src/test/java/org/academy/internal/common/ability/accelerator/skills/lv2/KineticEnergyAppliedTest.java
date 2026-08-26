@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class KineticEnergyAppliedTest {
     @Test
@@ -27,9 +27,9 @@ class KineticEnergyAppliedTest {
 
     @Test
     void coalescesClientMissAndServerHitFromOneSwing() {
-        assertEquals(false, KineticEnergyApplied.isDistinctImpactTrigger(100, 100));
-        assertEquals(false, KineticEnergyApplied.isDistinctImpactTrigger(100, 101));
-        assertEquals(true, KineticEnergyApplied.isDistinctImpactTrigger(100, 102));
+        assertFalse(KineticEnergyApplied.isDistinctImpactTrigger(100, 100));
+        assertFalse(KineticEnergyApplied.isDistinctImpactTrigger(100, 101));
+        assertTrue(KineticEnergyApplied.isDistinctImpactTrigger(100, 102));
     }
 
     @Test
@@ -37,9 +37,9 @@ class KineticEnergyAppliedTest {
         var center = new Vec3(4.1, 64.9, -2.2);
         var origin = BlockPos.containing(center);
 
-        assertEquals(true, KineticEnergyApplied.isWithinProgramBreakRadius(
+        assertTrue(KineticEnergyApplied.isWithinProgramBreakRadius(
                 center, origin, 0.0, origin));
-        assertEquals(false, KineticEnergyApplied.isWithinProgramBreakRadius(
+        assertFalse(KineticEnergyApplied.isWithinProgramBreakRadius(
                 center, origin, 0.0, origin.offset(1, 0, 0)));
     }
 }

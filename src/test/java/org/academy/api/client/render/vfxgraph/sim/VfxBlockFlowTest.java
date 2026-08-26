@@ -1,23 +1,19 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
+import org.academy.api.client.render.vfxgraph.model.*;
+import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
+import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxBlockFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * M28b 块级批次 flow：同一 INITIALIZE context 内多个 init 块，经 blockFlow 精确配对到各自 spawn 块。
@@ -77,11 +73,13 @@ class VfxBlockFlowTest {
         assertTrue(Math.max(x0, x1) - Math.min(x0, x1) > 0.1f, "A/B must have distinct velocities: " + x0 + "," + x1);
         // 精确值：0.3 与 0.1（顺序不定）
         assertTrue((Math.abs(x0 - 0.3f) < 1e-4f && Math.abs(x1 - 0.1f) < 1e-4f)
-                || (Math.abs(x0 - 0.1f) < 1e-4f && Math.abs(x1 - 0.3f) < 1e-4f),
+                        || (Math.abs(x0 - 0.1f) < 1e-4f && Math.abs(x1 - 0.3f) < 1e-4f),
                 "expected {0.3, 0.1} but got {" + x0 + "," + x1 + "}");
     }
 
-    /** 无块级 flow 时回退 context 级：init 处理整个上游 SPAWN context 的批次。 */
+    /**
+     * 无块级 flow 时回退 context 级：init 处理整个上游 SPAWN context 的批次。
+     */
     @Test
     void fallsBackToContextFlowWithoutBlockFlow() {
         var system = new VfxSystem("fallback",
@@ -106,7 +104,9 @@ class VfxBlockFlowTest {
         assertEquals(0.5f, sim.buffer().positionX(0), 1e-5f);
     }
 
-    /** 块级 flow 只影响自己的 init：未配对的 init 块收到空批次（不误伤其它 spawn 粒子）。 */
+    /**
+     * 块级 flow 只影响自己的 init：未配对的 init 块收到空批次（不误伤其它 spawn 粒子）。
+     */
     @Test
     void unpairedInitReceivesNothing() {
         var system = new VfxSystem("unpaired",
@@ -136,7 +136,7 @@ class VfxBlockFlowTest {
         float x1 = buffer.positionX(1);
         // 其中一个 x≈0.3（sA 经 iA），另一个 x≈0（sB 未配 init）
         assertTrue((Math.abs(x0 - 0.3f) < 1e-4f && Math.abs(x1) < 1e-4f)
-                || (Math.abs(x0) < 1e-4f && Math.abs(x1 - 0.3f) < 1e-4f),
+                        || (Math.abs(x0) < 1e-4f && Math.abs(x1 - 0.3f) < 1e-4f),
                 "expected {0.3, 0.0} but got {" + x0 + "," + x1 + "}");
     }
 }

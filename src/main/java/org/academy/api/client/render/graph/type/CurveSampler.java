@@ -10,7 +10,9 @@ public final class CurveSampler {
     private CurveSampler() {
     }
 
-    /** 采样 [0,1] 内 t；越界返回首/末关键帧值。 */
+    /**
+     * 采样 [0,1] 内 t；越界返回首/末关键帧值。
+     */
     public static float sample(Curve curve, float t) {
         var kfs = curve.keyframes();
         if (kfs.isEmpty()) return 0f;

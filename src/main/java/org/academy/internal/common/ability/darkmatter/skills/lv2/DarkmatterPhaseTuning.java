@@ -187,7 +187,9 @@ public final class DarkmatterPhaseTuning extends Skill {
             }
         }
 
-        /** Starts or refreshes the server lease used by maintained-key packets and GameTests. */
+        /**
+         * Starts or refreshes the server lease used by maintained-key packets and GameTests.
+         */
         public static boolean beginTuning(ServerPlayer player, Direction direction) {
             if (!Skills.DARKMATTER_PHASE_TUNING.get().isEnabled(player)) return false;
             TUNING.compute(player.getUUID(), (_, existing) -> {
@@ -203,7 +205,9 @@ public final class DarkmatterPhaseTuning extends Skill {
             return true;
         }
 
-        /** Ends the lease only when the released direction matches the active direction. */
+        /**
+         * Ends the lease only when the released direction matches the active direction.
+         */
         public static void endTuning(ServerPlayer player, Direction direction) {
             TUNING.computeIfPresent(player.getUUID(), (_, state) ->
                     state.direction == direction ? null : state);

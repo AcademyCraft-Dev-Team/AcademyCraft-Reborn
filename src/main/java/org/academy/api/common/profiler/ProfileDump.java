@@ -2,11 +2,7 @@ package org.academy.api.common.profiler;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class ProfileDump {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -42,9 +38,9 @@ public final class ProfileDump {
         for (ZoneSlice child : snapshot.childrenOf(path)) {
             double pct = snapshot.parentPercent(child);
             long rootTotal = snapshot.getRootTotalNs();
-            double gpct = rootTotal > 0 ? child.getTotalNs() * 100.0 / rootTotal : 0.0;
+            double gpct = rootTotal > 0 ? child.totalNs() * 100.0 / rootTotal : 0.0;
             sb.append("  ".repeat(depth))
-                    .append(child.getName())
+                    .append(child.name())
                     .append(" - ")
                     .append(String.format("%.2f%% / %.2f%%", pct, gpct))
                     .append(" - ")
@@ -52,12 +48,12 @@ public final class ProfileDump {
                     .append(" (self ")
                     .append(String.format("%.2f ms", child.getSelfMs()))
                     .append(") - ")
-                    .append(child.getCount())
+                    .append(child.count())
                     .append(" calls - max ")
                     .append(String.format("%.2f ms", child.getMaxMs()))
                     .append('\n');
             if (depth < maxDepth) {
-                appendZoneNode(sb, snapshot, child.getPath(), depth + 1, maxDepth);
+                appendZoneNode(sb, snapshot, child.path(), depth + 1, maxDepth);
             }
         }
     }
@@ -66,18 +62,18 @@ public final class ProfileDump {
         StringBuilder sb = new StringBuilder();
         sb.append("== AcademyCraft Sampling Profile ==\n")
                 .append("Total samples: ")
-                .append(snapshot.getTotalSamples())
+                .append(snapshot.totalSamples())
                 .append("  Duration: ")
-                .append(String.format("%.1f", snapshot.getDurationSeconds()))
+                .append(String.format("%.1f", snapshot.durationSeconds()))
                 .append(" s\n");
-        for (SampledThreadView view : snapshot.getThreads().values()) {
-            sb.append("-- Thread: ").append(view.getName())
-                    .append(" (").append(view.getSamples()).append(" samples)\n");
+        for (SampledThreadView view : snapshot.threads().values()) {
+            sb.append("-- Thread: ").append(view.name())
+                    .append(" (").append(view.samples()).append(" samples)\n");
             Map<String, Long> self = new HashMap<>();
-            collectSelf(view.getRoot(), self);
+            collectSelf(view.root(), self);
             List<Map.Entry<String, Long>> top = new ArrayList<>(self.entrySet());
             top.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
-            long total = view.getRoot().getSamples();
+            long total = view.root().samples();
             for (int i = 0; i < Math.min(limit, top.size()); i++) {
                 Map.Entry<String, Long> entry = top.get(i);
                 double pct = total > 0 ? entry.getValue() * 100.0 / total : 0.0;
@@ -98,10 +94,10 @@ public final class ProfileDump {
     }
 
     private static void collectSelf(SampledNode node, Map<String, Long> map) {
-        if (!"<root>".equals(node.getLabel())) {
-            map.merge(node.getLabel(), node.getSelfSamples(), Long::sum);
+        if (!"<root>".equals(node.label())) {
+            map.merge(node.label(), node.selfSamples(), Long::sum);
         }
-        for (SampledNode child : node.getChildren()) {
+        for (SampledNode child : node.children()) {
             collectSelf(child, map);
         }
     }
@@ -115,8 +111,8 @@ public final class ProfileDump {
         if (snapshot.isSampling()) {
             sb.append(" (paused: ").append(snapshot.isSamplingPaused() ? "yes" : "no").append(')');
             if (sampler != null) {
-                sb.append("\n  samples: ").append(sampler.getTotalSamples())
-                        .append("  duration: ").append(String.format("%.1f", sampler.getDurationSeconds()))
+                sb.append("\n  samples: ").append(sampler.totalSamples())
+                        .append("  duration: ").append(String.format("%.1f", sampler.durationSeconds()))
                         .append(" s");
             }
         }

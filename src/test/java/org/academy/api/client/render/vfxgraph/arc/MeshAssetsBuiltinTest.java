@@ -1,12 +1,13 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
 import org.junit.jupiter.api.Test;
 
-/** M29：内置表面生成器单测（复刻 Blender Plane/Sphere）。 */
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * M29：内置表面生成器单测（复刻 Blender Plane/Sphere）。
+ */
 class MeshAssetsBuiltinTest {
 
     @Test
@@ -36,7 +37,7 @@ class MeshAssetsBuiltinTest {
 
     @Test
     void resolveUnknownReturnsNull() {
-        assertEquals(null, MeshAssets.resolve("nonexistent"));
+        assertNull(MeshAssets.resolve("nonexistent"));
     }
 
     @Test

@@ -1,10 +1,11 @@
 package org.academy.api.client.render.vfxgraph.render;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GraphCameraTest {
     @Test
@@ -29,8 +30,8 @@ class GraphCameraTest {
     @Test
     void fromGameCameraPreservesPositionRotationProjection() {
         var position = new Vector3f(10f, -5f, 30f);
-        var view = new org.joml.Matrix4f().rotationY(0.5f);
-        var projection = new org.joml.Matrix4f().setPerspective(1f, 16f / 9f, 0.1f, 1000f);
+        var view = new Matrix4f().rotationY(0.5f);
+        var projection = new Matrix4f().setPerspective(1f, 16f / 9f, 0.1f, 1000f);
         var camera = GraphCamera.fromGameCamera(position, view, projection);
 
         assertEquals(position, camera.position());

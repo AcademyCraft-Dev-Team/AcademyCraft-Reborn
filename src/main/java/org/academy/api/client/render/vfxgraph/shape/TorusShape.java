@@ -2,7 +2,9 @@ package org.academy.api.client.render.vfxgraph.shape;
 
 import java.util.Random;
 
-/** 圆环（torus）表面采样（XZ 平面，主半径 + 次半径）。 */
+/**
+ * 圆环（torus）表面采样（XZ 平面，主半径 + 次半径）。
+ */
 public final class TorusShape implements EmitterShape {
     private final float cx;
     private final float cy;

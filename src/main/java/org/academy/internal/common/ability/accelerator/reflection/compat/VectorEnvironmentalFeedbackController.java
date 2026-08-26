@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -15,7 +16,6 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
 import java.util.*;
-import net.minecraft.util.Mth;
 
 /**
  * Limits only the audiovisual feedback produced by continuous positional

@@ -1,7 +1,6 @@
 package org.academy.internal.common.ability.mentalout.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import java.util.List;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -25,6 +24,8 @@ import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
+
+import java.util.List;
 
 public final class MentalTakeover extends Skill {
     public MentalTakeover() {

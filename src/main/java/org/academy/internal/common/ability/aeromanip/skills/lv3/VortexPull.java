@@ -23,9 +23,9 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
@@ -39,8 +39,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public final class VortexPull extends Skill {
     public VortexPull() {
@@ -116,7 +117,7 @@ public final class VortexPull extends Skill {
                     radius *= 1.2;
                     duration = Math.max(1, Math.round(duration * 1.2f));
                 }
-                var field = new AirflowField(java.util.UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.VORTEX,
+                var field = new AirflowField(UUID.randomUUID(), player.getUUID(), level.dimension(), AirflowField.Type.VORTEX,
                         AirflowField.Shape.SPHERE, center, look, radius, 0, 1.0f, duration, context.milestone());
                 var capture = new ProjectileCapture();
                 AeromanipFieldManager.activate(player, skill, field,
@@ -124,7 +125,8 @@ public final class VortexPull extends Skill {
                         (owner, activeField, age) -> capture.release(owner));
             });
         }
-        private static void tick(net.minecraft.server.level.ServerPlayer owner, AirflowField field, int age,
+
+        private static void tick(ServerPlayer owner, AirflowField field, int age,
                                  ProjectileCapture capture) {
             var box = field.bounds().inflate(1.0);
             var handled = 0;
@@ -153,7 +155,7 @@ public final class VortexPull extends Skill {
 
         private static boolean isFriendlyProjectile(ServerPlayer owner, Projectile projectile) {
             var projectileOwner = projectile.getOwner();
-            return projectileOwner == owner || projectileOwner != null && owner.isAlliedTo(projectileOwner);
+            return projectileOwner == owner || owner.isAlliedTo(projectileOwner);
         }
 
         private static final class ProjectileCapture {

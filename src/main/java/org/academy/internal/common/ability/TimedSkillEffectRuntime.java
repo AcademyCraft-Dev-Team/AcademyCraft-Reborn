@@ -3,22 +3,19 @@ package org.academy.internal.common.ability;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 
-import java.util.Iterator;
-import java.util.ArrayDeque;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
-/** Bounded, session-only marks and cooldowns shared by proficiency effects. */
+/**
+ * Bounded, session-only marks and cooldowns shared by proficiency effects.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class TimedSkillEffectRuntime {
     private static final int MAX_EFFECTS = 4096;

@@ -2,12 +2,11 @@ package org.academy.internal.common.ability.meltdowner.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.Map;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -48,6 +47,12 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public final class ParticleWaveCannon extends Skill {
     static final int CHARGE_TICKS = 25;
@@ -172,7 +177,7 @@ public final class ParticleWaveCannon extends Skill {
         private final float maximumLength;
         private final float damageRadius;
         private final float breakRadius;
-        private final java.util.Map<java.util.UUID, net.minecraft.world.entity.LivingEntity> beamTargets = new java.util.HashMap<>();
+        private final Map<UUID, LivingEntity> beamTargets = new HashMap<>();
         private final ContinuousReflectionSession reflectionSession = new ContinuousReflectionSession();
 
         private Context(ServerPlayer player) {
@@ -284,15 +289,15 @@ public final class ParticleWaveCannon extends Skill {
         private void updateResidualTargets(LinearAttackExecutor.SegmentExecutionResult outbound,
                                            LinearAttackExecutor.SegmentExecutionResult returned,
                                            AbilitySystemServer system) {
-            var current = new java.util.HashSet<java.util.UUID>();
+            var current = new HashSet<UUID>();
             for (var entity : outbound.hits()) {
-                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                if (entity instanceof LivingEntity living) {
                     current.add(living.getUUID());
                     beamTargets.put(living.getUUID(), living);
                 }
             }
             for (var entity : returned.hits()) {
-                if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                if (entity instanceof LivingEntity living) {
                     current.add(living.getUUID());
                     beamTargets.put(living.getUUID(), living);
                 }

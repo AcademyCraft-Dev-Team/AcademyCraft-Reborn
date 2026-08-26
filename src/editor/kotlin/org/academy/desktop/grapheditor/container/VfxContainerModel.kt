@@ -3,35 +3,10 @@ package org.academy.desktop.grapheditor.container
 import org.academy.api.client.render.graph.model.GraphParameter
 import org.academy.api.client.render.graph.model.Port
 import org.academy.api.client.render.graph.registry.NodeRegistry
-import org.academy.api.client.render.graph.type.ValueType
-import org.academy.api.client.render.vfxgraph.model.VfxBlock
-import org.academy.api.client.render.vfxgraph.model.VfxContext
-import org.academy.api.client.render.vfxgraph.model.VfxContextType
-import org.academy.api.client.render.vfxgraph.model.VfxDataEdge
-import org.academy.api.client.render.vfxgraph.model.VfxBlockFlowEdge
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge
-import org.academy.api.client.render.vfxgraph.model.VfxNode
-import org.academy.api.client.render.vfxgraph.model.VfxOperatorNode
-import org.academy.api.client.render.vfxgraph.model.VfxSystem
+import org.academy.api.client.render.vfxgraph.model.*
 import org.academy.desktop.grapheditor.command.Command
 import org.academy.desktop.grapheditor.command.UndoManager
-import org.academy.desktop.grapheditor.container.command.AddBlockCommand
-import org.academy.desktop.grapheditor.container.command.AddContextCommand
-import org.academy.desktop.grapheditor.container.command.AddOperatorCommand
-import org.academy.desktop.grapheditor.container.command.ConnectDataCommand
-import org.academy.desktop.grapheditor.container.command.ConnectBlockFlowCommand
-import org.academy.desktop.grapheditor.container.command.ConnectFlowCommand
-import org.academy.desktop.grapheditor.container.command.DisconnectDataCommand
-import org.academy.desktop.grapheditor.container.command.DisconnectBlockFlowCommand
-import org.academy.desktop.grapheditor.container.command.DisconnectFlowCommand
-import org.academy.desktop.grapheditor.container.command.MoveContextCommand
-import org.academy.desktop.grapheditor.container.command.MoveOperatorCommand
-import org.academy.desktop.grapheditor.container.command.RemoveBlockCommand
-import org.academy.desktop.grapheditor.container.command.RemoveContextCommand
-import org.academy.desktop.grapheditor.container.command.RemoveOperatorCommand
-import org.academy.desktop.grapheditor.container.command.SetContainerPropertyCommand
-import org.academy.desktop.grapheditor.container.command.SetOutputCommand
-import org.academy.desktop.grapheditor.container.command.VfxContainerCommand
+import org.academy.desktop.grapheditor.container.command.*
 
 /**
  * VFX 容器图编辑模型（M26）：编辑 [VfxSystem]（contexts/blocks/operators/flow/data edges）的
@@ -155,11 +130,13 @@ class VfxContainerModel(private val registry: NodeRegistry) {
 
     /** 节点首个输入端口 id；无则 null。 */
     fun firstInputPort(nodeId: String): String? =
-        portsFor(nodeId).firstOrNull { it.direction() == org.academy.api.client.render.graph.model.PortDirection.INPUT }?.id()
+        portsFor(nodeId).firstOrNull { it.direction() == org.academy.api.client.render.graph.model.PortDirection.INPUT }
+            ?.id()
 
     /** 节点首个输出端口 id；无则 null。 */
     fun firstOutputPort(nodeId: String): String? =
-        portsFor(nodeId).firstOrNull { it.direction() == org.academy.api.client.render.graph.model.PortDirection.OUTPUT }?.id()
+        portsFor(nodeId).firstOrNull { it.direction() == org.academy.api.client.render.graph.model.PortDirection.OUTPUT }
+            ?.id()
 
     // ---- id 分配 ----
 
@@ -285,7 +262,11 @@ class VfxContainerModel(private val registry: NodeRegistry) {
         val toType = portsFor(to).firstOrNull { it.id() == toPort }
             ?.let { if (it.direction() == org.academy.api.client.render.graph.model.PortDirection.INPUT) it else null }
             ?: return false
-        if (!org.academy.api.client.render.graph.type.TypeConversions.INSTANCE.canConvert(fromType.type(), toType.type())) {
+        if (!org.academy.api.client.render.graph.type.TypeConversions.INSTANCE.canConvert(
+                fromType.type(),
+                toType.type()
+            )
+        ) {
             return false
         }
         if (dataEdges.any { it.toNode == to && it.toPort == toPort }) {
@@ -315,14 +296,16 @@ class VfxContainerModel(private val registry: NodeRegistry) {
         return type.properties().firstOrNull { it.id() == propId }?.defaultValue()?.let { propertyValueString(it) }
     }
 
-    private fun propertyValueString(value: org.academy.api.client.render.graph.type.Value): String = when (value.type()) {
-        org.academy.api.client.render.graph.type.ValueType.FLOAT -> value.asFloat().toString()
-        org.academy.api.client.render.graph.type.ValueType.COLOR -> {
-            val c = value.asColor()
-            "${c.x},${c.y},${c.z},${c.w}"
+    private fun propertyValueString(value: org.academy.api.client.render.graph.type.Value): String =
+        when (value.type()) {
+            org.academy.api.client.render.graph.type.ValueType.FLOAT -> value.asFloat().toString()
+            org.academy.api.client.render.graph.type.ValueType.COLOR -> {
+                val c = value.asColor()
+                "${c.x},${c.y},${c.z},${c.w}"
+            }
+
+            else -> ""
         }
-        else -> ""
-    }
 
     fun moveContext(contextId: String, newX: Float, newY: Float) {
         val ctx = contexts[contextId] ?: return
@@ -409,7 +392,16 @@ class VfxContainerModel(private val registry: NodeRegistry) {
                 org.academy.api.client.render.graph.model.Edge.PortRef(it.toNode, it.toPort),
             )
         }
-        return VfxSystem("editor", ctxList, opList, flowList, blockFlowList, dataList, parameters.toList(), outputs.toList())
+        return VfxSystem(
+            "editor",
+            ctxList,
+            opList,
+            flowList,
+            blockFlowList,
+            dataList,
+            parameters.toList(),
+            outputs.toList()
+        )
     }
 
     fun load(system: VfxSystem) {
@@ -436,7 +428,14 @@ class VfxContainerModel(private val registry: NodeRegistry) {
             blockFlows.add(EdBlockFlowEdge(edge.fromBlockId(), edge.toBlockId()))
         }
         for (edge in system.dataEdges()) {
-            dataEdges.add(EdDataEdge(edge.from().nodeId(), edge.from().portId(), edge.to().nodeId(), edge.to().portId()))
+            dataEdges.add(
+                EdDataEdge(
+                    edge.from().nodeId(),
+                    edge.from().portId(),
+                    edge.to().nodeId(),
+                    edge.to().portId()
+                )
+            )
         }
         parameters.addAll(system.parameters())
         outputs.addAll(system.outputs())

@@ -1,7 +1,9 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import java.nio.ByteBuffer;
 import org.lwjgl.BufferUtils;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 /**
  * 曲线→管网格构建器（M22-Rev2）：复刻 Blender Curve to Mesh + Curve Circle 节点。
@@ -21,10 +23,10 @@ public final class CurveToMeshBuilder {
     /**
      * 构建 ArcCurve 的管网格。
      *
-     * @param arc          源弧线数据
-     * @param segmentRes   圆周分段数（默认 8，Blender Curve Circle Resolution=8）
-     * @param r,g,b,a      基础颜色
-     * @param brightnessScale  generation 亮度衰减因子
+     * @param arc             源弧线数据
+     * @param segmentRes      圆周分段数（默认 8，Blender Curve Circle Resolution=8）
+     * @param r,g,b,a         基础颜色
+     * @param brightnessScale generation 亮度衰减因子
      * @return 管网格数据（顶点 ByteBuffer + 索引 int[]）
      */
     public static MeshData build(ArcCurve arc, int segmentRes, float r, float g, float b, float a,
@@ -34,7 +36,7 @@ public final class CurveToMeshBuilder {
 
         // 按连续折线段（segment）分组：分支等互不相连的段各自成 run，避免被缝成一根管。
         // 主弧默认 segment 0；CurveGenerator 为每根分支分配独立 id。
-        var runs = new java.util.ArrayList<int[]>();
+        var runs = new ArrayList<int[]>();
         int runStart = 0;
         for (int i = 1; i <= n; i++) {
             if (i == n || arc.segment(i) != arc.segment(i - 1)) {
@@ -86,7 +88,15 @@ public final class CurveToMeshBuilder {
                 float ty = arc.y(next) - arc.y(prev);
                 float tz = arc.z(next) - arc.z(prev);
                 float tlen = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
-                if (tlen < 1e-6f) { tx = 0; ty = 1; tz = 0; } else { tx /= tlen; ty /= tlen; tz /= tlen; }
+                if (tlen < 1e-6f) {
+                    tx = 0;
+                    ty = 1;
+                    tz = 0;
+                } else {
+                    tx /= tlen;
+                    ty /= tlen;
+                    tz /= tlen;
+                }
 
                 // Right vector (parallel transport); reset per run
                 float[] right;
@@ -167,7 +177,9 @@ public final class CurveToMeshBuilder {
         return new MeshData(vertBuf, indices, totalVerts, totalIndices);
     }
 
-    /** 与切线方向垂直的初始 right 向量。 */
+    /**
+     * 与切线方向垂直的初始 right 向量。
+     */
     private static float[] initialRight(float tx, float ty, float tz) {
         float[] ref = Math.abs(ty) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
         float rx = ty * ref[2] - tz * ref[1];
@@ -178,7 +190,9 @@ public final class CurveToMeshBuilder {
         return new float[]{rx / len, ry / len, rz / len};
     }
 
-    /** Parallel transport：把 prevRight 投影到新切线的垂直平面。 */
+    /**
+     * Parallel transport：把 prevRight 投影到新切线的垂直平面。
+     */
     private static float[] parallelTransport(float[] prevRight, float tx, float ty, float tz) {
         // dot = prevRight · tangent
         float dot = prevRight[0] * tx + prevRight[1] * ty + prevRight[2] * tz;
@@ -191,7 +205,9 @@ public final class CurveToMeshBuilder {
         return new float[]{rx / len, ry / len, rz / len};
     }
 
-    /** 管网格数据。 */
+    /**
+     * 管网格数据。
+     */
     public record MeshData(ByteBuffer vertexBuffer, int[] indices, int vertexCount, int indexCount) {
         public static final MeshData EMPTY = new MeshData(BufferUtils.createByteBuffer(0), new int[0], 0, 0);
 

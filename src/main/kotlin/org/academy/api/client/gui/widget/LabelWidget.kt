@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget
 
+import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.GlyphDrawCommand
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
@@ -7,7 +8,6 @@ import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor.layout
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.util.GlyphCommandGenerator
 import kotlin.math.min
-import net.minecraft.util.Mth
 
 open class LabelWidget(text: String) : AbstractWidget() {
     var baseFontSize: Float = DEFAULT_BASE_FONT_SIZE

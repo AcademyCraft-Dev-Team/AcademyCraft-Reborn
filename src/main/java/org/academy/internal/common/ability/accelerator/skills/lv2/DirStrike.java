@@ -7,6 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -20,6 +21,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -50,7 +52,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.util.Mth;
 
 public class DirStrike extends Skill {
     public static final int EFFECT_RADIUS = 12;
@@ -222,7 +223,7 @@ public class DirStrike extends Skill {
                 // 图 VFX 挂点（M20，A4）：以冲击波位置广播图资产，radius/speed 作为存活参数驱动
                 // 爆发规模与速度（图资产缺失时客户端静默兜底，不影响伤害逻辑）。
                 SpawnVfxGraphPacket.broadcast(level,
-                        org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager.DIR_STRIKE_ASSET,
+                        VfxGraphManager.DIR_STRIKE_ASSET,
                         player.position(), -1, 1f,
                         Map.of("radius", (float) radius,
                                 "speed", 4f + (airborne ? 2f : 0f),

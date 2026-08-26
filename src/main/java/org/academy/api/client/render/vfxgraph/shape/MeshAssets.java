@@ -1,9 +1,10 @@
 package org.academy.api.client.render.vfxgraph.shape;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 网格三角形资产注册表（A3 / M29）：id → 三角化顶点数组。
@@ -22,17 +23,23 @@ public final class MeshAssets {
     private MeshAssets() {
     }
 
-    /** 注册（或覆盖）一个网格 id → 三角化顶点数组。 */
+    /**
+     * 注册（或覆盖）一个网格 id → 三角化顶点数组。
+     */
     public static void register(String id, float[] triangles) {
         TRIANGLES.put(id, triangles);
     }
 
-    /** 查询网格三角形；未注册返回 null。 */
+    /**
+     * 查询网格三角形；未注册返回 null。
+     */
     public static @Nullable float[] triangles(String id) {
         return TRIANGLES.get(id);
     }
 
-    /** 清空注册表（测试/重载用）。 */
+    /**
+     * 清空注册表（测试/重载用）。
+     */
     public static void clear() {
         TRIANGLES.clear();
     }
@@ -62,8 +69,8 @@ public final class MeshAssets {
         float h = size * 0.5f;
         // 顶点顺序保证法线朝 +Y（A=(-h,0,-h), B=(-h,0,h), C=(h,0,-h) 的 AB×AC 指向 +Y）
         return new float[]{
-                -h, 0, -h,  -h, 0, h,   h, 0, -h,
-                 h, 0,  h,   h, 0, -h,  -h, 0, h
+                -h, 0, -h, -h, 0, h, h, 0, -h,
+                h, 0, h, h, 0, -h, -h, 0, h
         };
     }
 
@@ -109,7 +116,9 @@ public final class MeshAssets {
         return arr;
     }
 
-    /** 球面上一点：经线角 az、纬线 index r（0=顶，rings=底）。 */
+    /**
+     * 球面上一点：经线角 az、纬线 index r（0=顶，rings=底）。
+     */
     private static float[] spherePoint(float az, int r, int rings, float radius) {
         float phi = (float) (Math.PI * r / rings);
         return new float[]{
@@ -120,8 +129,14 @@ public final class MeshAssets {
     }
 
     private static void appendTri(ArrayList<Float> out, float[] a, float[] b, float[] c) {
-        out.add(a[0]); out.add(a[1]); out.add(a[2]);
-        out.add(b[0]); out.add(b[1]); out.add(b[2]);
-        out.add(c[0]); out.add(c[1]); out.add(c[2]);
+        out.add(a[0]);
+        out.add(a[1]);
+        out.add(a[2]);
+        out.add(b[0]);
+        out.add(b[1]);
+        out.add(b[2]);
+        out.add(c[0]);
+        out.add(c[1]);
+        out.add(c[2]);
     }
 }

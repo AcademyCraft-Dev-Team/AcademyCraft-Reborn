@@ -2,7 +2,9 @@ package org.academy.api.common.ability.darkmatter;
 
 import java.util.Set;
 
-/** Public metadata for one configurable dark-matter shaping modifier. */
+/**
+ * Public metadata for one configurable dark-matter shaping modifier.
+ */
 public record DarkmatterModifierType(
         String id,
         int maxLevel,
@@ -19,7 +21,9 @@ public record DarkmatterModifierType(
         conflicts = Set.copyOf(conflicts);
     }
 
-    /** Source-compatible constructor for extensions whose modifiers are available from level 1. */
+    /**
+     * Source-compatible constructor for extensions whose modifiers are available from level 1.
+     */
     public DarkmatterModifierType(String id, int maxLevel, int pointCost,
                                   Set<DarkmatterShape> compatibleShapes,
                                   Set<String> conflicts) {

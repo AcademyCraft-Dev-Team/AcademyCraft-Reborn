@@ -20,97 +20,173 @@ public final class BlenderArcReference {
 
     // ==================== 场景 ====================
 
-    /** 地面平面：2×2（x/z ∈ [-1,1]，y=0），复刻 Blender Plane。 */
+    /**
+     * 地面平面：2×2（x/z ∈ [-1,1]，y=0），复刻 Blender Plane。
+     */
     public static final float PLANE_SIZE = 2f;
-    /** 悬浮球世界位置：复刻 Blender Sphere loc (0.52, 0.38, 4.34)。 */
+    /**
+     * 悬浮球世界位置：复刻 Blender Sphere loc (0.52, 0.38, 4.34)。
+     */
     public static final float SPHERE_X = 0.52f;
     public static final float SPHERE_Y = 4.34f;
     public static final float SPHERE_Z = 0.38f;
-    /** 球半径 ≈1。 */
+    /**
+     * 球半径 ≈1。
+     */
     public static final float SPHERE_RADIUS = 1f;
 
     // ==================== modifier 实际生效参数（权威） ====================
 
     // --- 表面电弧面板 ---
-    /** 电弧密度（随机点云阵列 Density，单位面积点数）。 */
+    /**
+     * 电弧密度（随机点云阵列 Density，单位面积点数）。
+     */
     public static final float ARC_DENSITY = 1.0f;
-    /** 电弧粗细（Curve to Mesh Scale 乘数，管半径）。 */
+    /**
+     * 电弧粗细（Curve to Mesh Scale 乘数，管半径）。
+     */
     public static final float ARC_THICKNESS = 0.78f;
-    /** 电弧宽度（实例 Scale 乘数）。 */
+    /**
+     * 电弧宽度（实例 Scale 乘数）。
+     */
     public static final float ARC_WIDTH = 1.0f;
-    /** 电弧高度（Curve Line 长度，弧基线跨度）。 */
+    /**
+     * 电弧高度（Curve Line 长度，弧基线跨度）。
+     */
     public static final float ARC_HEIGHT = 1.0f;
-    /** 游离速度（噪声域扭曲速度）。 */
+    /**
+     * 游离速度（噪声域扭曲速度）。
+     */
     public static final float ARC_DRIFT = 1.5f;
-    /** 生命周期（帧）。 */
+    /**
+     * 生命周期（帧）。
+     */
     public static final float ARC_LIFETIME = 20f;
-    /** 电弧亮度（Light 属性，材质 Emission 乘 6）。 */
+    /**
+     * 电弧亮度（Light 属性，材质 Emission 乘 6）。
+     */
     public static final float ARC_BRIGHTNESS = 1.0f;
-    /** 电弧颜色（LColor 属性；复刻目标改亮蓝）。 */
+    /**
+     * 电弧颜色（LColor 属性；复刻目标改亮蓝）。
+     */
     public static final float[] ARC_COLOR_BLUE = {0.13f, 0.21f, 1.0f, 1.0f};
-    /** 噪波强度（表面电弧）。 */
+    /**
+     * 噪波强度（表面电弧）。
+     */
     public static final float ARC_NOISE = 0.5f;
-    /** 随机点云阵列出现概率（保留 2.04%，每帧极稀疏）。 */
+    /**
+     * 随机点云阵列出现概率（保留 2.04%，每帧极稀疏）。
+     */
     public static final float ARC_APPEAR_PROB = 0.0204f;
-    /** 随机点云阵列散布频率（帧门控用）。 */
+    /**
+     * 随机点云阵列散布频率（帧门控用）。
+     */
     public static final int ARC_SPREAD_FREQ = 30;
 
     // --- 接触闪电面板 ---
-    /** 接触范围（Sample Nearest Surface 距离剔除阈值）。 */
+    /**
+     * 接触范围（Sample Nearest Surface 距离剔除阈值）。
+     */
     public static final float CONTACT_RANGE = 4.1f;
-    /** 接触闪电 Density（随机点云阵列.001）。 */
+    /**
+     * 接触闪电 Density（随机点云阵列.001）。
+     */
     public static final float CONTACT_DENSITY = 1.47f;
-    /** 接触闪电生命周期（帧）。 */
+    /**
+     * 接触闪电生命周期（帧）。
+     */
     public static final float CONTACT_LIFETIME = 6f;
-    /** 接触闪电发光强度（TLight，材质 Emission）。 */
+    /**
+     * 接触闪电发光强度（TLight，材质 Emission）。
+     */
     public static final float CONTACT_EMISSION = 3.0f;
-    /** 接触闪电半径（管半径乘数）。 */
+    /**
+     * 接触闪电半径（管半径乘数）。
+     */
     public static final float CONTACT_RADIUS = 0.8f;
-    /** 接触闪电噪波强度。 */
+    /**
+     * 接触闪电噪波强度。
+     */
     public static final float CONTACT_NOISE = 0.5f;
-    /** 接触闪电出现概率。 */
+    /**
+     * 接触闪电出现概率。
+     */
     public static final float CONTACT_APPEAR_PROB = 0.15f;
 
     // --- 粒子面板 ---
-    /** 粒子密度（Curve to Points 随机删减保留率）。 */
+    /**
+     * 粒子密度（Curve to Points 随机删减保留率）。
+     */
     public static final float PARTICLE_DENSITY = 0.48f;
-    /** 粒子缩放（实例 Scale 乘数）。 */
+    /**
+     * 粒子缩放（实例 Scale 乘数）。
+     */
     public static final float PARTICLE_SCALE = 0.83f;
-    /** 溅射速度（初始速度乘数）。 */
+    /**
+     * 溅射速度（初始速度乘数）。
+     */
     public static final float PARTICLE_SPLASH = 1.23f;
-    /** 重力G（Combine XYZ Z 分量，向下）。 */
+    /**
+     * 重力G（Combine XYZ Z 分量，向下）。
+     */
     public static final float PARTICLE_GRAVITY = -0.9f;
-    /** 粒子生命周期（帧）。 */
+    /**
+     * 粒子生命周期（帧）。
+     */
     public static final float PARTICLE_LIFETIME = 30f;
-    /** 粒子亮度（PLight，材质 Emission 乘 6）。 */
+    /**
+     * 粒子亮度（PLight，材质 Emission 乘 6）。
+     */
     public static final float PARTICLE_BRIGHTNESS = 1.0f;
-    /** 粒子颜色（PColor；复刻目标取材质 fallback 蓝 [0.23,0.35,0.69]）。 */
+    /**
+     * 粒子颜色（PColor；复刻目标取材质 fallback 蓝 [0.23,0.35,0.69]）。
+     */
     public static final float[] PARTICLE_COLOR_BLUE = {0.23f, 0.35f, 0.69f, 1.0f};
 
     // ==================== FloatCurve 控制点（权威，主源 BlenderArcCurves） ====================
 
-    /** FloatCurve.001 弧拱成长曲线（age/生命周期 → 控制柄上推乘数）。 */
+    /**
+     * FloatCurve.001 弧拱成长曲线（age/生命周期 → 控制柄上推乘数）。
+     */
     public static final float[][] CURVE_ARCH = BlenderArcCurves.ARCH_GROWTH;
-    /** FloatCurve.002 管半径沿弧剖面（端粗中细）。 */
+    /**
+     * FloatCurve.002 管半径沿弧剖面（端粗中细）。
+     */
     public static final float[][] CURVE_RADIUS = BlenderArcCurves.RADIUS_PROFILE;
-    /** FloatCurve.005 管半径随 age 衰减。 */
+    /**
+     * FloatCurve.005 管半径随 age 衰减。
+     */
     public static final float[][] CURVE_RADIUS_AGE = BlenderArcCurves.RADIUS_AGE;
-    /** FloatCurve.003 粒子缩放随生命衰减。 */
+    /**
+     * FloatCurve.003 粒子缩放随生命衰减。
+     */
     public static final float[][] CURVE_PARTICLE_LIFE = BlenderArcCurves.PARTICLE_LIFE;
 
     // --- M30 一比一复刻补充（2026-08-23 从实际 .blend 提取，先前缺失） ---
 
-    /** 表面电弧噪声乘数 pa 沿弧剖面（Float Curve 无名，脉冲：两端 0、中段 1）。 */
+    /**
+     * 表面电弧噪声乘数 pa 沿弧剖面（Float Curve 无名，脉冲：两端 0、中段 1）。
+     */
     public static final float[][] CURVE_NOISE_PA = BlenderArcCurves.NOISE_PA;
-    /** 接触电弧噪声乘数 shapep（Float Curve.007，同 pa 脉冲）。 */
+    /**
+     * 接触电弧噪声乘数 shapep（Float Curve.007，同 pa 脉冲）。
+     */
     public static final float[][] CURVE_CONTACT_SHAPEP = BlenderArcCurves.CONTACT_SHAPEP;
-    /** 电弧亮度随 age（Float Curve.004，先亮后灭）。 */
+    /**
+     * 电弧亮度随 age（Float Curve.004，先亮后灭）。
+     */
     public static final float[][] CURVE_LIGHT = BlenderArcCurves.LIGHT;
-    /** 接触电弧半径/发光生命（Float Curve.009）。 */
+    /**
+     * 接触电弧半径/发光生命（Float Curve.009）。
+     */
     public static final float[][] CURVE_CONTACT_RADIUS_AGE = BlenderArcCurves.CONTACT_RADIUS_AGE;
-    /** 表面电弧寿命沿弧变化（Float Curve.006，删除阈值 = 曲线×3 + 20 帧）。 */
+    /**
+     * 表面电弧寿命沿弧变化（Float Curve.006，删除阈值 = 曲线×3 + 20 帧）。
+     */
     public static final float[][] CURVE_SURFACE_LIFE_VAR = BlenderArcCurves.SURFACE_LIFE_VAR;
-    /** 接触电弧寿命沿弧变化（Float Curve.008，删除阈值 = 曲线×3 + 6 帧）。 */
+    /**
+     * 接触电弧寿命沿弧变化（Float Curve.008，删除阈值 = 曲线×3 + 6 帧）。
+     */
     public static final float[][] CURVE_CONTACT_LIFE_VAR = BlenderArcCurves.CONTACT_LIFE_VAR;
 
     // ==================== 实测几何（frame40） ====================
@@ -135,13 +211,17 @@ public final class BlenderArcReference {
             {1.000f, 0.110f, 0.000f},
     };
 
-    /** 实测表面电弧逐环管半径（最小 0.0024 / 最大 0.0034）。 */
+    /**
+     * 实测表面电弧逐环管半径（最小 0.0024 / 最大 0.0034）。
+     */
     public static final float[] MEASURED_RADIUS = {
             0.0034f, 0.0030f, 0.0028f, 0.0026f, 0.0025f, 0.0025f,
             0.0024f, 0.0024f, 0.0025f, 0.0026f, 0.0029f, 0.0034f,
     };
 
-    /** frame40 各材质弧数（实测）：表面电弧 2 条 / 接触闪电 4 条（+1 平面）/ 粒子 160 条。 */
+    /**
+     * frame40 各材质弧数（实测）：表面电弧 2 条 / 接触闪电 4 条（+1 平面）/ 粒子 160 条。
+     */
     public static final int MEASURED_SURFACE_ARCS = 2;
     public static final int MEASURED_CONTACT_ARCS = 4;
     public static final int MEASURED_PARTICLES = 160;

@@ -2,8 +2,6 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.Locale;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -12,6 +10,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -32,11 +31,7 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.*;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
@@ -49,6 +44,9 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
+import java.util.Locale;
 
 public final class ElectromagneticShield extends Skill {
     static final float BASE_CAPACITY = 100.0f;
@@ -313,7 +311,7 @@ public final class ElectromagneticShield extends Skill {
             Server.setStoredDamage(player, coolStoredDamage(data.getAbsorbedDamage(), cooling));
         }
 
-        private static void triggerOverloadPulse(ServerPlayer player, net.minecraft.world.entity.Entity attacker) {
+        private static void triggerOverloadPulse(ServerPlayer player, Entity attacker) {
             var skill = Skills.ELECTROMAGNETIC_SHIELD.get();
             var now = player.level().getGameTime();
             if (TimedSkillEffectRuntime.get(player.getUUID(), player.getUUID(), skill,

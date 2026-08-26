@@ -1,11 +1,15 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv1;
 
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.resources.R;
@@ -13,12 +17,9 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.FlowSensePacket;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import java.util.List;
 
@@ -93,7 +94,7 @@ public final class FlowSense extends Skill {
             }
         }
 
-        private static void renderPrediction(ServerPlayer player, ServerLevel level, Entity projectile, net.minecraft.world.phys.Vec3 velocity) {
+        private static void renderPrediction(ServerPlayer player, ServerLevel level, Entity projectile, Vec3 velocity) {
             var start = projectile.getBoundingBox().getCenter();
             for (var tick = 5; tick <= 20; tick += 5) {
                 var point = start.add(velocity.scale(tick));
@@ -108,9 +109,9 @@ public final class FlowSense extends Skill {
             }
         }
 
-        private static double distanceToSegmentSqr(net.minecraft.world.phys.Vec3 point,
-                                                   net.minecraft.world.phys.Vec3 start,
-                                                   net.minecraft.world.phys.Vec3 end) {
+        private static double distanceToSegmentSqr(Vec3 point,
+                                                   Vec3 start,
+                                                   Vec3 end) {
             var segment = end.subtract(start);
             var lengthSqr = segment.lengthSqr();
             if (lengthSqr <= 1.0e-8) return point.distanceToSqr(start);

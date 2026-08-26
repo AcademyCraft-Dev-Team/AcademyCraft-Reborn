@@ -1,12 +1,12 @@
 package org.academy.api.client.render.vfx.lightning;
 
+import net.minecraft.util.Mth;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class LightningMeshBuilder implements TubeMeshView {
     private static final int NOT_INITIALIZED = -1;

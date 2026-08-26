@@ -1,14 +1,14 @@
 package org.academy.internal.coremod.client;
 
-import net.minecraft.core.Holder;
 import net.minecraft.client.ClientRecipeBook;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.chat.ChatAbilities;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.stats.StatsCounter;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Field-free bytecode template for generated local-player dispatch subclasses. */
+/**
+ * Field-free bytecode template for generated local-player dispatch subclasses.
+ */
 public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreakerHealthAccess {
     private static Map<UUID, Long> academy$a;
     private static VarHandle academy$b;

@@ -3,7 +3,9 @@ package org.academy.api.common.ability.darkmatter;
 import java.util.EnumSet;
 import java.util.Set;
 
-/** Built-in modifier catalogue and its compatibility matrix. */
+/**
+ * Built-in modifier catalogue and its compatibility matrix.
+ */
 public final class DarkmatterModifiers {
     public static final String SHEAR = "shear";
     public static final String HARVEST = "harvest";
@@ -78,12 +80,12 @@ public final class DarkmatterModifiers {
     }
 
     private static void register(String id, int maxLevel, int cost, int requiredAbilityLevel,
-                                  Set<DarkmatterShape> shapes) {
+                                 Set<DarkmatterShape> shapes) {
         register(id, maxLevel, cost, requiredAbilityLevel, shapes, Set.of());
     }
 
     private static void register(String id, int maxLevel, int cost, int requiredAbilityLevel,
-                                  Set<DarkmatterShape> shapes, Set<String> conflicts) {
+                                 Set<DarkmatterShape> shapes, Set<String> conflicts) {
         var compatibleShapes = EnumSet.copyOf(shapes);
         // A coating is configured before its target item is known. Runtime context decides
         // which of its installed effects are meaningful after crafting.

@@ -6,13 +6,7 @@ import imgui.type.ImInt
 import imgui.type.ImString
 import org.academy.api.client.gui.editor.UiEditorDocument
 import org.academy.api.client.gui.layout.Gravity
-import org.academy.api.client.gui.serialize.PropSpec
-import org.academy.api.client.gui.serialize.PropType
-import org.academy.api.client.gui.serialize.WidgetCodecRegistry
-import org.academy.api.client.gui.serialize.WidgetNode
-import org.academy.api.client.gui.serialize.asValueString
-import org.academy.api.client.gui.serialize.setValue
-import org.academy.api.client.gui.serialize.value
+import org.academy.api.client.gui.serialize.*
 import org.academy.api.client.gui.widget.Widget
 
 /**
@@ -146,24 +140,28 @@ class WidgetInspectorPanel(private val getDoc: () -> UiEditorDocument) {
                     if (v[0].toString() != current) editValue(node, id, PropType.FLOAT, v[0].toString())
                 }
             }
+
             PropType.INT -> {
                 val v = intArrayOf(current.toIntOrNull() ?: 0)
                 if (ImGui.dragInt("$label##$id", v)) {
                     if (v[0].toString() != current) editValue(node, id, PropType.INT, v[0].toString())
                 }
             }
+
             PropType.BOOLEAN -> {
                 val flag = ImBoolean(current.toBoolean())
                 if (ImGui.checkbox("$label##$id", flag)) {
                     editValue(node, id, PropType.BOOLEAN, flag.get().toString())
                 }
             }
+
             PropType.COLOR -> {
                 val c = parseArgb(current)
                 if (ImGui.colorEdit4("$label##$id", c)) {
                     editValue(node, id, PropType.COLOR, argbToHex(c))
                 }
             }
+
             PropType.ENUM -> {
                 if (spec.options.isNotEmpty()) {
                     val options = spec.options
@@ -176,6 +174,7 @@ class WidgetInspectorPanel(private val getDoc: () -> UiEditorDocument) {
                     if (ImGui.inputText("$label##$id", buf)) editValue(node, id, PropType.TEXT, buf.get())
                 }
             }
+
             else -> {
                 val buf = ImString(current, 256)
                 if (ImGui.inputText("$label##$id", buf)) editValue(node, id, PropType.TEXT, buf.get())

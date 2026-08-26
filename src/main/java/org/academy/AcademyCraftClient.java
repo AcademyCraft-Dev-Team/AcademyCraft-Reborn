@@ -96,6 +96,8 @@ import org.academy.internal.common.world.level.material.Fluids;
 import org.joml.Vector3f;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.function.BiConsumer;
 
 import static org.academy.AcademyCraft.academy;
@@ -147,8 +149,8 @@ public final class AcademyCraftClient {
             // dev 热重载：监听运行目录下的 vfxgraph 资产（与资源包目录一致）
             var root = Minecraft.getInstance().gameDirectory.toPath().resolve("vfxgraph");
             try {
-                java.nio.file.Files.createDirectories(root);
-            } catch (java.io.IOException ignored) {
+                Files.createDirectories(root);
+            } catch (IOException ignored) {
             }
             VfxGraphManager.INSTANCE.startFileWatcher(root);
         }

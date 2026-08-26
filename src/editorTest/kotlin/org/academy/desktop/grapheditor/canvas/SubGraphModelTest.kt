@@ -1,11 +1,6 @@
 package org.academy.desktop.grapheditor.canvas
 
-import org.academy.api.client.render.graph.model.Edge
-import org.academy.api.client.render.graph.model.Graph
-import org.academy.api.client.render.graph.model.GraphNode
-import org.academy.api.client.render.graph.model.GraphParameter
-import org.academy.api.client.render.graph.model.Port
-import org.academy.api.client.render.graph.model.PortDirection
+import org.academy.api.client.render.graph.model.*
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry
 import org.academy.api.client.render.graph.subgraph.SubGraphRegistry
 import org.academy.api.client.render.graph.type.Value
@@ -15,7 +10,7 @@ import org.academy.api.client.render.shader.nodes.ShaderNodes
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import java.util.Optional
+import java.util.*
 
 class SubGraphModelTest {
 
@@ -28,12 +23,16 @@ class SubGraphModelTest {
     private fun subGraph(): Graph = Graph(
         "sub",
         listOf(
-            GraphNode("p", "input.param_float", mapOf("param" to "x"), listOf(
-                Port("out", "Out", PortDirection.OUTPUT, ValueType.FLOAT, Value.of(0f))
-            ), 0f, 0f),
-            GraphNode("o", "output.color", emptyMap(), listOf(
-                Port("color", "Color", PortDirection.INPUT, ValueType.COLOR, Value.color(1f, 1f, 1f, 1f))
-            ), 0f, 0f),
+            GraphNode(
+                "p", "input.param_float", mapOf("param" to "x"), listOf(
+                    Port("out", "Out", PortDirection.OUTPUT, ValueType.FLOAT, Value.of(0f))
+                ), 0f, 0f
+            ),
+            GraphNode(
+                "o", "output.color", emptyMap(), listOf(
+                    Port("color", "Color", PortDirection.INPUT, ValueType.COLOR, Value.color(1f, 1f, 1f, 1f))
+                ), 0f, 0f
+            ),
         ),
         listOf(Edge(Edge.PortRef("p", "out"), Edge.PortRef("o", "color"))),
         listOf(GraphParameter("x", "X", ValueType.FLOAT, Value.of(0f), Optional.empty())),

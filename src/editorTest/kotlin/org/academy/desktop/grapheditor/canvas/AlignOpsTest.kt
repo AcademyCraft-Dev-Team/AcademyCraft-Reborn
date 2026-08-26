@@ -87,7 +87,10 @@ class AlignOpsTest {
 
     @Test
     fun distributeTooFewNodesReturnsEmpty() {
-        assertTrue(AlignOps.distribute(mapOf("a" to Pair(0f, 0f), "b" to Pair(1f, 1f)), AlignOps.Distribute.HORIZONTAL).isEmpty())
+        assertTrue(
+            AlignOps.distribute(mapOf("a" to Pair(0f, 0f), "b" to Pair(1f, 1f)), AlignOps.Distribute.HORIZONTAL)
+                .isEmpty()
+        )
     }
 
     @Test

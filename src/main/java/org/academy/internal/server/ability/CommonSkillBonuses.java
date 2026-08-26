@@ -1,11 +1,11 @@
 package org.academy.internal.server.ability;
 
+import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.skilldata.SkillData;
 
 import java.util.Map;
-import net.minecraft.util.Mth;
 
 /**
  * Derived effects supplied by learned common-course skills.

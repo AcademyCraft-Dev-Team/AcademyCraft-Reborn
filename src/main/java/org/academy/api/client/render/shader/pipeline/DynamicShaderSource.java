@@ -2,13 +2,14 @@ package org.academy.api.client.render.shader.pipeline;
 
 import com.mojang.blaze3d.shaders.ShaderSource;
 import com.mojang.blaze3d.shaders.ShaderType;
+import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.resources.Identifier;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 动态着色器源（契约实现）。把图生成的 GLSL 源码以内容哈希路径注册，
@@ -17,7 +18,9 @@ import org.jspecify.annotations.Nullable;
 public final class DynamicShaderSource implements ShaderSource {
     private final Map<String, String> sources = new ConcurrentHashMap<>();
 
-    /** 注册源码，返回其唯一 Identifier（内容哈希，相同源码去重）。 */
+    /**
+     * 注册源码，返回其唯一 Identifier（内容哈希，相同源码去重）。
+     */
     public Identifier register(String source) {
         var path = "graph/" + sha256(source);
         sources.put(path, source);

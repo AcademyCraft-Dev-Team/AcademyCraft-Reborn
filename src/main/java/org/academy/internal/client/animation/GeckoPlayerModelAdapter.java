@@ -4,9 +4,13 @@ import net.minecraft.client.model.geom.ModelPart;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-/** Maps the supplied Gecko player skeleton's root pivot onto the vanilla player model. */
+/**
+ * Maps the supplied Gecko player skeleton's root pivot onto the vanilla player model.
+ */
 public final class GeckoPlayerModelAdapter {
-    /** Gecko's {@code all} bone is at the feet, which maps to vanilla model Y=24. */
+    /**
+     * Gecko's {@code all} bone is at the feet, which maps to vanilla model Y=24.
+     */
     static final float ROOT_PIVOT_Y = 24.0f;
 
     private GeckoPlayerModelAdapter() {

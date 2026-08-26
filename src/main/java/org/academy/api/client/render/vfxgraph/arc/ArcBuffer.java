@@ -29,7 +29,9 @@ public final class ArcBuffer {
         return arcs[index];
     }
 
-    /** 追加一条新弧线（返回可写引用，调用方填充数据后调用 {@link ArcCurve#setColor} 等）。 */
+    /**
+     * 追加一条新弧线（返回可写引用，调用方填充数据后调用 {@link ArcCurve#setColor} 等）。
+     */
     public ArcCurve add() {
         if (count == arcs.length) {
             int newCap = arcs.length * 2;
@@ -48,7 +50,9 @@ public final class ArcBuffer {
         return arc;
     }
 
-    /** 每帧递增 age，删除过期弧线（swap-remove）。先清全量 fresh 标记（M29b-02）。 */
+    /**
+     * 每帧递增 age，删除过期弧线（swap-remove）。先清全量 fresh 标记（M29b-02）。
+     */
     public void advance(float dt, Random random) {
         for (int i = 0; i < count; i++) {
             arcs[i].setFresh(false);
@@ -65,7 +69,9 @@ public final class ArcBuffer {
         }
     }
 
-    /** 清空全部弧线。 */
+    /**
+     * 清空全部弧线。
+     */
     public void clear() {
         count = 0;
     }

@@ -18,41 +18,24 @@ import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.Widget;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramDiagnostic;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueType;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
+import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
-import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
-import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.AbilityCategoryNames;
+import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
-import org.academy.internal.common.ability.program.AbilityProgramDefinition;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.CommonProgramNodeIds;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramEditorDocument;
-import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.*;
 
 import java.math.BigDecimal;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
-/** Named-port editor used by Precision Operation and backed directly by {@link AbilityProgram}. */
+/**
+ * Named-port editor used by Precision Operation and backed directly by {@link AbilityProgram}.
+ */
 public final class ModularProgramScreen extends UiScreen implements SerializedUiDebugHost {
     private static final int NODE_W = 88;
     private static final int NODE_HEADER_H = 11;
@@ -158,7 +141,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     public ModularProgramScreen(ModularProgramEditorSession session) {
         super(session.title());
-        this.session = java.util.Objects.requireNonNull(session, "session");
+        this.session = Objects.requireNonNull(session, "session");
         if (session.slotCount() < 1) {
             throw new IllegalArgumentException("Program editor session needs at least one slot");
         }
@@ -626,13 +609,13 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var y = portsY + 11;
         for (var port : selected.schema.inputs()) {
             smallText(graphics, "< " + Component.translatable(
-                    selected.entry.portTranslationKey(port.name())).getString(),
+                            selected.entry.portTranslationKey(port.name())).getString(),
                     x + 7, y, portColor(port.type()), width - 12);
             y += 9;
         }
         for (var port : selected.schema.outputs()) {
             smallText(graphics, "> " + Component.translatable(
-                    selected.entry.portTranslationKey(port.name())).getString(),
+                            selected.entry.portTranslationKey(port.name())).getString(),
                     x + 7, y, portColor(port.type()), width - 12);
             y += 9;
         }
@@ -1234,7 +1217,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private NodeView addNode(ProgramEditorNodeCatalog.Entry entry, double x, double y) {
         var existingIds = document.program().graph().nodes().stream()
-                .map(ProgramGraph.Node::id).collect(java.util.stream.Collectors.toSet());
+                .map(ProgramGraph.Node::id).collect(Collectors.toSet());
         var result = document.addNode(entry.id(), x, y);
         if (!result.successful()) {
             showTransient(result.diagnostic());
@@ -1265,7 +1248,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var selected = node(selectedNode);
         if (selected == null || selected.entry.type().role() == ProgramNodeRole.ENTRY) return;
         var existingIds = document.program().graph().nodes().stream()
-                .map(ProgramGraph.Node::id).collect(java.util.stream.Collectors.toSet());
+                .map(ProgramGraph.Node::id).collect(Collectors.toSet());
         var added = document.addNode(selected.entry.id(), selected.x + 18, selected.y + 18);
         if (!added.successful()) {
             showTransient(added.diagnostic());
@@ -1386,7 +1369,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var locked = session.precisionRules()
                 && document.program().graph().nodes().stream().anyMatch(node ->
                 node.type().equals(CommonProgramNodeIds.BRANCH)
-                        || java.util.Optional.ofNullable(PrecisionProgramNodeIds.kind(node.type()))
+                        || Optional.ofNullable(PrecisionProgramNodeIds.kind(node.type()))
                         .map(PrecisionGraph.NodeKind::isConditionalBranch).orElse(false));
         if (locked && !branchUnlocked()) {
             showTransient(PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED);
@@ -1810,7 +1793,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private List<NodeView> nodes() {
         return document.program().graph().nodes().stream()
                 .map(this::view)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -1856,8 +1839,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             case TOO_MANY_CONNECTIONS -> PrecisionGraph.Diagnostic.MULTIPLE_INPUTS;
             case MISSING_INPUT -> PrecisionGraph.Diagnostic.MISSING_INPUT;
             case DATA_CYCLE -> PrecisionGraph.Diagnostic.CYCLE;
-            case NO_ENTRY, MULTIPLE_ENTRIES, INVALID_ENTRY, AMBIGUOUS_FLOW ->
-                    PrecisionGraph.Diagnostic.INVALID_FLOW;
+            case NO_ENTRY, MULTIPLE_ENTRIES, INVALID_ENTRY, AMBIGUOUS_FLOW -> PrecisionGraph.Diagnostic.INVALID_FLOW;
             case UNREACHABLE_FLOW_NODE -> PrecisionGraph.Diagnostic.DISCONNECTED_FLOW;
             case INVALID_CONFIGURATION -> PrecisionGraph.Diagnostic.INVALID_PARAMETER;
             default -> PrecisionGraph.Diagnostic.MALFORMED;
@@ -2199,7 +2181,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private static <T> List<T> reversed(List<T> values) {
         var result = new ArrayList<>(values);
-        java.util.Collections.reverse(result);
+        Collections.reverse(result);
         return result;
     }
 

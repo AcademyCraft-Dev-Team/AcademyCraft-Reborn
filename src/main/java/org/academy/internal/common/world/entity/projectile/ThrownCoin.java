@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.entity.projectile;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ItemSupplier;
@@ -12,7 +13,6 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.Items;
-import net.minecraft.util.Mth;
 
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
     public int angle;

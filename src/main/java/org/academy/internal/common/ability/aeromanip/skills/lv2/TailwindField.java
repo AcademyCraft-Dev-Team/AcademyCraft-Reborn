@@ -2,8 +2,6 @@ package org.academy.internal.common.ability.aeromanip.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
@@ -26,11 +24,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.*;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
@@ -44,6 +38,9 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
+import java.util.UUID;
 
 public final class TailwindField extends Skill {
     public TailwindField() {
@@ -162,7 +159,7 @@ public final class TailwindField extends Skill {
                 if (entity instanceof Projectile projectile) {
                     var projectileOwner = projectile.getOwner();
                     friendly = projectileOwner == player
-                            || projectileOwner != null && player.isAlliedTo(projectileOwner);
+                            || player.isAlliedTo(projectileOwner);
                 }
                 var hostile = !friendly && AeromanipTargeting.canAffectNegatively(player, entity);
                 if ((entity instanceof Projectile || friendly) && dot > 0.01) {
@@ -174,7 +171,8 @@ public final class TailwindField extends Skill {
                     if (field.proficiencyMilestone() >= 3 && entity instanceof Projectile) {
                         var radial = entity.position().subtract(currentField.center());
                         var side = radial.subtract(direction.scale(radial.dot(direction)));
-                        if (side.lengthSqr() <= 1.0e-8) side = direction.cross(new net.minecraft.world.phys.Vec3(0, 1, 0));
+                        if (side.lengthSqr() <= 1.0e-8)
+                            side = direction.cross(new Vec3(0, 1, 0));
                         AeromanipTargeting.steerVelocity(entity, side, 0.65, Math.max(0.4, entity.getDeltaMovement().length()));
                     } else {
                         var multiplier = AeromanipTargeting.forceMultiplier(player, entity);
@@ -186,7 +184,7 @@ public final class TailwindField extends Skill {
             }
         }
 
-        private static void boostProjectileOnce(net.minecraft.server.level.ServerPlayer owner, Entity projectile) {
+        private static void boostProjectileOnce(ServerPlayer owner, Entity projectile) {
             var skill = Skills.TAILWIND_FIELD.get();
             var now = owner.level().getGameTime();
             if (TimedSkillEffectRuntime.get(owner.getUUID(), projectile.getUUID(), skill,
@@ -195,7 +193,7 @@ public final class TailwindField extends Skill {
             AeromanipTargeting.scaleVelocity(projectile, 1.2);
         }
 
-        private static void spawnVisual(net.minecraft.server.level.ServerPlayer player,
+        private static void spawnVisual(ServerPlayer player,
                                         AirflowField field, int age) {
             if ((age & 1) != 0) return;
             for (var step = 0; step <= 8; step++) {

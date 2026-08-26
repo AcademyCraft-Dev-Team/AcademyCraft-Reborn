@@ -16,7 +16,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Applies the authored full-body wing pose to player and matching armor models. */
+/**
+ * Applies the authored full-body wing pose to player and matching armor models.
+ */
 @Mixin(HumanoidModel.class)
 public abstract class MixinHumanoidModel {
     @Unique

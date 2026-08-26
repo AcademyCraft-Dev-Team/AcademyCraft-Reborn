@@ -20,11 +20,7 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalDouble;
+import java.util.*;
 
 public final class TexturedQuadRenderer implements VfxRenderer<WorldQuadData> {
     private static final int INSTANCE_STRIDE = 4 * (3 + 2 + 4) * Float.BYTES;

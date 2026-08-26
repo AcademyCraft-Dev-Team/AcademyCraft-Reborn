@@ -12,14 +12,13 @@ import com.mojang.blaze3d.systems.SurfaceException
 import net.minecraft.util.Util
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.msdf.font.MsdfFontService
-import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.Render
 import org.lwjgl.glfw.GLFW
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.OptionalInt
+import java.util.*
 
 /**
  * Boots Blaze3D standalone (GLFW window + OpenGL device) following the vanilla
@@ -46,7 +45,13 @@ object DesktopApplication {
         val host = DesktopUiHost(app, environment)
         val window = Window(
             host,
-            DisplayData(environment.physicalWidth, environment.physicalHeight, OptionalInt.empty(), OptionalInt.empty(), false),
+            DisplayData(
+                environment.physicalWidth,
+                environment.physicalHeight,
+                OptionalInt.empty(),
+                OptionalInt.empty(),
+                false
+            ),
             null,
             false,
             app.title,
@@ -91,7 +96,7 @@ object DesktopApplication {
 
             if (dumpLayout && frameCount == 60L) {
                 System.out.println(
-                    "[layout-dump] screen=${window.getScreenWidth()}x${window.getScreenHeight()} framebuffer=${window.width}x${window.height} guiScale=${environment.guiScale} guiSize=${environment.guiScaledWidth}x${environment.guiScaledHeight}"
+                    "[layout-dump] screen=${window.screenWidth}x${window.screenHeight} framebuffer=${window.width}x${window.height} guiScale=${environment.guiScale} guiSize=${environment.guiScaledWidth}x${environment.guiScaledHeight}"
                 )
                 printTree(host.root, 0)
             }
@@ -105,7 +110,7 @@ object DesktopApplication {
                 }
             }
 
-            if (!window.isMinimized()) {
+            if (!window.isMinimized) {
                 try {
                     surface.acquireNextTexture()
                 } catch (e: SurfaceException) {
@@ -115,14 +120,14 @@ object DesktopApplication {
 
             host.frame(partialTick)
 
-            if (surface.isAcquired()) {
+            if (surface.isAcquired) {
                 val color = host.target?.getColorTextureView()
                 if (color != null) {
                     surface.blitFromTexture(device.createCommandEncoder(), color)
                 }
             }
             device.createCommandEncoder().submit()
-            if (surface.isAcquired()) {
+            if (surface.isAcquired) {
                 surface.present()
             }
         }
@@ -136,6 +141,7 @@ object DesktopApplication {
         }
         window.close()
     }
+
     private fun configureSurface(surface: GpuSurface, window: Window) {
         val presentMode = GpuSurface.PresentMode.getSupportedVsyncMode(surface.supportedPresentModes(), true)
         surface.configure(GpuSurface.Configuration(window.width, window.height, presentMode))

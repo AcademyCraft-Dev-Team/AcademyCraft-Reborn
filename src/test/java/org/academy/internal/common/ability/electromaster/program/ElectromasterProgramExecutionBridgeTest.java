@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.electromaster.program;
 
 import com.google.gson.JsonObject;
+import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramGraph;
@@ -14,13 +15,10 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ElectromasterProgramExecutionBridgeTest {
     @Test
@@ -136,7 +134,7 @@ class ElectromasterProgramExecutionBridgeTest {
 
     private static ProgramGraph.Node node(
             int id,
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             JsonObject configuration
     ) {
         var nodeType = AbilityProgramDefinitions.require(
@@ -147,7 +145,7 @@ class ElectromasterProgramExecutionBridgeTest {
 
     private static ProgramGraph.Node powerNode(
             int id,
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             int power
     ) {
         var configuration = new JsonObject();
@@ -223,13 +221,13 @@ class ElectromasterProgramExecutionBridgeTest {
         }
 
         @Override
-        public java.util.OptionalDouble entityEnergyFraction(Object entity) {
-            return java.util.OptionalDouble.of(0.5);
+        public OptionalDouble entityEnergyFraction(Object entity) {
+            return OptionalDouble.of(0.5);
         }
 
         @Override
-        public java.util.OptionalDouble blockEnergyFraction(ProgramBlockPosition block) {
-            return java.util.OptionalDouble.of(0.5);
+        public OptionalDouble blockEnergyFraction(ProgramBlockPosition block) {
+            return OptionalDouble.of(0.5);
         }
 
         @Override

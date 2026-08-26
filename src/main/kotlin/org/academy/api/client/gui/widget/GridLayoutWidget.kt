@@ -91,10 +91,22 @@ open class GridLayoutWidget : AbstractWidgetContainer() {
             if (!child.isVisible()) continue
             val lp = child.layoutParams
             val cellWidthSpec = if (cellW >= 0f)
-                getChildMeasureSpec(MeasureSpec(MeasureSpec.Mode.AT_MOST, cellW), lp.marginLeft + lp.marginRight, lp.width, lp.widthMode, lp.widthPercent)
+                getChildMeasureSpec(
+                    MeasureSpec(MeasureSpec.Mode.AT_MOST, cellW),
+                    lp.marginLeft + lp.marginRight,
+                    lp.width,
+                    lp.widthMode,
+                    lp.widthPercent
+                )
             else MeasureSpec(MeasureSpec.Mode.UNSPECIFIED, 0f)
             val cellHeightSpec = if (cellH >= 0f)
-                getChildMeasureSpec(MeasureSpec(MeasureSpec.Mode.AT_MOST, cellH), lp.marginTop + lp.marginBottom, lp.height, lp.heightMode, lp.heightPercent)
+                getChildMeasureSpec(
+                    MeasureSpec(MeasureSpec.Mode.AT_MOST, cellH),
+                    lp.marginTop + lp.marginBottom,
+                    lp.height,
+                    lp.heightMode,
+                    lp.heightPercent
+                )
             else MeasureSpec(MeasureSpec.Mode.UNSPECIFIED, 0f)
             child.measure(cellWidthSpec, cellHeightSpec)
             maxCellW = max(maxCellW, child.measuredWidth)
