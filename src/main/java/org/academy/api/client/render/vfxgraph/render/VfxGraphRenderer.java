@@ -17,7 +17,6 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.resources.Identifier;
-import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
@@ -31,12 +30,7 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -393,7 +387,7 @@ public final class VfxGraphRenderer {
         var preClearedDepth = false;
         // soft particles（仅 quad 系）：任一输出规格为 quad（billboard）才拷深度；Iris shader pack 下退回 farView。
         var anyBillboard = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.QUAD);
-        var useSceneDepth = anyBillboard && sceneDepthUsable(IrisIntegration.isShaderPackInUse(), RenderSpec.Geometry.QUAD);
+        var useSceneDepth = anyBillboard && sceneDepthUsable(RenderSpec.Geometry.QUAD);
         if (useSceneDepth && depth != null) {
             if (clear) {
                 encoder.clearDepthTexture(depth.texture(), 0.0);
@@ -654,7 +648,7 @@ public final class VfxGraphRenderer {
         instanceData.flip();
         RenderSystem.getDevice().createCommandEncoder().writeToBuffer(instanceBuffer.slice(0, bytes), instanceData);
 
-        var depthView = sceneDepthUsable(IrisIntegration.isShaderPackInUse(), spec.geometry())
+        var depthView = sceneDepthUsable(spec.geometry())
                 && sceneDepth.view() != null ? sceneDepth.view() : farView;
         var billboard = spec.geometry() == RenderSpec.Geometry.QUAD;
         drawInstancedPass(pass, pipelineFor(spec), shapeBuffer, cameraUbo.slice(),
@@ -875,8 +869,8 @@ public final class VfxGraphRenderer {
      * Iris shader pack 时主目标深度不是场景深度（世界深度在 Iris 内部 gbuffer），采样会令
      * depthDiff<0 → 粒子被 discard/alpha 灭掉，退回 farView（0.0）保证可见。
      */
-    static boolean sceneDepthUsable(boolean shaderPackInUse, RenderSpec.Geometry geometry) {
-        return geometry == RenderSpec.Geometry.QUAD && !shaderPackInUse;
+    static boolean sceneDepthUsable(RenderSpec.Geometry geometry) {
+        return geometry == RenderSpec.Geometry.QUAD;
     }
 
     private static void clearTarget(GpuDevice device, GpuTextureView target, @Nullable GpuTextureView depth) {

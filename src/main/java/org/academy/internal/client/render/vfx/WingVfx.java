@@ -159,7 +159,6 @@ public final class WingVfx implements Vfx {
         for (var timeline : SWEEP_ANIMATIONS.values()) timeline.clear();
         BLACK_TO_WHITE_TRANSITIONS.clear();
         animationLevel = null;
-        PlatinumCosmosPass.clear();
     }
 
     @Override
@@ -182,14 +181,6 @@ public final class WingVfx implements Vfx {
             for (var kind : WingKind.values()) {
                 var active = isActive(player, kind);
                 if (!active && !isTransitionWing(kind, transition)) continue;
-                if (kind == WingKind.PLATINUM && PlatinumCosmosPass.worldMode() == PlatinumCosmosRenderMode.EXACT) {
-                    var poseStack = new PoseStack();
-                    poseStack.last().pose().set(root.getValue());
-                    PlatinumCosmosPass.enqueueThirdPerson(
-                            poseStack, player.getId(), currentTick, player.tickCount + partialTick
-                    );
-                    continue;
-                }
                 counts.merge(kind, countInstances(kind, player.getId(), currentTick, active), Integer::sum);
             }
             if (transition != null && transition.ascension().visible()) {
@@ -208,8 +199,6 @@ public final class WingVfx implements Vfx {
                 var active = isActive(player, kind);
                 var transition = transitionProjection(player.getId(), currentTick);
                 if (!active && !isTransitionWing(kind, transition)) continue;
-                if (kind == WingKind.PLATINUM && PlatinumCosmosPass.worldMode() == PlatinumCosmosRenderMode.EXACT)
-                    continue;
                 var effectTime = player.tickCount + partialTick;
                 if (isTransitionWing(kind, transition)) {
                     var pose = kind == WingKind.BLACK ? transition.blackWing() : transition.whiteWing();
@@ -668,16 +657,6 @@ public final class WingVfx implements Vfx {
         for (var kind : WingKind.values()) {
             if (kind == WingKind.STORM) continue;
             if (!isActive(player, kind)) continue;
-            if (kind == WingKind.PLATINUM) {
-                var mode = PlatinumCosmosPass.handMode();
-                if (mode == PlatinumCosmosRenderMode.EXACT) continue;
-                if (mode == PlatinumCosmosRenderMode.FALLBACK) {
-                    submitted |= submitFirstPersonGeometry(
-                            poseStack, collector, player, partialTick, kind, WHITE_WING_FIRST_PERSON
-                    );
-                    continue;
-                }
-            }
             submitted |= submitFirstPersonGeometry(
                     poseStack, collector, player, partialTick, kind, firstPersonRenderType(kind)
             );
