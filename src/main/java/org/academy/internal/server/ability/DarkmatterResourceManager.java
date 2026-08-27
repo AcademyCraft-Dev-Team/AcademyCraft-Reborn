@@ -254,18 +254,27 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         if (data == null) return;
         var state = data.getDarkmatterState();
         var level = playerCPManager.getLevel(player.getUUID());
+        var category = playerDataManager.getPlayerAbilityCategory(player.getUUID());
         var changed = state.reconcilePhase(level);
         changed |= state.repair();
 
         if (!supportsMatter(player)) {
+            var ownsSharedMp = category == AbilityCategories.DARKMATTER.get()
+                    || category.getResourceSpec().isEmpty();
             var hadMatter = state.totalMatter() > EPSILON || state.getReservedMatter() > EPSILON
-                    || data.getCpData().getCurrMP() > EPSILON || data.getCpData().getMaxMP() > EPSILON;
+                    || ownsSharedMp && (data.getCpData().getCurrMP() > EPSILON
+                    || data.getCpData().getMaxMP() > EPSILON);
             state.initializeResource(0.0f, 0.0f, 0.0f);
             state.setReservedMatter(0.0f);
-            data.getCpData().setCurrMP(0.0f);
-            data.getCpData().setMaxMP(0.0f);
+            if (ownsSharedMp) {
+                data.getCpData().setCurrMP(0.0f);
+                data.getCpData().setMaxMP(0.0f);
+            }
             removeMatterOccupation(player, data);
-            if (changed || hadMatter) commit(data, player);
+            if (changed || hadMatter) {
+                data.markDirty();
+                scheduleAllSync(player);
+            }
             return;
         }
 

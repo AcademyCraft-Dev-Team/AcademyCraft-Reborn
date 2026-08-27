@@ -101,6 +101,11 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .unlockedBy("has_iron_nugget", has(IRON_NUGGET))
                 .save(output);
 
+        shapeless(RecipeCategory.MISC, Items.PAPER_AIRPLANE.get())
+                .requires(PAPER)
+                .unlockedBy("has_paper", has(PAPER))
+                .save(output);
+
         shaped(RecipeCategory.REDSTONE, Items.WIRELESS_NODE.get())
                 .define('E', ENDER_PEARL)
                 .define('I', Items.IMAG_PHASE_INGOT.get())

@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.aeromanip.program;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -14,6 +13,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
@@ -214,17 +214,8 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
 
     private void spawnPushEffect(Entity target) {
         var center = target.getBoundingBox().getCenter();
-        targets.level().sendParticles(
-                ParticleTypes.GUST,
-                center.x,
-                center.y,
-                center.z,
-                2,
-                Math.max(0.05, target.getBbWidth() * 0.2),
-                Math.max(0.05, target.getBbHeight() * 0.1),
-                Math.max(0.05, target.getBbWidth() * 0.2),
-                0.02
-        );
+        AeromanipVfx.burst(targets.level(), center,
+                Math.max(0.35, target.getBbWidth() * 0.55));
     }
 
     private static void restoreVelocity(Entity entity, Vec3 velocity) {

@@ -32,4 +32,13 @@ public abstract class ServerContext implements Context {
      */
     protected void onUnregistered() {
     }
+
+    /**
+     * Object registered on the NeoForge event bus for this context. Contexts whose reusable
+     * behavior lives in a superclass can return a dedicated listener object, because the event
+     * bus intentionally rejects inherited {@code @SubscribeEvent} methods.
+     */
+    protected Object eventListener() {
+        return this;
+    }
 }

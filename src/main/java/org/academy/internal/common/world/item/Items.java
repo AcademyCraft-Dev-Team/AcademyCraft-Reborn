@@ -103,6 +103,8 @@ public final class Items {
             ITEMS.registerItem("ability_control_tablet", AbilityControlTabletItem::new);
     public static final DeferredHolder<Item, CoinItem> COIN =
             ITEMS.registerItem("coin", CoinItem::new);
+    public static final DeferredHolder<Item, PaperAirplaneItem> PAPER_AIRPLANE =
+            ITEMS.registerItem("paper_airplane", properties -> new PaperAirplaneItem(properties.stacksTo(64)));
     public static final DeferredHolder<Item, BlockItem> WIRELESS_NODE =
             ITEMS.registerSimpleBlockItem("wireless_node", Blocks.WIRELESS_NODE);
     public static final DeferredHolder<Item, BlockItem> WIND_GEN_BASE =

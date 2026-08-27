@@ -10,9 +10,9 @@ import static org.academy.api.common.ability.SkillProficiencyProfile.CostKind.*;
 public final class SkillProficiencyProfiles {
     private static final String PREFIX = "academy:";
     private static final Set<String> DECLARED_SKILLS = Set.of(
-            "airflow_jet", "air_cushion", "flow_sense", "atmosphere_shield", "breathing_film",
-            "pneumatic_grasp", "tailwind_field", "laminar_cutter", "vortex_pull", "atmosphere_blast_gun",
-            "wind_corridor", "pressure_lock", "flight", "vacuum_domain", "atmospheric_dominion",
+            "airflow_jet", "laminar_buffer", "flow_sense", "atmosphere_shield", "breathing_bubble",
+            "pneumatic_grasp", "tailwind_field", "laminar_cutter", "rejecting_wind", "vortex_pull",
+            "high_speed_jet", "turbulent_cavitation", "flight", "vacuum_domain", "adiabatic_compression",
             "vector_reflection", "reflection_filter", "vector_blast", "vector_accel", "vector_deviation",
             "kinetic_energy_applied", "dir_strike", "bloodflow_reverse", "black_wing", "white_wing",
             "platinum_wing", "crossing_the_abyss", "storm_wing", "plasma_generation",
@@ -35,8 +35,17 @@ public final class SkillProficiencyProfiles {
             "mind_destruction", "precision_operation"
     );
     private static final Map<String, String> CUSTOM_PROFILE_REASONS = Map.ofEntries(
+            Map.entry("airflow_jet", "release-tier damage, movement, and duration milestones are resolved together"),
+            Map.entry("laminar_buffer", "sharing, hover duration, and platform lifetime milestones are resolved together"),
             Map.entry("flow_sense", "range, cadence and synchronization budgets are resolved together"),
             Map.entry("pneumatic_grasp", "continuous costs depend on the selected entity class"),
+            Map.entry("breathing_bubble", "compressed-air upkeep, sharing and active radius milestones are resolved together"),
+            Map.entry("turbulent_cavitation", "damage and armor wear are derived from actual attributed displacement"),
+            Map.entry("tailwind_field", "release mode, field radius, duration and force milestones are resolved together"),
+            Map.entry("rejecting_wind", "release-tier force, control effects and low-drag duration are resolved together"),
+            Map.entry("high_speed_jet", "nozzle count, duration and stacked acceleration milestones are resolved together"),
+            Map.entry("flight", "creative-flight speed and compressed-air upkeep are resolved by its flight lease"),
+            Map.entry("vacuum_domain", "compressed-air upkeep, oxygen depletion, and the final radius are resolved together"),
             Map.entry("radiation_intensify", "mark duration and damage segments are resolved by the mark runtime"),
             Map.entry("space_folding_theorem", "passive damage and refund rules have no scalar CP profile"),
             Map.entry("darkmatter_generation", "server-authoritative MP/CP ledger implements its milestones"),
@@ -76,18 +85,18 @@ public final class SkillProficiencyProfiles {
     private static Map<String, SkillProficiencyProfile> createProfiles() {
         var profiles = new HashMap<String, SkillProficiencyProfile>();
 
-        put(profiles, continuous(0.9f), "airflow_jet", "magnet_manipulation", "current_recharge",
+        put(profiles, continuous(0.9f), "magnet_manipulation", "current_recharge",
                 "mining_beam", "light_shield", "particle_wave_cannon", "spacial_excision");
-        put(profiles, cast(5.0f / 6.0f), "air_cushion");
-        put(profiles, costs(Map.of(MAINTENANCE, 0.9f, CONTINUOUS, 0.9f)), "atmosphere_shield");
-        put(profiles, maintenance(0.9f), "breathing_film", "tailwind_field", "flight",
+        put(profiles, costs(Map.of(MAINTENANCE, 0.9f, CONTINUOUS, 0.9f, DYNAMIC, 0.9f)),
+                "atmosphere_shield");
+        put(profiles, maintenance(0.9f),
                 "kinetic_energy_applied", "black_wing", "white_wing", "platinum_wing",
                 "crossing_the_abyss", "storm_wing", "mine_detect", "magnetic_weapon",
                 "current_symbiosis", "bioelectric_operation", "iron_sand_arsenal", "electrical_contact",
                 "cloudroom", "spatial_synergy", "mental_intrusion",
                 "mental_takeover", "sensory_distortion");
-        put(profiles, cast(0.9f), "laminar_cutter", "vortex_pull", "atmosphere_blast_gun",
-                "wind_corridor", "pressure_lock", "vacuum_domain", "atmospheric_dominion",
+        put(profiles, continuous(0.9f), "adiabatic_compression");
+        put(profiles, cast(0.9f), "laminar_cutter", "vortex_pull",
                 "vector_blast", "vector_accel", "dir_strike", "bloodflow_reverse", "plasma_generation",
                 "arc_generate", "thunder_lance", "railgun", "ball_lightning", "lightning_nova",
                 "lightning_storm", "thunderclap", "single_high_speed_electron_beam", "scatter_bomb",

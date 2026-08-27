@@ -125,6 +125,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(configurableDarkmatterBlock, darkmatterBlock);
         blockModels.registerSimpleItemModel(configurableDarkmatterBlock,
                 ModelLocationUtils.getModelLocation(configurableDarkmatterBlock));
+        blockModels.createTrivialBlock(Blocks.COMPRESSED_AIR_PLATFORM.get(), providerW);
 
         var vegetationBlock = Blocks.IMAG_PHASE_VEGETATION.get();
         blockModels.createTrivialBlock(vegetationBlock, imagPhaseVegetation);
@@ -184,6 +185,16 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.DARK_MATTER_BOOTS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.itemModelOutput.accept(Items.PAPER_AIRPLANE.get(), ItemModelUtils.plainModel(
+                ModelTemplates.FLAT_ITEM.create(
+                        ModelLocationUtils.getModelLocation(Items.PAPER_AIRPLANE.get()),
+                        new TextureMapping().put(
+                                TextureSlot.LAYER0,
+                                new Material(AcademyCraft.vanilla("paper").withPrefix("item/"))
+                        ),
+                        itemModels.modelOutput
+                )
+        ));
         itemModels.generateFlatItem(Items.ABILITY_DEVELOPER.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
         itemModels.generateFlatItem(Items.WIND_GEN_BASE.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
         itemModels.generateFlatItem(Items.WIND_GEN_TOP.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
