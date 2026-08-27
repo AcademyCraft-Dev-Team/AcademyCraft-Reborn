@@ -44,6 +44,7 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
         }
         val anim = ObjectAnimator.ofFloat({ p ->
             pageOffset = p
+            applyPageOffset()
             invalidate()
         }, from, to)
             .setDuration(pageSwitchDuration)
@@ -58,6 +59,7 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
         if (index < 0 || index >= children.size) return
         currentPage = index
         pageOffset = index.toFloat()
+        applyPageOffset()
         invalidate()
     }
 
@@ -68,23 +70,39 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
     fun setCurrentPageUnchecked(index: Int) {
         currentPage = index.coerceAtLeast(0)
         pageOffset = index.coerceAtLeast(0).toFloat()
+        applyPageOffset()
         invalidate()
+    }
+
+    /**
+     * 将每页按当前 [pageOffset] 平移到对应屏幕位置.
+     * 在 [onLayout] 与翻页动画中调用, 偏移持久化到子控件的 [translationX],
+     * 使命中测试 (依赖 [Widget.getAbsoluteTranslationX]) 与渲染一致, 且空闲时无重绘.
+     */
+    private fun applyPageOffset() {
+        var index = 0
+        for (child in children.values) {
+            val tx = (index - pageOffset) * width
+            if (child.translationX != tx) child.translationX = tx
+            index++
+        }
+    }
+
+    override fun onLayout() {
+        super.onLayout()
+        applyPageOffset()
     }
 
     override fun render(context: RenderContext) {
         if (!isVisible()) return
         pageOffset = pageOffset.coerceIn(0f, (children.size - 1).coerceAtLeast(0).toFloat())
+        applyPageOffset()
         val scissor = ScissorRect(
             getAbsoluteX() + getAbsoluteTranslationX(),
             getAbsoluteY() + getAbsoluteTranslationY(),
             width, height
         )
         context.enableScissor(scissor)
-        var index = 0
-        for (child in children.values) {
-            child.translationX = (index - pageOffset) * width
-            index++
-        }
         super.render(context)
         context.disableScissor()
     }

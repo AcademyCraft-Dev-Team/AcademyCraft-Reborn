@@ -117,7 +117,7 @@ class TerminalHud private constructor() {
                 context.pose().pushPose()
                 context.drawOrder().push()
                 run {
-                    val max = context.commands.maxByOrNull { it.drawOrder }?.drawOrder ?: 0
+                    val max = context.commands.maxByOrNull { it.drawOrder }?.drawOrder ?: 0L
                     context.drawOrder().advance(max + 1)
                     context.pose().translate(xPos.toFloat(), yPos.toFloat())
 

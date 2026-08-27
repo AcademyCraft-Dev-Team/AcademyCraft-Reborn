@@ -35,9 +35,10 @@ class StartLevelDevPacketTest {
         StartLevelDevPacket.CODEC.encode(buffer, packet);
         var decoded = StartLevelDevPacket.CODEC.decode(buffer);
 
-        assertTrue(decoded.getSource().portable());
-        assertEquals(InteractionHand.OFF_HAND, decoded.getSource().hand());
-        assertNull(decoded.getSource().blockPos());
+        assertInstanceOf(DevelopmentSource.TabletDevelopmentSource.class, decoded.getSource());
+        var tablet = (DevelopmentSource.TabletDevelopmentSource) decoded.getSource();
+        assertEquals(InteractionHand.OFF_HAND, tablet.hand());
+        assertEquals(0L, decoded.getUserPos());
         assertEquals(StartLevelDevPacket.Mode.PREVIEW, decoded.getMode());
     }
 

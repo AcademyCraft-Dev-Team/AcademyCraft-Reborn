@@ -6,13 +6,6 @@ import org.academy.api.client.gui.animation.TimeInterpolator
 import org.academy.api.client.gui.widget.*
 import java.util.function.Consumer
 
-/**
- * 控件属性 DSL 增强喵: 在控件上直接链式配置属性 (返回自身), 供工厂 lambda 之外
- * 的表达式风格使用. 属性本身仍是 Kotlin `var` 字段, 这些只是便捷扩展.
- */
-
-// ============ ImageWidget ============
-
 fun ImageWidget.texture(id: Identifier?): ImageWidget {
     textureIdentifier = id
     return this
@@ -34,8 +27,6 @@ fun ImageWidget.brightnessOf(value: Float): ImageWidget {
     return this
 }
 
-// ============ LabelWidget ============
-
 fun LabelWidget.rgb(red: Float, green: Float, blue: Float): LabelWidget {
     setRed(red)
     setGreen(green)
@@ -47,8 +38,6 @@ fun LabelWidget.withDropShadow(enabled: Boolean = true): LabelWidget {
     dropShadow = enabled
     return this
 }
-
-// ============ ProgressBarWidget ============
 
 fun ProgressBarWidget.range(min: Float, max: Float): ProgressBarWidget {
     setMin(min)
@@ -67,8 +56,6 @@ fun ProgressBarWidget.colors(background: Int, foreground: Int): ProgressBarWidge
     return this
 }
 
-// ============ RoundedRectWidget ============
-
 fun RoundedRectWidget.border(width: Float, color: Int): RoundedRectWidget = setBorder(width, color)
 
 fun RoundedRectWidget.shadow(
@@ -84,14 +71,10 @@ fun RoundedRectWidget.horizontalGradient(from: Int, to: Int): RoundedRectWidget 
 
 fun RoundedRectWidget.radialGradient(from: Int, to: Int): RoundedRectWidget = setRadialGradient(from, to)
 
-// ============ ScrollPanelWidget ============
-
 fun ScrollPanelWidget.scrollSpeed(value: Float): ScrollPanelWidget {
     setScrollSpeed(value)
     return this
 }
-
-// ============ TextBoxWidget ============
 
 fun TextBoxWidget.enter(callback: Consumer<String>?): TextBoxWidget {
     setWhenEnter(callback)
@@ -113,14 +96,10 @@ fun TextBoxWidget.lineBreak(enabled: Boolean): TextBoxWidget {
     return this
 }
 
-// ============ ToggleButtonWidget ============
-
 fun ToggleButtonWidget.checked(value: Boolean): ToggleButtonWidget {
     isChecked = value
     return this
 }
-
-// ============ SeekBarWidget ============
 
 fun SeekBarWidget.keyIncrement(value: Int): SeekBarWidget {
     setKeyProgressIncrement(value)
@@ -131,8 +110,6 @@ fun SeekBarWidget.seekListener(listener: SeekBarWidget.OnSeekBarChangeListener?)
     setOnSeekBarChangeListener(listener)
     return this
 }
-
-// ============ WheelPickerWidget ============
 
 fun WheelPickerWidget.visibleItemCount(count: Int): WheelPickerWidget {
     visibleItemCount = count
@@ -185,8 +162,6 @@ fun WheelPickerWidget.onItemSelected(
     return this
 }
 
-// ============ PagerLayoutWidget ============
-
 fun PagerLayoutWidget.page(index: Int, animate: Boolean = false): PagerLayoutWidget {
     if (animate) switchToPage(index) else jumpToPage(index)
     return this
@@ -201,8 +176,6 @@ fun PagerLayoutWidget.interpolator(interpolator: TimeInterpolator): PagerLayoutW
     pageSwitchInterpolator = interpolator
     return this
 }
-
-// ============ DragBarWidget / ScrollBarWidget ============
 
 fun DragBarWidget.showBackground(visible: Boolean): DragBarWidget {
     setShowBackground(visible)
@@ -223,8 +196,6 @@ fun ScrollBarWidget.panel(p: ScrollPanelWidget?): ScrollBarWidget {
     this.panel = p
     return this
 }
-
-// ============ ParallaxImageWidget ============
 
 fun ParallaxImageWidget.parallaxFactor(x: Float, y: Float): ParallaxImageWidget = setParallaxFactor(x, y)
 

@@ -1,9 +1,6 @@
 package org.academy.api.client.gui.dsl
 
-import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.widget.ButtonWidget
-import org.academy.api.client.gui.widget.ToggleButtonWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 
@@ -26,7 +23,6 @@ fun Widget.lp(init: WidgetContainer.LayoutParams.() -> Unit): Widget {
     return this
 }
 
-/** FIXED 尺寸. */
 fun Widget.size(width: Float, height: Float): Widget {
     lp {
         this.width = width
@@ -37,7 +33,42 @@ fun Widget.size(width: Float, height: Float): Widget {
     return this
 }
 
-fun Widget.size(widthMode: SizeMode, heightMode: SizeMode): Widget {
+fun Widget.width(width: Float): Widget {
+    lp {
+        this.width = width
+        widthMode = SizeMode.FIXED
+    }
+    return this
+}
+
+fun Widget.height(height: Float): Widget {
+    lp {
+        this.height = height
+        heightMode = SizeMode.FIXED
+    }
+    return this
+}
+
+fun Widget.widthMode(widthMode: SizeMode): Widget {
+    lp {
+        this.widthMode = widthMode
+    }
+    return this
+}
+
+fun Widget.heightMode(heightMode: SizeMode): Widget {
+    lp {
+        this.heightMode = heightMode
+    }
+    return this
+}
+
+fun Widget.sizeMode(sizeMode: SizeMode): Widget {
+    sizeMode(sizeMode, sizeMode)
+    return this
+}
+
+fun Widget.sizeMode(widthMode: SizeMode, heightMode: SizeMode): Widget {
     lp {
         this.widthMode = widthMode
         this.heightMode = heightMode
@@ -63,7 +94,6 @@ fun Widget.matchParent(): Widget {
     return this
 }
 
-/** 线性布局权重 (仅对 LinearLayout 子级生效). */
 fun Widget.weight(weight: Float): Widget {
     (layoutParams as? org.academy.api.client.gui.widget.LinearLayoutWidget.LayoutParams)?.weight = weight
     return this
@@ -134,6 +164,78 @@ fun Widget.padding(left: Float, top: Float, right: Float, bottom: Float): Widget
     return this
 }
 
+fun Widget.marginLeft(left: Float): Widget {
+    lp { marginLeft = left }
+    return this
+}
+
+fun Widget.marginTop(top: Float): Widget {
+    lp { marginTop = top }
+    return this
+}
+
+fun Widget.marginRight(right: Float): Widget {
+    lp { marginRight = right }
+    return this
+}
+
+fun Widget.marginBottom(bottom: Float): Widget {
+    lp { marginBottom = bottom }
+    return this
+}
+
+fun Widget.marginHorizontal(horizontal: Float): Widget {
+    lp {
+        marginLeft = horizontal
+        marginRight = horizontal
+    }
+    return this
+}
+
+fun Widget.marginVertical(vertical: Float): Widget {
+    lp {
+        marginTop = vertical
+        marginBottom = vertical
+    }
+    return this
+}
+
+fun Widget.paddingLeft(left: Float): Widget {
+    lp { paddingLeft = left }
+    return this
+}
+
+fun Widget.paddingTop(top: Float): Widget {
+    lp { paddingTop = top }
+    return this
+}
+
+fun Widget.paddingRight(right: Float): Widget {
+    lp { paddingRight = right }
+    return this
+}
+
+fun Widget.paddingBottom(bottom: Float): Widget {
+    lp { paddingBottom = bottom }
+    return this
+}
+
+fun Widget.paddingHorizontal(horizontal: Float): Widget {
+    lp {
+        paddingLeft = horizontal
+        paddingRight = horizontal
+    }
+    return this
+}
+
+fun Widget.paddingVertical(vertical: Float): Widget {
+    lp {
+        paddingTop = vertical
+        paddingBottom = vertical
+    }
+    return this
+}
+
 // ============ 锚点约束辅助 ============
 
 fun Widget.anchors(h: Float, v: Float): Widget {
@@ -184,30 +286,3 @@ fun Widget.heightPercent(p: Float): Widget {
     return this
 }
 
-// ============ 交互辅助 ============
-
-/** 给按钮类控件设置点击回调. 非按钮控件无操作. */
-fun Widget.onClick(handler: () -> Unit): Widget {
-    (this as? ButtonWidget)?.onClickListener = OnClickListener { handler() }
-    return this
-}
-
-fun Widget.onCheckedChange(handler: (Boolean) -> Unit): Widget {
-    (this as? ToggleButtonWidget)?.onCheckedChangeListener =
-        object : ToggleButtonWidget.OnCheckedChangeListener {
-            override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
-                handler(isChecked)
-            }
-        }
-    return this
-}
-
-// ============ 名称生成 ============
-
-/** 生成容器内唯一的默认子控件名: `base`, `base_1`, `base_2`... */
-fun WidgetContainer.nextChildName(base: String): String {
-    if (base !in children) return base
-    var n = 1
-    while ("${base}_$n" in children) n++
-    return "${base}_$n"
-}

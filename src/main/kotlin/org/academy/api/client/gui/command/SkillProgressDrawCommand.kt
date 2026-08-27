@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.command
 
-import com.mojang.blaze3d.textures.GpuSampler
+import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuTextureView
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.SkillProgressUniforms
@@ -11,7 +12,6 @@ class SkillProgressDrawCommand : PosTexColorRectDrawCommand {
     constructor(
         outlineTexture: GpuTextureView,
         maskTexture: GpuTextureView,
-        sampler: GpuSampler,
         width: Float,
         height: Float,
         progress: Float,
@@ -22,8 +22,8 @@ class SkillProgressDrawCommand : PosTexColorRectDrawCommand {
         0f, 0f, 1f, 1f,
         1f, 1f, 1f, alpha,
         listOf(
-            TextureBinding("Sampler0", outlineTexture, sampler),
-            TextureBinding("Sampler1", maskTexture, sampler)
+            TextureBinding("Sampler0", outlineTexture, SAMPLER),
+            TextureBinding("Sampler1", maskTexture, SAMPLER)
         ),
         listOf(
             UniformPayload(
@@ -34,4 +34,8 @@ class SkillProgressDrawCommand : PosTexColorRectDrawCommand {
             )
         )
     )
+
+    companion object{
+        val SAMPLER = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+    }
 }

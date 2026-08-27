@@ -11,6 +11,7 @@ import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
+import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger
 import org.academy.api.client.gui.imgui.ImGuiUtilApi
@@ -31,12 +32,9 @@ class ScreenDispatcher private constructor() {
     private val backdropBlur = BackdropBlurEngine()
     private val uiContext: UiContext
 
-    /**
-     * 本帧模糊区域快照喵. [onRenderLoop] 写入, [onWorldComposite] 消费,
-     * 保证同帧内单 pass/split 与合成的判定一致 (主线程并发更新 uiContext 时不串帧).
-     */
+    /** 待合成的层: 每个 Pair 是 (above 命令列表, 对应的模糊区域). */
     @Volatile
-    private var frameBlurRegions: List<BlurRegion> = emptyList()
+    private var pendingLayers: List<Pair<List<SubmittedCommand>, List<BlurRegion>>> = emptyList()
 
     init {
         val window = Minecraft.getInstance().window
@@ -51,11 +49,6 @@ class ScreenDispatcher private constructor() {
         aboveTarget.resize(event.width, event.height)
     }
 
-    /**
-     * 由主线程在每帧输入/setScreen 处理完毕、GUI 提取开始前调用喵 ([ScreenEvent.Render.Pre]),
-     * 为当前 screen 生成 SubmittedCommand 列表与模糊区域喵.
-     * 相位晚于输入, 保证切屏首帧即生成本帧内容, 不残留上一 screen 的缓存.
-     */
     @SubscribeEvent
     fun onScreenRenderPre(event: ScreenEvent.Render.Pre) {
         val mc = Minecraft.getInstance()
@@ -70,11 +63,8 @@ class ScreenDispatcher private constructor() {
     }
 
     /**
-     * 由 Render 线程调用喵, 解析命令并绘制喵.
-     *
-     * 无模糊区时直接单 pass 渲染到 [renderTarget] (自包含帧); 有模糊区时按模糊区域切分:
-     * 下方内容照常进 [renderTarget] (经 vanilla GUI 管线叠加在原版屏幕背景上),
-     * 上方内容暂存 [aboveTarget], 待 [WorldCompositeEvent] (GUI 渲染完成后) 就地合成.
+     * 由 Render 线程调用喵. 无模糊区时单 pass; 有模糊区时只渲染第一段 (below) 到
+     * [renderTarget], 剩余层存入 [pendingLayers] 待 [onWorldComposite] 合成喵.
      */
     @SubscribeEvent
     fun onRenderLoop(@Suppress("unused") event: RenderLoopEvent) {
@@ -83,33 +73,68 @@ class ScreenDispatcher private constructor() {
         if (screen is RenderRoot) {
             val env = UiEnvironment.get()
             val regions = uiContext.blurRegions()
-            frameBlurRegions = regions
             if (regions.isEmpty()) {
+                pendingLayers = emptyList()
                 uiContext.upload(renderTarget, true)
             } else {
-                uiContext.uploadSplit(
-                    renderTarget, true,
-                    env.physicalWidth / env.guiScale,
-                    env.physicalHeight / env.guiScale,
-                    aboveTarget, regions
-                )
+                val result = uiContext.splitSegments(regions)
+                if (result != null) {
+                    val (allCommands, segments) = result
+                    if (segments.size >= 2) {
+                        val (firstCommands, _) = segments[0]
+                        val guiW = env.physicalWidth / env.guiScale
+                        val guiH = env.physicalHeight / env.guiScale
+                        uiContext.drawCommands(renderTarget, firstCommands, true, guiW, guiH)
+                        pendingLayers = segments.drop(1)
+                    } else {
+                        pendingLayers = emptyList()
+                        uiContext.drawCommands(renderTarget, allCommands, true,
+                            env.physicalWidth / env.guiScale,
+                            env.physicalHeight / env.guiScale)
+                    }
+                } else {
+                    pendingLayers = emptyList()
+                    uiContext.upload(renderTarget, true)
+                }
             }
         }
     }
 
     /**
-     * GUI 渲染完成 (主缓冲已含世界 + 原版屏幕背景 + Academy 下方内容):
-     * 以主缓冲为模糊源就地烘焙模糊区域并叠回上方内容, 再叠加 ImGui 调试层.
+     * GUI 渲染完成 (主缓冲已含世界 + 原版屏幕背景 + Academy below 内容).
+     * 逐层模糊+合成喵: 每个 blur region 从 [mainTarget] 采样 pyramid,
+     * 就地模糊后 blit 对应的 above 层叠回.
      */
     @SubscribeEvent
     fun onWorldComposite(@Suppress("unused") event: WorldCompositeEvent) {
         val mc = Minecraft.getInstance()
         val screen = mc.gui.screen() as? RenderRoot ?: return
         val mainTarget = mc.gameRenderer.mainRenderTarget()
-        val regions = frameBlurRegions
-        if (regions.isNotEmpty()) {
-            val aboveView = aboveTarget.getColorTextureView() ?: return
-            UiCompositor.composite(mainTarget, aboveView, regions, backdropBlur)
+        val layers = pendingLayers
+        if (layers.isNotEmpty()) {
+            val guiW = UiEnvironment.get().physicalWidth / UiEnvironment.get().guiScale
+            val guiH = UiEnvironment.get().physicalHeight / UiEnvironment.get().guiScale
+            for ((commands, regions) in layers) {
+                if (regions.isNotEmpty()) {
+                    val mainView = mainTarget.getColorTextureView() ?: continue
+                    backdropBlur.capture(mainView, regions.maxOf { it.radius })
+                    for (region in regions) {
+                        backdropBlur.fillRegion(
+                            mainView,
+                            region.x, region.y, region.width, region.height,
+                            region.radius,
+                            UiCompositor.NEUTRAL_TINT
+                        )
+                    }
+                }
+                if (commands.isNotEmpty()) {
+                    uiContext.drawCommands(aboveTarget, commands, true, guiW, guiH)
+                    val mainView = mainTarget.getColorTextureView() ?: continue
+                    val aboveView = aboveTarget.getColorTextureView() ?: continue
+                    UiCompositor.blitSource(mainView, aboveView)
+                }
+            }
+            pendingLayers = emptyList()
         }
         renderImGuiOverlay(mainTarget, screen)
     }

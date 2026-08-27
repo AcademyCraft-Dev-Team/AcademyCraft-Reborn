@@ -20,6 +20,13 @@ interface WidgetContainer : Widget {
 
     fun removeChild(name: String)
 
+    fun replaceChild(name: String, child: Widget)
+
+    fun replaceChild(name: String, child: Widget, runnable: () -> Unit) {
+        replaceChild(name, child)
+        runnable()
+    }
+
     fun clearChildren()
 
     val children: Map<String, Widget>

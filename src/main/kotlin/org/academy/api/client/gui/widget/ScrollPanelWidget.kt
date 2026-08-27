@@ -16,6 +16,7 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     AbstractWidgetContainer() {
     protected var scrollTarget: Float = 0f
     protected var scrollSpeed: Float = 24f
+    private var pendingScrollToEnd = false
 
     /** Below this distance (px) the scroll snaps onto its target and stops. */
     private companion object {
@@ -149,10 +150,6 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
             return
         }
 
-        // Widget hit-testing already works in absolute coordinates and accounts
-        // for every parent's scroll offset. Converting the pointer into content
-        // coordinates here applies the panel offset a second time, making controls
-        // inside a scrolled panel intermittently miss clicks.
         super.dispatchEvent(event)
     }
 
@@ -174,15 +171,23 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
             }
         }
 
-    /**
-     * must when layout is measured
-     */
     fun scrollToEnd() {
-        setScrollTarget(this.maxScroll)
+        if (isLayoutDirty) {
+            pendingScrollToEnd = true
+            invalidate()
+        } else {
+            pendingScrollToEnd = false
+            setScrollTarget(this.maxScroll)
+        }
     }
 
     override fun render(context: RenderContext) {
         if (!isVisible()) return
+
+        if (pendingScrollToEnd) {
+            pendingScrollToEnd = false
+            scrollTarget = maxScroll
+        }
 
         val currentScrollY = scrollY
         val newScrollY = Mth.lerp(ClientUtil.animationFactor(Mth.PI / 1.5f), currentScrollY, scrollTarget)

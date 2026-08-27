@@ -42,7 +42,7 @@ public class StartSkillDevPacket extends RequestPacket<ServerGamePacketListenerI
     }
 
     public long getUserPos() {
-        return source.blockPos() == null ? 0L : source.blockPos().asLong();
+        return source instanceof DevelopmentSource.BlockDevelopmentSource(var pos) ? pos.asLong() : 0L;
     }
 
     public DevelopmentSource getSource() {
