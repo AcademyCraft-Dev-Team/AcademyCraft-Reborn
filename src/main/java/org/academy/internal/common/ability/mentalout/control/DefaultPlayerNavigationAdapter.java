@@ -18,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.Flight;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 

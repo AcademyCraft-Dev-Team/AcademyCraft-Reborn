@@ -39,7 +39,13 @@ public final class Player {
             Map.entry("directed_shock", "kinetic_energy_applied"),
             Map.entry("bioelectric_surge", "bioelectric_operation"),
             Map.entry("electron_barrier", "light_shield"),
-            Map.entry("darkmatter_radiation", "darkmatter_interference")
+            Map.entry("darkmatter_radiation", "darkmatter_interference"),
+            Map.entry("air_cushion", "laminar_buffer"),
+            Map.entry("breathing_film", "breathing_bubble"),
+            Map.entry("pressure_lock", "turbulent_cavitation"),
+            Map.entry("atmosphere_blast_gun", "rejecting_wind"),
+            Map.entry("wind_corridor", "high_speed_jet"),
+            Map.entry("atmospheric_dominion", "adiabatic_compression")
     );
     private static final Set<String> RETIRED_SKILLS = Set.of(
             "academy:hell_flare",

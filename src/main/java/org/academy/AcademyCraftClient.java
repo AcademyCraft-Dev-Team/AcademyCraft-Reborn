@@ -94,6 +94,7 @@ import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
@@ -132,6 +133,7 @@ public final class AcademyCraftClient {
         AbilitySystemClient.init();
         AbilityProgramEditorClient.init();
         InstantTeleportSyncPacket.initClient();
+        SpawnVfxGraphPacket.initClient();
         ProficiencyPolicy.initClient();
         ProficiencySkillSettingsClient.init();
         ClientSyncManager.init();

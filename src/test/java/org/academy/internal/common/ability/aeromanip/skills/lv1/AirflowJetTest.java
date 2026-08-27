@@ -21,8 +21,19 @@ class AirflowJetTest {
     }
 
     @Test
-    void fullFluidSubmersionReducesPropulsionSpeed() {
-        assertEquals(2.4, AirflowJet.propulsionSpeed(2, false), 1.0E-9);
-        assertEquals(0.96, AirflowJet.propulsionSpeed(2, true), 1.0E-9);
+    void chargeMilestonesImproveTheMatchingReleaseTier() {
+        assertEquals(1.5, AirflowJet.instantDamage(false), 1.0E-9);
+        assertEquals(2.0, AirflowJet.instantDamage(true), 1.0E-9);
+        assertEquals(1.35, AirflowJet.halfLaunchSpeed(false), 1.0E-9);
+        assertEquals(1.62, AirflowJet.halfLaunchSpeed(true), 1.0E-9);
+        assertEquals(30, AirflowJet.fullPropulsionDuration(false));
+        assertEquals(40, AirflowJet.fullPropulsionDuration(true));
+    }
+
+    @Test
+    void fullFluidSubmersionReducesFullChargePropulsionSpeed() {
+        assertEquals(2.35, AirflowJet.fullPropulsionSpeed(false, false), 1.0E-9);
+        assertEquals(2.82, AirflowJet.fullPropulsionSpeed(true, false), 1.0E-9);
+        assertEquals(0.94, AirflowJet.fullPropulsionSpeed(false, true), 1.0E-9);
     }
 }

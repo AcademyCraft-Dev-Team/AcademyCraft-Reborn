@@ -119,6 +119,21 @@ class PlayerCPManagerTest {
     }
 
     @Test
+    void combinedResourceCostRequiresBothCpAndMp() {
+        assertTrue(PlayerCPManager.canAffordCombinedCost(20.0f, 40.0f, 20.0f, 40.0f));
+        assertFalse(PlayerCPManager.canAffordCombinedCost(19.0f, 40.0f, 20.0f, 40.0f));
+        assertFalse(PlayerCPManager.canAffordCombinedCost(20.0f, 39.0f, 20.0f, 40.0f));
+    }
+
+    @Test
+    void combinedResourceCostRejectsInvalidValues() {
+        assertFalse(PlayerCPManager.canAffordCombinedCost(
+                Float.NaN, 40.0f, 20.0f, 40.0f));
+        assertFalse(PlayerCPManager.canAffordCombinedCost(
+                20.0f, 40.0f, -1.0f, 0.0f));
+    }
+
+    @Test
     void migratesRecalculatedCpGrowthIntoThePersistentMaximum() {
         assertEquals(400.0f, PlayerCPManager.initialPersistentMaxCp(100.0f, 300.0f));
         assertEquals(640.0f, PlayerCPManager.initialPersistentMaxCp(640.0f, 300.0f));

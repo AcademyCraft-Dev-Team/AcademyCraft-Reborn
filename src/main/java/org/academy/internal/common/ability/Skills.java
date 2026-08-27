@@ -14,20 +14,20 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilt
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.*;
-import org.academy.internal.common.ability.aeromanip.skills.lv1.AirCushion;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
-import org.academy.internal.common.ability.aeromanip.skills.lv1.FlowSense;
-import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingFilm;
+import org.academy.internal.common.ability.aeromanip.skills.lv1.LaminarBuffer;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.FlowSense;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
-import org.academy.internal.common.ability.aeromanip.skills.lv2.TailwindField;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.TurbulentCavitation;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
-import org.academy.internal.common.ability.aeromanip.skills.lv3.VortexPull;
-import org.academy.internal.common.ability.aeromanip.skills.lv4.AtmosphereBlastGun;
-import org.academy.internal.common.ability.aeromanip.skills.lv4.PressureLock;
-import org.academy.internal.common.ability.aeromanip.skills.lv4.WindCorridor;
-import org.academy.internal.common.ability.aeromanip.skills.lv5.AtmosphericDominion;
-import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.RejectingWind;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.TailwindField;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.Flight;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.AdiabaticCompression;
 import org.academy.internal.common.ability.aeromanip.skills.lv5.VacuumDomain;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterGeneration;
@@ -96,20 +96,45 @@ public final class Skills {
      * Aeromanip
      */
     public static final DeferredHolder<Skill, AirflowJet> AIRFLOW_JET = SKILLS.register(SkillNames.AIRFLOW_JET, AirflowJet::new);
-    public static final DeferredHolder<Skill, AirCushion> AIR_CUSHION = SKILLS.register(SkillNames.AIR_CUSHION, AirCushion::new);
+    public static final DeferredHolder<Skill, LaminarBuffer> LAMINAR_BUFFER =
+            SKILLS.register(SkillNames.LAMINAR_BUFFER, LaminarBuffer::new);
+    /** Compatibility source alias; the registered skill id is academy:laminar_buffer. */
+    @Deprecated
+    public static final DeferredHolder<Skill, LaminarBuffer> AIR_CUSHION = LAMINAR_BUFFER;
     public static final DeferredHolder<Skill, FlowSense> FLOW_SENSE = SKILLS.register(SkillNames.FLOW_SENSE, FlowSense::new);
     public static final DeferredHolder<Skill, AtmosphereShield> ATMOSPHERE_SHIELD = SKILLS.register(SkillNames.ATMOSPHERE_SHIELD, AtmosphereShield::new);
-    public static final DeferredHolder<Skill, BreathingFilm> BREATHING_FILM = SKILLS.register(SkillNames.BREATHING_FILM, BreathingFilm::new);
+    public static final DeferredHolder<Skill, BreathingBubble> BREATHING_BUBBLE =
+            SKILLS.register(SkillNames.BREATHING_BUBBLE, BreathingBubble::new);
+    /** Compatibility source alias; the registered skill id is academy:breathing_bubble. */
+    @Deprecated
+    public static final DeferredHolder<Skill, BreathingBubble> BREATHING_FILM = BREATHING_BUBBLE;
     public static final DeferredHolder<Skill, PneumaticGrasp> PNEUMATIC_GRASP = SKILLS.register(SkillNames.PNEUMATIC_GRASP, PneumaticGrasp::new);
+    public static final DeferredHolder<Skill, TurbulentCavitation> TURBULENT_CAVITATION =
+            SKILLS.register(SkillNames.TURBULENT_CAVITATION, TurbulentCavitation::new);
     public static final DeferredHolder<Skill, TailwindField> TAILWIND_FIELD = SKILLS.register(SkillNames.TAILWIND_FIELD, TailwindField::new);
     public static final DeferredHolder<Skill, LaminarCutter> LAMINAR_CUTTER = SKILLS.register(SkillNames.LAMINAR_CUTTER, LaminarCutter::new);
+    public static final DeferredHolder<Skill, RejectingWind> REJECTING_WIND =
+            SKILLS.register(SkillNames.REJECTING_WIND, RejectingWind::new);
+    /** Compatibility source alias; the registered skill id is academy:rejecting_wind. */
+    @Deprecated
+    public static final DeferredHolder<Skill, RejectingWind> ATMOSPHERE_BLAST_GUN = REJECTING_WIND;
     public static final DeferredHolder<Skill, VortexPull> VORTEX_PULL = SKILLS.register(SkillNames.VORTEX_PULL, VortexPull::new);
-    public static final DeferredHolder<Skill, AtmosphereBlastGun> ATMOSPHERE_BLAST_GUN = SKILLS.register(SkillNames.ATMOSPHERE_BLAST_GUN, AtmosphereBlastGun::new);
-    public static final DeferredHolder<Skill, WindCorridor> WIND_CORRIDOR = SKILLS.register(SkillNames.WIND_CORRIDOR, WindCorridor::new);
-    public static final DeferredHolder<Skill, PressureLock> PRESSURE_LOCK = SKILLS.register(SkillNames.PRESSURE_LOCK, PressureLock::new);
+    public static final DeferredHolder<Skill, HighSpeedJet> HIGH_SPEED_JET =
+            SKILLS.register(SkillNames.HIGH_SPEED_JET, HighSpeedJet::new);
+    /** Compatibility source alias; the registered skill id is academy:high_speed_jet. */
+    @Deprecated
+    public static final DeferredHolder<Skill, HighSpeedJet> WIND_CORRIDOR = HIGH_SPEED_JET;
+    /** Compatibility source alias; the registered skill id is academy:turbulent_cavitation. */
+    @Deprecated
+    public static final DeferredHolder<Skill, TurbulentCavitation> PRESSURE_LOCK = TURBULENT_CAVITATION;
     public static final DeferredHolder<Skill, Flight> FLIGHT = SKILLS.register(SkillNames.FLIGHT, Flight::new);
     public static final DeferredHolder<Skill, VacuumDomain> VACUUM_DOMAIN = SKILLS.register(SkillNames.VACUUM_DOMAIN, VacuumDomain::new);
-    public static final DeferredHolder<Skill, AtmosphericDominion> ATMOSPHERIC_DOMINION = SKILLS.register(SkillNames.ATMOSPHERIC_DOMINION, AtmosphericDominion::new);
+    public static final DeferredHolder<Skill, AdiabaticCompression> ADIABATIC_COMPRESSION =
+            SKILLS.register(SkillNames.ADIABATIC_COMPRESSION, AdiabaticCompression::new);
+    /** Compatibility source alias; the registered skill id is academy:adiabatic_compression. */
+    @Deprecated
+    public static final DeferredHolder<Skill, AdiabaticCompression> ATMOSPHERIC_DOMINION =
+            ADIABATIC_COMPRESSION;
     /**
      * Accelerator
      */

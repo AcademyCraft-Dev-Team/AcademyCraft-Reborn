@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import net.minecraft.util.Mth;
 
 public final class AeromanipTargeting {
@@ -47,6 +48,19 @@ public final class AeromanipTargeting {
                 entity.getDeltaMovement(), direction, acceleration, maxForwardSpeed));
     }
 
+    /** High-speed variant used by stacked jet nozzles, with an explicit total-speed ceiling. */
+    public static void accelerateAlong(
+            Entity entity,
+            Vec3 direction,
+            double acceleration,
+            double maxForwardSpeed,
+            double maxTotalSpeed
+    ) {
+        setClampedVelocity(entity, acceleratedVelocity(
+                entity.getDeltaMovement(), direction, acceleration,
+                maxForwardSpeed, maxTotalSpeed), maxTotalSpeed);
+    }
+
     public static void steerVelocity(Entity entity, Vec3 direction, double response, double targetSpeed) {
         setClampedVelocity(entity, steeredVelocity(
                 entity.getDeltaMovement(), direction, response, targetSpeed));
@@ -75,15 +89,28 @@ public final class AeromanipTargeting {
     }
 
     static Vec3 acceleratedVelocity(Vec3 velocity, Vec3 direction, double acceleration, double maxForwardSpeed) {
+        return acceleratedVelocity(velocity, direction, acceleration, maxForwardSpeed, MAX_SPEED);
+    }
+
+    static Vec3 acceleratedVelocity(
+            Vec3 velocity,
+            Vec3 direction,
+            double acceleration,
+            double maxForwardSpeed,
+            double maxTotalSpeed
+    ) {
         if (!finite(velocity) || !finite(direction)
                 || !Double.isFinite(acceleration) || !Double.isFinite(maxForwardSpeed)
+                || !Double.isFinite(maxTotalSpeed) || maxTotalSpeed <= 0.0
                 || acceleration <= 0.0 || maxForwardSpeed <= 0.0 || direction.lengthSqr() <= 1.0e-8) {
             return finite(velocity) ? velocity : Vec3.ZERO;
         }
         var normalized = direction.normalize();
         var forwardSpeed = velocity.dot(normalized);
         var applied = Math.min(acceleration, maxForwardSpeed - forwardSpeed);
-        return applied > 0.0 ? clampVelocity(velocity.add(normalized.scale(applied))) : clampVelocity(velocity);
+        return applied > 0.0
+                ? clampVelocity(velocity.add(normalized.scale(applied)), maxTotalSpeed)
+                : clampVelocity(velocity, maxTotalSpeed);
     }
 
     static Vec3 steeredVelocity(Vec3 velocity, Vec3 direction, double response, double targetSpeed) {
@@ -98,8 +125,15 @@ public final class AeromanipTargeting {
     }
 
     private static void setClampedVelocity(Entity entity, Vec3 velocity) {
+        setClampedVelocity(entity, velocity, MAX_SPEED);
+    }
+
+    private static void setClampedVelocity(Entity entity, Vec3 velocity, double maxSpeed) {
         if (entity == null || !finite(velocity)) return;
-        entity.setDeltaMovement(clampVelocity(velocity));
+        if (EntityMotionGuard.currentMotionSourceEntity() instanceof ServerPlayer owner) {
+            AeromanipDisplacementTracker.mark(owner, entity);
+        }
+        entity.setDeltaMovement(clampVelocity(velocity, maxSpeed));
         entity.hurtMarked = true;
         if (entity instanceof ServerPlayer player) {
             player.connection.send(new ClientboundSetEntityMotionPacket(player));
@@ -107,8 +141,13 @@ public final class AeromanipTargeting {
     }
 
     private static Vec3 clampVelocity(Vec3 velocity) {
+        return clampVelocity(velocity, MAX_SPEED);
+    }
+
+    private static Vec3 clampVelocity(Vec3 velocity, double maxSpeed) {
         var speed = velocity.length();
-        return speed > MAX_SPEED ? velocity.scale(MAX_SPEED / speed) : velocity;
+        var cap = Double.isFinite(maxSpeed) ? Math.max(0.0, maxSpeed) : MAX_SPEED;
+        return speed > cap ? velocity.scale(cap / speed) : velocity;
     }
 
     public static Vec3 horizontalDirection(Vec3 direction) {

@@ -20,6 +20,11 @@ public final class AeromanipConfig {
         var server = player.level().getServer();
         if (!(server instanceof MinecraftServerContext context)) return fallback;
         var skill = context.getAcademyCraftServer().getAbilityConfig().skills.get(skillId);
+        if (skill == null) {
+            skill = AeromanipSkillMigration.legacyForReplacement(skillId)
+                    .map(context.getAcademyCraftServer().getAbilityConfig().skills::get)
+                    .orElse(null);
+        }
         if (skill == null) return fallback;
         var value = skill.floatMap.getOrDefault(key, fallback);
         return Float.isFinite(value) ? value : fallback;

@@ -18,6 +18,17 @@ class AeromanipTargetingTest {
     }
 
     @Test
+    void explicitJetCeilingAllowsStackedNozzlesToExceedNormalAirflowSpeed() {
+        var velocity = AeromanipTargeting.acceleratedVelocity(
+                new Vec3(2.95, 0, 0), new Vec3(1, 0, 0), 0.5, 6.0, 6.0);
+        assertEquals(3.45, velocity.x, 1.0e-9);
+
+        var capped = AeromanipTargeting.acceleratedVelocity(
+                new Vec3(5.9, 0, 0), new Vec3(1, 0, 0), 0.5, 6.0, 6.0);
+        assertEquals(6.0, capped.x, 1.0e-9);
+    }
+
+    @Test
     void steeringConvergesTowardTheRequestedAirflow() {
         var velocity = AeromanipTargeting.steeredVelocity(
                 new Vec3(0.4, 0, 0), new Vec3(0, 0, 2), 0.5, 1.2);

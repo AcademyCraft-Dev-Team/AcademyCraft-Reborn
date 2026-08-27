@@ -79,6 +79,18 @@ class WorldDataMigrationTest {
                 Player.canonicalizeSkillId("academy:level0_passive_lv3"));
         assertEquals("academy:darkmatter_interference",
                 Player.canonicalizeSkillId("academy:darkmatter_radiation"));
+        assertEquals("academy:laminar_buffer",
+                Player.canonicalizeSkillId("academy:air_cushion"));
+        assertEquals("academy:breathing_bubble",
+                Player.canonicalizeSkillId("academy:breathing_film"));
+        assertEquals("academy:turbulent_cavitation",
+                Player.canonicalizeSkillId("academy:pressure_lock"));
+        assertEquals("academy:rejecting_wind",
+                Player.canonicalizeSkillId("academy:atmosphere_blast_gun"));
+        assertEquals("academy:high_speed_jet",
+                Player.canonicalizeSkillId("academy:wind_corridor"));
+        assertEquals("academy:adiabatic_compression",
+                Player.canonicalizeSkillId("academy:atmospheric_dominion"));
     }
 
     @Test

@@ -4,6 +4,8 @@
     "academy:electrodamage",
     "academy:vec",
     "academy:cta",
-    "academy:mentaldamage"
+    "academy:mentaldamage",
+    "academy:vacuum_suffocation",
+    "academy:adiabatic_compression"
   ]
 }

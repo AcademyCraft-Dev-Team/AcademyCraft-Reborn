@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.aeromanip;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -48,7 +47,6 @@ public final class AeromanipFieldManager {
         AbilitySystemServer.registerContext(context);
         AeromanipFieldSyncPacket.sendToTracking(player, field, true);
         var sound = field.type() == AirflowField.Type.VACUUM
-                || field.type() == AirflowField.Type.ATMOSPHERIC_DOMINION
                 ? SoundEvents.AIRFLOW_DOMAIN.get()
                 : SoundEvents.AIRFLOW_FIELD.get();
         player.level().playSound(null, player.blockPosition(), sound,
@@ -101,10 +99,6 @@ public final class AeromanipFieldManager {
     public static void endPlaced(ServerPlayer player) {
         var context = ACTIVE.get(player);
         if (context != null) context.end();
-    }
-
-    public static float rangeMultiplier(ServerPlayer player) {
-        return hasActiveField(player, AirflowField.Type.ATMOSPHERIC_DOMINION) ? 1.25f : 1.0f;
     }
 
     @FunctionalInterface
@@ -172,22 +166,13 @@ public final class AeromanipFieldManager {
             if ((ageTicks & 1) != 0) return;
             skill.reportActivity(player, true);
             ticker.tick(player, field, ageTicks);
-            spawnVisual();
+            if (ageTicks % 8 == 0) spawnVisual();
         }
 
         private void spawnVisual() {
             var level = level();
             var center = field.center();
-            var count = field.type() == AirflowField.Type.ATMOSPHERIC_DOMINION ? 10 : 5;
-            level.sendParticles(
-                    ParticleTypes.CLOUD,
-                    center.x, center.y, center.z,
-                    count,
-                    Math.max(0.2, field.radius() * 0.4),
-                    Math.max(0.2, field.radius() * 0.2),
-                    Math.max(0.2, field.radius() * 0.4),
-                    0.01
-            );
+            AeromanipVfx.field(level, center, Math.max(0.2, field.radius()));
         }
 
         private void end() {

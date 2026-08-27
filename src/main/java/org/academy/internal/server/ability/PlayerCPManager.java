@@ -402,8 +402,25 @@ public class PlayerCPManager implements AbilitySubsystem {
 
     public boolean tryOccupation(UUID uuid, float amount, Skill skill, int iterationTicks,
                                  boolean isPermanent, String stackGroup, int stackLimit) {
+        return tryOccupationAndConsumeMP(
+                uuid, amount, 0.0f, skill, iterationTicks, isPermanent, stackGroup, stackLimit);
+    }
+
+    /** Atomically reserves CP and consumes MP, or changes neither resource. */
+    public boolean tryOccupationAndConsumeMP(
+            UUID uuid,
+            float cpAmount,
+            float mpAmount,
+            Skill skill,
+            int iterationTicks,
+            boolean isPermanent,
+            String stackGroup,
+            int stackLimit
+    ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null) return false;
+        if (playerData == null || skill == null
+                || !Float.isFinite(cpAmount) || cpAmount < 0.0f
+                || !Float.isFinite(mpAmount) || mpAmount < 0.0f) return false;
 
         var cpData = playerData.getCpData();
         var occupations = playerData.getCpOccupations();
@@ -412,7 +429,8 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         if (cpData.getStatus() == AbilityData.Status.OVERLOAD) return false;
         if (enterOverloadIfDepleted(uuid, cpData)) return false;
-        if (cpData.getAvailableCP() < amount) return false;
+        if (!canAffordCombinedCost(
+                cpData.getAvailableCP(), cpData.getCurrMP(), cpAmount, mpAmount)) return false;
 
         var hasDedicatedStackGroup = stackGroup != null && !stackGroup.isBlank();
         var normalizedStackGroup = hasDedicatedStackGroup ? stackGroup : skill.getKeyString();
@@ -424,22 +442,40 @@ public class PlayerCPManager implements AbilitySubsystem {
             if (currentStacks >= maxStacks) return false;
         }
 
-        if (amount <= 0) return true;
+        if (cpAmount <= 0.0f && mpAmount <= 0.0f) return true;
 
         var effectiveIterationTicks = iterationTicks;
-        if (!isPermanent && effectiveIterationTicks <= 0) {
-            effectiveIterationTicks = Math.max(1, Mth.ceil(amount * 0.5f));
+        if (cpAmount > 0.0f && !isPermanent && effectiveIterationTicks <= 0) {
+            effectiveIterationTicks = Math.max(1, Mth.ceil(cpAmount * 0.5f));
         }
-        occupations.add(new AbilityData.CpOccupationData(
-                amount,
-                effectiveIterationTicks,
-                skill.getKeyString(),
-                isPermanent,
-                normalizedStackGroup
-        ));
-        cpData.setAvailableCP(cpData.getAvailableCP() - amount, getMaxCP(uuid));
-        enterOverloadIfDepleted(uuid, cpData);
+        if (cpAmount > 0.0f) {
+            occupations.add(new AbilityData.CpOccupationData(
+                    cpAmount,
+                    effectiveIterationTicks,
+                    skill.getKeyString(),
+                    isPermanent,
+                    normalizedStackGroup
+            ));
+            cpData.setAvailableCP(cpData.getAvailableCP() - cpAmount, getMaxCP(uuid));
+            enterOverloadIfDepleted(uuid, cpData);
+        }
+        if (mpAmount > 0.0f) {
+            cpData.setCurrMP(Math.max(0.0f, cpData.getCurrMP() - mpAmount));
+        }
+        playerData.markDirty();
         return true;
+    }
+
+    static boolean canAffordCombinedCost(
+            float availableCp,
+            float currentMp,
+            float cpCost,
+            float mpCost
+    ) {
+        if (!Float.isFinite(availableCp) || !Float.isFinite(currentMp)
+                || !Float.isFinite(cpCost) || !Float.isFinite(mpCost)
+                || cpCost < 0.0f || mpCost < 0.0f) return false;
+        return availableCp + CP_EPSILON >= cpCost && currentMp + CP_EPSILON >= mpCost;
     }
 
     static long countTimedStacks(List<AbilityData.CpOccupationData> occupations, String stackGroup) {

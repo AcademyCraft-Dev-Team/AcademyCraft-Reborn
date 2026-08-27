@@ -37,6 +37,7 @@ public final class ActiveEffect {
     private GraphEffect effect;
     private float scale = 1f;
     private float minimumFarPlane;
+    private long expiresAtNanos = Long.MAX_VALUE;
     private boolean alwaysVisible;
     private @org.jspecify.annotations.Nullable Entity followEntity;
     private boolean stopped;
@@ -103,6 +104,19 @@ public final class ActiveEffect {
     }
 
     /**
+     * 为一次性效果设置真实时间寿命。使用单调时钟而不是累计模拟步长，避免管理器的
+     * tick 与逐帧模拟同时推进时把寿命重复扣除。
+     */
+    public void setLifetimeSeconds(float lifetimeSeconds) {
+        if (!Float.isFinite(lifetimeSeconds) || lifetimeSeconds <= 0f) {
+            expiresAtNanos = Long.MAX_VALUE;
+            return;
+        }
+        var durationNanos = (long) (lifetimeSeconds * 1_000_000_000L);
+        expiresAtNanos = System.nanoTime() + Math.max(1L, durationNanos);
+    }
+
+    /**
      * 跳过管理器的距离与视锥剔除。适用于范围远大于发射器包围球、或本身输出屏幕空间画面的效果。
      */
     public void setAlwaysVisible(boolean alwaysVisible) {
@@ -149,7 +163,8 @@ public final class ActiveEffect {
 
     /** tick 并返回是否应移除（显式 stop 或跟随实体已移除）。 */
     public boolean tick(float dt) {
-        if (stopped) {
+        if (stopped || System.nanoTime() >= expiresAtNanos) {
+            stopped = true;
             return true;
         }
         if (followEntity != null) {

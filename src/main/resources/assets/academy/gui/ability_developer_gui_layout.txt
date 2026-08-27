@@ -27,27 +27,27 @@ academy:white_wing=218.0,55.0
 
 [academy:aeromanip]
 academy:absolute_self_control=170.0,116.0
-academy:air_cushion=47.5,107.0
+academy:laminar_buffer=47.5,107.0
 academy:airflow_jet=14.5,53.5
-academy:atmosphere_blast_gun=153.0,36.5
 academy:atmosphere_shield=124.0,8.5
-academy:atmospheric_dominion=194.5,12.0
+academy:adiabatic_compression=194.5,12.0
 academy:brain_domain_development=12.0,116.0
-academy:breathing_film=99.5,46.0
+academy:breathing_bubble=99.5,46.0
 academy:complete_consciousness_analysis=130.5,116.0
 academy:endurance_training=75.0,25.0
 academy:flight=229.5,116.0
 academy:flow_sense=50.0,23.0
+academy:high_speed_jet=177.0,110.0
 academy:laminar_cutter=151.5,90.5
 academy:multiple_brain_domain_segmentation=53.0,116.0
 academy:parallel_thought_computation=93.0,116.0
 academy:physical_training=75.0,100.0
 academy:pneumatic_grasp=73.0,81.5
-academy:pressure_lock=232.5,63.5
+academy:rejecting_wind=189.5,65.5
+academy:turbulent_cavitation=232.5,63.5
 academy:tailwind_field=103.0,116.0
 academy:vacuum_domain=231.5,20.0
-academy:vortex_pull=189.5,65.5
-academy:wind_corridor=177.0,110.0
+academy:vortex_pull=214.5,85.5
 
 [academy:darkmatter]
 academy:absolute_self_control=177.5,113.0

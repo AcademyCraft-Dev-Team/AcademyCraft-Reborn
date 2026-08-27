@@ -146,7 +146,7 @@ public abstract class Skill {
      */
     protected final boolean executeActive(ServerPlayer player, CostCalculator calculator, SkillAction action) {
         return executeActiveInternal(
-                player, calculator, action, null, NO_STACK_LIMIT);
+                player, calculator, null, action, null, NO_STACK_LIMIT);
     }
 
     protected final boolean executeActive(ServerPlayer player, SkillAction action) {
@@ -156,12 +156,36 @@ public abstract class Skill {
     protected final boolean executeActive(ServerPlayer player, String stackGroup, int stackLimit,
                                           SkillAction action) {
         return executeActiveInternal(
-                player, ctx -> cpCost, action, stackGroup, stackLimit);
+                player, ctx -> cpCost, null, action, stackGroup, stackLimit);
+    }
+
+    /** Executes one active cast while atomically paying CP and category MP. */
+    protected final boolean executeActiveWithResource(
+            ServerPlayer player,
+            CostCalculator cpCalculator,
+            CostCalculator resourceCalculator,
+            SkillAction action
+    ) {
+        return executeActiveInternal(
+                player, cpCalculator, resourceCalculator, action, null, NO_STACK_LIMIT);
+    }
+
+    protected final boolean executeActiveWithResource(
+            ServerPlayer player,
+            CostCalculator cpCalculator,
+            CostCalculator resourceCalculator,
+            String stackGroup,
+            int stackLimit,
+            SkillAction action
+    ) {
+        return executeActiveInternal(
+                player, cpCalculator, resourceCalculator, action, stackGroup, stackLimit);
     }
 
     private boolean executeActiveInternal(
             ServerPlayer player,
             CostCalculator calculator,
+            @Nullable CostCalculator resourceCalculator,
             SkillAction action,
             String stackGroup,
             int stackLimit
@@ -204,6 +228,14 @@ public abstract class Skill {
         };
 
         var system = AbilitySystemServer.getSystem(player);
+        if (resourceCalculator != null) {
+            if (stackGroup == null) {
+                return system.castCpAndMpIfPossible(
+                        player, this, eventCost, resourceCalculator, eventAction);
+            }
+            return system.castCpAndMpIfPossible(
+                    player, this, eventCost, resourceCalculator, eventAction, stackGroup, stackLimit);
+        }
         if (stackGroup == null) {
             return system.castCpIfPossible(player, this, eventCost, eventAction);
         }
@@ -257,6 +289,49 @@ public abstract class Skill {
 
     protected final boolean executeContinuous(ServerPlayer player, SkillAction action, boolean effective) {
         return executeContinuous(player, ctx -> cpCost, action, effective);
+    }
+
+    /** Pays CP and category MP for one tick of an already-running skill. */
+    protected final boolean executeContinuousWithResource(
+            ServerPlayer player,
+            CostCalculator cpCalculator,
+            CostCalculator resourceCalculator,
+            SkillAction action,
+            boolean effective
+    ) {
+        if (!isEnabled(player)) return false;
+
+        var preEvent = new SkillExecutionPreEvent(this, player, true);
+        NeoForge.EVENT_BUS.post(preEvent);
+        if (preEvent.isCanceled()) return false;
+
+        return AbilitySystemServer.getSystem(player)
+                .castContinuousCpAndMpIfPossible(player, this, ctx -> {
+                    var baseCost = cpCalculator.calculate(ctx);
+                    var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                            SkillProficiencyProfile.CostKind.CONTINUOUS, ctx.milestone(), baseCost);
+                    var resolvedCost = DarkmatterSixWings.Server.adjustCategoryCost(
+                            player, this, baseCost, proficiencyCost);
+                    var costEvent = new SkillExecutionCostEvent(
+                            new ActiveCostContext(this, player, ctx, baseCost), true, resolvedCost);
+                    NeoForge.EVENT_BUS.post(costEvent);
+                    return costEvent.isCanceled() ? Float.NaN : costEvent.cost();
+                }, resourceCalculator, (ctx, actualCost) -> {
+                    var execution = new ActiveExecutionContext(this, player, ctx, actualCost);
+                    NeoForge.EVENT_BUS.post(new SkillExecutionStartEvent(execution, true));
+                    var successful = false;
+                    Throwable failure = null;
+                    try {
+                        action.execute(ctx, actualCost);
+                        successful = true;
+                    } catch (Throwable throwable) {
+                        failure = throwable;
+                        throw throwable;
+                    } finally {
+                        NeoForge.EVENT_BUS.post(
+                                new SkillExecutionFinishEvent(execution, true, successful, failure));
+                    }
+                }, effective);
     }
 
     public final void reportActivity(ServerPlayer player, boolean effective) {

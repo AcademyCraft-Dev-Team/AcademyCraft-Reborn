@@ -6,7 +6,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
-import org.academy.internal.common.ability.aeromanip.skills.lv4.AtmosphereBlastGun;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.RejectingWind;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
@@ -30,7 +30,7 @@ final class ControlledPlayerCombat {
         if (category == AbilityCategories.DARKMATTER.get()
                 && Skills.DARKMATTER_DISASSEMBLE.get().isEnabled(player)) return 32.0;
         if (category == AbilityCategories.AEROMANIP.get()
-                && Skills.ATMOSPHERE_BLAST_GUN.get().isEnabled(player)) return 8.0;
+                && Skills.REJECTING_WIND.get().isEnabled(player)) return 8.0;
         return 0.0;
     }
 
@@ -54,7 +54,7 @@ final class ControlledPlayerCombat {
             return DarkmatterDisassemble.Server.tryAutomatedAttack(player, target);
         }
         if (category == AbilityCategories.AEROMANIP.get()) {
-            return AtmosphereBlastGun.Server.tryAutomatedAttack(player);
+            return RejectingWind.Server.tryAutomatedAttack(player);
         }
         return false;
     }

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "aeromanip_mist_burst",
+  "parameters": [
+    { "id": "mist_alpha", "name": "Pressure Burst Fade", "type": "CURVE", "default": { "type": "CURVE", "curve": [
+      { "t": 0.0, "v": 0.24, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.08, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.58, "v": 0.74, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+    ] } },
+    { "id": "mist_size", "name": "Pressure Expansion", "type": "CURVE", "default": { "type": "CURVE", "curve": [
+      { "t": 0.0, "v": 0.42, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.36, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 1.0, "v": 1.62, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+    ] } }
+  ],
+  "contexts": [
+    { "id": "spawn", "type": "SPAWN", "name": "Compressed Air Burst", "x": 0, "y": 0, "blocks": [
+      { "id": "pressure_ring", "type": "vfx.block.spawn_burst", "properties": { "count": "28", "lifetime": "0.68", "size": "0.15", "color": "1,1,1,0.24", "vx": "0", "vy": "0.16", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.76", "half_x": "0.08" } },
+      { "id": "expanding_shell", "type": "vfx.block.spawn_burst", "properties": { "count": "22", "lifetime": "0.92", "size": "0.31", "color": "0.98,1,1,0.095", "vx": "0", "vy": "0.26", "vz": "0", "layer": "mist", "shape": "sphere", "radius": "0.82" } },
+      { "id": "wake_wisps", "type": "vfx.block.spawn_burst", "properties": { "count": "12", "lifetime": "1.08", "size": "0.43", "color": "0.92,0.97,1,0.07", "vx": "0", "vy": "0.42", "vz": "0", "layer": "mist", "shape": "sphere", "radius": "0.54" } }
+    ] },
+    { "id": "update", "type": "UPDATE", "name": "Expanding Pressure Wake", "x": 500, "y": 0, "blocks": [
+      { "id": "turbulence", "type": "vfx.block.update_turbulence", "properties": { "amplitude": "0.48", "frequency": "1.1" } },
+      { "id": "drag", "type": "vfx.block.update_drag", "properties": { "drag": "0.72" } },
+      { "id": "velocity", "type": "vfx.block.update_velocity", "properties": {} },
+      { "id": "age", "type": "vfx.block.update_age", "properties": {} },
+      { "id": "alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "mist_alpha", "layer": "mist" } },
+      { "id": "size", "type": "vfx.block.life_size", "properties": { "curve": "mist_size", "layer": "mist" } }
+    ] },
+    { "id": "output", "type": "OUTPUT", "name": "Visible White Pressure Mist", "x": 1000, "y": 0, "blocks": [
+      { "id": "out_mist", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_aeromanip_mist", "shader": "academy:core/vfxgraph_aeromanip_mist", "blend": "translucent", "layer": "mist" } }
+    ] }
+  ],
+  "operators": [],
+  "flow": [ { "from": "spawn", "to": "update" }, { "from": "update", "to": "output" } ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_mist" ]
+}

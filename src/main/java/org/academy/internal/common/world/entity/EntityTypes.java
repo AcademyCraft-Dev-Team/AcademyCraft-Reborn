@@ -6,6 +6,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
+import org.academy.internal.common.world.entity.projectile.PaperAirplane;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.academy.internal.common.world.entity.projectile.DarkmatterCreatureProjectile;
 import org.academy.internal.common.world.entity.projectile.DarkmatterSpearProjectile;
@@ -22,6 +23,17 @@ public class EntityTypes {
                     "thrown_coin", ThrownCoin::new, MobCategory.MISC,
                     thrownCoinBuilder ->
                             thrownCoinBuilder.sized(0.25f, 0.25f)
+            );
+    public static final DeferredHolder<EntityType<?>, EntityType<PaperAirplane>> PAPER_AIRPLANE =
+            ENTITY_TYPES.registerEntityType(
+                    "paper_airplane", PaperAirplane::new, MobCategory.MISC,
+                    builder -> builder.sized(0.45f, 0.12f).clientTrackingRange(64).updateInterval(1)
+            );
+    public static final DeferredHolder<EntityType<?>, EntityType<HighSpeedJetNozzle>> HIGH_SPEED_JET_NOZZLE =
+            ENTITY_TYPES.registerEntityType(
+                    "high_speed_jet_nozzle", HighSpeedJetNozzle::new, MobCategory.MISC,
+                    builder -> builder.sized(0.4f, 0.4f)
+                            .clientTrackingRange(96).updateInterval(1)
             );
     public static final DeferredHolder<EntityType<?>, EntityType<RailgunRay>> RAILGUN_RAY =
             ENTITY_TYPES.registerEntityType(
