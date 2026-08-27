@@ -27,7 +27,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     private class ChildRenderCache(
         val commands: MutableList<SubmittedCommand>,
         val regions: List<BlurRegion>,
-        val coverBaseRecordedMax: Int
+        val coverBaseRecordedMax: Long
     )
 
     private val childRenderCaches: MutableMap<Widget, ChildRenderCache> = IdentityHashMap()
@@ -550,6 +550,40 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             requestLayout()
             invalidate()
         }
+    }
+
+    override fun replaceChild(name: String, child: Widget) {
+        val old = protectedChildren[name]
+        if (old != null) {
+            if (old.isAttached()) {
+                old.dispatchDetached()
+            }
+            old.parent = null
+            if (focusedChild === old) focusedChild = null
+            if (hoveredWidget === old) hoveredWidget = null
+            if (gestureTarget === old) gestureTarget = null
+            dirtyChildrenSet.remove(old)
+            childRenderCaches.remove(old)
+        }
+
+        var lp = child.layoutParams
+        if (lp === WidgetContainer.LayoutParams.NONE) {
+            lp = generateDefaultLayoutParams()
+        }
+        if (!checkLayoutParams(lp)) {
+            lp = generateLayoutParams(lp)
+        }
+        child.layoutParams = lp
+        child.parent = this
+        child.name = name
+        protectedChildren[name] = child
+
+        if (isAttached()) {
+            child.dispatchAttached()
+        }
+
+        requestLayout()
+        invalidate()
     }
 
     override fun clearChildren() {

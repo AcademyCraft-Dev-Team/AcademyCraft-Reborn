@@ -6,13 +6,13 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * 验证 UI_LAYER 模糊的 drawOrder 不变量: 模糊面板的 drawOrder 位于
- * 其下方内容 (main) 与上方内容 (cover) 之间.
+ * 验证 UI_LAYER 模糊的 commandIndex 不变量: 模糊面板的 commandIndex 位于
+ * 其下方内容 (main) 与上方内容 (cover) 之间喵.
  */
 class BlurDrawOrderTest {
 
     @Test
-    fun `blur panel draw order is between main and cover content`() {
+    fun `blur panel command index is between main and cover content`() {
         val root = FrameLayoutWidget()
         val main = FrameLayoutWidget()
         val belowFill = FillWidget(0xFFAA0000.toInt())
@@ -32,24 +32,24 @@ class BlurDrawOrderTest {
         root.render(context)
 
         assertTrue(context.blurRegions.size == 1, "expected one blur region")
-        val blurOrder = context.blurRegions[0].drawOrder
+        val blurIndex = context.blurRegions[0].commandIndex
 
-        val belowOrders = context.commands
-            .filter { it.drawOrder < blurOrder }
-            .map { it.drawOrder }
-        assertTrue(belowOrders.isNotEmpty())
+        val belowIndices = context.commands
+            .filter { it.commandIndex < blurIndex }
+            .map { it.commandIndex }
+        assertTrue(belowIndices.isNotEmpty())
         assertTrue(
-            belowOrders.all { it < blurOrder },
-            "below commands (drawOrder=$belowOrders) must be < blur ($blurOrder)"
+            belowIndices.all { it < blurIndex },
+            "below commands (commandIndex=$belowIndices) must be < blur ($blurIndex)"
         )
-        val aboveOrders = context.commands
-            .filter { it.drawOrder >= blurOrder }
-            .map { it.drawOrder }
-        assertTrue(aboveOrders.isNotEmpty())
+        val aboveIndices = context.commands
+            .filter { it.commandIndex >= blurIndex }
+            .map { it.commandIndex }
+        assertTrue(aboveIndices.isNotEmpty())
     }
 
     @Test
-    fun `fill rect draw orders increase with container nesting`() {
+    fun `fill rect command indices increase monotonically`() {
         val root = FrameLayoutWidget()
         val a = FrameLayoutWidget()
         val f = FillWidget(0xFFAA0000.toInt())
@@ -65,9 +65,9 @@ class BlurDrawOrderTest {
         val context = RenderContext()
         root.render(context)
 
-        val orders = context.commands.map { it.drawOrder }
-        assertTrue(orders.size >= 2, "expected at least 2 commands, got $orders")
-        assertTrue(orders[0] < orders[1], "first child command must be before second: $orders")
+        val indices = context.commands.map { it.commandIndex }
+        assertTrue(indices.size >= 2, "expected at least 2 commands, got $indices")
+        assertTrue(indices[0] < indices[1], "first child command must be before second: $indices")
     }
 
     @Test
