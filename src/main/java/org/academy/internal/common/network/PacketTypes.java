@@ -30,17 +30,18 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.*;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.FlowSensePacket;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
-import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingFilm;
+import org.academy.internal.common.ability.aeromanip.skills.lv1.LaminarBuffer;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.FlowSense;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
-import org.academy.internal.common.ability.aeromanip.skills.lv2.TailwindField;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
-import org.academy.internal.common.ability.aeromanip.skills.lv3.VortexPull;
-import org.academy.internal.common.ability.aeromanip.skills.lv4.AtmosphereBlastGun;
-import org.academy.internal.common.ability.aeromanip.skills.lv4.PressureLock;
-import org.academy.internal.common.ability.aeromanip.skills.lv4.WindCorridor;
-import org.academy.internal.common.ability.aeromanip.skills.lv5.AtmosphericDominion;
-import org.academy.internal.common.ability.aeromanip.skills.lv5.Flight;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.RejectingWind;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.TailwindField;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.AdiabaticCompression;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.Flight;
 import org.academy.internal.common.ability.aeromanip.skills.lv5.VacuumDomain;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterGeneration;
@@ -209,12 +210,21 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AirflowJet.StopPacket>>
             AIRFLOW_JET_STOP = PACKET_TYPES.register("airflow_jet_stop",
             () -> new PacketType<>(AirflowJet.StopPacket.class, AirflowJet.StopPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BreathingFilm.CastPacket>>
-            BREATHING_FILM_CAST = PACKET_TYPES.register("breathing_film_cast",
-            () -> new PacketType<>(BreathingFilm.CastPacket.class, BreathingFilm.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarBuffer.StartPacket>>
+            LAMINAR_BUFFER_START = PACKET_TYPES.register("laminar_buffer_start",
+            () -> new PacketType<>(LaminarBuffer.StartPacket.class, LaminarBuffer.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarBuffer.StopPacket>>
+            LAMINAR_BUFFER_STOP = PACKET_TYPES.register("laminar_buffer_stop",
+            () -> new PacketType<>(LaminarBuffer.StopPacket.class, LaminarBuffer.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BreathingBubble.CastPacket>>
+            BREATHING_BUBBLE_CAST = PACKET_TYPES.register("breathing_bubble_cast",
+            () -> new PacketType<>(BreathingBubble.CastPacket.class, BreathingBubble.CastPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, FlowSensePacket>>
             FLOW_SENSE_SYNC = PACKET_TYPES.register("flow_sense_sync",
             () -> new PacketType<>(FlowSensePacket.class, FlowSensePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FlowSense.TogglePacket>>
+            FLOW_SENSE_TOGGLE = PACKET_TYPES.register("flow_sense_toggle",
+            () -> new PacketType<>(FlowSense.TogglePacket.class, FlowSense.TogglePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AeromanipFieldSyncPacket>>
             AEROMANIP_FIELD_SYNC = PACKET_TYPES.register("aeromanip_field_sync",
             () -> new PacketType<>(AeromanipFieldSyncPacket.class, AeromanipFieldSyncPacket.CODEC));
@@ -228,52 +238,55 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PneumaticGrasp.AdjustDistancePacket>>
             PNEUMATIC_GRASP_ADJUST_DISTANCE = PACKET_TYPES.register("pneumatic_grasp_adjust_distance",
             () -> new PacketType<>(PneumaticGrasp.AdjustDistancePacket.class, PneumaticGrasp.AdjustDistancePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarCutter.CastPacket>>
-            LAMINAR_CUTTER_CAST = PACKET_TYPES.register("laminar_cutter_cast",
-            () -> new PacketType<>(LaminarCutter.CastPacket.class, LaminarCutter.CastPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VortexPull.CastPacket>>
-            VORTEX_PULL_CAST = PACKET_TYPES.register("vortex_pull_cast",
-            () -> new PacketType<>(VortexPull.CastPacket.class, VortexPull.CastPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WindCorridor.CastPacket>>
-            WIND_CORRIDOR_CAST = PACKET_TYPES.register("wind_corridor_cast",
-            () -> new PacketType<>(WindCorridor.CastPacket.class, WindCorridor.CastPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PressureLock.StartPacket>>
-            PRESSURE_LOCK_START = PACKET_TYPES.register("pressure_lock_start",
-            () -> new PacketType<>(PressureLock.StartPacket.class, PressureLock.StartPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PressureLock.StopPacket>>
-            PRESSURE_LOCK_STOP = PACKET_TYPES.register("pressure_lock_stop",
-            () -> new PacketType<>(PressureLock.StopPacket.class, PressureLock.StopPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PressureLock.TargetPacket>>
-            PRESSURE_LOCK_TARGET = PACKET_TYPES.register("pressure_lock_target",
-            () -> new PacketType<>(PressureLock.TargetPacket.class, PressureLock.TargetPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TailwindField.TogglePacket>>
-            TAILWIND_FIELD_TOGGLE = PACKET_TYPES.register("tailwind_field_toggle",
-            () -> new PacketType<>(TailwindField.TogglePacket.class, TailwindField.TogglePacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AtmosphericDominion.CastPacket>>
-            ATMOSPHERIC_DOMINION_CAST = PACKET_TYPES.register("atmospheric_dominion_cast",
-            () -> new PacketType<>(AtmosphericDominion.CastPacket.class, AtmosphericDominion.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarCutter.StartPacket>>
+            LAMINAR_CUTTER_START = PACKET_TYPES.register("laminar_cutter_start",
+            () -> new PacketType<>(LaminarCutter.StartPacket.class, LaminarCutter.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarCutter.StopPacket>>
+            LAMINAR_CUTTER_STOP = PACKET_TYPES.register("laminar_cutter_stop",
+            () -> new PacketType<>(LaminarCutter.StopPacket.class, LaminarCutter.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VortexPull.StartPacket>>
+            VORTEX_PULL_START = PACKET_TYPES.register("vortex_pull_start",
+            () -> new PacketType<>(VortexPull.StartPacket.class, VortexPull.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VortexPull.StopPacket>>
+            VORTEX_PULL_STOP = PACKET_TYPES.register("vortex_pull_stop",
+            () -> new PacketType<>(VortexPull.StopPacket.class, VortexPull.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, RejectingWind.StartPacket>>
+            REJECTING_WIND_START = PACKET_TYPES.register("rejecting_wind_start",
+            () -> new PacketType<>(RejectingWind.StartPacket.class, RejectingWind.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, RejectingWind.StopPacket>>
+            REJECTING_WIND_STOP = PACKET_TYPES.register("rejecting_wind_stop",
+            () -> new PacketType<>(RejectingWind.StopPacket.class, RejectingWind.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, HighSpeedJet.PlacePacket>>
+            HIGH_SPEED_JET_PLACE = PACKET_TYPES.register("high_speed_jet_place",
+            () -> new PacketType<>(HighSpeedJet.PlacePacket.class, HighSpeedJet.PlacePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, HighSpeedJet.ActivatePacket>>
+            HIGH_SPEED_JET_ACTIVATE = PACKET_TYPES.register("high_speed_jet_activate",
+            () -> new PacketType<>(HighSpeedJet.ActivatePacket.class, HighSpeedJet.ActivatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TailwindField.StartPacket>>
+            TAILWIND_FIELD_START = PACKET_TYPES.register("tailwind_field_start",
+            () -> new PacketType<>(TailwindField.StartPacket.class, TailwindField.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TailwindField.StopPacket>>
+            TAILWIND_FIELD_STOP = PACKET_TYPES.register("tailwind_field_stop",
+            () -> new PacketType<>(TailwindField.StopPacket.class, TailwindField.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AdiabaticCompression.StartPacket>>
+            ADIABATIC_COMPRESSION_START = PACKET_TYPES.register("adiabatic_compression_start",
+            () -> new PacketType<>(AdiabaticCompression.StartPacket.class, AdiabaticCompression.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AdiabaticCompression.StopPacket>>
+            ADIABATIC_COMPRESSION_STOP = PACKET_TYPES.register("adiabatic_compression_stop",
+            () -> new PacketType<>(AdiabaticCompression.StopPacket.class, AdiabaticCompression.StopPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AtmosphereShield.TogglePacket>>
             ATMOSPHERE_SHIELD_TOGGLE = PACKET_TYPES.register("atmosphere_shield_toggle",
             () -> new PacketType<>(AtmosphereShield.TogglePacket.class, AtmosphereShield.TogglePacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AtmosphereBlastGun.CastPacket>>
-            ATMOSPHERE_BLAST_GUN_CAST = PACKET_TYPES.register("atmosphere_blast_gun_cast",
-            () -> new PacketType<>(AtmosphereBlastGun.CastPacket.class, AtmosphereBlastGun.CastPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AtmosphereBlastGun.StartPacket>>
-            ATMOSPHERE_BLAST_GUN_START = PACKET_TYPES.register("atmosphere_blast_gun_start",
-            () -> new PacketType<>(AtmosphereBlastGun.StartPacket.class, AtmosphereBlastGun.StartPacket.CODEC));
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AtmosphereBlastGun.StopPacket>>
-            ATMOSPHERE_BLAST_GUN_STOP = PACKET_TYPES.register("atmosphere_blast_gun_stop",
-            () -> new PacketType<>(AtmosphereBlastGun.StopPacket.class, AtmosphereBlastGun.StopPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Flight.TogglePacket>>
             FLIGHT_TOGGLE = PACKET_TYPES.register("flight_toggle",
             () -> new PacketType<>(Flight.TogglePacket.class, Flight.TogglePacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VacuumDomain.CastPacket>>
-            VACUUM_DOMAIN_CAST = PACKET_TYPES.register("vacuum_domain_cast",
-            () -> new PacketType<>(VacuumDomain.CastPacket.class, VacuumDomain.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VacuumDomain.TogglePacket>>
+            VACUUM_DOMAIN_TOGGLE = PACKET_TYPES.register("vacuum_domain_toggle",
+            () -> new PacketType<>(VacuumDomain.TogglePacket.class, VacuumDomain.TogglePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, StormWing.TogglePacket>>
             STORM_WING_TOGGLE = PACKET_TYPES.register("storm_wing_toggle",

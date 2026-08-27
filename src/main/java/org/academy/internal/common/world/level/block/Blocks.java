@@ -72,6 +72,20 @@ public final class Blocks {
                             .strength(5.0f, 30.0f)
                             .sound(SoundType.AMETHYST)
             );
+    public static final DeferredHolder<Block, CompressedAirPlatformBlock> COMPRESSED_AIR_PLATFORM =
+            BLOCKS.registerBlock(
+                    "compressed_air_platform",
+                    CompressedAirPlatformBlock::new,
+                    () -> BlockBehaviour.Properties.of()
+                            .strength(-1.0f, 3_600_000.0f)
+                            .noOcclusion()
+                            .noLootTable()
+                            .sound(SoundType.EMPTY)
+                            .pushReaction(PushReaction.DESTROY)
+                            .isSuffocating((state, level, pos) -> false)
+                            .isViewBlocking((state, level, pos) -> false)
+                            .isRedstoneConductor((state, level, pos) -> false)
+            );
 
     private static BlockBehaviour.Properties machineProperties() {
         // Match the enchanting table's mining behavior without copying its light or map color.

@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
@@ -46,8 +45,10 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
-import org.academy.internal.common.ability.aeromanip.skills.lv1.FlowSense;
+import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -171,6 +172,7 @@ public final class PneumaticGrasp extends Skill {
 
         private static final class Context extends ServerContext {
             private final ResourceKey<Level> dimension;
+            private final AeromanipResourceManager.UsageLease usageLease;
             private Entity controlledTarget;
             private double controlledSpeedCap;
             private double holdDistance = DEFAULT_CONTROL_DISTANCE;
@@ -180,6 +182,8 @@ public final class PneumaticGrasp extends Skill {
             private Context(ServerPlayer player) {
                 super(player);
                 dimension = player.level().dimension();
+                usageLease = AbilitySystemServer.getSystem(player)
+                        .getAeromanipResourceManager().beginUse(player);
             }
 
             private void end() {
@@ -212,22 +216,31 @@ public final class PneumaticGrasp extends Skill {
                 }
                 if (controlledTarget == null) return;
                 activeTicks++;
-                if (activeTicks % 10 == 0 && !AbilitySystemServer.getSystem(player).tryTimedOccupation(
-                        player.getUUID(),
-                        10.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
-                        skill,
-                        5)) {
+                if (activeTicks % 10 == 0 && !skill.executeContinuousWithResource(
+                        player,
+                        _ -> 10.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
+                        _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
+                                player, SkillNames.PNEUMATIC_GRASP,
+                                "compressedAirPerInterval", 8.0f)),
+                        (_, _) -> { },
+                        true)) {
                     end();
                     return;
                 }
                 if (milestone >= 3 && controlledTarget instanceof LivingEntity living
                         && living.onGround() && activeTicks % 5 == 0
-                        && !AbilitySystemServer.getSystem(player).tryTimedOccupation(
-                        player.getUUID(), 5.0f, skill, 5)) {
+                        && !skill.executeContinuousWithResource(
+                        player,
+                        _ -> 5.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
+                        _ -> 2.0f,
+                        (_, _) -> { },
+                        true)) {
                     end();
                     return;
                 }
-                moveTarget(controlledTarget, eye, look, skillLevel);
+                EntityMotionGuard.runWithMotionSource(
+                        player,
+                        () -> moveTarget(controlledTarget, eye, look, skillLevel));
                 skill.reportActivity(player, true);
             }
 
@@ -311,33 +324,22 @@ public final class PneumaticGrasp extends Skill {
             }
 
             private void spawnEffect(Entity target, Vec3 eye, Vec3 destination) {
-                if (!(player.level() instanceof ServerLevel level) || (activeTicks & 1) != 0) return;
+                if (!(player.level() instanceof ServerLevel level) || activeTicks % 6 != 0) return;
                 var targetCenter = target.getBoundingBox().getCenter();
                 var beam = targetCenter.subtract(eye);
-                var pointCount = Math.max(3, Math.min(7, Mth.ceil(beam.length() / 2.0)));
-                for (var index = 1; index <= pointCount; index++) {
-                    var point = eye.add(beam.scale((double) index / (pointCount + 1)));
-                    level.sendParticles(ParticleTypes.CLOUD,
-                            point.x, point.y, point.z, 1, 0.025, 0.025, 0.025, 0.005);
+                if (beam.lengthSqr() > 1.0e-8) {
+                    AeromanipVfx.stream(level, eye, beam, beam.length());
                 }
-                if ((activeTicks & 3) == 0) {
-                    var radius = Math.max(0.4, target.getBbWidth() * 0.7);
-                    var phase = activeTicks * 0.18;
-                    for (var index = 0; index < 6; index++) {
-                        var angle = phase + index * Mth.PI / 3.0;
-                        var point = targetCenter.add(Mth.cos(angle) * radius, 0.0, Mth.sin(angle) * radius);
-                        level.sendParticles(ParticleTypes.CLOUD,
-                                point.x, point.y, point.z, 1, 0.01, 0.02, 0.01, 0.002);
-                    }
-                    level.sendParticles(ParticleTypes.GUST,
-                            destination.x, destination.y, destination.z, 1, 0.05, 0.05, 0.05, 0.0);
-                }
+                AeromanipVfx.vortex(level, targetCenter,
+                        Math.max(0.4, target.getBbWidth() * 0.7));
+                AeromanipVfx.burst(level, destination, 0.32);
             }
 
             @Override
             protected void onUnregistered() {
                 controlledTarget = null;
                 controlledSpeedCap = 0.0;
+                usageLease.close();
                 ACTIVE.remove(player, this);
             }
         }

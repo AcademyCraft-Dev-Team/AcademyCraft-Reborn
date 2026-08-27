@@ -50,6 +50,10 @@ public class AbilityConfig {
     }
 
     public static class AeromanipSettings {
+        @SerializedName("compressedAirCapacity")
+        public int compressedAirCapacity = 128;
+        @SerializedName("compressedAirRecoveryPerTick")
+        public float compressedAirRecoveryPerTick = 4.0f;
         @SerializedName("pvpForceMultiplier")
         public float pvpForceMultiplier = 0.5f;
         @SerializedName("pvpControlDurationMultiplier")
@@ -191,9 +195,9 @@ public class AbilityConfig {
             defaultConfig.skills.put("single_high_speed_electron_beam", singleBeamSettings);
 
             for (var skillId : List.of(
-                    "airflow_jet", "air_cushion", "flow_sense", "breathing_film", "pneumatic_grasp",
-                    "tailwind_field", "atmosphere_shield", "laminar_cutter", "vortex_pull", "atmosphere_blast_gun",
-                    "wind_corridor", "pressure_lock", "flight", "vacuum_domain", "atmospheric_dominion")) {
+                    "airflow_jet", "laminar_buffer", "flow_sense", "breathing_bubble", "pneumatic_grasp",
+                    "tailwind_field", "atmosphere_shield", "laminar_cutter", "rejecting_wind", "vortex_pull",
+                    "high_speed_jet", "turbulent_cavitation", "flight", "vacuum_domain", "adiabatic_compression")) {
                 var settings = new SkillSettings();
                 settings.floatMap.put("damageMultiplier", 1.0f);
                 settings.floatMap.put("rangeMultiplier", 1.0f);
@@ -201,6 +205,18 @@ public class AbilityConfig {
                 settings.floatMap.put("cpMultiplier", 1.0f);
                 defaultConfig.skills.put(skillId, settings);
             }
+            defaultConfig.skills.get("breathing_bubble").floatMap.put("activeCompressedAirCost", 24.0f);
+            defaultConfig.skills.get("pneumatic_grasp").floatMap.put("compressedAirPerInterval", 8.0f);
+            defaultConfig.skills.get("atmosphere_shield").floatMap.put("compressedAirPerInterval", 4.0f);
+            defaultConfig.skills.get("high_speed_jet").floatMap.put("maximumNozzles", 8.0f);
+            defaultConfig.skills.get("flight").floatMap.put("compressedAirPerInterval", 2.0f);
+            defaultConfig.skills.get("flight").floatMap.put("compressedAirIntervalTicks", 20.0f);
+            defaultConfig.skills.get("vacuum_domain").floatMap.put("compressedAirPerInterval", 8.0f);
+            defaultConfig.skills.get("vacuum_domain").floatMap.put("compressedAirIntervalTicks", 10.0f);
+            defaultConfig.skills.get("adiabatic_compression").floatMap.put("compressedAirPerInterval", 8.0f);
+            defaultConfig.skills.get("adiabatic_compression").floatMap.put("compressedAirIntervalTicks", 10.0f);
+            defaultConfig.skills.get("adiabatic_compression").floatMap.put("targetDistance", 32.0f);
+            defaultConfig.skills.get("adiabatic_compression").floatMap.put("damagePerStack", 0.5f);
 
             return defaultConfig;
         }

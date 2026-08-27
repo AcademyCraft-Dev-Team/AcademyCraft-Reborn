@@ -15,6 +15,10 @@ public final class EntityRenderers {
     @SubscribeEvent
     public static void onRegister(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(EntityTypes.THROWN_COIN.get(), ThrownCoinRenderer::new);
+        event.registerEntityRenderer(EntityTypes.PAPER_AIRPLANE.get(),
+                context -> new ThrownItemRenderer<>(context, 0.75f, true));
+        event.registerEntityRenderer(EntityTypes.HIGH_SPEED_JET_NOZZLE.get(),
+                HighSpeedJetNozzleRenderer::new);
         event.registerEntityRenderer(EntityTypes.RAILGUN_RAY.get(), RailgunRayRenderer::new);
         event.registerEntityRenderer(EntityTypes.PLASMA.get(), PlasmaRenderer::new);
         event.registerEntityRenderer(EntityTypes.ARC.get(), ArcRenderer::new);

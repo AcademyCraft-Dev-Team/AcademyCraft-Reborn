@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "aeromanip_mist_ring",
+  "parameters": [
+    { "id": "mist_alpha", "name": "Ring Fade", "type": "CURVE", "default": { "type": "CURVE", "curve": [
+      { "t": 0.0, "v": 0.3, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.08, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.62, "v": 0.7, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+    ] } },
+    { "id": "mist_size", "name": "Ring Spread", "type": "CURVE", "default": { "type": "CURVE", "curve": [
+      { "t": 0.0, "v": 0.62, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 1.0, "v": 1.42, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+    ] } }
+  ],
+  "contexts": [
+    { "id": "spawn", "type": "SPAWN", "name": "Layered Atmospheric Ring", "x": 0, "y": 0, "blocks": [
+      { "id": "outer_ring", "type": "vfx.block.spawn_burst", "properties": { "count": "34", "lifetime": "1.12", "size": "0.22", "color": "1,1,1,0.105", "vx": "0", "vy": "0.10", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.82", "half_x": "0.07" } },
+      { "id": "inner_ring", "type": "vfx.block.spawn_burst", "properties": { "count": "22", "lifetime": "0.88", "size": "0.13", "color": "0.94,0.98,1,0.21", "vx": "0", "vy": "0.18", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.62", "half_x": "0.045" } }
+    ] },
+    { "id": "update", "type": "UPDATE", "name": "Sheared Circular Flow", "x": 500, "y": 0, "blocks": [
+      { "id": "vortex", "type": "vfx.block.update_vortex", "properties": { "strength": "1.15", "pull": "0.04", "vertical_pull": "0.08", "layer": "mist" } },
+      { "id": "turbulence", "type": "vfx.block.update_turbulence", "properties": { "amplitude": "0.16", "frequency": "0.85" } },
+      { "id": "velocity", "type": "vfx.block.update_velocity", "properties": {} },
+      { "id": "age", "type": "vfx.block.update_age", "properties": {} },
+      { "id": "alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "mist_alpha", "layer": "mist" } },
+      { "id": "size", "type": "vfx.block.life_size", "properties": { "curve": "mist_size", "layer": "mist" } }
+    ] },
+    { "id": "output", "type": "OUTPUT", "name": "Visible White Flow Ring", "x": 1000, "y": 0, "blocks": [
+      { "id": "out_mist", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_aeromanip_mist", "shader": "academy:core/vfxgraph_aeromanip_mist", "blend": "translucent", "layer": "mist" } }
+    ] }
+  ],
+  "operators": [],
+  "flow": [ { "from": "spawn", "to": "update" }, { "from": "update", "to": "output" } ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_mist" ]
+}

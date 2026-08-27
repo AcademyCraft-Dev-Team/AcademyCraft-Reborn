@@ -53,6 +53,7 @@ public final class AbilitySystemServer {
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
     private final DarkmatterResourceManager darkmatterResourceManager;
+    private final AeromanipResourceManager aeromanipResourceManager;
     private final PropsManager propsManager;
     private final SyncManager syncManager;
     private final InitialAbilityRecommendationCache initialAbilityRecommendations =
@@ -71,6 +72,10 @@ public final class AbilitySystemServer {
         darkmatterResourceManager = new DarkmatterResourceManager(
                 playerDataManager, playerCPManager, syncManager);
         SubsystemRegistry.registerSubsystem(darkmatterResourceManager, SyncTypes.DARKMATTER_STATE);
+
+        aeromanipResourceManager = new AeromanipResourceManager(
+                playerDataManager, playerCPManager, syncManager);
+        SubsystemRegistry.registerSubsystem(aeromanipResourceManager, SyncTypes.AEROMANIP_RESOURCE);
 
         propsManager = new PropsManager(playerDataManager, syncManager);
         NeoForge.EVENT_BUS.register(propsManager);
@@ -469,7 +474,7 @@ public final class AbilitySystemServer {
         instance.activeContexts.computeIfAbsent(player.getUUID(), _ -> ConcurrentHashMap.newKeySet())
                 .add(serverContext);
 
-        NeoForge.EVENT_BUS.register(serverContext);
+        NeoForge.EVENT_BUS.register(serverContext.eventListener());
         MisakaNetworkServer.NETWORK_MANAGER.register(serverContext);
     }
 
@@ -525,7 +530,7 @@ public final class AbilitySystemServer {
 
         if (contexts.isEmpty()) activeContexts.remove(player.getUUID(), contexts);
 
-        NeoForge.EVENT_BUS.unregister(serverContext);
+        NeoForge.EVENT_BUS.unregister(serverContext.eventListener());
         MisakaNetworkServer.NETWORK_MANAGER.unregister(serverContext);
         serverContext.onUnregistered();
     }
@@ -581,6 +586,10 @@ public final class AbilitySystemServer {
 
     public DarkmatterResourceService getDarkmatterResourceService() {
         return darkmatterResourceManager;
+    }
+
+    public AeromanipResourceManager getAeromanipResourceManager() {
+        return aeromanipResourceManager;
     }
 
     public Player getPlayerData(UUID uuid) {
@@ -681,6 +690,9 @@ public final class AbilitySystemServer {
         }
         if (categoryChanged) {
             playerDataManager.setPlayerAbilityCategory(uuid, abilityCategory);
+            // Resource managers reinitialize the pool for the new category on the next tick.
+            playerCPManager.setCurrMP(uuid, 0.0f);
+            playerCPManager.setMaxMP(uuid, 0.0f);
         }
         if (clearCategorySkills) {
             skillDataManager.clearCategorySkills(uuid);
@@ -811,6 +823,45 @@ public final class AbilitySystemServer {
         return castCpIfPossible(player, skill, calculator, action, false, effective, null, Skill.NO_STACK_LIMIT);
     }
 
+    public boolean castCpAndMpIfPossible(
+            ServerPlayer player,
+            Skill skill,
+            Skill.CostCalculator cpCalculator,
+            Skill.CostCalculator mpCalculator,
+            Skill.SkillAction action
+    ) {
+        return castCpAndMpIfPossible(
+                player, skill, cpCalculator, mpCalculator, action,
+                true, true, null, Skill.NO_STACK_LIMIT);
+    }
+
+    public boolean castCpAndMpIfPossible(
+            ServerPlayer player,
+            Skill skill,
+            Skill.CostCalculator cpCalculator,
+            Skill.CostCalculator mpCalculator,
+            Skill.SkillAction action,
+            String stackGroup,
+            int stackLimit
+    ) {
+        return castCpAndMpIfPossible(
+                player, skill, cpCalculator, mpCalculator, action,
+                true, true, stackGroup, stackLimit);
+    }
+
+    public boolean castContinuousCpAndMpIfPossible(
+            ServerPlayer player,
+            Skill skill,
+            Skill.CostCalculator cpCalculator,
+            Skill.CostCalculator mpCalculator,
+            Skill.SkillAction action,
+            boolean effective
+    ) {
+        return castCpAndMpIfPossible(
+                player, skill, cpCalculator, mpCalculator, action,
+                false, effective, null, Skill.NO_STACK_LIMIT);
+    }
+
     private boolean castCpIfPossible(ServerPlayer player, Skill skill,
                                      Skill.CostCalculator calculator,
                                      Skill.SkillAction action,
@@ -847,6 +898,48 @@ public final class AbilitySystemServer {
             return true;
         }
         return false;
+    }
+
+    private boolean castCpAndMpIfPossible(
+            ServerPlayer player,
+            Skill skill,
+            Skill.CostCalculator cpCalculator,
+            Skill.CostCalculator mpCalculator,
+            Skill.SkillAction action,
+            boolean discreteTrigger,
+            boolean effective,
+            String stackGroup,
+            int stackLimit
+    ) {
+        if (cpCalculator == null || mpCalculator == null || action == null) return false;
+        var uuid = player.getUUID();
+        var level = getPlayerSkillLevel(uuid, skill.getKeyString());
+        var proficiency = skill.getProficiency(player);
+        var milestone = skill.getEffectiveProficiencyMilestone(player);
+        var ctx = new Skill.SkillContext(
+                level,
+                proficiency,
+                milestone,
+                playerCPManager.getAvailableCP(uuid),
+                this
+        );
+
+        var baseCpCost = cpCalculator.calculate(ctx);
+        var compressedAirCost = mpCalculator.calculate(ctx);
+        if (!Float.isFinite(baseCpCost) || baseCpCost < 0.0f
+                || !Float.isFinite(compressedAirCost) || compressedAirCost < 0.0f) return false;
+        var actualCpCost = Math.max(0.0f,
+                OutputControl.adjustCpCost(this, uuid, skill, baseCpCost)
+                        * playerCPManager.getCalculationIntensity(uuid));
+        var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCpCost);
+        if (!aeromanipResourceManager.tryCast(
+                player, skill, actualCpCost, compressedAirCost, iterationPoints,
+                stackGroup, stackLimit)) return false;
+
+        EntityMotionGuard.runWithMotionSource(player, () -> action.execute(ctx, actualCpCost));
+        if (discreteTrigger) addPlayerSkillProficiency(uuid, skill, ProficiencyEvent.TRIGGER);
+        else reportSkillActivity(uuid, skill, effective ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE);
+        return true;
     }
 
     /**

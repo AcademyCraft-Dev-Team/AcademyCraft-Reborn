@@ -40,9 +40,11 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingFilm;
+import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -50,6 +52,9 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class AtmosphereShield extends Skill {
     private static final float[] REDUCTION = {0.20f, 0.28f, 0.35f};
@@ -67,7 +72,7 @@ public final class AtmosphereShield extends Skill {
                 .initiallyDisabled()
                 .maintenanceCost(30)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.BREATHING_FILM)
+                .dependsOn(Skills.BREATHING_BUBBLE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
     }
@@ -102,7 +107,7 @@ public final class AtmosphereShield extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.ATMOSPHERE_SHIELD.get(),
-                        List.of(BreathingFilm.Client.SKILL_INFO),
+                        List.of(BreathingBubble.Client.SKILL_INFO),
                         R.textures.atmosphere_shield_icon,
                         20,
                         72
@@ -140,16 +145,32 @@ public final class AtmosphereShield extends Skill {
     }
 
     public static final class Server {
+        private static final Map<ServerPlayer, AeromanipResourceManager.UsageLease> ACTIVE =
+                new WeakHashMap<>();
+
         private Server() {
         }
 
         @SubscribePacket
         public static void handle(TogglePacket packet) {
-            Skills.ATMOSPHERE_SHIELD.get().toggle(packet.getPacketListener().getPlayer());
+            var player = packet.getPacketListener().getPlayer();
+            Skills.ATMOSPHERE_SHIELD.get().toggle(player);
+            if (!Skills.ATMOSPHERE_SHIELD.get().isEnabled(player)) stop(player);
         }
 
         public static boolean isActive(ServerPlayer player) {
-            return player != null && Skills.ATMOSPHERE_SHIELD.get().isEnabled(player);
+            return player != null && ACTIVE.containsKey(player)
+                    && Skills.ATMOSPHERE_SHIELD.get().isEnabled(player);
+        }
+
+        private static void start(ServerPlayer player) {
+            ACTIVE.computeIfAbsent(player, current -> AbilitySystemServer.getSystem(current)
+                    .getAeromanipResourceManager().beginUse(current));
+        }
+
+        private static void stop(ServerPlayer player) {
+            var lease = ACTIVE.remove(player);
+            if (lease != null) lease.close();
         }
     }
 
@@ -172,9 +193,28 @@ public final class AtmosphereShield extends Skill {
                                 * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
                         skill
                 );
-                if (!enabled && skill.isEnabled(player)) {
-                    system.toggleSkill(player.getUUID(), skill.getKeyString());
+                if (enabled) {
+                    Server.start(player);
+                    if (player.level().getGameTime() % 10 == 0) {
+                        enabled = skill.executeContinuousWithResource(
+                                player,
+                                _ -> 0.0f,
+                                _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
+                                        player, SkillNames.ATMOSPHERE_SHIELD,
+                                        "compressedAirPerInterval", 4.0f)),
+                                (_, _) -> { },
+                                true);
+                    }
                 }
+                if (!enabled) {
+                    Server.stop(player);
+                    system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+                    if (skill.isEnabled(player)) {
+                        system.toggleSkill(player.getUUID(), skill.getKeyString());
+                    }
+                }
+            } else {
+                Server.stop(player);
             }
             var power = enabled
                     ? AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
@@ -191,7 +231,13 @@ public final class AtmosphereShield extends Skill {
                     6.0,
                     enabled
             );
-            if (enabled) stopNearbyProjectiles(player);
+            if (enabled && Server.isActive(player)) {
+                stopNearbyProjectiles(player);
+                if (player.level().getGameTime() % 12 == 0) {
+                    AeromanipVfx.ring(player.level(),
+                            player.position().add(0.0, player.getBbHeight() * 0.45, 0.0), 1.05);
+                }
+            }
         }
 
         @SubscribeEvent(priority = EventPriority.HIGH)
@@ -199,7 +245,7 @@ public final class AtmosphereShield extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
             if (!(event.getAmount() > 0.0f)) return;
             var skill = Skills.ATMOSPHERE_SHIELD.get();
-            if (!skill.isEnabled(player)) return;
+            if (!Server.isActive(player)) return;
             if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
                 projectile.setDeltaMovement(Vec3.ZERO);
                 projectile.hurtMarked = true;

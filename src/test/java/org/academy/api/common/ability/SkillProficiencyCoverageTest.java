@@ -117,7 +117,6 @@ class SkillProficiencyCoverageTest {
     @Test
     void knownUnimplementedMilestonesAreExplicitlyMarked() {
         var keys = new String[]{
-                "skill.academy.atmospheric_dominion.proficiency.3000",
                 "skill.academy.magnet_manipulation.proficiency.3000",
                 "skill.academy.mine_detect.proficiency.3000",
                 "skill.academy.current_recharge.proficiency.3000"

@@ -15,7 +15,15 @@ public final class SkillNames {
     public static final String PRESSURE_LOCK = "pressure_lock";
     public static final String FLIGHT = "flight";
     public static final String VACUUM_DOMAIN = "vacuum_domain";
+    /** Compatibility source name; the registered replacement is adiabatic_compression. */
+    @Deprecated
     public static final String ATMOSPHERIC_DOMINION = "atmospheric_dominion";
+    public static final String LAMINAR_BUFFER = "laminar_buffer";
+    public static final String BREATHING_BUBBLE = "breathing_bubble";
+    public static final String TURBULENT_CAVITATION = "turbulent_cavitation";
+    public static final String REJECTING_WIND = "rejecting_wind";
+    public static final String HIGH_SPEED_JET = "high_speed_jet";
+    public static final String ADIABATIC_COMPRESSION = "adiabatic_compression";
     public static final String RAILGUN = "railgun";
     public static final String ARC_GENERATE = "arc_generate";
     public static final String ELECTROMAGNETIC_SHIELD = "electromagnetic_shield";

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "aeromanip_mist_stream",
+  "parameters": [
+    { "id": "mist_alpha", "name": "Stream Fade", "type": "CURVE", "default": { "type": "CURVE", "curve": [
+      { "t": 0.0, "v": 0.4, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.05, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.62, "v": 0.78, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+    ] } },
+    { "id": "mist_size", "name": "Stream Diffusion", "type": "CURVE", "default": { "type": "CURVE", "curve": [
+      { "t": 0.0, "v": 0.48, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 0.55, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
+      { "t": 1.0, "v": 1.35, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
+    ] } }
+  ],
+  "contexts": [
+    { "id": "spawn", "type": "SPAWN", "name": "Directional Layered Air Stream", "x": 0, "y": 0, "blocks": [
+      { "id": "stream_body", "type": "vfx.block.spawn_burst", "properties": { "count": "34", "lifetime": "0.82", "size": "0.27", "color": "1,1,1,0.085", "vx": "0", "vy": "2.8", "vz": "0", "layer": "mist", "shape": "cylinder", "radius": "0.3", "cone_height": "4" } },
+      { "id": "fast_threads", "type": "vfx.block.spawn_burst", "properties": { "count": "18", "lifetime": "0.52", "size": "0.105", "color": "0.94,0.98,1,0.22", "vx": "0", "vy": "5.1", "vz": "0", "layer": "mist", "shape": "cylinder", "radius": "0.12", "cone_height": "3.8", "origin_y": "0.1" } },
+      { "id": "shear_skin", "type": "vfx.block.spawn_burst", "properties": { "count": "16", "lifetime": "0.66", "size": "0.16", "color": "0.9,0.96,1,0.12", "vx": "0", "vy": "3.8", "vz": "0", "layer": "mist", "shape": "cone", "radius": "0.4", "cone_height": "3.6" } }
+    ] },
+    { "id": "update", "type": "UPDATE", "name": "Laminar Drift With Fine Noise", "x": 500, "y": 0, "blocks": [
+      { "id": "turbulence", "type": "vfx.block.update_turbulence", "properties": { "amplitude": "0.12", "frequency": "1.35" } },
+      { "id": "drag", "type": "vfx.block.update_drag", "properties": { "drag": "0.58" } },
+      { "id": "velocity", "type": "vfx.block.update_velocity", "properties": {} },
+      { "id": "age", "type": "vfx.block.update_age", "properties": {} },
+      { "id": "alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "mist_alpha", "layer": "mist" } },
+      { "id": "size", "type": "vfx.block.life_size", "properties": { "curve": "mist_size", "layer": "mist" } }
+    ] },
+    { "id": "output", "type": "OUTPUT", "name": "Directional White Air Ribbons", "x": 1000, "y": 0, "blocks": [
+      { "id": "out_mist", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_aeromanip_mist", "shader": "academy:core/vfxgraph_aeromanip_mist", "blend": "translucent", "layer": "mist" } }
+    ] }
+  ],
+  "operators": [],
+  "flow": [ { "from": "spawn", "to": "update" }, { "from": "update", "to": "output" } ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [ "out_mist" ]
+}

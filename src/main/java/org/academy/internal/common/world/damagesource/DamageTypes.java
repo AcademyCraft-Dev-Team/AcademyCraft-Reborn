@@ -12,6 +12,9 @@ import java.util.Set;
 public final class DamageTypes {
     public static final ResourceKey<DamageType> RAILGUN = ResourceKey.create(Registries.DAMAGE_TYPE, AcademyCraft.academy("railgun"));
     public static final ResourceKey<DamageType> AERO_DAMAGE = create("aerodamage");
+    public static final ResourceKey<DamageType> LAMINAR_CUT = create("laminar_cut");
+    public static final ResourceKey<DamageType> VACUUM_SUFFOCATION = create("vacuum_suffocation");
+    public static final ResourceKey<DamageType> ADIABATIC_COMPRESSION = create("adiabatic_compression");
     public static final ResourceKey<DamageType> DM_DAMAGE = create("dmdamage");
     public static final ResourceKey<DamageType> ELECTRO_DAMAGE = create("electrodamage");
     public static final ResourceKey<DamageType> MELT_DAMAGE = create("meltdamage");
@@ -21,8 +24,8 @@ public final class DamageTypes {
     public static final ResourceKey<DamageType> MENTAL_DAMAGE = create("mentaldamage");
 
     private static final Set<ResourceKey<DamageType>> ACADEMY_DAMAGE_TYPES = Set.of(
-            AERO_DAMAGE, DM_DAMAGE, ELECTRO_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA,
-            MENTAL_DAMAGE
+            AERO_DAMAGE, LAMINAR_CUT, VACUUM_SUFFOCATION, ADIABATIC_COMPRESSION,
+            DM_DAMAGE, ELECTRO_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA, MENTAL_DAMAGE
     );
     private static final Set<ResourceKey<DamageType>> DIRECT_ACTUALLY_HURT_TYPES = Set.of(
             MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA, MENTAL_DAMAGE

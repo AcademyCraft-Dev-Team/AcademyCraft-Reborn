@@ -105,8 +105,7 @@ public record AirflowField(
         TAILWIND,
         VORTEX,
         WIND_CORRIDOR,
-        VACUUM,
-        ATMOSPHERIC_DOMINION
+        VACUUM
     }
 
     public enum Shape {

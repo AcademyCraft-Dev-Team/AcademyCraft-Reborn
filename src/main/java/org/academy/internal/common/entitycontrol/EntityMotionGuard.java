@@ -300,7 +300,7 @@ public final class EntityMotionGuard {
         if (imprisoned) return true;
         var protectedPlayer = hasForcedMovementProtection(entity);
         if (!protectedPlayer) return false;
-        var source = currentMotionSource();
+        var source = currentMotionSourceEntity();
         var fallbackSelfSource = source == null && isPlayerSelfSourced((ServerPlayer) entity);
         var shouldProtect = EntityMotionPolicy.shouldBlock(
                 false,
@@ -337,7 +337,8 @@ public final class EntityMotionGuard {
                 || VectorDeviation.Server.isActive(player));
     }
 
-    private static Entity currentMotionSource() {
+    /** Returns the server-thread motion source established by an ability execution, if any. */
+    public static Entity currentMotionSourceEntity() {
         var sources = MOTION_SOURCES.get();
         return sources == null ? null : sources.peek();
     }

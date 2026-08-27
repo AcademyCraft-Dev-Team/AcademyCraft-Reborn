@@ -10,11 +10,13 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -25,7 +27,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 /**
- * 通用 VFX 图 spawn 包（M20，A4）：服务端指定图资产、世界坐标与可选跟随实体，客户端经
+ * 通用 VFX 图 spawn 包（M20，A4）：服务端指定图资产、世界坐标、局部 +Y 朝向、寿命与可选跟随实体，客户端经
  * {@link VfxGraphManager} 生成效果。可携带一组 FLOAT 存活参数（经 {@code ActiveEffect.bind}
  * 绑定到图的 `param` 属性）。图资产缺失时客户端静默忽略，不影响既有技能表现。
  */
@@ -39,14 +41,18 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
             (buffer, packet) -> {
                 Identifier.STREAM_CODEC.encode(buffer, packet.assetId);
                 Vec3.STREAM_CODEC.encode(buffer, packet.position);
+                Vec3.STREAM_CODEC.encode(buffer, packet.direction);
                 ByteBufCodecs.VAR_INT.encode(buffer, packet.followEntityId);
                 ByteBufCodecs.FLOAT.encode(buffer, packet.scale);
+                ByteBufCodecs.FLOAT.encode(buffer, packet.lifetimeSeconds);
                 PARAM_CODEC.encode(buffer, packet.floatParams);
             },
             buffer -> new SpawnVfxGraphPacket(
                     Identifier.STREAM_CODEC.decode(buffer),
                     Vec3.STREAM_CODEC.decode(buffer),
+                    Vec3.STREAM_CODEC.decode(buffer),
                     ByteBufCodecs.VAR_INT.decode(buffer),
+                    ByteBufCodecs.FLOAT.decode(buffer),
                     ByteBufCodecs.FLOAT.decode(buffer),
                     PARAM_CODEC.decode(buffer)
             )
@@ -56,16 +62,20 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
 
     private final Identifier assetId;
     private final Vec3 position;
+    private final Vec3 direction;
     private final int followEntityId;
     private final float scale;
+    private final float lifetimeSeconds;
     private final Map<String, Float> floatParams;
 
-    SpawnVfxGraphPacket(Identifier assetId, Vec3 position, int followEntityId, float scale,
-            Map<String, Float> floatParams) {
+    SpawnVfxGraphPacket(Identifier assetId, Vec3 position, Vec3 direction, int followEntityId,
+            float scale, float lifetimeSeconds, Map<String, Float> floatParams) {
         this.assetId = assetId;
         this.position = position;
+        this.direction = direction;
         this.followEntityId = followEntityId;
         this.scale = scale;
+        this.lifetimeSeconds = lifetimeSeconds;
         this.floatParams = Map.copyOf(floatParams);
     }
 
@@ -83,6 +93,10 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
         return position;
     }
 
+    public Vec3 direction() {
+        return direction;
+    }
+
     public int followEntityId() {
         return followEntityId;
     }
@@ -91,24 +105,44 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
         return scale;
     }
 
+    public float lifetimeSeconds() {
+        return lifetimeSeconds;
+    }
+
     public Map<String, Float> floatParams() {
         return floatParams;
     }
 
     /** 按距离过滤向附近玩家广播。 */
     public static void broadcast(ServerLevel level, Identifier assetId, Vec3 position) {
-        broadcast(level, assetId, position, -1, 1f, Map.of());
+        broadcast(level, assetId, position, new Vec3(0, 1, 0), -1, 1f, 3f, Map.of());
     }
 
     public static void broadcast(ServerLevel level, Identifier assetId, Vec3 position,
             int followEntityId, float scale, Map<String, Float> floatParams) {
-        var packet = new SpawnVfxGraphPacket(assetId, position, followEntityId, scale, floatParams);
-        var rangeSquared = BROADCAST_RANGE * BROADCAST_RANGE;
+        broadcast(level, assetId, position, new Vec3(0, 1, 0),
+                followEntityId, scale, 3f, floatParams);
+    }
+
+    public static void broadcast(ServerLevel level, Identifier assetId, Vec3 position,
+            Vec3 direction, int followEntityId, float scale, float lifetimeSeconds,
+            Map<String, Float> floatParams) {
+        var packet = new SpawnVfxGraphPacket(assetId, position, direction,
+                followEntityId, scale, lifetimeSeconds, floatParams);
+        var broadcastRange = BROADCAST_RANGE + Math.min(128.0, Math.max(0.0, scale));
+        var rangeSquared = broadcastRange * broadcastRange;
         for (var observer : level.players()) {
             if (observer.distanceToSqr(position) <= rangeSquared) {
                 MisakaNetworkServer.send(observer, packet);
             }
         }
+    }
+
+    /** 向单个观察者发送，用于仅施法者可见的感知标记。 */
+    public static void send(ServerPlayer observer, Identifier assetId, Vec3 position,
+            Vec3 direction, float scale, float lifetimeSeconds, Map<String, Float> floatParams) {
+        MisakaNetworkServer.send(observer, new SpawnVfxGraphPacket(assetId, position, direction,
+                -1, scale, lifetimeSeconds, floatParams));
     }
 
     @Override
@@ -117,12 +151,17 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
     }
 
     private static boolean valid(SpawnVfxGraphPacket packet) {
-        if (packet.assetId == null || packet.position == null) return false;
+        if (packet.assetId == null || packet.position == null || packet.direction == null) return false;
         if (!Double.isFinite(packet.position.x) || !Double.isFinite(packet.position.y)
                 || !Double.isFinite(packet.position.z)) {
             return false;
         }
+        if (!Double.isFinite(packet.direction.x) || !Double.isFinite(packet.direction.y)
+                || !Double.isFinite(packet.direction.z)) {
+            return false;
+        }
         if (!Float.isFinite(packet.scale) || packet.scale <= 0f) return false;
+        if (!Float.isFinite(packet.lifetimeSeconds) || packet.lifetimeSeconds <= 0f) return false;
         for (var v : packet.floatParams.values()) {
             if (!Float.isFinite(v)) return false;
         }
@@ -149,6 +188,13 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                             new Vector3f((float) packet.position.x, (float) packet.position.y, (float) packet.position.z));
                 }
                 effect.setScale(packet.scale);
+                if (packet.scale >= 8f) effect.setAlwaysVisible(true);
+                var direction = new Vector3f((float) packet.direction.x,
+                        (float) packet.direction.y, (float) packet.direction.z);
+                if (direction.lengthSquared() < 1.0e-6f) direction.set(0f, 1f, 0f);
+                direction.normalize();
+                effect.setRotation(new Quaternionf().rotationTo(new Vector3f(0f, 1f, 0f), direction));
+                effect.setLifetimeSeconds(packet.lifetimeSeconds);
                 for (var entry : packet.floatParams.entrySet()) {
                     var value = entry.getValue();
                     effect.bind(entry.getKey(), () -> Value.of(value));

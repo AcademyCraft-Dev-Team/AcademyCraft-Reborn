@@ -205,10 +205,12 @@ public final class R {
         public static final Identifier vortex_pull_icon = academy("textures/ability/aeromanip/skill/vortex_pull/icon.png");
         public static final Identifier atmosphere_blast_gun_icon = academy("textures/ability/aeromanip/skill/atmosphere_blast_gun/icon.png");
         public static final Identifier wind_corridor_icon = academy("textures/ability/aeromanip/skill/wind_corridor/icon.png");
+        public static final Identifier high_speed_jet_icon = wind_corridor_icon;
         public static final Identifier pressure_lock_icon = academy("textures/ability/aeromanip/skill/pressure_lock/icon.png");
         public static final Identifier flight_icon = academy("textures/ability/aeromanip/skill/flight/icon.png");
         public static final Identifier vacuum_domain_icon = academy("textures/ability/aeromanip/skill/vacuum_domain/icon.png");
         public static final Identifier atmospheric_dominion_icon = academy("textures/ability/aeromanip/skill/atmospheric_dominion/icon.png");
+        public static final Identifier adiabatic_compression_icon = atmospheric_dominion_icon;
         public static final Identifier brain_domain_development_icon = academy("textures/ability/level0/skill/brain_domain_development/icon.png");
         public static final Identifier multiple_brain_domain_segmentation_icon = academy("textures/ability/level0/skill/multiple_brain_domain_segmentation/icon.png");
         public static final Identifier parallel_thought_computation_icon = academy("textures/ability/level0/skill/parallel_thought_computation/icon.png");

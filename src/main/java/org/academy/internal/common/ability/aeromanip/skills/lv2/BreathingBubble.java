@@ -2,8 +2,8 @@ package org.academy.internal.common.ability.aeromanip.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.tags.FluidTags;
@@ -31,8 +31,9 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.skills.lv1.FlowSense;
+import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -41,10 +42,17 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-public final class BreathingFilm extends Skill {
-    private static final int REFRESH_INTERVAL_TICKS = 10;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
-    public BreathingFilm() {
+/** Maintains a compressed-air bubble when its owner or nearby allies cannot breathe. */
+public final class BreathingBubble extends Skill {
+    static final int REFRESH_INTERVAL_TICKS = 10;
+    private static final float BASE_COMPRESSED_AIR_COST = 4.0f;
+    private static final float SHARED_COMPRESSED_AIR_COST = 2.0f;
+
+    public BreathingBubble() {
         super(Builder
                 .of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL2)
@@ -68,25 +76,34 @@ public final class BreathingFilm extends Skill {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
+    static float compressedAirCost(int milestone, boolean sharing) {
+        return (milestone >= 1 ? 3.0f : BASE_COMPRESSED_AIR_COST)
+                + (sharing ? SHARED_COMPRESSED_AIR_COST : 0.0f);
+    }
+
+    static double activeRadius(int milestone) {
+        return milestone >= 3 ? 24.0 : 16.0;
+    }
+
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
-                        Skills.BREATHING_FILM.get(),
+                        Skills.BREATHING_BUBBLE.get(),
                         List.of(FlowSense.Client.SKILL_INFO),
                         R.textures.breathing_film_icon,
                         75,
                         40
                 )
         );
-        public static final String KEY_NAME_CAST = SkillNames.BREATHING_FILM + "_cast";
+        public static final String KEY_NAME_CAST = SkillNames.BREATHING_BUBBLE + "_cast";
         public static Config CONFIG = new Config();
 
         private Client() {
         }
 
         private static void initialize() {
-            var skill = Skills.BREATHING_FILM.get();
+            var skill = Skills.BREATHING_BUBBLE.get();
             AcademyCraftConfig.registerTypeHandler(skill.getKey(), Config.Action.INSTANCE);
             CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(skill.getKey());
             InputSystem.addKeyBinding(KEY_NAME_CAST,
@@ -97,8 +114,9 @@ public final class BreathingFilm extends Skill {
         }
 
         private static void cast() {
-            if (AbilitySystemClient.canUseSkill(Skills.BREATHING_FILM.get()))
+            if (AbilitySystemClient.canUseSkill(Skills.BREATHING_BUBBLE.get())) {
                 MisakaNetworkClient.send(CastPacket.INSTANCE);
+            }
         }
 
         public static final class Config extends KeyBindingConfig {
@@ -131,70 +149,118 @@ public final class BreathingFilm extends Skill {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             if (player.level().getGameTime() % REFRESH_INTERVAL_TICKS != 0) return;
 
-            var skill = Skills.BREATHING_FILM.get();
+            var skill = Skills.BREATHING_BUBBLE.get();
             var system = AbilitySystemServer.getSystem(player);
             var runtimeData = skill.getRuntimeData(player);
             var available = runtimeData.isPresent() && LearningHelper.isSkillAvailableForCategory(
-                    system.getPlayerAbilityCategory(player.getUUID()),
-                    skill
-            );
+                    system.getPlayerAbilityCategory(player.getUUID()), skill);
             if (!available || !player.isAlive()) {
+                Server.stopSustaining(player);
                 system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
-                return;
-            }
-            var sharedTargets = skill.hasProficiencyMilestone(player, 2)
-                    ? player.level().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(4.0),
-                    target -> target != player && target.isAlive() && player.isAlliedTo(target)
-                            && target.distanceToSqr(player) <= 16.0
-                            && isHazardous(target))
-                    : List.<ServerPlayer>of();
-            var hazardous = isHazardous(player);
-            if (!hazardous && sharedTargets.isEmpty()) {
-                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
-                return;
-            }
-            if (!runtimeData.orElseThrow().isEnabled()) system.toggleSkill(player.getUUID(), skill.getKeyString());
-            if (!system.ensurePermanentOccupation(
-                    player.getUUID(),
-                    skill.getMaintenanceCost(player)
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_FILM)
-                            + (sharedTargets.isEmpty() ? 0.0f : 5.0f),
-                    skill
-            )) {
                 return;
             }
 
-            var maxAir = player.getMaxAirSupply();
-            if (player.getAirSupply() < maxAir) {
-                player.setAirSupply(maxAir);
+            var sharedTargets = skill.hasProficiencyMilestone(player, 2)
+                    ? player.level().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(4.0),
+                    target -> target != player && target.isAlive() && player.isAlliedTo(target)
+                            && target.distanceToSqr(player) <= 16.0 && isHazardous(target))
+                    : List.<ServerPlayer>of();
+            var hazardous = isHazardous(player);
+            if (!hazardous && sharedTargets.isEmpty()) {
+                Server.stopSustaining(player);
+                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+                return;
             }
-            for (var target : sharedTargets) target.setAirSupply(target.getMaxAirSupply());
+
+            if (!runtimeData.orElseThrow().isEnabled()) {
+                system.toggleSkill(player.getUUID(), skill.getKeyString());
+            }
+            if (!system.ensurePermanentOccupation(
+                    player.getUUID(),
+                    skill.getMaintenanceCost(player)
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_BUBBLE)
+                            + (sharedTargets.isEmpty() ? 0.0f : 5.0f),
+                    skill)) {
+                Server.stopSustaining(player);
+                return;
+            }
+
+            Server.startSustaining(player);
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            if (!skill.executeContinuousWithResource(
+                    player,
+                    _ -> 0.0f,
+                    _ -> compressedAirCost(milestone, !sharedTargets.isEmpty()),
+                    (_, _) -> refillAir(player, sharedTargets),
+                    true)) {
+                Server.stopSustaining(player);
+                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+            }
         }
 
         private static boolean isHazardous(ServerPlayer player) {
             return player.isEyeInFluid(FluidTags.WATER)
                     || player.getAirSupply() < player.getMaxAirSupply();
         }
+
+        private static void refillAir(ServerPlayer player, List<ServerPlayer> sharedTargets) {
+            player.setAirSupply(player.getMaxAirSupply());
+            for (var target : sharedTargets) target.setAirSupply(target.getMaxAirSupply());
+            if (player.level() instanceof ServerLevel level) {
+                AeromanipVfx.burst(level, new net.minecraft.world.phys.Vec3(
+                        player.getX(), player.getEyeY(), player.getZ()), 0.72);
+            }
+        }
     }
 
     public static final class Server {
-        private static final double ACTIVE_RADIUS = 16.0;
+        private static final Map<ServerPlayer, AeromanipResourceManager.UsageLease> ACTIVE =
+                new WeakHashMap<>();
+
+        private Server() {
+        }
 
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var skill = Skills.BREATHING_FILM.get();
+            var skill = Skills.BREATHING_BUBBLE.get();
             if (!skill.isEnabled(player)) return;
-            if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player.getUUID(),
-                    15.0f * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_FILM), skill, 5)) return;
-            for (var target : player.level().getEntitiesOfClass(
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var radius = activeRadius(milestone);
+            skill.executeActiveWithResource(
+                    player,
+                    _ -> 15.0f * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_BUBBLE),
+                    _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
+                            player, SkillNames.BREATHING_BUBBLE, "activeCompressedAirCost", 24.0f)),
+                    (_, _) -> refillSupportedTargets(player, radius));
+        }
+
+        public static boolean isSustained(ServerPlayer player) {
+            return ACTIVE.containsKey(player);
+        }
+
+        private static void startSustaining(ServerPlayer player) {
+            ACTIVE.computeIfAbsent(player, current -> AbilitySystemServer.getSystem(current)
+                    .getAeromanipResourceManager().beginUse(current));
+        }
+
+        private static void stopSustaining(ServerPlayer player) {
+            var lease = ACTIVE.remove(player);
+            if (lease != null) lease.close();
+        }
+
+        private static void refillSupportedTargets(ServerPlayer player, double radius) {
+            var targets = player.level().getEntitiesOfClass(
                     LivingEntity.class,
-                    player.getBoundingBox().inflate(ACTIVE_RADIUS),
+                    player.getBoundingBox().inflate(radius),
                     target -> target.isAlive()
-                            && target.distanceToSqr(player) <= ACTIVE_RADIUS * ACTIVE_RADIUS
-                            && isSupportedTarget(player, target)
-            )) {
-                target.setAirSupply(target.getMaxAirSupply());
+                            && target.distanceToSqr(player) <= radius * radius
+                            && isSupportedTarget(player, target));
+            for (var target : targets) target.setAirSupply(target.getMaxAirSupply());
+            if (player.level() instanceof ServerLevel level) {
+                AeromanipVfx.burst(level, new net.minecraft.world.phys.Vec3(
+                        player.getX(), player.getEyeY(), player.getZ()),
+                        Math.max(0.75, radius * 0.34));
             }
         }
 
@@ -215,7 +281,7 @@ public final class BreathingFilm extends Skill {
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
-            return PacketTypes.BREATHING_FILM_CAST.get();
+            return PacketTypes.BREATHING_BUBBLE_CAST.get();
         }
     }
 }
