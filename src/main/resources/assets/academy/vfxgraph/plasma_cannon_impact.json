@@ -44,9 +44,9 @@
   ],
   "contexts": [
     {
-      "id": "ctx_spawn", "type": "SPAWN", "name": "Monochrome Impact Beat And White Blue Plasma Detonation", "x": 0.0, "y": 0.0,
+      "id": "ctx_spawn", "type": "SPAWN", "name": "Four-Beat Light Crush Release And Chromatic Plasma Detonation", "x": 0.0, "y": 0.0,
       "blocks": [
-        { "id": "spawn_mono_impact", "type": "vfx.block.spawn_burst", "properties": { "count": "1", "lifetime": "0.14", "size": "13.5", "color": "1.0,1.0,1.0,1.0", "layer": "impact_mono", "shape": "point" } },
+        { "id": "spawn_mono_impact", "type": "vfx.block.spawn_burst", "properties": { "count": "1", "lifetime": "0.25", "size": "13.5", "color": "1.0,1.0,1.0,1.0", "layer": "impact_mono", "shape": "point" } },
         { "id": "spawn_flash", "type": "vfx.block.spawn_burst", "properties": { "count": "1", "lifetime": "0.8", "size": "20", "color": "1.0,0.99,1.0,1.0", "layer": "impact_core", "shape": "point" } },
         { "id": "spawn_halo", "type": "vfx.block.spawn_burst", "properties": { "count": "1", "lifetime": "1.25", "size": "34", "color": "0.34,0.48,1.0,0.46", "layer": "plasma_halo", "shape": "point" } },
         { "id": "spawn_smoke", "type": "vfx.block.spawn_burst", "properties": { "count": "84", "lifetime": "2.5", "size": "4.8", "color": "0.42,0.45,0.5,0.38", "layer": "smoke", "shape": "sphere", "radius": "3.5" } },
@@ -79,7 +79,7 @@
       ]
     },
     {
-      "id": "ctx_output", "type": "OUTPUT", "name": "Clean Flash Shock Rings Debris And Monochrome Impact Beat", "x": 1500.0, "y": 0.0,
+      "id": "ctx_output", "type": "OUTPUT", "name": "Flash Shock Rings Debris And Four-Beat Impact Exposure", "x": 1500.0, "y": 0.0,
       "blocks": [
         { "id": "out_flash", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_flash", "shader": "academy:core/vfxgraph_plasma_flash", "blend": "glow", "layer": "impact_core" } },
         { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },

@@ -61,6 +61,17 @@
           "properties": { "count": "1", "lifetime": "120", "size": "12.4", "color": "0.38,0.48,1.0,0.32", "layer": "plasma_halo", "shape": "point" }
         },
         {
+          "id": "spawn_surface_lightning",
+          "type": "vfx.block.arc_plasma_shell",
+          "properties": {
+            "position_param": "projectile_position", "emission_param": "", "progress_param": "",
+            "radius": "9.36", "radius_min": "9.36", "radius_max": "9.36", "radius_power": "1",
+            "count": "7", "segments": "22", "rotation_speed": "1.65", "jitter": "0.13",
+            "arc_span_min": "0.16", "arc_span_max": "0.38", "surface_offset": "0.22", "flicker_rate": "12",
+            "width": "0.055", "lifetime": "0.06", "color": "0.70,0.93,1.0,1.0"
+          }
+        },
+        {
           "id": "spawn_white_trails",
           "type": "vfx.block.spawn_burst",
           "properties": { "count": "2", "lifetime": "120", "size": "0.32", "color": "1.0,0.96,1.0,0.94", "layer": "trail_white", "shape": "point" }
@@ -124,12 +135,13 @@
     {
       "id": "ctx_output",
       "type": "OUTPUT",
-      "name": "White Pink Liquid Plasma Cannon Without Internal Lines",
+      "name": "White Pink Liquid Plasma Cannon With Surface Lightning",
       "x": 1500.0,
       "y": 0.0,
       "blocks": [
         { "id": "out_core", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_sphere", "shader": "academy:core/vfxgraph_plasma_liquid", "blend": "glow", "layer": "plasma_core" } },
         { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },
+        { "id": "out_surface_lightning", "type": "vfx.block.output_arc", "properties": { "vertex": "academy:core/vfxgraph_arc", "shader": "academy:core/vfxgraph_arc", "blend": "glow", "sparks": "0", "emission": "1.55", "noise_strength": "0.06", "drift_speed": "2.4", "lifetime": "0.07", "overall_scale": "1", "branch_depth": "0" } },
         { "id": "out_white_trails", "type": "vfx.block.output_ribbon", "properties": { "vertex": "academy:core/vfxgraph_simple", "shader": "academy:core/vfxgraph_simple", "blend": "glow", "layer": "trail_white" } },
         { "id": "out_plasma_trails", "type": "vfx.block.output_ribbon", "properties": { "vertex": "academy:core/vfxgraph_simple", "shader": "academy:core/vfxgraph_simple", "blend": "glow", "layer": "trail_plasma" } },
         { "id": "out_smoke", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_plasma_smoke", "shader": "academy:core/vfxgraph_plasma_smoke", "blend": "translucent", "layer": "smoke" } }
@@ -146,5 +158,5 @@
     { "from": "spawn_smoke", "to": "init_smoke_velocity" }
   ],
   "dataEdges": [],
-  "outputs": [ "out_core", "out_halo", "out_white_trails", "out_plasma_trails", "out_smoke" ]
+  "outputs": [ "out_core", "out_halo", "out_surface_lightning", "out_white_trails", "out_plasma_trails", "out_smoke" ]
 }

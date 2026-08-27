@@ -27,7 +27,9 @@ void main() {
     float safeW = max(abs(impactClip.w), 0.00001);
     vec2 impactNdc = impactClip.xy / safeW;
     bool inFront = impactClip.w > 0.0001;
-    bool insideViewport = all(lessThanEqual(abs(impactNdc), vec2(1.0)));
+    // Preserve impacts that land on, or only slightly beyond, a screen edge. Their full-screen
+    // procedural frame still needs to cover the view even though the physical origin is clipped.
+    bool insideViewport = all(lessThanEqual(abs(impactNdc), vec2(1.18)));
 
     // Screen-space impact frame. Reversed-Z uses 1.0 as the nearest depth, so the frame
     // stays on top of world geometry while keeping the shared no-depth-write pipeline. The
