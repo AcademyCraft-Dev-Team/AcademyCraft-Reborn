@@ -423,18 +423,20 @@ object MusicApp : App {
                                 .height(0f)
                                 .gravity(Gravity.CENTER_LEFT)
                         })
-                    row.addChild("add", createActionButton(
-                        R.textures.gui.icon.add,
-                        tr("app.academy.music_player.action.add")
-                    ) {
-                        OnlineMusicManager.add(entry)
-                    })
-                    row.addChild("play", createActionButton(
-                        R.textures.gui.app.music.play,
-                        tr("app.academy.music_player.action.play")
-                    ) {
-                        OnlineMusicManager.add(entry, true)
-                    })
+                    row.addChild(
+                        "add", createActionButton(
+                            R.textures.gui.icon.add,
+                            tr("app.academy.music_player.action.add")
+                        ) {
+                            OnlineMusicManager.add(entry)
+                        })
+                    row.addChild(
+                        "play", createActionButton(
+                            R.textures.gui.app.music.play,
+                            tr("app.academy.music_player.action.play")
+                        ) {
+                            OnlineMusicManager.add(entry, true)
+                        })
                     container.addChild("result_$index", row)
                 }
                 return
@@ -461,19 +463,21 @@ object MusicApp : App {
                         .gravity(Gravity.CENTER_LEFT)
                         .padding(2f, 0f)
                 })
-                row.addChild("play", createActionButton(
-                    R.textures.gui.app.music.play,
-                    tr("app.academy.music_player.action.play")
-                ) {
-                    MusicPlayerBackend.getInstance().play(index)
-                })
-                if (mediaInfo.provider != "local") {
-                    row.addChild("remove", createActionButton(
-                        R.textures.gui.icon.close,
-                        tr("app.academy.music_player.action.remove")
+                row.addChild(
+                    "play", createActionButton(
+                        R.textures.gui.app.music.play,
+                        tr("app.academy.music_player.action.play")
                     ) {
-                        OnlineMusicManager.remove(mediaInfo)
+                        MusicPlayerBackend.getInstance().play(index)
                     })
+                if (mediaInfo.provider != "local") {
+                    row.addChild(
+                        "remove", createActionButton(
+                            R.textures.gui.icon.close,
+                            tr("app.academy.music_player.action.remove")
+                        ) {
+                            OnlineMusicManager.remove(mediaInfo)
+                        })
                 }
                 container.addChild("track_$index", row)
             }

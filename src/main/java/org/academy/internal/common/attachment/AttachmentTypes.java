@@ -1,9 +1,6 @@
 package org.academy.internal.common.attachment;
 
 import com.mojang.serialization.Codec;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -15,6 +12,10 @@ import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.academy.AcademyCraft.MODID;
 

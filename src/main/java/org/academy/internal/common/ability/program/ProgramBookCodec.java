@@ -2,26 +2,16 @@ package org.academy.internal.common.ability.program;
 
 import com.google.gson.JsonParser;
 import net.minecraft.resources.Identifier;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramBook;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
+import org.academy.api.common.ability.program.*;
 import org.jspecify.annotations.Nullable;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
-/** Stable bounded binary representation used by skill data and the program editor protocol. */
+/**
+ * Stable bounded binary representation used by skill data and the program editor protocol.
+ */
 public final class ProgramBookCodec {
     public static final int MAX_PROGRAM_ENCODED_BYTES = 65_536;
     public static final int MAX_BOOK_ENCODED_BYTES = 1_048_576;
@@ -186,7 +176,7 @@ public final class ProgramBookCodec {
     ) throws IOException {
         requireCount(layout.nodePositions().size(), 0, ProgramLimits.DEFAULT.maxNodes(), "layout");
         var positions = layout.nodePositions().entrySet().stream()
-                .sorted(Comparator.comparingInt(java.util.Map.Entry::getKey))
+                .sorted(Comparator.comparingInt(Map.Entry::getKey))
                 .toList();
         data.writeShort(positions.size());
         for (var entry : positions) {

@@ -13,32 +13,38 @@ public record Curve(List<Keyframe> keyframes) {
         keyframes = List.copyOf(keyframes);
     }
 
-    /** 进入该关键帧的插值模式。 */
+    /**
+     * 进入该关键帧的插值模式。
+     */
     public enum Interpolation {
         LINEAR, STEP, SMOOTH, BEZIER
     }
 
     public record Keyframe(float time, float value, float inTangent, float outTangent, Interpolation interpolation) {
-        public Keyframe {
-            if (interpolation == null) interpolation = Interpolation.LINEAR;
-        }
-
-        /** 便捷构造：无切线、线性。 */
+        /**
+         * 便捷构造：无切线、线性。
+         */
         public Keyframe(float time, float value) {
             this(time, value, 0f, 0f, Interpolation.LINEAR);
         }
 
-        /** 便捷构造：线性插值入段。 */
+        /**
+         * 便捷构造：线性插值入段。
+         */
         public static Keyframe linear(float time, float value) {
             return new Keyframe(time, value, 0f, 0f, Interpolation.LINEAR);
         }
 
-        /** 便捷构造：步进插值入段。 */
+        /**
+         * 便捷构造：步进插值入段。
+         */
         public static Keyframe step(float time, float value) {
             return new Keyframe(time, value, 0f, 0f, Interpolation.STEP);
         }
 
-        /** 便捷构造：平滑（smoothstep）插值入段。 */
+        /**
+         * 便捷构造：平滑（smoothstep）插值入段。
+         */
         public static Keyframe smooth(float time, float value) {
             return new Keyframe(time, value, 0f, 0f, Interpolation.SMOOTH);
         }

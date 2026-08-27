@@ -1,28 +1,25 @@
 package org.academy.api.client.render.vfxgraph.serialize;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.GraphParameter;
+import org.academy.api.client.render.graph.model.Port;
+import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeType;
 import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.registry.PropertySpec;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.graph.model.PortDirection;
+import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxBlockFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxDataEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxOperatorNode;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
+import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JsonVfxGraphCodecTest {
     private final SimpleNodeRegistry registry = new SimpleNodeRegistry();
@@ -37,7 +34,7 @@ class JsonVfxGraphCodecTest {
 
     private NodeType attrPositionType() {
         return new NodeType("vfx.op.attr_position", "attribute", "Attribute Position",
-                List.of(new PortSpec("out", "Out", PortDirection.OUTPUT, ValueType.VEC3, Value.of(new org.joml.Vector3f()))),
+                List.of(new PortSpec("out", "Out", PortDirection.OUTPUT, ValueType.VEC3, Value.of(new Vector3f()))),
                 List.of());
     }
 
@@ -84,15 +81,17 @@ class JsonVfxGraphCodecTest {
 
         assertEquals(system, decoded);
         // 端口由目录重建（与核心 GraphNode 同约定）
-        assertEquals(1, decoded.contexts().get(0).blocks().get(0).ports().size());
-        assertEquals("Rate", decoded.contexts().get(0).blocks().get(0).ports().get(0).name());
-        assertEquals(1, decoded.operators().get(0).ports().size());
+        assertEquals(1, decoded.contexts().getFirst().blocks().getFirst().ports().size());
+        assertEquals("Rate", decoded.contexts().getFirst().blocks().getFirst().ports().getFirst().name());
+        assertEquals(1, decoded.operators().getFirst().ports().size());
     }
 
-    /** 由 NodeType 派生端口（与 codec 的 derivePorts 行为一致），保证 round-trip 相等。 */
-    private static java.util.List<org.academy.api.client.render.graph.model.Port> portsOf(NodeType type) {
+    /**
+     * 由 NodeType 派生端口（与 codec 的 derivePorts 行为一致），保证 round-trip 相等。
+     */
+    private static List<Port> portsOf(NodeType type) {
         return type.ports().stream()
-                .map(s -> new org.academy.api.client.render.graph.model.Port(
+                .map(s -> new Port(
                         s.id(), s.name(), s.direction(), s.type(), s.defaultValue()))
                 .toList();
     }
@@ -100,9 +99,9 @@ class JsonVfxGraphCodecTest {
     @Test
     void roundTripPreservesCurveParameter() {
         var codec = new JsonVfxGraphCodec(registry);
-        var curve = new org.academy.api.client.render.graph.type.Curve(List.of(
-                new org.academy.api.client.render.graph.type.Curve.Keyframe(
-                        0f, 1f, 2f, 3f, org.academy.api.client.render.graph.type.Curve.Interpolation.BEZIER)));
+        var curve = new Curve(List.of(
+                new Curve.Keyframe(
+                        0f, 1f, 2f, 3f, Curve.Interpolation.BEZIER)));
         var system = new VfxSystem(
                 "g",
                 List.of(),
@@ -113,11 +112,11 @@ class JsonVfxGraphCodecTest {
                 List.of());
 
         var decoded = codec.decode(codec.encode(system));
-        var back = decoded.parameters().get(0).defaultValue().asCurve();
+        var back = decoded.parameters().getFirst().defaultValue().asCurve();
         assertEquals(1, back.keyframes().size());
-        assertEquals(2f, back.keyframes().get(0).inTangent());
-        assertEquals(org.academy.api.client.render.graph.type.Curve.Interpolation.BEZIER,
-                back.keyframes().get(0).interpolation());
+        assertEquals(2f, back.keyframes().getFirst().inTangent());
+        assertEquals(Curve.Interpolation.BEZIER,
+                back.keyframes().getFirst().interpolation());
     }
 
     @Test
@@ -131,7 +130,9 @@ class JsonVfxGraphCodecTest {
         assertEquals("vfx", json.get(VfxGraphSchemaVersion.KIND_FIELD).getAsString());
     }
 
-    /** M28b：块级 flow round-trip。 */
+    /**
+     * M28b：块级 flow round-trip。
+     */
     @Test
     void roundTripPreservesBlockFlows() {
         var codec = new JsonVfxGraphCodec(registry);

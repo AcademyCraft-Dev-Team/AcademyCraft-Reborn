@@ -47,13 +47,33 @@ public final class SyncDarkmatterStatePacket extends Packet<ClientPacketListener
         return Float.isFinite(value) ? Math.max(0.0f, value) : 0.0f;
     }
 
-    public int abilityLevel() { return abilityLevel; }
-    public int totalPoints() { return totalPoints; }
-    public int alphaPoints() { return alphaPoints; }
-    public boolean gammaActive() { return gammaActive; }
-    public float naturalMatter() { return naturalMatter; }
-    public float createdMatter() { return createdMatter; }
-    public float reservedMatter() { return reservedMatter; }
+    public int abilityLevel() {
+        return abilityLevel;
+    }
+
+    public int totalPoints() {
+        return totalPoints;
+    }
+
+    public int alphaPoints() {
+        return alphaPoints;
+    }
+
+    public boolean gammaActive() {
+        return gammaActive;
+    }
+
+    public float naturalMatter() {
+        return naturalMatter;
+    }
+
+    public float createdMatter() {
+        return createdMatter;
+    }
+
+    public float reservedMatter() {
+        return reservedMatter;
+    }
 
     @Override
     public PacketType<ClientPacketListener, SyncDarkmatterStatePacket> getPacketType() {

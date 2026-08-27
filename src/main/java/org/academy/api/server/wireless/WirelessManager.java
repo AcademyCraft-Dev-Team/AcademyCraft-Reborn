@@ -3,6 +3,7 @@ package org.academy.api.server.wireless;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.*;
@@ -18,7 +19,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.util.Mth;
 
 public class WirelessManager {
     private static final Logger LOGGER = AcademyCraft.getLogger();

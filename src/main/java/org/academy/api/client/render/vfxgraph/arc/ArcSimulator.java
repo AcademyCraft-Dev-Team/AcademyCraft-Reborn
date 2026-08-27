@@ -33,12 +33,12 @@ public final class ArcSimulator {
         time += dt;
 
         // 1. 噪声位移（Blender: Noise Texture + Set Position Offset）
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             NoiseAnimator.animate(buffer.arc(i), time, driftSpeed, noiseStrength, noiseScale, noiseSeed);
         }
 
         // 2. 表面约束（Blender: Sample Nearest Surface → Set Position）
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             constraint.constrain(buffer.arc(i));
         }
 
@@ -46,12 +46,16 @@ public final class ArcSimulator {
         buffer.advance(dt, new Random(noiseSeed));
     }
 
-    /** 获取当前模拟时间。 */
+    /**
+     * 获取当前模拟时间。
+     */
     public float time() {
         return time;
     }
 
-    /** 获取弧线缓冲区。 */
+    /**
+     * 获取弧线缓冲区。
+     */
     public ArcBuffer buffer() {
         return buffer;
     }

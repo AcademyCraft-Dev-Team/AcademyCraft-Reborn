@@ -1,11 +1,11 @@
 package org.academy.api.client.render.shader.pipeline;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import com.mojang.blaze3d.shaders.ShaderType;
+import net.minecraft.resources.Identifier;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class DynamicShaderSourceTest {
     @Test
@@ -23,7 +23,7 @@ class DynamicShaderSourceTest {
         var a = source.register("a");
         var b = source.register("b");
 
-        org.junit.jupiter.api.Assertions.assertNotEquals(a, b);
+        Assertions.assertNotEquals(a, b);
     }
 
     @Test
@@ -37,7 +37,7 @@ class DynamicShaderSourceTest {
     @Test
     void getReturnsNullForUnknown() {
         var source = new DynamicShaderSource();
-        assertNull(source.get(net.minecraft.resources.Identifier.fromNamespaceAndPath("academy", "missing"),
+        assertNull(source.get(Identifier.fromNamespaceAndPath("academy", "missing"),
                 ShaderType.FRAGMENT));
     }
 }

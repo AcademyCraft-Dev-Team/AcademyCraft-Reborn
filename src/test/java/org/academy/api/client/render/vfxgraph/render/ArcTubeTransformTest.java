@@ -1,12 +1,14 @@
 package org.academy.api.client.render.vfxgraph.render;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+
+import java.nio.ByteBuffer;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * 电弧管顶点烘焙（M22-Rev2）：WorldTransform + overall_scale + 相机相对坐标。
@@ -25,14 +27,16 @@ class ArcTubeTransformTest {
         return CurveToMeshBuilder.build(arc, 4, 1f, 0.5f, 0.2f, 1f, 0.6f);
     }
 
-    /** 顶点 i 的位置（读取烘焙后的 buffer）。 */
-    private static float[] pos(java.nio.ByteBuffer buf, int vertex) {
-        int base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
+    /**
+     * 顶点 i 的位置（读取烘焙后的 buffer）。
+     */
+    private static float[] pos(ByteBuffer buf, int vertex) {
+        var base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
         return new float[]{buf.getFloat(base), buf.getFloat(base + 4), buf.getFloat(base + 8)};
     }
 
-    private static float[] normal(java.nio.ByteBuffer buf, int vertex) {
-        int base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
+    private static float[] normal(ByteBuffer buf, int vertex) {
+        var base = vertex * CurveToMeshBuilder.FLOATS_PER_VERTEX * 4;
         return new float[]{buf.getFloat(base + 12), buf.getFloat(base + 16), buf.getFloat(base + 20)};
     }
 
@@ -119,7 +123,7 @@ class ArcTubeTransformTest {
                 new Vector3f(), t, 1f);
         var expected = new float[3];
         t.applyDirection(beforeN[0], beforeN[1], beforeN[2], expected);
-        float len = (float) Math.sqrt(expected[0] * expected[0] + expected[1] * expected[1] + expected[2] * expected[2]);
+        var len = (float) Math.sqrt(expected[0] * expected[0] + expected[1] * expected[1] + expected[2] * expected[2]);
         expected[0] /= len;
         expected[1] /= len;
         expected[2] /= len;

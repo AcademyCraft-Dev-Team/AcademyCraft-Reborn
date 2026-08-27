@@ -105,7 +105,7 @@ final class DispatchSubclassFactory {
     }
 
     private static GenerationResult validateGenerated(Class<?> generated, Class<?> originalType,
-                                                       GeneratedSupport support) {
+                                                      GeneratedSupport support) {
         if (generated == null || generated.getSuperclass() != originalType) {
             return GenerationResult.failure("generated dispatch class has the wrong superclass");
         }
@@ -121,7 +121,7 @@ final class DispatchSubclassFactory {
             var modifiers = templateMethod.getModifiers();
             if (Modifier.isPrivate(modifiers) || Modifier.isStatic(modifiers)
                     || templateMethod.isSynthetic()) continue;
-            for (Class<?> type = originalType; type != null && expectedBase.isAssignableFrom(type);
+            for (var type = originalType; type != null && expectedBase.isAssignableFrom(type);
                  type = type.getSuperclass()) {
                 try {
                     var method = type.getDeclaredMethod(templateMethod.getName(),
@@ -219,14 +219,14 @@ final class DispatchSubclassFactory {
 
         var dataLookup = MethodHandles.privateLookupIn(SynchedEntityData.class,
                 MethodHandles.lookup());
-        VarHandle items = dataLookup.findVarHandle(
+        var items = dataLookup.findVarHandle(
                 SynchedEntityData.class,
                 "itemsById",
                 SynchedEntityData.DataItem[].class
         );
         var itemLookup = MethodHandles.privateLookupIn(SynchedEntityData.DataItem.class,
                 MethodHandles.lookup());
-        VarHandle value = itemLookup.findVarHandle(
+        var value = itemLookup.findVarHandle(
                 SynchedEntityData.DataItem.class,
                 "value",
                 Object.class

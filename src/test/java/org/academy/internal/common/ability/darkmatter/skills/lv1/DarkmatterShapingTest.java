@@ -1,17 +1,16 @@
 package org.academy.internal.common.ability.darkmatter.skills.lv1;
 
 import io.netty.buffer.Unpooled;
-import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
 import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingRegistries;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class DarkmatterShapingTest {
     @Test
@@ -36,7 +35,7 @@ class DarkmatterShapingTest {
         var previous = -1;
         for (var point = 0; point <= 250; point++) {
             var value = DarkmatterShaping.Server.toolEfficiency(point / 50.0f);
-            org.junit.jupiter.api.Assertions.assertTrue(value >= previous);
+            Assertions.assertTrue(value >= previous);
             previous = value;
         }
         assertEquals(3.6f, DarkmatterShaping.Server.shapingCost(4.0f, 1), 0.0001f);
@@ -159,8 +158,9 @@ class DarkmatterShapingTest {
     }
 
     private static void assertModifierLevel(int expected, String... ids) {
-        for (var id : ids) assertEquals(expected, DarkmatterShapingRegistries.modifier(id)
-                .orElseThrow().requiredAbilityLevel(), id);
+        for (var id : ids)
+            assertEquals(expected, DarkmatterShapingRegistries.modifier(id)
+                    .orElseThrow().requiredAbilityLevel(), id);
     }
 
     @Test

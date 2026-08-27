@@ -1,24 +1,20 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * M30 一比一复刻（2026-08-23，从实际 {@code 闪电附着.blend} 提取权威数据后）：
@@ -51,70 +47,78 @@ class M30FaithfulReplicationTest {
         return arc;
     }
 
-    /** M30：逐点噪声乘数 pa = 脉冲曲线(spline因子) × Random[0.4..2.2] —— 端点 0、中段满幅。 */
+    /**
+     * M30：逐点噪声乘数 pa = 脉冲曲线(spline因子) × Random[0.4..2.2] —— 端点 0、中段满幅。
+     */
     @Test
     void noisePaIsPulseWithRandomScale() {
-        for (long seed : new long[]{1, 42, 777, 99991}) {
+        for (var seed : new long[]{1, 42, 777, 99991}) {
             var arc = surfaceArc(seed);
             assertEquals(0f, arc.pa(0), 1e-6f, "pa at start endpoint = 0 (Blender Endpoint 排除噪声)");
             assertEquals(0f, arc.pa(arc.size() - 1), 1e-6f, "pa at end endpoint = 0");
-            for (int i = 1; i < arc.size() - 1; i++) {
-                float p = arc.pa(i);
+            for (var i = 1; i < arc.size() - 1; i++) {
+                var p = arc.pa(i);
                 assertTrue(p >= 0f, "interior pa >= 0 at index " + i + ", got " + p);
                 assertTrue(p <= 2.2f, "interior pa ≤ Random max 2.2, got " + p);
             }
             // 中段（spline 因子 ∈ [0.1,0.9]，脉冲满幅）必有 pa>0；近端点（<0.1/>0.9）归零
-            int n = arc.size();
-            boolean midActive = false;
-            for (int i = 1; i < n - 1; i++) {
-                float t = (float) i / (n - 1);
+            var n = arc.size();
+            var midActive = false;
+            for (var i = 1; i < n - 1; i++) {
+                var t = (float) i / (n - 1);
                 if (t >= 0.1f && t <= 0.9f) midActive = midActive || arc.pa(i) > 0f;
             }
             assertTrue(midActive, "middle-band points should carry positive pa (pulse full-width)");
         }
     }
 
-    /** M30：噪声幅度对齐 Blender (noise−0.5)×pa×噪波强度(0.5) —— 中段位移明显（旧实现 0.036 弱 9 倍）。 */
+    /**
+     * M30：噪声幅度对齐 Blender (noise−0.5)×pa×噪波强度(0.5) —— 中段位移明显（旧实现 0.036 弱 9 倍）。
+     */
     @Test
     void noiseDisplacementMatchesBlenderMagnitude() {
         var arc = surfaceArc(42L);
-        float[] before = new float[arc.size()];
-        for (int i = 0; i < arc.size(); i++) before[i] = arc.x(i);
+        var before = new float[arc.size()];
+        for (var i = 0; i < arc.size(); i++) before[i] = arc.x(i);
         NoiseAnimator.animate(arc, 1f, 1.5f, 0.5f, 2f, 42L);
         // 端点 pa=0 → 完全不动（复刻 Set Position.001 Selection=NOT(Endpoint)）
         assertEquals(before[0], arc.x(0), 1e-6f, "start endpoint unaffected by noise (pa=0)");
         assertEquals(before[arc.size() - 1], arc.x(arc.size() - 1), 1e-6f, "end endpoint unaffected by noise (pa=0)");
         // 中段：幅度 ±0.5×pa(0.4~2.2)×0.5 → 至少有一个点位移明显（>0.1，旧实现 ≤0.036）
-        float maxDisp = 0f;
-        for (int i = 1; i < arc.size() - 1; i++) {
+        var maxDisp = 0f;
+        for (var i = 1; i < arc.size() - 1; i++) {
             maxDisp = Math.max(maxDisp, Math.abs(arc.x(i) - before[i]));
         }
         assertTrue(maxDisp > 0.1f, "interior noise displacement should reach Blender magnitude, got " + maxDisp);
     }
 
-    /** M30：噪声漂移 = 场景秒×(1,1,1)，不乘游离速度（游离速度只驱动仿真区爬行）。 */
+    /**
+     * M30：噪声漂移 = 场景秒×(1,1,1)，不乘游离速度（游离速度只驱动仿真区爬行）。
+     */
     @Test
     void noiseDriftIndependentOfDriftSpeed() {
         var a = surfaceArc(9L);
         var b = surfaceArc(9L);
         NoiseAnimator.animate(a, 2f, 0.1f, 0.5f, 2f, 9L);
         NoiseAnimator.animate(b, 2f, 9.9f, 0.5f, 2f, 9L);
-        for (int i = 0; i < a.size(); i++) {
+        for (var i = 0; i < a.size(); i++) {
             assertEquals(a.x(i), b.x(i), 1e-6f, "driftSpeed must NOT affect noise drift (scene seconds only)");
             assertEquals(a.y(i), b.y(i), 1e-6f);
             assertEquals(a.z(i), b.z(i), 1e-6f);
         }
     }
 
-    /** M30：实例随机跨度缩放（Blender Instance Scale = Random[0.4..1.2]×电弧宽度）→ 弧大小各异。 */
+    /**
+     * M30：实例随机跨度缩放（Blender Instance Scale = Random[0.4..1.2]×电弧宽度）→ 弧大小各异。
+     */
     @Test
     void spanVariesByInstanceRandomScale() {
         float spanMin = Float.MAX_VALUE, spanMax = -Float.MAX_VALUE;
-        for (long seed : new long[]{1, 42, 777, 12345, 99991, 555}) {
+        for (var seed : new long[]{1, 42, 777, 12345, 99991, 555}) {
             var arc = surfaceArc(seed);
-            float dx = arc.x(0) - arc.x(arc.size() - 1);
-            float dz = arc.z(0) - arc.z(arc.size() - 1);
-            float span = (float) Math.sqrt(dx * dx + dz * dz);
+            var dx = arc.x(0) - arc.x(arc.size() - 1);
+            var dz = arc.z(0) - arc.z(arc.size() - 1);
+            var span = (float) Math.sqrt(dx * dx + dz * dz);
             spanMin = Math.min(spanMin, span);
             spanMax = Math.max(spanMax, span);
             assertTrue(span >= 0.4f && span <= 1.2f, "span within [0.4,1.2]×height, got " + span);
@@ -123,7 +127,9 @@ class M30FaithfulReplicationTest {
                 "arcs should vary in size across seeds, observed [" + spanMin + "," + spanMax + "]");
     }
 
-    /** M30：仿真区爬行（Set Position）——弧基座每帧沿切平面滑移累积，端点仍被吸附回表面。 */
+    /**
+     * M30：仿真区爬行（Set Position）——弧基座每帧沿切平面滑移累积，端点仍被吸附回表面。
+     */
     @Test
     void simCrawlAccumulatesWander() {
         var system = new VfxSystem("s",
@@ -137,16 +143,16 @@ class M30FaithfulReplicationTest {
                 List.of(), List.of(new VfxFlowEdge("spawn", "out")),
                 List.of(), List.of(), List.of("bO"));
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
             sim.step(1f / 60f);
         }
         var buf = sim.arcBuffer();
-        boolean sawWander = false;
-        boolean sawSnap = false;
-        for (int a = 0; a < buf.count(); a++) {
+        var sawWander = false;
+        var sawSnap = false;
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             if (!arc.hasArchBase()) continue;
-            float w = Math.abs(arc.wanderX()) + Math.abs(arc.wanderY()) + Math.abs(arc.wanderZ());
+            var w = Math.abs(arc.wanderX()) + Math.abs(arc.wanderY()) + Math.abs(arc.wanderZ());
             if (w > 1e-5f) sawWander = true;
             // 爬行后端点仍被 SurfaceConstraint 拉回平面
             if (Math.abs(arc.y(0)) < 1e-3f && Math.abs(arc.y(arc.size() - 1)) < 1e-3f) sawSnap = true;
@@ -155,7 +161,9 @@ class M30FaithfulReplicationTest {
         assertTrue(sawSnap, "endpoints should be re-snapped to surface after crawl");
     }
 
-    /** M30：age 亮度曲线先亮后灭（Float Curve.004 + 0.33 底），供渲染器烘焙闪烁。 */
+    /**
+     * M30：age 亮度曲线先亮后灭（Float Curve.004 + 0.33 底），供渲染器烘焙闪烁。
+     */
     @Test
     void lightCurveBrightensThenFades() {
         assertEquals(0.0f, BlenderArcCurves.sample(BlenderArcCurves.LIGHT, 0f), 1e-3f);
@@ -166,7 +174,9 @@ class M30FaithfulReplicationTest {
         assertTrue(BlenderArcCurves.sample(BlenderArcCurves.LIGHT, 0.5136f) + 0.33f > 1f, "mid-life light peaks above 1");
     }
 
-    /** M30：控制柄 = FloatCurve.001×Random×高度（**不含电弧粗细**）——curve 只缩放管半径。 */
+    /**
+     * M30：控制柄 = FloatCurve.001×Random×高度（**不含电弧粗细**）——curve 只缩放管半径。
+     */
     @Test
     void archHeightIndependentOfCurveParam() {
         var a = new ArcCurve();
@@ -179,14 +189,16 @@ class M30FaithfulReplicationTest {
         b.setAge(20f);
         CurveGenerator.sampleSurfaceArch(a);
         CurveGenerator.sampleSurfaceArch(b);
-        for (int i = 0; i < a.size(); i++) {
+        for (var i = 0; i < a.size(); i++) {
             assertEquals(a.y(i), b.y(i), 1e-5f, "arch height must not depend on curve param");
         }
         // 但管半径仍受 width（= 有效半径基准）影响
         assertEquals(a.width(0), b.width(0), 1e-5f);
     }
 
-    /** M30：接触弧半径走 FloatCurve.009（生命系数）——出生满半径、临终归零。 */
+    /**
+     * M30：接触弧半径走 FloatCurve.009（生命系数）——出生满半径、临终归零。
+     */
     @Test
     void contactRadiusUsesLifeCurve() {
         var born = new ArcCurve();
@@ -203,7 +215,9 @@ class M30FaithfulReplicationTest {
         assertTrue(born.pa(born.size() / 2) > 0f, "contact noise pa pulse active in middle");
     }
 
-    /** M30：接触弧 pa 同样端点 0（Blender Set Position.005 Selection=NOT(Endpoint Selection.005)）。 */
+    /**
+     * M30：接触弧 pa 同样端点 0（Blender Set Position.005 Selection=NOT(Endpoint Selection.005)）。
+     */
     @Test
     void contactNoiseEndpointsZero() {
         var arc = new ArcCurve();
@@ -213,7 +227,9 @@ class M30FaithfulReplicationTest {
         assertEquals(0f, arc.pa(arc.size() - 1), 1e-6f);
     }
 
-    /** M30：噪声强度/游离速度从 spawn 块属性接线到弧（修复此前接线断裂）。 */
+    /**
+     * M30：噪声强度/游离速度从 spawn 块属性接线到弧（修复此前接线断裂）。
+     */
     @Test
     void spawnBlockWiresNoiseParamsToArc() {
         var system = new VfxSystem("s",

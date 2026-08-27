@@ -8,7 +8,9 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Set;
 
-/** Category-specific storage and policy adapter for the shared modular program editor. */
+/**
+ * Category-specific storage and policy adapter for the shared modular program editor.
+ */
 public interface ModularProgramEditorSession {
     Component title();
 

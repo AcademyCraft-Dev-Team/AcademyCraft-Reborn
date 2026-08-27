@@ -14,13 +14,11 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-/** Server-authoritative automatic entry dispatch for every programmable ability category. */
+/**
+ * Server-authoritative automatic entry dispatch for every programmable ability category.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AbilityProgramTriggerRuntime {
     private static final Map<UUID, MovementState> MOVEMENT = new HashMap<>();

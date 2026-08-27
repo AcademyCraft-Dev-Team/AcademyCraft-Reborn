@@ -47,7 +47,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public final class JetStrike extends Skill {
     static final double DISTANCE = 8.0;
@@ -260,7 +263,7 @@ public final class JetStrike extends Skill {
         private final ServerLevel initialLevel;
         private final int proficiencyMilestone;
         private final float damage;
-        private final java.util.Set<java.util.UUID> hitTargets = new java.util.HashSet<>();
+        private final Set<UUID> hitTargets = new HashSet<>();
         private int ticks = TRAIL_TICKS;
 
         private TrailContext(ServerPlayer player, int proficiencyMilestone, float damage) {

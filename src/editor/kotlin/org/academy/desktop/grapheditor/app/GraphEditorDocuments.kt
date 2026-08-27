@@ -45,8 +45,10 @@ class GraphEditorDocuments(private val registry: NodeRegistry) {
     }
 
     /** 从磁盘图打开为新文档并激活；附带 sidecar 元数据。容器图（kind:"vfx"）加载进容器模型。 */
-    fun openDoc(path: Path, name: String, json: JsonObject, isContainer: Boolean,
-                metadata: EditorMetadata, mode: GraphMode): EditorDocument {
+    fun openDoc(
+        path: Path, name: String, json: JsonObject, isContainer: Boolean,
+        metadata: EditorMetadata, mode: GraphMode
+    ): EditorDocument {
         val model = GraphEditorModel(registry)
         val containerModel = VfxContainerModel(registry)
         if (isContainer) {
@@ -70,8 +72,10 @@ class GraphEditorDocuments(private val registry: NodeRegistry) {
     }
 
     /** 热重载（M21s）：就地替换指定路径文档的内容（保留标签页/相机，重置模型），返回 null 表示未打开。 */
-    fun reload(path: Path, name: String, json: JsonObject, isContainer: Boolean,
-               metadata: EditorMetadata, mode: GraphMode): EditorDocument? {
+    fun reload(
+        path: Path, name: String, json: JsonObject, isContainer: Boolean,
+        metadata: EditorMetadata, mode: GraphMode
+    ): EditorDocument? {
         val index = docs.indexOfFirst { it.path?.toAbsolutePath() == path.toAbsolutePath() }
         if (index < 0) {
             return null
@@ -86,7 +90,17 @@ class GraphEditorDocuments(private val registry: NodeRegistry) {
             model.load(JsonGraphCodec(registry).decode(json))
             model.loadMetadata(metadata)
         }
-        docs[index] = EditorDocument(name, path, model, containerModel, metadata, mode, old.cameraZoom, old.cameraPanX, old.cameraPanY)
+        docs[index] = EditorDocument(
+            name,
+            path,
+            model,
+            containerModel,
+            metadata,
+            mode,
+            old.cameraZoom,
+            old.cameraPanX,
+            old.cameraPanY
+        )
         rebuild()
         return docs[index]
     }

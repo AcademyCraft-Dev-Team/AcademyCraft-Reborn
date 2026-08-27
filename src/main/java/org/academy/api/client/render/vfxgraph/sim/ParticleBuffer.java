@@ -13,10 +13,14 @@ import java.util.Arrays;
 public final class ParticleBuffer {
     private static final int INITIAL_CAPACITY = 64;
 
-    /** 每粒子 trail 历史长度。 */
+    /**
+     * 每粒子 trail 历史长度。
+     */
     public static final int TRAIL_LENGTH = 8;
 
-    /** 递增种子计数器：swap-remove 与扩容均不改变 seed（着色器需要每粒子稳定的随机特征）。 */
+    /**
+     * 递增种子计数器：swap-remove 与扩容均不改变 seed（着色器需要每粒子稳定的随机特征）。
+     */
     private long nextSeed = 1L;
 
     private float[] px;
@@ -82,13 +86,15 @@ public final class ParticleBuffer {
         return px.length;
     }
 
-    /** 分配一个新粒子（必要时扩容），返回其索引。 */
+    /**
+     * 分配一个新粒子（必要时扩容），返回其索引。
+     */
     public int spawn() {
         if (count == px.length) {
             grow();
         }
         // Bug 修复：重置关键字段，防止 swap-remove 槽位复用时的残留数据泄漏
-        int i = count;
+        var i = count;
         lifetime[i] = 0f;
         age[i] = 0f;
         seed[i] = (float) (nextSeed++);
@@ -103,9 +109,11 @@ public final class ParticleBuffer {
         return count++;
     }
 
-    /** swap-remove 删除索引 i 的粒子（末位粒子移入该槽）。 */
+    /**
+     * swap-remove 删除索引 i 的粒子（末位粒子移入该槽）。
+     */
     public void kill(int i) {
-        int last = --count;
+        var last = --count;
         if (i != last) {
             px[i] = px[last];
             seed[i] = seed[last];
@@ -134,7 +142,7 @@ public final class ParticleBuffer {
     }
 
     private void grow() {
-        int newCap = px.length * 2;
+        var newCap = px.length * 2;
         px = Arrays.copyOf(px, newCap);
         seed = Arrays.copyOf(seed, newCap);
         layer = Arrays.copyOf(layer, newCap);
@@ -164,7 +172,9 @@ public final class ParticleBuffer {
 
     public float positionX(int i) {
         return px[i];
-    }    public float positionY(int i) {
+    }
+
+    public float positionY(int i) {
         return py[i];
     }
 
@@ -212,7 +222,9 @@ public final class ParticleBuffer {
         };
     }
 
-    /** 层过滤编码：{@code ""}（或 null）→ -1（全部），否则按 {@link #layerByte}。 */
+    /**
+     * 层过滤编码：{@code ""}（或 null）→ -1（全部），否则按 {@link #layerByte}。
+     */
     public static byte layerFilter(String layer) {
         return layer == null || layer.isEmpty() ? -1 : layerByte(layer);
     }
@@ -267,7 +279,9 @@ public final class ParticleBuffer {
         startAlpha[i] = a;
     }
 
-    /** 仅写 RGB 通道（不动 alpha/startAlpha）：供 life_color 逐帧改色而不破坏起始 alpha 语义。 */
+    /**
+     * 仅写 RGB 通道（不动 alpha/startAlpha）：供 life_color 逐帧改色而不破坏起始 alpha 语义。
+     */
     public void setColorRgb(int i, float r, float g, float b) {
         cr[i] = r;
         cg[i] = g;
@@ -353,10 +367,12 @@ public final class ParticleBuffer {
         return trailZ[i * TRAIL_LENGTH + k];
     }
 
-    /** 把当前位置压入 trail（新样本在最前，k=0 最新）。 */
+    /**
+     * 把当前位置压入 trail（新样本在最前，k=0 最新）。
+     */
     public void pushTrail(int i, float x, float y, float z) {
-        int size = Math.min(trailSize[i], TRAIL_LENGTH - 1);
-        int base = i * TRAIL_LENGTH;
+        var size = Math.min(trailSize[i], TRAIL_LENGTH - 1);
+        var base = i * TRAIL_LENGTH;
         System.arraycopy(trailX, base, trailX, base + 1, size);
         System.arraycopy(trailY, base, trailY, base + 1, size);
         System.arraycopy(trailZ, base, trailZ, base + 1, size);

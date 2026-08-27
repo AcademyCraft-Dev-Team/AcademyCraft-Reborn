@@ -1,27 +1,15 @@
 package org.academy.internal.common.ability.program;
 
 import com.google.gson.JsonElement;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramDiagnostic;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramValidationResult;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import net.minecraft.resources.Identifier;
+import org.academy.api.common.ability.program.*;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-/** Immutable, named-port editing surface shared by all ability-program screens. */
+/**
+ * Immutable, named-port editing surface shared by all ability-program screens.
+ */
 public final class ProgramEditorDocument {
     private static final int MAX_NODE_ID = 1_000_000;
 
@@ -32,7 +20,7 @@ public final class ProgramEditorDocument {
     public ProgramEditorDocument(
             AbilityProgram program,
             ProgramEditorNodeCatalog catalog,
-            Set<net.minecraft.resources.Identifier> capabilities
+            Set<Identifier> capabilities
     ) {
         this(program, catalog, capabilities, ProgramLimits.DEFAULT);
     }
@@ -40,7 +28,7 @@ public final class ProgramEditorDocument {
     public ProgramEditorDocument(
             AbilityProgram program,
             AbilityProgramDefinition definition,
-            Set<net.minecraft.resources.Identifier> capabilities
+            Set<Identifier> capabilities
     ) {
         this(program, definition.editorCatalog(), capabilities, definition.limits());
         if (!program.category().equals(definition.category())) {
@@ -51,7 +39,7 @@ public final class ProgramEditorDocument {
     private ProgramEditorDocument(
             AbilityProgram program,
             ProgramEditorNodeCatalog catalog,
-            Set<net.minecraft.resources.Identifier> capabilities,
+            Set<Identifier> capabilities,
             ProgramLimits limits
     ) {
         if (program == null || catalog == null) {
@@ -124,7 +112,7 @@ public final class ProgramEditorDocument {
         return ProgramGraphValidator.validate(program.graph(), context, catalog);
     }
 
-    public EditResult addNode(net.minecraft.resources.Identifier typeId, double x, double y) {
+    public EditResult addNode(Identifier typeId, double x, double y) {
         if (!Double.isFinite(x) || !Double.isFinite(y)) {
             return failure(ProgramDiagnosticCode.INVALID_NODE, -1, null);
         }

@@ -92,36 +92,36 @@ public final class WitherMentalControlAdapter implements MentalControlAdapter {
             }
         }
 
-            @Override
-            public void tick() {
-                clearHeads(wither);
-                wither.stopInPlace();
-                wither.getNavigation().stop();
-                wither.setJumping(false);
-                wither.setDeltaMovement(0.0, 0.0, 0.0);
-            }
-
-            @Override
-            public void close() {
-            }
+        @Override
+        public void tick() {
+            clearHeads(wither);
+            wither.stopInPlace();
+            wither.getNavigation().stop();
+            wither.setJumping(false);
+            wither.setDeltaMovement(0.0, 0.0, 0.0);
         }
+
+        @Override
+        public void close() {
+        }
+    }
 
     private record RelationBinding(WitherBoss wither) implements ControlBinding {
 
         @Override
-            public void tick() {
-                MentalControlRuntime.enforceTargetWhitelist(wither);
-                for (var head = 0; head < 3; head++) {
-                    var target = wither.level().getEntity(wither.getAlternativeTarget(head));
-                    if (target instanceof LivingEntity living
-                            && MentalControlRuntime.attackDecision(wither, living) == AttackDecision.DENY) {
-                        wither.setAlternativeTarget(head, 0);
-                    }
+        public void tick() {
+            MentalControlRuntime.enforceTargetWhitelist(wither);
+            for (var head = 0; head < 3; head++) {
+                var target = wither.level().getEntity(wither.getAlternativeTarget(head));
+                if (target instanceof LivingEntity living
+                        && MentalControlRuntime.attackDecision(wither, living) == AttackDecision.DENY) {
+                    wither.setAlternativeTarget(head, 0);
                 }
             }
-
-            @Override
-            public void close() {
-            }
         }
+
+        @Override
+        public void close() {
+        }
+    }
 }

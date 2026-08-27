@@ -20,7 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Authoritative Minecraft-server adapter for Darkmatter programs. */
+/**
+ * Authoritative Minecraft-server adapter for Darkmatter programs.
+ */
 public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRuntime {
     public static final double MAX_QUERY_RANGE = 32.0;
     public static final int MAX_QUERY_RESULTS = 128;

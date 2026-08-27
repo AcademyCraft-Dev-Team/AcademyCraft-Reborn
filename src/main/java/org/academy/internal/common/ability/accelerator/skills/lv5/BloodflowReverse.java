@@ -14,6 +14,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -35,13 +36,13 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -262,46 +263,46 @@ public class BloodflowReverse extends Skill {
                             context.system().getPlayerMaxCP(player.getUUID()) * 0.2f
                     ),
                     (ctx, actualCost) -> {
-                var serverLevel = player.level();
-                if (!(serverLevel instanceof ServerLevel)) return;
-                if (!target.isAlive() || target.isRemoved() || target.level() != serverLevel) return;
+                        var serverLevel = player.level();
+                        if (!(serverLevel instanceof ServerLevel)) return;
+                        if (!target.isAlive() || target.isRemoved() || target.level() != serverLevel) return;
 
-                var currentStacks = getBloodflowStacks(target);
-                var newStacks = currentStacks + 1;
-                var amplifier = Math.min(newStacks - 1, 4);
-                var skill = Skills.BLOODFLOW_REVERSE.get();
-                var duration = skill.hasProficiencyMilestone(player, 2) ? 250 : 200;
+                        var currentStacks = getBloodflowStacks(target);
+                        var newStacks = currentStacks + 1;
+                        var amplifier = Math.min(newStacks - 1, 4);
+                        var skill = Skills.BLOODFLOW_REVERSE.get();
+                        var duration = skill.hasProficiencyMilestone(player, 2) ? 250 : 200;
 
-                var damage = calculateDamage(target.getMaxHealth());
-                var damaged = target.hurtServer(serverLevel,
-                        SkillDamageSource.of(
-                                player,
-                                Skills.BLOODFLOW_REVERSE.get(),
-                                DamageTypes.VEC
-                        ), damage);
-                if (!damaged) return;
+                        var damage = calculateDamage(target.getMaxHealth());
+                        var damaged = target.hurtServer(serverLevel,
+                                SkillDamageSource.of(
+                                        player,
+                                        Skills.BLOODFLOW_REVERSE.get(),
+                                        DamageTypes.VEC
+                                ), damage);
+                        if (!damaged) return;
 
-                target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, amplifier));
-                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, amplifier));
-                target.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, duration, amplifier));
+                        target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, amplifier));
+                        target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, amplifier));
+                        target.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, duration, amplifier));
 
-                serverLevel.sendParticles(ParticleTypes.BLOOD_SPLASH.get(),
-                        target.getX(), target.getY(0.6), target.getZ(),
-                        12, 0.4, 0.55, 0.4, 0.12);
-                spawnSurfaceBloodSprays(serverLevel, player, target);
-                serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.BLOODFLOW_REVERSE.get(), SoundSource.AMBIENT, 1.0f, 1.0f);
+                        serverLevel.sendParticles(ParticleTypes.BLOOD_SPLASH.get(),
+                                target.getX(), target.getY(0.6), target.getZ(),
+                                12, 0.4, 0.55, 0.4, 0.12);
+                        spawnSurfaceBloodSprays(serverLevel, player, target);
+                        serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
+                                SoundEvents.BLOODFLOW_REVERSE.get(), SoundSource.AMBIENT, 1.0f, 1.0f);
 
-                setBloodflowStacks(target, newStacks);
-                if (skill.hasProficiencyMilestone(player, 3)) {
-                    var reduction = target instanceof net.minecraft.world.entity.player.Player
-                            || org.academy.internal.common.ability.aeromanip.AeromanipTargeting.isBoss(target)
-                            ? 0.25f
-                            : 0.5f;
-                    TimedSkillEffectRuntime.put(
-                            player, target.getUUID(), skill, "healing_reduction", 200, reduction);
-                }
-            });
+                        setBloodflowStacks(target, newStacks);
+                        if (skill.hasProficiencyMilestone(player, 3)) {
+                            var reduction = target instanceof Player
+                                    || AeromanipTargeting.isBoss(target)
+                                    ? 0.25f
+                                    : 0.5f;
+                            TimedSkillEffectRuntime.put(
+                                    player, target.getUUID(), skill, "healing_reduction", 200, reduction);
+                        }
+                    });
         }
 
         private static void spawnSurfaceBloodSprays(ServerLevel level, ServerPlayer player, LivingEntity target) {

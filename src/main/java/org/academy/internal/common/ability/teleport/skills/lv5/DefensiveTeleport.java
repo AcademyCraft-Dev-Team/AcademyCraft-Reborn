@@ -7,14 +7,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -54,8 +55,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import java.util.Set;
-import net.minecraft.util.Mth;
+import java.util.Objects;
 
 public final class DefensiveTeleport extends Skill {
     static final double SELECTION_SIZE = 5.0;
@@ -164,7 +164,7 @@ public final class DefensiveTeleport extends Skill {
                                         player, MultipartEntityTargeting.resolve(entity)))
                         .stream()
                         .map(MultipartEntityTargeting::resolve)
-                        .filter(java.util.Objects::nonNull)
+                        .filter(Objects::nonNull)
                         .distinct()
                         .toList();
                 var camera = minecraft.gameRenderer.mainCamera().position();
@@ -188,7 +188,7 @@ public final class DefensiveTeleport extends Skill {
                 if (entity == player || !entity.isAlive() || entity.isRemoved()) return false;
                 if (entity instanceof Projectile projectile) {
                     var owner = projectile.getOwner();
-                    return owner != player && (owner == null || !player.isAlliedTo(owner));
+                    return owner != player && (!player.isAlliedTo(owner));
                 }
                 if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
                 if (living instanceof Player target) {
@@ -254,7 +254,7 @@ public final class DefensiveTeleport extends Skill {
                                     player, MultipartEntityTargeting.resolve(entity)))
                     .stream()
                     .map(MultipartEntityTargeting::resolve)
-                    .filter(java.util.Objects::nonNull)
+                    .filter(Objects::nonNull)
                     .distinct()
                     .toList();
             if (selected.isEmpty()) return;

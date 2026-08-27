@@ -246,6 +246,8 @@ neoForge {
         register("clientCompat") {
             client()
             environment("IS_COMPAT", "true")
+            // due to shit iris
+            systemProperty("neoforge.disableGlValidation", "true")
         }
         register("clientDevWithRenderDoc") {
             client()
@@ -293,14 +295,6 @@ neoForge {
             systemProperty("academy.desktop.main", "org.academy.desktop.SampleMainKt")
             programArguments.add("--project-root=${layout.projectDirectory}")
         }
-        register("hudEditor") {
-            client()
-            environment("IS_DEV", "true")
-            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
-            sourceSet.set(editorSourceSet)
-            systemProperty("academy.desktop.main", "org.academy.desktop.hudeditor.HudEditorMainKt")
-            programArguments.add("--project-root=${layout.projectDirectory}")
-        }
         register("graphEditor") {
             client()
             environment("IS_DEV", "true")
@@ -312,14 +306,10 @@ neoForge {
         configureEach {
             logLevel.set(Level.DEBUG)
             systemProperty("terminal.ansi", "true")
-            // due to shit iris
-            systemProperty("neoforge.disableGlValidation", "true")
 
             systemProperty("mixin.debug.export", "true")
 
-            if (System.getProperty("java.vendor", "").contains("JetBrains", ignoreCase = true)) {
-                jvmArgument("-XX:+AllowEnhancedClassRedefinition")
-            }
+            jvmArgument("-XX:+AllowEnhancedClassRedefinition")
             jvmArgument("-Xverify:none")
         }
     }

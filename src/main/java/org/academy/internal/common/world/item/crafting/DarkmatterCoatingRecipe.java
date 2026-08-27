@@ -9,7 +9,9 @@ import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.common.world.item.ItemDataComponents;
 import org.academy.internal.common.world.item.Items;
 
-/** Shapeless application of one configured coating onto exactly one target item. */
+/**
+ * Shapeless application of one configured coating onto exactly one target item.
+ */
 public final class DarkmatterCoatingRecipe extends CustomRecipe {
     @Override
     public boolean matches(CraftingInput input, Level level) {
@@ -27,8 +29,8 @@ public final class DarkmatterCoatingRecipe extends CustomRecipe {
     }
 
     private static Inputs findInputs(CraftingInput input) {
-        ItemStack coating = ItemStack.EMPTY;
-        ItemStack target = ItemStack.EMPTY;
+        var coating = ItemStack.EMPTY;
+        var target = ItemStack.EMPTY;
         for (var slot = 0; slot < input.size(); slot++) {
             var stack = input.getItem(slot);
             if (stack.isEmpty()) continue;
@@ -48,5 +50,6 @@ public final class DarkmatterCoatingRecipe extends CustomRecipe {
         return RecipeSerializers.DARKMATTER_COATING.get();
     }
 
-    private record Inputs(ItemStack coating, ItemStack target) { }
+    private record Inputs(ItemStack coating, ItemStack target) {
+    }
 }

@@ -16,7 +16,7 @@ public final class ArcBuffer {
 
     public ArcBuffer() {
         arcs = new ArcCurve[INITIAL_CAPACITY];
-        for (int i = 0; i < INITIAL_CAPACITY; i++) {
+        for (var i = 0; i < INITIAL_CAPACITY; i++) {
             arcs[i] = new ArcCurve();
         }
     }
@@ -29,7 +29,9 @@ public final class ArcBuffer {
         return arcs[index];
     }
 
-    /** 追加一条新弧线（返回可写引用，调用方填充数据后调用 {@link ArcCurve#setColor} 等）。 */
+    /**
+     * 追加一条新弧线（返回可写引用，调用方填充数据后调用 {@link ArcCurve#setColor} 等）。
+     */
     public ArcCurve add() {
         return add(0L);
     }
@@ -37,9 +39,9 @@ public final class ArcBuffer {
     /** 追加替换式瞬态弧；同组可在下一次采样前整批替换。 */
     public ArcCurve add(long replacementGroup) {
         if (count == arcs.length) {
-            int newCap = arcs.length * 2;
+            var newCap = arcs.length * 2;
             var newArr = new ArcCurve[newCap];
-            for (int i = 0; i < newCap; i++) {
+            for (var i = 0; i < newCap; i++) {
                 newArr[i] = i < arcs.length ? arcs[i] : new ArcCurve();
             }
             arcs = newArr;
@@ -72,10 +74,10 @@ public final class ArcBuffer {
 
     /** 每帧递增 age，删除过期弧线（swap-remove）。先清全量 fresh 标记（M29b-02）。 */
     public void advance(float dt, Random random) {
-        for (int i = 0; i < count; i++) {
+        for (var i = 0; i < count; i++) {
             arcs[i].setFresh(false);
         }
-        int i = 0;
+        var i = 0;
         while (i < count) {
             var arc = arcs[i];
             arc.setAge(arc.age() + dt);
@@ -87,7 +89,9 @@ public final class ArcBuffer {
         }
     }
 
-    /** 清空全部弧线。 */
+    /**
+     * 清空全部弧线。
+     */
     public void clear() {
         count = 0;
     }

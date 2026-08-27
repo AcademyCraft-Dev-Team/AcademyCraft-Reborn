@@ -3,8 +3,11 @@ package org.academy.internal.common.ability.electromaster.skills.lv2;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -40,6 +43,8 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public class ThunderLance extends Skill {
@@ -194,19 +199,19 @@ public class ThunderLance extends Skill {
             if (milestone >= 3) branchDoubleHit(player, level, result, source, damage);
         }
 
-        private static void branchDoubleHit(ServerPlayer player, net.minecraft.server.level.ServerLevel level,
+        private static void branchDoubleHit(ServerPlayer player, ServerLevel level,
                                             LinearAttackExecutor.ExecutionResult result,
                                             SkillDamageSource source, float damage) {
-            var hits = new java.util.LinkedHashSet<net.minecraft.world.entity.Entity>();
+            var hits = new LinkedHashSet<Entity>();
             hits.addAll(result.outboundHits());
             hits.addAll(result.returnHits());
-            var origin = hits.stream().filter(net.minecraft.world.entity.LivingEntity.class::isInstance)
-                    .map(net.minecraft.world.entity.LivingEntity.class::cast).findFirst().orElse(null);
+            var origin = hits.stream().filter(LivingEntity.class::isInstance)
+                    .map(LivingEntity.class::cast).findFirst().orElse(null);
             if (origin == null) return;
-            var target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+            var target = level.getEntitiesOfClass(LivingEntity.class,
                             origin.getBoundingBox().inflate(6.0), candidate -> candidate != player
                                     && !hits.contains(candidate) && candidate.isAlive() && !player.isAlliedTo(candidate))
-                    .stream().min(java.util.Comparator.comparingDouble(origin::distanceToSqr)).orElse(null);
+                    .stream().min(Comparator.comparingDouble(origin::distanceToSqr)).orElse(null);
             if (target != null) {
                 target.hurtServer(level, source, damage * 0.4f);
                 ElectromasterArcEffects.spawnChainArc(

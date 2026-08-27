@@ -4,6 +4,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -13,19 +14,13 @@ import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
-import org.academy.internal.common.ability.program.PrecisionProgramExporter;
-import org.academy.internal.common.ability.program.PrecisionProgramAliases;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.ProgramBookCodec;
-import org.academy.internal.common.ability.program.ProgramEditorDocument;
-import org.academy.internal.common.ability.program.AbilityProgramManager;
+import org.academy.internal.common.ability.program.*;
 import org.misaka.MisakaNetworkClient;
 
-import java.util.Arrays;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.util.Mth;
 
 public final class PrecisionOperationClient {
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
@@ -154,7 +149,7 @@ public final class PrecisionOperationClient {
         if (minecraft.player == null || minecraft.gui.screen() != null
                 || AbilitySystemClient.category == null
                 || !AbilitySystemClient.category.getKey().equals(
-                        AbilityProgramDefinitions.mentalout().category())
+                AbilityProgramDefinitions.mentalout().category())
                 || AbilitySystemClient.getLevel().getLevelCode() < 5) return;
         screen = new ModularProgramScreen(EDITOR_SESSION);
         if (LAST_DIAGNOSTICS[selectedSlot] != PrecisionGraph.Diagnostic.OK) {
@@ -179,7 +174,7 @@ public final class PrecisionOperationClient {
         if (Minecraft.getInstance().gui.screen() != null
                 || AbilitySystemClient.category == null
                 || !AbilitySystemClient.category.getKey().equals(
-                        AbilityProgramDefinitions.mentalout().category())
+                AbilityProgramDefinitions.mentalout().category())
                 || AbilitySystemClient.getLevel().getLevelCode() < 5) return;
         selectedSlot = Mth.clamp(slot, 0, SLOT_COUNT - 1);
         MisakaNetworkClient.send(new PrecisionOperationManager.ExecutePacket(
@@ -320,7 +315,7 @@ public final class PrecisionOperationClient {
             var validation = new ProgramEditorDocument(
                     program,
                     definition,
-                    java.util.Set.of()
+                    Set.of()
             ).validation();
             if (!validation.valid()) {
                 var diagnostic = validation.diagnostics().getFirst();

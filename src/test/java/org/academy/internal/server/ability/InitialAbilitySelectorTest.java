@@ -3,7 +3,6 @@ package org.academy.internal.server.ability;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityFactorProfile;
-import org.academy.api.common.attribute.AbilityFactor;
 import org.academy.internal.common.ability.AbilityDevelopmentProfiles;
 import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.aeromanip.Aeromanip;

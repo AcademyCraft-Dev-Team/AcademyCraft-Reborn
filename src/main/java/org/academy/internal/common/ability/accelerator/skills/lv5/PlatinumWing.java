@@ -8,7 +8,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
@@ -47,6 +46,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.network.PacketTypes;
@@ -240,10 +240,10 @@ public final class PlatinumWing extends Skill {
                     || CtaFriendlyFireWhitelist.shouldProtect(player, living)) {
                 return;
             }
-            var level = (ServerLevel) player.level();
+            var level = player.level();
             var skill = Skills.PLATINUM_WING.get();
             if (skill.hasProficiencyMilestone(player, 3)
-                    && org.academy.internal.common.ability.aeromanip.AeromanipTargeting.isBoss(target)) {
+                    && AeromanipTargeting.isBoss(target)) {
                 var trueMaxHealth = EntityControlApi.getTrueMaxHealth(living);
                 if (!Float.isFinite(trueMaxHealth) || trueMaxHealth <= 0.0f) {
                     trueMaxHealth = living.getMaxHealth();
@@ -254,7 +254,7 @@ public final class PlatinumWing extends Skill {
                 living.hurtServer(
                         level,
                         SkillDamageSource.of(player, skill,
-                                org.academy.internal.common.world.damagesource.DamageTypes.VEC),
+                                DamageTypes.VEC),
                         damage
                 );
                 level.playSound(null, target, SoundEvents.PLAYER_ATTACK_CRIT,

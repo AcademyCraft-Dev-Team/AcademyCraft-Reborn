@@ -4,7 +4,9 @@ import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.SkillNames;
 
-/** Learned-skill capabilities required by Teleport action nodes. */
+/**
+ * Learned-skill capabilities required by Teleport action nodes.
+ */
 public final class TeleportProgramCapabilities {
     public static final Identifier SELF_TELEPORT =
             AcademyCraft.academy(SkillNames.SELF_TELEPORT);

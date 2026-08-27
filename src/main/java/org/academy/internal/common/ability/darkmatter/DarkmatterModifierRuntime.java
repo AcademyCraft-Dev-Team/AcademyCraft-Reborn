@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.darkmatter;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -10,13 +11,15 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Shearable;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -25,15 +28,16 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -45,20 +49,19 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
-import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
-import org.academy.internal.common.world.item.Items;
-import org.academy.api.server.ability.AbilitySystemServer;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Runtime hook set for shaped-item modifiers. All item data is read from the embedded profile. */
+/**
+ * Runtime hook set for shaped-item modifiers. All item data is read from the embedded profile.
+ */
 public final class DarkmatterModifierRuntime {
     private static final Identifier GRAVITY_ID = AcademyCraft.academy("shaping_antigravity");
     private static final Identifier SAFE_FALL_ID = AcademyCraft.academy("shaping_safe_fall");
@@ -72,12 +75,13 @@ public final class DarkmatterModifierRuntime {
             Registries.BLOCK, AcademyCraft.academy("darkmatter_harvestable/interact"));
     private static final TagKey<Block> STACKABLE_HARVESTABLES = TagKey.create(
             Registries.BLOCK, AcademyCraft.academy("darkmatter_harvestable/stackable"));
-    private static final TagKey<net.minecraft.world.item.Item> HARVEST_REPLANT_ITEMS = TagKey.create(
+    private static final TagKey<Item> HARVEST_REPLANT_ITEMS = TagKey.create(
             Registries.ITEM, AcademyCraft.academy("darkmatter_harvestable/replant_items"));
     private static final Map<UUID, Long> TELEPORT_SUPPRESSED_UNTIL = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> MAGNETIC_UNTIL = new ConcurrentHashMap<>();
 
-    private DarkmatterModifierRuntime() { }
+    private DarkmatterModifierRuntime() {
+    }
 
     public static void applyMelee(ServerPlayer attacker, LivingEntity target, ItemStack weapon) {
         if (!usable(weapon) || !DarkmatterTargeting.isAttackableBy(attacker, target)) return;
@@ -108,8 +112,8 @@ public final class DarkmatterModifierRuntime {
         var freezing = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.FREEZING);
         if (freezing > 0) {
             target.setTicksFrozen(Math.max(target.getTicksFrozen(), 80 + freezing * 60));
-            target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    net.minecraft.world.effect.MobEffects.SLOWNESS, 40 + freezing * 40,
+            target.addEffect(new MobEffectInstance(
+                    MobEffects.SLOWNESS, 40 + freezing * 40,
                     Math.max(0, freezing - 1)));
         }
         var burning = DarkmatterItemUtil.modifierLevel(weapon, DarkmatterModifiers.BURNING);
@@ -233,7 +237,8 @@ public final class DarkmatterModifierRuntime {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        private Events() { }
+        private Events() {
+        }
 
         @SubscribeEvent
         public static void onTeleport(EntityTeleportEvent event) {
@@ -277,7 +282,7 @@ public final class DarkmatterModifierRuntime {
             if (DarkmatterItemUtil.modifierLevel(held, DarkmatterModifiers.SHEAR) <= 0
                     || !DarkmatterItemUtil.isOperational(held)
                     || !shearable.readyForShearing()) return;
-            shearable.shear((ServerLevel) player.level(), SoundSource.PLAYERS, held);
+            shearable.shear(player.level(), SoundSource.PLAYERS, held);
             damageForUse(player, held, event.getHand(), 1);
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.SUCCESS);
@@ -294,14 +299,15 @@ public final class DarkmatterModifierRuntime {
                     event.getPos(), harvest, event.getHitVec());
             if (!changed && till > 0) {
                 var radius = Math.max(0, till - 1);
-                for (var x = -radius; x <= radius; x++) for (var z = -radius; z <= radius; z++) {
-                    var pos = event.getPos().offset(x, 0, z);
-                    var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP,
-                            pos, false);
-                    var result = net.minecraft.world.item.Items.NETHERITE_HOE.useOn(
-                            new UseOnContext(player, event.getHand(), hit));
-                    changed |= result.consumesAction();
-                }
+                for (var x = -radius; x <= radius; x++)
+                    for (var z = -radius; z <= radius; z++) {
+                        var pos = event.getPos().offset(x, 0, z);
+                        var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP,
+                                pos, false);
+                        var result = Items.NETHERITE_HOE.useOn(
+                                new UseOnContext(player, event.getHand(), hit));
+                        changed |= result.consumesAction();
+                    }
             }
             if (changed) {
                 event.setCanceled(true);
@@ -370,7 +376,7 @@ public final class DarkmatterModifierRuntime {
                 shape, DarkmatterItemUtil.effectBetaPower(source));
         var armor = target.getAttribute(Attributes.ARMOR);
         if (armor == null || penetration <= 0.0f) {
-            DarkmatterTargeting.hurt((ServerLevel) owner.level(), target,
+            DarkmatterTargeting.hurt(owner.level(), target,
                     SkillDamageSource.of(owner, Skills.DARKMATTER_SHAPING.get()), damage);
             return;
         }
@@ -381,7 +387,7 @@ public final class DarkmatterModifierRuntime {
                 -Math.clamp(penetration, 0.0f, 0.50f),
                 AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         try {
-            DarkmatterTargeting.hurt((ServerLevel) owner.level(), target,
+            DarkmatterTargeting.hurt(owner.level(), target,
                     SkillDamageSource.of(owner, Skills.DARKMATTER_SHAPING.get()), damage);
         } finally {
             armor.removeModifier(PROJECTILE_PENETRATION_ID);
@@ -390,62 +396,63 @@ public final class DarkmatterModifierRuntime {
     }
 
     private static boolean harvest(ServerPlayer player, ItemStack held,
-                                   net.minecraft.world.InteractionHand hand, BlockPos center,
+                                   InteractionHand hand, BlockPos center,
                                    int level, BlockHitResult originalHit) {
         var changed = false;
         var radius = level;
-        var world = (ServerLevel) player.level();
-        for (var x = -radius; x <= radius; x++) for (var z = -radius; z <= radius; z++) {
-            var pos = center.offset(x, 0, z);
-            var state = world.getBlockState(pos);
-            if (state.is(INTERACT_HARVESTABLES)) {
-                changed |= state.useWithoutItem(world, player,
-                        new BlockHitResult(Vec3.atCenterOf(pos), originalHit.getDirection(),
-                                pos, false)).consumesAction();
-                continue;
-            }
-            if (state.is(STACKABLE_HARVESTABLES)) {
-                var bottom = pos;
-                while (world.getBlockState(bottom.below()).is(STACKABLE_HARVESTABLES)) {
-                    bottom = bottom.below();
+        var world = player.level();
+        for (var x = -radius; x <= radius; x++)
+            for (var z = -radius; z <= radius; z++) {
+                var pos = center.offset(x, 0, z);
+                var state = world.getBlockState(pos);
+                if (state.is(INTERACT_HARVESTABLES)) {
+                    changed |= state.useWithoutItem(world, player,
+                            new BlockHitResult(Vec3.atCenterOf(pos), originalHit.getDirection(),
+                                    pos, false)).consumesAction();
+                    continue;
                 }
-                var second = bottom.above();
-                if (world.getBlockState(second).is(STACKABLE_HARVESTABLES)) {
-                    changed |= player.gameMode.destroyBlock(second);
+                if (state.is(STACKABLE_HARVESTABLES)) {
+                    var bottom = pos;
+                    while (world.getBlockState(bottom.below()).is(STACKABLE_HARVESTABLES)) {
+                        bottom = bottom.below();
+                    }
+                    var second = bottom.above();
+                    if (world.getBlockState(second).is(STACKABLE_HARVESTABLES)) {
+                        changed |= player.gameMode.destroyBlock(second);
+                    }
+                    continue;
                 }
-                continue;
+                var crop = state.getBlock() instanceof CropBlock cropBlock && cropBlock.isMaxAge(state);
+                if (!(crop || state.is(ADDITIONAL_HARVESTABLE_CROPS)
+                        || state.is(BlockTags.CROPS))) continue;
+                if (!player.gameMode.destroyBlock(pos)) continue;
+                changed = true;
+                if (consumeNearbySeed(world, pos)) {
+                    world.setBlock(pos, crop
+                            ? ((CropBlock) state.getBlock()).getStateForAge(0)
+                            : state.getBlock().defaultBlockState(), 3);
+                }
             }
-            var crop = state.getBlock() instanceof CropBlock cropBlock && cropBlock.isMaxAge(state);
-            if (!(crop || state.is(ADDITIONAL_HARVESTABLE_CROPS)
-                    || state.is(BlockTags.CROPS))) continue;
-            if (!player.gameMode.destroyBlock(pos)) continue;
-            changed = true;
-            if (consumeNearbySeed(world, pos)) {
-                world.setBlock(pos, crop
-                        ? ((CropBlock) state.getBlock()).getStateForAge(0)
-                        : state.getBlock().defaultBlockState(), 3);
-            }
-        }
         if (changed) damageForUse(player, held, hand, 1);
         return changed;
     }
 
     private static boolean damageForUse(ServerPlayer player, ItemStack stack,
-                                        net.minecraft.world.InteractionHand hand, int amount) {
+                                        InteractionHand hand, int amount) {
         if (DarkmatterItemUtil.isNativeEquipment(stack)) {
             return DarkmatterItemUtil.damageIntegrity(stack, amount / 12_000.0f);
         }
         // Coatings also support normally indestructible targets. Such targets keep their
         // vanilla durability semantics while still receiving the configured active effect.
         if (!stack.isDamageableItem()) return true;
-        stack.hurtAndBreak(amount, player, hand == net.minecraft.world.InteractionHand.MAIN_HAND
+        stack.hurtAndBreak(amount, player, hand == InteractionHand.MAIN_HAND
                 ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
         return true;
     }
 
     private static boolean consumeNearbySeed(ServerLevel level, BlockPos pos) {
         for (var item : level.getEntitiesOfClass(ItemEntity.class,
-                new net.minecraft.world.phys.AABB(pos).inflate(1.5), entity ->
+                new AABB(pos).inflate(1.5), entity ->
                         entity.isAlive() && entity.getItem().is(HARVEST_REPLANT_ITEMS))) {
             item.getItem().shrink(1);
             if (item.getItem().isEmpty()) item.discard();
@@ -484,7 +491,7 @@ public final class DarkmatterModifierRuntime {
     }
 
     private static void replaceAttribute(ServerPlayer player,
-                                         net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute,
+                                         Holder<Attribute> attribute,
                                          Identifier id, double amount,
                                          AttributeModifier.Operation operation) {
         var instance = player.getAttribute(attribute);
@@ -497,7 +504,7 @@ public final class DarkmatterModifierRuntime {
 
     private static void attractItems(ServerPlayer player) {
         var range = 5.0;
-        for (var item : ((ServerLevel) player.level()).getEntitiesOfClass(ItemEntity.class,
+        for (var item : player.level().getEntitiesOfClass(ItemEntity.class,
                 player.getBoundingBox().inflate(range), ItemEntity::isAlive)) {
             var delta = player.getEyePosition().subtract(item.position());
             if (delta.lengthSqr() < 0.04) continue;

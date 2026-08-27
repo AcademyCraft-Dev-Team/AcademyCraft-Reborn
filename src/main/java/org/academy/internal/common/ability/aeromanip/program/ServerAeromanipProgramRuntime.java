@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Authoritative Minecraft-server adapter for Aeromanip programs. */
+/**
+ * Authoritative Minecraft-server adapter for Aeromanip programs.
+ */
 public final class ServerAeromanipProgramRuntime implements AeromanipProgramRuntime {
     public static final double MAX_QUERY_RANGE = 32.0;
     public static final int MAX_QUERY_RESULTS = 128;

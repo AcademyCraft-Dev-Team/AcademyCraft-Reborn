@@ -1,8 +1,11 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import java.util.HashSet;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CurveToMeshBuilderTest {
 
@@ -52,14 +55,14 @@ class CurveToMeshBuilderTest {
 
         // Read first vertex: position should be near origin
         var buf = mesh.vertexBuffer();
-        float px = buf.getFloat(0);
-        float py = buf.getFloat(4);
-        float pz = buf.getFloat(8);
+        var px = buf.getFloat(0);
+        var py = buf.getFloat(4);
+        var pz = buf.getFloat(8);
         // Normal should be near unit length
-        float nx = buf.getFloat(12);
-        float ny = buf.getFloat(16);
-        float nz = buf.getFloat(20);
-        float nlen = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        var nx = buf.getFloat(12);
+        var ny = buf.getFloat(16);
+        var nz = buf.getFloat(20);
+        var nlen = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
         assertEquals(1.0f, nlen, 0.01f, "Normal should be unit length");
     }
 
@@ -86,13 +89,15 @@ class CurveToMeshBuilderTest {
 
         var mesh = CurveToMeshBuilder.build(arc, 4, 1, 1, 1, 1, 0.6f);
 
-        for (int i = 0; i < mesh.indexCount(); i++) {
+        for (var i = 0; i < mesh.indexCount(); i++) {
             assertTrue(mesh.indices()[i] >= 0 && mesh.indices()[i] < mesh.vertexCount(),
                     "Index out of range: " + mesh.indices()[i]);
         }
     }
 
-    /** 互不相连的分段（不同 segment）必须各自成 run，不得被缝成一根管（顶点连接问题回归）。 */
+    /**
+     * 互不相连的分段（不同 segment）必须各自成 run，不得被缝成一根管（顶点连接问题回归）。
+     */
     @Test
     void disconnectedSegmentsAreBuiltAsSeparateRuns() {
         var arc = new ArcCurve();
@@ -109,17 +114,19 @@ class CurveToMeshBuilderTest {
         assertEquals(48, mesh.indexCount());
 
         // 前 24 个索引只引用 run0 顶点 [0,8)，后 24 个只引用 run1 顶点 [8,16)
-        for (int i = 0; i < 24; i++) {
+        for (var i = 0; i < 24; i++) {
             assertTrue(mesh.indices()[i] >= 0 && mesh.indices()[i] < 8,
                     "run0 索引越界: " + mesh.indices()[i]);
         }
-        for (int i = 24; i < 48; i++) {
+        for (var i = 24; i < 48; i++) {
             assertTrue(mesh.indices()[i] >= 8 && mesh.indices()[i] < 16,
                     "run1 索引越界: " + mesh.indices()[i]);
         }
     }
 
-    /** CurveGenerator 的每根分支应获得独立 segment id → 建管时分成独立 run。 */
+    /**
+     * CurveGenerator 的每根分支应获得独立 segment id → 建管时分成独立 run。
+     */
     @Test
     void generatorAssignsDistinctSegmentPerBranch() {
         var arc = new ArcCurve();
@@ -128,8 +135,8 @@ class CurveToMeshBuilderTest {
                 1, 2, 1.57f, 0.3f, 0.35f, 0.6f, 2.0f);
 
         // 主弧 + 2 分支 = 3 个不同 segment
-        var segments = new java.util.HashSet<Integer>();
-        for (int i = 0; i < arc.size(); i++) {
+        var segments = new HashSet<Integer>();
+        for (var i = 0; i < arc.size(); i++) {
             segments.add(arc.segment(i));
         }
         assertEquals(3, segments.size());

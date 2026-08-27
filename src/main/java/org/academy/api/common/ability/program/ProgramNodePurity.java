@@ -5,7 +5,9 @@ package org.academy.api.common.ability.program;
  */
 public enum ProgramNodePurity {
     PURE,
-    /** Mutates only the current program session, never world state. */
+    /**
+     * Mutates only the current program session, never world state.
+     */
     STATE,
     WORLD_QUERY,
     ACTION,

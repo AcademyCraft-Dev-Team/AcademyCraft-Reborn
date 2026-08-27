@@ -22,25 +22,21 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
-import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowReverse;
-import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAbyss;
-import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
-import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
+import org.academy.internal.common.ability.accelerator.skills.lv5.*;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
-import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
-import org.academy.internal.coremod.ClassPointerProtectionManager;
-import org.academy.internal.coremod.ProtectionBackend;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
+import org.academy.internal.coremod.ClassPointerProtectionManager;
+import org.academy.internal.coremod.ProtectionBackend;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -385,7 +381,6 @@ public abstract class MixinLivingEntity {
         if (EntityControlApi.handleHeal(entity, amount)
                 || CrossingTheAbyss.Server.handleHeal(entity, amount)) {
             ci.cancel();
-            return;
         }
     }
 

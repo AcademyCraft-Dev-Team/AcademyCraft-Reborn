@@ -2,6 +2,7 @@ package org.academy.api.client.gui.msdf.font;
 
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
+import org.academy.api.client.gui.environment.UiEnvironment;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.util.freetype.FT_Face;
@@ -75,7 +76,7 @@ public class MsdfFontService {
 
     private static ByteBuffer loadResourceToBuffer(Identifier identifier) {
         try {
-            var is = org.academy.api.client.gui.environment.UiEnvironment.get()
+            var is = UiEnvironment.get()
                     .openResource(identifier.getNamespace(), identifier.getPath());
             if (is == null) throw new IOException("Resource not found: " + identifier);
             try (is) {

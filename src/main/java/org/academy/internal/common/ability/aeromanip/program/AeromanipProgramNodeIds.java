@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.aeromanip.program;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 
-/** Stable identifiers for Aeromanip program nodes. */
+/**
+ * Stable identifiers for Aeromanip program nodes.
+ */
 public final class AeromanipProgramNodeIds {
     public static final Identifier CASTER = id("target/caster");
     public static final Identifier LOOK_TARGET = id("target/look_target");

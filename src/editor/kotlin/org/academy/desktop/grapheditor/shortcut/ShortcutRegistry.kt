@@ -29,7 +29,7 @@ class ShortcutRegistry {
     fun handle() {
         for (entry in entries) {
             if (!ImGui.isKeyPressed(entry.key)) continue
-            if (ImGui.getIO().getKeyMods() == entry.mods) entry.action()
+            if (ImGui.getIO().keyMods == entry.mods) entry.action()
         }
     }
 

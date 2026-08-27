@@ -9,24 +9,39 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-/** Server-validated, persistable blueprint. Values are snapshots and never follow the owner after spawning. */
+/**
+ * Server-validated, persistable blueprint. Values are snapshots and never follow the owner after spawning.
+ */
 public final class DarkmatterCreatureBlueprint {
     public static final int VERSION = 1;
 
-    @SerializedName("version") private int version = VERSION;
-    @SerializedName("name") private String name = "Blueprint";
-    @SerializedName("investment") private int investment = 5;
-    @SerializedName("head") private String head = DarkmatterCreatureRegistries.HEAD_JAW.toString();
-    @SerializedName("torso") private String torso = DarkmatterCreatureRegistries.TORSO_WALK.toString();
-    @SerializedName("limbs") private String limbs = DarkmatterCreatureRegistries.LIMBS_GUARD.toString();
-    @SerializedName("additional") private String additional = DarkmatterCreatureRegistries.ADDITIONAL_NONE.toString();
-    @SerializedName("headAlpha") private int headAlpha = 25;
-    @SerializedName("torsoAlpha") private int torsoAlpha = 25;
-    @SerializedName("limbsAlpha") private int limbsAlpha = 25;
-    @SerializedName("additionalAlpha") private int additionalAlpha = 25;
-    @SerializedName("modules") private List<String> modules = new ArrayList<>();
+    @SerializedName("version")
+    private final int version = VERSION;
+    @SerializedName("name")
+    private String name = "Blueprint";
+    @SerializedName("investment")
+    private int investment = 5;
+    @SerializedName("head")
+    private String head = DarkmatterCreatureRegistries.HEAD_JAW.toString();
+    @SerializedName("torso")
+    private String torso = DarkmatterCreatureRegistries.TORSO_WALK.toString();
+    @SerializedName("limbs")
+    private String limbs = DarkmatterCreatureRegistries.LIMBS_GUARD.toString();
+    @SerializedName("additional")
+    private String additional = DarkmatterCreatureRegistries.ADDITIONAL_NONE.toString();
+    @SerializedName("headAlpha")
+    private int headAlpha = 25;
+    @SerializedName("torsoAlpha")
+    private int torsoAlpha = 25;
+    @SerializedName("limbsAlpha")
+    private int limbsAlpha = 25;
+    @SerializedName("additionalAlpha")
+    private int additionalAlpha = 25;
+    @SerializedName("modules")
+    private List<String> modules = new ArrayList<>();
 
-    public DarkmatterCreatureBlueprint() { }
+    public DarkmatterCreatureBlueprint() {
+    }
 
     public DarkmatterCreatureBlueprint(String name, int investment, String head, String torso,
                                        String limbs, String additional, int headAlpha, int torsoAlpha,
@@ -97,7 +112,10 @@ public final class DarkmatterCreatureBlueprint {
                 .filter(type -> type.slot() == slot).isEmpty()) errors.add(field);
     }
 
-    public int moduleBudget() { return Math.max(0, investment / 5); }
+    public int moduleBudget() {
+        return Math.max(0, investment / 5);
+    }
+
     public int moduleCost() {
         if (modules == null) return 0;
         var seen = new LinkedHashSet<String>();
@@ -152,18 +170,53 @@ public final class DarkmatterCreatureBlueprint {
                 Math.max(limbsAlpha, additionalAlpha)));
     }
 
-    public int version() { return version; }
-    public String name() { return sanitizeName(name); }
-    public int investment() { return investment; }
-    public String head() { return head; }
-    public String torso() { return torso; }
-    public String limbs() { return limbs; }
-    public String additional() { return additional; }
-    public int headAlpha() { return headAlpha; }
-    public int torsoAlpha() { return torsoAlpha; }
-    public int limbsAlpha() { return limbsAlpha; }
-    public int additionalAlpha() { return additionalAlpha; }
-    public List<String> modules() { return modules == null ? List.of() : List.copyOf(modules); }
+    public int version() {
+        return version;
+    }
+
+    public String name() {
+        return sanitizeName(name);
+    }
+
+    public int investment() {
+        return investment;
+    }
+
+    public String head() {
+        return head;
+    }
+
+    public String torso() {
+        return torso;
+    }
+
+    public String limbs() {
+        return limbs;
+    }
+
+    public String additional() {
+        return additional;
+    }
+
+    public int headAlpha() {
+        return headAlpha;
+    }
+
+    public int torsoAlpha() {
+        return torsoAlpha;
+    }
+
+    public int limbsAlpha() {
+        return limbsAlpha;
+    }
+
+    public int additionalAlpha() {
+        return additionalAlpha;
+    }
+
+    public List<String> modules() {
+        return modules == null ? List.of() : List.copyOf(modules);
+    }
 
     private static String sanitizeName(String raw) {
         if (raw == null || raw.isBlank()) return "Blueprint";

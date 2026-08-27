@@ -1,10 +1,6 @@
 package org.academy.api.client.render.vfxgraph;
 
 import com.mojang.blaze3d.textures.GpuTextureView;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
@@ -22,6 +18,11 @@ import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.VfxSimulator;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 运行时 VFX 图效果（自持）：持有模拟器 + [VfxGraphRenderer]，
@@ -58,7 +59,9 @@ public final class GraphEffect {
         this.simulator = new VfxSimulator(sourceNodes, registry, 0L, parameters);
     }
 
-    /** 容器模型构造（M27）：VfxSystem → VfxSystemSimulator（批次 flow + 数据流算子）。 */
+    /**
+     * 容器模型构造（M27）：VfxSystem → VfxSystemSimulator（批次 flow + 数据流算子）。
+     */
     public static GraphEffect container(VfxSystem system, VfxBlockRegistry blockRegistry,
                                         VfxOperatorRegistry operatorRegistry, List<GraphParameter> parameters) {
         var effect = new GraphEffect(system, blockRegistry, operatorRegistry, parameters);
@@ -74,7 +77,9 @@ public final class GraphEffect {
         this.systemSimulator = new VfxSystemSimulator(system, blockRegistry, operatorRegistry, 0L, parameters);
     }
 
-    /** 容器系统全部输出块 → RenderSpec 列表（几何由 output 块类型派生，着色器/混合/层由图数据；M21n 多输出）。 */
+    /**
+     * 容器系统全部输出块 → RenderSpec 列表（几何由 output 块类型派生，着色器/混合/层由图数据；M21n 多输出）。
+     */
     private static List<RenderSpec> systemSpecs(VfxSystem system) {
         var out = new ArrayList<RenderSpec>();
         for (var context : system.contexts()) {
@@ -88,17 +93,23 @@ public final class GraphEffect {
         return out.isEmpty() ? List.of(RenderSpec.DEFAULT) : List.copyOf(out);
     }
 
-    /** 全部输出规格（M21n 多输出：分层外观由各 spec 的 layer 过滤表达）。 */
+    /**
+     * 全部输出规格（M21n 多输出：分层外观由各 spec 的 layer 过滤表达）。
+     */
     public List<RenderSpec> specs() {
         return specs;
     }
 
-    /** 主输出规格（首个，兼容单输出调用方）。 */
+    /**
+     * 主输出规格（首个，兼容单输出调用方）。
+     */
     public RenderSpec spec() {
-        return specs.get(0);
+        return specs.getFirst();
     }
 
-    /** 覆盖某节点的某属性值（下次 tick 生效，重建模拟器）。 */
+    /**
+     * 覆盖某节点的某属性值（下次 tick 生效，重建模拟器）。
+     */
     public void setParameter(String nodeId, String propertyId, String value) {
         overrides.put(nodeId + ':' + propertyId, value);
         dirty = true;
@@ -132,13 +143,17 @@ public final class GraphEffect {
         return systemSimulator != null ? systemSimulator.buffer() : simulator.buffer();
     }
 
-    /** 本帧活电弧缓冲（M22，ADR-026：路径驱动 spine，Tube 渲染）；扁平模型无电弧返回 null。 */
+    /**
+     * 本帧活电弧缓冲（M22，ADR-026：路径驱动 spine，Tube 渲染）；扁平模型无电弧返回 null。
+     */
     public @Nullable ArcBuffer arcBuffer() {
         return systemSimulator != null ? systemSimulator.arcBuffer() : null;
     }
 
-    /** 自持渲染（编辑器路径：私有渲染器 + 恒等变换 + 清屏）。 */
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth, GraphCamera camera) {
+    /**
+     * 自持渲染（编辑器路径：私有渲染器 + 恒等变换 + 清屏）。
+     */
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera) {
         render(target, depth, camera, null, true, WorldTransform.identity(), false);
     }
 
@@ -185,10 +200,10 @@ public final class GraphEffect {
     }
 
     private GraphNode applyOverrides(GraphNode node) {
-        boolean any = false;
+        var any = false;
         var props = new HashMap<>(node.properties());
         for (var entry : overrides.entrySet()) {
-            int colon = entry.getKey().indexOf(':');
+            var colon = entry.getKey().indexOf(':');
             if (colon < 0) continue;
             if (entry.getKey().substring(0, colon).equals(node.id())) {
                 props.put(entry.getKey().substring(colon + 1), entry.getValue());

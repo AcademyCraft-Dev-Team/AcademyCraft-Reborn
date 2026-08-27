@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.widget
 
+import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.GlyphDrawCommand
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
@@ -7,7 +8,6 @@ import org.academy.api.client.gui.msdf.layout.MsdfTextProcessor.layout
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.util.GlyphCommandGenerator
 import kotlin.math.min
-import net.minecraft.util.Mth
 
 open class LabelWidget(text: String) : AbstractWidget() {
     var baseFontSize: Float = DEFAULT_BASE_FONT_SIZE
@@ -28,7 +28,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
                 invalidate()
             }
         }
-    protected var dropShadow: Boolean = false
+    var dropShadow: Boolean = false
     private var displayText: String = text
     private var measuredText: String? = null
     private var measuredFontSize = 0f
@@ -74,7 +74,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
     }
 
     private fun ensureMeasured(text: String) {
-        if (text !== measuredText || baseFontSize != measuredFontSize) {
+        if (text != measuredText || baseFontSize != measuredFontSize) {
             measuredText = text
             measuredFontSize = baseFontSize
             measuredTextWidth = getTextWidth(text, baseFontSize)

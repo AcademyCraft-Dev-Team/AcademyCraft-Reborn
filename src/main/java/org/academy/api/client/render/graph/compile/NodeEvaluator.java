@@ -1,9 +1,10 @@
 package org.academy.api.client.render.graph.compile;
 
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.type.Value;
+
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * 节点求值器（契约）。领域模块（shader/vfx）提供，用于常量折叠。

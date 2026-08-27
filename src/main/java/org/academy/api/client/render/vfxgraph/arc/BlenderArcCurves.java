@@ -11,14 +11,18 @@ public final class BlenderArcCurves {
     private BlenderArcCurves() {
     }
 
-    /** 弧拱成长曲线：输入 age/生命周期(0..1)，输出控制柄上推乘数。端点近平展 → 寿命末满拱。 */
+    /**
+     * 弧拱成长曲线：输入 age/生命周期(0..1)，输出控制柄上推乘数。端点近平展 → 寿命末满拱。
+     */
     public static final float[][] ARCH_GROWTH = {
             {0.000f, 0.112f},
             {0.677f, 0.394f},
             {1.000f, 1.000f},
     };
 
-    /** 管半径沿弧剖面：端粗 0.93 → 中细 0.475 → 端粗 0.925（复刻实测逐环半径）。 */
+    /**
+     * 管半径沿弧剖面：端粗 0.93 → 中细 0.475 → 端粗 0.925（复刻实测逐环半径）。
+     */
     public static final float[][] RADIUS_PROFILE = {
             {0.000f, 0.931f},
             {0.186f, 0.650f},
@@ -27,22 +31,28 @@ public final class BlenderArcCurves {
             {1.000f, 0.925f},
     };
 
-    /** 管半径随 age 衰减：出生 1.0 → 临终 0（弧临死收缩）。 */
+    /**
+     * 管半径随 age 衰减：出生 1.0 → 临终 0（弧临死收缩）。
+     */
     public static final float[][] RADIUS_AGE = {
             {0.000f, 1.000f},
             {0.695f, 0.763f},
             {1.000f, 0.000f},
     };
 
-    /** 粒子缩放随生命衰减：(0,1.0) → (0.659,0.769) → (1,0)。 */
+    /**
+     * 粒子缩放随生命衰减：(0,1.0) → (0.659,0.769) → (1,0)。
+     */
     public static final float[][] PARTICLE_LIFE = {
             {0.000f, 1.000f},
             {0.659f, 0.769f},
             {1.000f, 0.000f},
     };
 
-    /** 表面电弧噪声乘数 pa 沿弧剖面（Float Curve 无名，2026-08-23 从 .blend 提取）：脉冲——
-     *  两端 0（噪声位移在端点消失，配合 Endpoint 吸附）、中段满幅 1。逐点再 × Random[0.4..2.2]。 */
+    /**
+     * 表面电弧噪声乘数 pa 沿弧剖面（Float Curve 无名，2026-08-23 从 .blend 提取）：脉冲——
+     * 两端 0（噪声位移在端点消失，配合 Endpoint 吸附）、中段满幅 1。逐点再 × Random[0.4..2.2]。
+     */
     public static final float[][] NOISE_PA = {
             {0.000f, 0.000f},
             {0.100f, 0.000f},
@@ -52,11 +62,15 @@ public final class BlenderArcCurves {
             {1.000f, 0.000f},
     };
 
-    /** 接触电弧噪声乘数 shapep 沿弧剖面（Float Curve.007，同 pa 脉冲）。 */
+    /**
+     * 接触电弧噪声乘数 shapep 沿弧剖面（Float Curve.007，同 pa 脉冲）。
+     */
     public static final float[][] CONTACT_SHAPEP = NOISE_PA;
 
-    /** 电弧亮度随 age（Float Curve.004）：Light = 曲线(age/寿命)×亮度 + 0.33×亮度 → 先亮后灭闪烁。
-     *  (0,0)→(0.123,0.275)→(0.514,0.9125)→(0.796,0.594)→(1,0)。 */
+    /**
+     * 电弧亮度随 age（Float Curve.004）：Light = 曲线(age/寿命)×亮度 + 0.33×亮度 → 先亮后灭闪烁。
+     * (0,0)→(0.123,0.275)→(0.514,0.9125)→(0.796,0.594)→(1,0)。
+     */
     public static final float[][] LIGHT = {
             {0.000f, 0.000f},
             {0.1227f, 0.275f},
@@ -65,14 +79,18 @@ public final class BlenderArcCurves {
             {1.000f, 0.000f},
     };
 
-    /** 接触电弧半径/发光随生命衰减（Float Curve.009）：接触弧管半径与 TLight 共用此曲线。 */
+    /**
+     * 接触电弧半径/发光随生命衰减（Float Curve.009）：接触弧管半径与 TLight 共用此曲线。
+     */
     public static final float[][] CONTACT_RADIUS_AGE = {
             {0.000f, 1.000f},
             {0.7136f, 0.7438f},
             {1.000f, 0.000f},
     };
 
-    /** 表面电弧寿命沿弧变化（Float Curve.006）：删除阈值 = 曲线(factor)×3 + 20 帧（寿命沿弧变化）。 */
+    /**
+     * 表面电弧寿命沿弧变化（Float Curve.006）：删除阈值 = 曲线(factor)×3 + 20 帧（寿命沿弧变化）。
+     */
     public static final float[][] SURFACE_LIFE_VAR = {
             {0.000f, 0.000f},
             {0.1318f, 0.1875f},
@@ -81,7 +99,9 @@ public final class BlenderArcCurves {
             {1.000f, 0.000f},
     };
 
-    /** 接触电弧寿命沿弧变化（Float Curve.008）：删除阈值 = 曲线(factor)×3 + 6 帧。 */
+    /**
+     * 接触电弧寿命沿弧变化（Float Curve.008）：删除阈值 = 曲线(factor)×3 + 6 帧。
+     */
     public static final float[][] CONTACT_LIFE_VAR = {
             {0.0045f, 0.0125f},
             {0.4955f, 0.7625f},
@@ -94,12 +114,12 @@ public final class BlenderArcCurves {
     public static float sample(float[][] points, float x) {
         if (points.length == 0) return 0f;
         if (x <= points[0][0]) return points[0][1];
-        int n = points.length;
+        var n = points.length;
         if (x >= points[n - 1][0]) return points[n - 1][1];
-        for (int i = 0; i < n - 1; i++) {
+        for (var i = 0; i < n - 1; i++) {
             if (x >= points[i][0] && x <= points[i + 1][0]) {
-                float span = points[i + 1][0] - points[i][0];
-                float t = span <= 1e-6f ? 0f : (x - points[i][0]) / span;
+                var span = points[i + 1][0] - points[i][0];
+                var t = span <= 1e-6f ? 0f : (x - points[i][0]) / span;
                 return points[i][1] + (points[i + 1][1] - points[i][1]) * t;
             }
         }

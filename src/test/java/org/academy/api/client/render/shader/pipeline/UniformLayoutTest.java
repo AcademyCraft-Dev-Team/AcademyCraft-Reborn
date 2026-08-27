@@ -1,14 +1,15 @@
 package org.academy.api.client.render.shader.pipeline;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.util.List;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class UniformLayoutTest {
     @Test
@@ -16,8 +17,8 @@ class UniformLayoutTest {
         var layout = new UniformLayout(List.of());
         var entries = layout.entries();
         assertEquals(1, entries.size());
-        assertEquals("Time", entries.get(0).name());
-        assertEquals(0, entries.get(0).offset());
+        assertEquals("Time", entries.getFirst().name());
+        assertEquals(0, entries.getFirst().offset());
     }
 
     @Test
@@ -67,8 +68,8 @@ class UniformLayoutTest {
         ));
         var samplers = layout.samplers();
         assertEquals(1, samplers.size());
-        assertEquals("Sampler0", samplers.get(0).uniformName());
-        assertEquals("minecraft:textures/block/stone.png", samplers.get(0).identifier());
+        assertEquals("Sampler0", samplers.getFirst().uniformName());
+        assertEquals("minecraft:textures/block/stone.png", samplers.getFirst().identifier());
     }
 
     @Test

@@ -1,23 +1,19 @@
 package org.academy.api.client.render.vfxgraph.operator;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
 import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.registry.PropertySpec;
-import org.academy.api.client.render.graph.type.CurveSampler;
-import org.academy.api.client.render.graph.type.GradientSampler;
-import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.graph.type.*;
 import org.academy.api.client.render.vfxgraph.model.ParticleAttribute;
 import org.academy.api.client.render.vfxgraph.model.VfxOperatorNode;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 /**
  * VFX 算子目录（M25）：注册算子元数据（核心 NodeRegistry，含端口）与算子工厂（VfxOperatorRegistry）。
@@ -34,7 +30,7 @@ public final class VfxOperators {
         // ==================== attr-read（逐粒子） ====================
 
         for (var attribute : ParticleAttribute.values()) {
-            var typeId = "vfx.op.attr_" + attribute.name().toLowerCase(java.util.Locale.ROOT);
+            var typeId = "vfx.op.attr_" + attribute.name().toLowerCase(Locale.ROOT);
             var type = new NodeType(typeId, "attribute", "Attribute " + attribute.name(),
                     List.of(out("out", "Out", attribute.valueType(), defaultOf(attribute))),
                     List.of());
@@ -51,7 +47,7 @@ public final class VfxOperators {
                 List.of(out("out", "Out", ValueType.FLOAT, Value.of(0f))),
                 List.of(prop("value", "Value", ValueType.FLOAT, Value.of(0f)))));
         ops.register("vfx.op.constant", (node, inputs) -> ctx -> {
-            float value = propFloat(node, "value", 0f);
+            var value = propFloat(node, "value", 0f);
             // 常量：编译期可折叠，但保持统一求值路径
             return Value.of(value);
         });
@@ -63,8 +59,8 @@ public final class VfxOperators {
                 List.of(prop("param", "Parameter", ValueType.STRING, Value.string("")),
                         prop("value", "Value", ValueType.FLOAT, Value.of(0f)))));
         ops.register("vfx.op.param_float", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            float fallback = propFloat(node, "value", 0f);
+            var param = propString(node, "param", "");
+            var fallback = propFloat(node, "value", 0f);
             return Value.of(ctx.simContext() == null ? fallback : ctx.simContext().paramFloat(param, fallback));
         });
 
@@ -75,10 +71,10 @@ public final class VfxOperators {
                         prop("y", "Y", ValueType.FLOAT, Value.of(0f)),
                         prop("z", "Z", ValueType.FLOAT, Value.of(0f)))));
         ops.register("vfx.op.param_vec3", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            float fx = propFloat(node, "x", 0f);
-            float fy = propFloat(node, "y", 0f);
-            float fz = propFloat(node, "z", 0f);
+            var param = propString(node, "param", "");
+            var fx = propFloat(node, "x", 0f);
+            var fy = propFloat(node, "y", 0f);
+            var fz = propFloat(node, "z", 0f);
             if (ctx.simContext() == null) return Value.of(new Vector3f(fx, fy, fz));
             return Value.of(new Vector3f(
                     ctx.simContext().paramVec3(param, 0, fx),
@@ -94,11 +90,11 @@ public final class VfxOperators {
                         prop("b", "B", ValueType.FLOAT, Value.of(1f)),
                         prop("a", "A", ValueType.FLOAT, Value.of(1f)))));
         ops.register("vfx.op.param_color", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            float fr = propFloat(node, "r", 1f);
-            float fg = propFloat(node, "g", 1f);
-            float fb = propFloat(node, "b", 1f);
-            float fa = propFloat(node, "a", 1f);
+            var param = propString(node, "param", "");
+            var fr = propFloat(node, "r", 1f);
+            var fg = propFloat(node, "g", 1f);
+            var fb = propFloat(node, "b", 1f);
+            var fa = propFloat(node, "a", 1f);
             if (ctx.simContext() == null) return Value.color(fr, fg, fb, fa);
             return Value.color(
                     ctx.simContext().paramColor(param, 0, fr),
@@ -121,10 +117,10 @@ public final class VfxOperators {
                         out("out", "Out", ValueType.FLOAT, Value.of(0f))),
                 List.of(prop("curve", "Curve", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.curve", (node, inputs) -> {
-            String curveId = propString(node, "curve", "");
+            var curveId = propString(node, "curve", "");
             var tIn = inputs.get("t");
             return ctx -> {
-                float t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
+                var t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
                         : ctx.simContext() != null ? ctx.simContext().time() : 0f;
                 var curve = ctx.simContext() != null ? ctx.simContext().curve(curveId) : null;
                 if (curve == null) return Value.of(0f);
@@ -137,10 +133,10 @@ public final class VfxOperators {
                         out("out", "Out", ValueType.COLOR, Value.color(1f, 1f, 1f, 1f))),
                 List.of(prop("gradient", "Gradient", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.gradient", (node, inputs) -> {
-            String gradientId = propString(node, "gradient", "");
+            var gradientId = propString(node, "gradient", "");
             var tIn = inputs.get("t");
             return ctx -> {
-                float t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
+                var t = tIn != null ? asFloat(tIn.eval(ctx), 0f)
                         : ctx.simContext() != null ? ctx.simContext().time() : 0f;
                 var gradient = ctx.simContext() != null ? ctx.simContext().gradient(gradientId) : null;
                 if (gradient == null) return Value.color(1f, 1f, 1f, 1f);
@@ -152,14 +148,14 @@ public final class VfxOperators {
         // ==================== param curve/gradient（复制黑板源到引用参数 id，供 over-life 按 param 引用采样） ====================
 
         metadata.register(new NodeType("vfx.op.param_curve", "param", "Curve Parameter",
-                List.of(out("out", "Out", ValueType.CURVE, Value.curve(new org.academy.api.client.render.graph.type.Curve(
-                        List.of(new org.academy.api.client.render.graph.type.Curve.Keyframe(0f, 0f, 0f, 0f,
-                                org.academy.api.client.render.graph.type.Curve.Interpolation.LINEAR)))))),
+                List.of(out("out", "Out", ValueType.CURVE, Value.curve(new Curve(
+                        List.of(new Curve.Keyframe(0f, 0f, 0f, 0f,
+                                Curve.Interpolation.LINEAR)))))),
                 List.of(prop("param", "Parameter", ValueType.STRING, Value.string("")),
                         prop("curve", "Source Curve", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.param_curve", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            var empty = Value.curve(new org.academy.api.client.render.graph.type.Curve(List.of()));
+            var param = propString(node, "param", "");
+            var empty = Value.curve(new Curve(List.of()));
             if (param.isEmpty() || ctx.simContext() == null) return empty;
             var existing = ctx.simContext().curve(param);
             if (existing != null) return Value.curve(existing);
@@ -172,14 +168,15 @@ public final class VfxOperators {
         });
 
         metadata.register(new NodeType("vfx.op.param_gradient", "param", "Gradient Parameter",
-                List.of(out("out", "Out", ValueType.GRADIENT, Value.gradient(new org.academy.api.client.render.graph.type.Gradient(
-                        List.of(new org.academy.api.client.render.graph.type.Gradient.ColorStop(0f, 1f, 1f, 1f, 1f)))))),
+                List.of(out("out", "Out", ValueType.GRADIENT, Value.gradient(new Gradient(
+                        List.of(new Gradient.ColorStop(0f, 1f, 1f, 1f, 1f)))))),
                 List.of(prop("param", "Parameter", ValueType.STRING, Value.string("")),
                         prop("gradient", "Source Gradient", ValueType.STRING, Value.string("")))));
         ops.register("vfx.op.param_gradient", (node, inputs) -> ctx -> {
-            String param = propString(node, "param", "");
-            if (param.isEmpty() || ctx.simContext() == null) return Value.gradient(new org.academy.api.client.render.graph.type.Gradient(
-                    List.of(new org.academy.api.client.render.graph.type.Gradient.ColorStop(0f, 1f, 1f, 1f, 1f))));
+            var param = propString(node, "param", "");
+            if (param.isEmpty() || ctx.simContext() == null)
+                return Value.gradient(new Gradient(
+                        List.of(new Gradient.ColorStop(0f, 1f, 1f, 1f, 1f))));
             if (ctx.simContext().gradient(param) != null) {
                 return Value.gradient(ctx.simContext().gradient(param));
             }
@@ -188,8 +185,8 @@ public final class VfxOperators {
                 ctx.simContext().gradientIfAbsent(param, source);
                 return Value.gradient(source);
             }
-            return Value.gradient(new org.academy.api.client.render.graph.type.Gradient(
-                    List.of(new org.academy.api.client.render.graph.type.Gradient.ColorStop(0f, 1f, 1f, 1f, 1f))));
+            return Value.gradient(new Gradient(
+                    List.of(new Gradient.ColorStop(0f, 1f, 1f, 1f, 1f))));
         });
     }
 
@@ -216,7 +213,9 @@ public final class VfxOperators {
 
     // ==================== 辅助 ====================
 
-    /** attr-read 默认值：非粒子上下文/缓冲空时返回（匹配属性类型）。 */
+    /**
+     * attr-read 默认值：非粒子上下文/缓冲空时返回（匹配属性类型）。
+     */
     private static Value defaultOf(ParticleAttribute attribute) {
         return switch (attribute) {
             case POSITION, VELOCITY -> Value.of(new Vector3f());
@@ -238,7 +237,7 @@ public final class VfxOperators {
             case ROTATION -> Value.of(buffer.rotation(i));
             case MASS -> Value.of(buffer.mass(i));
             case SEED -> Value.of(buffer.seed(i));
-            case LAYER -> Value.of((int) buffer.layer(i));
+            case LAYER -> Value.of(buffer.layer(i));
         };
     }
 

@@ -1,7 +1,8 @@
 package org.academy.api.client.render.graph.compile;
 
-import java.util.List;
 import org.academy.api.client.render.graph.validate.GraphIssue;
+
+import java.util.List;
 
 /**
  * 图编译失败（契约）。携带全部 ERROR 级诊断。

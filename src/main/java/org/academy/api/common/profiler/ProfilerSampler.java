@@ -6,11 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ProfilerSampler {
@@ -55,8 +51,8 @@ public final class ProfilerSampler {
     }
 
     public static ThreadRef registerThread(Thread thread) {
-        long threadId = thread.threadId();
-        ThreadRef ref = threads.computeIfAbsent(threadId, id -> new ThreadRef(id, thread.getName()));
+        var threadId = thread.threadId();
+        var ref = threads.computeIfAbsent(threadId, id -> new ThreadRef(id, thread.getName()));
         trees.computeIfAbsent(threadId, id -> new SampledCallTree(id, thread.getName()));
         return ref;
     }
@@ -67,7 +63,7 @@ public final class ProfilerSampler {
     }
 
     public static void setThreadEnabled(long threadId, boolean enabled) {
-        ThreadRef ref = threads.get(threadId);
+        var ref = threads.get(threadId);
         if (ref != null) {
             ref.enabled = enabled;
         }
@@ -84,7 +80,7 @@ public final class ProfilerSampler {
             ProfilerSampler.intervalMicros = Math.max(100L, Math.min(1_000_000L, intervalMicros));
             captureStartNanos = System.nanoTime();
             resetInternal();
-            Thread thread = new Thread(ProfilerSampler::loop, "Academy Profiler Sampler");
+            var thread = new Thread(ProfilerSampler::loop, "Academy Profiler Sampler");
             thread.setDaemon(true);
             worker = thread;
             thread.start();
@@ -120,7 +116,7 @@ public final class ProfilerSampler {
 
     private static void resetInternal() {
         captureStartNanos = System.nanoTime();
-        for (SampledCallTree tree : trees.values()) {
+        for (var tree : trees.values()) {
             tree.reset();
         }
     }
@@ -138,9 +134,9 @@ public final class ProfilerSampler {
                     LOGGER.warn("Sampler iteration failed", t);
                 }
             }
-            long us = intervalMicros;
-            long sleepMs = us / 1000;
-            int sleepNs = (int) ((us % 1000) * 1000);
+            var us = intervalMicros;
+            var sleepMs = us / 1000;
+            var sleepNs = (int) ((us % 1000) * 1000);
             try {
                 Thread.sleep(sleepMs, sleepNs);
             } catch (InterruptedException e) {
@@ -151,7 +147,7 @@ public final class ProfilerSampler {
 
     private static void sampleOnce() {
         List<Long> enabledIds = new ArrayList<>();
-        for (ThreadRef ref : threads.values()) {
+        for (var ref : threads.values()) {
             if (ref.enabled) {
                 enabledIds.add(ref.id);
             }
@@ -159,23 +155,23 @@ public final class ProfilerSampler {
         if (enabledIds.isEmpty()) {
             return;
         }
-        long[] ids = enabledIds.stream().mapToLong(Long::longValue).toArray();
+        var ids = enabledIds.stream().mapToLong(Long::longValue).toArray();
         ThreadInfo[] infos;
         try {
             infos = threadBean.getThreadInfo(ids, MAX_DEPTH);
         } catch (Throwable t) {
             return;
         }
-        for (int i = 0; i < ids.length; i++) {
-            ThreadInfo info = infos[i];
+        for (var i = 0; i < ids.length; i++) {
+            var info = infos[i];
             if (info == null) {
                 continue;
             }
-            StackTraceElement[] stack = info.getStackTrace();
+            var stack = info.getStackTrace();
             if (stack.length == 0) {
                 continue;
             }
-            SampledCallTree tree = trees.get(ids[i]);
+            var tree = trees.get(ids[i]);
             if (tree != null) {
                 tree.insert(stack);
             }
@@ -184,9 +180,9 @@ public final class ProfilerSampler {
 
     public static SamplerSnapshot snapshot() {
         Map<Long, SampledThreadView> perThread = new LinkedHashMap<>();
-        for (Map.Entry<Long, SampledCallTree> entry : trees.entrySet()) {
-            SampledCallTree tree = entry.getValue();
-            long total = tree.totalSamples();
+        for (var entry : trees.entrySet()) {
+            var tree = entry.getValue();
+            var total = tree.totalSamples();
             perThread.put(entry.getKey(), new SampledThreadView(
                     entry.getKey(),
                     tree.getThreadName(),
@@ -195,8 +191,8 @@ public final class ProfilerSampler {
             ));
         }
         long totalSamples = 0;
-        for (SampledThreadView view : perThread.values()) {
-            totalSamples += view.getSamples();
+        for (var view : perThread.values()) {
+            totalSamples += view.samples();
         }
         return new SamplerSnapshot(perThread, totalSamples, elapsedSeconds());
     }
@@ -205,7 +201,7 @@ public final class ProfilerSampler {
         List<SampledCallNode> rawChildren = new ArrayList<>(node.getChildren().values());
         rawChildren.sort((a, b) -> Long.compare(b.getSamples().sum(), a.getSamples().sum()));
         List<SampledNode> children = new ArrayList<>();
-        for (SampledCallNode child : rawChildren) {
+        for (var child : rawChildren) {
             children.add(cloneNode(child, totalSamples));
         }
         return new SampledNode(

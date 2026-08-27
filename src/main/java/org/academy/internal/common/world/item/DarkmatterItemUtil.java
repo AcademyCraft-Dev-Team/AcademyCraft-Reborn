@@ -6,21 +6,14 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ArrowItem;
-import net.minecraft.world.item.BowItem;
-import net.minecraft.world.item.CrossbowItem;
-import net.minecraft.world.item.MaceItem;
-import net.minecraft.world.item.ProjectileWeaponItem;
-import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
-import org.academy.internal.common.ability.darkmatter.DarkmatterIntegrityCurve;
 import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
+import org.academy.internal.common.ability.darkmatter.DarkmatterIntegrityCurve;
 
 import java.util.Set;
 
@@ -153,7 +146,9 @@ public final class DarkmatterItemUtil {
         return setIntegrity(stack, integrity(stack) - amount);
     }
 
-    /** Passive carry decay uses an end-step snap so floating-point drift cannot extend the lifetime. */
+    /**
+     * Passive carry decay uses an end-step snap so floating-point drift cannot extend the lifetime.
+     */
     public static boolean decayIntegrity(ItemStack stack, int lifetimeTicks) {
         if (!isNativeEquipment(stack) || lifetimeTicks <= 0) return false;
         var previous = stack.getOrDefault(
@@ -168,7 +163,9 @@ public final class DarkmatterItemUtil {
         return setIntegrity(stack, integrity(stack) + amount);
     }
 
-    /** Converts ordinary durability damage into structural loss before resetting vanilla damage. */
+    /**
+     * Converts ordinary durability damage into structural loss before resetting vanilla damage.
+     */
     public static boolean absorbVanillaDurabilityDamage(ItemStack stack) {
         if (!isNativeEquipment(stack) || !stack.isDamageableItem()
                 || stack.getDamageValue() <= 0 || stack.getMaxDamage() <= 0) return false;

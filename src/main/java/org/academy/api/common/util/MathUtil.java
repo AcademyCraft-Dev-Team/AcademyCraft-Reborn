@@ -1,6 +1,7 @@
 package org.academy.api.common.util;
 
 import it.unimi.dsi.fastutil.ints.IntComparator;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -15,7 +16,6 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.function.Predicate;
-import net.minecraft.util.Mth;
 
 public class MathUtil {
     public static final RandomSource RANDOM_SOURCE = RandomSource.create();
@@ -155,7 +155,7 @@ public class MathUtil {
         if (Math.abs(a) > 1e-6) {
             var delta = b * b - 4 * a * c;
             if (delta >= 0) {
-                var sqrtDelta = Mth.sqrt((float) (delta));
+                var sqrtDelta = Mth.sqrt(delta);
                 var t1 = (-b - sqrtDelta) / (2 * a);
                 var t2 = (-b + sqrtDelta) / (2 * a);
 
@@ -328,7 +328,7 @@ public class MathUtil {
                 return false;
             }
 
-            var rayLengthLocal = Mth.sqrt((float) (lengthSq));
+            var rayLengthLocal = Mth.sqrt(lengthSq);
             rayDirLocal.div(rayLengthLocal);
 
             var nearFar = new Vector2f();

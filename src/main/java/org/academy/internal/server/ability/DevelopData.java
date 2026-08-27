@@ -52,7 +52,7 @@ public class DevelopData {
     }
 
     public @Nullable BlockPos getDeveloperPos() {
-        return developerSource == null ? null : developerSource.blockPos();
+        return developerSource instanceof DevelopmentSource.BlockDevelopmentSource(var pos) ? pos : null;
     }
 
     public @Nullable DevelopmentSource getDeveloperSource() {
@@ -91,7 +91,7 @@ public class DevelopData {
 
     public void tick(ServerPlayer player) {
         if (!isDeveloping() || action == null || developerSource == null) return;
-        if (!developerSource.portable()
+        if (developerSource instanceof DevelopmentSource.BlockDevelopmentSource
                 && (developerDimension == null || !developerDimension.equals(player.level().dimension()))) {
             fail("Wrong dimension");
             return;

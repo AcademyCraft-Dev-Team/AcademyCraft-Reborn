@@ -6,9 +6,9 @@ import io.netty.handler.codec.DecoderException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -16,6 +16,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
@@ -56,36 +57,55 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
-/** Blueprint-driven dark-matter creature creation and authoritative remote roster. */
+/**
+ * Blueprint-driven dark-matter creature creation and authoritative remote roster.
+ */
 public final class DarkmatterCreation extends Skill {
     public static final int MAX_CREATURES = 16;
-    /** Compatibility name retained for integrations that used the old fixed-beetle limit. */
+    /**
+     * Compatibility name retained for integrations that used the old fixed-beetle limit.
+     */
     public static final int MAX_BEETLES = MAX_CREATURES;
     public static final float MIN_INVESTMENT = 5.0f;
     public static final float MATTER_COST_PER_BEETLE = MIN_INVESTMENT;
-    /** Every living construct occupies a fixed part of the creator's CP ceiling. */
+    /**
+     * Every living construct occupies a fixed part of the creator's CP ceiling.
+     */
     public static final float RESERVED_CP_PER_BEETLE = 40.0f;
     private static final double MAX_PROGRAM_RANGE = 32.0;
 
     public static double followSpeed(int milestone) {
         return Math.clamp(milestone, 0, 3) >= 2 ? 1.20 : 1.0;
     }
+
     public static double targetingRange(int milestone) {
         return Math.clamp(milestone, 0, 3) >= 2 ? 1.20 : 1.0;
     }
+
     public static float moduleValueMultiplier(int milestone) {
         return Math.clamp(milestone, 0, 3) >= 3 ? 1.25f : 1.0f;
     }
+
     public static int stuckTeleportTicks(int milestone) {
         return Math.clamp(milestone, 0, 3) >= 2 ? 60 : 100;
     }
+
     public static int gammaRepeatTicks(int milestone) {
         return Math.clamp(milestone, 0, 3) >= 3 ? 80 : 100;
     }
-    /** Old swarm bonus is deliberately gone; each blueprint owns its own module effects. */
-    public static float swarmDamageMultiplier(int milestone, int attackers) { return 1.0f; }
-    public static boolean unlocksSwarmCommand(int sixWingsMilestone) { return false; }
+
+    /**
+     * Old swarm bonus is deliberately gone; each blueprint owns its own module effects.
+     */
+    public static float swarmDamageMultiplier(int milestone, int attackers) {
+        return 1.0f;
+    }
+
+    public static boolean unlocksSwarmCommand(int sixWingsMilestone) {
+        return false;
+    }
 
     public DarkmatterCreation() {
         super(Builder.of(AbilityCategories.DARKMATTER.get())
@@ -140,30 +160,46 @@ public final class DarkmatterCreation extends Skill {
         public static final String KEY_NAME_EDITOR = SkillNames.DARKMATTER_CREATION + "_editor";
         public static Config CONFIG = new Config();
 
-        private Client() { }
+        private Client() {
+        }
+
         private static void cast() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(
                     Skills.DARKMATTER_CREATION.get())) return;
             MisakaNetworkClient.send(CastPacket.INSTANCE);
         }
+
         private static void openEditor() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(
                     Skills.DARKMATTER_CREATION.get())) return;
             Minecraft.getInstance().gui.setScreen(new DarkmatterCreationScreen());
             MisakaNetworkClient.send(EditorRequestPacket.INSTANCE);
         }
+
         public static class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
-                private Action() { }
-                @Override public Config getDefault() { return new Config(); }
-                @Override public Class<Config> getTypeClass() { return Config.class; }
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
             }
         }
     }
 
     public static final class ClientPackets {
-        private ClientPackets() { }
+        private ClientPackets() {
+        }
+
         @SubscribePacket
         public static void handle(EditorSnapshotPacket packet) {
             DarkmatterCreationScreen.acceptSnapshot(packet);
@@ -187,24 +223,35 @@ public final class DarkmatterCreation extends Skill {
     }
 
     public static final class Server {
-        private Server() { }
+        private Server() {
+        }
 
-        @SubscribePacket public static void handle(CastPacket packet) {
+        @SubscribePacket
+        public static void handle(CastPacket packet) {
             summonSelected(packet.getPacketListener().getPlayer());
         }
-        @SubscribePacket public static void handle(EditorRequestPacket packet) {
+
+        @SubscribePacket
+        public static void handle(EditorRequestPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (isUsable(player)) sendSnapshot(player);
         }
-        @SubscribePacket public static void handle(SaveBlueprintPacket packet) {
+
+        @SubscribePacket
+        public static void handle(SaveBlueprintPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (!isUsable(player)) return;
             var level = abilityLevel(player);
-            if (!packet.blueprint.validate(level).isEmpty()) { sendSnapshot(player); return; }
+            if (!packet.blueprint.validate(level).isEmpty()) {
+                sendSnapshot(player);
+                return;
+            }
             updateData(player, data -> data.setBlueprint(packet.slot, packet.blueprint, level));
             sendSnapshot(player);
         }
-        @SubscribePacket public static void handle(SummonPacket packet) {
+
+        @SubscribePacket
+        public static void handle(SummonPacket packet) {
             var player = player(packet);
             var result = prepareAndSummon(player, packet.slot, packet.blueprint);
             if (player != null) {
@@ -212,7 +259,9 @@ public final class DarkmatterCreation extends Skill {
                 MisakaNetworkServer.send(player, new SummonResultPacket(result));
             }
         }
-        @SubscribePacket public static void handle(DismantlePacket packet) {
+
+        @SubscribePacket
+        public static void handle(DismantlePacket packet) {
             var player = player(packet);
             if (!isUsable(player)) return;
             if (packet.all) discardAll(player);
@@ -243,7 +292,7 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static SummonResult prepareAndSummon(ServerPlayer player, int slot,
-                                                      DarkmatterCreatureBlueprint submitted) {
+                                                     DarkmatterCreatureBlueprint submitted) {
             if (!isUsable(player) || !(player.level() instanceof ServerLevel level)) {
                 return SummonResult.UNAVAILABLE;
             }
@@ -331,9 +380,9 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static DarkmatterBeetle createCreature(ServerLevel level, ServerPlayer player,
-                                                        Vec3 position,
-                                                        DarkmatterCreatureBlueprint blueprint,
-                                                        int slot) {
+                                                       Vec3 position,
+                                                       DarkmatterCreatureBlueprint blueprint,
+                                                       int slot) {
             var creature = EntityTypes.DARKMATTER_BEETLE.get().create(level, EntitySpawnReason.MOB_SUMMONED);
             if (creature == null) return null;
             creature.setOwnerUUID(player.getUUID());
@@ -381,12 +430,14 @@ public final class DarkmatterCreation extends Skill {
             var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
             var desiredCount = creationData.getSummons().size() + 1;
             if (!replaceCreationOccupation(player, desiredCount)) {
-                creature.discard(); return Optional.empty();
+                creature.discard();
+                return Optional.empty();
             }
             if (!resource.consume(player, blueprint.investment(), Skills.DARKMATTER_CREATION.get(),
                     Skills.DARKMATTER_CREATION.get().getIterationTicks(player))) {
                 replaceCreationOccupation(player, desiredCount - 1);
-                creature.discard(); return Optional.empty();
+                creature.discard();
+                return Optional.empty();
             }
             updateData(player, mutable -> mutable.addSummon(creature.getUUID(), blueprint.name(),
                     blueprint.investment(), slot, level.dimension().identifier().toString(),
@@ -426,9 +477,10 @@ public final class DarkmatterCreation extends Skill {
             var legacy = new ArrayList<UUID>();
             updateData(player, mutable -> legacy.addAll(mutable.consumeLegacyOwned()));
             var server = player.level().getServer();
-            if (server != null) for (var uuid : legacy) for (var level : server.getAllLevels()) {
-                if (level.getEntity(uuid) instanceof DarkmatterBeetle creature) creature.discard();
-            }
+            if (server != null) for (var uuid : legacy)
+                for (var level : server.getAllLevels()) {
+                    if (level.getEntity(uuid) instanceof DarkmatterBeetle creature) creature.discard();
+                }
             replaceCreationOccupation(player, 0);
         }
 
@@ -447,24 +499,31 @@ public final class DarkmatterCreation extends Skill {
             var records = data(player).map(DarkmatterCreationData::getSummons).orElseGet(List::of);
             replaceCreationOccupation(player, records.size());
             if (records.isEmpty()) return;
-            if (!isUsable(player) || player.hasDisconnected()) { discardAll(player); return; }
+            if (!isUsable(player) || player.hasDisconnected()) {
+                discardAll(player);
+                return;
+            }
             var server = player.level().getServer();
             if (server == null) return;
-            for (var record : records) record.uuid().ifPresent(uuid -> {
-                DarkmatterBeetle loaded = null;
-                for (var level : server.getAllLevels()) {
-                    if (level.getEntity(uuid) instanceof DarkmatterBeetle found) { loaded = found; break; }
-                }
-                if (loaded != null) {
-                    var creature = loaded;
-                    updateData(player, mutable -> mutable.updateSummon(uuid,
-                            creature.level().dimension().identifier().toString(),
-                            creature.getX(), creature.getY(), creature.getZ(),
-                            creature.getHealth(), creature.getMaxHealth(), true));
-                } else updateData(player, mutable -> mutable.updateSummon(uuid,
-                        record.dimension(), record.x(), record.y(), record.z(),
-                        record.health(), record.maxHealth(), false));
-            });
+            for (var record : records)
+                record.uuid().ifPresent(uuid -> {
+                    DarkmatterBeetle loaded = null;
+                    for (var level : server.getAllLevels()) {
+                        if (level.getEntity(uuid) instanceof DarkmatterBeetle found) {
+                            loaded = found;
+                            break;
+                        }
+                    }
+                    if (loaded != null) {
+                        var creature = loaded;
+                        updateData(player, mutable -> mutable.updateSummon(uuid,
+                                creature.level().dimension().identifier().toString(),
+                                creature.getX(), creature.getY(), creature.getZ(),
+                                creature.getHealth(), creature.getMaxHealth(), true));
+                    } else updateData(player, mutable -> mutable.updateSummon(uuid,
+                            record.dimension(), record.x(), record.y(), record.z(),
+                            record.health(), record.maxHealth(), false));
+                });
             if (MinecraftServerTick.shouldSyncRoster(player.tickCount)) {
                 var baseRevision = data(player).map(DarkmatterCreationData::getRevision).orElse(0L);
                 updateData(player, DarkmatterCreationData::bumpRevision);
@@ -490,13 +549,14 @@ public final class DarkmatterCreation extends Skill {
         private static List<RosterEntry> roster(ServerPlayer player,
                                                 DarkmatterCreationData creationData) {
             var entries = new ArrayList<RosterEntry>();
-            for (var record : creationData.getSummons()) record.uuid().ifPresent(uuid -> {
-                var sameDimension = record.dimension().equals(player.level().dimension().identifier().toString());
-                var distance = sameDimension ? (float) Math.sqrt(player.distanceToSqr(
-                        record.x(), record.y(), record.z())) : -1.0f;
-                entries.add(new RosterEntry(uuid, record.name(), record.health(), record.maxHealth(),
-                        record.dimension(), distance, record.investment(), record.slot(), record.loaded()));
-            });
+            for (var record : creationData.getSummons())
+                record.uuid().ifPresent(uuid -> {
+                    var sameDimension = record.dimension().equals(player.level().dimension().identifier().toString());
+                    var distance = sameDimension ? (float) Math.sqrt(player.distanceToSqr(
+                            record.x(), record.y(), record.z())) : -1.0f;
+                    entries.add(new RosterEntry(uuid, record.name(), record.health(), record.maxHealth(),
+                            record.dimension(), distance, record.investment(), record.slot(), record.loaded()));
+                });
             return entries;
         }
 
@@ -505,7 +565,7 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static void updateData(ServerPlayer player,
-                                       java.util.function.Consumer<DarkmatterCreationData> updater) {
+                                       Consumer<DarkmatterCreationData> updater) {
             AbilitySystemServer.getSystem(player).updatePlayerSkillData(player.getUUID(),
                     Skills.DARKMATTER_CREATION.get(), DarkmatterCreationData.class, updater);
         }
@@ -543,26 +603,36 @@ public final class DarkmatterCreation extends Skill {
     }
 
     private static final class MinecraftServerTick {
-        private static boolean shouldSyncRoster(int tick) { return tick % 40 == 0; }
+        private static boolean shouldSyncRoster(int tick) {
+            return tick % 40 == 0;
+        }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        private Events() { }
-        @SubscribeEvent public static void onPlayerTick(PlayerTickEvent.Post event) {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.tick(player);
         }
-        @SubscribeEvent public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+
+        @SubscribeEvent
+        public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.discardAll(player);
         }
-        @SubscribeEvent public static void onDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+
+        @SubscribeEvent
+        public static void onDeath(LivingDeathEvent event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.discardAll(player);
         }
     }
 
     public record RosterEntry(UUID uuid, String name, float health, float maxHealth,
                               String dimension, float distance, int investment,
-                              int slot, boolean loaded) { }
+                              int slot, boolean loaded) {
+    }
 
     private static void encodeBlueprint(ByteBuf buf, DarkmatterCreatureBlueprint value) {
         ByteBufCodecs.STRING_UTF8.encode(buf, value.name());
@@ -578,6 +648,7 @@ public final class DarkmatterCreation extends Skill {
         ByteBufCodecs.VAR_INT.encode(buf, value.modules().size());
         value.modules().forEach(module -> ByteBufCodecs.STRING_UTF8.encode(buf, module));
     }
+
     private static DarkmatterCreatureBlueprint decodeBlueprint(ByteBuf buf) {
         var name = ByteBufCodecs.STRING_UTF8.decode(buf);
         var investment = ByteBufCodecs.VAR_INT.decode(buf);
@@ -597,9 +668,13 @@ public final class DarkmatterCreation extends Skill {
     }
 
     private static void encodeUuid(ByteBuf buf, UUID uuid) {
-        buf.writeLong(uuid.getMostSignificantBits()); buf.writeLong(uuid.getLeastSignificantBits());
+        buf.writeLong(uuid.getMostSignificantBits());
+        buf.writeLong(uuid.getLeastSignificantBits());
     }
-    private static UUID decodeUuid(ByteBuf buf) { return new UUID(buf.readLong(), buf.readLong()); }
+
+    private static UUID decodeUuid(ByteBuf buf) {
+        return new UUID(buf.readLong(), buf.readLong());
+    }
 
     private static int decodeBoundedCount(ByteBuf buf, int maximum, String field) {
         var count = ByteBufCodecs.VAR_INT.decode(buf);
@@ -653,33 +728,52 @@ public final class DarkmatterCreation extends Skill {
     public static final class CastPacket extends Packet<ServerGamePacketListenerImpl, CastPacket> {
         public static final CastPacket INSTANCE = new CastPacket();
         public static final StreamCodec<ByteBuf, CastPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private CastPacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
+
+        private CastPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, CastPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_CAST.get();
         }
     }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class EditorRequestPacket extends Packet<ServerGamePacketListenerImpl, EditorRequestPacket> {
         public static final EditorRequestPacket INSTANCE = new EditorRequestPacket();
         public static final StreamCodec<ByteBuf, EditorRequestPacket> CODEC = StreamCodec.unit(INSTANCE);
-        private EditorRequestPacket() { }
-        @Override public PacketType<ServerGamePacketListenerImpl, EditorRequestPacket> getPacketType() {
+
+        private EditorRequestPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, EditorRequestPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_EDITOR_REQUEST.get();
         }
     }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class SaveBlueprintPacket extends Packet<ServerGamePacketListenerImpl, SaveBlueprintPacket> {
         public static final StreamCodec<ByteBuf, SaveBlueprintPacket> CODEC = StreamCodec.of(
-                (buf, packet) -> { ByteBufCodecs.VAR_INT.encode(buf, packet.slot); encodeBlueprint(buf, packet.blueprint); },
+                (buf, packet) -> {
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.slot);
+                    encodeBlueprint(buf, packet.blueprint);
+                },
                 buf -> new SaveBlueprintPacket(ByteBufCodecs.VAR_INT.decode(buf), decodeBlueprint(buf)));
-        public final int slot; public final DarkmatterCreatureBlueprint blueprint;
+        public final int slot;
+        public final DarkmatterCreatureBlueprint blueprint;
+
         public SaveBlueprintPacket(int slot, DarkmatterCreatureBlueprint blueprint) {
-            this.slot = Math.clamp(slot, 0, 3); this.blueprint = blueprint.copy();
+            this.slot = Math.clamp(slot, 0, 3);
+            this.blueprint = blueprint.copy();
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, SaveBlueprintPacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SaveBlueprintPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_SAVE.get();
         }
     }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class SummonPacket extends Packet<ServerGamePacketListenerImpl, SummonPacket> {
         public static final StreamCodec<ByteBuf, SummonPacket> CODEC = StreamCodec.of(
@@ -692,27 +786,45 @@ public final class DarkmatterCreation extends Skill {
                         buf.readBoolean() ? decodeBlueprint(buf) : null));
         public final int slot;
         public final DarkmatterCreatureBlueprint blueprint;
-        public SummonPacket(int slot) { this(slot, null); }
+
+        public SummonPacket(int slot) {
+            this(slot, null);
+        }
+
         public SummonPacket(int slot, DarkmatterCreatureBlueprint blueprint) {
             this.slot = Math.clamp(slot, 0, 3);
             this.blueprint = blueprint == null ? null : blueprint.copy();
         }
-        @Override public PacketType<ServerGamePacketListenerImpl, SummonPacket> getPacketType() {
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SummonPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_SUMMON.get();
         }
     }
+
     @PacketTarget(ThreadType.SERVER)
     public static final class DismantlePacket extends Packet<ServerGamePacketListenerImpl, DismantlePacket> {
         public static final StreamCodec<ByteBuf, DismantlePacket> CODEC = StreamCodec.of(
-                (buf, packet) -> { buf.writeBoolean(packet.all); buf.writeBoolean(packet.uuid != null);
-                    if (packet.uuid != null) encodeUuid(buf, packet.uuid); },
+                (buf, packet) -> {
+                    buf.writeBoolean(packet.all);
+                    buf.writeBoolean(packet.uuid != null);
+                    if (packet.uuid != null) encodeUuid(buf, packet.uuid);
+                },
                 buf -> new DismantlePacket(buf.readBoolean(), buf.readBoolean() ? decodeUuid(buf) : null));
-        public final boolean all; public final UUID uuid;
-        public DismantlePacket(boolean all, UUID uuid) { this.all = all; this.uuid = uuid; }
-        @Override public PacketType<ServerGamePacketListenerImpl, DismantlePacket> getPacketType() {
+        public final boolean all;
+        public final UUID uuid;
+
+        public DismantlePacket(boolean all, UUID uuid) {
+            this.all = all;
+            this.uuid = uuid;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, DismantlePacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_DISMANTLE.get();
         }
     }
+
     @PacketTarget(ThreadType.CLIENT)
     public static final class EditorSnapshotPacket extends Packet<ClientPacketListener, EditorSnapshotPacket> {
         public static final StreamCodec<ByteBuf, EditorSnapshotPacket> CODEC = StreamCodec.of(
@@ -737,17 +849,24 @@ public final class DarkmatterCreation extends Skill {
                     for (var i = 0; i < rosterCount; i++) roster.add(decodeRosterEntry(buf));
                     return new EditorSnapshotPacket(revision, level, selected, blueprints, roster);
                 });
-        public final long revision; public final int abilityLevel; public final int selectedSlot;
-        public final List<DarkmatterCreatureBlueprint> blueprints; public final List<RosterEntry> roster;
+        public final long revision;
+        public final int abilityLevel;
+        public final int selectedSlot;
+        public final List<DarkmatterCreatureBlueprint> blueprints;
+        public final List<RosterEntry> roster;
+
         public EditorSnapshotPacket(long revision, int abilityLevel, int selectedSlot,
                                     List<DarkmatterCreatureBlueprint> blueprints,
                                     List<RosterEntry> roster) {
-            this.revision = Math.max(0, revision); this.abilityLevel = Math.clamp(abilityLevel, 1, 5);
+            this.revision = Math.max(0, revision);
+            this.abilityLevel = Math.clamp(abilityLevel, 1, 5);
             this.selectedSlot = Math.clamp(selectedSlot, 0, 3);
             this.blueprints = blueprints.stream().limit(4).map(DarkmatterCreatureBlueprint::copy).toList();
             this.roster = roster.stream().limit(MAX_CREATURES).toList();
         }
-        @Override public PacketType<ClientPacketListener, EditorSnapshotPacket> getPacketType() {
+
+        @Override
+        public PacketType<ClientPacketListener, EditorSnapshotPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_EDITOR_SNAPSHOT.get();
         }
     }
@@ -780,7 +899,8 @@ public final class DarkmatterCreation extends Skill {
             this.roster = roster.stream().limit(MAX_CREATURES).toList();
         }
 
-        @Override public PacketType<ClientPacketListener, RosterDeltaPacket> getPacketType() {
+        @Override
+        public PacketType<ClientPacketListener, RosterDeltaPacket> getPacketType() {
             return PacketTypes.DARKMATTER_CREATION_ROSTER_DELTA.get();
         }
     }

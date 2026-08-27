@@ -53,7 +53,6 @@ import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
-import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.common.util.UncheckedUtil;
@@ -77,11 +76,7 @@ import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.HudDebugScreen;
 import org.academy.internal.client.hud.HudLayoutConfig;
-import org.academy.internal.client.particle.BloodSplashParticle;
-import org.academy.internal.client.particle.BloodSprayParticle;
-import org.academy.internal.client.particle.ImagPhaseFluidParticle;
-import org.academy.internal.client.particle.ImagPhaseLeavesParticle;
-import org.academy.internal.client.particle.VectorBlastParticle;
+import org.academy.internal.client.particle.*;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
 import org.academy.internal.client.render.vfx.*;
@@ -92,6 +87,7 @@ import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterfe
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
 import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
@@ -102,6 +98,8 @@ import org.academy.internal.common.world.level.material.Fluids;
 import org.joml.Vector3f;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.function.BiConsumer;
 
 import static org.academy.AcademyCraft.academy;
@@ -154,8 +152,8 @@ public final class AcademyCraftClient {
             // dev 热重载：监听运行目录下的 vfxgraph 资产（与资源包目录一致）
             var root = Minecraft.getInstance().gameDirectory.toPath().resolve("vfxgraph");
             try {
-                java.nio.file.Files.createDirectories(root);
-            } catch (java.io.IOException ignored) {
+                Files.createDirectories(root);
+            } catch (IOException ignored) {
             }
             VfxGraphManager.INSTANCE.startFileWatcher(root);
         }
@@ -183,7 +181,6 @@ public final class AcademyCraftClient {
         InputSystem.tickMaintainedKeyBindings();
         AbilityControlTabletSpecialRenderer.tickHeldItems();
         ImagPhaseDowsingRodClient.tick();
-        // 注：VFX 图效果模拟改由 renderFrame 每帧按真实帧时间步进（平滑，不锁 20Hz tick），故此处不再调用 tick
     }
 
     @SubscribeEvent
@@ -312,7 +309,7 @@ public final class AcademyCraftClient {
                                                                 builder
                                                         ))
                                                         .executes(ctx -> {
-                                                            String file = StringArgumentType.getString(ctx, "file");
+                                                            var file = StringArgumentType.getString(ctx, "file");
                                                             UiLayoutEditor.INSTANCE.open(file);
                                                             return 1;
                                                         })
@@ -506,7 +503,7 @@ public final class AcademyCraftClient {
                             {245, 144, 144}, {178, 232, 243}, {209, 170, 225},
                             {243, 182, 224}, {196, 238, 156}
                     };
-                    int[] color = colors[random.nextInt(colors.length)];
+                    var color = colors[random.nextInt(colors.length)];
                     particle.setColor(
                             Math.max(0, Math.min(255, color[0] + random.nextInt(-20, 20))) / 255.0F,
                             Math.max(0, Math.min(255, color[1] + random.nextInt(-20, 20))) / 255.0F,
@@ -580,14 +577,14 @@ public final class AcademyCraftClient {
         // intentionally invisible. Keep the equipment asset and animated textures available
         // for item rendering/resource packs while suppressing only the humanoid layer submit.
         event.registerItem(new IClientItemExtensions() {
-            @Override
-            public int getArmorLayerTintColor(
-                    ItemStack stack, EquipmentClientInfo.Layer layer,
-                    int layerIdx, int fallbackColor
-            ) {
-                return 0;
-            }
-        }, Items.DARK_MATTER_HELMET.get(), Items.DARK_MATTER_CHESTPLATE.get(),
+                               @Override
+                               public int getArmorLayerTintColor(
+                                       ItemStack stack, EquipmentClientInfo.Layer layer,
+                                       int layerIdx, int fallbackColor
+                               ) {
+                                   return 0;
+                               }
+                           }, Items.DARK_MATTER_HELMET.get(), Items.DARK_MATTER_CHESTPLATE.get(),
                 Items.DARK_MATTER_LEGGINGS.get(), Items.DARK_MATTER_BOOTS.get());
     }
 

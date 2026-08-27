@@ -25,7 +25,6 @@ import org.academy.internal.client.profiler.ProfilerClientHooks
 import org.joml.Vector4f
 import org.slf4j.Logger
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.roundToInt
 
 /**
  * 负责管理本模组内置的 UI 帧缓冲区与 HUD 喵
@@ -113,7 +112,7 @@ object HudManager {
                     mainColor,
                     blurColor,
                     uiDepth,
-                    TerminalHud.getBlurRadius().roundToInt()
+                    TerminalHud.getBlurRadius()
                 )
                 Render.runBlitPass(
                     mainColor, Render.RenderPipelines.BLIT_SCREEN_WITH_BLEND,

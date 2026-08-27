@@ -2,14 +2,13 @@ package org.academy.internal.common.ability.mentalout.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -21,22 +20,18 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
-import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.api.common.entitycontrol.ControlDestination;
-import org.academy.api.common.entitycontrol.ControlDirective;
-import org.academy.api.common.entitycontrol.ControlRequest;
-import org.academy.api.common.entitycontrol.MentalControlApi;
+import org.academy.api.common.entitycontrol.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.mentalout.MentaloutConfig;
-import org.academy.internal.common.ability.mentalout.MentaloutControlCost;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.MentaloutControlCost;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntervention;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -46,6 +41,9 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Moves every compatible roster member to the block or entity under the caster's crosshair.
@@ -165,7 +163,7 @@ public final class CommandPositioning extends Skill {
                 return;
             }
 
-            var destinationEntity = destination instanceof ControlDestination.Entity(java.util.UUID uuid)
+            var destinationEntity = destination instanceof ControlDestination.Entity(var uuid)
                     ? uuid
                     : null;
             var skipped = 0;
@@ -244,19 +242,21 @@ public final class CommandPositioning extends Skill {
 
         private static ControlDestination formationDestination(
                 ControlDestination destination,
-                net.minecraft.world.entity.LivingEntity subject,
+                LivingEntity subject,
                 int index,
                 int count,
                 boolean enabled
         ) {
-            if (!enabled || !(destination instanceof ControlDestination.Position position)
+            if (!enabled || !(destination instanceof ControlDestination.Position(
+                    var dimension, var value
+            ))
                     || count <= 1) return destination;
             var spacing = Math.max(1.25, subject.getBbWidth() + 0.5);
             var radius = Math.max(1.5, count * spacing / (Math.PI * 2.0));
             var angle = Math.PI * 2.0 * index / count;
-            var offset = new net.minecraft.world.phys.Vec3(
+            var offset = new Vec3(
                     Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
-            return new ControlDestination.Position(position.dimension(), position.value().add(offset));
+            return new ControlDestination.Position(dimension, value.add(offset));
         }
 
         private static void feedback(ServerPlayer player, String key, Object... arguments) {

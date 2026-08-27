@@ -1,15 +1,9 @@
 package org.academy.internal.common.ability.program;
 
 import net.minecraft.resources.Identifier;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramDiagnostic;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeType;
+import org.academy.api.common.ability.program.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -113,6 +107,6 @@ public final class AbilityProgramDefinition {
     }
 
     private static ProgramCompileResult failure(ProgramDiagnosticCode code) {
-        return new ProgramCompileResult(null, java.util.List.of(ProgramDiagnostic.graph(code)));
+        return new ProgramCompileResult(null, List.of(ProgramDiagnostic.graph(code)));
     }
 }

@@ -2,6 +2,7 @@ package org.academy.api.common.ability.darkmatter;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,7 +23,7 @@ class DarkmatterShapingProfileTest {
 
     @Test
     void profileKeepsItsOwnPhaseAndDropsInvalidModifierRows() {
-        var source = new java.util.LinkedHashMap<String, Integer>();
+        var source = new LinkedHashMap<String, Integer>();
         source.put(DarkmatterModifiers.HARVEST, 2);
         source.put("", 3);
         source.put("zero", 0);

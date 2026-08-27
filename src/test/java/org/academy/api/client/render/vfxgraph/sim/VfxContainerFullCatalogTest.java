@@ -1,23 +1,24 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.academy.api.client.render.graph.model.GraphParameter;
+import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
+import org.academy.api.client.render.graph.type.Curve;
+import org.academy.api.client.render.graph.type.Gradient;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.vfxgraph.model.*;
+import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
+import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 容器块完整目录 + 全部算子注册、复杂容器系统全链路模拟（spawn→init→update→collision→over-life→output）。
@@ -70,7 +71,7 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.plasma_convergence", "vfx.block.arc_plasma_shell", "vfx.block.arc_shockwave",
                 "vfx.block.arc_radial_ripple", "vfx.block.arc_collapsing_box"
         };
-        for (String id : expected) {
+        for (var id : expected) {
             assertNotNull(blocks.find(id), "block should be registered: " + id);
         }
         assertEquals(57, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
@@ -87,12 +88,14 @@ class VfxContainerFullCatalogTest {
                 "vfx.op.add", "vfx.op.sub", "vfx.op.mul", "vfx.op.div",
                 "vfx.op.curve", "vfx.op.gradient", "vfx.op.param_curve", "vfx.op.param_gradient"
         };
-        for (String id : expected) {
+        for (var id : expected) {
             assertNotNull(ops.find(id), "operator should be registered: " + id);
         }
     }
 
-    /** 全链路：burst 球面发射 → init 速度/尺寸/随机 → 积分 + 重力 + 地面碰撞 → 生命周期 → 输出。 */
+    /**
+     * 全链路：burst 球面发射 → init 速度/尺寸/随机 → 积分 + 重力 + 地面碰撞 → 生命周期 → 输出。
+     */
     @Test
     void fullPipelineSimulates() {
         var system = new VfxSystem("full",
@@ -121,39 +124,41 @@ class VfxContainerFullCatalogTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 每帧 1/60s，跑 3 秒
-        for (int i = 0; i < 180; i++) {
+        for (var i = 0; i < 180; i++) {
             sim.step(1f / 60f);
         }
         var buffer = sim.buffer();
         // 粒子在重力+反弹下应保留在地面附近且 y>=0
         assertTrue(buffer.count() > 0);
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             assertTrue(buffer.positionY(i) >= -1e-4f, "particle must stay above ground");
             assertTrue(buffer.alpha(i) >= 0f, "alpha must not go negative");
         }
         // 粒子位置在有限范围内（积分稳定，无 NaN）
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             assertTrue(Float.isFinite(buffer.positionX(i)));
             assertTrue(Float.isFinite(buffer.positionY(i)));
             assertTrue(Float.isFinite(buffer.positionZ(i)));
         }
     }
 
-    /** over-life 引用黑板曲线/渐变参数：批次 init 后 alpha/size 随寿命曲线变化。 */
+    /**
+     * over-life 引用黑板曲线/渐变参数：批次 init 后 alpha/size 随寿命曲线变化。
+     */
     @Test
     void overLifeCurveReferenced() {
-        var curveParam = new org.academy.api.client.render.graph.model.GraphParameter(
-                "life_curve", "Life Curve", org.academy.api.client.render.graph.type.ValueType.CURVE,
-                org.academy.api.client.render.graph.type.Value.curve(new org.academy.api.client.render.graph.type.Curve(List.of(
-                        new org.academy.api.client.render.graph.type.Curve.Keyframe(0f, 1f, 0f, 0f, org.academy.api.client.render.graph.type.Curve.Interpolation.LINEAR),
-                        new org.academy.api.client.render.graph.type.Curve.Keyframe(1f, 0f, 0f, 0f, org.academy.api.client.render.graph.type.Curve.Interpolation.LINEAR)))),
-                java.util.Optional.empty());
-        var gradientParam = new org.academy.api.client.render.graph.model.GraphParameter(
-                "fire_grad", "Gradient", org.academy.api.client.render.graph.type.ValueType.GRADIENT,
-                org.academy.api.client.render.graph.type.Value.gradient(new org.academy.api.client.render.graph.type.Gradient(List.of(
-                        new org.academy.api.client.render.graph.type.Gradient.ColorStop(0f, 1f, 0.5f, 0.1f, 1f),
-                        new org.academy.api.client.render.graph.type.Gradient.ColorStop(1f, 0.1f, 0.05f, 0f, 0f)))),
-                java.util.Optional.empty());
+        var curveParam = new GraphParameter(
+                "life_curve", "Life Curve", ValueType.CURVE,
+                Value.curve(new Curve(List.of(
+                        new Curve.Keyframe(0f, 1f, 0f, 0f, Curve.Interpolation.LINEAR),
+                        new Curve.Keyframe(1f, 0f, 0f, 0f, Curve.Interpolation.LINEAR)))),
+                Optional.empty());
+        var gradientParam = new GraphParameter(
+                "fire_grad", "Gradient", ValueType.GRADIENT,
+                Value.gradient(new Gradient(List.of(
+                        new Gradient.ColorStop(0f, 1f, 0.5f, 0.1f, 1f),
+                        new Gradient.ColorStop(1f, 0.1f, 0.05f, 0f, 0f)))),
+                Optional.empty());
 
         var system = new VfxSystem("life",
                 List.of(
@@ -175,7 +180,7 @@ class VfxContainerFullCatalogTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of(curveParam, gradientParam));
         // 跑 0.5s（寿命 1s → t=0.5 → alpha≈0.5, size≈0.5）
-        for (int i = 0; i < 30; i++) {
+        for (var i = 0; i < 30; i++) {
             sim.step(1f / 60f);
         }
         var buffer = sim.buffer();
@@ -189,7 +194,9 @@ class VfxContainerFullCatalogTest {
         assertTrue(buffer.colorB(0) < 0.1f);
     }
 
-    /** arc 块 origin_x/y/z：曲线应以发射器 origin 为基点（此前硬编码 (0,0,0)，移动发射器对 arc 无效）。 */
+    /**
+     * arc 块 origin_x/y/z：曲线应以发射器 origin 为基点（此前硬编码 (0,0,0)，移动发射器对 arc 无效）。
+     */
     @Test
     void arcBoltRespectsOrigin() {
         var system = new VfxSystem("arcOrigin",
@@ -215,8 +222,8 @@ class VfxContainerFullCatalogTest {
         var arc = sim.arcBuffer().arc(0);
         assertTrue(arc.size() > 0);
         // 主弧 from=(2,3,4) to=(2,5,4)，曲线落在 from/to 之间（噪声会轻微漂移 x/z，故不精确断言 x/z）
-        for (int i = 0; i < arc.size(); i++) {
-            float dy = arc.y(i);
+        for (var i = 0; i < arc.size(); i++) {
+            var dy = arc.y(i);
             assertTrue(dy >= 2.9f && dy <= 5.6f, "arc point y out of range: " + dy);
         }
     }
@@ -372,7 +379,7 @@ class VfxContainerFullCatalogTest {
     }
 
     private int countBlocks() {
-        int n = 0;
+        var n = 0;
         for (var type : metadata.all()) {
             if (type.id().startsWith("vfx.block.")) n++;
         }
