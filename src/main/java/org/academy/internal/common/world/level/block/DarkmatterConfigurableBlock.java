@@ -10,11 +10,8 @@ import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.ScheduledTickAccess;
-import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.*;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -22,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.neoforged.neoforge.event.EventHooks;
 import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.internal.common.world.item.DarkmatterBlockItem;
 import org.academy.internal.common.world.item.Items;
@@ -30,7 +28,9 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.function.BiConsumer;
 
-/** Full-cube dark matter whose physical behavior is supplied by its block entity profile. */
+/**
+ * Full-cube dark matter whose physical behavior is supplied by its block entity profile.
+ */
 public final class DarkmatterConfigurableBlock extends FallingBlock implements EntityBlock {
     public static final BooleanProperty GRAVITY = BooleanProperty.create("gravity");
     public static final MapCodec<DarkmatterConfigurableBlock> CODEC =
@@ -47,7 +47,7 @@ public final class DarkmatterConfigurableBlock extends FallingBlock implements E
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(GRAVITY);
     }
 
@@ -88,7 +88,7 @@ public final class DarkmatterConfigurableBlock extends FallingBlock implements E
                                        BlockGetter level, BlockPos pos) {
         var hardness = profile(level, pos).hardness();
         if (hardness <= 0.0f) return 1.0f;
-        var divisor = net.neoforged.neoforge.event.EventHooks.doPlayerHarvestCheck(
+        var divisor = EventHooks.doPlayerHarvestCheck(
                 player, state, level, pos) ? 30.0f : 100.0f;
         return player.getDestroySpeed(state, pos) / hardness / divisor;
     }

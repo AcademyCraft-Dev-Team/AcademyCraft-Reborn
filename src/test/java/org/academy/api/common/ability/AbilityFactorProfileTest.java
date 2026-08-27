@@ -3,7 +3,8 @@ package org.academy.api.common.ability;
 import org.academy.api.common.attribute.AbilityFactor;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AbilityFactorProfileTest {
     @Test

@@ -142,6 +142,7 @@ public final class AreaTeleportState {
         public boolean withinLimit() {
             return withinLimit(MAX_REGION_SIZE);
         }
+
         public boolean withinLimit(int maxAxis) {
             return sizeX() > 0 && sizeY() > 0 && sizeZ() > 0
                     && sizeX() <= maxAxis && sizeY() <= maxAxis && sizeZ() <= maxAxis;

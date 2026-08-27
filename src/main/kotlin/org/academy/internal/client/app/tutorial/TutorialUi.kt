@@ -2,7 +2,6 @@ package org.academy.internal.client.app.tutorial
 
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.world.level.ItemLike
-import net.minecraft.world.item.Items as VanillaItems
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.drawable.TextureDrawable
@@ -13,8 +12,9 @@ import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
-import org.academy.internal.common.world.item.Items as AcademyItems
 import java.util.function.Consumer
+import net.minecraft.world.item.Items as VanillaItems
+import org.academy.internal.common.world.item.Items as AcademyItems
 
 object TutorialUi {
     const val WIDTH = 384f
@@ -344,12 +344,16 @@ object TutorialUi {
                 layoutParams = FrameLayoutWidget.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .heightMode(SizeMode.WRAP_CONTENT)
-                addChild("eyebrow", articleLabel(
-                    L10n[page.eyebrowKey], ARTICLE_BODY_FONT_SIZE, 0.68f, 10f
-                ))
-                addChild("title", articleLabel(
-                    L10n[page.titleKey], ARTICLE_SUBTITLE_FONT_SIZE, 1f, 14f
-                ))
+                addChild(
+                    "eyebrow", articleLabel(
+                        L10n[page.eyebrowKey], ARTICLE_BODY_FONT_SIZE, 0.68f, 10f
+                    )
+                )
+                addChild(
+                    "title", articleLabel(
+                        L10n[page.titleKey], ARTICLE_SUBTITLE_FONT_SIZE, 1f, 14f
+                    )
+                )
                 addChild("rule", FillWidget(0xA0FFFFFF.toInt()).apply {
                     layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f)
                 })
@@ -391,10 +395,12 @@ object TutorialUi {
             layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .padding(8f, 6f)
-            addChild("preview_label", articleLabel(
-                L10n[if (page.recipe == null) "app.academy.tutorial.preview" else "app.academy.tutorial.recipe"],
-                ARTICLE_BODY_FONT_SIZE, 0.68f, 10f
-            ))
+            addChild(
+                "preview_label", articleLabel(
+                    L10n[if (page.recipe == null) "app.academy.tutorial.preview" else "app.academy.tutorial.recipe"],
+                    ARTICLE_BODY_FONT_SIZE, 0.68f, 10f
+                )
+            )
             when {
                 page.recipe != null -> addRecipePreview(page.recipe)
                 page.stage != null -> addStagePreview(page)
@@ -421,9 +427,11 @@ object TutorialUi {
 
         private fun LinearLayoutWidget.addStagePreview(page: Page) {
             val stage = page.stage ?: 0
-            addChild("stage", articleLabel(
-                stage.toString().padStart(2, '0') + " / 05", 13f, 1f, 20f, Gravity.CENTER
-            ))
+            addChild(
+                "stage", articleLabel(
+                    stage.toString().padStart(2, '0') + " / 05", 13f, 1f, 20f, Gravity.CENTER
+                )
+            )
             addChild("progress", FrameLayoutWidget().apply {
                 background = ColorDrawable(0x30000000)
                 layoutParams = LinearLayoutWidget.LayoutParams()
@@ -468,12 +476,14 @@ object TutorialUi {
                                 background = ColorDrawable(if (item == null) 0x10000000 else ROW_FILL)
                                 layoutParams = LinearLayoutWidget.LayoutParams()
                                     .size(RECIPE_SLOT_SIZE, RECIPE_SLOT_SIZE)
-                                if (item != null) addChild("item", ItemStackWidget(item.asItem().defaultInstance).apply {
-                                    tooltipText = L10n[item.asItem().descriptionId]
-                                    layoutParams = FrameLayoutWidget.LayoutParams()
-                                        .size(ItemStackWidget.ITEM_SIZE, ItemStackWidget.ITEM_SIZE)
-                                        .gravity(Gravity.CENTER)
-                                })
+                                if (item != null) addChild(
+                                    "item",
+                                    ItemStackWidget(item.asItem().defaultInstance).apply {
+                                        tooltipText = L10n[item.asItem().descriptionId]
+                                        layoutParams = FrameLayoutWidget.LayoutParams()
+                                            .size(ItemStackWidget.ITEM_SIZE, ItemStackWidget.ITEM_SIZE)
+                                            .gravity(Gravity.CENTER)
+                                    })
                             })
                         }
                     })

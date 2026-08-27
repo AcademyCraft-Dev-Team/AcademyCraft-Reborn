@@ -21,7 +21,9 @@ public enum ParticleAttribute {
     LAYER(ValueType.INT, 1);
 
     private final ValueType valueType;
-    /** 通道数（1/3/4），供逐通道读取。 */
+    /**
+     * 通道数（1/3/4），供逐通道读取。
+     */
     private final int channels;
 
     ParticleAttribute(ValueType valueType, int channels) {

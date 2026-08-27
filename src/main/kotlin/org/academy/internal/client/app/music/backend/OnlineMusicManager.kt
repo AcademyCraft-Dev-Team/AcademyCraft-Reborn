@@ -12,10 +12,10 @@ import org.academy.internal.client.app.music.netease.NeteaseAudioCache
 import org.academy.internal.client.app.music.netease.NeteaseCredentialManager
 import org.academy.internal.client.app.music.netease.NeteaseLoginService
 import org.academy.internal.client.app.music.netease.NeteaseMusicService
+import org.academy.internal.client.app.music.qq.QqAudioCache
 import org.academy.internal.client.app.music.qq.QqCredentialManager
 import org.academy.internal.client.app.music.qq.QqLoginService
 import org.academy.internal.client.app.music.qq.QqMusicService
-import org.academy.internal.client.app.music.qq.QqAudioCache
 import org.academy.internal.common.network.MusicSyncPackets
 import org.misaka.MisakaNetworkClient
 import org.misaka.api.common.network.annotation.SubscribePacket

@@ -12,7 +12,9 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
 
-/** Shared construction and durability behavior for vanilla-derived shaped item classes. */
+/**
+ * Shared construction and durability behavior for vanilla-derived shaped item classes.
+ */
 public final class DarkmatterNativeItemSupport {
     private DarkmatterNativeItemSupport() {
     }
@@ -52,7 +54,9 @@ public final class DarkmatterNativeItemSupport {
                 || stack.is(net.minecraft.world.item.Items.ARROW);
     }
 
-    /** Creates the non-pickup fallback projectile used when a native bow has no ammo. */
+    /**
+     * Creates the non-pickup fallback projectile used when a native bow has no ammo.
+     */
     public static ItemStack infiniteDarkmatterArrow(ItemStack weapon) {
         var projectile = new ItemStack(Items.DARKMATTER_ARROW.get());
         if (DarkmatterItemUtil.isShapedItem(weapon)) {
@@ -73,7 +77,9 @@ public final class DarkmatterNativeItemSupport {
         return slotChanged || gameplayComponentsChanged(oldStack, newStack);
     }
 
-    /** Integrity/damage drift must not reset an in-progress block break. */
+    /**
+     * Integrity/damage drift must not reset an in-progress block break.
+     */
     public static boolean shouldCauseBlockBreakReset(ItemStack oldStack, ItemStack newStack) {
         return gameplayComponentsChanged(oldStack, newStack);
     }

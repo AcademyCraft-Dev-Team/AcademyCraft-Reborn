@@ -2,11 +2,10 @@ package org.academy.internal.common.ability.darkmatter.skills.lv4;
 
 import io.netty.buffer.Unpooled;
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 class DarkmatterCreationTest {
     @Test
@@ -33,7 +32,7 @@ class DarkmatterCreationTest {
         assertEquals(100, DarkmatterCreation.gammaRepeatTicks(2));
         assertEquals(80, DarkmatterCreation.gammaRepeatTicks(3));
         assertEquals(1.0f, DarkmatterCreation.swarmDamageMultiplier(3, 8), 0.0001f);
-        org.junit.jupiter.api.Assertions.assertFalse(DarkmatterCreation.unlocksSwarmCommand(3));
+        Assertions.assertFalse(DarkmatterCreation.unlocksSwarmCommand(3));
     }
 
     @Test

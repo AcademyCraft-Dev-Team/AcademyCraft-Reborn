@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.AnimationState;
@@ -30,7 +31,6 @@ import java.util.*;
 
 import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
 import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
-import net.minecraft.util.Mth;
 
 public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
     private static final Logger LOGGER = AcademyCraft.getLogger();

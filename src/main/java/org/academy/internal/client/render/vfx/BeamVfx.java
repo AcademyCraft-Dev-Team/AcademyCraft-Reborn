@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
@@ -7,7 +8,6 @@ import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.internal.client.renderer.entity.ReflectedBeamVisualGeometry;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.joml.Vector3f;
-import net.minecraft.util.Mth;
 
 public final class BeamVfx implements Vfx {
     private static final Vec3 WORLD_UP = new Vec3(0.0, 1.0, 0.0);
@@ -31,8 +31,8 @@ public final class BeamVfx implements Vfx {
     ) {
         var direction = end.subtract(start);
         var length = direction.length();
-        float yRot = 0.0f;
-        float xRot = 0.0f;
+        var yRot = 0.0f;
+        var xRot = 0.0f;
         if (direction.lengthSqr() > DIRECTION_EPSILON_SQUARED && Double.isFinite(length)) {
             var horizontalLength = Mth.sqrt((float) (direction.x * direction.x + direction.z * direction.z));
             yRot = (float) (Mth.atan2(-direction.x, direction.z)) * Mth.RAD_TO_DEG;

@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.meltdowner;
 
-import java.util.function.Predicate;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -13,6 +12,8 @@ import org.academy.api.common.util.LevelUtil;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.*;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
+
+import java.util.function.Predicate;
 
 public final class MeltdownerBeamActions {
     private MeltdownerBeamActions() {

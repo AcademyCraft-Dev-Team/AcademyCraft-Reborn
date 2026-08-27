@@ -2,8 +2,6 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -16,6 +14,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -73,6 +72,11 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.misaka.MisakaNetworkClient.send;
 
@@ -522,8 +526,8 @@ public final class Railgun extends Skill {
                         system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                         system.getPlayerDamageMultiplier(player.getUUID())
                 ) * profile.damageMultiplier();
-                var hitIndex = new java.util.concurrent.atomic.AtomicInteger();
-                var shockTriggered = new java.util.concurrent.atomic.AtomicBoolean();
+                var hitIndex = new AtomicInteger();
+                var shockTriggered = new AtomicBoolean();
                 var payload = LinearAttackPayload.builder(
                                 player,
                                 skill,
@@ -599,7 +603,7 @@ public final class Railgun extends Skill {
             }
 
             private static void triggerImpactShock(ServerPlayer owner, Vec3 center, float damage,
-                                                   net.minecraft.world.entity.Entity primary) {
+                                                   Entity primary) {
                 var source = SkillDamageSource.of(owner, Skills.RAILGUN.get());
                 for (var target : owner.level().getEntities(owner, new AABB(center, center).inflate(4.0),
                         entity -> entity.isAlive() && entity != primary && !owner.isAlliedTo(entity))) {

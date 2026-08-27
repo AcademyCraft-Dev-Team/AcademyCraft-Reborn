@@ -4,15 +4,12 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.UiScreen;
-import org.academy.api.client.gui.widget.BlendQuadWidget;
-import org.academy.api.client.gui.widget.EmptyWidget;
-import org.academy.api.client.gui.widget.FillWidget;
-import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.client.gui.widget.*;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
@@ -21,7 +18,6 @@ import org.misaka.MisakaNetworkClient;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class LocationTeleportScreen extends UiScreen implements SerializedUiDebugHost {
     private static final int ACTIVE = 0xFFFFFFFF;

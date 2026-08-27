@@ -3,6 +3,7 @@ package org.academy.internal.common.world.level.block.entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
@@ -19,12 +20,11 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.client.definitions.WindGenBaseAnimation;
 import org.academy.internal.client.gui.world.WindGenWorldGui;
-import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.util.EnergyChargeHelper;
+import org.academy.internal.common.world.level.block.Blocks;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
-import net.minecraft.util.Mth;
 
 public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
     private static final String NBT_COMPLETENESS = "Completeness";

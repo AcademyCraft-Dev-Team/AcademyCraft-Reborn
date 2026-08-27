@@ -1,12 +1,11 @@
 package org.academy.internal.common.ability.electromaster.program;
 
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -23,25 +22,20 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
-import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
-import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.util.EnergyChargeHelper;
+import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
-/** Authoritative Minecraft-server adapter for Electromaster programs. */
+/**
+ * Authoritative Minecraft-server adapter for Electromaster programs.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class ServerElectromasterProgramRuntime implements ElectromasterProgramRuntime {
     public static final double MAX_QUERY_RANGE = 32.0;
@@ -374,11 +368,11 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     }
 
     private BlockPos requireLocalBlock(Object value) {
-        if (!(value instanceof ProgramBlockPosition block)
-                || !block.dimension().equals(targets.level().dimension().identifier())) {
+        if (!(value instanceof ProgramBlockPosition(var dimension, var x, var y, var z))
+                || !dimension.equals(targets.level().dimension().identifier())) {
             throw new IllegalArgumentException("Block target is in another dimension");
         }
-        var position = new BlockPos(block.x(), block.y(), block.z());
+        var position = new BlockPos(x, y, z);
         if (!targets.level().hasChunkAt(position)
                 || position.getY() < targets.level().getMinY()
                 || position.getY() >= targets.level().getMaxY()

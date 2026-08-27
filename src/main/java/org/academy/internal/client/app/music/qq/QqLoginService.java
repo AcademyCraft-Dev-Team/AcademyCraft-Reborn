@@ -66,7 +66,7 @@ public final class QqLoginService {
             try {
                 updateStatus("QQ 音乐：阶段 1/4 获取二维码");
                 clearAuthSessionCookies();
-                String urlBuilder = QR_SHOW_URL + "?appid=" + APPID +
+                var urlBuilder = QR_SHOW_URL + "?appid=" + APPID +
                         "&e=2&l=M&s=3&d=72&v=4&t=0.787&daid=383" +
                         "&pt_3rd_aid=" + THIRD_APPID +
                         "&u1=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8);
@@ -121,7 +121,7 @@ public final class QqLoginService {
                 }
                 updateStatus("QQ 音乐：阶段 2/4 等待扫码确认");
                 var ptqrtoken = calculatePtqrtoken(qrsig);
-                String urlBuilder = QR_LOGIN_URL + "?u1=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8) +
+                var urlBuilder = QR_LOGIN_URL + "?u1=" + URLEncoder.encode(LOGIN_JUMP_URL, StandardCharsets.UTF_8) +
                         "&ptqrtoken=" + ptqrtoken +
                         "&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052" +
                         "&js_ver=25072815&js_type=1&login_sig=&pt_uistyle=40" +
@@ -761,7 +761,7 @@ public final class QqLoginService {
         for (int port : ports) {
             HttpURLConnection connection = null;
             try {
-                String builder = LOCAL_PTLOGIN_HOST +
+                var builder = LOCAL_PTLOGIN_HOST +
                         ':' + port +
                         "/pt_get_st?clientuin=" + normalizedUin +
                         "&r=" + Math.random() +
@@ -802,7 +802,7 @@ public final class QqLoginService {
     private static String requestPtloginJumpCode(String normalizedUin, PtLocalSession session) {
         HttpURLConnection connection = null;
         try {
-            String builder = PTLOGIN_JUMP_URL +
+            var builder = PTLOGIN_JUMP_URL +
                     "?clientuin=" + normalizedUin +
                     "&keyindex=" + session.keyIndex() +
                     "&pt_aid=" + APPID +
@@ -906,7 +906,7 @@ public final class QqLoginService {
     }
 
     private static String buildXloginUrl() {
-        String builder = XLOGIN_URL + "?appid=" + APPID +
+        var builder = XLOGIN_URL + "?appid=" + APPID +
                 "&daid=383" +
                 "&style=33" +
                 "&login_text=" + URLEncoder.encode("登录", StandardCharsets.UTF_8) +

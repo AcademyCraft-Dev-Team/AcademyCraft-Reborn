@@ -121,8 +121,8 @@ public final class AbilitySystemServer {
     public static void handleStopDev(StopDevPacket packet) {
         var player = packet.getPacketListener().getPlayer();
         var source = packet.getSource();
-        if (!source.portable()
-                && player.position().distanceToSqr(Vec3.atCenterOf(source.blockPos())) > 64.0) {
+        if (source instanceof DevelopmentSource.BlockDevelopmentSource(var pos)
+                && player.position().distanceToSqr(Vec3.atCenterOf(pos)) > 64.0) {
             return;
         }
 
@@ -307,11 +307,11 @@ public final class AbilitySystemServer {
                 );
                 if (recommendation != null) {
                     instance.initialAbilityRecommendations.put(
-                        player.getUUID(),
-                        recommendation,
-                        player.level().dimension().identifier(),
-                        source.cacheKey(),
-                        player.level().getGameTime()
+                            player.getUUID(),
+                            recommendation,
+                            player.level().dimension().identifier(),
+                            source.cacheKey(),
+                            player.level().getGameTime()
                     );
                     return new StartLevelDevPacket.Response(
                             StartLevelDevPacket.Response.Status.CONFIRMATION_REQUIRED,
@@ -967,10 +967,10 @@ public final class AbilitySystemServer {
                 actualCost,
                 skill,
                 resolveIterationPoints(skill.getIterationTicks(player), cost),
-                () -> Boolean.TRUE.equals(EntityMotionGuard.callWithMotionSource(
+                () -> EntityMotionGuard.callWithMotionSource(
                         player,
                         action::getAsBoolean
-                ))
+                )
         )) {
             return false;
         }
@@ -1035,7 +1035,9 @@ public final class AbilitySystemServer {
         );
     }
 
-    /** Atomically reserves every timed charge, or reserves none of them. */
+    /**
+     * Atomically reserves every timed charge, or reserves none of them.
+     */
     public boolean tryTimedOccupations(
             UUID uuid,
             Skill skill,

@@ -15,7 +15,7 @@ public abstract class KeyBindingConfig {
     private static final Gson GSON = new Gson();
 
     @SerializedName("keyBindings")
-    private Map<String, JsonElement> keyBindings = new LinkedHashMap<>();
+    private final Map<String, JsonElement> keyBindings = new LinkedHashMap<>();
     @SerializedName("enabledBindings")
     private Map<String, Boolean> enabledBindings = new LinkedHashMap<>();
     @SerializedName("defaultMigrations")

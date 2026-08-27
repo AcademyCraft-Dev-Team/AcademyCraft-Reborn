@@ -7,12 +7,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
@@ -29,12 +30,11 @@ import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
-/** Authoritative Minecraft-server adapter for vector-manipulation programs. */
+/**
+ * Authoritative Minecraft-server adapter for vector-manipulation programs.
+ */
 public final class ServerAcceleratorProgramRuntime implements AcceleratorProgramRuntime {
     public static final double MAX_QUERY_RANGE = 32.0;
     public static final int MAX_QUERY_RESULTS = 128;
@@ -236,8 +236,8 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                 charge(Skills.VECTOR_ACCEL.get(), displacementCost(strength));
                 var previousPosition = target.position();
                 var previousVelocity = target.getDeltaMovement();
-                var moved = Boolean.TRUE.equals(EntityMotionGuard.callWithMotionSource(
-                        player, () -> TeleportSync.teleportInstantly(target, targetPosition)));
+                var moved = EntityMotionGuard.callWithMotionSource(
+                        player, () -> TeleportSync.teleportInstantly(target, targetPosition));
                 if (!moved) throw new IllegalStateException("Entity displacement was rejected");
                 target.resetFallDistance();
                 return () -> {
@@ -259,7 +259,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         return new ProgramActionTransaction.ProgramAction() {
             private BlockPos sourcePos;
             private BlockPos destinationPos;
-            private net.minecraft.world.level.block.state.BlockState sourceState;
+            private BlockState sourceState;
 
             @Override
             public void validate() {
@@ -574,7 +574,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     }
 
     private ServerLevel level() {
-        return (ServerLevel) player.level();
+        return player.level();
     }
 
     private static double requireQueryRange(double range) {
@@ -669,9 +669,11 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         };
     }
 
-    /** All impacts staged by one VM run reserve their charges before the first world effect. */
+    /**
+     * All impacts staged by one VM run reserve their charges before the first world effect.
+     */
     private static final class ImpactBatch {
-        private final java.util.ArrayList<Float> costs = new java.util.ArrayList<>();
+        private final ArrayList<Float> costs = new ArrayList<>();
         private boolean reserved;
 
         private void add(float cost) {

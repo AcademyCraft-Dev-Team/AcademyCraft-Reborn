@@ -2,7 +2,9 @@ package org.academy.internal.common.world.item;
 
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemInstance;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.ItemAbilities;
@@ -28,7 +30,7 @@ public final class DarkmatterToolItem extends DarkmatterEquipmentItem {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         if (!DarkmatterItemUtil.isOperational(context.getItemInHand())) return InteractionResult.PASS;
-        for (var delegate : new net.minecraft.world.item.Item[]{
+        for (var delegate : new Item[]{
                 net.minecraft.world.item.Items.NETHERITE_AXE,
                 net.minecraft.world.item.Items.NETHERITE_SHOVEL,
                 net.minecraft.world.item.Items.NETHERITE_HOE}) {
@@ -40,7 +42,7 @@ public final class DarkmatterToolItem extends DarkmatterEquipmentItem {
 
     @Override
     public boolean canPerformAction(ItemInstance stack, ItemAbility action) {
-        if (stack instanceof net.minecraft.world.item.ItemStack itemStack
+        if (stack instanceof ItemStack itemStack
                 && !DarkmatterItemUtil.isOperational(itemStack)) return false;
         return ItemAbilities.DEFAULT_AXE_ACTIONS.contains(action)
                 || ItemAbilities.DEFAULT_SHOVEL_ACTIONS.contains(action)

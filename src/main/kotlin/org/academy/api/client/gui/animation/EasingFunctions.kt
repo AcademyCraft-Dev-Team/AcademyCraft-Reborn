@@ -7,7 +7,8 @@ import kotlin.math.pow
 object EasingFunctions {
     val LINEAR: TimeInterpolator = TimeInterpolator { input: Float -> input }
 
-    val EASE_IN_SINE: TimeInterpolator = TimeInterpolator { input: Float -> 1 - Mth.cos((input * Mth.PI / 2).toDouble()) }
+    val EASE_IN_SINE: TimeInterpolator =
+        TimeInterpolator { input: Float -> 1 - Mth.cos((input * Mth.PI / 2).toDouble()) }
     val EASE_IN_QUAD: TimeInterpolator = TimeInterpolator { input: Float -> input * input }
     val EASE_IN_EXPO: TimeInterpolator =
         TimeInterpolator { input: Float -> if (input == 0f) 0f else 2.0.pow((10 * input - 10).toDouble()).toFloat() }
@@ -25,7 +26,8 @@ object EasingFunctions {
             else -> -2.0.pow((10 * input - 10).toDouble()).toFloat() * Mth.sin((input * 10 - 10.75) * c4)
         }
     }
-    val EASE_IN_OUT_SINE: TimeInterpolator = TimeInterpolator { input: Float -> -0.5f * (Mth.cos((Mth.PI * input).toDouble()) - 1) }
+    val EASE_IN_OUT_SINE: TimeInterpolator =
+        TimeInterpolator { input: Float -> -0.5f * (Mth.cos((Mth.PI * input).toDouble()) - 1) }
     val EASE_IN_OUT_QUAD: TimeInterpolator = TimeInterpolator { input: Float ->
         if (input < 0.5f) 2 * input * input else 1 - (-2 * input + 2).toDouble().pow(2.0).toFloat() / 2
     }

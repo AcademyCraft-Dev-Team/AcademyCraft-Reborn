@@ -26,7 +26,9 @@ public interface DarkmatterResourceService {
 
     float consumeUpTo(ServerPlayer player, float requestedUnits, Skill consumer, int iterationTicks);
 
-    /** Adds earned MP without a CP debt or the natural-recovery capacity clamp. */
+    /**
+     * Adds earned MP without a CP debt or the natural-recovery capacity clamp.
+     */
     boolean creditEarnedMatter(ServerPlayer player, float units);
 
     boolean reserve(ServerPlayer player, float units, Skill consumer, int iterationTicks);

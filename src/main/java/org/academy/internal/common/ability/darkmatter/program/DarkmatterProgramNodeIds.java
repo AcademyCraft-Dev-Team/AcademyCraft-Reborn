@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.darkmatter.program;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 
-/** Stable identifiers for Darkmatter program nodes. */
+/**
+ * Stable identifiers for Darkmatter program nodes.
+ */
 public final class DarkmatterProgramNodeIds {
     public static final Identifier CASTER = id("target/caster");
     public static final Identifier LOOK_TARGET = id("target/look_target");

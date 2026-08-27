@@ -5,6 +5,7 @@ import org.academy.api.client.gui.msdf.font.MsdfFontService*/
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
+import net.minecraft.util.Mth
 import net.minecraft.world.entity.player.Inventory
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.common.NeoForge
@@ -34,7 +35,6 @@ import java.util.function.Consumer
 import kotlin.Int
 import kotlin.String
 import kotlin.run
-import net.minecraft.util.Mth
 
 class WirelessNodeScreen(
     menu: WirelessNodeMenu,

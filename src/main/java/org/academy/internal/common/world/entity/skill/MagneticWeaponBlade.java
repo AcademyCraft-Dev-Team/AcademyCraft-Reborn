@@ -4,12 +4,12 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
-import net.minecraft.util.Mth;
 
 public final class MagneticWeaponBlade extends RenderOnlyEntity {
     public static final int ATTACK_ANIMATION_TICKS = MagneticWeaponBladeMotion.ATTACK_END_TICK;

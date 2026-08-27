@@ -7,7 +7,7 @@ import org.academy.api.client.render.graph.registry.PropertySpec
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry
 import org.academy.api.client.render.graph.type.Value
 import org.academy.api.client.render.graph.type.ValueType
-import java.util.Optional
+import java.util.*
 
 /**
  * editorTest 共享夹具：提供带常量/加法节点目录的 [SimpleNodeRegistry]。

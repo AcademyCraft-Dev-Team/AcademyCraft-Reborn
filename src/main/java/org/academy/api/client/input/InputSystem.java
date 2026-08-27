@@ -2,6 +2,7 @@ package org.academy.api.client.input;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
@@ -90,7 +91,8 @@ public final class InputSystem {
             Consumer<BindingContext> onStart,
             Consumer<BindingContext> onStop
     ) {
-        addMaintainedKeyBinding(keyName, combo, onStart, onStop, _ -> {}, () -> true);
+        addMaintainedKeyBinding(keyName, combo, onStart, onStop, _ -> {
+        }, () -> true);
     }
 
     public static void addMaintainedKeyBinding(
@@ -100,7 +102,8 @@ public final class InputSystem {
             Consumer<BindingContext> onStop,
             BooleanSupplier canRemainActive
     ) {
-        addMaintainedKeyBinding(keyName, combo, onStart, onStop, _ -> {}, canRemainActive);
+        addMaintainedKeyBinding(keyName, combo, onStart, onStop, _ -> {
+        }, canRemainActive);
     }
 
     public static void removeKeyBinding(String keyName) {
@@ -390,9 +393,11 @@ public final class InputSystem {
         );
     }
 
-    /** Cancels maintained actions whose client-side preconditions no longer hold. */
+    /**
+     * Cancels maintained actions whose client-side preconditions no longer hold.
+     */
     public static void tickMaintainedKeyBindings() {
-        var minecraft = net.minecraft.client.Minecraft.getInstance();
+        var minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null
                 || minecraft.gui.screen() != null || !minecraft.isWindowActive()) {
             cancelMaintainedKeyBindings();

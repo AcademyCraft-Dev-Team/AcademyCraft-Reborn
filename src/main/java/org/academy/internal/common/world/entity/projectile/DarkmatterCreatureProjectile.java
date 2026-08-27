@@ -1,9 +1,9 @@
 package org.academy.internal.common.world.entity.projectile;
 
-import java.util.UUID;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
@@ -27,7 +27,11 @@ import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.item.Items;
 
-/** Physical direct/homing cannon round fired by a blueprint-created construct. */
+import java.util.UUID;
+
+/**
+ * Physical direct/homing cannon round fired by a blueprint-created construct.
+ */
 public final class DarkmatterCreatureProjectile extends AbstractArrow implements ItemSupplier {
     private static final Identifier PENETRATION_ID =
             AcademyCraft.academy("darkmatter_creature_projectile_penetration");
@@ -129,7 +133,7 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
     }
 
     private static boolean hurtWithPenetration(ServerLevel level, LivingEntity target,
-                                               net.minecraft.world.damagesource.DamageSource source,
+                                               DamageSource source,
                                                float damage, float penetration) {
         var armor = target.getAttribute(Attributes.ARMOR);
         if (armor == null || penetration <= 0.0f) {
@@ -147,8 +151,15 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
         }
     }
 
-    @Override public ItemStack getItem() { return new ItemStack(Items.DARKMATTER.get()); }
-    @Override protected ItemStack getDefaultPickupItem() { return getItem(); }
+    @Override
+    public ItemStack getItem() {
+        return new ItemStack(Items.DARKMATTER.get());
+    }
+
+    @Override
+    protected ItemStack getDefaultPickupItem() {
+        return getItem();
+    }
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
@@ -185,7 +196,10 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
     }
 
     private static UUID parseUuid(String value) {
-        try { return UUID.fromString(value); }
-        catch (IllegalArgumentException ignored) { return null; }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 }

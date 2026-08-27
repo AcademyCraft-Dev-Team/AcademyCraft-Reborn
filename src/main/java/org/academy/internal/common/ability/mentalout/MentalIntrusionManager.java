@@ -8,13 +8,14 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.LivingEntity;
-import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
@@ -35,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.util.Mth;
 
 public final class MentalIntrusionManager {
     private static final int READY_TIMEOUT_TICKS = 20;
@@ -170,7 +170,7 @@ public final class MentalIntrusionManager {
 
     static int playerIntrusionDuration(
             ServerPlayer player,
-            org.academy.api.common.ability.Skill skill,
+            Skill skill,
             int level
     ) {
         var base = MentaloutConfig.playerIntrusionDuration(player, level);

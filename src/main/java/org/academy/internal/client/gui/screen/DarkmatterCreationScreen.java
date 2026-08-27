@@ -2,8 +2,8 @@ package org.academy.internal.client.gui.screen;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.drawable.ColorDrawable;
@@ -11,14 +11,7 @@ import org.academy.api.client.gui.drawable.StateListDrawable;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.UiScreen;
-import org.academy.api.client.gui.widget.BlendQuadWidget;
-import org.academy.api.client.gui.widget.ButtonWidget;
-import org.academy.api.client.gui.widget.FillWidget;
-import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.LabelWidget;
-import org.academy.api.client.gui.widget.SeekBarWidget;
-import org.academy.api.client.gui.widget.TextBoxWidget;
-import org.academy.api.client.gui.widget.Widget;
+import org.academy.api.client.gui.widget.*;
 import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
@@ -28,8 +21,12 @@ import org.misaka.MisakaNetworkClient;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-/** Four-slot creature editor implemented exclusively with the Academy widget/event tree. */
+/**
+ * Four-slot creature editor implemented exclusively with the Academy widget/event tree.
+ */
 public final class DarkmatterCreationScreen extends UiScreen {
     private static final int PANEL_W = 540;
     private static final int PANEL_H = 320;
@@ -279,20 +276,20 @@ public final class DarkmatterCreationScreen extends UiScreen {
                 "  " + editing.investment() + " MP");
         var strength = editing.effectiveInvestment(0) / 5.0;
         addLabelLiteral(tr("screen.academy.darkmatter_creation.stats",
-                String.format("%.0f", 8 + 2 * strength),
-                String.format("%.1f", 2 + .4 * strength),
-                String.format("%.1f", Math.min(20, .5 * strength)),
-                String.format("%.3f", .20 + .004 * strength)),
+                        String.format("%.0f", 8 + 2 * strength),
+                        String.format("%.1f", 2 + .4 * strength),
+                        String.format("%.1f", Math.min(20, .5 * strength)),
+                        String.format("%.3f", .20 + .004 * strength)),
                 26, compact ? 137 : 170);
         addLabelLiteral(tr("screen.academy.darkmatter_creation.module_usage",
                         editing.moduleCost(), editing.moduleBudget()),
                 26, compact ? 157 : 191);
         var errors = editing.validate(snapshot.abilityLevel);
         addLabelLiteral(fit(summonStatus != null ? summonStatus : errors.isEmpty()
-                        ? tr("screen.academy.darkmatter_creation.valid")
-                        : tr("screen.academy.darkmatter_creation.invalid",
-                        errors.stream().map(this::validationError).toList().stream()
-                                .collect(java.util.stream.Collectors.joining(", "))),
+                                ? tr("screen.academy.darkmatter_creation.valid")
+                                : tr("screen.academy.darkmatter_creation.invalid",
+                                errors.stream().map(this::validationError).toList().stream()
+                                        .collect(Collectors.joining(", "))),
                         compact ? panelWidth - 52 : 306),
                 26, compact ? 177 : 220);
     }
@@ -302,13 +299,13 @@ public final class DarkmatterCreationScreen extends UiScreen {
         var gap = compact ? 28 : 35;
         addCycleButton(24, firstY, "screen.academy.darkmatter_creation.part.head",
                 editing.head(), HEADS, value -> replaceParts(
-                value, editing.torso(), editing.limbs(), editing.additional()));
+                        value, editing.torso(), editing.limbs(), editing.additional()));
         addCycleButton(24, firstY + gap, "screen.academy.darkmatter_creation.part.torso",
                 editing.torso(), TORSOS, value -> replaceParts(
-                editing.head(), value, editing.limbs(), editing.additional()));
+                        editing.head(), value, editing.limbs(), editing.additional()));
         addCycleButton(24, firstY + gap * 2, "screen.academy.darkmatter_creation.part.limbs",
                 editing.limbs(), LIMBS, value -> replaceParts(
-                editing.head(), editing.torso(), value, editing.additional()));
+                        editing.head(), editing.torso(), value, editing.additional()));
         addCycleButton(24, firstY + gap * 3, "screen.academy.darkmatter_creation.part.additional",
                 editing.additional(), ADDITIONAL,
                 value -> replaceParts(editing.head(), editing.torso(), editing.limbs(), value));
@@ -392,7 +389,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
     }
 
     private void addCycleButton(int x, int y, String labelKey, String current, String[] values,
-                                java.util.function.Consumer<String> setter) {
+                                Consumer<String> setter) {
         addButton(x, y, compact ? panelWidth - 48 : 300, 24,
                 tr(labelKey) + "  ·  " + partName(current), () -> {
                     setter.accept(values[(indexOf(values, current) + 1) % values.length]);
@@ -667,7 +664,8 @@ public final class DarkmatterCreationScreen extends UiScreen {
         return split >= 0 ? value.substring(split + 1) : value;
     }
 
-    private record ModuleHoverTarget(int x, int y, int width, int height, String module) { }
+    private record ModuleHoverTarget(int x, int y, int width, int height, String module) {
+    }
 
     private enum Tab {
         BLUEPRINT("screen.academy.darkmatter_creation.tab.blueprint"),

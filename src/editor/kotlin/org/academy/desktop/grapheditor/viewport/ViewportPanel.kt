@@ -8,15 +8,15 @@ import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import imgui.ImGui
-import imgui.flag.ImGuiMouseButton
-import imgui.flag.ImGuiWindowFlags
 import imgui.extension.imguizmo.ImGuizmo
 import imgui.extension.imguizmo.flag.Mode
 import imgui.extension.imguizmo.flag.Operation
+import imgui.flag.ImGuiMouseButton
+import imgui.flag.ImGuiWindowFlags
 import org.academy.desktop.grapheditor.canvas.GraphEditorModel
 import org.academy.desktop.grapheditor.canvas.GraphEditorModelRef
 import org.academy.desktop.platform.DesktopEnvironment
-import java.util.OptionalDouble
+import java.util.*
 
 /**
  * 独立 docked 视口（M14）：离屏 [TextureTarget] 渲染预览，经 [ImGuiBackend] 多纹理 ID
@@ -133,19 +133,23 @@ class ViewportPanel(
         if (ImGuizmo.isUsing()) return
 
         if (ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
-            orbit.yaw -= io.getMouseDeltaX() * 0.01f
-            orbit.pitch = (orbit.pitch - io.getMouseDeltaY() * 0.01f).coerceIn(-1.4f, 1.4f)
+            orbit.yaw -= io.mouseDeltaX * 0.01f
+            orbit.pitch = (orbit.pitch - io.mouseDeltaY * 0.01f).coerceIn(-1.4f, 1.4f)
         }
         if (ImGui.isMouseDragging(ImGuiMouseButton.Right) || ImGui.isMouseDragging(ImGuiMouseButton.Middle)) {
             val view = orbit.viewRotation()
             val scale = 2f * orbit.distance * kotlin.math.tan(orbit.fov / 2f) / winH
-            val rightX = view.m00(); val rightY = view.m10(); val rightZ = view.m20()
-            val upX = view.m01(); val upY = view.m11(); val upZ = view.m21()
-            orbit.targetX -= (rightX * io.getMouseDeltaX() - upX * io.getMouseDeltaY()) * scale
-            orbit.targetY -= (rightY * io.getMouseDeltaX() - upY * io.getMouseDeltaY()) * scale
-            orbit.targetZ -= (rightZ * io.getMouseDeltaX() - upZ * io.getMouseDeltaY()) * scale
+            val rightX = view.m00()
+            val rightY = view.m10()
+            val rightZ = view.m20()
+            val upX = view.m01()
+            val upY = view.m11()
+            val upZ = view.m21()
+            orbit.targetX -= (rightX * io.mouseDeltaX - upX * io.mouseDeltaY) * scale
+            orbit.targetY -= (rightY * io.mouseDeltaX - upY * io.mouseDeltaY) * scale
+            orbit.targetZ -= (rightZ * io.mouseDeltaX - upZ * io.mouseDeltaY) * scale
         }
-        val wheel = io.getMouseWheel()
+        val wheel = io.mouseWheel
         if (wheel != 0f) {
             orbit.distance = (orbit.distance * (if (wheel > 0) 0.9f else 1.1f)).coerceIn(0.5f, 500f)
         }
@@ -201,8 +205,10 @@ class ViewportPanel(
         val tw = (winW * resolutionScale).toInt()
         val th = (winH * resolutionScale).toInt()
         val text = "FPS %.0f  %.1f ms  particles %d  %dx%d".format(fps, ms, particleCount, tw, th)
-        ImGui.getWindowDrawList().addText(winX + 8f, winY + 8f,
-            ImGui.colorConvertFloat4ToU32(1f, 1f, 1f, 1f), text)
+        ImGui.getWindowDrawList().addText(
+            winX + 8f, winY + 8f,
+            ImGui.colorConvertFloat4ToU32(1f, 1f, 1f, 1f), text
+        )
     }
 
     /** 供 GraphEditorApp 每帧更新粒子数。 */

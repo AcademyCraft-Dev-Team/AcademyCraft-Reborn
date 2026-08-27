@@ -1,5 +1,9 @@
 package org.academy.api.client.render.vfxgraph.render;
 
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.joml.Matrix4f;

@@ -2,7 +2,9 @@ package org.academy.api.client.render.vfxgraph.shape;
 
 import java.util.Random;
 
-/** 盒内均匀采样（半边长 hx/hy/hz）。 */
+/**
+ * 盒内均匀采样（半边长 hx/hy/hz）。
+ */
 public final class BoxShape implements EmitterShape {
     private final float cx;
     private final float cy;

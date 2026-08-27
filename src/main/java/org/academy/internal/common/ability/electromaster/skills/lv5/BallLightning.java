@@ -426,7 +426,8 @@ public class BallLightning extends Skill {
                     super(player);
                     this.position = position;
                     velocity = direction.scale(0.8);
-                    orb = new LightOrb(player.level(), 100, 0.08f, () -> { });
+                    orb = new LightOrb(player.level(), 100, 0.08f, () -> {
+                    });
                     orb.setColor(0.25f, 0.55f, 1.0f);
                     orb.setPos(position);
                     player.level().addFreshEntity(orb);
@@ -441,7 +442,8 @@ public class BallLightning extends Skill {
                     var targets = MathUtil.getEntitiesInSphereByHP(level(), position, 24.0, entity -> entity != player);
                     if (!targets.isEmpty()) {
                         var delta = targets.getFirst().getBoundingBox().getCenter().subtract(position);
-                        if (delta.lengthSqr() > 1.0e-8) velocity = velocity.scale(0.75).add(delta.normalize().scale(0.25));
+                        if (delta.lengthSqr() > 1.0e-8)
+                            velocity = velocity.scale(0.75).add(delta.normalize().scale(0.25));
                     }
                     if (velocity.lengthSqr() > 0.96 * 0.96) velocity = velocity.normalize().scale(0.96);
                     position = position.add(velocity);
@@ -625,9 +627,9 @@ public class BallLightning extends Skill {
                 var theta = (float) (MathUtil.RANDOM.nextDouble() * 6.28);
                 var phi = (float) Math.acos(2 * MathUtil.RANDOM.nextDouble() - 1);
                 return position.toVector3f().add(
-                        (float) (r * Mth.sin(phi) * Mth.cos(theta)),
-                        (float) (r * Mth.sin(phi) * Mth.sin(theta)),
-                        (float) (r * Mth.cos(phi))
+                        r * Mth.sin(phi) * Mth.cos(theta),
+                        r * Mth.sin(phi) * Mth.sin(theta),
+                        r * Mth.cos(phi)
                 );
             }
 

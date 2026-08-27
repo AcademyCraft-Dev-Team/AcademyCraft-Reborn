@@ -2,11 +2,11 @@ package org.academy.internal.coremod;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.Holder;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -20,7 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Field-free bytecode template for generated server-player dispatch subclasses. */
+/**
+ * Field-free bytecode template for generated server-player dispatch subclasses.
+ */
 public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreakerHealthAccess {
     /*
      * These static placeholders are renamed to per-process random identifiers by
@@ -149,7 +151,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
             }
             return false;
         }
-        return academy$protected() ? false : super.hurtServer(level, source, remaining);
+        return !academy$protected() && super.hurtServer(level, source, remaining);
     }
 
     @Override

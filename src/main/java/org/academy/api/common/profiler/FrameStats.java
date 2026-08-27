@@ -26,11 +26,11 @@ public final class FrameStats {
             return new FrameStatsSnapshot(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, new double[0], new double[0]);
         }
 
-        long min = Long.MAX_VALUE;
-        long max = 0L;
-        long sum = 0L;
-        for (int i = 0; i < size; i++) {
-            long v = frameTimesNs[i];
+        var min = Long.MAX_VALUE;
+        var max = 0L;
+        var sum = 0L;
+        for (var i = 0; i < size; i++) {
+            var v = frameTimesNs[i];
             if (v < min) {
                 min = v;
             }
@@ -40,17 +40,17 @@ public final class FrameStats {
             sum += v;
         }
 
-        int recentCount = Math.min(size, 120);
-        long recentSum = 0L;
-        for (int i = 0; i < recentCount; i++) {
+        var recentCount = Math.min(size, 120);
+        var recentSum = 0L;
+        for (var i = 0; i < recentCount; i++) {
             recentSum += frameTimesNs[(index - 1 - i + CAPACITY * 2) % CAPACITY];
         }
 
-        int lastIndex = (index - 1 + CAPACITY) % CAPACITY;
-        long p99 = percentile(0.99);
-        double[] frameTimes = new double[size];
-        double[] heap = new double[size];
-        for (int i = 0; i < size; i++) {
+        var lastIndex = (index - 1 + CAPACITY) % CAPACITY;
+        var p99 = percentile(0.99);
+        var frameTimes = new double[size];
+        var heap = new double[size];
+        for (var i = 0; i < size; i++) {
             frameTimes[i] = frameTimesNs[i] / 1e6;
             heap[i] = heapBytes[i] / 1048576.0;
         }
@@ -69,12 +69,10 @@ public final class FrameStats {
     }
 
     private static long percentile(double q) {
-        long[] arr = new long[size];
-        for (int i = 0; i < size; i++) {
-            arr[i] = frameTimesNs[i];
-        }
+        var arr = new long[size];
+        System.arraycopy(frameTimesNs, 0, arr, 0, size);
         Arrays.sort(arr);
-        int pos = (int) ((arr.length - 1) * q);
+        var pos = (int) ((arr.length - 1) * q);
         return arr[pos];
     }
 }

@@ -49,8 +49,8 @@ public final class AbilityDeveloperRenderer implements BlockEntityRenderer<Abili
 
             poseStack.translate(0.5f, 1.5f, 0.5f);
             poseStack.mulPose(Axis.XP.rotationDegrees(180));
-            poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
-            poseStack.translate(0, 0, -1);
+            poseStack.mulPose(Axis.YP.rotationDegrees(yRot + 180));
+            poseStack.translate(0, 0, 1);
 
             submitNodeCollector.submitModel(MODEL, renderState, poseStack, Render.RenderTypes.ABILITY_DEVELOPER, renderState.lightCoords, OverlayTexture.NO_OVERLAY, 0, renderState.breakProgress);
 

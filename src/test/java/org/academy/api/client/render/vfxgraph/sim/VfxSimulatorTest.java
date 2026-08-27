@@ -1,16 +1,17 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VfxSimulatorTest {
     private VfxNodeRegistry vfxRegistry;
@@ -34,7 +35,7 @@ class VfxSimulatorTest {
         var sim = simulator(List.of(
                 node("spawn", "vfx.spawn_rate", Map.of("rate", "10", "lifetime", "100", "shape", "point"))
         ));
-        for (int i = 0; i < 5; i++) sim.step(0.1f);
+        for (var i = 0; i < 5; i++) sim.step(0.1f);
         assertEquals(5, sim.buffer().count());
     }
 
@@ -44,7 +45,7 @@ class VfxSimulatorTest {
                 node("spawn", "vfx.spawn_rate", Map.of("rate", "10", "lifetime", "100", "vy", "2", "shape", "point")),
                 node("vel", "vfx.update_velocity", Map.of())
         ));
-        for (int i = 0; i < 3; i++) sim.step(0.1f);
+        for (var i = 0; i < 3; i++) sim.step(0.1f);
         assertEquals(0.6f, sim.buffer().positionY(0), 1e-5f);
     }
 
@@ -65,7 +66,7 @@ class VfxSimulatorTest {
                 node("spawn", "vfx.spawn_rate", Map.of("rate", "10", "lifetime", "0.3", "shape", "point")),
                 node("age", "vfx.update_age", Map.of())
         ));
-        for (int i = 0; i < 6; i++) sim.step(0.1f);
+        for (var i = 0; i < 6; i++) sim.step(0.1f);
         // 稳态：最后 ~2 个粒子存活（生命周期 0.3s，每帧 0.1s）
         assertTrue(sim.buffer().count() <= 3);
         assertTrue(sim.buffer().count() >= 1);
@@ -95,11 +96,11 @@ class VfxSimulatorTest {
         sim.step(0.1f); // 产生 1 个粒子
         var buffer = sim.buffer();
         assertEquals(1, buffer.count());
-        float x = buffer.positionX(0);
-        float y = buffer.positionY(0);
-        float z = buffer.positionZ(0);
-        float sz = buffer.size(0);
-        float life = buffer.lifetime(0);
+        var x = buffer.positionX(0);
+        var y = buffer.positionY(0);
+        var z = buffer.positionZ(0);
+        var sz = buffer.size(0);
+        var life = buffer.lifetime(0);
         // dt=0 帧（暂停）：spawn 不产粒子，init 应空跑，粒子位置/尺寸/寿命保持不变
         sim.step(0f);
         assertEquals(x, buffer.positionX(0), 1e-6f);
@@ -117,11 +118,11 @@ class VfxSimulatorTest {
                 node("vel", "vfx.update_velocity", Map.of()),
                 node("age", "vfx.update_age", Map.of())
         ));
-        for (int i = 0; i < 20; i++) sim.step(0.05f);
-        int before = sim.buffer().count();
+        for (var i = 0; i < 20; i++) sim.step(0.05f);
+        var before = sim.buffer().count();
         assertTrue(before > 0);
-        float y0 = sim.buffer().positionY(0);
-        for (int i = 0; i < 120; i++) sim.step(0f); // 2 秒暂停
+        var y0 = sim.buffer().positionY(0);
+        for (var i = 0; i < 120; i++) sim.step(0f); // 2 秒暂停
         assertEquals(before, sim.buffer().count());
         assertEquals(y0, sim.buffer().positionY(0), 1e-6f);
         // 恢复后继续正常模拟

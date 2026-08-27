@@ -14,12 +14,10 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AbilityProgramEditorClientTest {
     @Test
@@ -27,7 +25,7 @@ class AbilityProgramEditorClientTest {
         var key = AbilityProgramEditorClient.defaultOpenKey();
 
         assertEquals(InputSystem.InputType.KEYBOARD, key.type());
-        assertEquals(java.util.Set.of(InputConstants.KEY_BACKSLASH), key.keys());
+        assertEquals(Set.of(InputConstants.KEY_BACKSLASH), key.keys());
         assertEquals(InputConstants.PRESS, key.action());
         assertEquals(0, key.modifiers());
         assertFalse(key.availableWhenScreen());
@@ -36,7 +34,7 @@ class AbilityProgramEditorClientTest {
 
     @Test
     void oldEqualDefaultCanBeRecognizedForMigration() {
-        assertEquals(java.util.Set.of(GLFW.GLFW_KEY_EQUAL),
+        assertEquals(Set.of(GLFW.GLFW_KEY_EQUAL),
                 AbilityProgramEditorClient.legacyDefaultOpenKey().keys());
     }
 
@@ -58,7 +56,7 @@ class AbilityProgramEditorClientTest {
         for (var keyCode : keys) {
             var key = AbilityProgramEditorClient.defaultExecuteKey(keyCode);
             assertEquals(InputSystem.InputType.KEYBOARD, key.type());
-            assertEquals(java.util.Set.of(keyCode), key.keys());
+            assertEquals(Set.of(keyCode), key.keys());
             assertEquals(InputConstants.PRESS, key.action());
             assertEquals(InputConstants.MOD_ALT, key.modifiers());
             assertFalse(key.availableWhenScreen());
@@ -130,9 +128,7 @@ class AbilityProgramEditorClientTest {
 
         assertEquals(AbilityProgramEditorClient.SLOT_COUNT, decoded.slots().size());
         assertTrue(decoded.slots().stream().allMatch(ProgramBook.Slot::empty));
-        assertFalse(AbilityProgramEditorClient.storageKey(player, accelerator)
-                .equals(AbilityProgramEditorClient.storageKey(player, teleport)));
-        assertFalse(AbilityProgramEditorClient.storageKey(player, accelerator)
-                .equals(AbilityProgramEditorClient.storageKey(UUID.randomUUID(), accelerator)));
+        assertNotEquals(AbilityProgramEditorClient.storageKey(player, accelerator), AbilityProgramEditorClient.storageKey(player, teleport));
+        assertNotEquals(AbilityProgramEditorClient.storageKey(player, accelerator), AbilityProgramEditorClient.storageKey(UUID.randomUUID(), accelerator));
     }
 }

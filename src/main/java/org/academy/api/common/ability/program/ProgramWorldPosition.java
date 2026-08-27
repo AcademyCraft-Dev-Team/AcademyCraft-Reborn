@@ -4,7 +4,9 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Objects;
 
-/** A precise position whose dimension is part of its type-safe runtime value. */
+/**
+ * A precise position whose dimension is part of its type-safe runtime value.
+ */
 public record ProgramWorldPosition(Identifier dimension, double x, double y, double z) {
     public ProgramWorldPosition {
         Objects.requireNonNull(dimension, "dimension");

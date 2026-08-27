@@ -71,6 +71,14 @@ class WidgetNode(
     var props: JsonObject = JsonObject(),
     val children: MutableList<WidgetNode> = ArrayList()
 ) {
+    /** v2 `include`: 引用的模板名。 */
+    var template: String? = null
+
+    /** v2 `repeat`: 次数 / 数据源 / 重复项。 */
+    var repeatCount: Int? = null
+    var repeatSource: String? = null
+    var repeatItem: WidgetNode? = null
+
     fun toJson(): JsonObject {
         val root = JsonObject()
         root.addProperty("type", type)
@@ -78,6 +86,14 @@ class WidgetNode(
         if (layout.size() > 0) root.add("layout", layout)
         if (common.size() > 0) root.add("common", common)
         if (props.size() > 0) root.add("props", props)
+        template?.let { root.addProperty("template", it) }
+        if (repeatCount != null || repeatSource != null || repeatItem != null) {
+            val rep = JsonObject()
+            repeatCount?.let { rep.addProperty("count", it) }
+            repeatSource?.let { rep.addProperty("source", it) }
+            repeatItem?.let { rep.add("item", it.toJson()) }
+            root.add("repeat", rep)
+        }
         if (children.isNotEmpty()) {
             val arr = JsonArray()
             for (child in children) arr.add(child.toJson())
@@ -105,6 +121,12 @@ class WidgetNode(
                 obj.getAsJsonObject("common") ?: JsonObject(),
                 obj.getAsJsonObject("props") ?: JsonObject()
             )
+            node.template = obj.get("template")?.asString
+            obj.getAsJsonObject("repeat")?.let { rep ->
+                node.repeatCount = rep.get("count")?.asInt
+                node.repeatSource = rep.get("source")?.asString
+                rep.getAsJsonObject("item")?.let { node.repeatItem = fromJson(it) }
+            }
             obj.getAsJsonArray("children")?.forEach {
                 node.children.add(fromJson(it.asJsonObject))
             }

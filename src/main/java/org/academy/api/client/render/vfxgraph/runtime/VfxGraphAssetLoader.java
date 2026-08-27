@@ -2,10 +2,6 @@ package org.academy.api.client.render.vfxgraph.runtime;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.neoforged.api.distmarker.Dist;
@@ -13,6 +9,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import org.academy.AcademyCraft;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
  * 图资产游戏内加载（M15-02）：把 {@code assets/<ns>/vfxgraph/*.json} 解码进
@@ -48,17 +49,17 @@ public final class VfxGraphAssetLoader implements PreparableReloadListener {
         var resources = currentReload.resourceManager().listResources(DIRECTORY,
                 path -> path.getPath().endsWith(".json") && !path.getPath().endsWith(".editor.json"));
         return CompletableFuture.supplyAsync(() -> {
-            // 后台线程：只解析，不改任何管理器状态
-            Map<Identifier, JsonObject> parsed = new LinkedHashMap<>();
-            for (var entry : resources.entrySet()) {
-                try (var reader = entry.getValue().openAsReader()) {
-                    parsed.put(entry.getKey(), GSON.fromJson(reader, JsonObject.class));
-                } catch (Exception exception) {
-                    AcademyCraft.getLogger().error("Unable to parse vfx graph asset: " + entry.getKey(), exception);
-                }
-            }
-            return parsed;
-        }, taskExecutor)
+                    // 后台线程：只解析，不改任何管理器状态
+                    Map<Identifier, JsonObject> parsed = new LinkedHashMap<>();
+                    for (var entry : resources.entrySet()) {
+                        try (var reader = entry.getValue().openAsReader()) {
+                            parsed.put(entry.getKey(), GSON.fromJson(reader, JsonObject.class));
+                        } catch (Exception exception) {
+                            AcademyCraft.getLogger().error("Unable to parse vfx graph asset: " + entry.getKey(), exception);
+                        }
+                    }
+                    return parsed;
+                }, taskExecutor)
                 .thenCompose(preparationBarrier::wait)
                 .thenAccept(VfxGraphAssetLoader::applyOnMainThread);
     }

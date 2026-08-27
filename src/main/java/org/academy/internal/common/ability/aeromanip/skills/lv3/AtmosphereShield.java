@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.aeromanip.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,11 +33,7 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.*;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
@@ -53,6 +48,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -293,7 +289,7 @@ public final class AtmosphereShield extends Skill {
                     projectile -> projectile.isAlive() && projectile.getOwner() != player
             )) {
                 if (handled++ >= cap) break;
-                projectile.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                projectile.setDeltaMovement(Vec3.ZERO);
                 projectile.hurtMarked = true;
                 expireStoppedProjectile(player, projectile, Skills.ATMOSPHERE_SHIELD.get());
             }

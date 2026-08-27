@@ -6,7 +6,6 @@ import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import net.minecraft.client.Minecraft;
-import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.joml.Vector4f;
@@ -49,11 +48,11 @@ public final class PostEffect {
                 List.of(),
                 false
         );
-        IrisIntegration.runWithBypass(PRE_PHASE::draw);
+        PRE_PHASE.draw();
     }
 
     public static void post() {
-        IrisIntegration.runWithBypass(POST_PHASE::draw);
+        POST_PHASE.draw();
     }
 
     public static Phase getPre() {

@@ -1,17 +1,19 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodes;
+import org.joml.Vector3f;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VfxSimulatorLiveParamTest {
     private VfxNodeRegistry vfxRegistry;
@@ -39,7 +41,7 @@ class VfxSimulatorLiveParamTest {
         assertEquals(0.1f, sim.buffer().positionY(0), 1e-5f);
 
         // 存活参数绑定 dir → (0,5,0)（不重建模拟器）：新粒子用 5
-        sim.setLiveParam("dir", Value.of(new org.joml.Vector3f(0f, 5f, 0f)));
+        sim.setLiveParam("dir", Value.of(new Vector3f(0f, 5f, 0f)));
         sim.step(0.1f);
         // 粒子 0 出生时 vy=1，第二帧仍以 vy=1 积分：0.1 + 0.1
         assertEquals(0.2f, sim.buffer().positionY(0), 1e-5f);
@@ -107,7 +109,7 @@ class VfxSimulatorLiveParamTest {
                 node("integ", "vfx.update_velocity", Map.of())
         ), vfxRegistry, 42L);
 
-        sim.setLiveParam("dir", Value.of(new org.joml.Vector3f(1f, 2f, 3f)));
+        sim.setLiveParam("dir", Value.of(new Vector3f(1f, 2f, 3f)));
         sim.step(0.1f);
         var buffer = sim.buffer();
         assertEquals(0.1f, buffer.positionX(0), 1e-5f);

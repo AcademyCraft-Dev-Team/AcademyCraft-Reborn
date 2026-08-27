@@ -79,8 +79,27 @@ interface Widget : Tickable {
     fun dispatchAttached()
     fun dispatchDetached()
     fun isAttached(): Boolean
+
+    /** 注册控件分离时的清理回调（如解绑 UiState 订阅）。 */
+    fun addOnDetach(action: () -> Unit) {}
+
+    fun removeOnDetach(action: () -> Unit) {}
     fun startAnimation(animator: Animator)
     fun cancelAnimations()
+
+    /** 布局完成后回调, 参数为本次布局解析出的矩形信息。 */
+    var onLayoutComplete: ((WidgetLayoutInfo) -> Unit)?
+
+    /** 注册在本次布局 pass 完成后执行的回调。 */
+    fun postLayout(action: () -> Unit)
+
+    /** 控件布局后的解析矩形快照。 */
+    data class WidgetLayoutInfo(
+        val x: Float,
+        val y: Float,
+        val width: Float,
+        val height: Float
+    )
 
     enum class Visibility {
         VISIBLE, INVISIBLE, GONE

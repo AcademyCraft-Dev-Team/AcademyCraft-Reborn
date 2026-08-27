@@ -1,19 +1,21 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.google.gson.JsonParser;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.Test;
+
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * M30：Blender「闪电附着」demo 资产端到端模拟——三系统（表面电弧/接触闪电/粒子火花）在
@@ -31,20 +33,20 @@ class BlenderArcDemoSimulationTest {
         var codec = new JsonVfxGraphCodec(metadata);
 
         var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/demo_blender_arc.json");
-        assertTrue(stream != null, "demo_blender_arc asset should exist");
+        assertNotNull(stream, "demo_blender_arc asset should exist");
         var json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
         var system = codec.decode(json);
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 跑 40 帧（≈ Blender frame40 对照）
-        for (int i = 0; i < 40; i++) {
+        for (var i = 0; i < 40; i++) {
             sim.step(1f / 30f);
         }
 
         var buf = sim.arcBuffer();
         assertTrue(buf.count() > 0, "should spawn arcs");
         int surface = 0, contact = 0, spark = 0;
-        for (int a = 0; a < buf.count(); a++) {
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             if (arc.hasSurface() && arc.hasArchBase() && !arc.pinStart()) surface++;
             else if (arc.hasSurface() && arc.pinStart()) contact++;

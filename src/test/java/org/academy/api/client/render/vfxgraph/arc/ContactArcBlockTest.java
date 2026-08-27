@@ -1,25 +1,24 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** M29：arc_contact 块（Blender 接触闪电：距离剔除 + 端点吸附接触面）容器端到端单测。 */
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * M29：arc_contact 块（Blender 接触闪电：距离剔除 + 端点吸附接触面）容器端到端单测。
+ */
 class ContactArcBlockTest {
     private VfxBlockRegistry blocks;
     private VfxOperatorRegistry ops;
@@ -61,22 +60,22 @@ class ContactArcBlockTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 多跑几帧让末端吸附球面（Blender End Size=1 仅末端）
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
             sim.step(1f / 60f);
         }
 
         var buf = sim.arcBuffer();
         assertTrue(buf.count() > 0, "contact_arc should spawn arcs");
-        for (int a = 0; a < buf.count(); a++) {
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             assertTrue(arc.hasSurface(), "contact arc should snap endpoints to contact mesh");
             // 末端（最后一个点）应被吸附到球面附近（原点半径为 1 的球平移到 (0.52,4.34,0.38)）
             // 起点（第一个点）固定在表面点，不吸附（Blender End Size=1）
-            int last = arc.size() - 1;
-            float dx = arc.x(last) - 0.52f;
-            float dy = arc.y(last) - 4.34f;
-            float dz = arc.z(last) - 0.38f;
-            float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            var last = arc.size() - 1;
+            var dx = arc.x(last) - 0.52f;
+            var dy = arc.y(last) - 4.34f;
+            var dz = arc.z(last) - 0.38f;
+            var len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
             assertEquals(1f, len, 0.3f, "contact arc end endpoint should be near sphere surface");
             assertEquals(0f, arc.y(0), 0.5f, "contact arc start endpoint stays on plane (y≈0)");
         }
@@ -130,7 +129,7 @@ class ContactArcBlockTest {
         simA.step(1f / 60f);
         simB.step(1f / 60f);
         assertEquals(simA.arcBuffer().count(), simB.arcBuffer().count());
-        for (int i = 0; i < simA.arcBuffer().count(); i++) {
+        for (var i = 0; i < simA.arcBuffer().count(); i++) {
             assertEquals(simA.arcBuffer().arc(i).size(), simB.arcBuffer().arc(i).size());
         }
     }

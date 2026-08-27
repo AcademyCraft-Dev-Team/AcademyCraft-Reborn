@@ -1,13 +1,11 @@
 package org.academy.api.client.render.graph.subgraph;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
+
+import java.util.*;
 
 /**
  * 子图内联展开器（M12-05）：把图中的 `subgraph` 节点替换为其引用的子图节点/边，ID 重映射。
@@ -26,12 +24,12 @@ public final class SubGraphFlattener {
     }
 
     public static Graph flatten(Graph graph, SubGraphRegistry registry) {
-        boolean hasSub = graph.nodes().stream().anyMatch(n -> "subgraph".equals(n.type()));
+        var hasSub = graph.nodes().stream().anyMatch(n -> "subgraph".equals(n.type()));
         if (!hasSub || registry == null) return graph;
 
         var newNodes = new ArrayList<GraphNode>();
         var newEdges = new ArrayList<Edge>();
-        var newParams = new ArrayList<GraphParameter>(graph.parameters());
+        var newParams = new ArrayList<>(graph.parameters());
 
         for (var node : graph.nodes()) {
             if (!"subgraph".equals(node.type())) {
@@ -65,13 +63,13 @@ public final class SubGraphFlattener {
 
         // 参数 -> 父图源（被覆盖的参数）
         Map<String, Edge.PortRef> paramOverride = new HashMap<>();
-        for (int i = 0; i < sub.parameters().size(); i++) {
+        for (var i = 0; i < sub.parameters().size(); i++) {
             var pe = inEdges.get("in" + i);
             if (pe != null) paramOverride.put(sub.parameters().get(i).id(), pe.from());
         }
 
         // 子图内部边 → 父图边的扩展列表
-        var subEdges = new ArrayList<Edge>(sub.edges());
+        var subEdges = new ArrayList<>(sub.edges());
 
         Map<String, String> idMap = new HashMap<>();
         for (var sn : sub.nodes()) {
@@ -92,11 +90,7 @@ public final class SubGraphFlattener {
             Edge.PortRef fromRef;
             if (fromNode != null && isParamNode(fromNode.type())) {
                 var override = paramOverride.get(fromNode.properties().get("param"));
-                if (override == null) {
-                    fromRef = new Edge.PortRef(idMap.get(e.from().nodeId()), e.from().portId());
-                } else {
-                    fromRef = override;
-                }
+                fromRef = Objects.requireNonNullElseGet(override, () -> new Edge.PortRef(idMap.get(e.from().nodeId()), e.from().portId()));
             } else {
                 var fromId = idMap.get(e.from().nodeId());
                 if (fromId == null) continue;

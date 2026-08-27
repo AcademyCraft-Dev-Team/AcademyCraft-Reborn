@@ -16,13 +16,13 @@ public class QuantumUtil {
     }
 
     public static void quantumHealthFluctuation(LivingEntity self) {
-        if (!(self.level() instanceof ServerLevel level)) return;
+        if (!(self.level() instanceof ServerLevel)) return;
 
         var data = self.getData(AttachmentTypes.QUANTUM_DATA.get());
         if (!data.active()) return;
 
         if (updateQuantumDuration(self, data)) {
-            if (self.tickCount % 20 == 0) applyHealthFluctuation(self, level);
+            if (self.tickCount % 20 == 0) applyHealthFluctuation(self);
         }
     }
 
@@ -39,7 +39,7 @@ public class QuantumUtil {
         return true;
     }
 
-    private static void applyHealthFluctuation(LivingEntity self, ServerLevel level) {
+    private static void applyHealthFluctuation(LivingEntity self) {
         var maxHealth = self.getMaxHealth();
         var currentHealth = self.getHealth();
 

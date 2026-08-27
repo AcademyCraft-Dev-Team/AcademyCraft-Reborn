@@ -12,7 +12,7 @@ public final class GlslLiterals {
 
     public static Expr of(Value v) {
         return switch (v.type()) {
-            case FLOAT -> new Expr(floatLit(v.asFloat()), ValueType.FLOAT);
+            case FLOAT, TIME -> new Expr(floatLit(v.asFloat()), ValueType.FLOAT);
             case INT -> new Expr(Integer.toString(v.asInt()), ValueType.INT);
             case BOOL -> new Expr(Boolean.toString(v.asBool()), ValueType.BOOL);
             case VEC2 -> {
@@ -29,7 +29,6 @@ public final class GlslLiterals {
                 yield new Expr("vec4(" + floatLit(x.x) + ", " + floatLit(x.y) + ", " + floatLit(x.z) + ", "
                         + floatLit(x.w) + ")", ValueType.VEC4);
             }
-            case TIME -> new Expr(floatLit(v.asFloat()), ValueType.FLOAT);
             default -> throw new IllegalArgumentException("no GLSL literal for " + v.type());
         };
     }

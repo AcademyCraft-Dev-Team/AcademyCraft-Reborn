@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.meltdowner;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
@@ -8,7 +9,6 @@ import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinear
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
 import java.util.UUID;
-import net.minecraft.util.Mth;
 
 public final class ContinuousBeamReflection {
     private ContinuousBeamReflection() {

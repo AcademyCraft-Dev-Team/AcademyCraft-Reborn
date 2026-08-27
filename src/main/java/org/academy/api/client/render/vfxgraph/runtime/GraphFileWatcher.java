@@ -1,19 +1,16 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import org.academy.AcademyCraft;
+import org.slf4j.Logger;
+
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import net.minecraft.resources.Identifier;
-import org.academy.AcademyCraft;
-import org.slf4j.Logger;
 
 /**
  * dev 模式图资产文件监听（M15-05 第二通道）：WatchService 监听目录下 {@code vfxgraph/*.json}
@@ -38,7 +35,9 @@ public final class GraphFileWatcher implements AutoCloseable {
         this.watchService = FileSystems.getDefault().newWatchService();
     }
 
-    /** 注册根目录及全部子目录（递归）。 */
+    /**
+     * 注册根目录及全部子目录（递归）。
+     */
     public void registerTree() throws IOException {
         registerTree(root);
     }
@@ -61,7 +60,9 @@ public final class GraphFileWatcher implements AutoCloseable {
         }
     }
 
-    /** 轮询一次事件并处理（供后台线程与测试调用）。 */
+    /**
+     * 轮询一次事件并处理（供后台线程与测试调用）。
+     */
     public void pollOnce() {
         var key = watchService.poll();
         if (key == null) {
@@ -101,8 +102,8 @@ public final class GraphFileWatcher implements AutoCloseable {
         var assetId = Identifier.fromNamespaceAndPath("academy", "vfxgraph/" + assetName);
         // 后台线程读文件，排队到主线程执行 reload（管理器集合非线程安全，Bug 修复）
         try {
-            var content = java.nio.file.Files.readString(file);
-            net.minecraft.client.Minecraft.getInstance().execute(() -> {
+            var content = Files.readString(file);
+            Minecraft.getInstance().execute(() -> {
                 try {
                     VfxGraphManager.INSTANCE.reloadFromContent(assetId, content);
                     LOGGER.info("Vfx graph asset reloaded: {}", assetId);
@@ -110,12 +111,14 @@ public final class GraphFileWatcher implements AutoCloseable {
                     LOGGER.error("Unable to reload vfx graph asset: {}", assetId, exception);
                 }
             });
-        } catch (java.io.IOException exception) {
+        } catch (IOException exception) {
             LOGGER.error("Unable to read vfx graph asset: {}", file, exception);
         }
     }
 
-    /** 后台常驻线程。 */
+    /**
+     * 后台常驻线程。
+     */
     public void startLoop() {
         executor.execute(() -> {
             while (!Thread.currentThread().isInterrupted()) {

@@ -84,13 +84,13 @@ public final class VertexUtil {
                 var faceNormalXd = Mth.cos(midAngled);
                 var faceNormalZd = Mth.sin(midAngled);
 
-                var nx = (float) faceNormalXd;
-                var nz = (float) faceNormalZd;
+                var nx = faceNormalXd;
+                var nz = faceNormalZd;
 
-                vertexBuffer[vertexIndex++] = new float[]{(float) x1d, yTop, (float) z1d, u1f, vTopf, nx, 0f, nz};
-                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yTop, (float) z2d, u2f, vTopf, nx, 0f, nz};
-                vertexBuffer[vertexIndex++] = new float[]{(float) x2d, yBottom, (float) z2d, u2f, vBottomf, nx, 0f, nz};
-                vertexBuffer[vertexIndex++] = new float[]{(float) x1d, yBottom, (float) z1d, u1f, vBottomf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{x1d, yTop, z1d, u1f, vTopf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{x2d, yTop, z2d, u2f, vTopf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{x2d, yBottom, z2d, u2f, vBottomf, nx, 0f, nz};
+                vertexBuffer[vertexIndex++] = new float[]{x1d, yBottom, z1d, u1f, vBottomf, nx, 0f, nz};
             }
 
             if (capped) {
@@ -115,8 +115,8 @@ public final class VertexUtil {
 
                     var topCapNormal = new float[]{0f, 1f, 0f};
                     var v1 = new float[]{(float) centerXd, yTop, (float) centerZd, uCenterf, vCenterf, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
-                    var v2 = new float[]{(float) x1d, yTop, (float) z1d, u1f, v1f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
-                    var v3 = new float[]{(float) x2d, yTop, (float) z2d, u2f, v2f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
+                    var v2 = new float[]{x1d, yTop, z1d, u1f, v1f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
+                    var v3 = new float[]{x2d, yTop, z2d, u2f, v2f, topCapNormal[0], topCapNormal[1], topCapNormal[2]};
 
                     vertexBuffer[vertexIndex++] = v3;
                     vertexBuffer[vertexIndex++] = v3;
@@ -140,8 +140,8 @@ public final class VertexUtil {
 
                     var bottomCapNormal = new float[]{0f, -1f, 0f};
                     var v1 = new float[]{(float) centerXd, yBottom, (float) centerZd, uCenterf, vCenterf, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
-                    var v2 = new float[]{(float) x2d, yBottom, (float) z2d, u2f, v2f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
-                    var v3 = new float[]{(float) x1d, yBottom, (float) z1d, u1f, v1f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
+                    var v2 = new float[]{x2d, yBottom, z2d, u2f, v2f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
+                    var v3 = new float[]{x1d, yBottom, z1d, u1f, v1f, bottomCapNormal[0], bottomCapNormal[1], bottomCapNormal[2]};
 
                     vertexBuffer[vertexIndex++] = v3;
                     vertexBuffer[vertexIndex++] = v3;
@@ -183,10 +183,10 @@ public final class VertexUtil {
                 var nx2f = Mth.cos(angle2d);
                 var nz2f = Mth.sin(angle2d);
 
-                var x1f = (float) x1d;
-                var z1f = (float) z1d;
-                var x2f = (float) x2d;
-                var z2f = (float) z2d;
+                var x1f = x1d;
+                var z1f = z1d;
+                var x2f = x2d;
+                var z2f = z2d;
 
                 vertexBuffer[vertexIndex++] = new float[]{x1f, yTop, z1f, nx1f, 0f, nz1f};
                 vertexBuffer[vertexIndex++] = new float[]{x2f, yTop, z2f, nx2f, 0f, nz2f};
@@ -249,7 +249,7 @@ public final class VertexUtil {
 
     public static final class Ball {
         private static float[] normalize(float[] v) {
-            var length = Mth.sqrt((float) (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]));
+            var length = Mth.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
             if (length > 1e-6) {
                 return new float[]{v[0] / length, v[1] / length, v[2] / length};
             }

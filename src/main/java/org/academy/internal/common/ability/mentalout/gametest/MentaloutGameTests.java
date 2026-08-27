@@ -21,11 +21,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.EntityReference;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase;
 import net.minecraft.world.level.GameType;
@@ -358,7 +354,7 @@ public final class MentaloutGameTests {
                     var entityHit = MentaloutTargeting.findSightDestination(
                             controller, MentaloutTargeting.MAX_SIGHT_RANGE);
                     helper.assertTrue(
-                            entityHit instanceof ControlDestination.Entity(UUID uuid)
+                            entityHit instanceof ControlDestination.Entity(var uuid)
                                     && uuid.equals(target.getUUID()),
                             "Sight destination did not select the looked-at entity"
                     );
@@ -376,7 +372,7 @@ public final class MentaloutGameTests {
                             new BlockPos(1, 3, 3)
                     ));
                     helper.assertTrue(
-                            blockHit instanceof ControlDestination.Position(Identifier dimension, Vec3 value)
+                            blockHit instanceof ControlDestination.Position(var dimension, var value)
                                     && dimension.equals(helper.getLevel().dimension().identifier())
                                     && value.distanceToSqr(expected) < 1.0e-6,
                             "Sight destination did not return the outside face position"

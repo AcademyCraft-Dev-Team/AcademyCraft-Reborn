@@ -1,6 +1,5 @@
 package org.academy.internal.common.world.entity.projectile;
 
-import java.util.UUID;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
@@ -19,7 +18,11 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.world.item.Items;
 
-/** Short-lived, server-owned feather blade used by Dark Matter Interference. */
+import java.util.UUID;
+
+/**
+ * Short-lived, server-owned feather blade used by Dark Matter Interference.
+ */
 public final class DarkmatterFeatherProjectile extends AbstractArrow implements ItemSupplier {
     private UUID targetId;
     private float damage = 1.0f;

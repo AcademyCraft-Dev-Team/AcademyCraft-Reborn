@@ -8,8 +8,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.util.EnergyChargeHelper;
+import org.academy.internal.common.world.level.block.Blocks;
 
 public final class WindGenMenu extends AbstractContainerMenu {
     public final ContainerLevelAccess access;

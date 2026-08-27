@@ -1,11 +1,10 @@
 package org.academy.api.common.ability.darkmatter;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
-/** Stable extension surface for shaped-item modifier metadata. */
+/**
+ * Stable extension surface for shaped-item modifier metadata.
+ */
 public final class DarkmatterShapingRegistries {
     private static final Map<String, DarkmatterModifierType> MODIFIERS = new LinkedHashMap<>();
 
@@ -26,6 +25,6 @@ public final class DarkmatterShapingRegistries {
 
     public static Collection<DarkmatterModifierType> modifiers() {
         DarkmatterModifiers.bootstrap();
-        return java.util.List.copyOf(MODIFIERS.values());
+        return List.copyOf(MODIFIERS.values());
     }
 }

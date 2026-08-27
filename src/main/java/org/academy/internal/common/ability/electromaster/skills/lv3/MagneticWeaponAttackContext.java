@@ -1,20 +1,22 @@
 package org.academy.internal.common.ability.electromaster.skills.lv3;
 
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.item.component.KineticWeapon;
 import org.academy.internal.common.ability.Skills;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-/** Sidecar attribution for a synchronous vanilla attack performed by Magnetic Weapon. */
+/**
+ * Sidecar attribution for a synchronous vanilla attack performed by Magnetic Weapon.
+ */
 public final class MagneticWeaponAttackContext implements AutoCloseable {
     private static final ThreadLocal<Deque<Frame>> FRAMES = ThreadLocal.withInitial(ArrayDeque::new);
 

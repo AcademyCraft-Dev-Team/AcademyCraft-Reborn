@@ -1,11 +1,7 @@
 package org.academy.api.client.render.shader.pipeline;
 
 import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.pipeline.BindGroupLayout;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.*;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -38,7 +34,9 @@ public final class ShaderGraphPipeline {
         return new ShaderGraphResult(buildPipeline(fragmentId, vertexId, samplers.size()), layout);
     }
 
-    /** 预编译到 GPU 管线缓存；仅在有 GpuDevice 的环境（游戏/桌面编辑器）调用。 */
+    /**
+     * 预编译到 GPU 管线缓存；仅在有 GpuDevice 的环境（游戏/桌面编辑器）调用。
+     */
     public CompiledRenderPipeline precompile(GpuDevice device, ShaderGraphResult result) {
         return device.precompilePipeline(result.pipeline(), shaderSource);
     }
@@ -53,7 +51,7 @@ public final class ShaderGraphPipeline {
                         .build());
         if (samplerCount > 0) {
             var samplerLayout = BindGroupLayout.builder();
-            for (int i = 0; i < samplerCount; i++) {
+            for (var i = 0; i < samplerCount; i++) {
                 samplerLayout.withSampler(SamplerBinding.uniformName(i));
             }
             builder.withBindGroupLayout(samplerLayout.build());

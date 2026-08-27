@@ -6,28 +6,17 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.core.BlockPos;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.Render;
-import org.academy.api.client.render.post.PostEffect;
-import org.academy.api.client.render.vfx.VfxPipelines;
-import org.academy.internal.common.world.level.material.Fluids;
+import org.academy.api.client.render.post.GlowEffect;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public final class ImagPhaseFluidParticle extends SingleQuadParticle {
     private static final float HALF_PI = (float) (Math.PI * 0.5);
-    private static final Layer ALWAYS_VISIBLE_LAYER = new Layer(
-            true,
-            TextureAtlas.LOCATION_PARTICLES,
-            VfxPipelines.IMAG_PHASE_PARTICLE_ALWAYS_VISIBLE
-    );
     private final float baseRotationX;
     private final float baseRotationY;
     private final float rotationSpeed;
@@ -47,8 +36,6 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
     ) {
         super(level, x, y, z, sprites.get(random));
         setSize(0.02F, 0.02F);
-        // Match the 1.21.1 SuspendedParticle size/lifetime distribution. The provider
-        // applies the original additional 0.5-0.75 scale and pastel color variation.
         quadSize = 0.1F * (random.nextFloat() * 0.5F + 0.5F) * 2.0F;
         quadSize *= random.nextFloat() * 0.6F + 0.2F;
         dripping = ySpeed < 0.0;
@@ -78,16 +65,7 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
     public void tick() {
         super.tick();
         if (removed) return;
-        if (dripping) {
-            if (onGround) remove();
-            return;
-        }
-
-        FluidState state = level.getFluidState(BlockPos.containing(x, y, z));
-        Fluid fluid = state.getType();
-        if (fluid != Fluids.IMAG_PHASE.get() && fluid != Fluids.FLOWING_IMAG_PHASE.get()) {
-            remove();
-        }
+        if (dripping) if (onGround) remove();
     }
 
     @Override
@@ -101,44 +79,18 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
                 .rotateX(baseRotationX + spin * 0.7F)
                 .rotateY(baseRotationY + spin);
 
-        if (IrisIntegration.isShaderPackInUse()) {
-            if (!IrisIntegration.isShadowRendererActive()) {
-                VertexConsumer postBuffer = PostEffect.getPost()
-                        .getBuffer(Render.RenderTypes.IMAG_PHASE_PARTICLE_POST);
-                extractPostQuad(postBuffer, rotation, renderX, renderY, renderZ, partialTick);
-                extractPostQuad(
-                        postBuffer,
-                        new Quaternionf(rotation).rotateY(HALF_PI),
-                        renderX,
-                        renderY,
-                        renderZ,
-                        partialTick
-                );
-                extractPostQuad(
-                        postBuffer,
-                        new Quaternionf(rotation).rotateX(HALF_PI),
-                        renderX,
-                        renderY,
-                        renderZ,
-                        partialTick
-                );
-            }
-            return;
-        }
-
-        // Three mutually perpendicular star planes form a spatial particle instead of a
-        // surface decal or a single camera-facing quad.
-        extractRotatedQuad(renderState, rotation, renderX, renderY, renderZ, partialTick);
-        extractRotatedQuad(
-                renderState,
+        var postBuffer = GlowEffect.getBefore().getBuffer(Render.RenderTypes.IMAG_PHASE_PARTICLE_POST);
+        extractPostQuad(postBuffer, rotation, renderX, renderY, renderZ, partialTick);
+        extractPostQuad(
+                postBuffer,
                 new Quaternionf(rotation).rotateY(HALF_PI),
                 renderX,
                 renderY,
                 renderZ,
                 partialTick
         );
-        extractRotatedQuad(
-                renderState,
+        extractPostQuad(
+                postBuffer,
                 new Quaternionf(rotation).rotateX(HALF_PI),
                 renderX,
                 renderY,
@@ -185,11 +137,11 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
 
     @Override
     public SingleQuadParticle.Layer getLayer() {
-        return ALWAYS_VISIBLE_LAYER;
+        return Layer.TRANSLUCENT_ITEMS;
     }
 
     @Override
     protected int getLightCoords(float partialTick) {
-        return 0xF000F0;
+        return LightCoordsUtil.FULL_BRIGHT;
     }
 }

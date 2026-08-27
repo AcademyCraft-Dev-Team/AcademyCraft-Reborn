@@ -1,11 +1,7 @@
 package org.academy.internal.common.ability;
 
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.LearningHelper;
-import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.SkillProficiencyProfiles;
-import org.academy.api.common.ability.SkillScope;
+import org.academy.api.common.ability.*;
 import org.academy.api.common.registries.Registries;
 
 import java.util.*;

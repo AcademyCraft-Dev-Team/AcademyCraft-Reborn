@@ -1,14 +1,15 @@
 package org.academy.internal.common.ability.program;
 
 import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/** Reverse adapter used only by legacy Precision editor surfaces and data migration. */
+/**
+ * Reverse adapter used only by legacy Precision editor surfaces and data migration.
+ */
 public final class PrecisionProgramExporter {
     private PrecisionProgramExporter() {
     }

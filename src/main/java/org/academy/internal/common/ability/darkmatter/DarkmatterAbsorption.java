@@ -6,11 +6,14 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import org.academy.AcademyCraft;
 
-/** Makes temporary dark-matter absorption compatible with the MAX_ABSORPTION attribute. */
+/**
+ * Makes temporary dark-matter absorption compatible with the MAX_ABSORPTION attribute.
+ */
 public final class DarkmatterAbsorption {
     private static final Identifier CAPACITY_ID = AcademyCraft.academy("darkmatter_absorption_capacity");
 
-    private DarkmatterAbsorption() { }
+    private DarkmatterAbsorption() {
+    }
 
     public static void grantAtLeast(ServerPlayer player, float amount) {
         if (player == null || !Float.isFinite(amount) || amount <= 0.0f) return;

@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.mentalout.skills.lv5;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,7 +63,7 @@ class PrecisionOperationDataTest {
     }
 
     private static void setField(Object target, String name, Object value) throws ReflectiveOperationException {
-        Field field = target.getClass().getDeclaredField(name);
+        var field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
     }

@@ -3,8 +3,8 @@ package org.academy.internal.client.render.vfx;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.util.context.ContextKey;
+import net.minecraft.world.entity.player.Player;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
@@ -18,7 +18,6 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.academy.AcademyCraft.academy;
 
@@ -84,7 +83,7 @@ public final class ElectromasterWeaponVfx implements Vfx {
         var roots = WingAvatarRegistry.entries();
         if (roots.isEmpty()) return;
 
-        for (Map.Entry<Integer, Matrix4f> entry : roots.entrySet()) {
+        for (var entry : roots.entrySet()) {
             var entity = level.getEntity(entry.getKey());
             if (!(entity instanceof Player player)) continue;
             var ironSand = player.getData(AttachmentTypes.IRON_SAND_DATA.get());

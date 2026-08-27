@@ -3,8 +3,8 @@ package org.academy.internal.common.attribute;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -24,7 +24,6 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import net.minecraft.util.Mth;
 
 /**
  * Applies the linear bonuses derived from effective P.R.O.P.S player attributes.
@@ -285,7 +284,7 @@ public final class PlayerAttributeRuntime {
         if (source == null) return null;
         if (source.getEntity() instanceof Player player) return player;
         if (source.getDirectEntity() instanceof Player player) return player;
-        Entity direct = source.getDirectEntity();
+        var direct = source.getDirectEntity();
         if (direct instanceof Projectile projectile
                 && projectile.getOwner() instanceof Player player) return player;
         return null;

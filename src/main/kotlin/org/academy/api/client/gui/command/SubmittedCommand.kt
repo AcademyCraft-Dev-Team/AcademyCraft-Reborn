@@ -8,7 +8,8 @@ class SubmittedCommand(
     val command: DrawCommand,
     val pose: PoseStack.Pose,
     val scissorRect: ScissorRect?,
-    val drawOrder: Int
+    val drawOrder: Long,
+    val commandIndex: Int = 0
 ) {
     val resourceKey: Long = calculateResourceKey(command)
 

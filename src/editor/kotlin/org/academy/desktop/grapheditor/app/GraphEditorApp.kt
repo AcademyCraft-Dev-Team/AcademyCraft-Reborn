@@ -5,14 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.mojang.blaze3d.pipeline.RenderTarget
 import imgui.ImGui
-import imgui.flag.ImGuiCond
-import imgui.flag.ImGuiDockNodeFlags
-import imgui.flag.ImGuiDir
-import imgui.flag.ImGuiKey
-import imgui.flag.ImGuiStyleVar
-import imgui.flag.ImGuiTabItemFlags
-import imgui.flag.ImGuiWindowFlags
-import imgui.internal.ImGui as ImGuiDock
+import imgui.flag.*
 import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
@@ -23,20 +16,16 @@ import org.academy.api.client.render.graph.serialize.GraphCodec
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec
 import org.academy.api.client.render.graph.type.ValueType
 import org.academy.api.client.render.shader.codegen.GlslNodeRegistry
-import org.academy.api.client.render.vfxgraph.serialize.VfxGraphSchemaVersion
 import org.academy.api.client.render.shader.nodes.ShaderNodes
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodes
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec
-import org.academy.desktop.grapheditor.canvas.AlignOps
-import org.academy.desktop.grapheditor.canvas.Camera2D
-import org.academy.desktop.grapheditor.canvas.GraphEditorModel
-import org.academy.desktop.grapheditor.canvas.GraphEditorModelRef
-import org.academy.desktop.grapheditor.canvas.NodeCanvas
+import org.academy.api.client.render.vfxgraph.serialize.VfxGraphSchemaVersion
+import org.academy.desktop.grapheditor.canvas.*
 import org.academy.desktop.grapheditor.clipboard.GraphClipboard
 import org.academy.desktop.grapheditor.commandpalette.CommandPalette
 import org.academy.desktop.grapheditor.container.VfxContainerCanvas
@@ -64,6 +53,7 @@ import org.academy.desktop.platform.GraphHotReload
 import org.academy.desktop.platform.ShaderHotReload
 import java.nio.file.Files
 import java.nio.file.Path
+import imgui.internal.ImGui as ImGuiDock
 
 /**
  * 桌面 Shader/VFX Graph 编辑器（多文档，M19，ADR-022）。ImGui docking 布局：
@@ -185,8 +175,8 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         shaderWatcher.scanNow()
         graphWatcher.scanNow()
         val io = ImGui.getIO()
-        val displayW = io.getDisplaySizeX()
-        val displayH = io.getDisplaySizeY()
+        val displayW = io.displaySizeX
+        val displayH = io.displaySizeY
 
         renderMenuBar()
         val menuH = ImGui.getFrameHeightWithSpacing()
@@ -340,10 +330,10 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         if (iniConfigured) return
         iniConfigured = true
         val io = ImGui.getIO()
-        io.setIniFilename(iniFile().toString())
+        io.iniFilename = iniFile().toString()
         // 仅标题栏/停靠标签可拖动窗口：画布内容区用 drawList 绘制、无 item，
         // 默认 ConfigWindowsMoveFromTitleBarOnly=false 会把内容拖拽误判为窗口移动。
-        io.setConfigWindowsMoveFromTitleBarOnly(true)
+        io.configWindowsMoveFromTitleBarOnly = true
     }
 
     private fun renderDockHost(menuH: Float, displayW: Float, displayH: Float) {
@@ -431,7 +421,13 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
                 ImGui.separator()
                 if (ImGui.menuItem("Copy", "Ctrl+C", false, canvas.selected.isNotEmpty())) canvas.copySelection()
                 if (ImGui.menuItem("Paste", "Ctrl+V")) canvas.pasteAtCursor()
-                if (ImGui.menuItem("Duplicate", "Ctrl+D", false, canvas.selected.isNotEmpty())) canvas.duplicateSelection()
+                if (ImGui.menuItem(
+                        "Duplicate",
+                        "Ctrl+D",
+                        false,
+                        canvas.selected.isNotEmpty()
+                    )
+                ) canvas.duplicateSelection()
                 if (ImGui.menuItem("Delete", "Del", false, canvas.selected.isNotEmpty())) canvas.deleteSelection()
                 ImGui.separator()
                 if (ImGui.menuItem("Select All", "Ctrl+A")) canvas.selectAll()
@@ -440,12 +436,42 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             }
             if (ImGui.beginMenu("Arrange")) {
                 val canAlign = canvas.selected.size >= 2
-                if (ImGui.menuItem("Align Left", "Ctrl+Alt+1", false, canAlign)) canvas.alignSelected(AlignOps.Align.LEFT)
-                if (ImGui.menuItem("Align Center H", "Ctrl+Alt+2", false, canAlign)) canvas.alignSelected(AlignOps.Align.CENTER_H)
-                if (ImGui.menuItem("Align Right", "Ctrl+Alt+3", false, canAlign)) canvas.alignSelected(AlignOps.Align.RIGHT)
+                if (ImGui.menuItem(
+                        "Align Left",
+                        "Ctrl+Alt+1",
+                        false,
+                        canAlign
+                    )
+                ) canvas.alignSelected(AlignOps.Align.LEFT)
+                if (ImGui.menuItem(
+                        "Align Center H",
+                        "Ctrl+Alt+2",
+                        false,
+                        canAlign
+                    )
+                ) canvas.alignSelected(AlignOps.Align.CENTER_H)
+                if (ImGui.menuItem(
+                        "Align Right",
+                        "Ctrl+Alt+3",
+                        false,
+                        canAlign
+                    )
+                ) canvas.alignSelected(AlignOps.Align.RIGHT)
                 if (ImGui.menuItem("Align Top", "Ctrl+Alt+4", false, canAlign)) canvas.alignSelected(AlignOps.Align.TOP)
-                if (ImGui.menuItem("Align Middle V", "Ctrl+Alt+5", false, canAlign)) canvas.alignSelected(AlignOps.Align.MIDDLE_V)
-                if (ImGui.menuItem("Align Bottom", "Ctrl+Alt+6", false, canAlign)) canvas.alignSelected(AlignOps.Align.BOTTOM)
+                if (ImGui.menuItem(
+                        "Align Middle V",
+                        "Ctrl+Alt+5",
+                        false,
+                        canAlign
+                    )
+                ) canvas.alignSelected(AlignOps.Align.MIDDLE_V)
+                if (ImGui.menuItem(
+                        "Align Bottom",
+                        "Ctrl+Alt+6",
+                        false,
+                        canAlign
+                    )
+                ) canvas.alignSelected(AlignOps.Align.BOTTOM)
                 ImGui.separator()
                 val canDistribute = canvas.selected.size >= 3
                 if (ImGui.menuItem("Distribute Horizontally", "Ctrl+Alt+H", false, canDistribute)) {
@@ -462,7 +488,9 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             }
             if (ImGui.beginMenu("View")) {
                 if (ImGui.menuItem("Palette", "Ctrl+Alt+P", isPanelVisible(PANEL_PALETTE))) togglePanel(PANEL_PALETTE)
-                if (ImGui.menuItem("Inspector", "Ctrl+Alt+I", isPanelVisible(PANEL_INSPECTOR))) togglePanel(PANEL_INSPECTOR)
+                if (ImGui.menuItem("Inspector", "Ctrl+Alt+I", isPanelVisible(PANEL_INSPECTOR))) togglePanel(
+                    PANEL_INSPECTOR
+                )
                 if (ImGui.menuItem("Project", "Ctrl+Alt+R", isPanelVisible(PANEL_PROJECT))) togglePanel(PANEL_PROJECT)
                 if (ImGui.menuItem("Generated GLSL", null, isPanelVisible(PANEL_GLSL))) togglePanel(PANEL_GLSL)
                 if (ImGui.menuItem("Viewport", null, true)) Unit
@@ -555,8 +583,10 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             }
             ImGui.endMenu()
         }
-        val blockTypes = registry.all().filter { it.category() == "spawn" || it.category() == "init"
-                || it.category() == "update" || it.category() == "output" }
+        val blockTypes = registry.all().filter {
+            it.category() == "spawn" || it.category() == "init"
+                    || it.category() == "update" || it.category() == "output"
+        }
             .sortedBy { it.category() + it.id() }
         if (blockTypes.isNotEmpty() && ImGui.beginMenu("Add Block")) {
             val targetCtx = containerModel.contexts.values.firstOrNull { it.id in cm.selectedContext }
@@ -654,16 +684,18 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
 
     private fun displayName(typeId: String): String = registry.find(typeId)?.displayName() ?: typeId
 
-    private fun defaultPropertyString(value: org.academy.api.client.render.graph.type.Value): String = when (value.type()) {
-        org.academy.api.client.render.graph.type.ValueType.FLOAT -> value.asFloat().toString()
-        org.academy.api.client.render.graph.type.ValueType.INT -> value.asInt().toString()
-        org.academy.api.client.render.graph.type.ValueType.BOOL -> value.asBool().toString()
-        org.academy.api.client.render.graph.type.ValueType.COLOR -> {
-            val c = value.asColor()
-            "${c.x},${c.y},${c.z},${c.w}"
+    private fun defaultPropertyString(value: org.academy.api.client.render.graph.type.Value): String =
+        when (value.type()) {
+            ValueType.FLOAT -> value.asFloat().toString()
+            ValueType.INT -> value.asInt().toString()
+            ValueType.BOOL -> value.asBool().toString()
+            ValueType.COLOR -> {
+                val c = value.asColor()
+                "${c.x},${c.y},${c.z},${c.w}"
+            }
+
+            else -> value.asString().let { "" }
         }
-        else -> value.asString().let { "" }
-    }
 
     private fun editPropertyValue(label: String, type: ValueType, current: String): String? {
         when (type) {
@@ -671,10 +703,12 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
                 val v = floatArrayOf(current.toFloatOrNull() ?: 0f)
                 if (ImGui.dragFloat(label, v, 0.01f)) return v[0].toString()
             }
+
             ValueType.INT -> {
                 val v = intArrayOf(current.toIntOrNull() ?: 0)
                 if (ImGui.dragInt(label, v)) return v[0].toString()
             }
+
             ValueType.COLOR -> {
                 val parts = current.split(",").map { it.trim().toFloatOrNull() ?: 1f }
                 val arr = floatArrayOf(
@@ -683,6 +717,7 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
                     return "${arr[0]},${arr[1]},${arr[2]},${arr[3]}"
                 }
             }
+
             else -> {
                 val s = ImString(current, 256)
                 if (ImGui.inputText(label, s)) return s.get()
@@ -718,7 +753,7 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             val node = nodeId?.let { model.nodes[it] }
             if (node != null && node.typeId == "subgraph") {
                 if (ImGui.menuItem("Open Sub Graph")) {
-                    nodeId?.let { openSubGraph(it) }
+                    nodeId.let { openSubGraph(it) }
                 }
                 ImGui.separator()
             }
@@ -858,15 +893,21 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey._4) { canvas.alignSelected(AlignOps.Align.TOP) }
         shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey._5) { canvas.alignSelected(AlignOps.Align.MIDDLE_V) }
         shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey._6) { canvas.alignSelected(AlignOps.Align.BOTTOM) }
-        shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey.H) { canvas.distributeSelected(AlignOps.Distribute.HORIZONTAL) }
-        shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey.V) { canvas.distributeSelected(AlignOps.Distribute.VERTICAL) }
+        shortcuts.register(
+            KeyMods.CTRL or KeyMods.ALT,
+            ImGuiKey.H
+        ) { canvas.distributeSelected(AlignOps.Distribute.HORIZONTAL) }
+        shortcuts.register(
+            KeyMods.CTRL or KeyMods.ALT,
+            ImGuiKey.V
+        ) { canvas.distributeSelected(AlignOps.Distribute.VERTICAL) }
         shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey.P) { togglePanel(PANEL_PALETTE) }
         shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey.I) { togglePanel(PANEL_INSPECTOR) }
         shortcuts.register(KeyMods.CTRL or KeyMods.ALT, ImGuiKey.R) { togglePanel(PANEL_PROJECT) }
     }
 
     private fun handleShortcuts() {
-        if (ImGui.getIO().getWantCaptureKeyboard()) return
+        if (ImGui.getIO().wantCaptureKeyboard) return
         shortcuts.handle()
     }
 
@@ -877,26 +918,30 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
                 canvas.addNodeAtGraph(type.id(), pos.first, pos.second)
             }
         }
-        commandPalette.setActions(nodeActions + listOf(
-            "Undo" to { activeUndo() },
-            "Redo" to { activeRedo() },
-            "Select All" to { canvas.selectAll() },
-            "Group Selection" to { canvas.groupSelection() },
-            "Add Frame" to { canvas.addFrameAtCursor() },
-            "Add Note" to { canvas.addNoteAtCursor() },
-            "Frame Selection" to { canvas.frameSelection() },
-            "Frame All" to { canvas.frameAll() },
-            "New Graph" to { newGraph() },
-            "Save" to { save() },
-            "Load" to { load() },
-        ))
+        commandPalette.setActions(
+            nodeActions + listOf(
+                "Undo" to { activeUndo() },
+                "Redo" to { activeRedo() },
+                "Select All" to { canvas.selectAll() },
+                "Group Selection" to { canvas.groupSelection() },
+                "Add Frame" to { canvas.addFrameAtCursor() },
+                "Add Note" to { canvas.addNoteAtCursor() },
+                "Frame Selection" to { canvas.frameSelection() },
+                "Frame All" to { canvas.frameAll() },
+                "New Graph" to { newGraph() },
+                "Save" to { save() },
+                "Load" to { load() },
+            )
+        )
     }
 
     /** 活动模型（VFX 容器模式用容器 undo 栈，否则扁平）。 */
-    private val activeModelCanUndo: Boolean get() =
-        if (mode == GraphMode.VFX) containerModel.canUndo else model.canUndo
-    private val activeModelCanRedo: Boolean get() =
-        if (mode == GraphMode.VFX) containerModel.canRedo else model.canRedo
+    private val activeModelCanUndo: Boolean
+        get() =
+            if (mode == GraphMode.VFX) containerModel.canUndo else model.canUndo
+    private val activeModelCanRedo: Boolean
+        get() =
+            if (mode == GraphMode.VFX) containerModel.canRedo else model.canRedo
 
     private fun activeCanUndo(): Boolean = activeModelCanUndo
 
@@ -943,11 +988,23 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         }
     }
 
-    private fun applyParamValue(paramId: String, valueFactory: (org.academy.api.client.render.graph.model.GraphParameter) -> org.academy.api.client.render.graph.type.Value) {
+    private fun applyParamValue(
+        paramId: String,
+        valueFactory: (org.academy.api.client.render.graph.model.GraphParameter) -> org.academy.api.client.render.graph.type.Value
+    ) {
         val index = model.parameters.indexOfFirst { it.id() == paramId }
         if (index < 0) return
         val p = model.parameters[index]
-        model.replaceParameter(index, org.academy.api.client.render.graph.model.GraphParameter(p.id(), p.name(), p.type(), valueFactory(p), p.range()))
+        model.replaceParameter(
+            index,
+            org.academy.api.client.render.graph.model.GraphParameter(
+                p.id(),
+                p.name(),
+                p.type(),
+                valueFactory(p),
+                p.range()
+            )
+        )
     }
 
     private fun renderStatus() {
@@ -956,8 +1013,8 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             GraphMode.VFX -> vfxPreview.error
         }
         error?.let { err ->
-            ImGui.setNextWindowPos(0f, ImGui.getIO().getDisplaySizeY() - 40f)
-            ImGui.setNextWindowSize(ImGui.getIO().getDisplaySizeX(), 40f)
+            ImGui.setNextWindowPos(0f, ImGui.getIO().displaySizeY - 40f)
+            ImGui.setNextWindowSize(ImGui.getIO().displaySizeX, 40f)
             ImGui.begin("##errorbar", NO_TITLE_MOVE_RESIZE)
             ImGui.textColored(1f, 0.35f, 0.35f, 1f, "Error: $err")
             ImGui.end()
@@ -966,8 +1023,8 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
 
     private fun renderGlslWindow() {
         val source = shaderPreview.fragmentSource ?: return
-        ImGui.setNextWindowPos(0f, ImGui.getIO().getDisplaySizeY() - 240f, ImGuiCond.FirstUseEver)
-        ImGui.setNextWindowSize(ImGui.getIO().getDisplaySizeX(), 220f, ImGuiCond.FirstUseEver)
+        ImGui.setNextWindowPos(0f, ImGui.getIO().displaySizeY - 240f, ImGuiCond.FirstUseEver)
+        ImGui.setNextWindowSize(ImGui.getIO().displaySizeX, 220f, ImGuiCond.FirstUseEver)
         ImGui.begin("Generated GLSL")
         if (ImGui.beginChild("##glsl_child", 0f, 0f)) {
             for (line in source.split('\n')) {
@@ -1006,17 +1063,20 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             if (doc.path == null) {
                 Files.createDirectories(target.parent)
             }
-            Files.writeString(target, gson.toJson(
-                if (mode == GraphMode.VFX) containerCodec.encode(containerModel.toSystem())
-                else codec.encode(model.toGraph())
-            ))
+            Files.writeString(
+                target, gson.toJson(
+                    if (mode == GraphMode.VFX) containerCodec.encode(containerModel.toSystem())
+                    else codec.encode(model.toGraph())
+                )
+            )
             writeSidecar(target.resolveSibling("${target.fileName.toString().removeSuffix(".json")}.editor.json"))
             doc.path = target
             recentFiles.add(target)
             documents.refresh()
             projectBrowser.refresh()
             // 本编辑器写入后确认 mtime，避免热重载把"自己保存"当成外部修改
-            graphWatcher.acknowledge(target)        } catch (e: Exception) {
+            graphWatcher.acknowledge(target)
+        } catch (e: Exception) {
             println("[graph-editor] save failed: ${e.message}")
         }
     }
@@ -1117,10 +1177,10 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         const val PANEL_GLSL = "Generated GLSL"
         const val INSPECTOR_W = 300f
         const val NO_TITLE_MOVE_RESIZE = ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove or
-            ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoTitleBar or ImGuiWindowFlags.NoBringToFrontOnFocus
+                ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoTitleBar or ImGuiWindowFlags.NoBringToFrontOnFocus
         private val DOCK_HOST_FLAGS = ImGuiWindowFlags.NoDocking or ImGuiWindowFlags.NoTitleBar or
-            ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove or
-            ImGuiWindowFlags.NoBringToFrontOnFocus or ImGuiWindowFlags.NoNavFocus
+                ImGuiWindowFlags.NoCollapse or ImGuiWindowFlags.NoResize or ImGuiWindowFlags.NoMove or
+                ImGuiWindowFlags.NoBringToFrontOnFocus or ImGuiWindowFlags.NoNavFocus
         private val CANVAS_FLAGS = ImGuiWindowFlags.NoScrollbar or ImGuiWindowFlags.NoScrollWithMouse
     }
 }

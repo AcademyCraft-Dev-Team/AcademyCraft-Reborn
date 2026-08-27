@@ -27,11 +27,11 @@ public class SampledCallTree {
 
     public void insert(StackTraceElement[] frames) {
         sampleCount.increment();
-        SampledCallNode node = root;
+        var node = root;
         node.samples.increment();
-        for (int i = frames.length - 1; i >= 0; i--) {
-            StackTraceElement frame = frames[i];
-            String label = frame.getClassName() + '.' + frame.getMethodName();
+        for (var i = frames.length - 1; i >= 0; i--) {
+            var frame = frames[i];
+            var label = frame.getClassName() + '.' + frame.getMethodName();
             node = node.child(label);
             node.samples.increment();
             if (i == 0) {

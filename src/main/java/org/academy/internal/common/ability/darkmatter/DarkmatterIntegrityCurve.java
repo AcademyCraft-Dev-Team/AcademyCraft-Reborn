@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.darkmatter;
 
-/** Pure structural-integrity arithmetic, deliberately independent of item registries. */
+/**
+ * Pure structural-integrity arithmetic, deliberately independent of item registries.
+ */
 public final class DarkmatterIntegrityCurve {
     private DarkmatterIntegrityCurve() {
     }

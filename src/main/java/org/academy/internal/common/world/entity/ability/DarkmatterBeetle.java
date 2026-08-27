@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.entity.ability;
 
+import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -11,15 +12,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.MoveControl;
@@ -33,7 +33,6 @@ import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -47,18 +46,18 @@ import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Comparator;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-/** One entity type whose synchronized model branches and behavior are defined by a saved blueprint snapshot. */
+/**
+ * One entity type whose synchronized model branches and behavior are defined by a saved blueprint snapshot.
+ */
 public final class DarkmatterBeetle extends Monster {
     private static final Identifier PENETRATION_ID =
             AcademyCraft.academy("darkmatter_creature_penetration");
@@ -90,7 +89,7 @@ public final class DarkmatterBeetle extends Monster {
     private int torsoAlpha = 25;
     private int limbsAlpha = 25;
     private int additionalAlpha = 25;
-    private java.util.List<String> modules = java.util.List.of();
+    private List<String> modules = List.of();
     private float averageGammaPower;
     private int outOfRangeTicks;
     private int outOfCombatTicks;
@@ -143,10 +142,14 @@ public final class DarkmatterBeetle extends Monster {
         investment = blueprint.investment();
         abilityLevel = Math.clamp(level, 1, 5);
         proficiencyMilestone = Math.clamp(milestone, 0, 3);
-        head = blueprint.head(); torso = blueprint.torso(); limbs = blueprint.limbs();
+        head = blueprint.head();
+        torso = blueprint.torso();
+        limbs = blueprint.limbs();
         additional = blueprint.additional();
-        headAlpha = blueprint.headAlpha(); torsoAlpha = blueprint.torsoAlpha();
-        limbsAlpha = blueprint.limbsAlpha(); additionalAlpha = blueprint.additionalAlpha();
+        headAlpha = blueprint.headAlpha();
+        torsoAlpha = blueprint.torsoAlpha();
+        limbsAlpha = blueprint.limbsAlpha();
+        additionalAlpha = blueprint.additionalAlpha();
         modules = blueprint.modules();
         averageGammaPower = gammaCatalyzed ? blueprint.averageGammaPower(abilityLevel) : 0.0f;
         outputAdjustmentBypassed = OutputControl.isOutputAdjustmentBypassed();
@@ -188,7 +191,7 @@ public final class DarkmatterBeetle extends Monster {
         }
     }
 
-    private void setAttribute(net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> key,
+    private void setAttribute(Holder<Attribute> key,
                               double value) {
         var attribute = getAttribute(key);
         if (attribute != null) attribute.setBaseValue(Math.max(0.0, value));
@@ -227,17 +230,46 @@ public final class DarkmatterBeetle extends Monster {
         }
     }
 
-    public int headModel() { return entityData.get(HEAD_MODEL); }
-    public int torsoModel() { return entityData.get(TORSO_MODEL); }
-    public int limbsModel() { return entityData.get(LIMBS_MODEL); }
-    public int additionalModel() { return entityData.get(ADDITIONAL_MODEL); }
-    public boolean gammaCatalyzed() { return entityData.get(GAMMA_CATALYZED); }
-    public boolean degraded() { return entityData.get(DEGRADED); }
-    public int investment() { return investment; }
-    public int blueprintSlot() { return blueprintSlot; }
+    public int headModel() {
+        return entityData.get(HEAD_MODEL);
+    }
 
-    public Optional<UUID> getOwnerUUID() { return Optional.ofNullable(ownerUUID); }
-    public void setOwnerUUID(UUID uuid) { ownerUUID = uuid; }
+    public int torsoModel() {
+        return entityData.get(TORSO_MODEL);
+    }
+
+    public int limbsModel() {
+        return entityData.get(LIMBS_MODEL);
+    }
+
+    public int additionalModel() {
+        return entityData.get(ADDITIONAL_MODEL);
+    }
+
+    public boolean gammaCatalyzed() {
+        return entityData.get(GAMMA_CATALYZED);
+    }
+
+    public boolean degraded() {
+        return entityData.get(DEGRADED);
+    }
+
+    public int investment() {
+        return investment;
+    }
+
+    public int blueprintSlot() {
+        return blueprintSlot;
+    }
+
+    public Optional<UUID> getOwnerUUID() {
+        return Optional.ofNullable(ownerUUID);
+    }
+
+    public void setOwnerUUID(UUID uuid) {
+        ownerUUID = uuid;
+    }
+
     public boolean isOwnedBy(ServerPlayer player) {
         return getOwnerUUID().filter(player.getUUID()::equals).isPresent();
     }
@@ -346,7 +378,8 @@ public final class DarkmatterBeetle extends Monster {
         if (gammaCatalyzed() && recentHeadTarget != null
                 && tickCount - recentHeadAttackTick >= DarkmatterCreation.gammaRepeatTicks(proficiencyMilestone)) {
             var target = serverLevel.getEntity(recentHeadTarget);
-            if (target instanceof LivingEntity living && living.isAlive()) rangedAttack(serverLevel, owner, living, true);
+            if (target instanceof LivingEntity living && living.isAlive())
+                rangedAttack(serverLevel, owner, living, true);
             recentHeadAttackTick = tickCount;
         }
     }
@@ -506,14 +539,15 @@ public final class DarkmatterBeetle extends Monster {
         for (var item : level.getEntitiesOfClass(ItemEntity.class, getBoundingBox().inflate(range),
                 candidate -> candidate.isAlive() && !candidate.hasPickUpDelay())) {
             var remaining = insertCargo(item.getItem().copy());
-            if (remaining.isEmpty()) item.discard(); else item.setItem(remaining);
+            if (remaining.isEmpty()) item.discard();
+            else item.setItem(remaining);
             break;
         }
     }
 
     private int cargoSlotCount() {
         if (!isCarrier()) return 0;
-        return Math.clamp(3 + 3 * (int) Math.floor(alphaPower(limbsAlpha)),
+        return Math.clamp(3 + 3L * (int) Math.floor(alphaPower(limbsAlpha)),
                 3, MAX_CARGO_SLOTS);
     }
 
@@ -566,9 +600,9 @@ public final class DarkmatterBeetle extends Monster {
         var penetration = Math.min(0.5f, 0.08f * beta
                 + (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_WEAPON.toString())
                 ? 0.06f * betaPower(additionalAlpha) : 0.0f));
-        var projectile = org.academy.internal.common.world.entity.EntityTypes
+        var projectile = EntityTypes
                 .DARKMATTER_CREATURE_PROJECTILE.get().create(
-                        level, net.minecraft.world.entity.EntitySpawnReason.MOB_SUMMONED);
+                        level, EntitySpawnReason.MOB_SUMMONED);
         if (projectile == null) return;
         var homing = head.equals(DarkmatterCreatureRegistries.HEAD_HOMING.toString());
         var projectileSpeed = (homing ? 0.95f : 1.25f) + 0.12f * alpha;
@@ -643,7 +677,8 @@ public final class DarkmatterBeetle extends Monster {
         if (hurt) {
             if (beta > 0.0f) target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,
                     20 + Math.round(10 * beta), 0, false, false));
-            recentHeadTarget = target.getUUID(); recentHeadAttackTick = tickCount;
+            recentHeadTarget = target.getUUID();
+            recentHeadAttackTick = tickCount;
             if (head.equals(DarkmatterCreatureRegistries.HEAD_JAW.toString()) && alpha > 0.0f) {
                 var away = target.position().subtract(position());
                 if (away.lengthSqr() > 1.0e-6) {
@@ -681,8 +716,13 @@ public final class DarkmatterBeetle extends Monster {
         }
     }
 
-    private float alphaPower(int points) { return Math.clamp(points, 0, abilityLevel * 50) / 50.0f; }
-    private float betaPower(int points) { return (abilityLevel * 50 - Math.clamp(points, 0, abilityLevel * 50)) / 50.0f; }
+    private float alphaPower(int points) {
+        return Math.clamp(points, 0, abilityLevel * 50) / 50.0f;
+    }
+
+    private float betaPower(int points) {
+        return (abilityLevel * 50 - Math.clamp(points, 0, abilityLevel * 50)) / 50.0f;
+    }
 
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
@@ -695,11 +735,28 @@ public final class DarkmatterBeetle extends Monster {
         return super.hurtServer(level, source, amount * (1.0f - reduction));
     }
 
-    @Override protected SoundEvent getAmbientSound() { return SoundEvents.ENDERMITE_AMBIENT; }
-    @Override protected SoundEvent getHurtSound(DamageSource source) { return SoundEvents.ENDERMITE_HURT; }
-    @Override protected SoundEvent getDeathSound() { return SoundEvents.ENDERMITE_DEATH; }
-    @Override public boolean removeWhenFarAway(double distanceToClosestPlayer) { return false; }
-    @Override public boolean isPushable() {
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return SoundEvents.ENDERMITE_AMBIENT;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource source) {
+        return SoundEvents.ENDERMITE_HURT;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.ENDERMITE_DEATH;
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
         return !modules.contains(DarkmatterCreatureRegistries.MODULE_FORMATION.toString());
     }
 
@@ -718,7 +775,10 @@ public final class DarkmatterBeetle extends Monster {
     protected void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
         input.getString("academy_owner").ifPresent(value -> {
-            try { setOwnerUUID(UUID.fromString(value)); } catch (IllegalArgumentException ignored) { }
+            try {
+                setOwnerUUID(UUID.fromString(value));
+            } catch (IllegalArgumentException ignored) {
+            }
         });
         blueprintVersion = input.getIntOr("academy_blueprint_version", DarkmatterCreatureBlueprint.VERSION);
         blueprintSlot = Math.clamp(input.getIntOr("academy_blueprint_slot", 0), 0, 3);
@@ -754,10 +814,14 @@ public final class DarkmatterBeetle extends Monster {
         output.putInt("academy_investment", investment);
         output.putInt("academy_ability_level", abilityLevel);
         output.putInt("academy_milestone", proficiencyMilestone);
-        output.putString("academy_head", head); output.putString("academy_torso", torso);
-        output.putString("academy_limbs", limbs); output.putString("academy_additional", additional);
-        output.putInt("academy_head_alpha", headAlpha); output.putInt("academy_torso_alpha", torsoAlpha);
-        output.putInt("academy_limbs_alpha", limbsAlpha); output.putInt("academy_additional_alpha", additionalAlpha);
+        output.putString("academy_head", head);
+        output.putString("academy_torso", torso);
+        output.putString("academy_limbs", limbs);
+        output.putString("academy_additional", additional);
+        output.putInt("academy_head_alpha", headAlpha);
+        output.putInt("academy_torso_alpha", torsoAlpha);
+        output.putInt("academy_limbs_alpha", limbsAlpha);
+        output.putInt("academy_additional_alpha", additionalAlpha);
         output.putInt("academy_gamma_catalyzed", gammaCatalyzed() ? 1 : 0);
         output.putInt("academy_gamma_power_milli", Math.round(averageGammaPower * 1000));
         output.putInt(
@@ -766,9 +830,9 @@ public final class DarkmatterBeetle extends Monster {
         ContainerHelper.saveAllItems(output.child("academy_cargo"), cargo, false);
     }
 
-    private static java.util.List<String> parseModules(String raw) {
-        if (raw == null || raw.isBlank()) return java.util.List.of();
-        return java.util.Arrays.stream(raw.split(";")).filter(value -> !value.isBlank())
+    private static List<String> parseModules(String raw) {
+        if (raw == null || raw.isBlank()) return List.of();
+        return Arrays.stream(raw.split(";")).filter(value -> !value.isBlank())
                 .limit(32).toList();
     }
 }

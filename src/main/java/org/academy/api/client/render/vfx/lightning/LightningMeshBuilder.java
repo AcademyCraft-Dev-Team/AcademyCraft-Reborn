@@ -1,12 +1,11 @@
 package org.academy.api.client.render.vfx.lightning;
 
-import org.joml.Vector3f;
+import net.minecraft.util.Mth;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class LightningMeshBuilder implements TubeMeshView {
     private static final int NOT_INITIALIZED = -1;
@@ -33,8 +32,8 @@ public final class LightningMeshBuilder implements TubeMeshView {
             float segmentRadius,
             float @Nullable [] pointRadii
     ) {
-        int newTotalPointsCount = 0;
-        for (LightningBranch lightningBranch : lightningBranches) {
+        var newTotalPointsCount = 0;
+        for (var lightningBranch : lightningBranches) {
             newTotalPointsCount += lightningBranch.lightningPoints.size();
         }
 
@@ -42,12 +41,12 @@ public final class LightningMeshBuilder implements TubeMeshView {
             reconstructMesh(lightningBranches, newTotalPointsCount, segmentResolution);
         }
 
-        int vertexIndex = 0;
-        int pointIndex = 0;
-        for (LightningBranch lightningBranch : lightningBranches) {
-            float branchSegmentRadius = segmentRadius * lightningBranch.widthPercentage;
-            for (LightningPoint lightningPoint : lightningBranch.lightningPoints) {
-                float radius = pointRadii == null
+        var vertexIndex = 0;
+        var pointIndex = 0;
+        for (var lightningBranch : lightningBranches) {
+            var branchSegmentRadius = segmentRadius * lightningBranch.widthPercentage;
+            for (var lightningPoint : lightningBranch.lightningPoints) {
+                var radius = pointRadii == null
                         ? branchSegmentRadius
                         : branchSegmentRadius * pointRadii[pointIndex];
                 updatePointVertices(lightningPoint, radius, vertexIndex);
@@ -106,7 +105,7 @@ public final class LightningMeshBuilder implements TubeMeshView {
     public void packIndices(ByteBuffer buffer) {
         buffer.clear();
         buffer.order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < indexCount; i++) {
+        for (var i = 0; i < indexCount; i++) {
             buffer.putInt(indices[i]);
         }
         buffer.flip();
@@ -119,13 +118,13 @@ public final class LightningMeshBuilder implements TubeMeshView {
     }
 
     private void updatePointVertices(LightningPoint lightningPoint, float segmentRadius, int vertexIndex) {
-        Vector3f right = lightningPoint.rightAxis;
-        Vector3f up = lightningPoint.upAxis;
-        for (int i = 0; i < segmentResolution; i++) {
-            float offsetX = segmentRadius * ringCos[i];
-            float offsetY = segmentRadius * ringSin[i];
+        var right = lightningPoint.rightAxis;
+        var up = lightningPoint.upAxis;
+        for (var i = 0; i < segmentResolution; i++) {
+            var offsetX = segmentRadius * ringCos[i];
+            var offsetY = segmentRadius * ringSin[i];
 
-            int base = (vertexIndex + i) * 3;
+            var base = (vertexIndex + i) * 3;
             positions[base] = lightningPoint.position.x + right.x * offsetX + up.x * offsetY;
             positions[base + 1] = lightningPoint.position.y + right.y * offsetX + up.y * offsetY;
             positions[base + 2] = lightningPoint.position.z + right.z * offsetX + up.z * offsetY;
@@ -138,9 +137,9 @@ public final class LightningMeshBuilder implements TubeMeshView {
         }
         ringCos = new float[segmentResolution];
         ringSin = new float[segmentResolution];
-        for (int i = 0; i < segmentResolution; i++) {
-            float pointPercentage = (float) i / (segmentResolution - 1);
-            float angle = DEG_TO_RAD * pointPercentage * 360f;
+        for (var i = 0; i < segmentResolution; i++) {
+            var pointPercentage = (float) i / (segmentResolution - 1);
+            var angle = DEG_TO_RAD * pointPercentage * 360f;
             ringCos[i] = Mth.cos(angle);
             ringSin[i] = Mth.sin(angle);
         }
@@ -151,10 +150,10 @@ public final class LightningMeshBuilder implements TubeMeshView {
         this.segmentResolution = segmentResolution;
         ensureRingTables();
 
-        int totalVerticesCount = 0;
-        int totalTrianglesCount = 0;
-        for (LightningBranch lightningBranch : lightningBranches) {
-            int branchPointsCount = lightningBranch.lightningPoints.size();
+        var totalVerticesCount = 0;
+        var totalTrianglesCount = 0;
+        for (var lightningBranch : lightningBranches) {
+            var branchPointsCount = lightningBranch.lightningPoints.size();
             totalVerticesCount += segmentResolution * branchPointsCount;
             totalTrianglesCount += 2 * segmentResolution * (branchPointsCount - 1);
         }
@@ -165,24 +164,24 @@ public final class LightningMeshBuilder implements TubeMeshView {
         uvs = new float[totalVerticesCount * 2];
         indices = new int[indexCount];
 
-        int vertexOffset = 0;
-        int trianglesOffset = 0;
-        for (LightningBranch lightningBranch : lightningBranches) {
+        var vertexOffset = 0;
+        var trianglesOffset = 0;
+        for (var lightningBranch : lightningBranches) {
             createMeshData(lightningBranch, vertexOffset, trianglesOffset);
-            int branchPointsCount = lightningBranch.lightningPoints.size();
+            var branchPointsCount = lightningBranch.lightningPoints.size();
             vertexOffset += branchPointsCount * segmentResolution;
             trianglesOffset += 3 * 2 * (branchPointsCount - 1) * segmentResolution;
         }
     }
 
     private void createMeshData(LightningBranch lightningBranch, int vertexOffset, int trianglesOffset) {
-        List<LightningPoint> lightningPoints = lightningBranch.lightningPoints;
-        int pointsCount = lightningPoints.size();
-        int tri = trianglesOffset;
+        var lightningPoints = lightningBranch.lightningPoints;
+        var pointsCount = lightningPoints.size();
+        var tri = trianglesOffset;
 
-        for (int i = 0; i < pointsCount; i++) {
-            for (int counter = 0; counter < segmentResolution; counter++) {
-                int uvIndex = (vertexOffset + i * segmentResolution + counter) * 2;
+        for (var i = 0; i < pointsCount; i++) {
+            for (var counter = 0; counter < segmentResolution; counter++) {
+                var uvIndex = (vertexOffset + i * segmentResolution + counter) * 2;
                 uvs[uvIndex] = lightningBranch.intensityPercentage;
                 uvs[uvIndex + 1] = 0f;
             }
@@ -194,20 +193,20 @@ public final class LightningMeshBuilder implements TubeMeshView {
     }
 
     private int addTriangleIndices(int tri, int vertexIndexOffset, int pointIndex) {
-        int previousSegmentFirstIndex = (pointIndex - 1) * segmentResolution;
-        int previousSegmentLastIndex = previousSegmentFirstIndex + segmentResolution - 1;
-        int currentSegmentFirstIndex = previousSegmentLastIndex + 1;
-        int currentSegmentLastIndex = currentSegmentFirstIndex + segmentResolution - 1;
+        var previousSegmentFirstIndex = (pointIndex - 1) * segmentResolution;
+        var previousSegmentLastIndex = previousSegmentFirstIndex + segmentResolution - 1;
+        var currentSegmentFirstIndex = previousSegmentLastIndex + 1;
+        var currentSegmentLastIndex = currentSegmentFirstIndex + segmentResolution - 1;
 
-        for (int i = 0; i < segmentResolution; i++) {
-            int previousSegmentFirst = previousSegmentFirstIndex + i;
-            int previousSegmentSecond = previousSegmentFirst + 1;
+        for (var i = 0; i < segmentResolution; i++) {
+            var previousSegmentFirst = previousSegmentFirstIndex + i;
+            var previousSegmentSecond = previousSegmentFirst + 1;
             if (previousSegmentSecond > previousSegmentLastIndex) {
                 previousSegmentSecond -= segmentResolution;
             }
 
-            int currentSegmentFirst = currentSegmentFirstIndex + i;
-            int currentSegmentSecond = currentSegmentFirst + 1;
+            var currentSegmentFirst = currentSegmentFirstIndex + i;
+            var currentSegmentSecond = currentSegmentFirst + 1;
             if (currentSegmentSecond > currentSegmentLastIndex) {
                 currentSegmentSecond -= segmentResolution;
             }

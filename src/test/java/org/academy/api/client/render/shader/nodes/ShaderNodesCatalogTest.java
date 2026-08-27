@@ -1,21 +1,22 @@
 package org.academy.api.client.render.shader.nodes;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.GraphFixtures;
 import org.academy.api.client.render.graph.compile.DefaultGraphCompiler;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.Graph;
-import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.shader.codegen.GlslGenerator;
 import org.academy.api.client.render.shader.codegen.GlslNodeRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * M11 节点目录 codegen 测试：每个新增节点产出含预期 GLSL 的片段着色器。
@@ -51,7 +52,7 @@ class ShaderNodesCatalogTest {
     @Test
     void samplerUniformDeclaredOnlyWhenUsed() {
         // 无纹理图：不声明任何 sampler
-        assertTrue(!singleNode("input.uv", Map.of()).contains("uniform sampler2D"));
+        assertFalse(singleNode("input.uv", Map.of()).contains("uniform sampler2D"));
         // 有 texture.sample：声明该纹理的槽位
         assertTrue(singleNode("texture.sample", Map.of("texture", "minecraft:textures/block/stone.png"))
                 .contains("uniform sampler2D Sampler0;"));

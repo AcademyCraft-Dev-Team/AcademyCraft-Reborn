@@ -58,8 +58,8 @@ public final class FirstPersonSweepGeometry {
     }
 
     public record WingProjection(float rootX, float rootY, float rootZ,
-                          float sweepDegrees, float tiltDegrees,
-                          float scale, float alpha) {
+                                 float sweepDegrees, float tiltDegrees,
+                                 float scale, float alpha) {
         Point centerline(float normalizedLength) {
             var length = WING_LENGTH * scale * Mth.clamp(normalizedLength, 0.0f, 1.0f);
             var sweep = (sweepDegrees) * Mth.DEG_TO_RAD;

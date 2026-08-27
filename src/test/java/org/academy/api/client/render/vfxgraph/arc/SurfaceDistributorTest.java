@@ -1,15 +1,19 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class SurfaceDistributorTest {
 
-    /** 单位立方体三角形数据（6面×2三角形=12三角形，108 floats）。 */
+    /**
+     * 单位立方体三角形数据（6面×2三角形=12三角形，108 floats）。
+     */
     private static float[] unitCubeTriangles() {
-        float[] tris = new float[12 * 9];
-        int t = 0;
+        var tris = new float[12 * 9];
+        var t = 0;
         // +X face (x=1)
         t = tri(tris, t, 1, -1, -1, 1, -1, 1, 1, 1, 1);
         t = tri(tris, t, 1, 1, 1, 1, 1, -1, 1, -1, -1);
@@ -32,10 +36,16 @@ class SurfaceDistributorTest {
     }
 
     private static int tri(float[] out, int t, float ax, float ay, float az,
-                            float bx, float by, float bz, float cx, float cy, float cz) {
-        out[t++] = ax; out[t++] = ay; out[t++] = az;
-        out[t++] = bx; out[t++] = by; out[t++] = bz;
-        out[t++] = cx; out[t++] = cy; out[t++] = cz;
+                           float bx, float by, float bz, float cx, float cy, float cz) {
+        out[t++] = ax;
+        out[t++] = ay;
+        out[t++] = az;
+        out[t++] = bx;
+        out[t++] = by;
+        out[t++] = bz;
+        out[t++] = cx;
+        out[t++] = cy;
+        out[t++] = cz;
         return t;
     }
 
@@ -77,7 +87,7 @@ class SurfaceDistributorTest {
         var a = dist.distribute(5f, 0.5f, 1.0f, 10f, 123L);
         var b = dist.distribute(5f, 0.5f, 1.0f, 10f, 123L);
         assertEquals(a.size(), b.size());
-        for (int i = 0; i < a.size(); i++) {
+        for (var i = 0; i < a.size(); i++) {
             assertEquals(a.get(i).x(), b.get(i).x(), 1e-6f);
             assertEquals(a.get(i).y(), b.get(i).y(), 1e-6f);
             assertEquals(a.get(i).z(), b.get(i).z(), 1e-6f);
@@ -89,24 +99,26 @@ class SurfaceDistributorTest {
         var dist = new SurfaceDistributor(unitCubeTriangles());
         var samples = dist.distribute(10f, 1.0f, 0f, 1f, 42L);
         for (var s : samples) {
-            float len = (float) Math.sqrt(s.nx() * s.nx() + s.ny() * s.ny() + s.nz() * s.nz());
+            var len = (float) Math.sqrt(s.nx() * s.nx() + s.ny() * s.ny() + s.nz() * s.nz());
             assertEquals(1.0f, len, 0.01f, "Normal should be unit length: " + len);
         }
     }
 
     @Test
     void tangentDirectionReturnsUnitVector() {
-        var random = new java.util.Random(42);
-        for (int i = 0; i < 100; i++) {
-            float nx = random.nextFloat() * 2 - 1;
-            float ny = random.nextFloat() * 2 - 1;
-            float nz = random.nextFloat() * 2 - 1;
-            float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        var random = new Random(42);
+        for (var i = 0; i < 100; i++) {
+            var nx = random.nextFloat() * 2 - 1;
+            var ny = random.nextFloat() * 2 - 1;
+            var nz = random.nextFloat() * 2 - 1;
+            var len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
             if (len < 1e-6f) continue;
-            nx /= len; ny /= len; nz /= len;
+            nx /= len;
+            ny /= len;
+            nz /= len;
 
             var dir = SurfaceDistributor.tangentDirection(nx, ny, nz, (float) Math.PI / 4, random);
-            float dlen = (float) Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+            var dlen = (float) Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
             assertEquals(1.0f, dlen, 0.01f, "Tangent direction should be unit length");
         }
     }

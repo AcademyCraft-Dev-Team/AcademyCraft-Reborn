@@ -1,21 +1,24 @@
 package org.academy.api.client.render.vfxgraph.serialize;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.google.gson.JsonParser;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.academy.api.client.render.vfxgraph.validate.VfxGraphValidator;
 import org.junit.jupiter.api.Test;
 
-/** M28b：demo_fire 重写为块级 flow 紧凑结构（4 spawn + 4 init 配对），校验 + 模拟 + 各层速度独立。 */
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * M28b：demo_fire 重写为块级 flow 紧凑结构（4 spawn + 4 init 配对），校验 + 模拟 + 各层速度独立。
+ */
 class VfxFireBlockFlowAssetsTest {
     @Test
     void blockFlowFireValidatesAndSimulates() {
@@ -37,11 +40,11 @@ class VfxFireBlockFlowAssetsTest {
 
         // 模拟：各层速度独立（spawn_core 1.2 / flame 0.9 / ember 1.6 / smoke 0.45）
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, system.parameters());
-        for (int i = 0; i < 120; i++) sim.step(1f / 60f);
+        for (var i = 0; i < 120; i++) sim.step(1f / 60f);
         var buf = sim.buffer();
         assertTrue(buf.count() > 0, "fire should spawn particles");
         float minVy = Float.MAX_VALUE, maxVy = -Float.MAX_VALUE;
-        for (int i = 0; i < buf.count(); i++) {
+        for (var i = 0; i < buf.count(); i++) {
             minVy = Math.min(minVy, buf.velocityY(i));
             maxVy = Math.max(maxVy, buf.velocityY(i));
         }

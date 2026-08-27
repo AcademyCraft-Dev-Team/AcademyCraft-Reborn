@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.meltdowner.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.*;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -49,6 +48,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.*;
 
 public final class AutoCruiseBeamCannon extends Skill {
     static final int DETECT_INTERVAL_TICKS = 10;
@@ -381,7 +382,7 @@ public final class AutoCruiseBeamCannon extends Skill {
                         .map(LivingEntity.class::cast)
                         .filter(living -> isDetectable(player, living)
                                 && living.distanceToSqr(player) <= scanRadius * scanRadius)
-                        .min(java.util.Comparator
+                        .min(Comparator
                                 .comparing((LivingEntity living) -> !RadiationIntensify.isMarked(living, level.getGameTime()))
                                 .thenComparingDouble(LivingEntity::getHealth))
                         .orElse(null);
@@ -403,7 +404,7 @@ public final class AutoCruiseBeamCannon extends Skill {
             return level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(scanRadius),
                             target -> target != primary && isDetectable(player, target)
                                     && target.distanceToSqr(player) <= scanRadius * scanRadius)
-                    .stream().min(java.util.Comparator.comparingDouble(LivingEntity::getHealth)).orElse(null);
+                    .stream().min(Comparator.comparingDouble(LivingEntity::getHealth)).orElse(null);
         }
 
         private static final class PendingShot {

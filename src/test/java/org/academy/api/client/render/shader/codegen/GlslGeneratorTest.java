@@ -1,9 +1,5 @@
 package org.academy.api.client.render.shader.codegen;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.GraphFixtures;
 import org.academy.api.client.render.graph.compile.DefaultGraphCompiler;
 import org.academy.api.client.render.graph.model.Edge;
@@ -16,6 +12,12 @@ import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.shader.nodes.ShaderNodes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class GlslGeneratorTest {
     private SimpleNodeRegistry registry;
@@ -75,7 +77,7 @@ class GlslGeneratorTest {
                         node("output.color", "out", Map.of())
                 ),
                 List.of(new Edge(new Edge.PortRef("p1", "out"), new Edge.PortRef("out", "color"))),
-                List.of(new GraphParameter("speed", "Speed", ValueType.FLOAT, Value.of(1f), java.util.Optional.empty())),
+                List.of(new GraphParameter("speed", "Speed", ValueType.FLOAT, Value.of(1f), Optional.empty())),
                 List.of("out")
         );
 
@@ -121,7 +123,7 @@ class GlslGeneratorTest {
                 List.of("out")
         );
 
-        assertTrue(!generate(graph).contains("uniform sampler2D"));
+        assertFalse(generate(graph).contains("uniform sampler2D"));
     }
 
     @Test
@@ -173,7 +175,7 @@ class GlslGeneratorTest {
         var source = generate(graph);
 
         assertTrue(source.contains("uniform sampler2D Sampler0;"));
-        assertTrue(!source.contains("uniform sampler2D Sampler1;"));
+        assertFalse(source.contains("uniform sampler2D Sampler1;"));
     }
 
     @Test
@@ -190,10 +192,10 @@ class GlslGeneratorTest {
         );
 
         var plan = GlslGenerator.samplePlan(graph);
-        assertTrue(plan.size() == 2);
-        assertTrue("Sampler0".equals(plan.get(0).uniformName()));
-        assertTrue("minecraft:textures/block/stone.png".equals(plan.get(0).identifier()));
-        assertTrue("Sampler1".equals(plan.get(1).uniformName()));
-        assertTrue("minecraft:textures/block/dirt.png".equals(plan.get(1).identifier()));
+        assertEquals(2, plan.size());
+        assertEquals("Sampler0", plan.get(0).uniformName());
+        assertEquals("minecraft:textures/block/stone.png", plan.get(0).identifier());
+        assertEquals("Sampler1", plan.get(1).uniformName());
+        assertEquals("minecraft:textures/block/dirt.png", plan.get(1).identifier());
     }
 }

@@ -11,19 +11,16 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilt
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.effect.StatusEffects;
 
-import java.lang.ref.WeakReference;
 import java.lang.StackWalker.StackFrame;
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.lang.ref.WeakReference;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Guards vanilla entity motion entry points for imprisonment and vector-reflection protection. */
+/**
+ * Guards vanilla entity motion entry points for imprisonment and vector-reflection protection.
+ */
 public final class EntityMotionGuard {
     private static final double POSITION_EPSILON_SQUARED = 1.0e-8;
     private static final int MIN_VISIBLE_EFFECT_DURATION_TICKS = 10;

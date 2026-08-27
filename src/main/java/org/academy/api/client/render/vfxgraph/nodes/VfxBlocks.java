@@ -4,32 +4,26 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.util.Mth;
+import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
+import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.registry.PropertySpec;
 import org.academy.api.client.render.graph.type.CurveSampler;
 import org.academy.api.client.render.graph.type.GradientSampler;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.vfxgraph.arc.*;
 import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
-import org.academy.api.client.render.vfxgraph.arc.CurveGenerator;
-import org.academy.api.client.render.vfxgraph.arc.MeshDistance;
-import org.academy.api.client.render.vfxgraph.arc.SurfaceDistributor;
-import org.academy.api.client.render.vfxgraph.shape.BoxShape;
-import org.academy.api.client.render.vfxgraph.shape.CircleEdgeShape;
-import org.academy.api.client.render.vfxgraph.shape.ConeShape;
-import org.academy.api.client.render.vfxgraph.shape.CylinderShape;
-import org.academy.api.client.render.vfxgraph.shape.DiscShape;
-import org.academy.api.client.render.vfxgraph.shape.EmitterShape;
-import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
-import org.academy.api.client.render.vfxgraph.shape.MeshShape;
-import org.academy.api.client.render.vfxgraph.shape.PointShape;
-import org.academy.api.client.render.vfxgraph.shape.SphereShape;
-import org.academy.api.client.render.vfxgraph.shape.TorusShape;
+import org.academy.api.client.render.vfxgraph.shape.*;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * VFX 容器块目录（M24–M27）：注册块元数据（核心 NodeRegistry）与块工厂（VfxBlockRegistry）。
@@ -47,7 +41,9 @@ public final class VfxBlocks {
     private VfxBlocks() {
     }
 
-    /** spawn/init 块共享的基础属性。 */
+    /**
+     * spawn/init 块共享的基础属性。
+     */
     private static final List<PropertySpec> PARTICLE_BASIC = List.of(
             prop("lifetime", ValueType.FLOAT, Value.of(1f)),
             prop("size", ValueType.FLOAT, Value.of(0.1f)),
@@ -58,7 +54,9 @@ public final class VfxBlocks {
             prop("layer", ValueType.STRING, Value.string("fire"))
     );
 
-    /** 发射形状属性（spawn/init_position 共用）。 */
+    /**
+     * 发射形状属性（spawn/init_position 共用）。
+     */
     private static final List<PropertySpec> SHAPE_PROPS = List.of(
             prop("shape", ValueType.STRING, Value.string("point")),
             prop("position_param", ValueType.STRING, Value.string("")),
@@ -74,13 +72,17 @@ public final class VfxBlocks {
             prop("mesh_scale", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** spawn 尾块：PARTICLE_BASIC + SHAPE_PROPS。 */
-    private static final List<PropertySpec> SPAWN_TAIL = java.util.stream.Stream.concat(
+    /**
+     * spawn 尾块：PARTICLE_BASIC + SHAPE_PROPS。
+     */
+    private static final List<PropertySpec> SPAWN_TAIL = Stream.concat(
             PARTICLE_BASIC.stream(), SHAPE_PROPS.stream()).toList();
 
-    /** output 块共享属性默认（数据驱动，M21l）：着色器/混合值**不写死具体 shader id**，
-     *  一律空串中性默认，由图上显式指定（缺失时渲染层兜底 billboard/translucent）；
-     *  layer 过滤该输出负责渲染的粒子层（空串=全部，分层外观用多输出块表达）。 */
+    /**
+     * output 块共享属性默认（数据驱动，M21l）：着色器/混合值**不写死具体 shader id**，
+     * 一律空串中性默认，由图上显式指定（缺失时渲染层兜底 billboard/translucent）；
+     * layer 过滤该输出负责渲染的粒子层（空串=全部，分层外观用多输出块表达）。
+     */
     private static final List<PropertySpec> OUTPUT_PROPERTIES = List.of(
             prop("vertex", ValueType.STRING, Value.string("")),
             prop("shader", ValueType.STRING, Value.string("")),
@@ -89,7 +91,9 @@ public final class VfxBlocks {
             prop("layer", ValueType.STRING, Value.string(""))
     );
 
-    /** arc_surface/arc_contact 共享属性（M29，Blender 表面电弧：布点 + 短弧 + 噪声 + 端点吸附）。 */
+    /**
+     * arc_surface/arc_contact 共享属性（M29，Blender 表面电弧：布点 + 短弧 + 噪声 + 端点吸附）。
+     */
     private static final List<PropertySpec> ARC_SURFACE_PROPS = List.of(
             prop("mesh", ValueType.STRING, Value.string("builtin:plane")),
             prop("density", ValueType.FLOAT, Value.of(3.8f)),
@@ -111,7 +115,9 @@ public final class VfxBlocks {
             prop("origin_z", ValueType.FLOAT, Value.of(0f))
     );
 
-    /** arc_contact 专属属性：接触对象（MeshAssets id）+ 距离剔除阈值 + 接触对象位移。 */
+    /**
+     * arc_contact 专属属性：接触对象（MeshAssets id）+ 距离剔除阈值 + 接触对象位移。
+     */
     private static final List<PropertySpec> ARC_CONTACT_PROPS = List.of(
             prop("contact_mesh", ValueType.STRING, Value.string("builtin:sphere")),
             prop("contact_range", ValueType.FLOAT, Value.of(4.1f)),
@@ -120,7 +126,9 @@ public final class VfxBlocks {
             prop("contact_origin_z", ValueType.FLOAT, Value.of(0f))
     );
 
-    /** arc_spark 粒子火花属性（M30，Blender 粒子系统：弧→点 + 溅射 + 重力 + 迷你管）。 */
+    /**
+     * arc_spark 粒子火花属性（M30，Blender 粒子系统：弧→点 + 溅射 + 重力 + 迷你管）。
+     */
     private static final List<PropertySpec> ARC_SPARK_PROPS = List.of(
             prop("probability", ValueType.FLOAT, Value.of(0.48f)),
             prop("max_sparks", ValueType.INT, Value.of(10)),
@@ -133,7 +141,9 @@ public final class VfxBlocks {
             prop("emission", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** output_arc 的 ARC 观感参数（数据驱动，M22-Rev2）：Blender 式参数 + 火花参数。 */
+    /**
+     * output_arc 的 ARC 观感参数（数据驱动，M22-Rev2）：Blender 式参数 + 火花参数。
+     */
     private static final List<PropertySpec> ARC_OUTPUT_PROPERTIES = List.of(
             prop("sparks", ValueType.INT, Value.of(8)),
             prop("spark_speed", ValueType.FLOAT, Value.of(2.2f)),
@@ -155,19 +165,25 @@ public final class VfxBlocks {
             prop("branch_brightness_scale", ValueType.FLOAT, Value.of(0.6f))
     );
 
-    /** over-life curve 系共享（curve/layer）。 */
+    /**
+     * over-life curve 系共享（curve/layer）。
+     */
     private static final List<PropertySpec> CURVE_LAYER = List.of(
             prop("curve", ValueType.STRING, Value.string("")),
             prop("layer", ValueType.STRING, Value.string(""))
     );
 
-    /** noise/turbulence 共享（amplitude/frequency）。 */
+    /**
+     * noise/turbulence 共享（amplitude/frequency）。
+     */
     private static final List<PropertySpec> NOISE = List.of(
             prop("amplitude", ValueType.FLOAT, Value.of(1f)),
             prop("frequency", ValueType.FLOAT, Value.of(1f))
     );
 
-    /** collision_ground/plane 共享尾块（bounce/kill）。 */
+    /**
+     * collision_ground/plane 共享尾块（bounce/kill）。
+     */
     private static final List<PropertySpec> BOUNCE_KILL = List.of(
             prop("bounce", ValueType.FLOAT, Value.of(0.5f)),
             prop("kill", ValueType.BOOL, Value.of(false))
@@ -361,7 +377,7 @@ public final class VfxBlocks {
 
         metadata.register(type("vfx.block.orient_face_camera", "orient", "Face Camera", List.of()));
         blocks.register("vfx.block.orient_face_camera", (n, p) -> (buf, ctx) -> {
-            for (int i = 0; i < buf.count(); i++) buf.setRotation(i, 0f);
+            for (var i = 0; i < buf.count(); i++) buf.setRotation(i, 0f);
         });
 
         metadata.register(type("vfx.block.orient_velocity", "orient", "Align To Velocity",
@@ -642,7 +658,7 @@ public final class VfxBlocks {
         blocks.register("vfx.block.arc_surface", VfxBlocks::arcSurface);
 
         metadata.register(type("vfx.block.arc_contact", "spawn", "Arc Contact",
-                java.util.stream.Stream.concat(ARC_SURFACE_PROPS.stream(), ARC_CONTACT_PROPS.stream()).toList()));
+                Stream.concat(ARC_SURFACE_PROPS.stream(), ARC_CONTACT_PROPS.stream()).toList()));
         blocks.register("vfx.block.arc_contact", VfxBlocks::arcContact);
 
         metadata.register(type("vfx.block.arc_spark", "spawn", "Arc Spark",
@@ -651,7 +667,7 @@ public final class VfxBlocks {
 
         // output_arc：OUTPUT_PROPERTIES（vertex/shader/blend/layer）+ ARC 观感参数（数据驱动，M22g）
         metadata.register(type("vfx.block.output_arc", "output", "Output Arc",
-                java.util.stream.Stream.concat(OUTPUT_PROPERTIES.stream(), ARC_OUTPUT_PROPERTIES.stream()).toList()));
+                Stream.concat(OUTPUT_PROPERTIES.stream(), ARC_OUTPUT_PROPERTIES.stream()).toList()));
         blocks.register("vfx.block.output_arc", (n, p) -> (buf, ctx) -> {
         });
     }
@@ -671,14 +687,14 @@ public final class VfxBlocks {
         EmitterShape shape = buildShape(block);
         float[] acc = {0f};
         return (buf, ctx) -> {
-            float r = portFloat(ports, "rate", -1, buf, ctx, rate);
+            var r = portFloat(ports, "rate", -1, buf, ctx, rate);
             acc[0] += r * ctx.dt();
-            int n = (int) acc[0];
+            var n = (int) acc[0];
             acc[0] -= n;
             if (n == 0) return;
-            int start = buf.count();
-            float[] p = new float[3];
-            for (int k = 0; k < n; k++) {
+            var start = buf.count();
+            var p = new float[3];
+            for (var k = 0; k < n; k++) {
                 shape.sample(ctx.random(), p);
                 applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
@@ -709,9 +725,9 @@ public final class VfxBlocks {
         return (buf, ctx) -> {
             if (fired[0]) return;
             fired[0] = true;
-            int start = buf.count();
-            float[] p = new float[3];
-            for (int k = 0; k < count; k++) {
+            var start = buf.count();
+            var p = new float[3];
+            for (var k = 0; k < count; k++) {
                 shape.sample(ctx.random(), p);
                 applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
@@ -744,9 +760,9 @@ public final class VfxBlocks {
             acc[0] += ctx.dt();
             if (acc[0] < interval) return;
             acc[0] = 0f;
-            int start = buf.count();
-            float[] p = new float[3];
-            for (int k = 0; k < count; k++) {
+            var start = buf.count();
+            var p = new float[3];
+            for (var k = 0; k < count; k++) {
                 shape.sample(ctx.random(), p);
                 applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
@@ -777,12 +793,12 @@ public final class VfxBlocks {
         float[] acc = {0f};
         return (buf, ctx) -> {
             acc[0] += rate * speed * ctx.dt();
-            int n = (int) acc[0];
+            var n = (int) acc[0];
             acc[0] -= n;
             if (n == 0) return;
-            int start = buf.count();
-            float[] p = new float[3];
-            for (int k = 0; k < n; k++) {
+            var start = buf.count();
+            var p = new float[3];
+            for (var k = 0; k < n; k++) {
                 shape.sample(ctx.random(), p);
                 applyPositionParam(p, positionParam, ctx);
                 int i = buf.spawn();
@@ -804,7 +820,7 @@ public final class VfxBlocks {
         EmitterShape shape = buildShape(block);
         String positionParam = propString(block, "position_param", "");
         return (buf, ctx) -> {
-            float[] p = new float[3];
+            var p = new float[3];
             ctx.forEachIncoming(i -> {
                 shape.sample(ctx.random(), p);
                 applyPositionParam(p, positionParam, ctx);
@@ -814,30 +830,30 @@ public final class VfxBlocks {
     }
 
     private static SimNode initVelocity(VfxBlock block, PortValueSource ports) {
-        float vx = propFloat(block, "vx", 0f);
-        float vy = propFloat(block, "vy", 1f);
-        float vz = propFloat(block, "vz", 0f);
-        float random = propFloat(block, "random", 0f);
-        String param = propString(block, "param", "");
+        var vx = propFloat(block, "vx", 0f);
+        var vy = propFloat(block, "vy", 1f);
+        var vz = propFloat(block, "vz", 0f);
+        var random = propFloat(block, "random", 0f);
+        var param = propString(block, "param", "");
         return (buf, ctx) -> ctx.forEachIncoming(i -> {
-            float rvx = portFloat(ports, "vx", i, buf, ctx, vx);
-            float rvy = portFloat(ports, "vy", i, buf, ctx, vy);
-            float rvz = portFloat(ports, "vz", i, buf, ctx, vz);
+            var rvx = portFloat(ports, "vx", i, buf, ctx, vx);
+            var rvy = portFloat(ports, "vy", i, buf, ctx, vy);
+            var rvz = portFloat(ports, "vz", i, buf, ctx, vz);
             if (!param.isEmpty()) {
                 rvx = ctx.paramVec3(param, 0, rvx);
                 rvy = ctx.paramVec3(param, 1, rvy);
                 rvz = ctx.paramVec3(param, 2, rvz);
             }
-            float rx = random * (ctx.random().nextFloat() * 2f - 1f);
-            float ry = random * (ctx.random().nextFloat() * 2f - 1f);
-            float rz = random * (ctx.random().nextFloat() * 2f - 1f);
+            var rx = random * (ctx.random().nextFloat() * 2f - 1f);
+            var ry = random * (ctx.random().nextFloat() * 2f - 1f);
+            var rz = random * (ctx.random().nextFloat() * 2f - 1f);
             buf.setVelocity(i, rvx + rx, rvy + ry, rvz + rz);
         });
     }
 
     private static SimNode initColor(VfxBlock block, PortValueSource ports) {
-        float[] color = propColor(block, "color");
-        String param = propString(block, "param", "");
+        var color = propColor(block, "color");
+        var param = propString(block, "param", "");
         return (buf, ctx) -> ctx.forEachIncoming(i -> {
             var v = ports.eval("color", i, buf, ctx);
             float r = color[0], g = color[1], b = color[2], a = color[3];
@@ -858,35 +874,35 @@ public final class VfxBlocks {
     }
 
     private static SimNode initSize(VfxBlock block, PortValueSource ports) {
-        float size = propFloat(block, "size", 0.1f);
-        String param = propString(block, "param", "");
+        var size = propFloat(block, "size", 0.1f);
+        var param = propString(block, "param", "");
         return (buf, ctx) -> ctx.forEachIncoming(i -> {
-            float s = portFloat(ports, "size", i, buf, ctx, size);
+            var s = portFloat(ports, "size", i, buf, ctx, size);
             if (!param.isEmpty()) s = ctx.paramFloat(param, s);
             buf.setSize(i, s);
         });
     }
 
     private static SimNode initRotation(VfxBlock block, PortValueSource ports) {
-        float rotation = propFloat(block, "rotation", 0f);
+        var rotation = propFloat(block, "rotation", 0f);
         return (buf, ctx) -> ctx.forEachIncoming(i -> buf.setRotation(i, rotation));
     }
 
     private static SimNode initLifetime(VfxBlock block, PortValueSource ports) {
-        float lifetime = propFloat(block, "lifetime", 1f);
+        var lifetime = propFloat(block, "lifetime", 1f);
         return (buf, ctx) -> ctx.forEachIncoming(i -> buf.setLifetime(i, lifetime));
     }
 
     private static SimNode initMass(VfxBlock block, PortValueSource ports) {
-        float mass = propFloat(block, "mass", 1f);
+        var mass = propFloat(block, "mass", 1f);
         return (buf, ctx) -> ctx.forEachIncoming(i -> buf.setMass(i, mass));
     }
 
     private static SimNode initRandomize(VfxBlock block, PortValueSource ports) {
-        float posAmp = propFloat(block, "pos", 0.1f);
-        float velAmp = propFloat(block, "vel", 0.1f);
-        float sizeAmp = propFloat(block, "size", 0.1f);
-        float lifeAmp = propFloat(block, "lifetime", 0.1f);
+        var posAmp = propFloat(block, "pos", 0.1f);
+        var velAmp = propFloat(block, "vel", 0.1f);
+        var sizeAmp = propFloat(block, "size", 0.1f);
+        var lifeAmp = propFloat(block, "lifetime", 0.1f);
         return (buf, ctx) -> ctx.forEachIncoming(i -> {
             buf.setPosition(i,
                     buf.positionX(i) + jitter(ctx, posAmp),
@@ -905,8 +921,8 @@ public final class VfxBlocks {
 
     private static SimNode updateVelocity(VfxBlock block, PortValueSource ports) {
         return (buf, ctx) -> {
-            float dt = ctx.dt();
-            for (int i = 0; i < buf.count(); i++) {
+            var dt = ctx.dt();
+            for (var i = 0; i < buf.count(); i++) {
                 buf.setPosition(i,
                         buf.positionX(i) + buf.velocityX(i) * dt,
                         buf.positionY(i) + buf.velocityY(i) * dt,
@@ -916,26 +932,26 @@ public final class VfxBlocks {
     }
 
     private static SimNode updateGravity(VfxBlock block, PortValueSource ports) {
-        float g = propFloat(block, "gravity", -9.8f);
-        String param = propString(block, "param", "");
+        var g = propFloat(block, "gravity", -9.8f);
+        var param = propString(block, "param", "");
         return (buf, ctx) -> {
-            float rg = param.isEmpty() ? g : ctx.paramFloat(param, g);
-            float dt = ctx.dt();
-            for (int i = 0; i < buf.count(); i++) {
+            var rg = param.isEmpty() ? g : ctx.paramFloat(param, g);
+            var dt = ctx.dt();
+            for (var i = 0; i < buf.count(); i++) {
                 buf.setVelocity(i, buf.velocityX(i), buf.velocityY(i) + rg * dt, buf.velocityZ(i));
             }
         };
     }
 
     private static SimNode updateForce(VfxBlock block, PortValueSource ports) {
-        float fx = propFloat(block, "fx", 0f);
-        float fy = propFloat(block, "fy", 0f);
-        float fz = propFloat(block, "fz", 0f);
+        var fx = propFloat(block, "fx", 0f);
+        var fy = propFloat(block, "fy", 0f);
+        var fz = propFloat(block, "fz", 0f);
         return (buf, ctx) -> {
-            float dt = ctx.dt();
-            for (int i = 0; i < buf.count(); i++) {
-                float m = buf.mass(i);
-                float inv = m > 0f ? 1f / m : 1f;
+            var dt = ctx.dt();
+            for (var i = 0; i < buf.count(); i++) {
+                var m = buf.mass(i);
+                var inv = m > 0f ? 1f / m : 1f;
                 buf.setVelocity(i,
                         buf.velocityX(i) + fx * inv * dt,
                         buf.velocityY(i) + fy * inv * dt,
@@ -945,15 +961,15 @@ public final class VfxBlocks {
     }
 
     private static SimNode updateNoise(VfxBlock block, PortValueSource ports) {
-        float amp = propFloat(block, "amplitude", 1f);
-        float freq = propFloat(block, "frequency", 1f);
+        var amp = propFloat(block, "amplitude", 1f);
+        var freq = propFloat(block, "frequency", 1f);
         return (buf, ctx) -> {
-            float dt = ctx.dt();
-            float t = ctx.time() * freq;
-            for (int i = 0; i < buf.count(); i++) {
-                float nx = hash(buf.positionX(i) * freq + 1.7f, buf.positionY(i) * freq, t) * 2f - 1f;
-                float ny = hash(buf.positionY(i) * freq, t + 3.1f, buf.positionZ(i) * freq) * 2f - 1f;
-                float nz = hash(t + 5.3f, buf.positionZ(i) * freq, buf.positionX(i) * freq) * 2f - 1f;
+            var dt = ctx.dt();
+            var t = ctx.time() * freq;
+            for (var i = 0; i < buf.count(); i++) {
+                var nx = hash(buf.positionX(i) * freq + 1.7f, buf.positionY(i) * freq, t) * 2f - 1f;
+                var ny = hash(buf.positionY(i) * freq, t + 3.1f, buf.positionZ(i) * freq) * 2f - 1f;
+                var nz = hash(t + 5.3f, buf.positionZ(i) * freq, buf.positionX(i) * freq) * 2f - 1f;
                 buf.setVelocity(i,
                         buf.velocityX(i) + nx * amp * dt,
                         buf.velocityY(i) + ny * amp * dt,
@@ -963,24 +979,24 @@ public final class VfxBlocks {
     }
 
     private static SimNode updateTurbulence(VfxBlock block, PortValueSource ports) {
-        float amp = propFloat(block, "amplitude", 1f);
-        float freq = propFloat(block, "frequency", 1f);
+        var amp = propFloat(block, "amplitude", 1f);
+        var freq = propFloat(block, "frequency", 1f);
         return (buf, ctx) -> {
-            float dt = ctx.dt();
-            float t = ctx.time() * freq;
-            for (int i = 0; i < buf.count(); i++) {
-                float n = hash(buf.positionX(i) * freq, buf.positionY(i) * freq, t) * 2f - 1f;
-                float vx = buf.velocityX(i);
-                float vy = buf.velocityY(i);
-                float vz = buf.velocityZ(i);
-                float len = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
+            var dt = ctx.dt();
+            var t = ctx.time() * freq;
+            for (var i = 0; i < buf.count(); i++) {
+                var n = hash(buf.positionX(i) * freq, buf.positionY(i) * freq, t) * 2f - 1f;
+                var vx = buf.velocityX(i);
+                var vy = buf.velocityY(i);
+                var vz = buf.velocityZ(i);
+                var len = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
                 if (len < 1e-5f) continue;
                 vx /= len;
                 vy /= len;
                 vz /= len;
-                float tx = vz;
-                float tz = -vx;
-                float tl = (float) Math.sqrt(tx * tx + tz * tz);
+                var tx = vz;
+                var tz = -vx;
+                var tl = (float) Math.sqrt(tx * tx + tz * tz);
                 if (tl < 1e-5f) {
                     tx = 1f;
                     tz = 0f;
@@ -1126,20 +1142,20 @@ public final class VfxBlocks {
     }
 
     private static SimNode updateDrag(VfxBlock block, PortValueSource ports) {
-        float drag = propFloat(block, "drag", 0.1f);
+        var drag = propFloat(block, "drag", 0.1f);
         return (buf, ctx) -> {
-            float factor = (float) Math.exp(-drag * ctx.dt());
-            for (int i = 0; i < buf.count(); i++) {
+            var factor = (float) Math.exp(-drag * ctx.dt());
+            for (var i = 0; i < buf.count(); i++) {
                 buf.setVelocity(i, buf.velocityX(i) * factor, buf.velocityY(i) * factor, buf.velocityZ(i) * factor);
             }
         };
     }
 
     private static SimNode updateDamping(VfxBlock block, PortValueSource ports) {
-        float damping = propFloat(block, "damping", 0.5f);
+        var damping = propFloat(block, "damping", 0.5f);
         return (buf, ctx) -> {
-            float factor = Math.max(0f, 1f - damping * ctx.dt());
-            for (int i = 0; i < buf.count(); i++) {
+            var factor = Math.max(0f, 1f - damping * ctx.dt());
+            for (var i = 0; i < buf.count(); i++) {
                 buf.setVelocity(i, buf.velocityX(i) * factor, buf.velocityY(i) * factor, buf.velocityZ(i) * factor);
             }
         };
@@ -1147,10 +1163,10 @@ public final class VfxBlocks {
 
     private static SimNode updateAge(VfxBlock block, PortValueSource ports) {
         return (buf, ctx) -> {
-            float dt = ctx.dt();
-            int i = 0;
+            var dt = ctx.dt();
+            var i = 0;
             while (i < buf.count()) {
-                float age = buf.age(i) + dt;
+                var age = buf.age(i) + dt;
                 buf.setAge(i, age);
                 if (age >= buf.lifetime(i)) {
                     buf.kill(i);
@@ -1163,8 +1179,8 @@ public final class VfxBlocks {
 
     private static SimNode updateFade(VfxBlock block, PortValueSource ports) {
         return (buf, ctx) -> {
-            for (int i = 0; i < buf.count(); i++) {
-                float t = Math.min(1f, buf.age(i) / buf.lifetime(i));
+            for (var i = 0; i < buf.count(); i++) {
+                var t = Math.min(1f, buf.age(i) / buf.lifetime(i));
                 buf.setAlpha(i, buf.startAlpha(i) * (1f - t));
                 buf.setSizeScaled(i, buf.startSize(i) * (1f - t));
             }
@@ -1174,10 +1190,10 @@ public final class VfxBlocks {
     // ==================== collision / bounds ====================
 
     private static SimNode collisionGround(VfxBlock block, PortValueSource ports) {
-        float bounce = propFloat(block, "bounce", 0.5f);
-        boolean kill = propBool(block, "kill", false);
+        var bounce = propFloat(block, "bounce", 0.5f);
+        var kill = propBool(block, "kill", false);
         return (buf, ctx) -> {
-            int i = 0;
+            var i = 0;
             while (i < buf.count()) {
                 if (buf.positionY(i) <= 0f && buf.velocityY(i) < 0f) {
                     if (kill) {
@@ -1193,11 +1209,11 @@ public final class VfxBlocks {
     }
 
     private static SimNode collisionPlane(VfxBlock block, PortValueSource ports) {
-        float height = propFloat(block, "height", 0f);
-        float bounce = propFloat(block, "bounce", 0.5f);
-        boolean kill = propBool(block, "kill", false);
+        var height = propFloat(block, "height", 0f);
+        var bounce = propFloat(block, "bounce", 0.5f);
+        var kill = propBool(block, "kill", false);
         return (buf, ctx) -> {
-            int i = 0;
+            var i = 0;
             while (i < buf.count()) {
                 if (buf.positionY(i) <= height && buf.velocityY(i) < 0f) {
                     if (kill) {
@@ -1213,23 +1229,23 @@ public final class VfxBlocks {
     }
 
     private static SimNode collisionSphere(VfxBlock block, PortValueSource ports) {
-        float cx = propFloat(block, "cx", 0f);
-        float cy = propFloat(block, "cy", 0f);
-        float cz = propFloat(block, "cz", 0f);
-        float radius = propFloat(block, "radius", 1f);
-        float bounce = propFloat(block, "bounce", 0.5f);
+        var cx = propFloat(block, "cx", 0f);
+        var cy = propFloat(block, "cy", 0f);
+        var cz = propFloat(block, "cz", 0f);
+        var radius = propFloat(block, "radius", 1f);
+        var bounce = propFloat(block, "bounce", 0.5f);
         return (buf, ctx) -> {
-            for (int i = 0; i < buf.count(); i++) {
-                float dx = buf.positionX(i) - cx;
-                float dy = buf.positionY(i) - cy;
-                float dz = buf.positionZ(i) - cz;
-                float dist = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+            for (var i = 0; i < buf.count(); i++) {
+                var dx = buf.positionX(i) - cx;
+                var dy = buf.positionY(i) - cy;
+                var dz = buf.positionZ(i) - cz;
+                var dist = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
                 if (dist >= radius || dist < 1e-6f) continue;
-                float nx = dx / dist;
-                float ny = dy / dist;
-                float nz = dz / dist;
+                var nx = dx / dist;
+                var ny = dy / dist;
+                var nz = dz / dist;
                 buf.setPosition(i, cx + nx * radius, cy + ny * radius, cz + nz * radius);
-                float dot = buf.velocityX(i) * nx + buf.velocityY(i) * ny + buf.velocityZ(i) * nz;
+                var dot = buf.velocityX(i) * nx + buf.velocityY(i) * ny + buf.velocityZ(i) * nz;
                 if (dot < 0f) {
                     buf.setVelocity(i,
                             buf.velocityX(i) - (1f + bounce) * dot * nx,
@@ -1241,18 +1257,18 @@ public final class VfxBlocks {
     }
 
     private static SimNode bounds(VfxBlock block, PortValueSource ports) {
-        float minX = propFloat(block, "min_x", -10f);
-        float minY = propFloat(block, "min_y", -10f);
-        float minZ = propFloat(block, "min_z", -10f);
-        float maxX = propFloat(block, "max_x", 10f);
-        float maxY = propFloat(block, "max_y", 10f);
-        float maxZ = propFloat(block, "max_z", 10f);
+        var minX = propFloat(block, "min_x", -10f);
+        var minY = propFloat(block, "min_y", -10f);
+        var minZ = propFloat(block, "min_z", -10f);
+        var maxX = propFloat(block, "max_x", 10f);
+        var maxY = propFloat(block, "max_y", 10f);
+        var maxZ = propFloat(block, "max_z", 10f);
         return (buf, ctx) -> {
-            int i = 0;
+            var i = 0;
             while (i < buf.count()) {
-                float x = buf.positionX(i);
-                float y = buf.positionY(i);
-                float z = buf.positionZ(i);
+                var x = buf.positionX(i);
+                var y = buf.positionY(i);
+                var z = buf.positionZ(i);
                 if (x < minX || x > maxX || y < minY || y > maxY || z < minZ || z > maxZ) {
                     buf.kill(i);
                 } else {
@@ -1263,9 +1279,9 @@ public final class VfxBlocks {
     }
 
     private static SimNode kill(VfxBlock block, PortValueSource ports) {
-        float time = propFloat(block, "time", 5f);
+        var time = propFloat(block, "time", 5f);
         return (buf, ctx) -> {
-            int i = 0;
+            var i = 0;
             while (i < buf.count()) {
                 if (buf.age(i) >= time) {
                     buf.kill(i);
@@ -1279,12 +1295,12 @@ public final class VfxBlocks {
     // ==================== over-life ====================
 
     private static SimNode lifeColor(VfxBlock block, PortValueSource ports) {
-        String gradientId = propString(block, "gradient", "");
-        byte layerFilter = layerFilter(block);
+        var gradientId = propString(block, "gradient", "");
+        var layerFilter = layerFilter(block);
         return (buf, ctx) -> {
             var gradient = ctx.gradient(gradientId);
             if (gradient == null) return;
-            for (int i = 0; i < buf.count(); i++) {
+            for (var i = 0; i < buf.count(); i++) {
                 if (layerFilter >= 0 && buf.layer(i) != layerFilter) continue;
                 var c = GradientSampler.sample(gradient, lifeT(buf, i));
                 buf.setColorRgb(i, c.x, c.y, c.z);
@@ -1293,12 +1309,12 @@ public final class VfxBlocks {
     }
 
     private static SimNode lifeAlpha(VfxBlock block, PortValueSource ports) {
-        String curveId = propString(block, "curve", "");
-        byte layerFilter = layerFilter(block);
+        var curveId = propString(block, "curve", "");
+        var layerFilter = layerFilter(block);
         return (buf, ctx) -> {
             var curve = ctx.curve(curveId);
             if (curve == null) return;
-            for (int i = 0; i < buf.count(); i++) {
+            for (var i = 0; i < buf.count(); i++) {
                 if (layerFilter >= 0 && buf.layer(i) != layerFilter) continue;
                 buf.setAlpha(i, buf.startAlpha(i) * CurveSampler.sample(curve, lifeT(buf, i)));
             }
@@ -1306,12 +1322,12 @@ public final class VfxBlocks {
     }
 
     private static SimNode lifeSize(VfxBlock block, PortValueSource ports) {
-        String curveId = propString(block, "curve", "");
-        byte layerFilter = layerFilter(block);
+        var curveId = propString(block, "curve", "");
+        var layerFilter = layerFilter(block);
         return (buf, ctx) -> {
             var curve = ctx.curve(curveId);
             if (curve == null) return;
-            for (int i = 0; i < buf.count(); i++) {
+            for (var i = 0; i < buf.count(); i++) {
                 if (layerFilter >= 0 && buf.layer(i) != layerFilter) continue;
                 buf.setSizeScaled(i, buf.startSize(i) * CurveSampler.sample(curve, lifeT(buf, i)));
             }
@@ -1319,14 +1335,14 @@ public final class VfxBlocks {
     }
 
     private static SimNode lifeVelocity(VfxBlock block, PortValueSource ports) {
-        String curveId = propString(block, "curve", "");
-        byte layerFilter = layerFilter(block);
+        var curveId = propString(block, "curve", "");
+        var layerFilter = layerFilter(block);
         return (buf, ctx) -> {
             var curve = ctx.curve(curveId);
             if (curve == null) return;
-            for (int i = 0; i < buf.count(); i++) {
+            for (var i = 0; i < buf.count(); i++) {
                 if (layerFilter >= 0 && buf.layer(i) != layerFilter) continue;
-                float s = CurveSampler.sample(curve, lifeT(buf, i));
+                var s = CurveSampler.sample(curve, lifeT(buf, i));
                 buf.setVelocity(i,
                         buf.velocityX(i) * s,
                         buf.velocityY(i) * s,
@@ -1338,28 +1354,28 @@ public final class VfxBlocks {
     // ==================== orient ====================
 
     private static SimNode orientVelocity(VfxBlock block, PortValueSource ports) {
-        float offset = propFloat(block, "offset", 0f);
+        var offset = propFloat(block, "offset", 0f);
         return (buf, ctx) -> {
-            for (int i = 0; i < buf.count(); i++) {
-                float angle = (float) Math.atan2(buf.velocityZ(i), buf.velocityX(i));
+            for (var i = 0; i < buf.count(); i++) {
+                var angle = (float) Math.atan2(buf.velocityZ(i), buf.velocityX(i));
                 buf.setRotation(i, angle + offset);
             }
         };
     }
 
     private static SimNode orientFixed(VfxBlock block, PortValueSource ports) {
-        float rotation = propFloat(block, "rotation", 0f);
+        var rotation = propFloat(block, "rotation", 0f);
         return (buf, ctx) -> {
-            for (int i = 0; i < buf.count(); i++) {
+            for (var i = 0; i < buf.count(); i++) {
                 buf.setRotation(i, rotation);
             }
         };
     }
 
     private static SimNode orientSpin(VfxBlock block, PortValueSource ports) {
-        float speed = propFloat(block, "speed", 1f);
+        var speed = propFloat(block, "speed", 1f);
         return (buf, ctx) -> {
-            for (int i = 0; i < buf.count(); i++) {
+            for (var i = 0; i < buf.count(); i++) {
                 buf.setRotation(i, buf.rotation(i) + speed * ctx.dt());
             }
         };
@@ -1367,37 +1383,47 @@ public final class VfxBlocks {
 
     // ==================== arc（M22，路径驱动，CPU spine + GPU 观感，无线程） ====================
 
-    /** 两点电弧（Blender 式：from→to + 表面法线起拱 + 递归分支 + 噪声动画）。 */
+    /**
+     * 两点电弧（Blender 式：from→to + 表面法线起拱 + 递归分支 + 噪声动画）。
+     */
     private static SimNode arcBolt(VfxBlock block, PortValueSource ports) {
-        float ox = propFloat(block, "origin_x", 0f);
-        float oy = propFloat(block, "origin_y", 0f);
-        float oz = propFloat(block, "origin_z", 0f);
-        float fromX = propFloat(block, "from_x", ox);
-        float fromY = propFloat(block, "from_y", oy);
-        float fromZ = propFloat(block, "from_z", oz);
-        float toX = propFloat(block, "to_x", ox);
-        float toY = propFloat(block, "to_y", oy + 2f);
-        float toZ = propFloat(block, "to_z", oz);
-        float probability = propFloat(block, "probability", 0.5f);
-        float width = propFloat(block, "width", 0.01f);
-        int segments = propInt(block, "segments", 12);
-        float lifetime = propFloat(block, "lifetime", 1f);
-        float[] color = propColor(block, "color");
-        float emission = propFloat(block, "emission", 1f);
-        int branchDepth = propInt(block, "branch_depth", 1);
-        int branchCount = propInt(block, "branch_count", 2);
-        float branchAngle = propFloat(block, "branch_angle", 1.57f);
-        float branchLengthScale = propFloat(block, "branch_length_scale", 0.3f);
-        float branchWidthScale = propFloat(block, "branch_width_scale", 0.35f);
-        float branchBrightnessScale = propFloat(block, "branch_brightness_scale", 0.6f);
+        var ox = propFloat(block, "origin_x", 0f);
+        var oy = propFloat(block, "origin_y", 0f);
+        var oz = propFloat(block, "origin_z", 0f);
+        var fromX = propFloat(block, "from_x", ox);
+        var fromY = propFloat(block, "from_y", oy);
+        var fromZ = propFloat(block, "from_z", oz);
+        var toX = propFloat(block, "to_x", ox);
+        var toY = propFloat(block, "to_y", oy + 2f);
+        var toZ = propFloat(block, "to_z", oz);
+        var probability = propFloat(block, "probability", 0.5f);
+        var width = propFloat(block, "width", 0.01f);
+        var segments = propInt(block, "segments", 12);
+        var lifetime = propFloat(block, "lifetime", 1f);
+        var color = propColor(block, "color");
+        var emission = propFloat(block, "emission", 1f);
+        var branchDepth = propInt(block, "branch_depth", 1);
+        var branchCount = propInt(block, "branch_count", 2);
+        var branchAngle = propFloat(block, "branch_angle", 1.57f);
+        var branchLengthScale = propFloat(block, "branch_length_scale", 0.3f);
+        var branchWidthScale = propFloat(block, "branch_width_scale", 0.35f);
+        var branchBrightnessScale = propFloat(block, "branch_brightness_scale", 0.6f);
         // 主弧法线：from→to 连线方向（起拱方向，贴表面）
         float vx = toX - fromX, vy = toY - fromY, vz = toZ - fromZ;
-        float vlen = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
+        var vlen = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
         float nx, ny, nz;
-        if (vlen < 1e-6f) { nx = 0; ny = 1; nz = 0; } else { nx = vx / vlen; ny = vy / vlen; nz = vz / vlen; }
+        if (vlen < 1e-6f) {
+            nx = 0;
+            ny = 1;
+            nz = 0;
+        } else {
+            nx = vx / vlen;
+            ny = vy / vlen;
+            nz = vz / vlen;
+        }
         long[] seed = {0L};
         // 每 N 秒生成一条电弧（低频，避免每帧生成导致几十上百条累积）；interval=0 则每帧概率生成
-        float interval = propFloat(block, "interval", 0f);
+        var interval = propFloat(block, "interval", 0f);
         float[] accumulator = {0f};
         // 断续出现（复刻 Blender 随机点云阵列 Delete Geometry）：按概率随机跳过，产生零星断档
         return (buf, ctx) -> {
@@ -1409,7 +1435,7 @@ public final class VfxBlocks {
             seed[0]++;
             if (ctx.random().nextFloat() > probability) return;
             var arc = ctx.arcs().add();
-            org.academy.api.client.render.vfxgraph.arc.CurveGenerator.generateFromTo(
+            CurveGenerator.generateFromTo(
                     arc, fromX, fromY, fromZ, toX, toY, toZ,
                     nx, ny, nz,
                     width, segments,
@@ -1420,34 +1446,36 @@ public final class VfxBlocks {
         };
     }
 
-    /** 环绕电弧。 */
+    /**
+     * 环绕电弧。
+     */
     private static SimNode arcOrbit(VfxBlock block, PortValueSource ports) {
-        float ox = propFloat(block, "origin_x", 0f);
-        float oy = propFloat(block, "origin_y", 0f);
-        float oz = propFloat(block, "origin_z", 0f);
-        float radius = propFloat(block, "radius", 1.5f);
-        float width = propFloat(block, "width", 0.01f);
-        int segments = propInt(block, "segments", 12);
-        float lifetime = propFloat(block, "lifetime", 0f);
-        float[] color = propColor(block, "color");
-        float emission = propFloat(block, "emission", 1f);
-        float height = propFloat(block, "height", 2f);
-        int branchDepth = propInt(block, "branch_depth", 0);
-        int branchCount = propInt(block, "branch_count", 2);
-        float branchAngle = propFloat(block, "branch_angle", 1.57f);
-        float branchLengthScale = propFloat(block, "branch_length_scale", 0.3f);
-        float branchWidthScale = propFloat(block, "branch_width_scale", 0.35f);
-        float branchBrightnessScale = propFloat(block, "branch_brightness_scale", 0.6f);
+        var ox = propFloat(block, "origin_x", 0f);
+        var oy = propFloat(block, "origin_y", 0f);
+        var oz = propFloat(block, "origin_z", 0f);
+        var radius = propFloat(block, "radius", 1.5f);
+        var width = propFloat(block, "width", 0.01f);
+        var segments = propInt(block, "segments", 12);
+        var lifetime = propFloat(block, "lifetime", 0f);
+        var color = propColor(block, "color");
+        var emission = propFloat(block, "emission", 1f);
+        var height = propFloat(block, "height", 2f);
+        var branchDepth = propInt(block, "branch_depth", 0);
+        var branchCount = propInt(block, "branch_count", 2);
+        var branchAngle = propFloat(block, "branch_angle", 1.57f);
+        var branchLengthScale = propFloat(block, "branch_length_scale", 0.3f);
+        var branchWidthScale = propFloat(block, "branch_width_scale", 0.35f);
+        var branchBrightnessScale = propFloat(block, "branch_brightness_scale", 0.6f);
         long[] seed = {0L};
         float[] angle = {0f};
-        float speed = propFloat(block, "speed", 1f);
+        var speed = propFloat(block, "speed", 1f);
         return (buf, ctx) -> {
             seed[0]++;
             angle[0] += ctx.dt() * speed;
-            float x = ox + (float) Math.cos(angle[0]) * radius;
-            float z = oz + (float) Math.sin(angle[0]) * radius;
+            var x = ox + (float) Math.cos(angle[0]) * radius;
+            var z = oz + (float) Math.sin(angle[0]) * radius;
             var arc = ctx.arcs().add();
-            org.academy.api.client.render.vfxgraph.arc.CurveGenerator.generate(
+            CurveGenerator.generate(
                     arc, x, oy, z, 0, 1, 0,
                     width, segments,
                     color[0] * emission, color[1] * emission, color[2] * emission, color[3],
@@ -2302,28 +2330,28 @@ public final class VfxBlocks {
 
     /** 表面电弧（M29，Blender「闪电附着」主流水线）：表面布点 + per-point 短弧 + 断续时序 + 端点吸附。 */
     private static SimNode arcSurface(VfxBlock block, PortValueSource ports) {
-        float ox = propFloat(block, "origin_x", 0f);
-        float oy = propFloat(block, "origin_y", 0f);
-        float oz = propFloat(block, "origin_z", 0f);
-        String mesh = propString(block, "mesh", "builtin:plane");
-        float density = propFloat(block, "density", 3.8f);
-        float probability = propFloat(block, "probability", 0.5f);
-        float frequency = propFloat(block, "frequency", 1f);
-        int framePeriod = propInt(block, "frame_period", 3);
-        float fps = propFloat(block, "fps", 30f);
-        float height = propFloat(block, "height", 1f);
-        float curve = propFloat(block, "curve", 0.78f);
-        float width = propFloat(block, "width", 0.01f);
-        int segments = propInt(block, "segments", 12);
-        float lifetime = propFloat(block, "lifetime", 1f);
-        float[] color = propColor(block, "color");
-        float emission = propFloat(block, "emission", 1f);
-        float noiseStrength = propFloat(block, "noise_strength", 0.5f);
-        float driftSpeed = propFloat(block, "drift_speed", 1.5f);
-        float[] base = MeshAssets.resolve(mesh);
+        var ox = propFloat(block, "origin_x", 0f);
+        var oy = propFloat(block, "origin_y", 0f);
+        var oz = propFloat(block, "origin_z", 0f);
+        var mesh = propString(block, "mesh", "builtin:plane");
+        var density = propFloat(block, "density", 3.8f);
+        var probability = propFloat(block, "probability", 0.5f);
+        var frequency = propFloat(block, "frequency", 1f);
+        var framePeriod = propInt(block, "frame_period", 3);
+        var fps = propFloat(block, "fps", 30f);
+        var height = propFloat(block, "height", 1f);
+        var curve = propFloat(block, "curve", 0.78f);
+        var width = propFloat(block, "width", 0.01f);
+        var segments = propInt(block, "segments", 12);
+        var lifetime = propFloat(block, "lifetime", 1f);
+        var color = propColor(block, "color");
+        var emission = propFloat(block, "emission", 1f);
+        var noiseStrength = propFloat(block, "noise_strength", 0.5f);
+        var driftSpeed = propFloat(block, "drift_speed", 1.5f);
+        var base = MeshAssets.resolve(mesh);
         // 表面网格平移 origin（布点 + 端点吸附都在同一位移后的表面，保持一致性）
-        float[] surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
-        SurfaceDistributor distributor = surface == null ? null : new SurfaceDistributor(surface);
+        var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
+        var distributor = surface == null ? null : new SurfaceDistributor(surface);
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
@@ -2331,7 +2359,7 @@ public final class VfxBlocks {
             // 帧周期断续时序（M29b-01，复刻 Blender Compare(Frame MOD N) EQUAL 0）：
             // frequency<=0 时每帧 spawn（兼容旧资产/测试）；否则只在 frame % frame_period == 0
             // 的帧 spawn 一批，其余帧跳过——避免每帧全密度 spawn 导致弧数爆炸（稳态 ~450 → <30）。
-            long frame = (long) (ctx.time() * fps);
+            var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;
                 if (frame == lastGateFrame[0]) return;
@@ -2356,42 +2384,44 @@ public final class VfxBlocks {
         };
     }
 
-    /** 接触闪电（M30，复刻 Blender 主组第二套系统）：源面布点 + 到接触对象距离剔除 + 直线弧末端吸附接触面。 */
+    /**
+     * 接触闪电（M30，复刻 Blender 主组第二套系统）：源面布点 + 到接触对象距离剔除 + 直线弧末端吸附接触面。
+     */
     private static SimNode arcContact(VfxBlock block, PortValueSource ports) {
-        float ox = propFloat(block, "origin_x", 0f);
-        float oy = propFloat(block, "origin_y", 0f);
-        float oz = propFloat(block, "origin_z", 0f);
-        String mesh = propString(block, "mesh", "builtin:plane");
-        String contactMesh = propString(block, "contact_mesh", "builtin:sphere");
-        float contactRange = propFloat(block, "contact_range", 4.1f);
-        float cox = propFloat(block, "contact_origin_x", 0f);
-        float coy = propFloat(block, "contact_origin_y", 4.3f);
-        float coz = propFloat(block, "contact_origin_z", 0f);
-        float density = propFloat(block, "density", 3.8f);
-        float probability = propFloat(block, "probability", 0.5f);
-        float frequency = propFloat(block, "frequency", 1f);
-        int framePeriod = propInt(block, "frame_period", 3);
-        float fps = propFloat(block, "fps", 30f);
-        float height = propFloat(block, "height", 1f);
-        float curve = propFloat(block, "curve", 0.78f);
-        float width = propFloat(block, "width", 0.01f);
-        int segments = propInt(block, "segments", 12);
-        float lifetime = propFloat(block, "lifetime", 1f);
-        float[] color = propColor(block, "color");
-        float emission = propFloat(block, "emission", 1f);
-        float noiseStrength = propFloat(block, "noise_strength", 0.5f);
-        float driftSpeed = propFloat(block, "drift_speed", 1.5f);
-        float[] base = MeshAssets.resolve(mesh);
-        float[] contactBase = MeshAssets.resolve(contactMesh);
-        float[] surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
-        float[] contact = contactBase == null ? null : offsetTriangles(contactBase, cox, coy, coz);
-        SurfaceDistributor distributor = surface == null ? null : new SurfaceDistributor(surface);
+        var ox = propFloat(block, "origin_x", 0f);
+        var oy = propFloat(block, "origin_y", 0f);
+        var oz = propFloat(block, "origin_z", 0f);
+        var mesh = propString(block, "mesh", "builtin:plane");
+        var contactMesh = propString(block, "contact_mesh", "builtin:sphere");
+        var contactRange = propFloat(block, "contact_range", 4.1f);
+        var cox = propFloat(block, "contact_origin_x", 0f);
+        var coy = propFloat(block, "contact_origin_y", 4.3f);
+        var coz = propFloat(block, "contact_origin_z", 0f);
+        var density = propFloat(block, "density", 3.8f);
+        var probability = propFloat(block, "probability", 0.5f);
+        var frequency = propFloat(block, "frequency", 1f);
+        var framePeriod = propInt(block, "frame_period", 3);
+        var fps = propFloat(block, "fps", 30f);
+        var height = propFloat(block, "height", 1f);
+        var curve = propFloat(block, "curve", 0.78f);
+        var width = propFloat(block, "width", 0.01f);
+        var segments = propInt(block, "segments", 12);
+        var lifetime = propFloat(block, "lifetime", 1f);
+        var color = propColor(block, "color");
+        var emission = propFloat(block, "emission", 1f);
+        var noiseStrength = propFloat(block, "noise_strength", 0.5f);
+        var driftSpeed = propFloat(block, "drift_speed", 1.5f);
+        var base = MeshAssets.resolve(mesh);
+        var contactBase = MeshAssets.resolve(contactMesh);
+        var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
+        var contact = contactBase == null ? null : offsetTriangles(contactBase, cox, coy, coz);
+        var distributor = surface == null ? null : new SurfaceDistributor(surface);
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
             if (distributor == null || surface == null || contact == null) return;
             // 帧周期断续时序（M29b-01，同 arc_surface）：frequency<=0 每帧，否则按帧周期门控
-            long frame = (long) (ctx.time() * fps);
+            var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;
                 if (frame == lastGateFrame[0]) return;
@@ -2402,10 +2432,10 @@ public final class VfxBlocks {
             for (var s : samples) {
                 float px = s.x(), py = s.y(), pz = s.z();
                 // 到接触对象最近距离 → 超出接触范围剔除（Blender Compare GREATER_THAN → Delete Geometry）
-                float dist = MeshDistance.nearestDistance(contact, px, py, pz);
+                var dist = MeshDistance.nearestDistance(contact, px, py, pz);
                 if (dist > contactRange) continue;
                 // 接触表面最近点（Blender Sample Nearest Surface.002.Value → Set Position.004 末端）
-                float[] nearest = MeshDistance.nearestPoint(contact, px, py, pz);
+                var nearest = MeshDistance.nearestPoint(contact, px, py, pz);
                 var arc = ctx.arcs().add();
                 CurveGenerator.generateContactArc(
                         arc, px, py, pz,
@@ -2421,66 +2451,68 @@ public final class VfxBlocks {
         };
     }
 
-    /** 粒子火花（M30，复刻 Blender 主组第三套系统）：弧→点 + 概率删减 + 溅射方向+重力 + 迷你管对齐速度。 */
+    /**
+     * 粒子火花（M30，复刻 Blender 主组第三套系统）：弧→点 + 概率删减 + 溅射方向+重力 + 迷你管对齐速度。
+     */
     private static SimNode arcSpark(VfxBlock block, PortValueSource ports) {
-        float probability = propFloat(block, "probability", 0.5f);
-        int maxSparks = propInt(block, "max_sparks", 3);
-        float splashSpeed = propFloat(block, "splash_speed", 1.3f);
-        float gravity = propFloat(block, "gravity", -0.9f);
-        float lifetime = propFloat(block, "lifetime", 0.5f);
-        float scale = propFloat(block, "scale", 1.4f);
-        float radius = propFloat(block, "radius", 0.005f);
-        float[] color = propColor(block, "color");
-        float emission = propFloat(block, "emission", 1f);
+        var probability = propFloat(block, "probability", 0.5f);
+        var maxSparks = propInt(block, "max_sparks", 3);
+        var splashSpeed = propFloat(block, "splash_speed", 1.3f);
+        var gravity = propFloat(block, "gravity", -0.9f);
+        var lifetime = propFloat(block, "lifetime", 0.5f);
+        var scale = propFloat(block, "scale", 1.4f);
+        var radius = propFloat(block, "radius", 0.005f);
+        var color = propColor(block, "color");
+        var emission = propFloat(block, "emission", 1f);
         long[] seed = {0L};
         return (buf, ctx) -> {
             seed[0]++;
             var random = ctx.random();
             var arcs = ctx.arcs();
-            int n = arcs.count();
-            for (int a = 0; a < n; a++) {
+            var n = arcs.count();
+            for (var a = 0; a < n; a++) {
                 var arc = arcs.arc(a);
                 // 只从本帧新增的带表面弧（arc_surface/arc_contact 源弧）取点；火花弧（无表面、
                 // fresh=false 于下帧）不再派生火花，消除指数放大（M29b-02）
                 if (!arc.fresh() || !arc.hasSurface()) continue;
-                int size = arc.size();
+                var size = arc.size();
                 if (size < 2) continue;
                 // 每弧火花数上限（防本帧新增多条弧时火花总量过大）
-                int spawned = 0;
+                var spawned = 0;
                 // 弧→点（Blender Curve to Points，Count=10 → 按控制点取点）
-                int pointCount = Math.min(size, 10);
-                for (int i = 0; i < pointCount; i++) {
+                var pointCount = Math.min(size, 10);
+                for (var i = 0; i < pointCount; i++) {
                     if (spawned >= maxSparks) break;
                     // 概率删减（Blender Delete Geometry + Random Value：保留 = 粒子密度）
                     if (random.nextFloat() > probability) continue;
-                    int idx = i * (size - 1) / Math.max(1, pointCount - 1);
+                    var idx = i * (size - 1) / Math.max(1, pointCount - 1);
                     float px = arc.x(idx), py = arc.y(idx), pz = arc.z(idx);
                     // 溅射方向：绕表面法线随机（Blender 矢量选择：约束矢量=法线，角度 π/2）
-                    float[] ref = surfaceTangent(arc, idx);
-                    float[] dir = SurfaceDistributor.tangentDirection(ref[0], ref[1], ref[2],
+                    var ref = surfaceTangent(arc, idx);
+                    var dir = SurfaceDistributor.tangentDirection(ref[0], ref[1], ref[2],
                             (float) Math.PI / 3f, random);
                     // 初始速度：溅射速度 × Random(0.3~1.2)（Blender Math.007 = Random.006 × 溅射速度）
-                    float speed = splashSpeed * (0.3f + 0.9f * random.nextFloat());
-                    float vx = dir[0] * speed;
-                    float vy = dir[1] * speed;
-                    float vz = dir[2] * speed;
+                    var speed = splashSpeed * (0.3f + 0.9f * random.nextFloat());
+                    var vx = dir[0] * speed;
+                    var vy = dir[1] * speed;
+                    var vz = dir[2] * speed;
                     // 迷你电弧：2 点短弧，方向 = 速度（复刻 Align Rotation to Vector(速度)）
                     // 长度 = 实例 Scale（Random.005 0.01~0.03 × 粒子缩放）× 生命系数曲线
-                    float lifeScale = BlenderArcCurves.sample(BlenderArcCurves.PARTICLE_LIFE, 0f);
-                    float len = (0.01f + 0.02f * random.nextFloat()) * scale * lifeScale;
-                    float vlen = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
-                    float ux = vlen < 1e-6f ? 0f : vx / vlen;
-                    float uy = vlen < 1e-6f ? 1f : vy / vlen;
-                    float uz = vlen < 1e-6f ? 0f : vz / vlen;
+                    var lifeScale = BlenderArcCurves.sample(BlenderArcCurves.PARTICLE_LIFE, 0f);
+                    var len = (0.01f + 0.02f * random.nextFloat()) * scale * lifeScale;
+                    var vlen = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
+                    var ux = vlen < 1e-6f ? 0f : vx / vlen;
+                    var uy = vlen < 1e-6f ? 1f : vy / vlen;
+                    var uz = vlen < 1e-6f ? 0f : vz / vlen;
                     var spark = arcs.add();
-                    float ex = px + ux * len;
-                    float ey = py + uy * len;
-                    float ez = pz + uz * len;
+                    var ex = px + ux * len;
+                    var ey = py + uy * len;
+                    var ez = pz + uz * len;
                     spark.addPoint(px, py, pz, radius * (0.2f + 0.4f * random.nextFloat()), 0, 0);
                     spark.addPoint(ex, ey, ez, radius * 0.3f, 0, 0);
                     spark.setColor(color[0] * emission, color[1] * emission, color[2] * emission, color[3]);
                     spark.setLifetime(lifetime);
-                    spark.setSeed(seed[0] * 131 + a * 17 + i);
+                    spark.setSeed(seed[0] * 131 + a * 17L + i);
                     spark.setSparkVelocity(vx, vy, vz);
                     spawned++;
                 }
@@ -2488,23 +2520,27 @@ public final class VfxBlocks {
         };
     }
 
-    /** 估算弧线第 i 控制点的表面切向（相邻点差，供火花方向参考）。 */
-    private static float[] surfaceTangent(org.academy.api.client.render.vfxgraph.arc.ArcCurve arc, int i) {
-        int prev = Math.max(0, i - 1);
-        int next = Math.min(arc.size() - 1, i + 1);
-        float tx = arc.x(next) - arc.x(prev);
-        float ty = arc.y(next) - arc.y(prev);
-        float tz = arc.z(next) - arc.z(prev);
-        float len = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
+    /**
+     * 估算弧线第 i 控制点的表面切向（相邻点差，供火花方向参考）。
+     */
+    private static float[] surfaceTangent(ArcCurve arc, int i) {
+        var prev = Math.max(0, i - 1);
+        var next = Math.min(arc.size() - 1, i + 1);
+        var tx = arc.x(next) - arc.x(prev);
+        var ty = arc.y(next) - arc.y(prev);
+        var tz = arc.z(next) - arc.z(prev);
+        var len = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
         if (len < 1e-6f) return new float[]{0, 1, 0};
         return new float[]{tx / len, ty / len, tz / len};
     }
 
-    /** 平移三角形网格（每 3 个浮点 +x、+y、+z），返回新数组。 */
+    /**
+     * 平移三角形网格（每 3 个浮点 +x、+y、+z），返回新数组。
+     */
     private static float[] offsetTriangles(float[] tris, float ox, float oy, float oz) {
         if (tris.length == 0) return tris;
         var out = tris.clone();
-        for (int i = 0; i + 2 < out.length; i += 3) {
+        for (var i = 0; i + 2 < out.length; i += 3) {
             out[i] += ox;
             out[i + 1] += oy;
             out[i + 2] += oz;
@@ -2514,7 +2550,9 @@ public final class VfxBlocks {
 
     // ==================== 辅助 ====================
 
-    /** 端口求值：有数据流绑定返回算子值（逐粒子），否则返回属性默认。 */
+    /**
+     * 端口求值：有数据流绑定返回算子值（逐粒子），否则返回属性默认。
+     */
     private static float portFloat(PortValueSource ports, String portId, int particleIndex,
                                    ParticleBuffer buffer, SimContext ctx, float fallback) {
         var v = ports.eval(portId, particleIndex, buffer, ctx);
@@ -2526,13 +2564,15 @@ public final class VfxBlocks {
         return ParticleBuffer.layerByte(propString(block, "layer", "fire"));
     }
 
-    /** over-life layer 过滤：""=全部，fire=0，smoke=1。 */
+    /**
+     * over-life layer 过滤：""=全部，fire=0，smoke=1。
+     */
     private static byte layerFilter(VfxBlock block) {
         return ParticleBuffer.layerFilter(propString(block, "layer", ""));
     }
 
     private static float lifeT(ParticleBuffer buf, int i) {
-        float l = buf.lifetime(i);
+        var l = buf.lifetime(i);
         if (l <= 0f) return 1f;
         return Math.min(1f, buf.age(i) / l);
     }
@@ -2571,22 +2611,25 @@ public final class VfxBlocks {
     }
 
     private static float hash(float x, float y, float z) {
-        float s = (float) Math.sin(x * 127.1f + y * 311.7f + z * 74.7f) * 43758.5453f;
+        var s = (float) Math.sin(x * 127.1f + y * 311.7f + z * 74.7f) * 43758.5453f;
         return s - (float) Math.floor(s);
     }
 
     private static EmitterShape buildShape(VfxBlock block) {
-        float ox = propFloat(block, "origin_x", 0f);
-        float oy = propFloat(block, "origin_y", 0f);
-        float oz = propFloat(block, "origin_z", 0f);
-        float scale = propFloat(block, "mesh_scale", 1f);
+        var ox = propFloat(block, "origin_x", 0f);
+        var oy = propFloat(block, "origin_y", 0f);
+        var oz = propFloat(block, "origin_z", 0f);
+        var scale = propFloat(block, "mesh_scale", 1f);
         return switch (propString(block, "shape", "point")) {
             case "sphere" -> new SphereShape(ox, oy, oz, propFloat(block, "radius", 1f));
             case "box" -> new BoxShape(ox, oy, oz,
                     propFloat(block, "half_x", 1f), propFloat(block, "half_y", 1f), propFloat(block, "half_z", 1f));
-            case "cone" -> new ConeShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
-            case "cylinder" -> new CylinderShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
-            case "torus" -> new TorusShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "half_x", 0.25f));
+            case "cone" ->
+                    new ConeShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
+            case "cylinder" ->
+                    new CylinderShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "cone_height", 2f));
+            case "torus" ->
+                    new TorusShape(ox, oy, oz, propFloat(block, "radius", 1f), propFloat(block, "half_x", 0.25f));
             case "circle_edge" -> new CircleEdgeShape(ox, oy, oz, propFloat(block, "radius", 1f));
             case "disc" -> new DiscShape(ox, oy, oz, propFloat(block, "radius", 1f));
             case "mesh" -> meshShape(block, ox, oy, oz, scale);
@@ -2638,29 +2681,29 @@ public final class VfxBlocks {
     }
 
     private static NodeType type(String id, String category, String name, List<PropertySpec> head, List<PropertySpec> tail) {
-        var props = new java.util.ArrayList<PropertySpec>(head.size() + tail.size());
+        var props = new ArrayList<PropertySpec>(head.size() + tail.size());
         props.addAll(head);
         props.addAll(tail);
         return new NodeType(id, category, name, List.of(), List.copyOf(props));
     }
 
-    private static NodeType typeWithPorts(String id, String category, String name, List<org.academy.api.client.render.graph.registry.PortSpec> ports,
+    private static NodeType typeWithPorts(String id, String category, String name, List<PortSpec> ports,
                                           List<PropertySpec> props) {
         return new NodeType(id, category, name, List.copyOf(ports), List.copyOf(props));
     }
 
-    private static NodeType typeWithPorts(String id, String category, String name, List<org.academy.api.client.render.graph.registry.PortSpec> ports,
+    private static NodeType typeWithPorts(String id, String category, String name, List<PortSpec> ports,
                                           List<PropertySpec> head, List<PropertySpec> tail) {
-        var props = new java.util.ArrayList<PropertySpec>(head.size() + tail.size());
+        var props = new ArrayList<PropertySpec>(head.size() + tail.size());
         props.addAll(head);
         props.addAll(tail);
         return new NodeType(id, category, name, List.copyOf(ports), List.copyOf(props));
     }
 
-    private static org.academy.api.client.render.graph.registry.PortSpec in(
+    private static PortSpec in(
             String id, String name, ValueType type) {
-        return new org.academy.api.client.render.graph.registry.PortSpec(
-                id, name, org.academy.api.client.render.graph.model.PortDirection.INPUT, type,
+        return new PortSpec(
+                id, name, PortDirection.INPUT, type,
                 switch (type) {
                     case FLOAT, TIME, INT -> Value.of(0f);
                     case COLOR -> Value.color(1f, 1f, 1f, 1f);
