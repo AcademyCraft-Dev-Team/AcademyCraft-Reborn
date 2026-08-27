@@ -2,7 +2,9 @@ package org.academy.api.common.ability.darkmatter;
 
 import java.util.Locale;
 
-/** Built-in shape catalogue. The GUI is populated from this catalogue instead of fixed buttons. */
+/**
+ * Built-in shape catalogue. The GUI is populated from this catalogue instead of fixed buttons.
+ */
 public enum DarkmatterShape {
     TOOL(4.0f, 1, 1),
     SWORD(4.0f, 1, 1),

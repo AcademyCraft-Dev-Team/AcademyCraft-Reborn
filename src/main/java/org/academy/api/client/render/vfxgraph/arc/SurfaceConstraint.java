@@ -22,12 +22,16 @@ public final class SurfaceConstraint {
     private final SurfaceDistributor fixed;
     private final Map<float[], SurfaceDistributor> cache = new IdentityHashMap<>();
 
-    /** 逐弧表面：约束目标取自 {@link ArcCurve#surface()}。 */
+    /**
+     * 逐弧表面：约束目标取自 {@link ArcCurve#surface()}。
+     */
     public SurfaceConstraint() {
         this.fixed = null;
     }
 
-    /** 固定表面：对构造时给定的表面约束（旧 {@link ArcSimulator} 路径）。 */
+    /**
+     * 固定表面：对构造时给定的表面约束（旧 {@link ArcSimulator} 路径）。
+     */
     public SurfaceConstraint(SurfaceDistributor distributor) {
         this.fixed = distributor;
     }
@@ -45,20 +49,20 @@ public final class SurfaceConstraint {
 
     private SurfaceDistributor distributorFor(ArcCurve arc) {
         if (fixed != null) return fixed;
-        float[] surface = arc.surface();
+        var surface = arc.surface();
         if (surface == null || surface.length == 0) return null;
         return cache.computeIfAbsent(surface, SurfaceDistributor::new);
     }
 
     private void constrain(ArcCurve arc, SurfaceDistributor distributor) {
-        float[] tris = distributor.triangles();
+        var tris = distributor.triangles();
 
         if (arc.size() < 2) return;
 
         // 只约束每段（segment）连续折线的两个端点（参考 Endpoint Selection）
         // pinStart（接触弧）：起点固定于表面点，不参与吸附（Blender End Size=1 仅末端）
-        int runStart = 0;
-        for (int i = 1; i <= arc.size(); i++) {
+        var runStart = 0;
+        for (var i = 1; i <= arc.size(); i++) {
             if (i == arc.size() || arc.segment(i) != arc.segment(i - 1)) {
                 if (!arc.pinStart()) {
                     constrainPoint(arc, runStart, tris);
@@ -74,11 +78,11 @@ public final class SurfaceConstraint {
      * 对每个三角形求最近点（Closest Point on Triangle），取全局最近者，就地改写端点。
      */
     private void constrainPoint(ArcCurve arc, int i, float[] tris) {
-        float px = arc.x(i);
-        float py = arc.y(i);
-        float pz = arc.z(i);
+        var px = arc.x(i);
+        var py = arc.y(i);
+        var pz = arc.z(i);
 
-        float[] nearest = MeshDistance.nearestPoint(tris, px, py, pz);
+        var nearest = MeshDistance.nearestPoint(tris, px, py, pz);
         if (nearest[0] != px || nearest[1] != py || nearest[2] != pz) {
             arc.setPoint(i, nearest[0], nearest[1], nearest[2]);
         }

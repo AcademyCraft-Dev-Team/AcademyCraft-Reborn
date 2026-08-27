@@ -10,10 +10,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -33,6 +35,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.misaka.MisakaNetworkClient;
@@ -45,7 +48,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.Map;
 import java.util.WeakHashMap;
-import net.minecraft.util.Mth;
 
 public class SpacialExcision extends Skill {
     public SpacialExcision() {
@@ -235,7 +237,7 @@ public class SpacialExcision extends Skill {
                 var center = player.position();
                 for (var delay = 10; delay <= 40; delay += 10) {
                     var scheduledDelay = delay;
-                    org.academy.internal.common.ability.TimedSkillEffectRuntime.schedule(player, delay,
+                    TimedSkillEffectRuntime.schedule(player, delay,
                             () -> emitBoundary(serverLevel, player, center, scheduledDelay));
                 }
             }
@@ -243,7 +245,7 @@ public class SpacialExcision extends Skill {
             unregister();
         }
 
-        private static void emitBoundary(ServerLevel level, ServerPlayer owner, net.minecraft.world.phys.Vec3 center,
+        private static void emitBoundary(ServerLevel level, ServerPlayer owner, Vec3 center,
                                          int age) {
             var radius = BASE_RADIUS + MAX_TICKS * RADIUS_GROWTH * 1.2f;
             var inner = Math.max(0.0, radius - 1.25);

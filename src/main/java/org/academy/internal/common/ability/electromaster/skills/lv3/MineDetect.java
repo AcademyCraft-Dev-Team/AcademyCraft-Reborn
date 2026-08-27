@@ -14,6 +14,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -50,11 +51,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.awt.Color;
+import java.awt.*;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.util.Mth;
 
 public final class MineDetect extends Skill {
     static final int RADIUS = 64;

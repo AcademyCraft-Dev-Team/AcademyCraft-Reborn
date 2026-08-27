@@ -1,19 +1,11 @@
 package org.academy.internal.common.ability.mentalout.skills.lv5;
 
 import com.google.gson.annotations.SerializedName;
-import com.mojang.blaze3d.platform.InputConstants;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
-import org.academy.AcademyCraftClient;
-import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
-import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -22,23 +14,23 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
-import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
-import org.academy.internal.common.ability.program.PrecisionProgramBookMigrator;
-import org.academy.internal.common.ability.program.PrecisionProgramExporter;
-import org.academy.internal.common.ability.program.PrecisionProgramAliases;
-import org.academy.internal.common.ability.program.ProgramBookCodec;
-import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
+import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.skilldata.SkillData;
+
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 
 public final class PrecisionOperation extends Skill {
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
+
     public PrecisionOperation() {
         super(Builder
                 .of(AbilityCategories.MENTALOUT.get())
@@ -168,7 +160,9 @@ public final class PrecisionOperation extends Skill {
             installBook(changed);
         }
 
-        /** Legacy editor adapter. New runtime code should consume {@link #programBook(UUID)}. */
+        /**
+         * Legacy editor adapter. New runtime code should consume {@link #programBook(UUID)}.
+         */
         public PrecisionGraph slot(int slot) {
             normalizeData(this);
             var exported = PrecisionProgramExporter.export(cachedBook.slot(Mth.clamp(slot, 0, 3)).program());
@@ -180,7 +174,9 @@ public final class PrecisionOperation extends Skill {
             return slots.get(Mth.clamp(slot, 0, 3));
         }
 
-        /** Legacy editor adapter. The next owner-aware read migrates all four slots as one book. */
+        /**
+         * Legacy editor adapter. The next owner-aware read migrates all four slots as one book.
+         */
         public void replaceSlot(int slot, PrecisionGraph graph) {
             var validation = graph == null ? PrecisionGraph.EMPTY.validate() : graph.validate();
             if (!validation.valid()) throw new IllegalArgumentException(validation.diagnostic().name());

@@ -6,23 +6,31 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
+import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamActions;
+import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 import java.util.UUID;
-import net.minecraft.util.Mth;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public static final int MAX_CHARGE_TICKS = 40;
@@ -316,36 +324,36 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         var start = position();
         var end = start.add(getLookAngle().scale(length));
 
-        var hitIndex = new java.util.concurrent.atomic.AtomicInteger();
-        var source = org.academy.api.common.damage.SkillDamageSource.of(owner, sourceSkill);
-        var payload = org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload
+        var hitIndex = new AtomicInteger();
+        var source = SkillDamageSource.of(owner, sourceSkill);
+        var payload = LinearAttackPayload
                 .builder(owner, sourceSkill, source, 0.125f)
                 .targetFilter(target -> target.getType() != getType())
                 .outboundTargetFilter(target -> !target.getUUID().equals(ignoredTargetId)
                         && MeltdownerTargeting.canAffectNegatively(owner, target))
                 .damage(target -> {
-                    var living = target instanceof net.minecraft.world.entity.LivingEntity entity ? entity : null;
+                    var living = target instanceof LivingEntity entity ? entity : null;
                     var index = hitIndex.getAndIncrement();
                     if (index > (proficiencyMilestone >= 3 ? 1 : 0)) return 0.0f;
                     var marked = radiationEnabled && living != null
-                            && org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify
+                            && RadiationIntensify
                             .isMarked(living, level.getGameTime());
-                    var markMultiplier = org.academy.internal.common.ability.Skills.RADIATION_INTENSIFY.get()
+                    var markMultiplier = Skills.RADIATION_INTENSIFY.get()
                             .hasProficiencyMilestone(owner, 2) ? 1.6f : 1.5f;
                     var hitBaseDamage = index == 0 ? baseDamage : baseDamage * 0.6f;
                     var hitMaxHealthRatio = index == 0 ? targetMaxHealthDamageRatio : 0.0f;
                     var targetMaxHealth = living == null ? 0.0f : living.getMaxHealth();
                     return powerScaledBase
-                            ? org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage
+                            ? MeltdownerBeamDamage
                             .calculatePowerScaledBase(hitBaseDamage, hitMaxHealthRatio, targetMaxHealth,
                                     abilityPower, playerDamageMultiplier, marked, markMultiplier)
-                            : org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage.calculate(
+                            : MeltdownerBeamDamage.calculate(
                             hitBaseDamage, hitMaxHealthRatio, targetMaxHealth,
                             playerDamageMultiplier, marked, markMultiplier);
                 })
                 .onHit((target, _, hurt) -> {
-                    if (hurt && radiationEnabled && target instanceof net.minecraft.world.entity.LivingEntity living) {
-                        org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify
+                    if (hurt && radiationEnabled && target instanceof LivingEntity living) {
+                        RadiationIntensify
                                 .mark(owner, living, level.getGameTime());
                     }
                 })
@@ -391,8 +399,10 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         return currentChargerTicks < getAttackDelayTicks();
     }
 
-    /** Excludes one launch subject from this beam without making its allies immune. */
-    public void setIgnoredTarget(net.minecraft.world.entity.Entity target) {
+    /**
+     * Excludes one launch subject from this beam without making its allies immune.
+     */
+    public void setIgnoredTarget(Entity target) {
         ignoredTargetId = target == null ? null : target.getUUID();
     }
 

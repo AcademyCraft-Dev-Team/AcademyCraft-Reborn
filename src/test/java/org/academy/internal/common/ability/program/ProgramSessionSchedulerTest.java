@@ -5,16 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramLimits;
-import org.academy.api.common.ability.program.ProgramNodePurity;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeScope;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -23,9 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ProgramSessionSchedulerTest {
     private static final Identifier CATEGORY = AcademyCraft.academy("mentalout");
@@ -107,9 +96,9 @@ class ProgramSessionSchedulerTest {
         var program = compile(List.of(STOP));
         ProgramExecutorLookup executors = type -> type.equals(STOP)
                 ? (_, _, _) -> {
-                    executions.incrementAndGet();
-                    return ProgramNodeStep.stop();
-                }
+            executions.incrementAndGet();
+            return ProgramNodeStep.stop();
+        }
                 : null;
         assertTrue(scheduler.start(
                 "first", program, executors, null, 4, 0, 10,
@@ -179,13 +168,13 @@ class ProgramSessionSchedulerTest {
                         role == ProgramNodeRole.ENTRY
                                 ? List.of()
                                 : List.of(role == ProgramNodeRole.ACTION && hasFlowOutput
-                                        ? new ProgramPortDefinition(
-                                                "flow", ProgramValueTypes.FLOW, true, 2)
-                                        : ProgramPortDefinition.requiredInput(
-                                                "flow", ProgramValueTypes.FLOW)),
+                                ? new ProgramPortDefinition(
+                                "flow", ProgramValueTypes.FLOW, true, 2)
+                                : ProgramPortDefinition.requiredInput(
+                                "flow", ProgramValueTypes.FLOW)),
                         hasFlowOutput || role == ProgramNodeRole.ENTRY
                                 ? List.of(ProgramPortDefinition.output(
-                                        "flow", ProgramValueTypes.FLOW))
+                                "flow", ProgramValueTypes.FLOW))
                                 : List.of()
                 );
             }

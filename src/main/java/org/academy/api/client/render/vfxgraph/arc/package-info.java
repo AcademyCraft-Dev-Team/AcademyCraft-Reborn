@@ -8,5 +8,7 @@
  *
  * @see org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer#drawArcTubes
  */
-@org.jspecify.annotations.NullMarked
+@NullMarked
 package org.academy.api.client.render.vfxgraph.arc;
+
+import org.jspecify.annotations.NullMarked;

@@ -10,11 +10,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Generic target reset for redirected homing projectiles, including third-party subclasses.

@@ -1,7 +1,9 @@
 package org.academy.api.client.render.vfxgraph.model;
 
-import java.util.List;
 import org.academy.api.client.render.graph.model.GraphParameter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * VFX 容器图（M23）：顶层资产单元，对标 Unity VFX Graph 的 System 资产。
@@ -41,7 +43,9 @@ public record VfxSystem(
         outputs = List.copyOf(outputs);
     }
 
-    /** 兼容重载（M28b 前调用点）：无块级 flow。 */
+    /**
+     * 兼容重载（M28b 前调用点）：无块级 flow。
+     */
     public VfxSystem(
             String id,
             List<VfxContext> contexts,
@@ -54,9 +58,11 @@ public record VfxSystem(
         this(id, contexts, operators, flowEdges, List.of(), dataEdges, parameters, outputs);
     }
 
-    /** 全部块与算子的扁平视图（数据边引用、校验、执行器构建用）。 */
+    /**
+     * 全部块与算子的扁平视图（数据边引用、校验、执行器构建用）。
+     */
     public List<VfxNode> nodes() {
-        var out = new java.util.ArrayList<VfxNode>();
+        var out = new ArrayList<VfxNode>();
         for (var context : contexts) {
             out.addAll(context.blocks());
         }
@@ -64,7 +70,9 @@ public record VfxSystem(
         return List.copyOf(out);
     }
 
-    /** 按 id 查块或算子；无则返回 null。 */
+    /**
+     * 按 id 查块或算子；无则返回 null。
+     */
     public VfxNode findNode(String nodeId) {
         for (var node : nodes()) {
             if (node.id().equals(nodeId)) return node;
@@ -72,7 +80,9 @@ public record VfxSystem(
         return null;
     }
 
-    /** 按 id 查 context；无则返回 null。 */
+    /**
+     * 按 id 查 context；无则返回 null。
+     */
     public VfxContext findContext(String contextId) {
         for (var context : contexts) {
             if (context.id().equals(contextId)) return context;

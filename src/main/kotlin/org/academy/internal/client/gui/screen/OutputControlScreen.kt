@@ -11,12 +11,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.screen.UiScreen
-import org.academy.api.client.gui.widget.FillWidget
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.LabelWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.SeekBarWidget
-import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.InputSystem
 import org.academy.internal.common.ability.level0.skills.OutputControl
 import org.academy.internal.common.ability.program.ProgramPowerScale
@@ -73,19 +68,20 @@ class OutputControlScreen(
                 .height(10f)
                 .gravity(Gravity.CENTER)
         })
-        content.addChild("hint", LabelWidget(
-            Component.translatable(
-                "screen.academy.output_control.hint",
-                InputSystem.formatKeyBinding(OutputControl.Client.KEY_NAME_OPEN)
-            ).string
-        ).apply {
-            scale = 0.7f
-            alpha = 0.7f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(8f)
-                .gravity(Gravity.CENTER)
-        })
+        content.addChild(
+            "hint", LabelWidget(
+                Component.translatable(
+                    "screen.academy.output_control.hint",
+                    InputSystem.formatKeyBinding(OutputControl.Client.KEY_NAME_OPEN)
+                ).string
+            ).apply {
+                scale = 0.7f
+                alpha = 0.7f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(8f)
+                    .gravity(Gravity.CENTER)
+            })
         content.addChild("separator", FillWidget(PRIMARY_FOREGROUND).apply {
             alpha = 0.8f
             layoutParams = LinearLayoutWidget.LayoutParams()
@@ -93,7 +89,8 @@ class OutputControlScreen(
                 .height(1f)
         })
 
-        content.addChild("ability_output", createParameterRow(
+        content.addChild(
+            "ability_output", createParameterRow(
             "screen.academy.output_control.ability_output",
             ProgramPowerScale.MIN,
             ProgramPowerScale.MAX,
@@ -104,7 +101,8 @@ class OutputControlScreen(
                 sendSettings(false)
             }
         ))
-        content.addChild("movement_speed", createParameterRow(
+        content.addChild(
+            "movement_speed", createParameterRow(
             "screen.academy.output_control.movement_speed",
             0f,
             1f,
@@ -115,7 +113,8 @@ class OutputControlScreen(
                 sendSettings(false)
             }
         ))
-        content.addChild("jump_height", createParameterRow(
+        content.addChild(
+            "jump_height", createParameterRow(
             "screen.academy.output_control.jump_height",
             0f,
             1f,
@@ -277,14 +276,16 @@ class OutputControlScreen(
             val markerX = Mth.clamp(width * ratio - MARKER_WIDTH * 0.5f, 0f, width - MARKER_WIDTH)
             context.pose().pushPose()
             context.pose().translate(markerX, -2f)
-            context.submit(FillRectDrawCommand(
-                MARKER_WIDTH,
-                height + 4f,
-                1f,
-                1f,
-                1f,
-                context.accumulatedAlpha
-            ))
+            context.submit(
+                FillRectDrawCommand(
+                    MARKER_WIDTH,
+                    height + 4f,
+                    1f,
+                    1f,
+                    1f,
+                    context.accumulatedAlpha
+                )
+            )
             context.pose().popPose()
         }
     }

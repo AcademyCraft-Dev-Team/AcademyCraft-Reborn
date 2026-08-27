@@ -1,33 +1,15 @@
 package org.academy.internal.common.ability.accelerator.program;
 
 import com.google.gson.JsonObject;
-import org.academy.api.common.ability.program.ProgramBlockPosition;
-import org.academy.api.common.ability.program.AbilityProgram;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramDirection;
-import org.academy.api.common.ability.program.ProgramEditorLayout;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramWorldPosition;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.BaseAbilityProgramDefinition;
-import org.academy.internal.common.ability.program.CommonProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramActionTransaction;
-import org.academy.internal.common.ability.program.ProgramEditorDocument;
-import org.academy.internal.common.ability.program.ProgramVmResult;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.resources.Identifier;
+import org.academy.api.common.ability.program.*;
+import org.academy.internal.common.ability.program.*;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AcceleratorProgramExecutionBridgeTest {
     @Test
@@ -82,7 +64,7 @@ class AcceleratorProgramExecutionBridgeTest {
                         AcceleratorProgramNodeCatalog.INSTANCE
                                 .find(AcceleratorProgramNodeIds.APPLY_VECTOR)
                                 .configurationCodec()
-                                .parse(com.mojang.serialization.JsonOps.INSTANCE,
+                                .parse(JsonOps.INSTANCE,
                                         catalog.entry(AcceleratorProgramNodeIds.APPLY_VECTOR)
                                                 .defaultConfiguration())
                                 .result()
@@ -91,7 +73,7 @@ class AcceleratorProgramExecutionBridgeTest {
                 AcceleratorProgramNodeCatalog.INSTANCE
                         .find(AcceleratorProgramNodeIds.KINETIC_SHOCKWAVE)
                         .configurationCodec()
-                        .parse(com.mojang.serialization.JsonOps.INSTANCE,
+                        .parse(JsonOps.INSTANCE,
                                 catalog.entry(AcceleratorProgramNodeIds.KINETIC_SHOCKWAVE)
                                         .defaultConfiguration())
                         .result()
@@ -335,7 +317,7 @@ class AcceleratorProgramExecutionBridgeTest {
 
     private static ProgramGraph.Node node(
             int id,
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             JsonObject configuration
     ) {
         var nodeType = AbilityProgramDefinitions.require(
@@ -346,7 +328,7 @@ class AcceleratorProgramExecutionBridgeTest {
 
     private static ProgramGraph.Node strengthNode(
             int id,
-            net.minecraft.resources.Identifier type,
+            Identifier type,
             int strength
     ) {
         var configuration = new JsonObject();

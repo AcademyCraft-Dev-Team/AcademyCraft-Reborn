@@ -4,11 +4,11 @@ import com.sun.management.HotSpotDiagnosticMXBean;
 import sun.misc.Unsafe;
 
 import java.lang.management.ManagementFactory;
-import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("removal")
 final class HotSpotClassPointerAccess {
     static final String DISABLE_PROPERTY = "academy.vector_reflection.class_pointer.disable";
 
@@ -52,7 +52,7 @@ final class HotSpotClassPointerAccess {
 
     static boolean hasNoInstanceFields(Class<?> type) {
         if (type == null) return false;
-        for (Field field : type.getDeclaredFields()) {
+        for (var field : type.getDeclaredFields()) {
             if (!Modifier.isStatic(field.getModifiers())) return false;
         }
         return true;
@@ -71,7 +71,7 @@ final class HotSpotClassPointerAccess {
         }
 
         try {
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
+            var field = Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
             var unsafe = (Unsafe) field.get(null);
             var bean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
@@ -102,9 +102,9 @@ final class HotSpotClassPointerAccess {
         var a2 = new ProbeBase();
         var b1 = new ProbeOther();
         var b2 = new ProbeOther();
-        long match = -1L;
+        var match = -1L;
         var step = wordBytes == 8 ? 8L : 4L;
-        for (long offset = step; offset <= 32L; offset += step) {
+        for (var offset = step; offset <= 32L; offset += step) {
             var firstA = rawRead(unsafe, a1, offset, wordBytes);
             var secondA = rawRead(unsafe, a2, offset, wordBytes);
             var firstB = rawRead(unsafe, b1, offset, wordBytes);

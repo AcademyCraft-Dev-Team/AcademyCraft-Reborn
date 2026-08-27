@@ -85,8 +85,15 @@ class GradientEditor {
             val isSel = i == selected
             val markerCol = ImGui.colorConvertFloat4ToU32(stop.r(), stop.g(), stop.b(), 1f)
             draw.addTriangleFilled(x, barY + barH, x - 7f, barY + barH + 12f, x + 7f, barY + barH + 12f, markerCol)
-            draw.addTriangle(x, barY + barH, x - 7f, barY + barH + 12f, x + 7f, barY + barH + 12f,
-                if (isSel) ImGui.colorConvertFloat4ToU32(1f, 1f, 1f, 1f) else ImGui.colorConvertFloat4ToU32(0.2f, 0.2f, 0.2f, 1f))
+            draw.addTriangle(
+                x, barY + barH, x - 7f, barY + barH + 12f, x + 7f, barY + barH + 12f,
+                if (isSel) ImGui.colorConvertFloat4ToU32(1f, 1f, 1f, 1f) else ImGui.colorConvertFloat4ToU32(
+                    0.2f,
+                    0.2f,
+                    0.2f,
+                    1f
+                )
+            )
         }
     }
 

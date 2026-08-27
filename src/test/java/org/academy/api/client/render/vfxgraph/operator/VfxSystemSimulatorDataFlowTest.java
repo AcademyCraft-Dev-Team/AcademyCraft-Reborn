@@ -1,28 +1,22 @@
 package org.academy.api.client.render.vfxgraph.operator;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.Edge;
-import org.academy.api.client.render.graph.model.Port;
 import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxDataEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxOperatorNode;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VfxSystemSimulatorDataFlowTest {
     private VfxBlockRegistry blocks;
@@ -54,7 +48,9 @@ class VfxSystemSimulatorDataFlowTest {
         return new VfxDataEdge(new Edge.PortRef(from, "out"), new Edge.PortRef(to, toPort));
     }
 
-    /** attr-read → math → init 块端口写回链：vx 端口由 attr_seed×mul 驱动，逐粒子不同。 */
+    /**
+     * attr-read → math → init 块端口写回链：vx 端口由 attr_seed×mul 驱动，逐粒子不同。
+     */
     @Test
     void attributeDrivenMathWritesPerParticle() {
         var system = new VfxSystem("dataflow",
@@ -86,11 +82,13 @@ class VfxSystemSimulatorDataFlowTest {
         var buffer = sim.buffer();
         assertEquals(1, buffer.count());
         // 粒子 seed 稳定值 S，vx = S*2
-        float seed = buffer.seed(0);
+        var seed = buffer.seed(0);
         assertEquals(seed * 2f, buffer.velocityX(0), 1e-5f);
     }
 
-    /** 多粒子：每粒子 seed 不同 → 端口驱动的 vx 逐粒子不同（验证非折叠）。 */
+    /**
+     * 多粒子：每粒子 seed 不同 → 端口驱动的 vx 逐粒子不同（验证非折叠）。
+     */
     @Test
     void attributeDrivenValueDiffersPerParticle() {
         var system = new VfxSystem("per-particle",
@@ -119,16 +117,18 @@ class VfxSystemSimulatorDataFlowTest {
         sim.step(0.1f);
         var buffer = sim.buffer();
         assertEquals(4, buffer.count());
-        float v0 = buffer.velocityX(0);
-        var distinct = new java.util.HashSet<Float>();
-        for (int i = 0; i < buffer.count(); i++) {
+        var v0 = buffer.velocityX(0);
+        var distinct = new HashSet<Float>();
+        for (var i = 0; i < buffer.count(); i++) {
             distinct.add(buffer.velocityX(i));
             assertEquals(buffer.seed(i), buffer.velocityX(i), 1e-5f);
         }
         assertTrue(distinct.size() >= 2, "per-particle values should differ across seeds");
     }
 
-    /** 算子间连接 + 输入端口绑定：mul 的 b 来自 constant，a 来自 attr。 */
+    /**
+     * 算子间连接 + 输入端口绑定：mul 的 b 来自 constant，a 来自 attr。
+     */
     @Test
     void operatorChainWithConstantInput() {
         var system = new VfxSystem("chain",
@@ -161,7 +161,9 @@ class VfxSystemSimulatorDataFlowTest {
         assertEquals(buffer.seed(0) * 0.25f, buffer.size(0), 1e-5f);
     }
 
-    /** 算子环检测。 */
+    /**
+     * 算子环检测。
+     */
     @Test
     void operatorCycleThrows() {
         var system = new VfxSystem("cycle",
@@ -184,7 +186,9 @@ class VfxSystemSimulatorDataFlowTest {
         }
     }
 
-    /** param 算子：无存活参数注入时用兜底值。 */
+    /**
+     * param 算子：无存活参数注入时用兜底值。
+     */
     @Test
     void paramOperatorFallsBackToProperty() {
         var system = new VfxSystem("param",
@@ -211,7 +215,9 @@ class VfxSystemSimulatorDataFlowTest {
         assertEquals(3f, sim.buffer().velocityX(0), 1e-5f);
     }
 
-    /** 算子端口驱动 init_color 的 color 端口（COLOR 类型）。 */
+    /**
+     * 算子端口驱动 init_color 的 color 端口（COLOR 类型）。
+     */
     @Test
     void colorOperatorDrivesInitColor() {
         var system = new VfxSystem("color",
@@ -238,7 +244,9 @@ class VfxSystemSimulatorDataFlowTest {
         assertEquals(0.8f, buffer.alpha(0), 1e-5f);
     }
 
-    /** 元数据端口派生：attr 算子声明输出端口、math 声明 a/b/out。 */
+    /**
+     * 元数据端口派生：attr 算子声明输出端口、math 声明 a/b/out。
+     */
     @Test
     void operatorMetadataDeclaresPorts() {
         assertTrue(metadata.find("vfx.op.attr_position").ports().stream()

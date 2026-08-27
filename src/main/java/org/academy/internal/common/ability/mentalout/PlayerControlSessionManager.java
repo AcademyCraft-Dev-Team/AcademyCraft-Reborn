@@ -10,11 +10,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
@@ -29,12 +28,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
@@ -753,7 +752,7 @@ public final class PlayerControlSessionManager {
                 ClipContext.Fluid.ANY,
                 subject
         ));
-        var level = (ServerLevel) subject.level();
+        var level = subject.level();
         var stack = subject.getItemInHand(hand);
         if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
             subject.gameMode.useItemOn(subject, level, stack, hand, blockHit);

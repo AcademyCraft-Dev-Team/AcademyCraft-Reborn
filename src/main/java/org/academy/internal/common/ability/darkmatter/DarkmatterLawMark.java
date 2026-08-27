@@ -5,7 +5,9 @@ import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 
-/** Short-lived server-side abnormal-law mark shared by Cut, Disassemble and Interference. */
+/**
+ * Short-lived server-side abnormal-law mark shared by Cut, Disassemble and Interference.
+ */
 public final class DarkmatterLawMark {
     private static final String EFFECT = "abnormal_law";
 
@@ -23,7 +25,9 @@ public final class DarkmatterLawMark {
                 Math.max(0.0f, betaPower));
     }
 
-    /** Returns the armor-bypassing detonation damage and consumes a matching, unexpired mark. */
+    /**
+     * Returns the armor-bypassing detonation damage and consumes a matching, unexpired mark.
+     */
     public static float detonate(ServerPlayer owner, LivingEntity target) {
         if (owner == null || target == null) return 0.0f;
         return TimedSkillEffectRuntime.consume(

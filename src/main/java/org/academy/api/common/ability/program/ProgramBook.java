@@ -3,6 +3,7 @@ package org.academy.api.common.ability.program;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,7 +34,7 @@ public record ProgramBook(
                 CURRENT_SCHEMA_VERSION,
                 0,
                 0,
-                java.util.Collections.nCopies(slotCount, Slot.EMPTY)
+                Collections.nCopies(slotCount, Slot.EMPTY)
         );
     }
 
@@ -56,7 +57,9 @@ public record ProgramBook(
                 : new ProgramBook(schemaVersion, revision, index, slots);
     }
 
-    /** Preserves existing slots while expanding or truncating a book to a new fixed slot count. */
+    /**
+     * Preserves existing slots while expanding or truncating a book to a new fixed slot count.
+     */
     public ProgramBook resize(int slotCount) {
         if (slotCount <= 0) throw new IllegalArgumentException("Program book needs at least one slot");
         if (slotCount == slots.size()) return this;

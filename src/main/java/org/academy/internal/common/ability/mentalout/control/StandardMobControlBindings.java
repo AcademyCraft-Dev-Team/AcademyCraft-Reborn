@@ -66,57 +66,57 @@ final class StandardMobControlBindings {
     private record ForceTargetBinding(Mob mob, UUID targetId) implements ControlBinding {
 
         @Override
-            public void tick() {
-                if (!mob.isAlive() || mob.isRemoved()) return;
-                MentalControlRuntime.maintainTarget(mob);
-            }
+        public void tick() {
+            if (!mob.isAlive() || mob.isRemoved()) return;
+            MentalControlRuntime.maintainTarget(mob);
+        }
 
-            @Override
-            public void close() {
-                if (!(mob instanceof MentalControlMobAccess access)) return;
-                var current = access.academy$getRawMentalControlTarget();
-                if (current != null && current.getUUID().equals(targetId)
-                        && MentalControlRuntime.getForcedTarget(mob) == null) {
-                    mob.setTarget(null);
-                }
-                var memory = mob.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
-                if (memory != null && memory.isPresent() && memory.get().getUUID().equals(targetId)
-                        && MentalControlRuntime.getForcedTarget(mob) == null) {
-                    mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-                }
+        @Override
+        public void close() {
+            if (!(mob instanceof MentalControlMobAccess access)) return;
+            var current = access.academy$getRawMentalControlTarget();
+            if (current != null && current.getUUID().equals(targetId)
+                    && MentalControlRuntime.getForcedTarget(mob) == null) {
+                mob.setTarget(null);
+            }
+            var memory = mob.getBrain().getMemoryInternal(MemoryModuleType.ATTACK_TARGET);
+            if (memory != null && memory.isPresent() && memory.get().getUUID().equals(targetId)
+                    && MentalControlRuntime.getForcedTarget(mob) == null) {
+                mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
             }
         }
+    }
 
     private record FreezeBinding(Mob mob) implements ControlBinding {
 
         @Override
-            public void tick() {
-                if (!mob.isAlive() || mob.isRemoved()) return;
-                var verticalVelocity = Math.min(0.0, mob.getDeltaMovement().y);
-                mob.stopInPlace();
-                mob.getNavigation().stop();
-                mob.setJumping(false);
-                mob.setDeltaMovement(0.0, verticalVelocity, 0.0);
-            }
-
-            @Override
-            public void close() {
-            }
+        public void tick() {
+            if (!mob.isAlive() || mob.isRemoved()) return;
+            var verticalVelocity = Math.min(0.0, mob.getDeltaMovement().y);
+            mob.stopInPlace();
+            mob.getNavigation().stop();
+            mob.setJumping(false);
+            mob.setDeltaMovement(0.0, verticalVelocity, 0.0);
         }
+
+        @Override
+        public void close() {
+        }
+    }
 
     private record RelationBinding(Mob mob) implements ControlBinding {
 
         @Override
-            public void tick() {
-                if (mob.isAlive() && !mob.isRemoved()) {
-                    MentalControlRuntime.enforceTargetWhitelist(mob);
-                }
-            }
-
-            @Override
-            public void close() {
+        public void tick() {
+            if (mob.isAlive() && !mob.isRemoved()) {
+                MentalControlRuntime.enforceTargetWhitelist(mob);
             }
         }
+
+        @Override
+        public void close() {
+        }
+    }
 
     private static final class PathBinding implements ControlBinding {
         private final Mob mob;
@@ -358,26 +358,26 @@ final class StandardMobControlBindings {
     private record LookBinding(Mob mob, UUID targetId) implements ControlBinding {
 
         @Override
-            public void tick() {
-                applyLook();
-            }
-
-            @Override
-            public void beforeLookControlTick() {
-                applyLook();
-            }
-
-            private void applyLook() {
-                if (!mob.isAlive() || mob.isRemoved()) return;
-                var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), targetId);
-                if (target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()) return;
-                mob.getLookControl().setLookAt(target, 30.0f, 30.0f);
-            }
-
-            @Override
-            public void close() {
-            }
+        public void tick() {
+            applyLook();
         }
+
+        @Override
+        public void beforeLookControlTick() {
+            applyLook();
+        }
+
+        private void applyLook() {
+            if (!mob.isAlive() || mob.isRemoved()) return;
+            var target = MentalControlRuntime.findLivingEntity(mob.level().getServer(), targetId);
+            if (target == null || target.level() != mob.level() || !target.isAlive() || target.isRemoved()) return;
+            mob.getLookControl().setLookAt(target, 30.0f, 30.0f);
+        }
+
+        @Override
+        public void close() {
+        }
+    }
 
     private record ResolvedDestination(Vec3 position, LivingEntity entity) {
         private BlockPos blockPosition() {

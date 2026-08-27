@@ -1,7 +1,7 @@
 package org.academy.internal.common.world.entity.skill;
 
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 public final class MagneticWeaponBladeMotion {
     public static final int PREP_END_TICK = 2;

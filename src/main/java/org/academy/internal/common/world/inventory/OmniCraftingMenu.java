@@ -7,24 +7,15 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.CraftingContainer;
-import net.minecraft.world.inventory.ResultContainer;
-import net.minecraft.world.inventory.ResultSlot;
-import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.inventory.TransientCraftingContainer;
+import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.BedBlock;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity;
-
-import java.util.Optional;
 
 public final class OmniCraftingMenu extends AbstractContainerMenu {
     public static final int SPECIAL_RECIPE_ENERGY = 4_000;
@@ -106,7 +97,7 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
             result = new ItemStack(Items.ABILITY_DEVELOPER.get());
         } else {
             var input = craftSlots.asCraftInput();
-            Optional<RecipeHolder<CraftingRecipe>> recipe = level.getServer().getRecipeManager()
+            var recipe = level.getServer().getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, input, level);
             if (recipe.isPresent() && resultSlots.setRecipeUsed(player, recipe.get())) {
                 var assembled = recipe.get().value().assemble(input);
@@ -131,7 +122,7 @@ public final class OmniCraftingMenu extends AbstractContainerMenu {
                 && is(8, Items.IMAG_PHASE_INGOT.get());
     }
 
-    private boolean is(int slot, net.minecraft.world.item.Item item) {
+    private boolean is(int slot, Item item) {
         return craftSlots.getItem(slot).is(item);
     }
 

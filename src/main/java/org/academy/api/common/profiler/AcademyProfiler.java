@@ -129,12 +129,12 @@ public final class AcademyProfiler {
     }
 
     public static ProfilerSnapshot snapshot() {
-        long now = System.nanoTime();
-        ProfilerSnapshot snap = cachedSnapshot;
+        var now = System.nanoTime();
+        var snap = cachedSnapshot;
         if (snap != null && now - cachedSnapshotAt < SNAPSHOT_TTL_NANOS) {
             return snap;
         }
-        ProfilerSnapshot fresh = buildSnapshot();
+        var fresh = buildSnapshot();
         cachedSnapshot = fresh;
         cachedSnapshotAt = System.nanoTime();
         return fresh;

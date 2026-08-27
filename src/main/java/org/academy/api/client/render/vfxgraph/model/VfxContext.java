@@ -25,7 +25,9 @@ public record VfxContext(
         blocks = List.copyOf(blocks);
     }
 
-    /** 显示名：显式 name 优先，否则阶段名。 */
+    /**
+     * 显示名：显式 name 优先，否则阶段名。
+     */
     public String displayName() {
         return name == null || name.isBlank() ? type.name() : name;
     }

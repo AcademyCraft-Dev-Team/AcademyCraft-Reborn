@@ -1,25 +1,24 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** M29：arc_spark 块（Blender 粒子火花：弧→点 + 溅射 + 迷你管）容器端到端单测。 */
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * M29：arc_spark 块（Blender 粒子火花：弧→点 + 溅射 + 迷你管）容器端到端单测。
+ */
 class SparkArcBlockTest {
     private VfxBlockRegistry blocks;
     private VfxOperatorRegistry ops;
@@ -42,7 +41,9 @@ class SparkArcBlockTest {
         return new VfxContext(id, type, "", List.of(blocks), 0f, 0f);
     }
 
-    /** spark 依赖上游 arc_surface 提供带表面弧，自身产生迷你火花弧。 */
+    /**
+     * spark 依赖上游 arc_surface 提供带表面弧，自身产生迷你火花弧。
+     */
     private static VfxSystem sparkSystem(Map<String, String> sparkProps) {
         return new VfxSystem("sp",
                 List.of(
@@ -66,8 +67,8 @@ class SparkArcBlockTest {
 
         var buf = sim.arcBuffer();
         // 表面弧 + 火花弧都入同一个 buffer；火花弧是无表面迷你 2 点弧
-        boolean hasSpark = false;
-        for (int a = 0; a < buf.count(); a++) {
+        var hasSpark = false;
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             if (!arc.hasSurface()) {
                 hasSpark = true;
@@ -85,7 +86,7 @@ class SparkArcBlockTest {
         sim.step(1f / 60f);
 
         var buf = sim.arcBuffer();
-        for (int a = 0; a < buf.count(); a++) {
+        for (var a = 0; a < buf.count(); a++) {
             assertTrue(buf.arc(a).hasSurface(), "probability 0 → only surface arcs, no sparks");
         }
     }
@@ -97,15 +98,15 @@ class SparkArcBlockTest {
         sim.step(1f / 60f);
 
         var buf = sim.arcBuffer();
-        for (int a = 0; a < buf.count(); a++) {
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             if (!arc.hasSurface()) {
                 // 火花弧：迷你管（Blender Curve Line 长度 = 实例 Scale 0.01~0.03 × 粒子缩放），
                 // 起点在源弧控制点，终点沿溅射方向延伸
-                float dx = arc.x(1) - arc.x(0);
-                float dy = arc.y(1) - arc.y(0);
-                float dz = arc.z(1) - arc.z(0);
-                float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                var dx = arc.x(1) - arc.x(0);
+                var dy = arc.y(1) - arc.y(0);
+                var dz = arc.z(1) - arc.z(0);
+                var len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
                 assertTrue(len > 1e-4f, "spark should extend, len=" + len);
                 assertTrue(len < 0.5f, "spark is a mini tube (Blender scale 0.01~0.03 × particle scale)");
             }

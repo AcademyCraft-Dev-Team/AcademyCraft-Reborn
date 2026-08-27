@@ -4,7 +4,9 @@ import org.academy.api.common.ability.AbilityFactorProfile;
 
 import java.util.List;
 
-/** Core and reserved P.R.O.P.S profiles, ordered as neural, muscle, endurance, dexterity, perception. */
+/**
+ * Core and reserved P.R.O.P.S profiles, ordered as neural, muscle, endurance, dexterity, perception.
+ */
 public final class AbilityDevelopmentProfiles {
     public static final AbilityFactorProfile ACCELERATOR = profile(6, 0, 0, 2, 2);
     public static final AbilityFactorProfile ELECTROMASTER = profile(4, 3, 1, 3, 3);
@@ -14,11 +16,17 @@ public final class AbilityDevelopmentProfiles {
     public static final AbilityFactorProfile DARKMATTER = profile(5, 1, 3, 0, 3);
     public static final AbilityFactorProfile MENTALOUT = profile(4, 1, 1, 1, 5);
 
-    /** Reserved for a future physically focused ability. Not attached to a registered category. */
+    /**
+     * Reserved for a future physically focused ability. Not attached to a registered category.
+     */
     public static final AbilityFactorProfile RESERVED_A = profile(2, 6, 0, 2, 0);
-    /** Reserved for a future endurance/perception focused ability. Not attached to a registered category. */
+    /**
+     * Reserved for a future endurance/perception focused ability. Not attached to a registered category.
+     */
     public static final AbilityFactorProfile RESERVED_B = profile(1, 1, 5, 1, 4);
-    /** Reserved for a future perception focused ability. Not attached to a registered category. */
+    /**
+     * Reserved for a future perception focused ability. Not attached to a registered category.
+     */
     public static final AbilityFactorProfile RESERVED_C = profile(0, 0, 2, 2, 6);
 
     private static final List<AbilityFactorProfile> ACTIVE = List.of(

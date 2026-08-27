@@ -1,15 +1,8 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -32,6 +25,13 @@ import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.academy.api.client.render.vfxgraph.serialize.VfxGraphSchemaVersion;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 
 /**
  * 客户端 VFX 图效果管理器（M15-01）：tick/render 循环接入，spawn/停止，资产重载，池化/剔除。
@@ -56,7 +56,9 @@ public final class VfxGraphManager {
     private GraphFileWatcher fileWatcher;
     private boolean initialized;
     private long lastRenderNanos = -1;
-    /** 最近一帧的相机（供 glow pass 复用，与主渲染同帧）。 */
+    /**
+     * 最近一帧的相机（供 glow pass 复用，与主渲染同帧）。
+     */
     private @Nullable GraphCamera lastCamera;
 
     private VfxGraphManager() {
@@ -82,12 +84,16 @@ public final class VfxGraphManager {
         return initialized;
     }
 
-    /** 由 {@code AcademyCraftClient.initRender()} 调用。 */
+    /**
+     * 由 {@code AcademyCraftClient.initRender()} 调用。
+     */
     public void init() {
         initialized = true;
     }
 
-    /** 由 {@code AcademyCraftClient.onClientStopped()} 调用。 */
+    /**
+     * 由 {@code AcademyCraftClient.onClientStopped()} 调用。
+     */
     public void close() {
         stopFileWatcher();
         effects.clear();
@@ -98,7 +104,9 @@ public final class VfxGraphManager {
         initialized = false;
     }
 
-    /** dev 模式启动文件监听（M15-05）。 */
+    /**
+     * dev 模式启动文件监听（M15-05）。
+     */
     public void startFileWatcher(Path root) {
         if (fileWatcher != null) {
             return;
@@ -109,7 +117,7 @@ public final class VfxGraphManager {
             watcher.startLoop();
             fileWatcher = watcher;
         } catch (IOException exception) {
-            org.academy.AcademyCraft.getLogger().warn("Unable to start vfx graph file watcher at {}", root, exception);
+            AcademyCraft.getLogger().warn("Unable to start vfx graph file watcher at {}", root, exception);
         }
     }
 
@@ -120,7 +128,9 @@ public final class VfxGraphManager {
         }
     }
 
-    /** 逐 effect tick。移除已停止或跟随实体已移除的效果。 */
+    /**
+     * 逐 effect tick。移除已停止或跟随实体已移除的效果。
+     */
     public void tick(float dt) {
         if (!initialized) {
             return;
@@ -138,16 +148,18 @@ public final class VfxGraphManager {
         }
     }
 
-    /** 渲染所有可见效果到目标纹理（不清屏，叠加世界变换）。每帧以真实帧时间步进模拟（平滑，不锁 20Hz tick）；游戏暂停时冻结。
-     *  glow 拓扑（{@code BILLBOARD_GLOW}）效果在此渲出实心 additive 主体，另由 {@link #renderGlowFrame} 渲进 bloom 输入形成光晕。 */
+    /**
+     * 渲染所有可见效果到目标纹理（不清屏，叠加世界变换）。每帧以真实帧时间步进模拟（平滑，不锁 20Hz tick）；游戏暂停时冻结。
+     * glow 拓扑（{@code BILLBOARD_GLOW}）效果在此渲出实心 additive 主体，另由 {@link #renderGlowFrame} 渲进 bloom 输入形成光晕。
+     */
     public void renderFrame(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera) {
         if (!initialized || effects.isEmpty()) {
             return;
         }
         lastCamera = camera;
-        boolean paused = Minecraft.getInstance().isPaused();
-        long now = System.nanoTime();
-        float dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
+        var paused = Minecraft.getInstance().isPaused();
+        var now = System.nanoTime();
+        var dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
         lastRenderNanos = now;
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
@@ -176,7 +188,9 @@ public final class VfxGraphManager {
         }
     }
 
-    /** 把 glow 拓扑效果渲进 bloom 输入（additive，不清屏，只画 GLOW 输出规格）。由 {@code GlowEffect.process()} 调用。 */
+    /**
+     * 把 glow 拓扑效果渲进 bloom 输入（additive，不清屏，只画 GLOW 输出规格）。由 {@code GlowEffect.process()} 调用。
+     */
     public void renderGlowFrame(GpuTextureView color, @Nullable GpuTextureView depth) {
         if (!initialized || effects.isEmpty()) {
             return;
@@ -207,7 +221,9 @@ public final class VfxGraphManager {
         }
     }
 
-    /** 是否存在活的 glow 拓扑效果（供 {@code GlowEffect.process()} 决定是否跑 bloom 帧）。 */
+    /**
+     * 是否存在活的 glow 拓扑效果（供 {@code GlowEffect.process()} 决定是否跑 bloom 帧）。
+     */
     public boolean hasGlowData() {
         if (!initialized) {
             return false;
@@ -220,7 +236,9 @@ public final class VfxGraphManager {
         return false;
     }
 
-    /** 按图资产 id spawn 效果到世界坐标。键统一去掉 .json，兼容带/不带扩展名的写法。 */
+    /**
+     * 按图资产 id spawn 效果到世界坐标。键统一去掉 .json，兼容带/不带扩展名的写法。
+     */
     public ActiveEffect spawn(Identifier assetId, Vector3f position) {
         var key = normalizedKey(assetId);
         var container = containerAssets.get(key);
@@ -243,7 +261,9 @@ public final class VfxGraphManager {
         return effect;
     }
 
-    /** 资产键统一为不带 .json 的 identifier 字符串（与命令/API 入参一致）。 */
+    /**
+     * 资产键统一为不带 .json 的 identifier 字符串（与命令/API 入参一致）。
+     */
     private static String normalizedKey(Identifier assetId) {
         var s = assetId.toString();
         return s.endsWith(".json") ? s.substring(0, s.length() - 5) : s;
@@ -266,7 +286,7 @@ public final class VfxGraphManager {
             var resource = resourceManager.getResource(fullId).orElse(null);
             if (resource != null) {
                 try (var reader = resource.openAsReader()) {
-                    return decodeAsset(key, new com.google.gson.Gson().fromJson(reader, JsonObject.class));
+                    return decodeAsset(key, new Gson().fromJson(reader, JsonObject.class));
                 }
             }
         } catch (Exception ignored) {
@@ -277,8 +297,8 @@ public final class VfxGraphManager {
             if (stream == null) {
                 return null;
             }
-            try (var reader = new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8)) {
-                return decodeAsset(key, new com.google.gson.Gson().fromJson(reader, JsonObject.class));
+            try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                return decodeAsset(key, new Gson().fromJson(reader, JsonObject.class));
             }
         } catch (Exception exception) {
             AcademyCraft.getLogger().debug("Unable to lazily load vfx graph asset {}", assetId, exception);
@@ -286,7 +306,9 @@ public final class VfxGraphManager {
         }
     }
 
-    /** 按 schema 解码并缓存：容器进 containerAssets，扁平进 GraphAssets。返回扁平 Graph（容器返回 null）。 */
+    /**
+     * 按 schema 解码并缓存：容器进 containerAssets，扁平进 GraphAssets。返回扁平 Graph（容器返回 null）。
+     */
     private @Nullable Graph decodeAsset(String key, JsonObject json) {
         if (isContainerJson(json)) {
             try {
@@ -310,7 +332,9 @@ public final class VfxGraphManager {
         }
     }
 
-    /** spawn 并跟随实体（每 tick 对齐实体位置，实体移除即停）。 */
+    /**
+     * spawn 并跟随实体（每 tick 对齐实体位置，实体移除即停）。
+     */
     public ActiveEffect spawnFollow(Identifier assetId, Entity entity) {
         var effect = spawn(assetId, new Vector3f((float) entity.getX(), (float) entity.getY(), (float) entity.getZ()));
         effect.follow(entity);
@@ -329,15 +353,19 @@ public final class VfxGraphManager {
         return effects.size();
     }
 
-    /** 从磁盘文件加载/重载单个资产（dev 热重载，M15-05）。 */
+    /**
+     * 从磁盘文件加载/重载单个资产（dev 热重载，M15-05）。
+     */
     public void reloadFromFile(Identifier assetId, Path file) throws IOException {
         reloadFromContent(assetId, Files.readString(file));
     }
 
-    /** 以已读取的 JSON 文本加载/重载单个资产（供主线程/后台线程调用）。 */
+    /**
+     * 以已读取的 JSON 文本加载/重载单个资产（供主线程/后台线程调用）。
+     */
     public void reloadFromContent(Identifier assetId, String jsonText) {
         var key = assetId.toString();
-        var json = new com.google.gson.Gson().fromJson(jsonText, JsonObject.class);
+        var json = new Gson().fromJson(jsonText, JsonObject.class);
         if (isContainerJson(json)) {
             var system = new JsonVfxGraphCodec(metadata).decode(json);
             containerAssets.put(key, system);
@@ -350,7 +378,9 @@ public final class VfxGraphManager {
         }
     }
 
-    /** 注册（或重载）一个资产并刷新使用它的存活效果。解码失败则跳过（不中断重载）。 */
+    /**
+     * 注册（或重载）一个资产并刷新使用它的存活效果。解码失败则跳过（不中断重载）。
+     */
     public void registerAsset(Identifier assetId, JsonObject json) {
         var key = assetId.toString();
         if (isContainerJson(json)) {
@@ -369,7 +399,9 @@ public final class VfxGraphManager {
         }
     }
 
-    /** 全量失效（资源重载触发，F3+T）。 */
+    /**
+     * 全量失效（资源重载触发，F3+T）。
+     */
     public void invalidateAll() {
         assets.invalidateAll();
         containerAssets.clear();

@@ -1,5 +1,6 @@
 package org.academy.desktop.grapheditor
 
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.desktop.grapheditor.app.GraphEditorApp
 import org.academy.desktop.platform.DesktopApplication
 import org.academy.desktop.platform.DesktopEnvironment
@@ -20,5 +21,6 @@ fun main(args: Array<String>) {
         ?: 1f
 
     val environment = DesktopEnvironment(projectRoot, 1600, 900, guiScale)
+    UiEnvironment.set(environment)
     DesktopApplication.run(GraphEditorApp(environment), environment)
 }

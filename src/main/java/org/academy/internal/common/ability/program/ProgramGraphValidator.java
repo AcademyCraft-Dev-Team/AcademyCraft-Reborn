@@ -1,27 +1,9 @@
 package org.academy.internal.common.ability.program;
 
 import com.mojang.serialization.JsonOps;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramDiagnostic;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramNodeRole;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramPortDefinition;
-import org.academy.api.common.ability.program.ProgramValidationResult;
-import org.academy.api.common.ability.program.ProgramValueType;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Structural, type and entitlement validation shared by the editor and server compiler.
@@ -309,7 +291,7 @@ public final class ProgramGraphValidator {
                     .add(edge.edge.to().nodeId());
             indegree.computeIfPresent(edge.edge.to().nodeId(), (_, value) -> value + 1);
         }
-        var pending = new java.util.PriorityQueue<Integer>();
+        var pending = new PriorityQueue<Integer>();
         indegree.forEach((id, degree) -> {
             if (degree == 0) pending.add(id);
         });

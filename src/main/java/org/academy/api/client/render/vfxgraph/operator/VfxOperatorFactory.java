@@ -1,7 +1,8 @@
 package org.academy.api.client.render.vfxgraph.operator;
 
-import java.util.Map;
 import org.academy.api.client.render.vfxgraph.model.VfxOperatorNode;
+
+import java.util.Map;
 
 /**
  * 算子工厂（M25）：由算子实例（属性 + 输入端口求值器）构建 [VfxOperator]。

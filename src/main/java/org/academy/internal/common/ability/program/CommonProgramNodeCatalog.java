@@ -15,6 +15,7 @@ import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,14 +126,16 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 CommonProgramNodeIds.INTEGER_MULTIPLY,
                 CommonProgramNodeIds.INTEGER_DIVIDE,
                 CommonProgramNodeIds.INTEGER_MODULO
-        )) put(result, id, unitType(binarySchema(ProgramValueTypes.INTEGER, ProgramValueTypes.INTEGER)));
+        ))
+            put(result, id, unitType(binarySchema(ProgramValueTypes.INTEGER, ProgramValueTypes.INTEGER)));
         for (var id : List.of(
                 CommonProgramNodeIds.INTEGER_EQUAL,
                 CommonProgramNodeIds.INTEGER_LESS,
                 CommonProgramNodeIds.INTEGER_LESS_EQUAL,
                 CommonProgramNodeIds.INTEGER_GREATER,
                 CommonProgramNodeIds.INTEGER_GREATER_EQUAL
-        )) put(result, id, unitType(binarySchema(ProgramValueTypes.INTEGER, ProgramValueTypes.BOOLEAN)));
+        ))
+            put(result, id, unitType(binarySchema(ProgramValueTypes.INTEGER, ProgramValueTypes.BOOLEAN)));
 
         for (var id : List.of(
                 CommonProgramNodeIds.BIG_INTEGER_ADD,
@@ -140,14 +143,16 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 CommonProgramNodeIds.BIG_INTEGER_MULTIPLY,
                 CommonProgramNodeIds.BIG_INTEGER_DIVIDE,
                 CommonProgramNodeIds.BIG_INTEGER_MODULO
-        )) put(result, id, unitType(binarySchema(ProgramValueTypes.BIG_INTEGER, ProgramValueTypes.BIG_INTEGER)));
+        ))
+            put(result, id, unitType(binarySchema(ProgramValueTypes.BIG_INTEGER, ProgramValueTypes.BIG_INTEGER)));
         for (var id : List.of(
                 CommonProgramNodeIds.BIG_INTEGER_EQUAL,
                 CommonProgramNodeIds.BIG_INTEGER_LESS,
                 CommonProgramNodeIds.BIG_INTEGER_LESS_EQUAL,
                 CommonProgramNodeIds.BIG_INTEGER_GREATER,
                 CommonProgramNodeIds.BIG_INTEGER_GREATER_EQUAL
-        )) put(result, id, unitType(binarySchema(ProgramValueTypes.BIG_INTEGER, ProgramValueTypes.BOOLEAN)));
+        ))
+            put(result, id, unitType(binarySchema(ProgramValueTypes.BIG_INTEGER, ProgramValueTypes.BOOLEAN)));
 
         for (var id : List.of(
                 CommonProgramNodeIds.FLOAT_ADD,
@@ -155,14 +160,16 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 CommonProgramNodeIds.FLOAT_MULTIPLY,
                 CommonProgramNodeIds.FLOAT_DIVIDE,
                 CommonProgramNodeIds.FLOAT_MODULO
-        )) put(result, id, unitType(binarySchema(ProgramValueTypes.FLOAT, ProgramValueTypes.FLOAT)));
+        ))
+            put(result, id, unitType(binarySchema(ProgramValueTypes.FLOAT, ProgramValueTypes.FLOAT)));
         for (var id : List.of(
                 CommonProgramNodeIds.FLOAT_EQUAL,
                 CommonProgramNodeIds.FLOAT_LESS,
                 CommonProgramNodeIds.FLOAT_LESS_EQUAL,
                 CommonProgramNodeIds.FLOAT_GREATER,
                 CommonProgramNodeIds.FLOAT_GREATER_EQUAL
-        )) put(result, id, unitType(binarySchema(ProgramValueTypes.FLOAT, ProgramValueTypes.BOOLEAN)));
+        ))
+            put(result, id, unitType(binarySchema(ProgramValueTypes.FLOAT, ProgramValueTypes.BOOLEAN)));
 
         put(result, CommonProgramNodeIds.BOOLEAN_NOT, unitType(new ProgramNodeSchema(
                 List.of(ProgramPortDefinition.requiredInput("value", ProgramValueTypes.BOOLEAN)),
@@ -172,7 +179,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 CommonProgramNodeIds.BOOLEAN_AND,
                 CommonProgramNodeIds.BOOLEAN_OR,
                 CommonProgramNodeIds.BOOLEAN_XOR
-        )) put(result, id, unitType(binarySchema(ProgramValueTypes.BOOLEAN, ProgramValueTypes.BOOLEAN)));
+        ))
+            put(result, id, unitType(binarySchema(ProgramValueTypes.BOOLEAN, ProgramValueTypes.BOOLEAN)));
     }
 
     private static void registerControlAndState(Map<Identifier, ProgramNodeType<?>> result) {
@@ -477,30 +485,32 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 CommonProgramNodeIds.FILTER_ENTITY_TARGETED_BY,
                 CommonProgramNodeIds.FILTER_ENTITY_LAST_DAMAGED_BY,
                 CommonProgramNodeIds.FILTER_ENTITY_VISIBLE_FROM
-        )) put(result, id, queryType(new ProgramNodeSchema(
-                List.of(
-                        ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET),
-                        ProgramPortDefinition.requiredInput(
-                                relationPort(id), ProgramValueTypes.ENTITY_REFERENCE)
-                ),
-                List.of(ProgramPortDefinition.output("entities", ProgramValueTypes.ENTITY_SET))
-        )));
+        ))
+            put(result, id, queryType(new ProgramNodeSchema(
+                    List.of(
+                            ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET),
+                            ProgramPortDefinition.requiredInput(
+                                    relationPort(id), ProgramValueTypes.ENTITY_REFERENCE)
+                    ),
+                    List.of(ProgramPortDefinition.output("entities", ProgramValueTypes.ENTITY_SET))
+            )));
         for (var id : List.of(
                 CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_LEAST,
                 CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_MOST,
                 CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_LEAST,
                 CommonProgramNodeIds.FILTER_ENTITY_MAX_HEALTH_AT_MOST
-        )) put(result, id, queryType(new ProgramNodeSchema(
-                List.of(
-                        ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET),
-                        ProgramPortDefinition.requiredInput(
-                                id.equals(CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_LEAST)
-                                        || id.equals(CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_MOST)
-                                        ? "percent" : "health",
-                                ProgramValueTypes.FLOAT)
-                ),
-                List.of(ProgramPortDefinition.output("entities", ProgramValueTypes.ENTITY_SET))
-        )));
+        ))
+            put(result, id, queryType(new ProgramNodeSchema(
+                    List.of(
+                            ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET),
+                            ProgramPortDefinition.requiredInput(
+                                    id.equals(CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_LEAST)
+                                            || id.equals(CommonProgramNodeIds.FILTER_ENTITY_HEALTH_AT_MOST)
+                                            ? "percent" : "health",
+                                    ProgramValueTypes.FLOAT)
+                    ),
+                    List.of(ProgramPortDefinition.output("entities", ProgramValueTypes.ENTITY_SET))
+            )));
         put(result, CommonProgramNodeIds.FILTER_ENTITY_TYPE, type(
                 EntityKindConfiguration.CODEC,
                 _ -> entitySetFilter,
@@ -794,7 +804,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.BLOCK_POSITION_SET,
                 ProgramValueTypes.ENTITY_SET,
                 ProgramValueTypes.LIVING_ENTITY_SET
-        )) result.put(type.id(), type);
+        ))
+            result.put(type.id(), type);
         return Map.copyOf(result);
     }
 
@@ -944,7 +955,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         }
 
         private static List<String> parsedSelectors(String value) {
-            return java.util.Arrays.stream(value.split("[,;\\r\\n]+"))
+            return Arrays.stream(value.split("[,;\\r\\n]+"))
                     .map(String::trim)
                     .filter(selector -> !selector.isEmpty())
                     .distinct()
@@ -1028,7 +1039,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         public static final Codec<HealthThresholdTriggerConfiguration> CODEC =
                 RecordCodecBuilder.create(instance -> instance.group(
                         HealthThresholdMode.CODEC.optionalFieldOf(
-                                "mode", HealthThresholdMode.BELOW)
+                                        "mode", HealthThresholdMode.BELOW)
                                 .forGetter(HealthThresholdTriggerConfiguration::mode),
                         Codec.floatRange(0.0f, Float.MAX_VALUE)
                                 .optionalFieldOf("threshold", 10.0f)
@@ -1317,8 +1328,13 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
             this.type = type;
         }
 
-        public String wireName() { return wireName; }
-        public ProgramValueType type() { return type; }
+        public String wireName() {
+            return wireName;
+        }
+
+        public ProgramValueType type() {
+            return type;
+        }
 
         private static Vec3Kind byName(String name) {
             for (var value : values()) if (value.wireName.equals(name)) return value;
@@ -1333,8 +1349,13 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 Vec3Operator::byName, Vec3Operator::wireName);
         private final String wireName;
 
-        Vec3Operator(String wireName) { this.wireName = wireName; }
-        public String wireName() { return wireName; }
+        Vec3Operator(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
 
         private static Vec3Operator byName(String name) {
             for (var value : values()) if (value.wireName.equals(name)) return value;
@@ -1357,8 +1378,13 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
             this.collectionType = collectionType;
         }
 
-        public String wireName() { return wireName; }
-        public ProgramValueType collectionType() { return collectionType; }
+        public String wireName() {
+            return wireName;
+        }
+
+        public ProgramValueType collectionType() {
+            return collectionType;
+        }
 
         private static PointCollectionKind byName(String name) {
             for (var value : values()) if (value.wireName.equals(name)) return value;
@@ -1379,8 +1405,13 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
             this.reversed = reversed;
         }
 
-        public String wireName() { return wireName; }
-        public boolean reversed() { return reversed; }
+        public String wireName() {
+            return wireName;
+        }
+
+        public boolean reversed() {
+            return reversed;
+        }
 
         private static SortOrder byName(String name) {
             for (var value : values()) if (value.wireName.equals(name)) return value;

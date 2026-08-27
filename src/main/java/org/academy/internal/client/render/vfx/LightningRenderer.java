@@ -144,10 +144,10 @@ public final class LightningRenderer implements VfxRenderer<LightningMeshData> {
         }
 
         private void upload(CommandEncoder writeEncoder, TubeMeshView mesh) {
-            int vertexCount = mesh.vertexCount();
-            int indexCount = mesh.indexCount();
-            long vertexBytes = (long) vertexCount * TubeMesh.VERTEX_STRIDE_BYTES;
-            long meshVersion = mesh.version();
+            var vertexCount = mesh.vertexCount();
+            var indexCount = mesh.indexCount();
+            var vertexBytes = (long) vertexCount * TubeMesh.VERTEX_STRIDE_BYTES;
+            var meshVersion = mesh.version();
 
             if (meshVersion == lastVersion && indexBuffer != null) {
                 usedVertexBytes = vertexBytes;
@@ -184,9 +184,9 @@ public final class LightningRenderer implements VfxRenderer<LightningMeshData> {
                 try (var mapped = vertexBuffer.map(0, vertexBytes, false, true)) {
                     var buf = mapped.data();
                     buf.clear();
-                    for (int i = 0; i < vertexCount; i++) {
-                        int p = i * 3;
-                        int u = i * 2;
+                    for (var i = 0; i < vertexCount; i++) {
+                        var p = i * 3;
+                        var u = i * 2;
                         buf.putFloat(positions[p]).putFloat(positions[p + 1]).putFloat(positions[p + 2]);
                         buf.putFloat(uvs[u]).putFloat(uvs[u + 1]);
                     }

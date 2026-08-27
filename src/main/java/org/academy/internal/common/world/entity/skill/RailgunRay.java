@@ -3,11 +3,11 @@ package org.academy.internal.common.world.entity.skill;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
-import net.minecraft.util.Mth;
 
 public class RailgunRay extends RenderOnlyEntity {
     public static final float DEFAULT_LENGTH = 50.0f;

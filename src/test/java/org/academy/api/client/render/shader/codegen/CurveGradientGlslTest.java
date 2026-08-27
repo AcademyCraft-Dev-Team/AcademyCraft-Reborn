@@ -1,12 +1,13 @@
 package org.academy.api.client.render.shader.codegen;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
 import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Gradient;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CurveGradientGlslTest {
 

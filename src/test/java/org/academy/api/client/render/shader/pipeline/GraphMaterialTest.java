@@ -1,5 +1,17 @@
 package org.academy.api.client.render.shader.pipeline;
 
+import com.mojang.blaze3d.buffers.Std140Builder;
+import org.academy.api.client.render.graph.model.GraphParameter;
+import org.academy.api.client.render.graph.type.Curve;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.joml.Vector3f;
+import org.junit.jupiter.api.Test;
+import org.lwjgl.system.MemoryStack;
+
+import java.util.List;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -51,11 +63,11 @@ class GraphMaterialTest {
     void writeEmitsTimeThenUniformValues() {
         var layout = new UniformLayout(List.of(
                 param("a", ValueType.FLOAT, Value.of(1f)),
-                param("v", ValueType.VEC3, Value.of(new org.joml.Vector3f(1f, 2f, 3f)))
+                param("v", ValueType.VEC3, Value.of(new Vector3f(1f, 2f, 3f)))
         ));
         var material = new GraphMaterial(layout, List.of(
                 param("a", ValueType.FLOAT, Value.of(1f)),
-                param("v", ValueType.VEC3, Value.of(new org.joml.Vector3f(1f, 2f, 3f)))
+                param("v", ValueType.VEC3, Value.of(new Vector3f(1f, 2f, 3f)))
         ));
         var builder = Std140Builder.intoBuffer(ByteBuffer.allocate(layout.totalSize()));
         material.write(builder, 0.5f);
@@ -71,13 +83,13 @@ class GraphMaterialTest {
     void samplerAndCurveParametersSkippedInWrite() {
         var layout = new UniformLayout(List.of(
                 param("s", ValueType.SAMPLER, Value.sampler("x")),
-                param("c", ValueType.CURVE, Value.curve(new org.academy.api.client.render.graph.type.Curve(
+                param("c", ValueType.CURVE, Value.curve(new Curve(
                         List.of()))),
                 param("f", ValueType.FLOAT, Value.of(7f))
         ));
         var material = new GraphMaterial(layout, List.of(
                 param("s", ValueType.SAMPLER, Value.sampler("x")),
-                param("c", ValueType.CURVE, Value.curve(new org.academy.api.client.render.graph.type.Curve(
+                param("c", ValueType.CURVE, Value.curve(new Curve(
                         List.of()))),
                 param("f", ValueType.FLOAT, Value.of(7f))
         ));
@@ -98,7 +110,7 @@ class GraphMaterialTest {
         ));
         var bindings = material.samplerBindings();
         assertEquals(1, bindings.size());
-        assertEquals("Sampler0", bindings.get(0).uniformName());
-        assertEquals("minecraft:textures/block/stone.png", bindings.get(0).identifier());
+        assertEquals("Sampler0", bindings.getFirst().uniformName());
+        assertEquals("minecraft:textures/block/stone.png", bindings.getFirst().identifier());
     }
 }

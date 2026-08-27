@@ -21,24 +21,31 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.ItemAbilities;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
@@ -48,18 +55,21 @@ import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhase
 import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterRepair;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
-import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
+import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
+import org.academy.internal.common.world.item.DarkmatterNativeItemSupport;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** End-to-end gates for the server-owned dark-matter MP and CP ledger. */
+/**
+ * End-to-end gates for the server-owned dark-matter MP and CP ledger.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class DarkmatterResourceGameTests {
     private static final Identifier TEST_INSTANCE_TYPE =
@@ -349,8 +359,8 @@ public final class DarkmatterResourceGameTests {
                         "Failed to initialize shaping MP");
 
                 helper.assertTrue(DarkmatterShaping.Server.createShaped(
-                                player, org.academy.api.common.ability.darkmatter.DarkmatterShape.TOOL,
-                                50, java.util.Map.of()),
+                                player, DarkmatterShape.TOOL,
+                                50, Map.of()),
                         "Empty-hand tool shaping was rejected");
                 helper.assertTrue(player.getMainHandItem().is(
                                 org.academy.internal.common.world.item.Items.DARKMATTER_TOOL.get()),
@@ -375,10 +385,10 @@ public final class DarkmatterResourceGameTests {
                         org.academy.internal.common.world.item.Items.DARKMATTER_BOW.get());
                 var arrow = new ItemStack(
                         org.academy.internal.common.world.item.Items.DARKMATTER_ARROW.get());
-                helper.assertTrue(((net.minecraft.world.item.ProjectileWeaponItem) bow.getItem())
+                helper.assertTrue(((ProjectileWeaponItem) bow.getItem())
                                 .getAllSupportedProjectiles(bow).test(arrow),
                         "Native bow does not accept the dark-matter arrow");
-                var fallback = org.academy.internal.common.world.item.DarkmatterNativeItemSupport
+                var fallback = DarkmatterNativeItemSupport
                         .infiniteDarkmatterArrow(bow);
                 helper.assertTrue(fallback.is(
                                 org.academy.internal.common.world.item.Items.DARKMATTER_ARROW.get())
@@ -401,16 +411,16 @@ public final class DarkmatterResourceGameTests {
                 helper.assertTrue(manager.debugSetPools(player, 20.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize native-tool MP");
                 helper.assertTrue(DarkmatterShaping.Server.createShaped(
-                                player, org.academy.api.common.ability.darkmatter.DarkmatterShape.TOOL,
-                                100, java.util.Map.of()),
+                                player, DarkmatterShape.TOOL,
+                                100, Map.of()),
                         "Failed to shape the native tool");
                 var tool = player.getMainHandItem();
                 helper.assertTrue(tool.getItem().canPerformAction(tool,
-                                net.neoforged.neoforge.common.ItemAbilities.AXE_STRIP)
+                                ItemAbilities.AXE_STRIP)
                                 && tool.getItem().canPerformAction(tool,
-                                net.neoforged.neoforge.common.ItemAbilities.SHOVEL_FLATTEN)
+                                ItemAbilities.SHOVEL_FLATTEN)
                                 && tool.getItem().canPerformAction(tool,
-                                net.neoforged.neoforge.common.ItemAbilities.HOE_TILL),
+                                ItemAbilities.HOE_TILL),
                         "Native tool does not expose axe, shovel and hoe actions");
                 var enchantments = player.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
                 var efficiency = enchantments.getOrThrow(Enchantments.EFFICIENCY);
@@ -531,7 +541,7 @@ public final class DarkmatterResourceGameTests {
                         "Beta entity disassembly was rejected");
                 helper.assertTrue(alphaRemainingHealth < betaTarget.getHealth(),
                         "Alpha and beta entity damage did not produce distinct server results");
-                helper.assertTrue(betaTarget.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS),
+                helper.assertTrue(betaTarget.hasEffect(MobEffects.WEAKNESS),
                         "Beta entity disassembly did not apply corrosion/weakness");
                 assertClose(helper, 100.0f, manager.getView(player).totalMatter(),
                         "Entity deconstruction must not consume MP");
@@ -597,8 +607,8 @@ public final class DarkmatterResourceGameTests {
                 helper.assertTrue(cobblestone == 11,
                         "M3 did not send all eleven legal drops to inventory: " + cobblestone);
                 helper.assertTrue(helper.getLevel().getEntitiesOfClass(
-                                net.minecraft.world.entity.item.ItemEntity.class,
-                                new net.minecraft.world.phys.AABB(origin).inflate(14.0)).isEmpty(),
+                                ItemEntity.class,
+                                new AABB(origin).inflate(14.0)).isEmpty(),
                         "M3 left disassembly drops on the ground despite inventory space");
                 assertClose(helper, 100.0f, manager.getView(player).totalMatter(),
                         "M3 deconstruction must not consume MP");
@@ -644,7 +654,7 @@ public final class DarkmatterResourceGameTests {
                         "Disassemble could not consume the cut law mark");
                 helper.assertTrue(!DarkmatterLawMark.isMarkedBy(player, betaTarget),
                         "Disassemble did not consume the shared abnormal-law mark");
-                helper.assertTrue(betaTarget.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS),
+                helper.assertTrue(betaTarget.hasEffect(MobEffects.WEAKNESS),
                         "Law-mark detonation did not apply weakness");
                 assertClose(helper, 94.0f, manager.getView(player).totalMatter(),
                         "Deconstruction consumed MP in addition to the two cuts");
@@ -694,44 +704,44 @@ public final class DarkmatterResourceGameTests {
                 var healthBeforeBurst = new float[1];
                 var observedNewExposure = new boolean[1];
                 helper.startSequence().thenWaitUntil(() -> {
-                    pinTarget(betaTarget, betaPosition);
-                    DarkmatterRadiation.Server.tick(player);
-                    helper.assertTrue(DarkmatterRadiation.Server.getExposureTicks(
-                                    player, betaTarget) >= 10,
-                            "Beta exposure did not accumulate to ten ticks");
-                }).thenWaitUntil(() -> {
-                    pinTarget(betaTarget, outsidePosition);
-                    DarkmatterRadiation.Server.tick(player);
-                    helper.assertTrue(DarkmatterRadiation.Server.getExposureTicks(
-                                    player, betaTarget) == 0,
-                            "Exposure remained after leaving the beta field");
-                }).thenExecute(() -> healthBeforeBurst[0] = betaTarget.getHealth())
+                            pinTarget(betaTarget, betaPosition);
+                            DarkmatterRadiation.Server.tick(player);
+                            helper.assertTrue(DarkmatterRadiation.Server.getExposureTicks(
+                                            player, betaTarget) >= 10,
+                                    "Beta exposure did not accumulate to ten ticks");
+                        }).thenWaitUntil(() -> {
+                            pinTarget(betaTarget, outsidePosition);
+                            DarkmatterRadiation.Server.tick(player);
+                            helper.assertTrue(DarkmatterRadiation.Server.getExposureTicks(
+                                            player, betaTarget) == 0,
+                                    "Exposure remained after leaving the beta field");
+                        }).thenExecute(() -> healthBeforeBurst[0] = betaTarget.getHealth())
                         .thenWaitUntil(() -> {
-                    pinTarget(betaTarget, betaPosition);
-                    DarkmatterRadiation.Server.tick(player);
-                    var exposure = DarkmatterRadiation.Server.getExposureTicks(
-                            player, betaTarget);
-                    observedNewExposure[0] |= exposure > 0;
-                    helper.assertTrue(observedNewExposure[0] && exposure == 0,
-                            "Twenty consecutive beta-exposure ticks did not burst: "
-                                    + exposure);
-                    helper.assertTrue(betaTarget.getHealth() < healthBeforeBurst[0],
-                            "Exposure burst did not deal server-authoritative damage");
-                }).thenExecute(() -> {
-                    helper.assertTrue(betaTarget.hasEffect(
-                                    net.minecraft.world.effect.MobEffects.GLOWING)
-                                    && betaTarget.hasEffect(
-                                    net.minecraft.world.effect.MobEffects.WEAKNESS),
-                            "Beta interference did not apply glowing and weakness");
-                    var remaining = manager.getView(player).totalMatter();
-                    helper.assertTrue(remaining >= 168.9f && remaining <= 170.1f,
-                            "Interference maintenance did not charge 2 MP/second: "
-                                    + remaining);
-                    DarkmatterRadiation.Server.endChannel(player);
-                    helper.assertTrue(!DarkmatterRadiation.Server.isChanneling(player),
-                            "Interference remained active after release");
-                    removePlayer(helper, player);
-                }).thenSucceed();
+                            pinTarget(betaTarget, betaPosition);
+                            DarkmatterRadiation.Server.tick(player);
+                            var exposure = DarkmatterRadiation.Server.getExposureTicks(
+                                    player, betaTarget);
+                            observedNewExposure[0] |= exposure > 0;
+                            helper.assertTrue(observedNewExposure[0] && exposure == 0,
+                                    "Twenty consecutive beta-exposure ticks did not burst: "
+                                            + exposure);
+                            helper.assertTrue(betaTarget.getHealth() < healthBeforeBurst[0],
+                                    "Exposure burst did not deal server-authoritative damage");
+                        }).thenExecute(() -> {
+                            helper.assertTrue(betaTarget.hasEffect(
+                                            MobEffects.GLOWING)
+                                            && betaTarget.hasEffect(
+                                            MobEffects.WEAKNESS),
+                                    "Beta interference did not apply glowing and weakness");
+                            var remaining = manager.getView(player).totalMatter();
+                            helper.assertTrue(remaining >= 168.9f && remaining <= 170.1f,
+                                    "Interference maintenance did not charge 2 MP/second: "
+                                            + remaining);
+                            DarkmatterRadiation.Server.endChannel(player);
+                            helper.assertTrue(!DarkmatterRadiation.Server.isChanneling(player),
+                                    "Interference remained active after release");
+                            removePlayer(helper, player);
+                        }).thenSucceed();
             }
         },
         DARKMATTER_NETWORK_MEMBERS_ARE_PROTECTED(
@@ -845,13 +855,13 @@ public final class DarkmatterResourceGameTests {
                 helper.assertTrue(manager.setAlphaPoints(player, 0),
                         "Failed to initialize repair beta extreme");
                 player.setHealth(10.0f);
-                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                        net.minecraft.world.effect.MobEffects.POISON, 120));
+                player.addEffect(new MobEffectInstance(
+                        MobEffects.POISON, 120));
                 helper.assertTrue(DarkmatterRepair.Server.tryPulse(player),
                         "Beta repair rejected real health/status work");
                 assertClose(helper, 12.5f, player.getHealth(),
                         "Beta repair healed the wrong amount");
-                var poison = player.getEffect(net.minecraft.world.effect.MobEffects.POISON);
+                var poison = player.getEffect(MobEffects.POISON);
                 helper.assertTrue(poison != null && poison.getDuration() == 60,
                         "Beta repair shortened poison by the wrong duration");
 
@@ -874,14 +884,14 @@ public final class DarkmatterResourceGameTests {
                 helper.assertTrue(manager.setAlphaPoints(player, 0),
                         "Failed to restore repair beta extreme");
                 player.setHealth(10.0f);
-                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                        net.minecraft.world.effect.MobEffects.POISON, 200));
+                player.addEffect(new MobEffectInstance(
+                        MobEffects.POISON, 200));
                 helper.assertTrue(DarkmatterRepair.Server.tryPulse(player),
                         "M3 fourth productive pulse was rejected");
                 player.setHealth(10.0f);
                 helper.assertTrue(DarkmatterRepair.Server.tryPulse(player),
                         "M3 fifth productive pulse was rejected");
-                helper.assertTrue(!player.hasEffect(net.minecraft.world.effect.MobEffects.POISON),
+                helper.assertTrue(!player.hasEffect(MobEffects.POISON),
                         "M3 fifth productive pulse did not remove a harmful effect");
                 helper.assertTrue(DarkmatterRepair.Server.productivePulses(
                                 player.getUUID()) == 5,

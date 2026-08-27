@@ -4,6 +4,9 @@
     <inspection_tool class="AutoCloseableResource" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,java.lang.foreign.Arena,ofAuto,java.lang.foreign.Arena,global,com.mojang.blaze3d.buffers.GpuBufferSlice,buffer,net.minecraft.server.level.ServerPlayer,level,net.minecraft.world.entity.Entity,level,org.academy.api.client.gui.msdf.atlas.MsdfGlyph,page,net.minecraft.client.resources.model.sprite.Material.Baked,sprite,org.academy.api.server.ability.ServerContext,level,net.minecraft.client.renderer.StagedVertexBuffer.ExecuteInfo,vertexBuffer,org.academy.api.client.gui.msdf.font.MsdfFontService,loadFont,org.academy.internal.client.renderer.vfx.BeamRenderer.BeamGeometry,boxBuffer|ballBuffer" />
     </inspection_tool>
+    <inspection_tool class="ConstantValue" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="true" />
+    </inspection_tool>
     <inspection_tool class="KaptKotlinCompilerPlugin" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="NullableProblems" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="REPORT_NULLABLE_METHOD_OVERRIDES_NOTNULL" value="true" />

@@ -1,13 +1,13 @@
 package org.academy.internal.client.app.props
 
 import com.mojang.math.Axis
+import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.common.attribute.AbilityFactor
 import org.academy.internal.common.attribute.PropsMath
-import kotlin.math.*
-import net.minecraft.util.Mth
+import kotlin.math.hypot
 
 class RadarChartWidget : AbstractWidget() {
     private data class Point(val x: Float, val y: Float)
@@ -81,7 +81,8 @@ class RadarChartWidget : AbstractWidget() {
         if (length <= 0.001f) return
         context.pose().pushPose()
         context.pose().translate(from.x, from.y - thickness / 2f)
-        context.pose().mulPose(Axis.ZP.rotationDegrees((Mth.atan2(dy.toDouble(), dx.toDouble()) * Mth.RAD_TO_DEG).toFloat()))
+        context.pose()
+            .mulPose(Axis.ZP.rotationDegrees((Mth.atan2(dy.toDouble(), dx.toDouble()) * Mth.RAD_TO_DEG).toFloat()))
         context.submit(
             FillRectDrawCommand(
                 length,

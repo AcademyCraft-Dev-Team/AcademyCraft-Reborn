@@ -1,10 +1,10 @@
 package org.academy.internal.client.render.vfx;
 
+import net.minecraft.util.Mth;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class CameraShakeManager {
     private static final long NANOS_PER_TICK = 50_000_000L;

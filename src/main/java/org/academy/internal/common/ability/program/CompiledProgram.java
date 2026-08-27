@@ -8,6 +8,7 @@ import org.academy.api.common.ability.program.ProgramNodeType;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Registry-resolved intermediate representation consumed by the metered VM.
@@ -23,7 +24,7 @@ public record CompiledProgram(
     public CompiledProgram {
         nodes = Map.copyOf(nodes);
         dataOrder = List.copyOf(dataOrder);
-        inputs = inputs.entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+        inputs = inputs.entrySet().stream().collect(Collectors.toUnmodifiableMap(
                 Map.Entry::getKey,
                 entry -> List.copyOf(entry.getValue())
         ));

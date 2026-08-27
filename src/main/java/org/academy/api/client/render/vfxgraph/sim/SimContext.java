@@ -1,13 +1,16 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
+import org.academy.api.client.render.graph.type.Curve;
+import org.academy.api.client.render.graph.type.Gradient;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import org.academy.api.client.render.graph.type.Curve;
-import org.academy.api.client.render.graph.type.Gradient;
-import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
+import java.util.function.IntConsumer;
 
 /**
  * 模拟帧上下文：dt、累计时间、随机源、黑板曲线/渐变、存活参数、本帧 spawn 批次、电弧缓冲。
@@ -101,71 +104,91 @@ public final class SimContext {
         return liveParams;
     }
 
-    /** 遍历本帧新粒子索引（由 incomingBatches 汇总）。 */
-    public void forEachIncoming(java.util.function.IntConsumer action) {
+    /**
+     * 遍历本帧新粒子索引（由 incomingBatches 汇总）。
+     */
+    public void forEachIncoming(IntConsumer action) {
         for (var batch : incomingBatches) {
-            for (int i = batch.start(); i < batch.end(); i++) {
+            for (var i = batch.start(); i < batch.end(); i++) {
                 action.accept(i);
             }
         }
     }
 
-    /** 读取存活浮点参数（有绑定返回绑定值，无则返回默认）。 */
+    /**
+     * 读取存活浮点参数（有绑定返回绑定值，无则返回默认）。
+     */
     public float paramFloat(String paramId, float defaultVal) {
         if (paramId.isEmpty()) return defaultVal;
         var v = liveParams.get(paramId);
-        return v != null && v.type() == org.academy.api.client.render.graph.type.ValueType.FLOAT ? v.asFloat() : defaultVal;
+        return v != null && v.type() == ValueType.FLOAT ? v.asFloat() : defaultVal;
     }
 
-    /** 读取存活 Vec3 参数的单个分量（index 0/1/2 = x/y/z）。 */
+    /**
+     * 读取存活 Vec3 参数的单个分量（index 0/1/2 = x/y/z）。
+     */
     public float paramVec3(String paramId, int index, float defaultVal) {
         if (paramId.isEmpty()) return defaultVal;
         var v = liveParams.get(paramId);
-        if (v != null && v.type() == org.academy.api.client.render.graph.type.ValueType.VEC3) {
+        if (v != null && v.type() == ValueType.VEC3) {
             var a = v.asVec3();
             return index == 0 ? a.x() : index == 1 ? a.y() : a.z();
         }
         return defaultVal;
     }
 
-    /** 读取存活颜色参数的单个分量（index 0/1/2/3 = r/g/b/a）。 */
+    /**
+     * 读取存活颜色参数的单个分量（index 0/1/2/3 = r/g/b/a）。
+     */
     public float paramColor(String paramId, int index, float defaultVal) {
         if (paramId.isEmpty()) return defaultVal;
         var v = liveParams.get(paramId);
-        if (v != null && v.type() == org.academy.api.client.render.graph.type.ValueType.COLOR) {
+        if (v != null && v.type() == ValueType.COLOR) {
             var a = v.asColor();
             return index == 0 ? a.x() : index == 1 ? a.y() : index == 2 ? a.z() : a.w();
         }
         return defaultVal;
     }
 
-    /** 获取黑板曲线。 */
-    public org.academy.api.client.render.graph.type.Curve curve(String id) {
+    /**
+     * 获取黑板曲线。
+     */
+    public Curve curve(String id) {
         return curves.get(id);
     }
 
-    /** 获取黑板渐变。 */
-    public org.academy.api.client.render.graph.type.Gradient gradient(String id) {
+    /**
+     * 获取黑板渐变。
+     */
+    public Gradient gradient(String id) {
         return gradients.get(id);
     }
 
-    /** 获取存活参数值。 */
-    public org.academy.api.client.render.graph.type.Value param(String id) {
+    /**
+     * 获取存活参数值。
+     */
+    public Value param(String id) {
         return liveParams.get(id);
     }
 
-    /** 设置存活参数（如果不存在）。 */
-    public void paramIfAbsent(String id, org.academy.api.client.render.graph.type.Value value) {
+    /**
+     * 设置存活参数（如果不存在）。
+     */
+    public void paramIfAbsent(String id, Value value) {
         liveParams.putIfAbsent(id, value);
     }
 
-    /** 设置黑板曲线（如果不存在）。 */
-    public void curveIfAbsent(String id, org.academy.api.client.render.graph.type.Curve curve) {
+    /**
+     * 设置黑板曲线（如果不存在）。
+     */
+    public void curveIfAbsent(String id, Curve curve) {
         curves.putIfAbsent(id, curve);
     }
 
-    /** 设置黑板渐变（如果不存在）。 */
-    public void gradientIfAbsent(String id, org.academy.api.client.render.graph.type.Gradient gradient) {
+    /**
+     * 设置黑板渐变（如果不存在）。
+     */
+    public void gradientIfAbsent(String id, Gradient gradient) {
         gradients.putIfAbsent(id, gradient);
     }
 }

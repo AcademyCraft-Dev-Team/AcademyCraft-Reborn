@@ -1,12 +1,5 @@
 package org.academy.api.client.render.graph.compile;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.GraphFixtures;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.Graph;
@@ -15,6 +8,12 @@ import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 class DefaultGraphCompilerTest {
     private final SimpleNodeRegistry registry = new SimpleNodeRegistry();
 
@@ -22,7 +21,9 @@ class DefaultGraphCompilerTest {
         return new DefaultGraphCompiler(registry);
     }
 
-    /** 测试求值器：折叠 constant（读 value 属性）与 add（a+b）。 */
+    /**
+     * 测试求值器：折叠 constant（读 value 属性）与 add（a+b）。
+     */
     private static NodeEvaluator arithmeticEvaluator() {
         return (node, inputs) -> switch (node.type()) {
             case "input.constant" -> Optional.of(Map.of("out", Value.of(

@@ -80,7 +80,8 @@ public final class HudLayout {
             var screenWidth = minecraft.getWindow().getGuiScaledWidth();
             var screenHeight = minecraft.getWindow().getGuiScaledHeight();
             var defaultsValue = defaults.getRegions().get(configKey);
-            if (defaultsValue == null) defaultsValue = HudLayoutDefaults.INSTANCE.defaults().getRegions().get(configKey);
+            if (defaultsValue == null)
+                defaultsValue = HudLayoutDefaults.INSTANCE.defaults().getRegions().get(configKey);
             var userScale = includePlayerConfig ? userScale() : 1.0f;
             var scale = validScale(defaultsValue.getScale() * userScale);
             var width = nominalWidth() * scale;

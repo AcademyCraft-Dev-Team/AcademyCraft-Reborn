@@ -6,7 +6,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
@@ -16,7 +15,9 @@ import org.academy.internal.common.world.level.block.entity.DarkmatterBlockEntit
 
 import javax.annotation.Nullable;
 
-/** Block item carrying the per-placement physical profile selected in the shaping editor. */
+/**
+ * Block item carrying the per-placement physical profile selected in the shaping editor.
+ */
 public final class DarkmatterBlockItem extends BlockItem implements DarkmatterShapedItem {
     public DarkmatterBlockItem(DarkmatterConfigurableBlock block, Properties properties) {
         super(block, properties
@@ -53,8 +54,8 @@ public final class DarkmatterBlockItem extends BlockItem implements DarkmatterSh
             ItemStack stack,
             BlockState state
     ) {
-        boolean updated = super.updateCustomBlockEntityTag(pos, level, player, stack, state);
-        BlockEntity blockEntity = level.getBlockEntity(pos);
+        var updated = super.updateCustomBlockEntityTag(pos, level, player, stack, state);
+        var blockEntity = level.getBlockEntity(pos);
         if (blockEntity instanceof DarkmatterBlockEntity darkmatterBlockEntity) {
             darkmatterBlockEntity.setProfile(profile(stack));
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);

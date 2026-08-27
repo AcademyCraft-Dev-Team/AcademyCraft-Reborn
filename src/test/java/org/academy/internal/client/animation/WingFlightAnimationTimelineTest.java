@@ -3,13 +3,7 @@ package org.academy.internal.client.animation;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.junit.jupiter.api.Test;
 
-import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.FLYING_FAST;
-import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.FLYING_SLOW;
-import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.IDLE;
-import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.QUIT_FLYING_FAST;
-import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.START_FLYING_FAST;
-import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.START_FLYING_SLOW;
-import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.STOP_FLYING_SLOW;
+import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class WingFlightAnimationTimelineTest {

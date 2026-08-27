@@ -24,8 +24,8 @@ import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
-import org.academy.internal.client.hud.HudLayoutEditorScreen
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient
+import org.academy.internal.client.hud.HudLayoutEditorScreen
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
 import org.lwjgl.glfw.GLFW

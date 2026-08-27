@@ -2,6 +2,7 @@ package org.academy.api.client.render.shader.codegen;
 
 import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Gradient;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 节点代码生成上下文（契约）。提供黑板参数 uniform 名解析与辅助函数注册。
@@ -11,13 +12,17 @@ public interface GlslGenContext {
 
     void addHelper(String functionSource);
 
-    /** 返回参数对应的曲线数据；参数非 CURVE 或不存在返回 null。 */
-    default Curve curve(String parameterId) {
+    /**
+     * 返回参数对应的曲线数据；参数非 CURVE 或不存在返回 null。
+     */
+    default @Nullable Curve curve(String parameterId) {
         return null;
     }
 
-    /** 返回参数对应的渐变数据；参数非 GRADIENT 或不存在返回 null。 */
-    default Gradient gradient(String parameterId) {
+    /**
+     * 返回参数对应的渐变数据；参数非 GRADIENT 或不存在返回 null。
+     */
+    default @Nullable Gradient gradient(String parameterId) {
         return null;
     }
 

@@ -5,52 +5,53 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.InteractionHand;
-import org.jspecify.annotations.Nullable;
 
-/** Identifies the energy source backing an ability-development session. */
-public record DevelopmentSource(@Nullable BlockPos blockPos, @Nullable InteractionHand hand) {
-    public static final StreamCodec<ByteBuf, DevelopmentSource> CODEC = StreamCodec.of(
+import java.util.Objects;
+
+public sealed interface DevelopmentSource
+        permits DevelopmentSource.BlockDevelopmentSource, DevelopmentSource.TabletDevelopmentSource {
+    String cacheKey();
+
+    StreamCodec<ByteBuf, DevelopmentSource> CODEC = StreamCodec.of(
             (buffer, source) -> {
-                ByteBufCodecs.BOOL.encode(buffer, source.portable());
-                if (source.portable()) {
-                    ByteBufCodecs.VAR_INT.encode(buffer, source.hand.ordinal());
-                } else {
-                    BlockPos.STREAM_CODEC.encode(buffer, source.blockPos);
+                if (source instanceof TabletDevelopmentSource(InteractionHand hand)) {
+                    ByteBufCodecs.BOOL.encode(buffer, true);
+                    ByteBufCodecs.VAR_INT.encode(buffer, hand.ordinal());
+                } else if (source instanceof BlockDevelopmentSource(BlockPos blockPos)) {
+                    ByteBufCodecs.BOOL.encode(buffer, false);
+                    BlockPos.STREAM_CODEC.encode(buffer, blockPos);
                 }
             },
             buffer -> {
                 if (ByteBufCodecs.BOOL.decode(buffer)) {
                     var ordinal = ByteBufCodecs.VAR_INT.decode(buffer);
                     var hands = InteractionHand.values();
-                    return tablet(ordinal >= 0 && ordinal < hands.length
-                            ? hands[ordinal]
-                            : InteractionHand.MAIN_HAND);
+                    return new TabletDevelopmentSource(
+                            ordinal >= 0 && ordinal < hands.length
+                                    ? hands[ordinal]
+                                    : InteractionHand.MAIN_HAND);
                 }
-                return block(BlockPos.STREAM_CODEC.decode(buffer));
+                return new BlockDevelopmentSource(BlockPos.STREAM_CODEC.decode(buffer));
             }
     );
 
-    public DevelopmentSource {
-        if ((blockPos == null) == (hand == null)) {
-            throw new IllegalArgumentException("Development source needs exactly one location");
+    static DevelopmentSource block(BlockPos pos) {
+        return new BlockDevelopmentSource(Objects.requireNonNull(pos, "pos"));
+    }
+
+    static DevelopmentSource tablet(InteractionHand hand) {
+        return new TabletDevelopmentSource(hand);
+    }
+
+    record BlockDevelopmentSource(BlockPos blockPos) implements DevelopmentSource {
+        public String cacheKey() {
+            return "block:" + blockPos.asLong();
         }
-        if (blockPos != null) blockPos = blockPos.immutable();
     }
 
-    public static DevelopmentSource block(BlockPos pos) {
-        if (pos == null) throw new IllegalArgumentException("Developer position cannot be null");
-        return new DevelopmentSource(pos, null);
-    }
-
-    public static DevelopmentSource tablet(InteractionHand hand) {
-        return new DevelopmentSource(null, hand == null ? InteractionHand.MAIN_HAND : hand);
-    }
-
-    public boolean portable() {
-        return hand != null;
-    }
-
-    public String cacheKey() {
-        return portable() ? "tablet:" + hand.name() : "block:" + blockPos.asLong();
+    record TabletDevelopmentSource(InteractionHand hand) implements DevelopmentSource {
+        public String cacheKey() {
+            return "tablet:" + hand.name();
+        }
     }
 }

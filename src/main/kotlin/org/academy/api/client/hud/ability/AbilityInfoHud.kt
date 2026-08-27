@@ -26,6 +26,8 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.render.VertexWriter
+import org.academy.api.client.gui.serialize.UiBindingContext
+import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.InputSystem
 import org.academy.api.client.render.Render
@@ -141,6 +143,9 @@ class AbilityInfoHud private constructor() {
         private lateinit var skillWheelLayout: FrameLayoutWidget
         private lateinit var skillWheelMount: FrameLayoutWidget
 
+        /** v2 布局绑定：ability_cp_hud.json 的 cp_value 标签经 bind_text 接到此状态。 */
+        private val cpTextState = UiState("")
+
         private val root: FrameLayoutWidget = createRoot()
 
         override fun get(): WidgetContainer {
@@ -151,14 +156,18 @@ class AbilityInfoHud private constructor() {
             val root = object : FrameLayoutWidget() {
                 override fun tick() {
                     applyHudLayout()
+                    updateCpText()
                     super.tick()
                 }
             }
             root.alpha = 0f
+            val bindings = UiBindingContext().register("hud.cp_value", cpTextState)
             cpLayout = SerializedUiLayout.load(
                 AcademyCraft.academy("ui/layout/ability_cp_hud.json"),
-                listOf("cp")
-            ) { hudFallback("cp", 240f, 27f) }
+                listOf("cp"),
+                { hudFallback("cp", 240f, 27f) },
+                bindings
+            )
             cpMount = SerializedUiLayout.require(cpLayout, "cp") as FrameLayoutWidget
             root.addChild("cp_layout", cpLayout)
 
@@ -625,10 +634,12 @@ class AbilityInfoHud private constructor() {
 
             skillWheel.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
-            skillWheel.setVisibleItemCount(7)
-                .setCyclic(true)
-                .setCurtain(true)
-                .setAtmospheric(true)
+            skillWheel.apply {
+                visibleItemCount = 7
+                isCyclic = true
+                isCurtain = true
+                isAtmospheric = true
+            }
             skillWheelMount.addChild("runtime_content", skillWheel)
 
             return root
@@ -644,6 +655,12 @@ class AbilityInfoHud private constructor() {
             skillWheelMount.translationX = wheelRect.x()
             skillWheelMount.translationY = wheelRect.y()
             skillWheelMount.scale = HudLayout.Region.SKILL_WHEEL.scale()
+        }
+
+        private fun updateCpText() {
+            val text =
+                "${AbilitySystemClient.getAvailableCP().roundToInt()} / ${AbilitySystemClient.getMaxCP().roundToInt()}"
+            if (cpTextState.value != text) cpTextState.value = text
         }
 
         private fun hudFallback(name: String, width: Float, height: Float): FrameLayoutWidget {

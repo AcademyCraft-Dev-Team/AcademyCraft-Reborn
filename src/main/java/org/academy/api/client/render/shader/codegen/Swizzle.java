@@ -12,7 +12,9 @@ public final class Swizzle {
     private Swizzle() {
     }
 
-    /** 按分量数返回 swizzle 后缀。 */
+    /**
+     * 按分量数返回 swizzle 后缀。
+     */
     public static String of(int components) {
         return switch (components) {
             case 1 -> X;

@@ -1,26 +1,14 @@
 package org.academy.api.client.render.graph.compile;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.academy.api.client.render.graph.model.Edge;
-import org.academy.api.client.render.graph.model.Graph;
-import org.academy.api.client.render.graph.model.GraphNode;
-import org.academy.api.client.render.graph.model.GraphParameter;
-import org.academy.api.client.render.graph.model.Port;
-import org.academy.api.client.render.graph.model.PortDirection;
+import org.academy.api.client.render.graph.model.*;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.validate.DefaultGraphValidator;
 import org.academy.api.client.render.graph.validate.GraphIssue;
 import org.academy.api.client.render.graph.validate.GraphValidator;
 import org.jspecify.annotations.Nullable;
+
+import java.util.*;
 
 /**
  * 默认图编译器（契约实现）。校验 → 死代码消除 → 拓扑排序 → 常量折叠（可选）。
@@ -65,7 +53,9 @@ public final class DefaultGraphCompiler implements GraphCompiler {
         return new CompiledGraph(order, parameterIds, folded);
     }
 
-    /** 从输出节点反向可达的节点集合（死代码消除）。 */
+    /**
+     * 从输出节点反向可达的节点集合（死代码消除）。
+     */
     private static Set<String> reachableNodes(Graph graph) {
         Map<String, List<String>> reverse = new HashMap<>();
         for (var edge : graph.edges()) {
@@ -142,7 +132,7 @@ public final class DefaultGraphCompiler implements GraphCompiler {
             }
 
             Map<String, Value> inputs = new HashMap<>();
-            boolean allConst = true;
+            var allConst = true;
             for (var port : node.ports()) {
                 if (port.direction() != PortDirection.INPUT) continue;
                 var edge = inputEdges.get(node.id() + ':' + port.id());

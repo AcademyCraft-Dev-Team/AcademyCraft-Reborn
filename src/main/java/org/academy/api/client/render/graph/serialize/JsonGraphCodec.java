@@ -1,21 +1,9 @@
 package org.academy.api.client.render.graph.serialize;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import org.academy.api.client.render.graph.model.Edge;
-import org.academy.api.client.render.graph.model.Graph;
-import org.academy.api.client.render.graph.model.GraphNode;
-import org.academy.api.client.render.graph.model.GraphParameter;
-import org.academy.api.client.render.graph.model.Port;
+import org.academy.api.client.render.graph.model.*;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
-import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.Value;
@@ -23,6 +11,8 @@ import org.academy.api.client.render.graph.type.ValueType;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+
+import java.util.*;
 
 /**
  * 基于 Gson 的图编解码器（契约实现）。
@@ -145,7 +135,7 @@ public final class JsonGraphCodec implements GraphCodec {
             return List.of();
         }
         var ports = new ArrayList<Port>(type.ports().size());
-        for (PortSpec spec : type.ports()) {
+        for (var spec : type.ports()) {
             ports.add(new Port(spec.id(), spec.name(), spec.direction(), spec.type(), spec.defaultValue()));
         }
         return ports;
@@ -178,12 +168,14 @@ public final class JsonGraphCodec implements GraphCodec {
         return new Edge.PortRef(o.get("nodeId").getAsString(), o.get("portId").getAsString());
     }
 
-    /** 共享值编码（供 VFX 容器图 codec 复用，M23）。 */
+    /**
+     * 共享值编码（供 VFX 容器图 codec 复用，M23）。
+     */
     public static JsonObject encodeValue(Value v) {
         var o = new JsonObject();
         o.addProperty("type", v.type().name());
         switch (v.type()) {
-            case FLOAT -> o.addProperty("value", v.asFloat());
+            case FLOAT, TIME -> o.addProperty("value", v.asFloat());
             case INT -> o.addProperty("value", v.asInt());
             case BOOL -> o.addProperty("value", v.asBool());
             case VEC2 -> {
@@ -212,7 +204,6 @@ public final class JsonGraphCodec implements GraphCodec {
                 o.addProperty("a", x.w);
             }
             case SAMPLER -> o.addProperty("path", v.asSampler());
-            case TIME -> o.addProperty("value", v.asFloat());
             case CURVE -> o.add("curve", encodeCurve(v.asCurve()));
             case GRADIENT -> o.add("gradient", encodeGradient(v.asGradient()));
             case MESH -> o.addProperty("path", v.asMesh());
@@ -221,11 +212,13 @@ public final class JsonGraphCodec implements GraphCodec {
         return o;
     }
 
-    /** 共享值解码（供 VFX 容器图 codec 复用，M23）。 */
+    /**
+     * 共享值解码（供 VFX 容器图 codec 复用，M23）。
+     */
     public static Value decodeValue(JsonObject o) {
         var type = ValueType.valueOf(o.get("type").getAsString());
         return switch (type) {
-            case FLOAT -> Value.of(o.get("value").getAsFloat());
+            case FLOAT, TIME -> Value.of(o.get("value").getAsFloat());
             case INT -> Value.of(o.get("value").getAsInt());
             case BOOL -> Value.of(o.get("value").getAsBoolean());
             case VEC2 -> Value.of(new Vector2f(o.get("x").getAsFloat(), o.get("y").getAsFloat()));
@@ -238,7 +231,6 @@ public final class JsonGraphCodec implements GraphCodec {
                     o.get("r").getAsFloat(), o.get("g").getAsFloat(),
                     o.get("b").getAsFloat(), o.get("a").getAsFloat());
             case SAMPLER -> Value.sampler(o.get("path").getAsString());
-            case TIME -> Value.of(o.get("value").getAsFloat());
             case CURVE -> Value.curve(decodeCurve(o.getAsJsonArray("curve")));
             case GRADIENT -> Value.gradient(decodeGradient(o.getAsJsonArray("gradient")));
             case MESH -> Value.mesh(o.get("path").getAsString());
@@ -262,7 +254,7 @@ public final class JsonGraphCodec implements GraphCodec {
 
     private static Curve decodeCurve(JsonArray arr) {
         var kfs = new ArrayList<Curve.Keyframe>();
-        for (JsonElement el : arr) {
+        for (var el : arr) {
             var o = el.getAsJsonObject();
             var interpolation = o.has("i") ? Curve.Interpolation.valueOf(o.get("i").getAsString()) : Curve.Interpolation.LINEAR;
             kfs.add(new Curve.Keyframe(
@@ -290,7 +282,7 @@ public final class JsonGraphCodec implements GraphCodec {
 
     private static Gradient decodeGradient(JsonArray arr) {
         var stops = new ArrayList<Gradient.ColorStop>();
-        for (JsonElement el : arr) {
+        for (var el : arr) {
             var o = el.getAsJsonObject();
             stops.add(new Gradient.ColorStop(
                     o.get("p").getAsFloat(), o.get("r").getAsFloat(), o.get("g").getAsFloat(),

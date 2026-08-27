@@ -16,7 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static org.academy.AcademyCraft.academy;
 
-/** Makes vanilla's hard-coded thrown-trident renderer item-aware. */
+/**
+ * Makes vanilla's hard-coded thrown-trident renderer item-aware.
+ */
 @Mixin(ThrownTridentRenderer.class)
 public abstract class MixinThrownTridentRenderer {
     private static final ContextKey<Boolean> DARKMATTER_TRIDENT =

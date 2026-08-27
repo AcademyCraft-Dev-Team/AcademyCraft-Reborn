@@ -1,6 +1,8 @@
 package org.academy.internal.server.ability;
 
-/** Pure input normalization for P.R.O.P.S activity rewards. */
+/**
+ * Pure input normalization for P.R.O.P.S activity rewards.
+ */
 final class PropsAcquisition {
     private static final double MAX_MELEE_DAMAGE_PER_HIT = 10.0;
 

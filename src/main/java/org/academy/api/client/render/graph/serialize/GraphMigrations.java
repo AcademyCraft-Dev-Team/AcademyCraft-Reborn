@@ -1,6 +1,7 @@
 package org.academy.api.client.render.graph.serialize;
 
 import com.google.gson.JsonObject;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -18,7 +19,7 @@ public final class GraphMigrations {
      */
     public static JsonObject apply(JsonObject json, List<GraphMigration> migrations) {
         var current = json;
-        int version = json.has(GraphSchemaVersion.VERSION_FIELD)
+        var version = json.has(GraphSchemaVersion.VERSION_FIELD)
                 ? json.get(GraphSchemaVersion.VERSION_FIELD).getAsInt()
                 : 0;
 

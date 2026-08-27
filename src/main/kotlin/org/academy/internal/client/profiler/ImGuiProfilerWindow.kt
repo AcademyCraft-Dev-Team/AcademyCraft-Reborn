@@ -156,11 +156,11 @@ object ImGuiProfilerWindow {
         }
         ImGui.text(
             "Total samples: %d   Duration: %.1f s   Paused: %s".format(
-                sampler.totalSamples, sampler.durationSeconds, snapshot.samplingPaused
+                sampler.totalSamples(), sampler.durationSeconds(), snapshot.samplingPaused
             )
         )
 
-        if (sampler.totalSamples > 0 && ImPlot.beginPlot("Sampler Pie", 0f, 200f)) {
+        if (sampler.totalSamples() > 0 && ImPlot.beginPlot("Sampler Pie", 0f, 200f)) {
             val top = topSampledMethods(sampler, 10)
             if (top.isNotEmpty()) {
                 ImPlot.setupAxes("", "")
@@ -174,10 +174,10 @@ object ImGuiProfilerWindow {
 
         ImGui.separator()
         if (ImGui.beginChild("sampler_calltree", 0f, 0f)) {
-            for (view in sampler.threads.values) {
-                if (ImGui.collapsingHeader("%s (%d samples)".format(view.name, view.samples))) {
+            for (view in sampler.threads().values) {
+                if (ImGui.collapsingHeader("%s (%d samples)".format(view.name(), view.samples()))) {
                     ImGui.indent()
-                    renderCallNode(view.root)
+                    renderCallNode(view.root())
                     ImGui.unindent()
                 }
             }
@@ -187,10 +187,10 @@ object ImGuiProfilerWindow {
 
     private fun topSampledMethods(sampler: SamplerSnapshot, n: Int): List<Pair<String, Double>> {
         val map = HashMap<String, Long>()
-        for (view in sampler.threads.values) {
-            collectSelf(view.root, map)
+        for (view in sampler.threads().values) {
+            collectSelf(view.root(), map)
         }
-        val total = sampler.totalSamples
+        val total = sampler.totalSamples()
         return map.entries
             .sortedByDescending { it.value }
             .take(n)
@@ -198,20 +198,20 @@ object ImGuiProfilerWindow {
     }
 
     private fun collectSelf(node: SampledNode, map: MutableMap<String, Long>) {
-        if (node.label != "<root>") {
-            map.merge(node.label, node.selfSamples, Long::plus)
+        if (node.label() != "<root>") {
+            map.merge(node.label(), node.selfSamples(), Long::plus)
         }
-        for (child in node.children) {
+        for (child in node.children()) {
             collectSelf(child, map)
         }
     }
 
     private fun renderCallNode(node: SampledNode) {
-        val label = "%s  [%.1f%% self / %.1f%% total]".format(node.label, node.selfPercent, node.samplesPercent)
-        if (node.children.isEmpty()) {
+        val label = "%s  [%.1f%% self / %.1f%% total]".format(node.label(), node.selfPercent, node.samplesPercent)
+        if (node.children().isEmpty()) {
             ImGui.text(label)
         } else if (ImGui.treeNodeEx(label, ImGuiTreeNodeFlags.SpanAvailWidth)) {
-            for (child in node.children) {
+            for (child in node.children()) {
                 renderCallNode(child)
             }
             ImGui.treePop()
@@ -260,7 +260,7 @@ object ImGuiProfilerWindow {
             ImPlot.setupAxes("", "")
             ImPlot.setupAxesLimits(-1.5, 1.5, -1.5, 1.5)
             val top = children.take(10)
-            val labels = top.map { it.name }.toTypedArray()
+            val labels = top.map { it.name() }.toTypedArray()
             val values = top.map { it.totalMs.toFloat() }.toFloatArray()
             ImPlot.plotPieChart(labels, values, 0.0, 0.0, 1.0)
             ImPlot.endPlot()
@@ -278,14 +278,14 @@ object ImGuiProfilerWindow {
             for (child in children) {
                 ImGui.tableNextRow()
                 ImGui.tableNextColumn()
-                if (ImGui.selectable(child.name + "##" + child.path)) {
+                if (ImGui.selectable(child.name() + "##" + child.path())) {
                     // single click selects
                 }
                 if (ImGui.isItemHovered() && ImGui.isMouseDoubleClicked(0)) {
-                    zonePath = child.path
+                    zonePath = child.path()
                 }
                 ImGui.tableNextColumn()
-                ImGui.text(child.count.toString())
+                ImGui.text(child.count().toString())
                 ImGui.tableNextColumn()
                 ImGui.text("%.2f".format(child.totalMs))
                 ImGui.tableNextColumn()
@@ -298,7 +298,7 @@ object ImGuiProfilerWindow {
 
         ImGui.text(
             "Thread total: %.2f ms   Path total: %.2f ms".format(
-                zones.rootTotalNs / 1e6, zones.sliceAt(zonePath).totalNs / 1e6
+                zones.rootTotalNs / 1e6, zones.sliceAt(zonePath).totalNs() / 1e6
             )
         )
     }
@@ -315,24 +315,24 @@ object ImGuiProfilerWindow {
 
     private fun drawFrameTab() {
         val frame = AcademyProfiler.snapshot().frame
-        ImGui.text("FPS: %.1f".format(frame.fps))
+        ImGui.text("FPS: %.1f".format(frame.fps()))
         ImGui.text(
             "Frame avg %.2f ms | min %.2f | max %.2f | p99 %.2f | last %.2f".format(
-                frame.avgMs, frame.minMs, frame.maxMs, frame.p99Ms, frame.lastFrameMs
+                frame.avgMs(), frame.minMs(), frame.maxMs(), frame.p99Ms(), frame.lastFrameMs()
             )
         )
-        ImGui.text("Samples: %d / 720".format(frame.size))
+        ImGui.text("Samples: %d / 720".format(frame.size()))
 
-        if (frame.size > 0 && ImPlot.beginPlot("Frame Time (ms)", 0f, 180f)) {
+        if (frame.size() > 0 && ImPlot.beginPlot("Frame Time (ms)", 0f, 180f)) {
             ImPlot.setupAxes("frame", "ms")
-            ImPlot.setupAxesLimits(0.0, frame.size.toDouble(), 0.0, 33.0)
-            ImPlot.plotLine("ms", frame.frameTimesMs)
+            ImPlot.setupAxesLimits(0.0, frame.size().toDouble(), 0.0, 33.0)
+            ImPlot.plotLine("ms", frame.frameTimesMs())
             ImPlot.endPlot()
         }
 
-        if (frame.size > 0 && ImPlot.beginPlot("Heap (MB)", 0f, 120f)) {
+        if (frame.size() > 0 && ImPlot.beginPlot("Heap (MB)", 0f, 120f)) {
             ImPlot.setupAxes("frame", "MB")
-            ImPlot.plotLine("heap", frame.heapUsedMb)
+            ImPlot.plotLine("heap", frame.heapUsedMb())
             ImPlot.endPlot()
         }
     }

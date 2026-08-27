@@ -1,10 +1,10 @@
 package org.academy.internal.common.ability.teleport.program;
 
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,20 +13,21 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
@@ -35,16 +36,17 @@ import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
-import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
-
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
-/** Authoritative Minecraft-server adapter for Teleport programs. */
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+/**
+ * Authoritative Minecraft-server adapter for Teleport programs.
+ */
 public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime {
     public static final double MAX_QUERY_RANGE = 128.0;
     public static final int MAX_QUERY_RESULTS = 128;
@@ -627,10 +629,10 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     }
 
     private boolean teleport(Entity entity, ServerLevel level, Vec3 destination) {
-        return Boolean.TRUE.equals(EntityMotionGuard.callWithMotionSource(
+        return EntityMotionGuard.callWithMotionSource(
                 player,
                 () -> TeleportSync.teleportInstantly(entity, level, destination)
-        ));
+        );
     }
 
     private static float requireCostMultiplier(float multiplier) {
@@ -654,7 +656,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             float yaw,
             float pitch
     ) {
-        if (!(entity.level() instanceof net.minecraft.server.level.ServerLevel)
+        if (!(entity.level() instanceof ServerLevel)
                 || entity.isRemoved()) {
             return;
         }
@@ -678,9 +680,9 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
 
     private ProgramWorldPosition destinationPosition(Object value) {
         if (value instanceof ProgramWorldPosition world) return world;
-        if (value instanceof ProgramBlockPosition block) {
+        if (value instanceof ProgramBlockPosition(var dimension, var x, var y, var z)) {
             return new ProgramWorldPosition(
-                    block.dimension(), block.x() + 0.5, block.y(), block.z() + 0.5);
+                    dimension, x + 0.5, y, z + 0.5);
         }
         throw new IllegalArgumentException("Teleport destination must be a block or world position");
     }
@@ -703,11 +705,11 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     }
 
     private BlockPos requireLocalBlock(Object value) {
-        if (!(value instanceof ProgramBlockPosition block)
-                || !block.dimension().equals(targets.level().dimension().identifier())) {
+        if (!(value instanceof ProgramBlockPosition(var dimension, var x, var y, var z))
+                || !dimension.equals(targets.level().dimension().identifier())) {
             throw new IllegalArgumentException("Teleport block is in another dimension");
         }
-        var position = new BlockPos(block.x(), block.y(), block.z());
+        var position = new BlockPos(x, y, z);
         if (!targets.level().hasChunkAt(position)
                 || position.getY() < targets.level().getMinY()
                 || position.getY() >= targets.level().getMaxY()
@@ -721,7 +723,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     private void requireEditableBlock(BlockPos position) {
         if (!targets.level().mayInteract(player, position)
                 || player.blockActionRestricted(
-                        targets.level(), position, player.gameMode.getGameModeForPlayer())) {
+                targets.level(), position, player.gameMode.getGameModeForPlayer())) {
             throw new IllegalArgumentException("Teleport block is protected");
         }
     }

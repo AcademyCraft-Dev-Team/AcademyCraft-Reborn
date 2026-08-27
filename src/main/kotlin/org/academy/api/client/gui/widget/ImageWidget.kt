@@ -13,7 +13,7 @@ import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.render.RenderContext
 
 open class ImageWidget : AbstractWidget {
-    protected var textureIdentifier: Identifier? = null
+    var textureIdentifier: Identifier? = null
 
     protected var textureView: GpuTextureView? = null
 
@@ -38,11 +38,8 @@ open class ImageWidget : AbstractWidget {
     var v3: Float = 0f
 
     var brightness: Float = 1.0f
-        protected set
     var green: Float = 1.0f
-        protected set
     var blue: Float = 1.0f
-        protected set
 
     constructor()
 

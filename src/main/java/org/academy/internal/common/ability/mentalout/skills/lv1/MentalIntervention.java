@@ -23,11 +23,11 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
+import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -38,6 +38,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class MentalIntervention extends Skill {
     public MentalIntervention() {
@@ -143,7 +144,7 @@ public final class MentalIntervention extends Skill {
             if (result == MentaloutControlContext.ToggleResult.ADDED
                     && milestone >= 3 && selected != null && !(selected instanceof ServerPlayer)) {
                 var roster = MentaloutControlContext.subjects(player).stream()
-                        .map(LivingEntity::getUUID).collect(java.util.stream.Collectors.toSet());
+                        .map(LivingEntity::getUUID).collect(Collectors.toSet());
                 var added = 0;
                 for (var nearby : player.level().getEntitiesOfClass(LivingEntity.class,
                         selected.getBoundingBox().inflate(4.0), candidate ->

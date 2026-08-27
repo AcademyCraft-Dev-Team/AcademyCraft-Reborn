@@ -1,9 +1,11 @@
 package org.academy.api.client.render.vfxgraph.shape;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EmitterShapeM13Test {
 
@@ -11,10 +13,10 @@ class EmitterShapeM13Test {
     void cylinderSamplesWithinBounds() {
         var shape = new CylinderShape(0f, 0f, 0f, 2f, 5f);
         var random = new Random(1);
-        float[] out = new float[3];
-        for (int k = 0; k < 100; k++) {
+        var out = new float[3];
+        for (var k = 0; k < 100; k++) {
             shape.sample(random, out);
-            float r = (float) Math.sqrt(out[0] * out[0] + out[2] * out[2]);
+            var r = (float) Math.sqrt(out[0] * out[0] + out[2] * out[2]);
             assertTrue(r >= 1.99f && r <= 2.01f, "cylinder surface radius");
             assertTrue(out[1] >= 0f && out[1] <= 5f, "cylinder height");
         }
@@ -24,10 +26,10 @@ class EmitterShapeM13Test {
     void torusSamplesWithinBounds() {
         var shape = new TorusShape(0f, 0f, 0f, 3f, 1f);
         var random = new Random(2);
-        float[] out = new float[3];
-        for (int k = 0; k < 100; k++) {
+        var out = new float[3];
+        for (var k = 0; k < 100; k++) {
             shape.sample(random, out);
-            float r = (float) Math.sqrt(out[0] * out[0] + out[2] * out[2]);
+            var r = (float) Math.sqrt(out[0] * out[0] + out[2] * out[2]);
             assertTrue(r >= 2f - 1e-4f && r <= 4f + 1e-4f, "torus radius range");
             assertTrue(out[1] >= -1f - 1e-4f && out[1] <= 1f + 1e-4f, "torus height");
         }
@@ -37,12 +39,12 @@ class EmitterShapeM13Test {
     void circleEdgeSamplesOnRing() {
         var shape = new CircleEdgeShape(0f, 1f, 0f, 2f);
         var random = new Random(3);
-        float[] out = new float[3];
-        for (int k = 0; k < 100; k++) {
+        var out = new float[3];
+        for (var k = 0; k < 100; k++) {
             shape.sample(random, out);
-            float r = (float) Math.sqrt(out[0] * out[0] + out[2] * out[2]);
+            var r = (float) Math.sqrt(out[0] * out[0] + out[2] * out[2]);
             assertTrue(Math.abs(r - 2f) < 1e-4f, "circle edge radius");
-            assertTrue(out[1] == 1f, "circle edge y");
+            assertEquals(1f, out[1], "circle edge y");
         }
     }
 }

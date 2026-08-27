@@ -1,9 +1,9 @@
 package org.academy.api.client.render.vfxgraph.shape;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import org.junit.jupiter.api.Test;
 
 class ObjMeshParserTest {
     @Test
@@ -14,7 +14,7 @@ class ObjMeshParserTest {
                 v 0 1 0
                 f 1 2 3
                 """);
-        assertArrayEquals(new float[] { 0, 0, 0, 1, 0, 0, 0, 1, 0 }, triangles, 1e-6f);
+        assertArrayEquals(new float[]{0, 0, 0, 1, 0, 0, 0, 1, 0}, triangles, 1e-6f);
     }
 
     @Test
@@ -26,7 +26,7 @@ class ObjMeshParserTest {
                 v 0 1 0
                 f 1 2 3 4
                 """);
-        assertArrayEquals(new float[] {
+        assertArrayEquals(new float[]{
                 0, 0, 0, 1, 0, 0, 1, 1, 0,
                 0, 0, 0, 1, 1, 0, 0, 1, 0
         }, triangles, 1e-6f);
@@ -40,7 +40,7 @@ class ObjMeshParserTest {
                 v 0 1 0
                 f 1/1 2/1 3/1
                 """);
-        assertArrayEquals(new float[] { 0, 0, 0, 1, 0, 0, 0, 1, 0 }, triangles, 1e-6f);
+        assertArrayEquals(new float[]{0, 0, 0, 1, 0, 0, 0, 1, 0}, triangles, 1e-6f);
     }
 
     @Test
@@ -52,7 +52,7 @@ class ObjMeshParserTest {
                 v 0 1 0
                 f -3 -2 -1
                 """);
-        assertArrayEquals(new float[] { 0, 0, 0, 1, 0, 0, 0, 1, 0 }, triangles, 1e-6f);
+        assertArrayEquals(new float[]{0, 0, 0, 1, 0, 0, 0, 1, 0}, triangles, 1e-6f);
     }
 
     @Test

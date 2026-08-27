@@ -1,6 +1,6 @@
 package org.academy.desktop.grapheditor.command
 
-import java.util.ArrayDeque
+import java.util.*
 
 /**
  * 撤销/重做管理器（命令模式）。execute 执行并压入撤销栈；undo/redo 回滚/重放；

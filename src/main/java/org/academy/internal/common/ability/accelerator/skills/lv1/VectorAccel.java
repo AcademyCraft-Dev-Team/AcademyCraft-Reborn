@@ -42,17 +42,17 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -513,7 +513,7 @@ public final class VectorAccel extends Skill {
             target.hurtServer(
                     player.level(),
                     SkillDamageSource.of(player, skill,
-                            org.academy.internal.common.world.damagesource.DamageTypes.VEC),
+                            DamageTypes.VEC),
                     damage
             );
             var direction = Server.normalizeDashDirection(player.getLookAngle());

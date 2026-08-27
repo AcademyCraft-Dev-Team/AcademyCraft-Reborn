@@ -6,11 +6,11 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
+import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
 
 import static org.academy.AcademyCraft.MODID;
-import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
 
 public final class ItemDataComponents {
     public static final DeferredRegister.DataComponents DATA_COMPONENTS =

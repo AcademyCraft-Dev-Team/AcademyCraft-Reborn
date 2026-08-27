@@ -18,13 +18,13 @@ class ProfilerTest {
             val snap = AcademyProfiler.snapshot()
             assertTrue(snap.zones.isNotEmpty(), "expected at least one zone session")
             val zs = snap.zones.values.first()
-            val outer = zs.childrenOf(ZoneProfiler.ROOT).firstOrNull { it.name == "outer" }
+            val outer = zs.childrenOf(ZoneProfiler.ROOT).firstOrNull { it.name() == "outer" }
             assertNotNull(outer, "outer zone missing")
-            assertEquals(10, outer!!.count)
-            assertTrue(outer.totalNs > 0)
-            val children = zs.childrenOf(outer.path)
-            assertTrue(children.any { it.name == "inner.a" })
-            assertTrue(children.any { it.name == "inner.b" })
+            assertEquals(10, outer!!.count())
+            assertTrue(outer.totalNs() > 0)
+            val children = zs.childrenOf(outer.path())
+            assertTrue(children.any { it.name() == "inner.a" })
+            assertTrue(children.any { it.name() == "inner.b" })
             val totalPercent = children.sumOf { zs.parentPercent(it) }
             assertTrue(totalPercent <= 101.0, "child percentages should sum to ~100: $totalPercent")
         } finally {
@@ -45,10 +45,10 @@ class ProfilerTest {
         val snap = AcademyProfiler.snapshot()
         val sampler = snap.sampler
         assertNotNull(sampler, "sampler snapshot should exist after start/stop")
-        assertTrue(sampler!!.totalSamples > 0, "expected samples to be captured")
-        val view = sampler.threads[target.id]
+        assertTrue(sampler.totalSamples() > 0, "expected samples to be captured")
+        val view = sampler.threads()[target.id]
         assertNotNull(view)
-        assertTrue(view!!.root.samples > 0)
+        assertTrue(view!!.root().samples() > 0)
     }
 
     @Test
@@ -56,9 +56,9 @@ class ProfilerTest {
         FrameStats.recordFrame(16_000_000L, 100_000_000L)
         FrameStats.recordFrame(17_000_000L, 110_000_000L)
         val snap = FrameStats.snapshot()
-        assertEquals(2, snap.size)
-        assertTrue(snap.avgMs in 16.0..17.5, "avg ${snap.avgMs}")
-        assertTrue(snap.fps > 0)
+        assertEquals(2, snap.size())
+        assertTrue(snap.avgMs() in 16.0..17.5, "avg ${snap.avgMs()}")
+        assertTrue(snap.fps() > 0)
     }
 
     @Test

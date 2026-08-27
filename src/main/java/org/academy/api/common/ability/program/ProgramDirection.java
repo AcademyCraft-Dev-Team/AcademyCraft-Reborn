@@ -1,6 +1,8 @@
 package org.academy.api.common.ability.program;
 
-/** A normalized non-zero direction. Distance is always supplied separately. */
+/**
+ * A normalized non-zero direction. Distance is always supplied separately.
+ */
 public record ProgramDirection(double x, double y, double z) {
     private static final double MIN_LENGTH_SQUARED = 1.0E-12;
 

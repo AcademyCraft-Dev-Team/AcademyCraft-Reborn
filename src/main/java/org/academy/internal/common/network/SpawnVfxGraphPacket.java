@@ -1,9 +1,6 @@
 package org.academy.internal.common.network;
 
 import io.netty.buffer.ByteBuf;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.IntFunction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -15,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -25,6 +23,10 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.IntFunction;
 
 /**
  * 通用 VFX 图 spawn 包（M20，A4）：服务端指定图资产、世界坐标、局部 +Y 朝向、寿命与可选跟随实体，客户端经
@@ -113,7 +115,9 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
         return floatParams;
     }
 
-    /** 按距离过滤向附近玩家广播。 */
+    /**
+     * 按距离过滤向附近玩家广播。
+     */
     public static void broadcast(ServerLevel level, Identifier assetId, Vec3 position) {
         broadcast(level, assetId, position, new Vec3(0, 1, 0), -1, 1f, 3f, Map.of());
     }
@@ -179,8 +183,8 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
             if (minecraft.level == null) return;
             try {
                 var manager = VfxGraphManager.INSTANCE;
-                Entity follow = packet.followEntityId >= 0 ? minecraft.level.getEntity(packet.followEntityId) : null;
-                org.academy.api.client.render.vfxgraph.runtime.ActiveEffect effect;
+                var follow = packet.followEntityId >= 0 ? minecraft.level.getEntity(packet.followEntityId) : null;
+                ActiveEffect effect;
                 if (follow != null) {
                     effect = manager.spawnFollow(packet.assetId, follow);
                 } else {

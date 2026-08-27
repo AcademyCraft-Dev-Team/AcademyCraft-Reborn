@@ -3,7 +3,9 @@ package org.academy.internal.common.ability.accelerator.program;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 
-/** Stable identifiers for vector-manipulation program nodes. */
+/**
+ * Stable identifiers for vector-manipulation program nodes.
+ */
 public final class AcceleratorProgramNodeIds {
     public static final Identifier CASTER = id("target/caster");
     public static final Identifier LOOK_TARGET = id("target/look_target");

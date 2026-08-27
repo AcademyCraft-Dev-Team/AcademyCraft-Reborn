@@ -24,7 +24,7 @@ public final class ImagPhaseUnitItem extends Item {
 
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
+        var stack = player.getItemInHand(hand);
         var hitResult = getPlayerPOVHitResult(level, player, ClipContext.Fluid.NONE);
         if (hitResult.getType() == HitResult.Type.MISS) {
             return InteractionResult.PASS;
@@ -52,7 +52,7 @@ public final class ImagPhaseUnitItem extends Item {
         level.gameEvent(player, GameEvent.FLUID_PLACE, pos);
         player.awardStat(Stats.ITEM_USED.get(this));
 
-        ItemStack result = player.hasInfiniteMaterials()
+        var result = player.hasInfiniteMaterials()
                 ? stack
                 : ItemUtils.createFilledResult(stack, player, new ItemStack(Items.EMPTY_UNIT.get()));
         return InteractionResult.SUCCESS.heldItemTransformedTo(result);

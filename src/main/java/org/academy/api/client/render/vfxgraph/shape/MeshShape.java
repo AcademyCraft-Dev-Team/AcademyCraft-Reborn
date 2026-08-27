@@ -29,21 +29,23 @@ public final class MeshShape implements EmitterShape {
             throw new IllegalArgumentException("triangles must be xyz*3 per triangle");
         }
         this.triangles = triangles.clone();
-        int triCount = triangles.length / FLOATS_PER_TRIANGLE;
+        var triCount = triangles.length / FLOATS_PER_TRIANGLE;
         this.cumulativeArea = new float[triCount];
-        float total = 0f;
-        for (int i = 0; i < triCount; i++) {
+        var total = 0f;
+        for (var i = 0; i < triCount; i++) {
             total += triangleArea(i);
             cumulativeArea[i] = total;
         }
         this.totalArea = total;
     }
 
-    /** 单位立方体（0..1 范围，6 面 × 2 三角形），与 {@code vfx.output_mesh} 渲染一致。 */
+    /**
+     * 单位立方体（0..1 范围，6 面 × 2 三角形），与 {@code vfx.output_mesh} 渲染一致。
+     */
     public static MeshShape unitCube(float ox, float oy, float oz, float scale) {
-        float[] cube = new float[6 * 2 * FLOATS_PER_TRIANGLE];
-        int t = 0;
-        for (int face = 0; face < 6; face++) {
+        var cube = new float[6 * 2 * FLOATS_PER_TRIANGLE];
+        var t = 0;
+        for (var face = 0; face < 6; face++) {
             var quad = CUBE_FACES[face];
             // quad 顶点顺序：逆时针，拆成两个三角形 (0,1,2)/(0,2,3)
             t = pushTriangle(cube, t, quad[0], quad[1], quad[2]);
@@ -53,9 +55,15 @@ public final class MeshShape implements EmitterShape {
     }
 
     private static int pushTriangle(float[] out, int t, float[] a, float[] b, float[] c) {
-        out[t++] = a[0]; out[t++] = a[1]; out[t++] = a[2];
-        out[t++] = b[0]; out[t++] = b[1]; out[t++] = b[2];
-        out[t++] = c[0]; out[t++] = c[1]; out[t++] = c[2];
+        out[t++] = a[0];
+        out[t++] = a[1];
+        out[t++] = a[2];
+        out[t++] = b[0];
+        out[t++] = b[1];
+        out[t++] = b[2];
+        out[t++] = c[0];
+        out[t++] = c[1];
+        out[t++] = c[2];
         return t;
     }
 
@@ -67,26 +75,26 @@ public final class MeshShape implements EmitterShape {
             out[2] = oz;
             return;
         }
-        int tri = pickTriangle(random.nextFloat() * totalArea);
-        int base = tri * FLOATS_PER_TRIANGLE;
+        var tri = pickTriangle(random.nextFloat() * totalArea);
+        var base = tri * FLOATS_PER_TRIANGLE;
         float ax = triangles[base], ay = triangles[base + 1], az = triangles[base + 2];
         float bx = triangles[base + 3], by = triangles[base + 4], bz = triangles[base + 5];
         float cx = triangles[base + 6], cy = triangles[base + 7], cz = triangles[base + 8];
-        float u = (float) Math.sqrt(random.nextFloat());
-        float v = random.nextFloat();
-        float px = (1f - u) * ax + u * ((1f - v) * bx + v * cx);
-        float py = (1f - u) * ay + u * ((1f - v) * by + v * cy);
-        float pz = (1f - u) * az + u * ((1f - v) * bz + v * cz);
+        var u = (float) Math.sqrt(random.nextFloat());
+        var v = random.nextFloat();
+        var px = (1f - u) * ax + u * ((1f - v) * bx + v * cx);
+        var py = (1f - u) * ay + u * ((1f - v) * by + v * cy);
+        var pz = (1f - u) * az + u * ((1f - v) * bz + v * cz);
         out[0] = ox + px * scale;
         out[1] = oy + py * scale;
         out[2] = oz + pz * scale;
     }
 
     private int pickTriangle(float target) {
-        int lo = 0;
-        int hi = cumulativeArea.length - 1;
+        var lo = 0;
+        var hi = cumulativeArea.length - 1;
         while (lo < hi) {
-            int mid = (lo + hi) >>> 1;
+            var mid = (lo + hi) >>> 1;
             if (cumulativeArea[mid] < target) {
                 lo = mid + 1;
             } else {
@@ -97,23 +105,23 @@ public final class MeshShape implements EmitterShape {
     }
 
     private float triangleArea(int index) {
-        int base = index * FLOATS_PER_TRIANGLE;
+        var base = index * FLOATS_PER_TRIANGLE;
         float ax = triangles[base], ay = triangles[base + 1], az = triangles[base + 2];
         float abx = triangles[base + 3] - ax, aby = triangles[base + 4] - ay, abz = triangles[base + 5] - az;
         float acx = triangles[base + 6] - ax, acy = triangles[base + 7] - ay, acz = triangles[base + 8] - az;
-        float nx = aby * acz - abz * acy;
-        float ny = abz * acx - abx * acz;
-        float nz = abx * acy - aby * acx;
+        var nx = aby * acz - abz * acy;
+        var ny = abz * acx - abx * acz;
+        var nz = abx * acy - aby * acx;
         return 0.5f * (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
     }
 
     // 单位立方体 6 面（每面 4 顶点，逆时针）
     private static final float[][][] CUBE_FACES = {
-            { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 } }, // -Z
-            { { 0, 0, 1 }, { 0, 1, 1 }, { 1, 1, 1 }, { 1, 0, 1 } }, // +Z
-            { { 0, 0, 0 }, { 0, 1, 0 }, { 0, 1, 1 }, { 0, 0, 1 } }, // -X
-            { { 1, 0, 0 }, { 1, 0, 1 }, { 1, 1, 1 }, { 1, 1, 0 } }, // +X
-            { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 0, 1 }, { 0, 0, 1 } }, // -Y
-            { { 0, 1, 0 }, { 0, 1, 1 }, { 1, 1, 1 }, { 1, 1, 0 } }, // +Y
+            {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}}, // -Z
+            {{0, 0, 1}, {0, 1, 1}, {1, 1, 1}, {1, 0, 1}}, // +Z
+            {{0, 0, 0}, {0, 1, 0}, {0, 1, 1}, {0, 0, 1}}, // -X
+            {{1, 0, 0}, {1, 0, 1}, {1, 1, 1}, {1, 1, 0}}, // +X
+            {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}}, // -Y
+            {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}, {1, 1, 0}}, // +Y
     };
 }

@@ -9,8 +9,8 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -39,7 +39,9 @@ import java.util.function.DoubleBinaryOperator;
 import java.util.function.IntBinaryOperator;
 import java.util.function.Predicate;
 
-/** Runtime implementations of the common node algebra. */
+/**
+ * Runtime implementations of the common node algebra.
+ */
 public final class CommonProgramExecutors implements ProgramExecutorLookup {
     public static final CommonProgramExecutors INSTANCE = new CommonProgramExecutors();
 
@@ -154,7 +156,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             Map<Identifier, ProgramNodeExecutor<?>> result
     ) {
         put(result, CommonProgramNodeIds.BRANCH, (_, _, inputs) -> ProgramNodeStep.next(
-                booleanValue(inputs, "condition") ? "true" : "false"
+                Boolean.toString(booleanValue(inputs, "condition"))
         ));
         put(result, CommonProgramNodeIds.STOP, (_, _, _) -> ProgramNodeStep.stop());
         put(result, CommonProgramNodeIds.VARIABLE_GET,
@@ -384,14 +386,14 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         )).orElseGet(CommonProgramExecutors::emptyData));
         put(result, CommonProgramNodeIds.ENTITY_LOOK_DIRECTION, (context, _, inputs) ->
                 resolver(context).lookDirectionOf(raw(
-                                inputs,
-                                "entity",
-                                ProgramValueTypes.ENTITY_REFERENCE
-                        )).map(direction -> data(
-                                "direction",
-                                ProgramValueTypes.DIRECTION,
-                                direction
-                        )).orElseGet(CommonProgramExecutors::emptyData));
+                        inputs,
+                        "entity",
+                        ProgramValueTypes.ENTITY_REFERENCE
+                )).map(direction -> data(
+                        "direction",
+                        ProgramValueTypes.DIRECTION,
+                        direction
+                )).orElseGet(CommonProgramExecutors::emptyData));
         put(result, CommonProgramNodeIds.ENTITIES_AROUND, (context, _, inputs) -> {
             var radius = nonNegative(floatValue(inputs, "radius"), "radius");
             var entities = resolver(context).entitiesAround(worldPosition(inputs, "center"), radius);
@@ -639,8 +641,8 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case WORLD_POSITION -> CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION;
                         case BLOCK_POSITION -> CommonProgramNodeCatalog.CollectionDomain.BLOCK_POSITION;
                     };
-                    var values = new java.util.ArrayList<>(collection(inputs, "values", domain));
-                    Comparator<Object> comparator = Comparator.comparingDouble(
+                    var values = new ArrayList<>(collection(inputs, "values", domain));
+                    var comparator = Comparator.comparingDouble(
                             value -> pointDistanceSquared(context, origin, value));
                     if (configuration.order().reversed()) comparator = comparator.reversed();
                     values.sort(comparator);
@@ -667,7 +669,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 || sizeX * sizeY > 32_768L || sizeX * sizeY * sizeZ > 32_768L) {
             throw new IllegalArgumentException("Block volume exceeds 32768 positions");
         }
-        var blocks = new java.util.ArrayList<ProgramBlockPosition>((int) (sizeX * sizeY * sizeZ));
+        var blocks = new ArrayList<ProgramBlockPosition>((int) (sizeX * sizeY * sizeZ));
         for (long x = minX; x <= maxX; x++) {
             for (long y = minY; y <= maxY; y++) {
                 for (long z = minZ; z <= maxZ; z++) {
@@ -858,7 +860,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 List.of(raw(inputs, "value", domain.elementType()))
         ));
         put(result, domain.id("union"), (_, _, inputs) -> {
-            var values = new LinkedHashSet<Object>();
+            var values = new LinkedHashSet<>();
             values.addAll(collection(inputs, "left", domain));
             values.addAll(collection(inputs, "right", domain));
             return data("values", domain.collectionType(), List.copyOf(values));
@@ -1173,7 +1175,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         if (!ProgramValueTypes.canConnect(source.type(), target)) {
             throw new IllegalArgumentException("Cannot store incompatible program value");
         }
-        Object raw = source.value();
+        var raw = source.value();
         if (source.type().equals(ProgramValueTypes.INTEGER) && target.equals(ProgramValueTypes.FLOAT)) {
             raw = ((Integer) raw).doubleValue();
         }

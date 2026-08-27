@@ -1,10 +1,11 @@
 package org.academy.api.client.render.vfxgraph.render;
 
-import java.util.Map;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.resources.R;
+
+import java.util.Map;
 
 /**
  * VFX 效果渲染规格（数据驱动，M21l）：描述粒子缓冲如何被渲染。
@@ -37,7 +38,9 @@ public record RenderSpec(
         ArcRender arc
 ) {
 
-    /** 缺省规格：中性软圆斑 quad、全部层（仅"未指定"时的中性兜底，非按类型枚举）。 */
+    /**
+     * 缺省规格：中性软圆斑 quad、全部层（仅"未指定"时的中性兜底，非按类型枚举）。
+     */
     public static final RenderSpec DEFAULT = new RenderSpec(
             Geometry.QUAD, Blend.TRANSLUCENT,
             R.shaders.core.vfxgraph_particle, R.shaders.core.vfxgraph_particle, null, "",
@@ -80,14 +83,18 @@ public record RenderSpec(
             float branchWidthScale,
             float branchBrightnessScale
     ) {
-        /** 缺省参数。 */
+        /**
+         * 缺省参数。
+         */
         public static final ArcRender DEFAULT = new ArcRender(
                 8, 2.2f, 0.02f, 0.6f, 0.5f, 10f, 0.2f, 0.35f, 0.12f, 0.25f, 0.3f,
                 0.5f, 0.27f, 1.0f, 12, 1.0f,
                 1, 2, 1.57f, 0.3f, 0.35f, 0.6f);
     }
 
-    /** 由输出节点构建：着色器/混合**仅**来自节点属性；几何由节点类型派生（结构性）；层由 {@code layer} 属性过滤。 */
+    /**
+     * 由输出节点构建：着色器/混合**仅**来自节点属性；几何由节点类型派生（结构性）；层由 {@code layer} 属性过滤。
+     */
     public static RenderSpec fromOutputNode(GraphNode node) {
         var geometry = switch (node.type()) {
             case "vfx.output_mesh" -> Geometry.MESH;
@@ -111,7 +118,9 @@ public record RenderSpec(
         return new RenderSpec(geometry, blend, vertex, fragment, texture, layer, arc);
     }
 
-    /** ARC 观感参数解析（数据驱动，M22-Rev2）。 */
+    /**
+     * ARC 观感参数解析（数据驱动，M22-Rev2）。
+     */
     private static ArcRender arcRender(GraphNode node) {
         var p = node.properties();
         return new ArcRender(
@@ -174,7 +183,9 @@ public record RenderSpec(
         return layer.isEmpty() || ParticleBuffer.layerByte(layer) == particleLayer;
     }
 
-    /** 是否 GLOW 规格（参与 bloom 输入，供 bloomPass 过滤）。 */
+    /**
+     * 是否 GLOW 规格（参与 bloom 输入，供 bloomPass 过滤）。
+     */
     public boolean feedsBloom() {
         return blend == Blend.GLOW;
     }

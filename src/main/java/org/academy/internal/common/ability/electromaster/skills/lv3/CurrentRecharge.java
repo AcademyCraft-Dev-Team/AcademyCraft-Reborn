@@ -30,11 +30,7 @@ import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
-import org.academy.api.common.ability.AbilityLevel;
-import org.academy.api.common.ability.DevCondition;
-import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.SkillProficiencyProfile;
-import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.common.ability.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -42,10 +38,10 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.util.EnergyChargeHelper;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -53,7 +49,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -190,7 +185,9 @@ public final class CurrentRecharge extends Skill {
             if (context != null) context.end();
         }
 
-        /** Starts the same charge-or-redstone behavior for exactly ten server ticks. */
+        /**
+         * Starts the same charge-or-redstone behavior for exactly ten server ticks.
+         */
         public static ServerContext startProgramCharge(
                 ServerPlayer player,
                 @Nullable LivingEntity entity,

@@ -4,7 +4,6 @@ import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 public class ZoneSession {
@@ -30,9 +29,9 @@ public class ZoneSession {
     }
 
     public void push(String zoneName) {
-        ZoneNode current = currentNode();
-        String path = childPath(current.path, zoneName);
-        ZoneNode node = nodes.computeIfAbsent(path, p -> new ZoneNode(p, zoneName));
+        var current = currentNode();
+        var path = childPath(current.path, zoneName);
+        var node = nodes.computeIfAbsent(path, p -> new ZoneNode(p, zoneName));
         pathStack.addLast(node);
         startTimes.addLast(System.nanoTime());
     }
@@ -45,8 +44,8 @@ public class ZoneSession {
             return;
         }
         long start = startTimes.removeLast();
-        ZoneNode node = pathStack.removeLast();
-        long elapsed = System.nanoTime() - start;
+        var node = pathStack.removeLast();
+        var elapsed = System.nanoTime() - start;
         node.totalNs.add(elapsed);
         node.count.increment();
         node.maxNs.accumulateAndGet(elapsed, Math::max);
@@ -62,7 +61,7 @@ public class ZoneSession {
     }
 
     private ZoneNode currentNode() {
-        ZoneNode last = pathStack.peekLast();
+        var last = pathStack.peekLast();
         return last != null ? last : nodes.get(ZoneProfiler.ROOT);
     }
 
@@ -82,15 +81,15 @@ public class ZoneSession {
     }
 
     public ZoneSnapshot snapshot() {
-        ZoneNode rootNode = nodes.get(ZoneProfiler.ROOT);
-        long rootTotal = rootNode != null ? rootNode.totalNs.sum() : 0L;
+        var rootNode = nodes.get(ZoneProfiler.ROOT);
+        var rootTotal = rootNode != null ? rootNode.totalNs.sum() : 0L;
         Map<String, ZoneSlice> slices = new LinkedHashMap<>();
-        for (Map.Entry<String, ZoneNode> entry : nodes.entrySet()) {
-            String path = entry.getKey();
-            ZoneNode node = entry.getValue();
-            long self = selfNs(node);
+        for (var entry : nodes.entrySet()) {
+            var path = entry.getKey();
+            var node = entry.getValue();
+            var self = selfNs(node);
             Map<String, Long> counters = new LinkedHashMap<>();
-            for (Map.Entry<String, LongAdder> counter : node.counters.entrySet()) {
+            for (var counter : node.counters.entrySet()) {
                 counters.put(counter.getKey(), counter.getValue().sum());
             }
             slices.put(path, new ZoneSlice(
@@ -109,10 +108,10 @@ public class ZoneSession {
     }
 
     private long selfNs(ZoneNode node) {
-        long childSum = 0L;
-        String prefix = node.path + ZoneProfiler.PATH_SEPARATOR;
-        for (Map.Entry<String, ZoneNode> entry : nodes.entrySet()) {
-            String path = entry.getKey();
+        var childSum = 0L;
+        var prefix = node.path + ZoneProfiler.PATH_SEPARATOR;
+        for (var entry : nodes.entrySet()) {
+            var path = entry.getKey();
             if (path.length() > node.path.length()
                     && path.startsWith(prefix)
                     && path.indexOf(ZoneProfiler.PATH_SEPARATOR, node.path.length() + 1) < 0) {

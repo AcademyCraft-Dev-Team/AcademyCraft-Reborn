@@ -2,6 +2,7 @@ package org.academy.api.client.gui.widget
 
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.input.PreeditEvent
+import net.minecraft.util.Mth
 import net.neoforged.bus.api.Event
 import net.neoforged.bus.api.ICancellableEvent
 import net.neoforged.neoforge.common.NeoForge
@@ -20,7 +21,6 @@ import java.util.function.Consumer
 import java.util.function.Predicate
 import kotlin.math.max
 import kotlin.math.min
-import net.minecraft.util.Mth
 
 open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     protected val stringBuilder: StringBuilder = StringBuilder()
@@ -56,6 +56,9 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     private var mouseDragging = false
     private var dragStartPos = 0
     private var preeditText = ""
+    private var cachedLayout: MsdfTextProcessor.LayoutResult? = null
+    private var cachedLayoutText: String? = null
+    private var cachedLayoutFontSize = -1f
     private var lastNotifiedText = ""
 
     /** Shown in gray when the box is empty and not focused. Not written back to the model. */
@@ -99,24 +102,11 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     }
 
     private fun renderPlaceholder(context: RenderContext) {
-        val lp = layoutParams
         val finalScale = scale * layoutScale
-        val availableWidth = width - lp.paddingLeft - lp.paddingRight
-        val availableHeight = height - lp.paddingTop - lp.paddingBottom
-        val placeholderWidth = getTextWidth(placeholder) * finalScale
-        val placeholderHeight = getTextHeight(placeholder) * finalScale
-
-        var alignmentOffsetX = 0f
-        val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
-        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX = (availableWidth - placeholderWidth) / 2.0f
-        else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX = availableWidth - placeholderWidth
-        var alignmentOffsetY = 0f
-        val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
-        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY = (availableHeight - placeholderHeight) / 2.0f
-        else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY = availableHeight - placeholderHeight
+        val (originX, originY) = textOrigin(getTextWidth(placeholder), getTextHeight(placeholder))
 
         context.pose().pushPose()
-        context.pose().translate(lp.paddingLeft + alignmentOffsetX, lp.paddingTop + alignmentOffsetY)
+        context.pose().translate(originX, originY)
         context.pose().scale(finalScale, finalScale)
         val commands = GlyphCommandGenerator.generate(
             placeholder, baseFontSize, 0f, 0.5f, 0.5f, 0.5f, alpha * context.accumulatedAlpha
@@ -126,39 +116,25 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     }
 
     private fun renderCaret(context: RenderContext) {
-        val lp = layoutParams
-        val finalScale = layoutScale * scale
-        val textBeforeCaret = stringBuilder.substring(0, getCodeUnitIndexForCodePoint(caretPos)) + preeditText
-        val lastNewline = textBeforeCaret.lastIndexOf('\n')
-        val caretLineText = if (lastNewline >= 0) textBeforeCaret.substring(lastNewline + 1) else textBeforeCaret
-        val lineIndex = textBeforeCaret.count { it == '\n' }
-        val lineAdvance = lineAdvancePx()
-        val availableHeight = height - lp.paddingTop - lp.paddingBottom
-        val availableWidth = width - lp.paddingLeft - lp.paddingRight
+        val layout = textLayout()
+        val finalScale = scale * layoutScale
+        val empty = layout.instances.isEmpty()
+        val (originX, originY) = textOrigin(
+            if (empty) 0f else layout.width,
+            if (empty) baseFontSize else layout.height
+        )
 
-        var alignmentOffsetX = 0f
-        val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
-        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX =
-            (availableWidth - getTextWidth(composedText) * finalScale) / 2.0f
-        else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX =
-            availableWidth - getTextWidth(composedText) * finalScale
-        var alignmentOffsetY = 0f
-        val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
-        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY =
-            (availableHeight - getTextHeight(composedText) * finalScale) / 2.0f
-        else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY =
-            availableHeight - getTextHeight(composedText) * finalScale
-
-        val caretXOffset = lineXAt(caretLineText, caretLineText.length) * finalScale
-        val finalX = lp.paddingLeft + alignmentOffsetX + caretXOffset
-        val finalY = lp.paddingTop + alignmentOffsetY + lineIndex * lineAdvance * finalScale
+        val caretUnit = getCodeUnitIndexForCodePoint(caretPos) + preeditText.length
+        val line = layout.lines.firstOrNull { caretUnit <= it.codeUnitEnd } ?: layout.lines.last()
+        val caretX = originX + penRightAt(layout, line, caretUnit) * finalScale
+        val caretY = originY + line.bandTop * finalScale
 
         context.pose().pushPose()
-        context.pose().translate(finalX, finalY)
+        context.pose().translate(caretX, caretY)
         context.submit(
             FillRectDrawCommand(
                 0.5f,
-                lineAdvance * finalScale,
+                baseFontSize * finalScale,
                 1f,
                 1f,
                 1f,
@@ -169,62 +145,36 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     }
 
     private fun renderSelection(context: RenderContext) {
-        val lp = layoutParams
-        val finalScale = layoutScale * scale
-        val fullText = composedText
-
         val start = min(selectionStart, selectionEnd)
         val end = max(selectionStart, selectionEnd)
-
         if (start >= end) return
+
+        val layout = textLayout()
+        if (layout.instances.isEmpty()) return
 
         val startUnit = getCodeUnitIndexForCodePoint(start)
         val endUnit = getCodeUnitIndexForCodePoint(end)
+        val finalScale = scale * layoutScale
+        val (originX, originY) = textOrigin(layout.width, layout.height)
+        val stripHeight = baseFontSize * finalScale
 
-        val lines = fullText.split('\n')
-        val lineAdvance = lineAdvancePx()
-        val availableWidth = width - lp.paddingLeft - lp.paddingRight
-        val availableHeight = height - lp.paddingTop - lp.paddingBottom
-
-        var alignmentOffsetX = 0f
-        val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
-        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX =
-            (availableWidth - getTextWidth(fullText) * finalScale) / 2.0f
-        else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX =
-            availableWidth - getTextWidth(fullText) * finalScale
-        var alignmentOffsetY = 0f
-        val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
-        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY =
-            (availableHeight - getTextHeight(fullText) * finalScale) / 2.0f
-        else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY =
-            availableHeight - getTextHeight(fullText) * finalScale
-
-        val baseX = lp.paddingLeft + alignmentOffsetX
-        val baseY = lp.paddingTop + alignmentOffsetY
-
-        // Draw a highlight rect per overlapped line (code-unit range within each line).
-        var lineStartUnit = 0
-        for ((index, line) in lines.withIndex()) {
-            val lineEndUnit = lineStartUnit + line.length
-            val overlapStart = max(startUnit, lineStartUnit)
-            val overlapEnd = min(endUnit, lineEndUnit)
-            if (overlapStart < overlapEnd) {
-                val x0 = lineXAt(line, overlapStart - lineStartUnit) * finalScale
-                val x1 = lineXAt(line, overlapEnd - lineStartUnit) * finalScale
-                val y = baseY + index * lineAdvance * finalScale
-                context.pose().pushPose()
-                context.pose().translate(baseX + x0, y)
-                context.submit(
-                    FillRectDrawCommand(
-                        (x1 - x0).coerceAtLeast(0f),
-                        lineAdvance * finalScale,
-                        0.3f, 0.5f, 0.8f,
-                        alpha * context.accumulatedAlpha * 0.5f
-                    )
+        for (line in layout.lines) {
+            val overlapStart = max(startUnit, line.codeUnitStart)
+            val overlapEnd = min(endUnit, line.codeUnitEnd)
+            if (overlapStart >= overlapEnd) continue
+            val x0 = penRightAt(layout, line, overlapStart)
+            val x1 = penRightAt(layout, line, overlapEnd)
+            context.pose().pushPose()
+            context.pose().translate(originX + x0 * finalScale, originY + line.bandTop * finalScale)
+            context.submit(
+                FillRectDrawCommand(
+                    (x1 - x0).coerceAtLeast(0f),
+                    stripHeight,
+                    0.3f, 0.5f, 0.8f,
+                    alpha * context.accumulatedAlpha * 0.5f
                 )
-                context.pose().popPose()
-            }
-            lineStartUnit = lineEndUnit + 1
+            )
+            context.pose().popPose()
         }
     }
 
@@ -501,84 +451,115 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     }
 
     private fun getCaretPosAtMouse(mouseX: Double, mouseY: Double): Int {
-        val lp = layoutParams
-        val finalScale = scale * layoutScale
+        val layout = textLayout()
+        if (layout.instances.isEmpty()) return 0
         val fullText = composedText
-        val availableWidth = width - lp.paddingLeft - lp.paddingRight
-        val availableHeight = height - lp.paddingTop - lp.paddingBottom
+        val finalScale = scale * layoutScale
+        val (originX, originY) = textOrigin(layout.width, layout.height)
 
-        var alignmentOffsetY = 0f
-        val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
-        if (verticalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetY =
-            (availableHeight - getTextHeight(fullText) * finalScale) / 2.0f
-        else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetY =
-            availableHeight - getTextHeight(fullText) * finalScale
+        val textY = ((mouseY - getAbsoluteY()).toFloat() - originY) / finalScale
+        var target = layout.lines.first()
+        var bestDist = Float.MAX_VALUE
+        for (line in layout.lines) {
+            val dist = when {
+                textY < line.bandTop -> line.bandTop - textY
+                textY > line.bandBottom -> textY - line.bandBottom
+                else -> 0f
+            }
+            if (dist < bestDist) {
+                bestDist = dist
+                target = line
+            }
+        }
 
-        val lineAdvance = lineAdvancePx()
-        val localY = (mouseY - getAbsoluteY() - lp.paddingTop - alignmentOffsetY) / finalScale
-        val lines = fullText.split('\n')
-        var lineIndex = (localY / lineAdvance).toInt()
-        lineIndex = lineIndex.coerceIn(0, lines.size - 1)
-
-        var lineStartUnit = 0
-        for (k in 0 until lineIndex) lineStartUnit += lines[k].length + 1
-
-        var alignmentOffsetX = 0f
-        val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
-        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX =
-            (availableWidth - getTextWidth(fullText) * finalScale) / 2.0f
-        else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX =
-            availableWidth - getTextWidth(fullText) * finalScale
-
-        val lineText = lines[lineIndex]
-        val localX = mouseX.toFloat() - getAbsoluteX() - lp.paddingLeft - alignmentOffsetX
-        var caretInLine = caretCodePointsInLine(lineText, localX / finalScale)
-        val unitOffset = lineStartUnit + lineText.offsetByCodePoints(0, caretInLine)
+        val textX = ((mouseX - getAbsoluteX()).toFloat() - originX) / finalScale
+        val unitInLine = caretCodeUnitsInLine(layout, target, textX)
+        val unitOffset = target.codeUnitStart + unitInLine
         return fullText.codePointCount(0, unitOffset)
     }
 
+    private fun textLayout(): MsdfTextProcessor.LayoutResult {
+        val text = composedText
+        var cached = cachedLayout
+        if (cached == null || text !== cachedLayoutText || baseFontSize != cachedLayoutFontSize) {
+            cached = MsdfTextProcessor.layout(text, baseFontSize)
+            cachedLayoutText = text
+            cachedLayoutFontSize = baseFontSize
+            cachedLayout = cached
+        }
+        return cached
+    }
+
+    /** Shared padding+gravity alignment; block dimensions are unscaled font px. */
+    private fun textOrigin(blockWidth: Float, blockHeight: Float): Pair<Float, Float> {
+        val lp = layoutParams
+        val finalScale = scale * layoutScale
+        val availableWidth = width - lp.paddingLeft - lp.paddingRight
+        val availableHeight = height - lp.paddingTop - lp.paddingBottom
+
+        var offsetX = 0f
+        val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
+        if (horizontalGravity == Gravity.AXIS_SPECIFIED) offsetX =
+            (availableWidth - blockWidth * finalScale) / 2.0f
+        else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) offsetX =
+            availableWidth - blockWidth * finalScale
+
+        var offsetY = 0f
+        val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
+        if (verticalGravity == Gravity.AXIS_SPECIFIED) offsetY =
+            (availableHeight - blockHeight * finalScale) / 2.0f
+        else if ((verticalGravity and Gravity.AXIS_PULL_AFTER) != 0) offsetY =
+            availableHeight - blockHeight * finalScale
+
+        return Pair(lp.paddingLeft + offsetX, lp.paddingTop + offsetY)
+    }
+
+    /** Max advance edge within [line] up to absolute code-unit index [unit]. */
+    private fun penRightAt(
+        layout: MsdfTextProcessor.LayoutResult,
+        line: MsdfTextProcessor.LineLayout,
+        unit: Int
+    ): Float {
+        val end = min(unit, line.codeUnitEnd)
+        var x = 0f
+        for (instance in layout.instances) {
+            if (instance.glyphIndex < line.codeUnitStart) continue
+            if (instance.glyphIndex >= end) break
+            val right = instance.penX + instance.advance
+            if (right > x) x = right
+        }
+        return x
+    }
+
     /**
-     * Finds the caret (code point index within [lineText]) for a local X position.
-     * The click is assigned to the closest kerning-adjusted caret stop from the
-     * same layout used for rendering.
+     * Finds the caret (code-unit offset within [line]) for a text-space X position.
+     * The caret sits between glyph advance boundaries: for each glyph we compare
+     * the click against the midpoint of the gap to its predecessor.
      */
-    private fun caretCodePointsInLine(lineText: String, localX: Float): Int {
-        if (lineText.isEmpty()) return 0
-        val result = MsdfTextProcessor.layout(lineText, baseFontSize)
+    private fun caretCodeUnitsInLine(
+        layout: MsdfTextProcessor.LayoutResult,
+        line: MsdfTextProcessor.LineLayout,
+        localX: Float
+    ): Int {
         var best = 0
-        var bestDist = kotlin.math.abs(localX)
-        for (instance in result.instances) {
-            val dist = kotlin.math.abs(localX - instance.penX)
+        var bestDist = Float.MAX_VALUE
+        var prevPen = 0f
+        for (instance in layout.instances) {
+            if (instance.glyphIndex < line.codeUnitStart) continue
+            if (instance.glyphIndex >= line.codeUnitEnd) break
+            val gapMid = (prevPen + instance.penX) / 2f
+            val dist = kotlin.math.abs(localX - gapMid)
             if (dist < bestDist) {
                 bestDist = dist
-                best = lineText.codePointCount(0, instance.glyphIndex)
+                best = instance.glyphIndex - line.codeUnitStart
             }
+            prevPen = instance.penX + instance.advance
         }
-        if (kotlin.math.abs(localX - result.width) < bestDist) {
-            best = lineText.codePointCount(0, lineText.length)
+        val endMid = (prevPen + penRightAt(layout, line, line.codeUnitEnd)) / 2f
+        if (kotlin.math.abs(localX - endMid) < bestDist) {
+            best = line.codeUnitEnd - line.codeUnitStart
         }
         return best
-    }
-
-    /**
-     * Returns the caret stop used by the same shaped layout that renders [line]. For an
-     * interior stop this is the next glyph's kerning-adjusted pen; for the final stop it is
-     * the rendered line edge. Keeping these metrics shared prevents GUI scaling from
-     * magnifying the small advance/kerning discrepancy into a visibly displaced caret.
-     */
-    private fun lineXAt(line: String, unit: Int): Float {
-        if (unit <= 0 || line.isEmpty()) return 0f
-        val result = MsdfTextProcessor.layout(line, baseFontSize)
-        for (instance in result.instances) {
-            if (instance.glyphIndex >= unit) return instance.penX
-        }
-        return result.width
-    }
-
-    private fun lineAdvancePx(): Float {
-        val single = getTextHeight("M", baseFontSize)
-        val double = getTextHeight("M\nM", baseFontSize)
-        return (double - single).coerceAtLeast(baseFontSize * 0.5f)
     }
 
     private fun getCodeUnitIndexForCodePoint(codePointIndex: Int): Int {

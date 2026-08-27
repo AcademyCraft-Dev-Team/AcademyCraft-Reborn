@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import org.academy.AcademyCraft;
-import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.Render;
 import org.joml.Matrix4fc;
@@ -74,7 +73,7 @@ public final class WorldLineOverlayPass {
                 );
             }
             withModelView(modelViewMatrix,
-                    () -> IrisIntegration.runWithBypass(() -> dispatcher.renderAllFeatures(WORLD_STORAGE)));
+                    () -> dispatcher.renderAllFeatures(WORLD_STORAGE));
         } catch (Throwable throwable) {
             worldPassAvailable = false;
             if (FAILURE_LOGGED.compareAndSet(false, true)) {

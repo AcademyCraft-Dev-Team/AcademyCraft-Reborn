@@ -1,16 +1,17 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * M16-02 CPU 性能门禁（headless）：10k 粒子场景的模拟帧耗时。
@@ -49,10 +50,10 @@ class VfxSimulatorPerfTest {
         assertEquals(10000, sim.buffer().count());
 
         long worst = 0;
-        for (int i = 0; i < 60; i++) {
-            long start = System.nanoTime();
+        for (var i = 0; i < 60; i++) {
+            var start = System.nanoTime();
             sim.step(0.016f);
-            long elapsed = System.nanoTime() - start;
+            var elapsed = System.nanoTime() - start;
             worst = Math.max(worst, elapsed);
         }
         System.out.println("[perf] 10k particle steady-state worst step: " + worst / 1_000_000.0 + " ms");
@@ -69,11 +70,11 @@ class VfxSimulatorPerfTest {
                 node("age", "vfx.update_age", Map.of())
         ), vfxRegistry, 42L);
 
-        long start = System.nanoTime();
-        for (int i = 0; i < 600; i++) {
+        var start = System.nanoTime();
+        for (var i = 0; i < 600; i++) {
             sim.step(0.016f);
         }
-        long total = System.nanoTime() - start;
+        var total = System.nanoTime() - start;
         System.out.println("[perf] 10k particle churn 600 steps total: " + total / 1_000_000.0 + " ms");
         assertTrue(total < BURST_TOTAL_BUDGET_NS, "10k churn total exceeded budget: " + total + " ns");
     }

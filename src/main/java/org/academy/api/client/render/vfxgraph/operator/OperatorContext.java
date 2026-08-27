@@ -1,6 +1,5 @@
 package org.academy.api.client.render.vfxgraph.operator;
 
-import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 

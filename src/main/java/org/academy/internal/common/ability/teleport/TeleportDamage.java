@@ -20,7 +20,7 @@ public final class TeleportDamage {
     }
 
     public static float fleshRipping(float baseDamage, float maxHealth, float abilityPower,
-                                    float spaceFoldingMultiplier) {
+                                     float spaceFoldingMultiplier) {
         if (!Float.isFinite(baseDamage) || !Float.isFinite(maxHealth)
                 || !Float.isFinite(abilityPower) || !Float.isFinite(spaceFoldingMultiplier)) {
             return 0.0f;
@@ -31,7 +31,9 @@ public final class TeleportDamage {
         return Float.isFinite(damage) ? damage : 0.0f;
     }
 
-    /** Compatibility overloads for callers and tests that still express the passive as a boolean. */
+    /**
+     * Compatibility overloads for callers and tests that still express the passive as a boolean.
+     */
     public static float threatening(float baseDamage, float weaponBonus, float playerMultiplier,
                                     boolean spaceFolding) {
         return threatening(baseDamage, weaponBonus, 1.0f, playerMultiplier,

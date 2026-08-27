@@ -1,10 +1,10 @@
 package org.academy.internal.client.renderer.entity;
 
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import org.academy.internal.common.world.entity.EntityTypes;
 
 @EventBusSubscriber(Dist.CLIENT)

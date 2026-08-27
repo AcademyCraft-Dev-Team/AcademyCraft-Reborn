@@ -144,7 +144,9 @@ public class MagnetManipulation extends Skill {
         return length > maxSpeed ? velocity.scale(maxSpeed / length) : velocity;
     }
 
-    /** Shared homing profile for ability-controlled falling blocks. */
+    /**
+     * Shared homing profile for ability-controlled falling blocks.
+     */
     public static Vec3 calculateControlledBlockVelocity(
             Vec3 currentVelocity,
             Vec3 origin,

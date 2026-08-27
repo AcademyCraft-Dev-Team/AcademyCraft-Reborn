@@ -1,12 +1,14 @@
 package org.academy.api.client.render.shader.codegen;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
-import java.util.Map;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class GlslNodeRegistryTest {
     @Test
@@ -33,7 +35,7 @@ class GlslNodeRegistryTest {
         GlslNodeGenerator generator = (node, inputs, ctx) ->
                 Map.of("out", new Expr("(" + inputs.get("a").code() + " + " + inputs.get("b").code() + ")",
                         ValueType.FLOAT));
-        var node = new GraphNode("n", "math.add", Map.of(), java.util.List.of(), 0f, 0f);
+        var node = new GraphNode("n", "math.add", Map.of(), List.of(), 0f, 0f);
         var inputs = Map.of(
                 "a", new Expr("1.0", ValueType.FLOAT),
                 "b", new Expr("2.0", ValueType.FLOAT)

@@ -13,6 +13,7 @@ import org.academy.api.common.entitycontrol.PerceptionDecision;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 
 import java.util.*;
 

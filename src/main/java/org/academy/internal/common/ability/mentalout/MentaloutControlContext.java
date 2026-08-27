@@ -1,19 +1,21 @@
 package org.academy.internal.common.ability.mentalout;
 
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.AcademyCraft;
+import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.common.ability.SkillProficiencyProfile;
-import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -744,7 +746,7 @@ public final class MentaloutControlContext extends ServerContext {
                                 && !entries.containsKey(candidate.getUUID())
                                 && !FriendlyFireSetting.shouldPrevent(player, candidate))
                 .stream()
-                .min(java.util.Comparator.comparingDouble(candidate ->
+                .min(Comparator.comparingDouble(candidate ->
                         candidate.distanceToSqr(previousTarget)))
                 .orElse(null);
         if (replacementTarget == null) {
@@ -994,7 +996,7 @@ public final class MentaloutControlContext extends ServerContext {
         }
 
         private void applyModifier(
-                net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute,
+                Holder<Attribute> attribute,
                 Identifier id
         ) {
             var instance = subject.getAttribute(attribute);

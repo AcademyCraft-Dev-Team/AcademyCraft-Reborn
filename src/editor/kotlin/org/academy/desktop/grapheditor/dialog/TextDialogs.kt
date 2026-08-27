@@ -10,7 +10,6 @@ import imgui.type.ImString
 class PromptDialog {
     private val buffer = ImString(64)
     private var open = false
-        private set
     private var title = ""
     private var label = ""
     private var onSubmit: ((String) -> Unit)? = null
@@ -55,7 +54,6 @@ class NoteEditDialog {
     private val titleBuf = ImString(64)
     private val bodyBuf = ImString(2048)
     private var open = false
-        private set
     private var onSubmit: ((String, String) -> Unit)? = null
 
     fun open(title: String, body: String, onSubmit: (String, String) -> Unit) {

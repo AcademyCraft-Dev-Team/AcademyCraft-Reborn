@@ -1,15 +1,15 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
 
 class ParticleBufferTest {
     @Test
     void spawnGrowsCapacity() {
         var buffer = new ParticleBuffer(4);
-        for (int i = 0; i < 100; i++) {
+        for (var i = 0; i < 100; i++) {
             buffer.spawn();
         }
         assertEquals(100, buffer.count());
@@ -19,9 +19,9 @@ class ParticleBufferTest {
     @Test
     void killSwapRemovesPreservingSurvivors() {
         var buffer = new ParticleBuffer();
-        int a = buffer.spawn();
-        int b = buffer.spawn();
-        int c = buffer.spawn();
+        var a = buffer.spawn();
+        var b = buffer.spawn();
+        var c = buffer.spawn();
 
         buffer.setPosition(a, 1f, 0f, 0f);
         buffer.setPosition(b, 2f, 0f, 0f);
@@ -38,7 +38,7 @@ class ParticleBufferTest {
     @Test
     void accessorsRoundTrip() {
         var buffer = new ParticleBuffer();
-        int i = buffer.spawn();
+        var i = buffer.spawn();
         buffer.setPosition(i, 1f, 2f, 3f);
         buffer.setVelocity(i, 4f, 5f, 6f);
         buffer.setColor(i, 0.1f, 0.2f, 0.3f, 0.4f);
@@ -56,8 +56,8 @@ class ParticleBufferTest {
     @Test
     void layerDefaultsToFireAndSurvivesSwapRemove() {
         var buffer = new ParticleBuffer();
-        int a = buffer.spawn();
-        int b = buffer.spawn();
+        var a = buffer.spawn();
+        var b = buffer.spawn();
         assertEquals((byte) 0, buffer.layer(a));
         buffer.setLayer(b, (byte) 1);
         assertEquals((byte) 1, buffer.layer(b));

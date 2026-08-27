@@ -5,9 +5,9 @@ import net.minecraft.world.effect.MobEffectCategory;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.glfw.GLFW;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class ReflectionFilterTest {
     private static final Gson GSON = new Gson();
@@ -23,7 +23,7 @@ class ReflectionFilterTest {
 
     @Test
     void opensOnEqualByDefault() {
-        assertEquals(java.util.Set.of(GLFW.GLFW_KEY_EQUAL),
+        assertEquals(Set.of(GLFW.GLFW_KEY_EQUAL),
                 ReflectionFilter.defaultOpenKey().keys());
     }
 

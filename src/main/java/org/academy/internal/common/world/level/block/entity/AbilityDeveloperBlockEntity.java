@@ -2,6 +2,7 @@ package org.academy.internal.common.world.level.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
@@ -16,7 +17,6 @@ import org.academy.internal.client.definitions.AbilityDeveloperAnimation;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
-import net.minecraft.util.Mth;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
     public static final int CLOSE_DELAY_TICKS = 20;

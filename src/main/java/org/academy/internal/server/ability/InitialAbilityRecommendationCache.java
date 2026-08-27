@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** One-shot, server-authoritative P.R.O.P.S recommendations. */
+/**
+ * One-shot, server-authoritative P.R.O.P.S recommendations.
+ */
 public final class InitialAbilityRecommendationCache {
     public static final long EXPIRATION_TICKS = 1_200L;
 

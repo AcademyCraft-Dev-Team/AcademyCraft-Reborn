@@ -4,9 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class InputSystemPrimaryBindingTest {
     private static final String TEST_BINDING = "input_system_test_use";
@@ -21,15 +19,14 @@ class InputSystemPrimaryBindingTest {
         assertTrue(InputSystem.primaryBindingPriority("vector_blast_use", "vector_blast")
                 < InputSystem.primaryBindingPriority("vector_blast_pull_start", "vector_blast"));
         assertTrue(InputSystem.primaryBindingPriority(
-                        "kinetic_energy_applied_toggle", "kinetic_energy_applied")
+                "kinetic_energy_applied_toggle", "kinetic_energy_applied")
                 < InputSystem.primaryBindingPriority(
-                        "kinetic_energy_applied_block_break_toggle", "kinetic_energy_applied"));
+                "kinetic_energy_applied_block_break_toggle", "kinetic_energy_applied"));
     }
 
     @Test
     void baseStartAndEndRemainOnePrimaryMaintainedGesture() {
-        assertTrue(InputSystem.primaryBindingPriority("railgun_start", "railgun")
-                == InputSystem.primaryBindingPriority("railgun_end", "railgun"));
+        assertEquals(InputSystem.primaryBindingPriority("railgun_start", "railgun"), InputSystem.primaryBindingPriority("railgun_end", "railgun"));
     }
 
     @Test

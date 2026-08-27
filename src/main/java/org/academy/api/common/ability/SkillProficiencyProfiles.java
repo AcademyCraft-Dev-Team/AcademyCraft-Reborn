@@ -6,7 +6,9 @@ import java.util.Set;
 
 import static org.academy.api.common.ability.SkillProficiencyProfile.CostKind.*;
 
-/** Scalar proficiency declarations for every category-scoped Academy skill. */
+/**
+ * Scalar proficiency declarations for every category-scoped Academy skill.
+ */
 public final class SkillProficiencyProfiles {
     private static final String PREFIX = "academy:";
     private static final Set<String> DECLARED_SKILLS = Set.of(

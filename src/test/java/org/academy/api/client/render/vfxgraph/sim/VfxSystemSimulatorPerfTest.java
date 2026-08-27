@@ -1,22 +1,19 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
+import org.academy.api.client.render.vfxgraph.model.*;
+import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
+import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * M28-02 容器执行器 CPU 性能门禁（headless）：10k 粒子场景的模拟帧耗时（对标 VfxSimulatorPerfTest）。
@@ -72,10 +69,10 @@ class VfxSystemSimulatorPerfTest {
         assertEquals(10000, sim.buffer().count());
 
         long worst = 0;
-        for (int i = 0; i < 60; i++) {
-            long start = System.nanoTime();
+        for (var i = 0; i < 60; i++) {
+            var start = System.nanoTime();
             sim.step(0.016f);
-            long elapsed = System.nanoTime() - start;
+            var elapsed = System.nanoTime() - start;
             worst = Math.max(worst, elapsed);
         }
         System.out.println("[perf] container 10k particle steady-state worst step: " + worst / 1_000_000.0 + " ms");
@@ -101,11 +98,11 @@ class VfxSystemSimulatorPerfTest {
                 List.of());
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        long start = System.nanoTime();
-        for (int i = 0; i < 600; i++) {
+        var start = System.nanoTime();
+        for (var i = 0; i < 600; i++) {
             sim.step(0.016f);
         }
-        long total = System.nanoTime() - start;
+        var total = System.nanoTime() - start;
         System.out.println("[perf] container 10k particle churn 600 steps total: " + total / 1_000_000.0 + " ms");
         assertTrue(total < BURST_TOTAL_BUDGET_NS, "container 10k churn total exceeded budget: " + total + " ns");
     }

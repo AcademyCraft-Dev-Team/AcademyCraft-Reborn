@@ -29,7 +29,8 @@ public final class AeromanipFieldManager {
             AirflowField field,
             FieldTicker ticker
     ) {
-        activate(player, skill, field, ticker, (_, _, _) -> { });
+        activate(player, skill, field, ticker, (_, _, _) -> {
+        });
     }
 
     public static void activate(
@@ -64,7 +65,8 @@ public final class AeromanipFieldManager {
     ) {
         var previous = PERSONAL.get(player);
         if (previous != null) previous.end();
-        var context = new FieldContext(player, skill, field, ticker, (_, _, _) -> { }, PERSONAL);
+        var context = new FieldContext(player, skill, field, ticker, (_, _, _) -> {
+        }, PERSONAL);
         PERSONAL.put(player, context);
         AbilitySystemServer.registerContext(context);
         AeromanipFieldSyncPacket.sendToTracking(player, field, true);

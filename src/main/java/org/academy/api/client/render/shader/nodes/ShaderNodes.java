@@ -1,8 +1,5 @@
 package org.academy.api.client.render.shader.nodes;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
@@ -11,21 +8,22 @@ import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.registry.PropertySpec;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.shader.codegen.CurveGradientGlsl;
-import org.academy.api.client.render.shader.codegen.Expr;
-import org.academy.api.client.render.shader.codegen.GlslGenerator;
-import org.academy.api.client.render.shader.codegen.GlslLiterals;
-import org.academy.api.client.render.shader.codegen.GlslNodeGenerator;
-import org.academy.api.client.render.shader.codegen.GlslNodeRegistry;
+import org.academy.api.client.render.shader.codegen.*;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Shader 节点目录：注册节点元数据（核心 NodeRegistry）与 GLSL 生成器（GlslNodeRegistry）。
  *
  * <p>纹理采样（M11-01/A1，ADR-021）：{@code texture.sample} 按 {@code texture} 属性经
- * {@link org.academy.api.client.render.shader.codegen.GlslGenContext#samplerName} 解析为
+ * {@link GlslGenContext#samplerName} 解析为
  * {@code Sampler0..SamplerN-1}（多样本动态绑定）；坐标/几何输入（M11-07）目前为全屏 quad 预览的近似实现。</p>
  */
 public final class ShaderNodes {
@@ -142,21 +140,21 @@ public final class ShaderNodes {
                 type("input.constant", "input", "Constant",
                         List.of(out("out", "Out", ValueType.FLOAT)),
                         List.of(prop("value", "Value", ValueType.FLOAT, Value.of(0f)))),
-                (n, i, c) -> Map.of("out", GlslLiterals.of(Value.of(parseFloat(n, "value")))));
+                (n, _, _) -> Map.of("out", GlslLiterals.of(Value.of(parseFloat(n, "value")))));
 
         register(metadata, codegen,
                 type("input.color", "input", "Color",
                         List.of(out("out", "Out", ValueType.COLOR)),
                         List.of(prop("value", "Value", ValueType.COLOR, Value.color(1f, 1f, 1f, 1f)))),
-                (n, i, c) -> Map.of("out", colorLiteral(n.properties().getOrDefault("value", "1.0,1.0,1.0,1.0"))));
+                (n, _, _) -> Map.of("out", colorLiteral(n.properties().getOrDefault("value", "1.0,1.0,1.0,1.0"))));
 
         register(metadata, codegen,
                 type("input.time", "input", "Time", List.of(out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr(GlslGenerator.TIME_MEMBER, ValueType.FLOAT)));
+                (_, _, _) -> Map.of("out", new Expr(GlslGenerator.TIME_MEMBER, ValueType.FLOAT)));
 
         register(metadata, codegen,
                 type("input.uv", "input", "UV", List.of(out("out", "Out", ValueType.VEC2)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr(GlslGenerator.UV_VARYING, ValueType.VEC2)));
+                (_, _, _) -> Map.of("out", new Expr(GlslGenerator.UV_VARYING, ValueType.VEC2)));
 
         registerParam(metadata, codegen, "input.param_float", ValueType.FLOAT);
         registerParam(metadata, codegen, "input.param_vec3", ValueType.VEC3);
@@ -167,39 +165,39 @@ public final class ShaderNodes {
         register(metadata, codegen,
                 type("input.world_pos", "input", "World Position",
                         List.of(out("out", "Out", ValueType.VEC3)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec3(" + GlslGenerator.UV_VARYING + " * 2.0 - 1.0, 0.0)", ValueType.VEC3)));
+                (_, _, _) -> Map.of("out", new Expr("vec3(" + GlslGenerator.UV_VARYING + " * 2.0 - 1.0, 0.0)", ValueType.VEC3)));
         register(metadata, codegen,
                 type("input.object_pos", "input", "Object Position",
                         List.of(out("out", "Out", ValueType.VEC3)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec3(" + GlslGenerator.UV_VARYING + " * 2.0 - 1.0, 0.0)", ValueType.VEC3)));
+                (_, _, _) -> Map.of("out", new Expr("vec3(" + GlslGenerator.UV_VARYING + " * 2.0 - 1.0, 0.0)", ValueType.VEC3)));
         register(metadata, codegen,
                 type("input.normal", "input", "Normal",
                         List.of(out("out", "Out", ValueType.VEC3)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec3(0.0, 0.0, 1.0)", ValueType.VEC3)));
+                (_, _, _) -> Map.of("out", new Expr("vec3(0.0, 0.0, 1.0)", ValueType.VEC3)));
         register(metadata, codegen,
                 type("input.view_dir", "input", "View Direction",
                         List.of(out("out", "Out", ValueType.VEC3)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec3(0.0, 0.0, 1.0)", ValueType.VEC3)));
+                (_, _, _) -> Map.of("out", new Expr("vec3(0.0, 0.0, 1.0)", ValueType.VEC3)));
         register(metadata, codegen,
                 type("input.camera_pos", "input", "Camera Position",
                         List.of(out("out", "Out", ValueType.VEC3)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec3(0.0, 0.0, 1.0)", ValueType.VEC3)));
+                (_, _, _) -> Map.of("out", new Expr("vec3(0.0, 0.0, 1.0)", ValueType.VEC3)));
         register(metadata, codegen,
                 type("input.screen_pos", "input", "Screen Position",
                         List.of(out("out", "Out", ValueType.VEC4)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec4(" + GlslGenerator.UV_VARYING + ", 0.0, 1.0)", ValueType.VEC4)));
+                (_, _, _) -> Map.of("out", new Expr("vec4(" + GlslGenerator.UV_VARYING + ", 0.0, 1.0)", ValueType.VEC4)));
         register(metadata, codegen,
                 type("input.delta_time", "input", "Delta Time",
                         List.of(out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("0.016", ValueType.FLOAT)));
+                (_, _, _) -> Map.of("out", new Expr("0.016", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("input.sine_time", "input", "Sine Time",
                         List.of(out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("sin(" + GlslGenerator.TIME_MEMBER + ")", ValueType.FLOAT)));
+                (_, _, _) -> Map.of("out", new Expr("sin(" + GlslGenerator.TIME_MEMBER + ")", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("input.cosine_time", "input", "Cosine Time",
                         List.of(out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("cos(" + GlslGenerator.TIME_MEMBER + ")", ValueType.FLOAT)));
+                (_, _, _) -> Map.of("out", new Expr("cos(" + GlslGenerator.TIME_MEMBER + ")", ValueType.FLOAT)));
 
         // ---- 纹理采样（M11-01）----
 
@@ -257,17 +255,17 @@ public final class ShaderNodes {
                 type("math.power", "math", "Power",
                         List.of(in("a", "A", ValueType.FLOAT), in("b", "B", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("pow(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("pow(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("math.lerp", "math", "Lerp",
                         List.of(in("a", "A", ValueType.FLOAT), in("b", "B", ValueType.FLOAT), in("t", "T", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("mix(" + i.get("a").code() + ", " + i.get("b").code() + ", " + i.get("t").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("mix(" + i.get("a").code() + ", " + i.get("b").code() + ", " + i.get("t").code() + ")", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("math.clamp", "math", "Clamp",
                         List.of(in("x", "X", ValueType.FLOAT), in("min", "Min", ValueType.FLOAT), in("max", "Max", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("clamp(" + i.get("x").code() + ", " + i.get("min").code() + ", " + i.get("max").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("clamp(" + i.get("x").code() + ", " + i.get("min").code() + ", " + i.get("max").code() + ")", ValueType.FLOAT)));
         registerUnaryFloat(metadata, codegen, "math.sin", "Sine", "sin");
         registerUnaryFloat(metadata, codegen, "math.cos", "Cosine", "cos");
         registerUnaryFloat(metadata, codegen, "math.tan", "Tangent", "tan");
@@ -280,7 +278,7 @@ public final class ShaderNodes {
         register(metadata, codegen,
                 type("math.negate", "math", "Negate",
                         List.of(in("x", "X", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("(-" + i.get("x").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("(-" + i.get("x").code() + ")", ValueType.FLOAT)));
         registerBinaryFloat(metadata, codegen, "math.mod", "Modulo", "mod");
         registerUnaryFloat(metadata, codegen, "math.frac", "Fraction", "fract");
         registerUnaryFloat(metadata, codegen, "math.reciprocal", "Reciprocal", null);
@@ -303,19 +301,19 @@ public final class ShaderNodes {
                 type("math.step", "math", "Step",
                         List.of(in("edge", "Edge", ValueType.FLOAT), in("x", "X", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("step(" + i.get("edge").code() + ", " + i.get("x").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("step(" + i.get("edge").code() + ", " + i.get("x").code() + ")", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("math.remap", "math", "Remap",
                         List.of(in("x", "X", ValueType.FLOAT), in("inMin", "In Min", ValueType.FLOAT),
                                 in("inMax", "In Max", ValueType.FLOAT), in("outMin", "Out Min", ValueType.FLOAT),
                                 in("outMax", "Out Max", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("(" + i.get("outMin").code() + " + (" + i.get("outMax").code() + " - " + i.get("outMin").code() + ") * clamp((" + i.get("x").code() + " - " + i.get("inMin").code() + ") / (" + i.get("inMax").code() + " - " + i.get("inMin").code() + "), 0.0, 1.0))", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("(" + i.get("outMin").code() + " + (" + i.get("outMax").code() + " - " + i.get("outMin").code() + ") * clamp((" + i.get("x").code() + " - " + i.get("inMin").code() + ") / (" + i.get("inMax").code() + " - " + i.get("inMin").code() + "), 0.0, 1.0))", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("math.inverse_lerp", "math", "Inverse Lerp",
                         List.of(in("a", "A", ValueType.FLOAT), in("b", "B", ValueType.FLOAT), in("x", "X", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("(" + i.get("x").code() + " - " + i.get("a").code() + ") / (" + i.get("b").code() + " - " + i.get("a").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("(" + i.get("x").code() + " - " + i.get("a").code() + ") / (" + i.get("b").code() + " - " + i.get("a").code() + ")", ValueType.FLOAT)));
 
         registerVec3Binary(metadata, codegen, "math.add_vec3", "Add Vec3", "+");
         registerVec3Binary(metadata, codegen, "math.multiply_vec3", "Multiply Vec3", "*");
@@ -323,75 +321,75 @@ public final class ShaderNodes {
                 type("math.lerp_vec3", "math", "Lerp Vec3",
                         List.of(in("a", "A", ValueType.VEC3), in("b", "B", ValueType.VEC3), in("t", "T", ValueType.FLOAT), out("out", "Out", ValueType.VEC3)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("mix(" + i.get("a").code() + ", " + i.get("b").code() + ", " + i.get("t").code() + ")", ValueType.VEC3)));
+                (_, i, _) -> Map.of("out", new Expr("mix(" + i.get("a").code() + ", " + i.get("b").code() + ", " + i.get("t").code() + ")", ValueType.VEC3)));
         register(metadata, codegen,
                 type("math.length", "math", "Length",
                         List.of(in("v", "V", ValueType.VEC3), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("length(" + i.get("v").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("length(" + i.get("v").code() + ")", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("math.normalize", "math", "Normalize",
                         List.of(in("v", "V", ValueType.VEC3), out("out", "Out", ValueType.VEC3)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr("normalize(" + i.get("v").code() + ")", ValueType.VEC3)));
+                (_, i, _) -> Map.of("out", new Expr("normalize(" + i.get("v").code() + ")", ValueType.VEC3)));
         register(metadata, codegen,
                 type("math.dot", "math", "Dot",
                         List.of(in("a", "A", ValueType.VEC3), in("b", "B", ValueType.VEC3), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("dot(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("dot(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("math.cross", "math", "Cross",
                         List.of(in("a", "A", ValueType.VEC3), in("b", "B", ValueType.VEC3), out("out", "Out", ValueType.VEC3)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("cross(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.VEC3)));
+                (_, i, _) -> Map.of("out", new Expr("cross(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.VEC3)));
         register(metadata, codegen,
                 type("math.distance", "math", "Distance",
                         List.of(in("a", "A", ValueType.VEC3), in("b", "B", ValueType.VEC3), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("distance(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("distance(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("math.reflect", "math", "Reflect",
                         List.of(in("i", "I", ValueType.VEC3), in("n", "N", ValueType.VEC3), out("out", "Out", ValueType.VEC3)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("reflect(" + i.get("i").code() + ", " + i.get("n").code() + ")", ValueType.VEC3)));
+                (_, i, _) -> Map.of("out", new Expr("reflect(" + i.get("i").code() + ", " + i.get("n").code() + ")", ValueType.VEC3)));
         register(metadata, codegen,
                 type("math.refract", "math", "Refract",
                         List.of(in("i", "I", ValueType.VEC3), in("n", "N", ValueType.VEC3), in("eta", "Eta", ValueType.FLOAT), out("out", "Out", ValueType.VEC3)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("refract(" + i.get("i").code() + ", " + i.get("n").code() + ", " + i.get("eta").code() + ")", ValueType.VEC3)));
+                (_, i, _) -> Map.of("out", new Expr("refract(" + i.get("i").code() + ", " + i.get("n").code() + ", " + i.get("eta").code() + ")", ValueType.VEC3)));
 
         // ---- 噪声（M11-06）----
 
         register(metadata, codegen,
                 type("math.noise", "math", "Noise",
                         List.of(in("uv", "UV", ValueType.VEC2), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> {
+                (_, i, c) -> {
                     c.addHelper(NOISE_HELPER);
                     return Map.of("out", new Expr("_academy_noise(" + i.get("uv").code() + ")", ValueType.FLOAT));
                 });
         register(metadata, codegen,
                 type("noise.value", "noise", "Value Noise",
                         List.of(in("uv", "UV", ValueType.VEC2), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> {
+                (_, i, c) -> {
                     c.addHelper(VALUE_NOISE_HELPER);
                     return Map.of("out", new Expr("_academy_value_noise(" + i.get("uv").code() + ")", ValueType.FLOAT));
                 });
         register(metadata, codegen,
                 type("noise.perlin", "noise", "Perlin Noise",
                         List.of(in("uv", "UV", ValueType.VEC2), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> {
+                (_, i, c) -> {
                     c.addHelper(PERLIN_HELPER);
                     return Map.of("out", new Expr("_academy_perlin_noise(" + i.get("uv").code() + ")", ValueType.FLOAT));
                 });
         register(metadata, codegen,
                 type("noise.simplex", "noise", "Simplex Noise",
                         List.of(in("uv", "UV", ValueType.VEC2), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> {
+                (_, i, c) -> {
                     c.addHelper(SIMPLEX_HELPER);
                     return Map.of("out", new Expr("_academy_simplex_noise(" + i.get("uv").code() + ") * 0.5 + 0.5", ValueType.FLOAT));
                 });
         register(metadata, codegen,
                 type("noise.voronoi", "noise", "Voronoi",
                         List.of(in("uv", "UV", ValueType.VEC2), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> {
+                (_, i, c) -> {
                     c.addHelper(VORONOI_HELPER);
                     return Map.of("out", new Expr("_academy_voronoi(" + i.get("uv").code() + ")", ValueType.FLOAT));
                 });
@@ -402,12 +400,12 @@ public final class ShaderNodes {
                 type("color.ramp", "color", "Gradient Ramp",
                         List.of(in("t", "T", ValueType.FLOAT), out("out", "Out", ValueType.COLOR)),
                         List.of(prop("stops", "Stops", ValueType.STRING, Value.string("0.0:0,0,0,1;1.0:1,1,1,1")))),
-                (n, i, c) -> Map.of("out", gradientExpr(n, i.get("t").code())));
+                (n, i, _) -> Map.of("out", gradientExpr(n, i.get("t").code())));
         register(metadata, codegen,
                 type("color.hsv2rgb", "color", "HSV to RGB",
                         List.of(in("h", "H", ValueType.FLOAT), in("s", "S", ValueType.FLOAT), in("v", "V", ValueType.FLOAT), out("out", "Out", ValueType.COLOR)),
                         List.of()),
-                (n, i, c) -> {
+                (_, i, c) -> {
                     c.addHelper(HSV_HELPER);
                     return Map.of("out", new Expr("vec4(_academy_hsv2rgb(vec3(" + i.get("h").code() + ", " + i.get("s").code() + ", " + i.get("v").code() + ")), 1.0)", ValueType.COLOR));
                 });
@@ -416,7 +414,7 @@ public final class ShaderNodes {
                         List.of(in("c", "Color", ValueType.COLOR), out("h", "H", ValueType.FLOAT),
                                 out("s", "S", ValueType.FLOAT), out("v", "V", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> {
+                (_, i, c) -> {
                     c.addHelper(HSV_HELPER);
                     var hsv = "_academy_rgb2hsv(" + i.get("c").code() + ".rgb)";
                     return Map.of(
@@ -428,18 +426,18 @@ public final class ShaderNodes {
                 type("color.contrast", "color", "Contrast",
                         List.of(in("color", "Color", ValueType.COLOR), in("contrast", "Contrast", ValueType.FLOAT, Value.of(1f)), out("out", "Out", ValueType.COLOR)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec4((" + i.get("color").code() + ".rgb - 0.5) * " + i.get("contrast").code() + " + 0.5, " + i.get("color").code() + ".a)", ValueType.COLOR)));
+                (_, i, _) -> Map.of("out", new Expr("vec4((" + i.get("color").code() + ".rgb - 0.5) * " + i.get("contrast").code() + " + 0.5, " + i.get("color").code() + ".a)", ValueType.COLOR)));
         register(metadata, codegen,
                 type("color.luminance", "color", "Luminance",
                         List.of(in("color", "Color", ValueType.COLOR), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("dot(" + i.get("color").code() + ".rgb, vec3(0.299, 0.587, 0.114))", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("dot(" + i.get("color").code() + ".rgb, vec3(0.299, 0.587, 0.114))", ValueType.FLOAT)));
         register(metadata, codegen,
                 type("color.blend", "color", "Blend",
                         List.of(in("a", "A", ValueType.COLOR), in("b", "B", ValueType.COLOR),
                                 in("t", "T", ValueType.FLOAT, Value.of(0.5f)), out("out", "Out", ValueType.COLOR)),
                         List.of(prop("mode", "Mode", ValueType.STRING, Value.string("mix")))),
-                (n, i, c) -> {
+                (n, i, _) -> {
                     var a = i.get("a").code();
                     var b = i.get("b").code();
                     var expr = switch (n.properties().getOrDefault("mode", "mix")) {
@@ -459,7 +457,7 @@ public final class ShaderNodes {
                                 in("offset", "Offset", ValueType.VEC2, Value.of(new Vector2f())),
                                 out("out", "Out", ValueType.VEC2)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("(" + i.get("uv").code() + " * " + i.get("tiling").code() + " + " + i.get("offset").code() + ")", ValueType.VEC2)));
+                (_, i, _) -> Map.of("out", new Expr("(" + i.get("uv").code() + " * " + i.get("tiling").code() + " + " + i.get("offset").code() + ")", ValueType.VEC2)));
 
         // ---- 自定义函数（M11-09）----
 
@@ -467,7 +465,7 @@ public final class ShaderNodes {
                 type("output.custom", "output", "Custom Function",
                         List.of(out("out", "Out", ValueType.COLOR)),
                         List.of(prop("body", "Body", ValueType.STRING, Value.string("vec4(0.0)")))),
-                (n, i, c) -> Map.of("out", new Expr(n.properties().getOrDefault("body", "vec4(0.0)"), ValueType.COLOR)));
+                (n, _, _) -> Map.of("out", new Expr(n.properties().getOrDefault("body", "vec4(0.0)"), ValueType.COLOR)));
 
         // ---- 子图（M12-05）----
         // 端口由引用的子图动态派生（GraphEditorModel.portsFor）；编译期经 SubGraphFlattener 内联。
@@ -479,18 +477,18 @@ public final class ShaderNodes {
                 type("combine.vec3", "combine", "Make Vec3",
                         List.of(in("x", "X", ValueType.FLOAT), in("y", "Y", ValueType.FLOAT), in("z", "Z", ValueType.FLOAT), out("out", "Out", ValueType.VEC3)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec3(" + i.get("x").code() + ", " + i.get("y").code() + ", " + i.get("z").code() + ")", ValueType.VEC3)));
+                (_, i, _) -> Map.of("out", new Expr("vec3(" + i.get("x").code() + ", " + i.get("y").code() + ", " + i.get("z").code() + ")", ValueType.VEC3)));
         register(metadata, codegen,
                 type("combine.vec4", "combine", "Make Vec4",
                         List.of(in("x", "X", ValueType.FLOAT), in("y", "Y", ValueType.FLOAT), in("z", "Z", ValueType.FLOAT), in("w", "W", ValueType.FLOAT), out("out", "Out", ValueType.VEC4)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("vec4(" + i.get("x").code() + ", " + i.get("y").code() + ", " + i.get("z").code() + ", " + i.get("w").code() + ")", ValueType.VEC4)));
+                (_, i, _) -> Map.of("out", new Expr("vec4(" + i.get("x").code() + ", " + i.get("y").code() + ", " + i.get("z").code() + ", " + i.get("w").code() + ")", ValueType.VEC4)));
         register(metadata, codegen,
                 type("split.vec3", "split", "Split Vec3",
                         List.of(in("v", "V", ValueType.VEC3),
                                 out("x", "X", ValueType.FLOAT), out("y", "Y", ValueType.FLOAT), out("z", "Z", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> {
+                (_, i, _) -> {
                     var v = i.get("v").code();
                     return Map.of(
                             "x", new Expr(v + ".x", ValueType.FLOAT),
@@ -503,7 +501,7 @@ public final class ShaderNodes {
                                 out("x", "X", ValueType.FLOAT), out("y", "Y", ValueType.FLOAT),
                                 out("z", "Z", ValueType.FLOAT), out("w", "W", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> {
+                (_, i, _) -> {
                     var v = i.get("v").code();
                     return Map.of(
                             "x", new Expr(v + ".x", ValueType.FLOAT),
@@ -528,7 +526,7 @@ public final class ShaderNodes {
                 type(id, "input", "Parameter",
                         List.of(out("out", "Out", type)),
                         List.of(prop("param", "Parameter", ValueType.STRING, Value.string("")))),
-                (n, i, c) -> Map.of("out", new Expr(c.parameterUniform(n.properties().get("param")), type)));
+                (n, _, c) -> Map.of("out", new Expr(c.parameterUniform(n.properties().get("param")), type)));
     }
 
     private static void registerBinary(NodeRegistry metadata, GlslNodeRegistry codegen, String id, String name, String op) {
@@ -536,7 +534,7 @@ public final class ShaderNodes {
                 type(id, "math", name,
                         List.of(in("a", "A", ValueType.FLOAT), in("b", "B", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("(" + i.get("a").code() + " " + op + " " + i.get("b").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr("(" + i.get("a").code() + " " + op + " " + i.get("b").code() + ")", ValueType.FLOAT)));
     }
 
     private static void registerVec3Binary(NodeRegistry metadata, GlslNodeRegistry codegen, String id, String name, String op) {
@@ -544,22 +542,23 @@ public final class ShaderNodes {
                 type(id, "math", name,
                         List.of(in("a", "A", ValueType.VEC3), in("b", "B", ValueType.VEC3), out("out", "Out", ValueType.VEC3)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr("(" + i.get("a").code() + " " + op + " " + i.get("b").code() + ")", ValueType.VEC3)));
+                (_, i, _) -> Map.of("out", new Expr("(" + i.get("a").code() + " " + op + " " + i.get("b").code() + ")", ValueType.VEC3)));
     }
 
-    /** 一元浮点函数：`fn(x)`；fn 为 null 时用自定义模板（reciprocal/saturate/smoothstep 等）。 */
-    private static void registerUnaryFloat(NodeRegistry metadata, GlslNodeRegistry codegen, String id, String name, String fn) {
-        var body = switch (id) {
+    /**
+     * 一元浮点函数：`fn(x)`；fn 为 null 时用自定义模板（reciprocal/saturate/smoothstep 等）。
+     */
+    private static void registerUnaryFloat(NodeRegistry metadata, GlslNodeRegistry codegen, String id, String name, @Nullable String fn) {
+        var template = switch (id) {
             case "math.reciprocal" -> "(1.0 / {x})";
             case "math.saturate" -> "clamp({x}, 0.0, 1.0)";
             case "math.smoothstep" -> "smoothstep(0.0, 1.0, clamp({x}, 0.0, 1.0))";
             default -> fn == null ? null : fn + "({x})";
         };
-        final String template = body;
         register(metadata, codegen,
                 type(id, "math", name,
                         List.of(in("x", "X", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (n, i, c) -> Map.of("out", new Expr(template.replace("{x}", i.get("x").code()), ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr(template.replace("{x}", i.get("x").code()), ValueType.FLOAT)));
     }
 
     private static void registerBinaryFloat(NodeRegistry metadata, GlslNodeRegistry codegen, String id, String name, String fn) {
@@ -567,39 +566,41 @@ public final class ShaderNodes {
                 type(id, "math", name,
                         List.of(in("a", "A", ValueType.FLOAT), in("b", "B", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)),
                         List.of()),
-                (n, i, c) -> Map.of("out", new Expr(fn + "(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr(fn + "(" + i.get("a").code() + ", " + i.get("b").code() + ")", ValueType.FLOAT)));
     }
 
-    /** 解析渐变 stops（"t:r,g,b,a;t:r,g,b,a;..."）为 GLSL mix 链。 */
+    /**
+     * 解析渐变 stops（"t:r,g,b,a;t:r,g,b,a;..."）为 GLSL mix 链。
+     */
     private static Expr gradientExpr(GraphNode node, String t) {
-        String stops = node.properties().getOrDefault("stops", "0.0:0,0,0,1;1.0:1,1,1,1");
-        List<float[]> parsed = parseStops(stops);
+        var stops = node.properties().getOrDefault("stops", "0.0:0,0,0,1;1.0:1,1,1,1");
+        var parsed = parseStops(stops);
         if (parsed.isEmpty()) {
             return new Expr("vec4(1.0)", ValueType.COLOR);
         }
-        String expr = colorLiteral(parsed.get(0));
-        for (int i = 1; i < parsed.size(); i++) {
-            float[] prev = parsed.get(i - 1);
-            float[] cur = parsed.get(i);
-            float span = cur[0] - prev[0];
-            String seg = span <= 0f ? "0.0" : "(clamp((" + t + " - " + prev[0] + ") / " + span + ", 0.0, 1.0))";
-            expr = "mix(" + expr + ", " + colorLiteral(cur) + ", " + seg + ")";
+        StringBuilder expr = new StringBuilder(colorLiteral(parsed.getFirst()));
+        for (var i = 1; i < parsed.size(); i++) {
+            var prev = parsed.get(i - 1);
+            var cur = parsed.get(i);
+            var span = cur[0] - prev[0];
+            var seg = span <= 0f ? "0.0" : "(clamp((" + t + " - " + prev[0] + ") / " + span + ", 0.0, 1.0))";
+            expr = new StringBuilder("mix(" + expr + ", " + colorLiteral(cur) + ", " + seg + ")");
         }
-        return new Expr(expr, ValueType.COLOR);
+        return new Expr(expr.toString(), ValueType.COLOR);
     }
 
     private static List<float[]> parseStops(String stops) {
-        var list = new java.util.ArrayList<float[]>();
+        var list = new ArrayList<float[]>();
         for (var stop : stops.split(";")) {
             var parts = stop.split(":");
             if (parts.length != 2) continue;
             var t = Float.parseFloat(parts[0].trim());
             var rgba = parts[1].split(",");
             if (rgba.length < 3) continue;
-            float r = Float.parseFloat(rgba[0].trim());
-            float g = Float.parseFloat(rgba[1].trim());
-            float b = Float.parseFloat(rgba[2].trim());
-            float a = rgba.length > 3 ? Float.parseFloat(rgba[3].trim()) : 1f;
+            var r = Float.parseFloat(rgba[0].trim());
+            var g = Float.parseFloat(rgba[1].trim());
+            var b = Float.parseFloat(rgba[2].trim());
+            var a = rgba.length > 3 ? Float.parseFloat(rgba[3].trim()) : 1f;
             list.add(new float[]{t, r, g, b, a});
         }
         return list;
@@ -631,7 +632,6 @@ public final class ShaderNodes {
 
     private static Value defaultValue(ValueType t) {
         return switch (t) {
-            case FLOAT -> Value.of(0f);
             case VEC2 -> Value.of(new Vector2f());
             case VEC3 -> Value.of(new Vector3f());
             case VEC4 -> Value.of(new Vector4f());
@@ -639,7 +639,6 @@ public final class ShaderNodes {
             case INT -> Value.of(0);
             case BOOL -> Value.of(false);
             case SAMPLER -> Value.sampler("");
-            case TIME -> Value.of(0f);
             case STRING -> Value.string("");
             default -> Value.of(0f);
         };
@@ -651,10 +650,10 @@ public final class ShaderNodes {
 
     private static Expr colorLiteral(String csv) {
         var parts = csv.split(",");
-        float r = parts.length > 0 ? Float.parseFloat(parts[0].trim()) : 1f;
-        float g = parts.length > 1 ? Float.parseFloat(parts[1].trim()) : 1f;
-        float b = parts.length > 2 ? Float.parseFloat(parts[2].trim()) : 1f;
-        float a = parts.length > 3 ? Float.parseFloat(parts[3].trim()) : 1f;
+        var r = parts.length > 0 ? Float.parseFloat(parts[0].trim()) : 1f;
+        var g = parts.length > 1 ? Float.parseFloat(parts[1].trim()) : 1f;
+        var b = parts.length > 2 ? Float.parseFloat(parts[2].trim()) : 1f;
+        var a = parts.length > 3 ? Float.parseFloat(parts[3].trim()) : 1f;
         return GlslLiterals.of(Value.color(r, g, b, a));
     }
 }

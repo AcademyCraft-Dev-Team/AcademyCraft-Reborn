@@ -1,15 +1,5 @@
 package org.academy.api.client.render.shader.codegen;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.GraphFixtures;
 import org.academy.api.client.render.graph.compile.DefaultGraphCompiler;
 import org.academy.api.client.render.graph.model.Edge;
@@ -24,6 +14,17 @@ import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.shader.nodes.ShaderNodes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * M16-05 GLSL 黄金测试：代表性图 → 生成 GLSL → 与 {@code src/test/resources/shader/golden/*.glsl}

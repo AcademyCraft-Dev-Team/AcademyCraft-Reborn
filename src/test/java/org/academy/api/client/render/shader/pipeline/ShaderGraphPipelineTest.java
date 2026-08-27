@@ -1,11 +1,5 @@
 package org.academy.api.client.render.shader.pipeline;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.GraphFixtures;
 import org.academy.api.client.render.graph.compile.DefaultGraphCompiler;
 import org.academy.api.client.render.graph.model.Edge;
@@ -16,6 +10,12 @@ import org.academy.api.client.render.shader.codegen.GlslNodeRegistry;
 import org.academy.api.client.render.shader.nodes.ShaderNodes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class ShaderGraphPipelineTest {
     private SimpleNodeRegistry registry;
@@ -50,8 +50,8 @@ class ShaderGraphPipelineTest {
 
         assertNotNull(result.pipeline());
         assertNotNull(result.layout());
-        assertEquals("Time", result.layout().entries().get(0).name());
-        assertTrue(result.pipeline().getLocation() != null);
+        assertEquals("Time", result.layout().entries().getFirst().name());
+        assertNotNull(result.pipeline().getLocation());
     }
 
     @Test

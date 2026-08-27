@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
@@ -15,7 +16,6 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorV
 import org.joml.Vector3f;
 
 import java.util.List;
-import net.minecraft.util.Mth;
 
 public final class VectorRedirectVfx implements Vfx {
     private static final long LIFETIME_NANOS = 350_000_000L;

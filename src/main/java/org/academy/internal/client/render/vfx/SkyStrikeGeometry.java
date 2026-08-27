@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.modifier.ColorModifier;
@@ -16,7 +17,6 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import net.minecraft.util.Mth;
 
 public record SkyStrikeGeometry(
         List<ArcPath> paths,

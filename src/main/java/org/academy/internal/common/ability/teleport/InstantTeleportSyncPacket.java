@@ -14,7 +14,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-/** Client snap used because vanilla 26.2 interpolates short absolute entity-position updates. */
+/**
+ * Client snap used because vanilla 26.2 interpolates short absolute entity-position updates.
+ */
 @PacketTarget(ThreadType.CLIENT)
 public final class InstantTeleportSyncPacket
         extends Packet<ClientPacketListener, InstantTeleportSyncPacket> {

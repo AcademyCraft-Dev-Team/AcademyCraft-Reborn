@@ -3,16 +3,11 @@ package org.academy.internal.client.ability.mentalout;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.CommonProgramNodeIds;
-import org.academy.internal.common.ability.program.PrecisionProgramBookMigrator;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramBookCodec;
-import org.academy.internal.common.ability.program.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

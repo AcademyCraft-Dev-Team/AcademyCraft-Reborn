@@ -87,12 +87,12 @@ public final class ProgramActionTransaction {
         return failures == 0
                 ? Result.success(state, Phase.ROLLBACK)
                 : Result.failure(
-                        state,
-                        Phase.ROLLBACK,
-                        -1,
-                        new IllegalStateException("One or more program compensators failed"),
-                        failures
-                );
+                state,
+                Phase.ROLLBACK,
+                -1,
+                new IllegalStateException("One or more program compensators failed"),
+                failures
+        );
     }
 
     /**

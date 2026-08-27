@@ -117,7 +117,7 @@ public final class GlowEffect {
         inputDescriptor = null;
     }
 
-    private void runBlurPass(GpuTextureView output, GpuTextureView input, Vector2f outSize, float dirX, float dirY, int radius) {
+    private void runBlurPass(GpuTextureView output, GpuTextureView input, Vector2f outSize, float dirX, float dirY, float radius) {
         writeBlurUniforms(outSize, dirX, dirY, radius);
         var blurUboSlice = getBlurUniformsBuffer().slice();
         var textures = List.of(

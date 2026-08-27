@@ -37,7 +37,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import java.util.Set;
 
 public final class QuickLocationTeleport extends Skill {
     private static final double PICK_REACH = 32.0;

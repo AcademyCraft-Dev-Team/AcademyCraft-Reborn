@@ -11,13 +11,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_W;
+import static org.lwjgl.glfw.GLFW.*;
 
-/** Resolves synchronized wing controls into per-avatar animation playback. */
+/**
+ * Resolves synchronized wing controls into per-avatar animation playback.
+ */
 public final class WingFlightAnimationClient {
     private static final Map<UUID, WingFlightAnimationTimeline> TIMELINES = new HashMap<>();
     private static final Map<Integer, WingFlightAnimationTimeline.Playback> PLAYBACKS =

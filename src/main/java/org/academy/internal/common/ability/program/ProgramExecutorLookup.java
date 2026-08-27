@@ -3,12 +3,14 @@ package org.academy.internal.common.ability.program;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
+
 @FunctionalInterface
 public interface ProgramExecutorLookup {
     @Nullable ProgramNodeExecutor<?> find(Identifier nodeType);
 
     static ProgramExecutorLookup firstOf(ProgramExecutorLookup... lookups) {
-        var chain = java.util.List.of(lookups);
+        var chain = List.of(lookups);
         if (chain.isEmpty()) throw new IllegalArgumentException("Program executor lookup chain is empty");
         return id -> {
             for (var lookup : chain) {

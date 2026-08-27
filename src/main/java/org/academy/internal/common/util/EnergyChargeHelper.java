@@ -16,6 +16,9 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.academy.api.common.energy.AcademyEnergyItem;
 import org.academy.api.common.wireless.WirelessUser;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.OptionalDouble;
 
 public final class EnergyChargeHelper {
@@ -47,7 +50,9 @@ public final class EnergyChargeHelper {
         return charge(access.getCapability(Capabilities.Energy.ITEM)) > 0;
     }
 
-    /** Transfers stored machine energy into an item capability in one server-side operation. */
+    /**
+     * Transfers stored machine energy into an item capability in one server-side operation.
+     */
     public static int transferToItem(WirelessUser source, ItemStack stack, int maxTransfer) {
         if (source == null || stack.isEmpty() || maxTransfer <= 0) return 0;
         if (stack.getItem() instanceof AcademyEnergyItem energyItem) {
@@ -154,7 +159,7 @@ public final class EnergyChargeHelper {
 
     public static boolean hasFullyChargedEquipment(Player player, boolean includeHotbar) {
         var found = false;
-        var stacks = new java.util.ArrayList<ItemStack>();
+        var stacks = new ArrayList<ItemStack>();
         stacks.add(player.getMainHandItem());
         stacks.add(player.getOffhandItem());
         for (var slot : ARMOR_SLOTS) stacks.add(player.getItemBySlot(slot));
@@ -193,10 +198,10 @@ public final class EnergyChargeHelper {
     }
 
     public static OptionalDouble blockEnergyFraction(Level level, BlockPos pos) {
-        long stored = 0L;
-        long capacity = 0L;
-        var seen = java.util.Collections.newSetFromMap(
-                new java.util.IdentityHashMap<EnergyHandler, Boolean>());
+        var stored = 0L;
+        var capacity = 0L;
+        var seen = Collections.newSetFromMap(
+                new IdentityHashMap<EnergyHandler, Boolean>());
         for (var side : Direction.values()) {
             var handler = level.getCapability(Capabilities.Energy.BLOCK, pos, side);
             if (handler == null || !seen.add(handler)) continue;
@@ -213,12 +218,12 @@ public final class EnergyChargeHelper {
     }
 
     public static OptionalDouble entityEnergyFraction(LivingEntity entity) {
-        long stored = 0L;
-        long capacity = 0L;
-        var handlers = new java.util.ArrayList<EnergyHandler>();
+        var stored = 0L;
+        var capacity = 0L;
+        var handlers = new ArrayList<EnergyHandler>();
         var entityHandler = entity.getCapability(Capabilities.Energy.ENTITY, null);
         if (entityHandler != null) handlers.add(entityHandler);
-        var stacks = new java.util.ArrayList<ItemStack>();
+        var stacks = new ArrayList<ItemStack>();
         stacks.add(entity.getMainHandItem());
         stacks.add(entity.getOffhandItem());
         for (var slot : ARMOR_SLOTS) stacks.add(entity.getItemBySlot(slot));

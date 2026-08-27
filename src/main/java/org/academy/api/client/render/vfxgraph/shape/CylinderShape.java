@@ -2,7 +2,9 @@ package org.academy.api.client.render.vfxgraph.shape;
 
 import java.util.Random;
 
-/** 圆柱侧面采样（沿 Y 轴，半径 + 高度）。 */
+/**
+ * 圆柱侧面采样（沿 Y 轴，半径 + 高度）。
+ */
 public final class CylinderShape implements EmitterShape {
     private final float cx;
     private final float cy;
@@ -20,7 +22,7 @@ public final class CylinderShape implements EmitterShape {
 
     @Override
     public void sample(Random random, float[] out) {
-        float theta = random.nextFloat() * 2f * (float) Math.PI;
+        var theta = random.nextFloat() * 2f * (float) Math.PI;
         out[0] = cx + (float) Math.cos(theta) * radius;
         out[1] = cy + random.nextFloat() * height;
         out[2] = cz + (float) Math.sin(theta) * radius;

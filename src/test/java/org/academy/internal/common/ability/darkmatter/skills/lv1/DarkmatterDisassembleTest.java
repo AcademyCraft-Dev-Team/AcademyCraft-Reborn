@@ -1,10 +1,11 @@
 package org.academy.internal.common.ability.darkmatter.skills.lv1;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -43,19 +44,19 @@ class DarkmatterDisassembleTest {
     void hitFaceMakesVisiblePlaneWinBeforeHiddenDepth() {
         assertEquals(
                 List.of(
-                        net.minecraft.core.Direction.NORTH,
-                        net.minecraft.core.Direction.SOUTH,
-                        net.minecraft.core.Direction.WEST,
-                        net.minecraft.core.Direction.EAST,
-                        net.minecraft.core.Direction.UP,
-                        net.minecraft.core.Direction.DOWN),
+                        Direction.NORTH,
+                        Direction.SOUTH,
+                        Direction.WEST,
+                        Direction.EAST,
+                        Direction.UP,
+                        Direction.DOWN),
                 DarkmatterDisassemble.Server.prioritizedDirections(
-                        net.minecraft.core.Direction.UP));
+                        Direction.UP));
         var targets = DarkmatterDisassemble.Server.connectedTargets(
                 BlockPos.ZERO,
                 5,
                 DarkmatterDisassemble.Server.prioritizedDirections(
-                        net.minecraft.core.Direction.UP),
+                        Direction.UP),
                 ignored -> true);
         assertEquals(List.of(
                 BlockPos.ZERO,

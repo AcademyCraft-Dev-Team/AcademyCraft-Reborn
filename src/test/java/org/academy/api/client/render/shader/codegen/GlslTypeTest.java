@@ -1,10 +1,10 @@
 package org.academy.api.client.render.shader.codegen;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import org.academy.api.client.render.graph.type.ValueType;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class GlslTypeTest {
     @Test

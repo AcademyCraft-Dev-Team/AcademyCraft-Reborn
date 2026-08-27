@@ -1,41 +1,13 @@
 package org.academy.desktop.grapheditor.canvas
 
-import org.academy.api.client.render.graph.model.Edge
-import org.academy.api.client.render.graph.model.Graph
-import org.academy.api.client.render.graph.model.GraphNode
-import org.academy.api.client.render.graph.model.GraphParameter
-import org.academy.api.client.render.graph.model.Port
-import org.academy.api.client.render.graph.model.PortDirection
+import org.academy.api.client.render.graph.model.*
 import org.academy.api.client.render.graph.registry.NodeRegistry
 import org.academy.api.client.render.graph.registry.NodeType
 import org.academy.api.client.render.graph.registry.PortSpec
 import org.academy.api.client.render.graph.type.TypeConversions
 import org.academy.api.client.render.graph.type.Value
 import org.academy.api.client.render.graph.type.ValueType
-import org.academy.desktop.grapheditor.command.AddNodeCommand
-import org.academy.desktop.grapheditor.command.AddParameterCommand
-import org.academy.desktop.grapheditor.command.AddFrameCommand
-import org.academy.desktop.grapheditor.command.AddNoteCommand
-import org.academy.desktop.grapheditor.command.Command
-import org.academy.desktop.grapheditor.command.ConnectCommand
-import org.academy.desktop.grapheditor.command.CompositeCommand
-import org.academy.desktop.grapheditor.command.DisconnectCommand
-import org.academy.desktop.grapheditor.command.MoveFrameCommand
-import org.academy.desktop.grapheditor.command.MoveNodeCommand
-import org.academy.desktop.grapheditor.command.MoveNoteCommand
-import org.academy.desktop.grapheditor.command.ReconnectCommand
-import org.academy.desktop.grapheditor.command.RemoveFrameCommand
-import org.academy.desktop.grapheditor.command.RemoveNodeCommand
-import org.academy.desktop.grapheditor.command.RemoveNoteCommand
-import org.academy.desktop.grapheditor.command.RemoveParameterCommand
-import org.academy.desktop.grapheditor.command.RenameFrameCommand
-import org.academy.desktop.grapheditor.command.ReorderNodeCommand
-import org.academy.desktop.grapheditor.command.ResizeFrameCommand
-import org.academy.desktop.grapheditor.command.SetNoteContentCommand
-import org.academy.desktop.grapheditor.command.SetOutputCommand
-import org.academy.desktop.grapheditor.command.SetParameterCommand
-import org.academy.desktop.grapheditor.command.SetPropertyCommand
-import org.academy.desktop.grapheditor.command.UndoManager
+import org.academy.desktop.grapheditor.command.*
 import org.academy.desktop.grapheditor.document.EditorMetadata
 import org.academy.desktop.grapheditor.document.FrameData
 import org.academy.desktop.grapheditor.document.NoteData
@@ -147,7 +119,12 @@ class GraphEditorModel(private val registry: NodeRegistry) {
             if (nodes.containsKey(id)) RemoveNodeCommand(this, id) else null
         }
         if (commands.isEmpty()) return
-        undoManager.execute(CompositeCommand(commands, "Delete ${commands.size} node${if (commands.size > 1) "s" else ""}"))
+        undoManager.execute(
+            CompositeCommand(
+                commands,
+                "Delete ${commands.size} node${if (commands.size > 1) "s" else ""}"
+            )
+        )
     }
 
     fun connect(fromNode: String, fromPort: String, toNode: String, toPort: String): Boolean {
@@ -201,6 +178,7 @@ class GraphEditorModel(private val registry: NodeRegistry) {
             val c = value.asColor()
             "${c.x},${c.y},${c.z},${c.w}"
         }
+
         else -> ""
     }
 
@@ -343,7 +321,15 @@ class GraphEditorModel(private val registry: NodeRegistry) {
         sub.parameters().forEachIndexed { i, p ->
             ports.add(Port("in$i", p.name(), PortDirection.INPUT, p.type(), p.defaultValue()))
         }
-        ports.add(Port("out", "Out", PortDirection.OUTPUT, ValueType.COLOR, org.academy.api.client.render.graph.type.Value.color(1f, 1f, 1f, 1f)))
+        ports.add(
+            Port(
+                "out",
+                "Out",
+                PortDirection.OUTPUT,
+                ValueType.COLOR,
+                Value.color(1f, 1f, 1f, 1f)
+            )
+        )
         return ports
     }
 

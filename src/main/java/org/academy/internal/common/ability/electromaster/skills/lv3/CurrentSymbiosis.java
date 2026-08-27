@@ -25,7 +25,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.util.EnergyChargeHelper;
 import org.misaka.MisakaNetworkClient;

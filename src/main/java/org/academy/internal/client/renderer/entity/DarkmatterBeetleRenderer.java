@@ -8,7 +8,9 @@ import org.academy.internal.client.model.DarkmatterCreatureModel;
 import org.academy.internal.client.renderer.entity.state.DarkmatterCreatureRenderState;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 
-/** Compatibility-named renderer for the new composable creature model. */
+/**
+ * Compatibility-named renderer for the new composable creature model.
+ */
 public final class DarkmatterBeetleRenderer extends MobRenderer<
         DarkmatterBeetle, DarkmatterCreatureRenderState, DarkmatterCreatureModel> {
     public DarkmatterBeetleRenderer(EntityRendererProvider.Context context) {

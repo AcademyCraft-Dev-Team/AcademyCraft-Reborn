@@ -3,6 +3,7 @@ package org.academy.api.client.gui.msdf.atlas;
 import lovely.cane.jmsdfgen.*;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
+import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.client.gui.msdf.atlas.allocator.Rect;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
@@ -54,7 +55,10 @@ public class MsdfAtlas {
         ) return null;
 
         shape.normalize();
-        shape.orientContours();
+        // Shape.orientContours 本身是忠实移植自c++, 没有问题的;
+        // 但是由于c++版本依赖Skia(实际上LWJGL的绑定也不含Skia)进行更准确的修正, java社区没有完整绑定的Skia
+        // 所以会有部分文字错误, 需要特殊修复(再次声明这不是jmsdfgen的问题)
+        if (!isCjk(character)) shape.orientContours();
         shape.setYAxisOrientation(YAxisOrientation.Y_DOWNWARD);
 
         EdgeColoring.edgeColoringSimple(shape, 3.0, 0);
@@ -142,8 +146,9 @@ public class MsdfAtlas {
                         new Projection(new Vector2(scale), new Vector2(tx, ty)), new Range(rangeInEM)
                 );
                 var config = new GeneratorConfig.MSDFGeneratorConfig();
-                config.overlapSupport = false;
+                config.overlapSupport = true;
                 MSDFGen.generateMSDF(bitmap.toBitmapSection(), shape, transform, config);
+                MSDFErrorCorrection.msdfErrorCorrection(bitmap.toBitmapSection(), shape, transform, config);
 
                 var rgbaArray = new byte[pixelCount * 4];
                 var fi = 0;
@@ -161,7 +166,7 @@ public class MsdfAtlas {
                 var rgbaBuf = MemoryUtil.memAlloc(pixelCount * 4);
                 rgbaBuf.put(rgbaArray);
                 rgbaBuf.flip();
-                org.academy.api.client.gui.environment.UiEnvironment.get().runOnMainThread(() -> {
+                UiEnvironment.get().runOnMainThread(() -> {
                     finalPage.upload(upRect, rgbaBuf);
                     MemoryUtil.memFree(rgbaBuf);
                 });
@@ -177,5 +182,13 @@ public class MsdfAtlas {
         pages.forEach(AtlasPage::close);
         pages.clear();
         glyphCache.clear();
+    }
+
+    private static boolean isCjk(int codepoint) {
+        var script = Character.UnicodeScript.of(codepoint);
+        return script == Character.UnicodeScript.HAN ||
+                script == Character.UnicodeScript.HIRAGANA ||
+                script == Character.UnicodeScript.KATAKANA ||
+                script == Character.UnicodeScript.HANGUL;
     }
 }

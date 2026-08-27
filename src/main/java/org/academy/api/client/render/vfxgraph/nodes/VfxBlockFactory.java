@@ -11,11 +11,15 @@ import org.academy.api.client.render.vfxgraph.sim.SimNode;
  * {@link PortValueSource} 读取端口值（有则优先于属性，无则用属性默认）。</p>
  */
 public interface VfxBlockFactory {
-    /** 无数据流绑定的缺省创建（端口读取恒返回属性默认值）。 */
+    /**
+     * 无数据流绑定的缺省创建（端口读取恒返回属性默认值）。
+     */
     default SimNode create(VfxBlock block) {
         return create(block, PortValueSource.none());
     }
 
-    /** 带端口值源创建：块内读取端口时先查数据流绑定，无绑定则用属性默认。 */
+    /**
+     * 带端口值源创建：块内读取端口时先查数据流绑定，无绑定则用属性默认。
+     */
     SimNode create(VfxBlock block, PortValueSource ports);
 }

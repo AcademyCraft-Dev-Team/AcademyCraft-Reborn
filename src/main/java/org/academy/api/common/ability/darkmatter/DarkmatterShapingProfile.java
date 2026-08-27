@@ -9,7 +9,9 @@ import net.minecraft.network.codec.StreamCodec;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Immutable, server-validated blueprint embedded in every shaped dark-matter item. */
+/**
+ * Immutable, server-validated blueprint embedded in every shaped dark-matter item.
+ */
 public record DarkmatterShapingProfile(
         int abilityLevel,
         int alphaPoints,
@@ -33,7 +35,7 @@ public record DarkmatterShapingProfile(
                 ByteBufCodecs.VAR_INT.encode(buffer, profile.alphaPoints());
                 ByteBufCodecs.VAR_INT.encode(buffer, profile.betaPoints());
                 ByteBufCodecs.map(LinkedHashMap::new,
-                        ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)
+                                ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_INT)
                         .encode(buffer, new LinkedHashMap<>(profile.modifiers()));
             },
             buffer -> new DarkmatterShapingProfile(

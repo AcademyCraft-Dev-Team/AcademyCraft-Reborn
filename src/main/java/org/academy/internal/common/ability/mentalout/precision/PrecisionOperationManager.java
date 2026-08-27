@@ -3,10 +3,6 @@ package org.academy.internal.common.ability.mentalout.precision;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -17,17 +13,9 @@ import net.minecraft.util.Mth;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.program.CommonProgramNodeCatalog;
-import org.academy.internal.common.ability.program.CommonProgramNodeIds;
-import org.academy.internal.common.ability.program.CompiledProgram;
-import org.academy.internal.common.ability.program.PrecisionProgramCompilation;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.AbilityProgramManager;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramBookCodec;
-import org.academy.internal.common.ability.program.ProgramTriggers;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
+import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
 import org.misaka.MisakaNetworkServer;
@@ -36,6 +24,11 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public final class PrecisionOperationManager {
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
@@ -139,8 +132,8 @@ public final class PrecisionOperationManager {
             if (abilityProgram == null) continue;
             var matches = trigger == ProgramTriggers.Type.HEALTH
                     ? ProgramTriggers.matchesHealth(
-                            abilityProgram, player,
-                            AbilityProgramDefinitions.mentalout().category(), slot)
+                    abilityProgram, player,
+                    AbilityProgramDefinitions.mentalout().category(), slot)
                     : ProgramTriggers.matches(abilityProgram, trigger, movement, gameTime);
             if (!matches) continue;
             var compiled = compiled(player, slot);

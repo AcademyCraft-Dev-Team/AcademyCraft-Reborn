@@ -4,6 +4,7 @@ import net.minecraft.advancements.AdvancementType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
@@ -23,17 +24,11 @@ import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import net.minecraft.util.Mth;
 
 public class PlayerCPManager implements AbilitySubsystem {
     static final float BASE_MAX_CP = 100.0f;
@@ -622,7 +617,9 @@ public class PlayerCPManager implements AbilitySubsystem {
         return true;
     }
 
-    /** Atomically adds a group of timed charges without changing the skill's permanent charge. */
+    /**
+     * Atomically adds a group of timed charges without changing the skill's permanent charge.
+     */
     public boolean tryTimedOccupations(
             UUID uuid,
             Skill skill,
@@ -937,12 +934,12 @@ public class PlayerCPManager implements AbilitySubsystem {
             naturalMaxCP = playerData.isMaxCpInitialized()
                     ? normalizeDebugMaxCP(playerData.getCpData().getMaxCP())
                     : initialPersistentMaxCp(
-                            playerData.getCpData().getMaxCP(),
-                            Math.max(
-                                    playerData.getAppliedCommonSkillMaxCpBonus(),
-                                    getDerivedMaxCpBonus(uuid)
-                            )
-                    );
+                    playerData.getCpData().getMaxCP(),
+                    Math.max(
+                            playerData.getAppliedCommonSkillMaxCpBonus(),
+                            getDerivedMaxCpBonus(uuid)
+                    )
+            );
         }
         return resolveEffectiveMaxCP(naturalMaxCP, debugMaxCpOverrides.get(uuid));
     }

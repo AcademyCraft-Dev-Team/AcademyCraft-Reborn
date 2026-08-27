@@ -55,7 +55,7 @@ public sealed interface ControlDirective permits ControlDirective.ForceTarget,
         }
 
         public UUID targetUuid() {
-            return destination instanceof ControlDestination.Entity(UUID uuid) ? uuid : null;
+            return destination instanceof ControlDestination.Entity(var uuid) ? uuid : null;
         }
 
         @Override

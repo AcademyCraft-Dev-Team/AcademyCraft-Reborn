@@ -1,11 +1,11 @@
 package org.academy.internal.common.ability.teleport.skills.lv1;
 
+import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;

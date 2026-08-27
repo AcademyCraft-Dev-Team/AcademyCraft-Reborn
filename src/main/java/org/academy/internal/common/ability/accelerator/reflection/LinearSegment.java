@@ -1,9 +1,9 @@
 package org.academy.internal.common.ability.accelerator.reflection;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Objects;
-import net.minecraft.util.Mth;
 
 public record LinearSegment(Vec3 start, Vec3 end) {
     private static final double MIN_LENGTH_SQR = 1.0E-12;

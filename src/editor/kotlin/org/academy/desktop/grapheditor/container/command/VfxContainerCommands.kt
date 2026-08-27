@@ -245,7 +245,7 @@ class SetContainerPropertyCommand(
 
     override fun label(): String = "Set property"
 
-    override fun mergeKey(): String? = "prop:$nodeId:$propId"
+    override fun mergeKey(): String = "prop:$nodeId:$propId"
 
     override fun mergeWith(next: Command): Command? {
         if (next !is SetContainerPropertyCommand) return null
@@ -276,7 +276,7 @@ class MoveContextCommand(
 
     override fun label(): String = "Move context"
 
-    override fun mergeKey(): String? = "moveCtx:$contextId"
+    override fun mergeKey(): String = "moveCtx:$contextId"
 
     override fun mergeWith(next: Command): Command? {
         if (next !is MoveContextCommand) return null
@@ -307,7 +307,7 @@ class MoveOperatorCommand(
 
     override fun label(): String = "Move operator"
 
-    override fun mergeKey(): String? = "moveOp:$nodeId"
+    override fun mergeKey(): String = "moveOp:$nodeId"
 
     override fun mergeWith(next: Command): Command? {
         if (next !is MoveOperatorCommand) return null

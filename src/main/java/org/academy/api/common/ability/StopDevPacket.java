@@ -34,7 +34,7 @@ public class StopDevPacket extends Packet<ServerGamePacketListenerImpl, StopDevP
     }
 
     public BlockPos getUserPos() {
-        return source.blockPos();
+        return source instanceof DevelopmentSource.BlockDevelopmentSource(var pos) ? pos : BlockPos.ZERO;
     }
 
     public DevelopmentSource getSource() {

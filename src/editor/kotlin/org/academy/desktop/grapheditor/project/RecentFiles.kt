@@ -4,7 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.ArrayDeque
+import java.util.*
 
 /**
  * 最近文件 LRU 列表，持久化到本地 JSON（新增在前，淘汰最旧）。
@@ -41,7 +41,8 @@ class RecentFiles(
         if (!Files.isRegularFile(persistenceFile)) return
         try {
             val text = Files.readString(persistenceFile)
-            val list = gson.fromJson<List<String>>(text, TypeToken.getParameterized(List::class.java, String::class.java).type)
+            val list =
+                gson.fromJson<List<String>>(text, TypeToken.getParameterized(List::class.java, String::class.java).type)
             list?.take(maxEntries)?.forEach { entries.addLast(it) }
         } catch (_: Exception) {
             entries.clear()

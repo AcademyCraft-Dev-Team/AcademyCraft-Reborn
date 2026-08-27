@@ -5,6 +5,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
@@ -32,7 +33,6 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-import net.minecraft.util.Mth;
 
 public final class AbilitySystemClient {
     public static final Set<Skill> LEARNED_SKILLS = new CopyOnWriteArraySet<>();
@@ -521,13 +521,33 @@ public final class AbilitySystemClient {
         return 2.0f * Math.min(darkmatterAlphaPoints, beta) / darkmatterTotalPoints;
     }
 
-    public static int getDarkmatterLevel() { return darkmatterLevel; }
-    public static int getDarkmatterTotalPoints() { return darkmatterTotalPoints; }
-    public static int getDarkmatterAlphaPoints() { return darkmatterAlphaPoints; }
-    public static boolean isDarkmatterGammaActive() { return darkmatterGammaActive; }
-    public static float getDarkmatterNaturalMatter() { return darkmatterNaturalMatter; }
-    public static float getDarkmatterCreatedMatter() { return darkmatterCreatedMatter; }
-    public static float getDarkmatterReservedMatter() { return darkmatterReservedMatter; }
+    public static int getDarkmatterLevel() {
+        return darkmatterLevel;
+    }
+
+    public static int getDarkmatterTotalPoints() {
+        return darkmatterTotalPoints;
+    }
+
+    public static int getDarkmatterAlphaPoints() {
+        return darkmatterAlphaPoints;
+    }
+
+    public static boolean isDarkmatterGammaActive() {
+        return darkmatterGammaActive;
+    }
+
+    public static float getDarkmatterNaturalMatter() {
+        return darkmatterNaturalMatter;
+    }
+
+    public static float getDarkmatterCreatedMatter() {
+        return darkmatterCreatedMatter;
+    }
+
+    public static float getDarkmatterReservedMatter() {
+        return darkmatterReservedMatter;
+    }
 
     public static AbilityCategory getCategory() {
         return category;

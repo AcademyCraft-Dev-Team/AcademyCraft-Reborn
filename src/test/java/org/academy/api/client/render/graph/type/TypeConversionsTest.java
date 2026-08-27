@@ -1,13 +1,9 @@
 package org.academy.api.client.render.graph.type;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.joml.Vector2f;
-import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class TypeConversionsTest {
     private final TypeConverter converter = TypeConversions.INSTANCE;

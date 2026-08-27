@@ -1,24 +1,23 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** M29b：弧数爆炸修复（帧周期门控 + 火花只从本帧新增弧 + 火花数上限）。 */
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * M29b：弧数爆炸修复（帧周期门控 + 火花只从本帧新增弧 + 火花数上限）。
+ */
 class M29bArcGatingTest {
     private VfxBlockRegistry blocks;
     private VfxOperatorRegistry ops;
@@ -41,7 +40,9 @@ class M29bArcGatingTest {
         return new VfxContext(id, type, "", List.of(blocks), 0f, 0f);
     }
 
-    /** frequency>0 + frame_period=N：只在 frame % N == 0 的帧 spawn 一批，稳态驻留有界（<30）。 */
+    /**
+     * frequency>0 + frame_period=N：只在 frame % N == 0 的帧 spawn 一批，稳态驻留有界（<30）。
+     */
     @Test
     void framePeriodicGatingCapsSpawnedArcs() {
         var system = new VfxSystem("s",
@@ -59,15 +60,17 @@ class M29bArcGatingTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 跑 300 帧：帧周期 3（@30fps）→ 每 0.1s 一批 ~4 弧，lifetime 0.4s → 稳态 ≈ 4 × 4 = 16
-        for (int i = 0; i < 300; i++) {
+        for (var i = 0; i < 300; i++) {
             sim.step(1f / 60f);
         }
-        int arcs = sim.arcBuffer().count();
+        var arcs = sim.arcBuffer().count();
         assertTrue(arcs > 0, "gated surface arcs should still spawn");
         assertTrue(arcs < 30, "frame-periodic gating should keep steady-state arc count < 30, got " + arcs);
     }
 
-    /** frequency<=0：保留 legacy 每帧 spawn（旧资产/测试兼容）。 */
+    /**
+     * frequency<=0：保留 legacy 每帧 spawn（旧资产/测试兼容）。
+     */
     @Test
     void frequencyZeroKeepsLegacyEveryFrameSpawn() {
         var system = new VfxSystem("s",
@@ -87,7 +90,9 @@ class M29bArcGatingTest {
         assertTrue(sim.arcBuffer().count() > 0, "frequency<=0 keeps legacy per-frame spawn");
     }
 
-    /** arc_spark 只从本帧新增弧（fresh）派生火花；且每弧火花数有上限 → 火花总量有界。 */
+    /**
+     * arc_spark 只从本帧新增弧（fresh）派生火花；且每弧火花数有上限 → 火花总量有界。
+     */
     @Test
     void sparkOnlyFromFreshArcsCapsGrowth() {
         var system = new VfxSystem("s",
@@ -107,19 +112,21 @@ class M29bArcGatingTest {
                 List.of(), List.of(), List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        for (int i = 0; i < 300; i++) {
+        for (var i = 0; i < 300; i++) {
             sim.step(1f / 60f);
         }
         // 源弧稳态 ~16（见 framePeriodicGatingCapsSpawnedArcs）；火花只从本帧新增弧派生 + 每弧 ≤3 →
         // 火花稳态应远小于"每条弧每控制点每帧"的指数放大（旧 ~1000+）。给宽松上界。
-        int sparks = 0;
-        for (int a = 0; a < sim.arcBuffer().count(); a++) {
+        var sparks = 0;
+        for (var a = 0; a < sim.arcBuffer().count(); a++) {
             if (!sim.arcBuffer().arc(a).hasSurface()) sparks++;
         }
         assertTrue(sparks < 100, "spark arcs should be bounded (fresh-only + per-arc cap), got " + sparks);
     }
 
-    /** 火花弧（无表面）自身不被再派生（fresh 在下帧清除 + 无表面过滤），总量有界无指数增长。 */
+    /**
+     * 火花弧（无表面）自身不被再派生（fresh 在下帧清除 + 无表面过滤），总量有界无指数增长。
+     */
     @Test
     void sparksDoNotRecursivelySpawnSparks() {
         var system = new VfxSystem("s",
@@ -139,7 +146,7 @@ class M29bArcGatingTest {
                 List.of(), List.of(), List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        for (int i = 0; i < 300; i++) {
+        for (var i = 0; i < 300; i++) {
             sim.step(1f / 60f);
         }
         // 稳态后总弧数（源弧 + 火花）应远小于旧 ~1000+ 指数放大：宽松上界

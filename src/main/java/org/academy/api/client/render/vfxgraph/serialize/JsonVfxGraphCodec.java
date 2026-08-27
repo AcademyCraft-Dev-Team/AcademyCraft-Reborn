@@ -1,13 +1,7 @@
 package org.academy.api.client.render.vfxgraph.serialize;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.model.Port;
@@ -15,25 +9,11 @@ import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
 import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxBlockFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxDataEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxOperatorNode;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.vfxgraph.model.*;
 
-/**
- * VFX 容器图 JSON 编解码器（M23）。**新 schema，无旧扁平格式兼容**。
- *
- * <p>块/算子端口不序列化（由 {@link NodeType} 派生，目录是端口规格唯一事实源），
- * 仅存 id/type/properties（/坐标）。黑板书参数、曲线/渐变等值复用 {@link JsonGraphCodec} 的值编解码。</p>
- *
- * <p>顶层 schema：{@code version} + {@code kind:"vfx"} + {@code id} + {@code parameters} +
- * {@code contexts[].{id,type,name,x,y,blocks[].{id,type,properties}}} + {@code operators[].{id,type,properties,x,y}}
- * + {@code flow[].{from,to}} + {@code dataEdges[].{from:{nodeId,portId},to:{nodeId,portId}}} + {@code outputs[]}。</p>
- */
+import java.util.*;
+
 public final class JsonVfxGraphCodec implements VfxGraphCodec {
     private final NodeRegistry registry;
 
@@ -198,7 +178,7 @@ public final class JsonVfxGraphCodec implements VfxGraphCodec {
             return List.of();
         }
         var ports = new ArrayList<Port>(type.ports().size());
-        for (PortSpec spec : type.ports()) {
+        for (var spec : type.ports()) {
             ports.add(new Port(spec.id(), spec.name(), spec.direction(), spec.type(), spec.defaultValue()));
         }
         return ports;
@@ -227,7 +207,7 @@ public final class JsonVfxGraphCodec implements VfxGraphCodec {
 
     private static List<GraphParameter> decodeParameters(JsonArray arr) {
         var out = new ArrayList<GraphParameter>();
-        for (JsonElement el : arr) {
+        for (var el : arr) {
             var o = el.getAsJsonObject();
             Optional<GraphParameter.Range> range = Optional.empty();
             if (o.has("min") && o.has("max")) {
@@ -236,7 +216,7 @@ public final class JsonVfxGraphCodec implements VfxGraphCodec {
             out.add(new GraphParameter(
                     o.get("id").getAsString(),
                     o.get("name").getAsString(),
-                    org.academy.api.client.render.graph.type.ValueType.valueOf(o.get("type").getAsString()),
+                    ValueType.valueOf(o.get("type").getAsString()),
                     JsonGraphCodec.decodeValue(o.getAsJsonObject("default")),
                     range));
         }

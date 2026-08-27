@@ -1,13 +1,16 @@
 package org.academy.api.client.gui.serialize
 
 import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import net.minecraft.resources.Identifier
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.api.client.gui.state.UiState
+import org.academy.api.client.gui.state.bindProgress
+import org.academy.api.client.gui.state.bindText
+import org.academy.api.client.gui.state.bindVisible
+import org.academy.api.client.gui.widget.*
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -20,7 +23,10 @@ import java.nio.file.Path
 object WidgetSerializer {
     private val logger = AcademyCraft.getLogger()
 
-    const val FORMAT_VERSION = 1
+    const val FORMAT_VERSION = 2
+
+    /** 最早仍可解码的历史格式版本. */
+    const val MIN_SUPPORTED_VERSION = 1
 
     // ============ 编码 (控件树 -> JSON) ============
 
@@ -97,25 +103,69 @@ object WidgetSerializer {
 
     // ============ 解码 (JSON -> 控件树) ============
 
-    fun decode(json: JsonObject): Widget {
+    fun decode(json: JsonObject, bindings: UiBindingContext? = null): Widget {
+        return decode(json, bindings, null)
+    }
+
+    fun decode(json: JsonObject, bindings: UiBindingContext?, templates: UiTemplateRegistry?): Widget {
+        validateVersion(json)
         UiLayoutCodecs.ensureRegistered()
         val rootObj = json.getAsJsonObject("root") ?: json
         val rootNode = WidgetNode.fromJson(rootObj)
-        val widget = decodeNode(rootNode)
+        val widget = decodeNode(rootNode, bindings, templates)
         applyLayout(widget, rootNode.layout)
         return widget
     }
 
-    private fun decodeNode(node: WidgetNode): Widget {
+    private fun validateVersion(json: JsonObject) {
+        val element = json.get("version") ?: return
+        if (!element.isJsonPrimitive || !element.asJsonPrimitive.isNumber) {
+            throw IllegalArgumentException("Layout 'version' must be a number")
+        }
+        val version = element.asInt
+        if (version < MIN_SUPPORTED_VERSION || version > FORMAT_VERSION) {
+            throw IllegalArgumentException(
+                "Unsupported layout format version $version (supported: $MIN_SUPPORTED_VERSION..$FORMAT_VERSION)"
+            )
+        }
+    }
+
+    private fun decodeNode(
+        node: WidgetNode,
+        bindings: UiBindingContext?,
+        templates: UiTemplateRegistry?
+    ): Widget {
+        // v2 `include`：按模板名展开为实际控件。
+        if (node.type == "include") {
+            val template = templates?.resolve(node.template ?: "")
+                ?: throw IllegalArgumentException("Unknown template '${node.template}'")
+            val expanded = template.expand(node.props)
+            expanded.name = node.name
+            return decodeNode(expanded, bindings, templates)
+        }
+
         val codec = WidgetCodecRegistry.byType<Widget>(node.type)
             ?: throw IllegalArgumentException("Unknown widget type '${node.type}'")
-        val widget = codec.create(node.props)
+        val props = clampPropsToSchema(codec, node.props)
+        val widget = codec.create(props)
         widget.name = node.name
-        applyCommon(widget, node.common)
-        codec.decodeProps(widget, node.props)
+        applyCommon(widget, node.common, bindings)
+        codec.decodeProps(widget, props)
         if (widget is WidgetContainer) {
+            val repeatCount = resolveRepeatCount(node, bindings)
+            if (repeatCount > 0) {
+                val item = node.repeatItem
+                    ?: throw IllegalArgumentException("repeat without item on '${node.name}'")
+                for (i in 0 until repeatCount) {
+                    val copy = WidgetNode.fromJson(item.toJson())
+                    copy.name = "${item.name}_$i"
+                    val child = decodeNode(copy, bindings, templates)
+                    widget.addChild(copy.name, child)
+                    applyLayout(child, copy.layout)
+                }
+            }
             for (childNode in node.children) {
-                val child = decodeNode(childNode)
+                val child = decodeNode(childNode, bindings, templates)
                 // 先 addChild 让父容器把 layoutParams 校正为父容器的子类,
                 // 再应用 layout (weight 等字段在子类里才存在, 不会被丢弃).
                 widget.addChild(childNode.name, child)
@@ -123,6 +173,37 @@ object WidgetSerializer {
             }
         }
         return widget
+    }
+
+    private fun resolveRepeatCount(node: WidgetNode, bindings: UiBindingContext?): Int {
+        node.repeatCount?.let { return it }
+        node.repeatSource?.let { return bindings?.resolveRepeatCount(it) ?: 0 }
+        return 0
+    }
+
+    /**
+     * 以 [WidgetCodec.propertySchema] 为唯一事实来源, 将数值属性钳制到声明的 min/max 区间.
+     * 仅处理 FLOAT/INT 类型; 其余属性原样透传.
+     */
+    private fun clampPropsToSchema(codec: WidgetCodec<*>, props: JsonObject): JsonObject {
+        if (props.size() == 0 || codec.propertySchema.isEmpty()) return props
+        val clamped = JsonObject()
+        for ((key, value) in props.entrySet()) {
+            val spec = codec.propertySchema.firstOrNull { it.key == key }
+            val primitive = (value as? JsonPrimitive)?.takeIf { it.isNumber }
+            if (spec != null && primitive != null &&
+                (spec.type == PropType.FLOAT || spec.type == PropType.INT)
+            ) {
+                if (spec.type == PropType.FLOAT) {
+                    clamped.addProperty(key, primitive.asFloat.coerceIn(spec.min, spec.max))
+                } else {
+                    clamped.addProperty(key, primitive.asInt.coerceIn(spec.min.toInt(), spec.max.toInt()))
+                }
+            } else {
+                clamped.add(key, value)
+            }
+        }
+        return clamped
     }
 
     private fun applyLayout(widget: Widget, layout: JsonObject) {
@@ -150,7 +231,7 @@ object WidgetSerializer {
         widget.layoutParams = lp
     }
 
-    private fun applyCommon(widget: Widget, common: JsonObject) {
+    private fun applyCommon(widget: Widget, common: JsonObject, bindings: UiBindingContext? = null) {
         common.optString("visibility")?.let { widget.visibility = Widget.Visibility.valueOf(it) }
         common.optFloat("alpha")?.let { widget.alpha = it }
         common.optBoolean("enabled")?.let { widget.isEnabled = it }
@@ -165,6 +246,25 @@ object WidgetSerializer {
         common.optFloat("origin_x")?.let { widget.originX = it }
         common.optFloat("origin_y")?.let { widget.originY = it }
         common.optString("tooltip_text")?.let { widget.tooltipText = it }
+        bindings ?: return
+        common.optString("bind_text")?.let { ref ->
+            bindings.resolveBinding(ref)?.let { state ->
+                @Suppress("UNCHECKED_CAST")
+                (widget as? LabelWidget)?.bindText(state as UiState<String>)
+            }
+        }
+        common.optString("visible_when")?.let { ref ->
+            bindings.resolveBinding(ref)?.let { state ->
+                @Suppress("UNCHECKED_CAST")
+                widget.bindVisible(state as UiState<Boolean>)
+            }
+        }
+        common.optString("progress_when")?.let { ref ->
+            bindings.resolveBinding(ref)?.let { state ->
+                @Suppress("UNCHECKED_CAST")
+                (widget as? ProgressBarWidget)?.bindProgress(state as UiState<Float>)
+            }
+        }
     }
 
     // ============ 字符串 / 文件 I/O ============
@@ -172,9 +272,17 @@ object WidgetSerializer {
     fun toPrettyJson(root: WidgetContainer): String = UiJson.GSON.toJson(encode(root))
 
     fun fromJsonString(json: String): Widget {
+        return fromJsonString(json, null, null)
+    }
+
+    fun fromJsonString(json: String, bindings: UiBindingContext?): Widget {
+        return fromJsonString(json, bindings, null)
+    }
+
+    fun fromJsonString(json: String, bindings: UiBindingContext?, templates: UiTemplateRegistry?): Widget {
         val element = UiJson.GSON.fromJson(json, JsonObject::class.java)
             ?: throw IllegalArgumentException("Invalid layout JSON")
-        return decode(element)
+        return decode(element, bindings, templates)
     }
 
     /** 可写布局目录: <gameDir>/academy/ui */
@@ -188,14 +296,23 @@ object WidgetSerializer {
     }
 
     fun import(file: Path): Widget {
-        return fromJsonString(Files.readString(file))
+        return import(file, null)
+    }
+
+    fun import(file: Path, bindings: UiBindingContext?): Widget {
+        return fromJsonString(Files.readString(file), bindings)
     }
 
     /** 从 assets (只读) 加载布局. */
     fun loadLayout(identifier: Identifier): Widget {
+        return loadLayout(identifier, null)
+    }
+
+    /** 从 assets (只读) 加载布局，并可传入绑定上下文解析 `$path`。 */
+    fun loadLayout(identifier: Identifier, bindings: UiBindingContext?): Widget {
         val json = UiEnvironment.get().openResource(identifier.namespace, identifier.path)?.use { stream ->
             UiJson.GSON.fromJson(stream.reader(), JsonObject::class.java)
         } ?: throw IllegalArgumentException("Layout '$identifier' is empty")
-        return decode(json)
+        return decode(json, bindings)
     }
 }

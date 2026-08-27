@@ -6,7 +6,9 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 
-/** Server-validated physical parameters embedded in a shaped dark-matter block item. */
+/**
+ * Server-validated physical parameters embedded in a shaped dark-matter block item.
+ */
 public record DarkmatterBlockProfile(float hardness, float explosionResistance, boolean gravity) {
     public static final float MIN_HARDNESS = 0.0f;
     public static final float MAX_HARDNESS = 50.0f;

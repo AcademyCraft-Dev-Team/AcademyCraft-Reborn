@@ -40,23 +40,23 @@ public final class SparkGenerator {
             if (random.nextFloat() > survivalRate) continue;
 
             // 火花方向：法线方向 + 随机扰动
-            float nx = ep.nx;
-            float ny = ep.ny;
-            float nz = ep.nz;
-            float[] dir = SurfaceDistributor.tangentDirection(nx, ny, nz, (float) Math.PI / 3, random);
+            var nx = ep.nx;
+            var ny = ep.ny;
+            var nz = ep.nz;
+            var dir = SurfaceDistributor.tangentDirection(nx, ny, nz, (float) Math.PI / 3, random);
 
             // 火花起点（端点位置）
-            float sx = ep.x;
-            float sy = ep.y;
-            float sz = ep.z;
+            var sx = ep.x;
+            var sy = ep.y;
+            var sz = ep.z;
 
             // 火花终点（沿方向延伸）
-            float ex = sx + dir[0] * sparkLength;
-            float ey = sy + dir[1] * sparkLength;
-            float ez = sz + dir[2] * sparkLength;
+            var ex = sx + dir[0] * sparkLength;
+            var ey = sy + dir[1] * sparkLength;
+            var ez = sz + dir[2] * sparkLength;
 
             // 火花生命周期（随机变化 ±30%）
-            float sparkLife = lifetime * (0.7f + 0.6f * random.nextFloat());
+            var sparkLife = lifetime * (0.7f + 0.6f * random.nextFloat());
 
             sparks.add(new SparkData(sx, sy, sz, ex, ey, ez, sparkRadius, sparkLife,
                     ep.r, ep.g, ep.b, ep.a));
@@ -64,15 +64,17 @@ public final class SparkGenerator {
         return sparks;
     }
 
-    /** 提取弧线端点（每个分支最后一个控制点）。 */
+    /**
+     * 提取弧线端点（每个分支最后一个控制点）。
+     */
     private static List<Endpoint> extractEndpoints(ArcCurve arc) {
         var endpoints = new ArrayList<Endpoint>();
         if (arc.size() < 2) return endpoints;
 
         // 简单策略：取每段 generation 的最后一个点
         float lastGen = -1;
-        for (int i = 0; i < arc.size(); i++) {
-            float gen = arc.generation(i);
+        for (var i = 0; i < arc.size(); i++) {
+            var gen = arc.generation(i);
             if (gen != lastGen) {
                 // 新分支开始，前一个点是上一个分支的端点
                 if (i > 0) {
@@ -88,30 +90,38 @@ public final class SparkGenerator {
 
     private static void addEndpoint(List<Endpoint> endpoints, ArcCurve arc, int idx) {
         // 用相邻点估算法线
-        int prev = Math.max(0, idx - 1);
-        int next = Math.min(arc.size() - 1, idx + 1);
-        float tx = arc.x(next) - arc.x(prev);
-        float ty = arc.y(next) - arc.y(prev);
-        float tz = arc.z(next) - arc.z(prev);
-        float tlen = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
+        var prev = Math.max(0, idx - 1);
+        var next = Math.min(arc.size() - 1, idx + 1);
+        var tx = arc.x(next) - arc.x(prev);
+        var ty = arc.y(next) - arc.y(prev);
+        var tz = arc.z(next) - arc.z(prev);
+        var tlen = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
         float nx, ny, nz;
         if (tlen < 1e-6f) {
-            nx = 0; ny = 1; nz = 0;
+            nx = 0;
+            ny = 1;
+            nz = 0;
         } else {
-            nx = tx / tlen; ny = ty / tlen; nz = tz / tlen;
+            nx = tx / tlen;
+            ny = ty / tlen;
+            nz = tz / tlen;
         }
         endpoints.add(new Endpoint(arc.x(idx), arc.y(idx), arc.z(idx), nx, ny, nz,
                 arc.r(), arc.g(), arc.b(), arc.a()));
     }
 
-    /** 火花数据。 */
+    /**
+     * 火花数据。
+     */
     public record SparkData(
             float startX, float startY, float startZ,
             float endX, float endY, float endZ,
             float radius, float lifetime,
             float r, float g, float b, float a
     ) {
-        /** 转为 ArcCurve（供 CurveToMeshBuilder 使用）。 */
+        /**
+         * 转为 ArcCurve（供 CurveToMeshBuilder 使用）。
+         */
         public ArcCurve toArcCurve() {
             var arc = new ArcCurve();
             arc.addPoint(startX, startY, startZ, radius, 0);
@@ -122,7 +132,9 @@ public final class SparkGenerator {
         }
     }
 
-    /** 端点数据。 */
+    /**
+     * 端点数据。
+     */
     private record Endpoint(float x, float y, float z, float nx, float ny, float nz,
                             float r, float g, float b, float a) {
     }

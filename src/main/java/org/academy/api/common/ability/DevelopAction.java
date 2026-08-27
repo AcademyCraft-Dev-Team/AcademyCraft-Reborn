@@ -22,7 +22,9 @@ public interface DevelopAction {
         return "Developing...";
     }
 
-    /** Identifies the skill or level operation so clients can reconnect UI state after navigation. */
+    /**
+     * Identifies the skill or level operation so clients can reconnect UI state after navigation.
+     */
     default String getTargetId() {
         return "";
     }

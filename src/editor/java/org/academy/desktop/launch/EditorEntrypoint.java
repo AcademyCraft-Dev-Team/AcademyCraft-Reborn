@@ -6,7 +6,7 @@ import net.neoforged.fml.startup.FatalErrorReporting;
 
 /**
  * FML launch entrypoint for the out-of-game desktop tools.
- *
+ * <p>
  * Mirrors {@link net.neoforged.fml.startup.Client} (bootstraps the FML loader,
  * which the NeoForge-patched vanilla classes require) but launches a desktop
  * editor main class instead of the game client. Which main to run is controlled
@@ -19,7 +19,7 @@ public final class EditorEntrypoint extends Entrypoint {
     private EditorEntrypoint() {
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         try (var startupResult = startup(args, false, Dist.CLIENT, true)) {
             var main = createMainMethodCallable(startupResult, DEFAULT_MAIN);
             main.invokeExact(startupResult.loader().getProgramArgs().getArguments());

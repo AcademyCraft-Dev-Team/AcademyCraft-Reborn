@@ -4,10 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.netty.buffer.Unpooled;
-import java.util.Map;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SpawnVfxGraphPacketTest {
     private static SpawnVfxGraphPacket roundTrip(SpawnVfxGraphPacket packet) {

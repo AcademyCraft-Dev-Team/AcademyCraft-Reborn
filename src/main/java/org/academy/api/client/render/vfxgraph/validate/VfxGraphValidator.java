@@ -1,20 +1,17 @@
 package org.academy.api.client.render.vfxgraph.validate;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.academy.api.client.render.graph.model.Port;
 import org.academy.api.client.render.graph.model.PortDirection;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
-import org.academy.api.client.render.graph.type.TypeConverter;
 import org.academy.api.client.render.graph.type.TypeConversions;
+import org.academy.api.client.render.graph.type.TypeConverter;
 import org.academy.api.client.render.graph.validate.GraphIssue;
+import org.academy.api.client.render.vfxgraph.model.VfxContext;
 import org.academy.api.client.render.vfxgraph.model.VfxContextType;
 import org.academy.api.client.render.vfxgraph.model.VfxNode;
 import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+
+import java.util.*;
 
 /**
  * VFX 容器图校验器（M23）：context 引用、flow 连通/无环、数据边引用与类型兼容、输出存在。
@@ -37,7 +34,7 @@ public final class VfxGraphValidator {
 
     public List<GraphIssue> validate(VfxSystem system) {
         var issues = new ArrayList<GraphIssue>();
-        var contexts = new HashMap<String, org.academy.api.client.render.vfxgraph.model.VfxContext>();
+        var contexts = new HashMap<String, VfxContext>();
         var nodes = new HashMap<String, VfxNode>();
 
         for (var ctx : system.contexts()) {
@@ -70,7 +67,7 @@ public final class VfxGraphValidator {
         }
     }
 
-    private void checkFlow(VfxSystem system, Map<String, org.academy.api.client.render.vfxgraph.model.VfxContext> contexts,
+    private void checkFlow(VfxSystem system, Map<String, VfxContext> contexts,
                            List<GraphIssue> issues) {
         if (system.contexts().isEmpty()) {
             issues.add(GraphIssue.error("vfx system has no contexts"));
@@ -135,7 +132,9 @@ public final class VfxGraphValidator {
         return false;
     }
 
-    /** 块级 flow：源必须是 SPAWN context 内的块，目标必须是 INITIALIZE context 内的块。 */
+    /**
+     * 块级 flow：源必须是 SPAWN context 内的块，目标必须是 INITIALIZE context 内的块。
+     */
     private void checkBlockFlows(VfxSystem system, Map<String, VfxNode> nodes, List<GraphIssue> issues) {
         var blockContextType = new HashMap<String, VfxContextType>();
         for (var ctx : system.contexts()) {
@@ -161,7 +160,8 @@ public final class VfxGraphValidator {
         }
     }
 
-    private void checkDataEdges(VfxSystem system, Map<String, VfxNode> nodes, List<GraphIssue> issues) {        for (var edge : system.dataEdges()) {
+    private void checkDataEdges(VfxSystem system, Map<String, VfxNode> nodes, List<GraphIssue> issues) {
+        for (var edge : system.dataEdges()) {
             var fromNode = nodes.get(edge.from().nodeId());
             var toNode = nodes.get(edge.to().nodeId());
             if (fromNode == null) {

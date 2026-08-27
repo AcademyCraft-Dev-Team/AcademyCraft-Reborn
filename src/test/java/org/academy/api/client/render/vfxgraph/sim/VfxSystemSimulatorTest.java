@@ -1,20 +1,17 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VfxSystemSimulatorTest {
     private VfxBlockRegistry blocks;
@@ -33,7 +30,9 @@ class VfxSystemSimulatorTest {
         return new VfxContext(id, type, "", List.of(blocks), 0f, 0f);
     }
 
-    /** 单 spawn → 单 init → update 的最小流水线。 */
+    /**
+     * 单 spawn → 单 init → update 的最小流水线。
+     */
     @Test
     void spawnInitUpdatePipelineProducesMovedParticles() {
         var system = new VfxSystem("demo",
@@ -54,7 +53,7 @@ class VfxSystemSimulatorTest {
                 List.of());
 
         var sim = new VfxSystemSimulator(system, blocks, 42L, List.of());
-        for (int i = 0; i < 3; i++) {
+        for (var i = 0; i < 3; i++) {
             sim.step(0.1f);
         }
         var buffer = sim.buffer();
@@ -63,7 +62,9 @@ class VfxSystemSimulatorTest {
         assertEquals(0.6f, buffer.positionY(0), 1e-5f);
     }
 
-    /** 核心：两个独立 spawn→init 链路，init 只处理自己上游 spawn 的批次（互不干扰）。 */
+    /**
+     * 核心：两个独立 spawn→init 链路，init 只处理自己上游 spawn 的批次（互不干扰）。
+     */
     @Test
     void multiSpawnInitsAreIndependent() {
         var system = new VfxSystem("multi",
@@ -96,9 +97,9 @@ class VfxSystemSimulatorTest {
         var buffer = sim.buffer();
         assertEquals(2, buffer.count());
         // 两个独立 spawn context 的先后不保证，按颜色断言：红色（链路 A，vx=1 → x=0.1）、绿色（链路 B，vx=3 → x=0.3）
-        int red = -1;
-        int green = -1;
-        for (int i = 0; i < buffer.count(); i++) {
+        var red = -1;
+        var green = -1;
+        for (var i = 0; i < buffer.count(); i++) {
             if (buffer.colorR(i) > 0.5f) red = i;
             else green = i;
         }
@@ -107,7 +108,9 @@ class VfxSystemSimulatorTest {
         assertEquals(0.3f, buffer.positionX(green), 1e-5f);
     }
 
-    /** 暂停（dt=0）：spawn 不产粒子，init 空跑，已有粒子不受影响。 */
+    /**
+     * 暂停（dt=0）：spawn 不产粒子，init 空跑，已有粒子不受影响。
+     */
     @Test
     void pauseFreezesSimulation() {
         var system = new VfxSystem("pause",
@@ -129,16 +132,18 @@ class VfxSystemSimulatorTest {
         sim.step(0.1f);
         var buffer = sim.buffer();
         assertEquals(1, buffer.count());
-        float x = buffer.positionX(0);
+        var x = buffer.positionX(0);
         // dt=0 多帧：无新粒子、位置不变
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
             sim.step(0f);
         }
         assertEquals(1, buffer.count());
         assertEquals(x, buffer.positionX(0), 1e-6f);
     }
 
-    /** gravity 阶段在 update 内按序应用。 */
+    /**
+     * gravity 阶段在 update 内按序应用。
+     */
     @Test
     void appliesGravityInUpdatePhase() {
         var system = new VfxSystem("grav",
@@ -250,7 +255,9 @@ class VfxSystemSimulatorTest {
         }
     }
 
-    /** 多个 spawn context 喂同一个 init：批次并集被 init 一次性处理。 */
+    /**
+     * 多个 spawn context 喂同一个 init：批次并集被 init 一次性处理。
+     */
     @Test
     void multipleSpawnsFeedSingleInit() {
         var system = new VfxSystem("fan-in",
@@ -278,12 +285,14 @@ class VfxSystemSimulatorTest {
         var buffer = sim.buffer();
         // 两个 spawn context 各产 1 粒子，init 拿到并集（2 个）都设 vx=5 → x=0.5
         assertEquals(2, buffer.count());
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             assertEquals(0.5f, buffer.positionX(i), 1e-5f);
         }
     }
 
-    /** M28b 回归：loop 重启经 setTime 延续时间戳——编辑后粒子为 0 不再导致 t 冻结。 */
+    /**
+     * M28b 回归：loop 重启经 setTime 延续时间戳——编辑后粒子为 0 不再导致 t 冻结。
+     */
     @Test
     void setTimeContinuesAcrossRestart() {
         var system = new VfxSystem("loop-time",
@@ -301,12 +310,12 @@ class VfxSystemSimulatorTest {
 
         var sim = new VfxSystemSimulator(system, blocks, 42L, List.of());
         // 播完：burst 5 粒 + lifetime 0.3 → 跑 1s 后粒子为 0
-        for (int i = 0; i < 60; i++) sim.step(1f / 60f);
+        for (var i = 0; i < 60; i++) sim.step(1f / 60f);
         assertEquals(0, sim.buffer().count());
         assertTrue(sim.time() > 0f);
 
         // 模拟编辑器 loop 重启：新建模拟器 + setTime 延续原时间
-        float continued = sim.time();
+        var continued = sim.time();
         var sim2 = new VfxSystemSimulator(system, blocks, 42L, List.of());
         sim2.setTime(continued);
         sim2.step(1f / 60f);

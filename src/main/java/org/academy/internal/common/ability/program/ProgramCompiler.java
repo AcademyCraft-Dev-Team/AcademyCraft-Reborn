@@ -1,19 +1,9 @@
 package org.academy.internal.common.ability.program;
 
 import com.mojang.serialization.JsonOps;
-import org.academy.api.common.ability.program.ProgramCompileContext;
-import org.academy.api.common.ability.program.ProgramDiagnostic;
-import org.academy.api.common.ability.program.ProgramDiagnosticCode;
-import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.api.common.ability.program.ProgramNodeSchema;
-import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Resolves a validated graph into stable input slots and control-flow targets.
@@ -54,7 +44,7 @@ public final class ProgramCompiler {
                 continue;
             }
             nodes.put(node.id(), compiled);
-            if (compiled.role() == org.academy.api.common.ability.program.ProgramNodeRole.ENTRY) {
+            if (compiled.role() == ProgramNodeRole.ENTRY) {
                 entryNodeId = node.id();
             }
         }
@@ -94,7 +84,7 @@ public final class ProgramCompiler {
             var roots = nodes.values().stream()
                     .filter(node -> node.role().requiresFlow())
                     .filter(node -> !incoming.contains(node.id()))
-                    .sorted(java.util.Comparator.comparingInt(
+                    .sorted(Comparator.comparingInt(
                             CompiledProgram.CompiledNode::id))
                     .toList();
             if (roots.size() != 1) {
@@ -104,7 +94,7 @@ public final class ProgramCompiler {
             entryNodeId = roots.getFirst().id();
         }
 
-        var pending = new java.util.PriorityQueue<Integer>();
+        var pending = new PriorityQueue<Integer>();
         dataIndegree.forEach((id, degree) -> {
             if (degree == 0) pending.add(id);
         });
@@ -133,7 +123,7 @@ public final class ProgramCompiler {
                     .result()
                     .orElse(null);
             if (configuration == null) return null;
-            ProgramNodeSchema schema = type.schema(configuration);
+            var schema = type.schema(configuration);
             return new CompiledProgram.CompiledNode(
                     node.id(),
                     node.type(),

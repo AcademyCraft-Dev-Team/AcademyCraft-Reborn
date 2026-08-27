@@ -1,6 +1,5 @@
 package org.academy.internal.client.render.vfx;
 
-import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -32,7 +31,7 @@ public final class RailgunVfx implements Vfx {
         if (level == null) return;
         var roots = WingAvatarRegistry.entries();
 
-        for (Map.Entry<Integer, Matrix4f> entry : roots.entrySet()) {
+        for (var entry : roots.entrySet()) {
             var entity = level.getEntity(entry.getKey());
             if (!(entity instanceof Player player)) continue;
             if (minecraft.options.getCameraType().isFirstPerson() && player == minecraft.player) continue;

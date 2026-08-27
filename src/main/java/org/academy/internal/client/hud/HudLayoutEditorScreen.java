@@ -30,6 +30,7 @@ public final class HudLayoutEditorScreen extends Screen {
     private double grabOffsetY;
     private float initialScale;
     private boolean activated;
+
     public HudLayoutEditorScreen(@Nullable Screen previousScreen) {
         super(Component.translatable("hud.academy.layout.title"));
         this.previousScreen = previousScreen;

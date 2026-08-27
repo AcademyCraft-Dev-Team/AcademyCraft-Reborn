@@ -7,12 +7,20 @@ package org.academy.api.client.render.vfxgraph.model;
  * 同一阶段可存在多个 context 实例（如多个独立发射器），各自含若干 {@link VfxBlock}。</p>
  */
 public enum VfxContextType {
-    /** 生成粒子批次（spawn 块输出「本帧新粒子索引批次」）。 */
+    /**
+     * 生成粒子批次（spawn 块输出「本帧新粒子索引批次」）。
+     */
     SPAWN,
-    /** 初始化新粒子（只处理经 flow 边传入的批次）。 */
+    /**
+     * 初始化新粒子（只处理经 flow 边传入的批次）。
+     */
     INITIALIZE,
-    /** 逐帧更新全部存活粒子。 */
+    /**
+     * 逐帧更新全部存活粒子。
+     */
     UPDATE,
-    /** 输出/渲染（决定 RenderSpec）。 */
+    /**
+     * 输出/渲染（决定 RenderSpec）。
+     */
     OUTPUT
 }

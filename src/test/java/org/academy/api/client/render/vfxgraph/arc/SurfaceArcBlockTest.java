@@ -1,25 +1,24 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
-import java.util.Map;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
-import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** M29：arc_surface 块（Blender 表面电弧）容器端到端单测。 */
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * M29：arc_surface 块（Blender 表面电弧）容器端到端单测。
+ */
 class SurfaceArcBlockTest {
     private VfxBlockRegistry blocks;
     private VfxOperatorRegistry ops;
@@ -64,7 +63,7 @@ class SurfaceArcBlockTest {
         assertTrue(arc.size() >= 3, "surface arc should have control points");
         assertTrue(arc.hasSurface(), "surface arc should carry its surface for endpoint snap");
         // 表面点在平面上（y=0 附近）
-        for (int i = 0; i < arc.size(); i++) {
+        for (var i = 0; i < arc.size(); i++) {
             assertTrue(Math.abs(arc.y(i)) < 1.2f, "surface arc y should stay near plane: " + arc.y(i));
         }
     }
@@ -85,11 +84,11 @@ class SurfaceArcBlockTest {
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
         // 跑多帧：端点应被 SurfaceConstraint 拉回平面（y→0）
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
             sim.step(1f / 60f);
         }
         var buf = sim.arcBuffer();
-        for (int a = 0; a < buf.count(); a++) {
+        for (var a = 0; a < buf.count(); a++) {
             var arc = buf.arc(a);
             if (!arc.hasSurface()) continue;
             assertEquals(0f, arc.y(0), 1e-3f, "first endpoint should snap to plane (y=0)");
@@ -119,7 +118,7 @@ class SurfaceArcBlockTest {
         simA.step(1f / 60f);
         simB.step(1f / 60f);
         assertEquals(simA.arcBuffer().count(), simB.arcBuffer().count());
-        for (int i = 0; i < simA.arcBuffer().count(); i++) {
+        for (var i = 0; i < simA.arcBuffer().count(); i++) {
             assertEquals(simA.arcBuffer().arc(i).size(), simB.arcBuffer().arc(i).size());
         }
     }

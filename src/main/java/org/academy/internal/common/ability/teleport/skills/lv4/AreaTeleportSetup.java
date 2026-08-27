@@ -1,10 +1,11 @@
 package org.academy.internal.common.ability.teleport.skills.lv4;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.AreaTeleportState;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.api.common.network.ThreadType;
@@ -29,7 +30,7 @@ public final class AreaTeleportSetup {
             if (packet.action == MarkPacket.ACTION_SWAP) {
                 if (milestone >= 3 && policy.allowAreaTeleportSwap()) {
                     var enabled = AreaTeleportState.toggleSwap(player.getUUID());
-                    player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                    player.sendOverlayMessage(Component.translatable(
                             enabled
                                     ? "message.academy.area_teleport.swap_enabled"
                                     : "message.academy.area_teleport.swap_disabled"));
@@ -66,6 +67,7 @@ public final class AreaTeleportSetup {
                     default -> MARK;
                 });
         private final int action;
+
         private MarkPacket(int action) {
             this.action = action;
         }

@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.program;
 
-/** Shared continuous power semantics for configurable ability-program actions. */
+/**
+ * Shared continuous power semantics for configurable ability-program actions.
+ */
 public final class ProgramPowerScale {
     /** Lowest selectable power. Legacy serialized zeroes are normalized to this value. */
     public static final float MIN = 0.01f;
@@ -46,7 +48,9 @@ public final class ProgramPowerScale {
         return baseCost * costMultiplier(power);
     }
 
-    /** Continuously interpolates non-damage effects through the former three power tiers. */
+    /**
+     * Continuously interpolates non-damage effects through the former three power tiers.
+     */
     public static double interpolate(
             float power,
             double controlled,

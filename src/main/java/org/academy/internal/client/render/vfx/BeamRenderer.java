@@ -9,6 +9,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.client.render.vfx.VfxPipelines;
 import org.academy.api.client.render.vfx.VfxRenderContext;
@@ -26,7 +27,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Supplier;
-import net.minecraft.util.Mth;
 
 public final class BeamRenderer implements VfxRenderer<BeamData> {
     private static final AABB RAY = new AABB(-0.5, 0, -0.5, 0.5, 1, 0.5);
@@ -59,8 +59,8 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
 
     private static Matrix4f orientation(BeamData beam) {
         return new Matrix4f()
-                .rotateY((float) (90 - beam.yRot()) * Mth.DEG_TO_RAD)
-                .rotateZ((float) (90 + beam.xRot()) * Mth.DEG_TO_RAD);
+                .rotateY((90 - beam.yRot()) * Mth.DEG_TO_RAD)
+                .rotateZ((90 + beam.xRot()) * Mth.DEG_TO_RAD);
     }
 
     @Override

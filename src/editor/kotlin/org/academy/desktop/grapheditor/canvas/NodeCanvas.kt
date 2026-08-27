@@ -1,7 +1,7 @@
 package org.academy.desktop.grapheditor.canvas
 
-import imgui.ImGui
 import imgui.ImDrawList
+import imgui.ImGui
 import imgui.flag.ImDrawFlags
 import imgui.flag.ImGuiMouseButton
 import org.academy.api.client.render.graph.model.PortDirection
@@ -73,6 +73,7 @@ class NodeCanvas(
     private class NodeDrag(val startGraphX: Float, val startGraphY: Float) {
         val initialPositions = mutableMapOf<String, Pair<Float, Float>>()
     }
+
     private class FrameDrag(
         val frameId: String,
         val startGraphX: Float,
@@ -82,6 +83,7 @@ class NodeCanvas(
     ) {
         val initialNodePositions = mutableMapOf<String, Pair<Float, Float>>()
     }
+
     private class ResizeDrag(
         val frameId: String,
         val startGraphX: Float,
@@ -89,7 +91,15 @@ class NodeCanvas(
         val initialW: Float,
         val initialH: Float,
     )
-    private class NoteDrag(val noteId: String, val startGraphX: Float, val startGraphY: Float, val initialX: Float, val initialY: Float)
+
+    private class NoteDrag(
+        val noteId: String,
+        val startGraphX: Float,
+        val startGraphY: Float,
+        val initialX: Float,
+        val initialY: Float
+    )
+
     private class BoxSelect(val startX: Float, val startY: Float, var curX: Float, var curY: Float)
 
     /**
@@ -304,11 +314,11 @@ class NodeCanvas(
         val io = ImGui.getIO()
 
         if (ImGui.isMouseDragging(ImGuiMouseButton.Right) || ImGui.isMouseDragging(ImGuiMouseButton.Middle)) {
-            camera.panX += io.getMouseDeltaX()
-            camera.panY += io.getMouseDeltaY()
+            camera.panX += io.mouseDeltaX
+            camera.panY += io.mouseDeltaY
         }
 
-        val wheel = io.getMouseWheel()
+        val wheel = io.mouseWheel
         if (wheel != 0f) {
             val factor = if (wheel > 0) 1.1f else 1f / 1.1f
             val mouseX = ImGui.getMousePosX()
@@ -374,13 +384,27 @@ class NodeCanvas(
         val titleFill = col(0.2f, 0.25f, 0.22f, 0.9f)
 
         drawList.addRectFilled(r[0], r[1], r[0] + r[2], r[1] + r[3], fill, 6f)
-        drawList.addRectFilled(r[0], r[1], r[0] + r[2], r[1] + titleH, titleFill, 6f, ImDrawFlags.RoundCornersBottomRight)
+        drawList.addRectFilled(
+            r[0],
+            r[1],
+            r[0] + r[2],
+            r[1] + titleH,
+            titleFill,
+            6f,
+            ImDrawFlags.RoundCornersBottomRight
+        )
         drawList.addRect(r[0], r[1], r[0] + r[2], r[1] + r[3], border, 6f, ImDrawFlags.RoundCornersAll, 2f)
         if (frame.title.isNotEmpty()) {
             drawList.addText(r[0] + 8f, r[1] + 3f, col(1f, 1f, 1f, 1f), frame.title)
         }
         // 右下角缩放手柄
-        drawList.addRectFilled(r[0] + r[2] - 10f, r[1] + r[3] - 10f, r[0] + r[2], r[1] + r[3], col(0.5f, 0.5f, 0.5f, 0.8f))
+        drawList.addRectFilled(
+            r[0] + r[2] - 10f,
+            r[1] + r[3] - 10f,
+            r[0] + r[2],
+            r[1] + r[3],
+            col(0.5f, 0.5f, 0.5f, 0.8f)
+        )
     }
 
     private fun frameResizeHandlePos(frame: FrameData): Pair<Float, Float> {
@@ -401,7 +425,7 @@ class NodeCanvas(
 
     private fun frameContainsNode(frame: FrameData, node: GraphEditorModel.EdNode): Boolean =
         node.x >= frame.x && node.y >= frame.y &&
-            node.x + NODE_WIDTH <= frame.x + frame.w && node.y + 30f <= frame.y + frame.h
+                node.x + NODE_WIDTH <= frame.x + frame.w && node.y + 30f <= frame.y + frame.h
 
     // ---- sticky note ----
 
@@ -619,7 +643,7 @@ class NodeCanvas(
                 if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
                     openSubGraphRequest = node.id
                 }
-                val ctrl = ImGui.getIO().getKeyMods().let { it and 1 != 0 }
+                val ctrl = ImGui.getIO().keyMods.let { it and 1 != 0 }
                 if (node.id !in selected && !ctrl) {
                     selected.clear()
                 }
@@ -674,8 +698,10 @@ class NodeCanvas(
             if (ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
                 val gx = camera.screenToGraphX(mouseX)
                 val gy = camera.screenToGraphY(mouseY)
-                val newX = if (snapEnabled) camera.snap(drag.initialX + gx - drag.startGraphX) else drag.initialX + gx - drag.startGraphX
-                val newY = if (snapEnabled) camera.snap(drag.initialY + gy - drag.startGraphY) else drag.initialY + gy - drag.startGraphY
+                val newX =
+                    if (snapEnabled) camera.snap(drag.initialX + gx - drag.startGraphX) else drag.initialX + gx - drag.startGraphX
+                val newY =
+                    if (snapEnabled) camera.snap(drag.initialY + gy - drag.startGraphY) else drag.initialY + gy - drag.startGraphY
                 model.moveFrame(drag.frameId, newX, newY)
                 val dx = newX - drag.initialX
                 val dy = newY - drag.initialY
@@ -701,8 +727,10 @@ class NodeCanvas(
             if (ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
                 val gx = camera.screenToGraphX(mouseX)
                 val gy = camera.screenToGraphY(mouseY)
-                val nx = if (snapEnabled) camera.snap(drag.initialX + gx - drag.startGraphX) else drag.initialX + gx - drag.startGraphX
-                val ny = if (snapEnabled) camera.snap(drag.initialY + gy - drag.startGraphY) else drag.initialY + gy - drag.startGraphY
+                val nx =
+                    if (snapEnabled) camera.snap(drag.initialX + gx - drag.startGraphX) else drag.initialX + gx - drag.startGraphX
+                val ny =
+                    if (snapEnabled) camera.snap(drag.initialY + gy - drag.startGraphY) else drag.initialY + gy - drag.startGraphY
                 model.moveNote(drag.noteId, nx, ny)
             }
         }
@@ -778,6 +806,7 @@ class NodeCanvas(
                     model.connect(c.nodeId, c.portId, target.first, target.second)
                 }
             }
+
             DragKind.FROM_INPUT -> {
                 val target = hitOutputPort(mouseX, mouseY)
                 if (target != null) {

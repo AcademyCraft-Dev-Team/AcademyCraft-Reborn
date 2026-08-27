@@ -9,33 +9,16 @@ import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.Orientation;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.UiScreen;
-import org.academy.api.client.gui.widget.BlendQuadWidget;
-import org.academy.api.client.gui.widget.ButtonWidget;
-import org.academy.api.client.gui.widget.FillWidget;
-import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.LabelWidget;
-import org.academy.api.client.gui.widget.LinearLayoutWidget;
-import org.academy.api.client.gui.widget.ScrollBarWidget;
-import org.academy.api.client.gui.widget.ScrollPanelWidget;
-import org.academy.api.client.gui.widget.SeekBarWidget;
-import org.academy.api.client.gui.widget.ToggleButtonWidget;
-import org.academy.api.client.gui.widget.Widget;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterModifierType;
-import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingRegistries;
+import org.academy.api.client.gui.widget.*;
+import org.academy.api.common.ability.darkmatter.*;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 
-import java.util.LinkedHashMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
-/** Standalone editor for native dark-matter equipment and material blueprints. */
+/**
+ * Standalone editor for native dark-matter equipment and material blueprints.
+ */
 public final class DarkmatterShapingScreen extends UiScreen {
     private static final int PANEL_W = 392;
     private static final int PANEL_H = 210;
@@ -189,8 +172,14 @@ public final class DarkmatterShapingScreen extends UiScreen {
                 alphaPercent = Math.round(progress);
                 refreshSummary();
             }
-            @Override public void onStartTrackingTouch(SeekBarWidget seekBar) { }
-            @Override public void onStopTrackingTouch(SeekBarWidget seekBar) { }
+
+            @Override
+            public void onStartTrackingTouch(SeekBarWidget seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBarWidget seekBar) {
+            }
         });
         panel.addChild("phase_slider", slider);
         phaseWidgets.add(slider);
@@ -240,8 +229,14 @@ public final class DarkmatterShapingScreen extends UiScreen {
                 blockHardness = Math.round(progress * 2.0f) / 2.0f;
                 refreshSummary();
             }
-            @Override public void onStartTrackingTouch(SeekBarWidget seekBar) { }
-            @Override public void onStopTrackingTouch(SeekBarWidget seekBar) { }
+
+            @Override
+            public void onStartTrackingTouch(SeekBarWidget seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBarWidget seekBar) {
+            }
         });
         panel.addChild("block_hardness_slider", hardnessSlider);
         blockWidgets.add(hardnessSlider);
@@ -267,8 +262,14 @@ public final class DarkmatterShapingScreen extends UiScreen {
                 blockResistance = Math.round(progress / 10.0f) * 10.0f;
                 refreshSummary();
             }
-            @Override public void onStartTrackingTouch(SeekBarWidget seekBar) { }
-            @Override public void onStopTrackingTouch(SeekBarWidget seekBar) { }
+
+            @Override
+            public void onStartTrackingTouch(SeekBarWidget seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBarWidget seekBar) {
+            }
         });
         panel.addChild("block_resistance_slider", resistanceSlider);
         blockWidgets.add(resistanceSlider);

@@ -44,15 +44,11 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
-/** Server-authoritative program books and execution gateway for non-mentalout categories. */
+/**
+ * Server-authoritative program books and execution gateway for non-mentalout categories.
+ */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AbilityProgramManager {
     public static final int SLOT_COUNT = 10;
@@ -326,7 +322,7 @@ public final class AbilityProgramManager {
         if (transaction == null) return vmDiagnostic;
         var cause = transaction.cause();
         var message = cause == null || cause.getMessage() == null
-                ? "" : cause.getMessage().toLowerCase(java.util.Locale.ROOT);
+                ? "" : cause.getMessage().toLowerCase(Locale.ROOT);
         if (message.contains("insufficient cp")) return ProgramVmDiagnostic.INSUFFICIENT_CP;
         if (message.contains("outside program range") || message.contains("exceeds its strength limit")) {
             return ProgramVmDiagnostic.TARGET_OUT_OF_RANGE;

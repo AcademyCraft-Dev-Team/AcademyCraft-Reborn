@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.darkmatter.skills.lv1;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +45,7 @@ class DarkmatterGenerationTest {
                 108.0f, 20, 0.0f, 1.0f, 3, 1.0f);
         var masteredSixWings = DarkmatterGeneration.unitsForDuration(
                 108.0f, 20, 0.0f, 1.0f, 3, 1.2f);
-        org.junit.jupiter.api.Assertions.assertTrue(masteredSixWings > ordinary);
+        Assertions.assertTrue(masteredSixWings > ordinary);
         assertEquals(1.0f,
                 DarkmatterGeneration.cpPerCreatedMatter(5.0f, 3, 1.2f), 0.0001f);
     }
