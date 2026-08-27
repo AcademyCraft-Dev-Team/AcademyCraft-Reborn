@@ -15,7 +15,7 @@ import org.joml.Vector4f
  * 调用方保证 [composite] 执行时 [RenderTarget] 内容即模糊面板背后的完整背景.
  */
 object UiCompositor {
-    private val NEUTRAL_TINT = Vector4f(1f, 1f, 1f, 1f)
+    internal val NEUTRAL_TINT = Vector4f(1f, 1f, 1f, 1f)
 
     /**
      * 就地合成: 把 [target] 中每个 [BlurRegion] 区域替换为其内容的模糊版,
@@ -33,7 +33,6 @@ object UiCompositor {
         if (regions.isEmpty()) return
         val targetView = target.getColorTextureView() ?: return
 
-        // 金字塔直接从 target 采样: 此时 target 即「面板背后的世界」.
         blur.capture(targetView, regions.maxOf { it.radius })
 
         for (region in regions) {
@@ -47,7 +46,44 @@ object UiCompositor {
         blitSource(targetView, above)
     }
 
-    private fun blitSource(target: GpuTextureView, source: GpuTextureView) {
+    /**
+     * 逐层合成: 把 [source] 中每个 [BlurRegion] 区域替换为 [target] 累积内容的模糊版,
+     * 然后把 source 整层叠到 [target] 上喵.
+     *
+     * 嵌套模糊时, [target] 已含之前各层的累积结果,
+     * pyramid 从 [target] 采样保证嵌套正确.
+     *
+     * @param target 已含之前各层累积结果的帧缓冲 (就地读改写).
+     * @param source 当前层的内容纹理.
+     */
+    fun compositeLayer(
+        target: RenderTarget,
+        source: GpuTextureView,
+        regions: List<BlurRegion>,
+        blur: BackdropBlurEngine,
+    ) {
+        if (regions.isEmpty()) {
+            val targetView = target.getColorTextureView() ?: return
+            blitSource(targetView, source)
+            return
+        }
+
+        val targetView = target.getColorTextureView() ?: return
+
+        blur.capture(targetView, regions.maxOf { it.radius })
+
+        for (region in regions) {
+            blur.fillRegion(
+                targetView,
+                region.x, region.y, region.width, region.height,
+                region.radius,
+                NEUTRAL_TINT
+            )
+        }
+        blitSource(targetView, source)
+    }
+
+    fun blitSource(target: GpuTextureView, source: GpuTextureView) {
         Render.runBlitPass(
             target, null, false, false,
             Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,

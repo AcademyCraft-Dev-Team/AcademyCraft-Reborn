@@ -116,8 +116,8 @@ public final class AbilitySystemServer {
     public static void handleStopDev(StopDevPacket packet) {
         var player = packet.getPacketListener().getPlayer();
         var source = packet.getSource();
-        if (!source.portable()
-                && player.position().distanceToSqr(Vec3.atCenterOf(source.blockPos())) > 64.0) {
+        if (source instanceof DevelopmentSource.BlockDevelopmentSource(var pos)
+                && player.position().distanceToSqr(Vec3.atCenterOf(pos)) > 64.0) {
             return;
         }
 

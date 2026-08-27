@@ -43,13 +43,6 @@ public final class R {
         public static final Identifier position_tex = vanilla("core/position_tex");
         public static final Identifier position_color = vanilla("core/position_color");
         public static final Identifier position_tex_color = vanilla("core/position_tex_color");
-        public static final Identifier position_color_lightmap = vanilla("core/position_color_lightmap");
-        public static final Identifier POSITION_TEX = position_tex;
-        public static final Identifier POSITION_COLOR = position_color;
-        public static final Identifier POSITION_TEX_COLOR = position_tex_color;
-        public static final Identifier POSITION_COLOR_LIGHTMAP = position_color_lightmap;
-        public static final Identifier SCREEN_BLIT = academy("core/screen_blit");
-        public static final Identifier DISTORTION_RING = academy("core/distortion_ring");
 
         private shaders() {
         }
@@ -109,25 +102,10 @@ public final class R {
     }
 
     public static final class textures {
-        public static final Identifier MODEL_ABILITY_DEVELOPER = academy("textures/model/ability_developer.png");
-        public static final Identifier UI_DEVELOPER_PANEL_LEFT = academy("textures/gui/developer/ui_developerleft.png");
-        public static final Identifier PANEL_LEFT_BACK_MIDDLE = academy("textures/gui/developer/parent_background_developermachine.png");
-        public static final Identifier PANEL_RIGHT_BACK = academy("textures/gui/developer/parent_background_developerright.png");
-        public static final Identifier UI_DEVELOPER_PANEL_RIGHT = academy("textures/gui/developer/ui_developerright.png");
-        public static final Identifier UI_DEVELOPER_SKILL_AREA_BG = academy("textures/gui/developer/skill_panel_back.png");
-        public static final Identifier UI_DEVELOPER_SKILL_ICON_BG = academy("textures/gui/developer/skill_back.png");
-        public static final Identifier ICON_ACCELERATOR = academy("textures/gui/icon/icon_accelerator.png");
-        public static final Identifier ICON_ELECTROMASTER = academy("textures/gui/icon/icon_electromaster.png");
-        public static final Identifier ICON_MELTDOWNER = academy("textures/gui/icon/icon_meltdowner.png");
-        public static final Identifier ICON_NOCATEGORY = academy("textures/gui/icon/icon_nocategory.png");
-        public static final Identifier ICON_TELEPORTER = academy("textures/gui/icon/icon_teleporter.png");
         public static final Identifier ICON_AEROMANIP = academy("textures/ability/aeromanip/icon.png");
         public static final Identifier ICON_DARKMATTER = academy("textures/ability/darkmatter/icon.png");
-        public static final Identifier CP_BAR_VALUE = academy("textures/hud/cp_bar_value.png");
-        public static final Identifier CP_BAR_BACKGROUND = academy("textures/hud/cp_bar_background.png");
         public static final Identifier SP_BAR_VALUE = academy("textures/hud/sp_bar_value.png");
         public static final Identifier arc = academy("textures/ability/electromaster/skill/arc_generate/effect/line_segment.png");
-        public static final Identifier arc_generate_icon = academy("textures/ability/electromaster/skill/arc_generate/icon.png");
         public static final Identifier magnet_manipulation_icon = academy("textures/ability/electromaster/skill/magnet_manipulation/icon.png");
         public static final Identifier mine_detect_icon = academy("textures/ability/electromaster/skill/mine_detect/icon.png");
         public static final Identifier thunder_lance_icon = academy("textures/ability/electromaster/skill/thunder_lance/icon.png");
@@ -135,9 +113,6 @@ public final class R {
         public static final Identifier current_recharge_icon = academy("textures/ability/electromaster/skill/current_recharge/icon.png");
         public static final Identifier current_symbiosis_icon = academy("textures/ability/electromaster/skill/current_symbiosis/icon.png");
         public static final Identifier bioelectric_operation_icon = academy("textures/ability/electromaster/skill/bioelectric_operation/icon.png");
-        public static final Identifier railgun_icon = academy("textures/ability/electromaster/skill/railgun/icon.png");
-        public static final Identifier thunderclap_icon = academy("textures/ability/electromaster/skill/thunderclap/icon.png");
-        public static final Identifier iron_sand_arsenal_icon = academy("textures/ability/electromaster/skill/iron_sand_arsenal/icon.png");
         public static final Identifier iron_sand_arsenal_effect = academy("textures/ability/electromaster/skill/iron_sand_arsenal/effect/iron_sand.png");
         public static final Identifier ball_lightning_icon = academy("textures/ability/electromaster/skill/ball_lightning/icon.png");
         public static final Identifier single_high_speed_electron_beam_icon = academy("textures/ability/meltdowner/skill/single_high_speed_electron_beam/icon.png");
@@ -157,8 +132,6 @@ public final class R {
         public static final Identifier location_teleport_icon = academy("textures/ability/teleport/skill/location_teleport/icon.png");
         public static final Identifier quick_location_teleport_icon = academy("textures/ability/teleport/skill/quick_location_teleport/icon.png");
         public static final Identifier area_teleport_select_icon = academy("textures/ability/teleport/skill/area_teleport_select/icon.png");
-        public static final Identifier area_teleport_setup_icon = academy("textures/ability/teleport/skill/area_teleport_setup/icon.png");
-        public static final Identifier area_teleport_start_icon = academy("textures/ability/teleport/skill/area_teleport_start/icon.png");
         public static final Identifier flashing_icon = academy("textures/ability/teleport/skill/flashing/icon.png");
         public static final Identifier defensive_teleport_icon = academy("textures/ability/teleport/skill/defensive_teleport/icon.png");
         public static final Identifier teleport_cursor = academy("textures/ability/teleport/effect/teleport_cursor.png");
@@ -175,17 +148,13 @@ public final class R {
         public static final Identifier darkmatter_beetle = academy("textures/entity/darkmatter_beetle.png");
         public static final Identifier darkmatter_six_wings_icon = academy("textures/ability/darkmatter/skill/darkmatter_six_wings/icon.png");
         public static final Identifier darkmatter_six_wings_effect = academy("textures/ability/darkmatter/skill/darkmatter_six_wings/effect/darkmatter_six_wings.png");
-        public static final Identifier vector_reflection_icon = academy("textures/ability/accelerator/skill/vector_reflection/icon.png");
         public static final Identifier reflection_filter_icon = academy("textures/ability/accelerator/skill/reflection_filter/icon.png");
         public static final Identifier vector_blast_icon = academy("textures/ability/accelerator/skill/vector_blast/icon.png");
         public static final Identifier kinetic_energy_applied_icon = academy("textures/ability/accelerator/skill/kinetic_energy_applied/icon.png");
-        public static final Identifier bloodflow_reverse_icon = academy("textures/ability/accelerator/skill/bloodflow_reverse/icon.png");
-        public static final Identifier storm_wing_icon = academy("textures/ability/accelerator/skill/storm_wing/icon.png");
         public static final Identifier black_wing_icon = academy("textures/ability/accelerator/skill/black_wing/icon.png");
         public static final Identifier white_wing_icon = academy("textures/ability/accelerator/skill/white_wing/icon.png");
         public static final Identifier platinum_wing_icon = academy("textures/ability/accelerator/skill/platinum_wing/icon.png");
         public static final Identifier crossing_the_abyss_icon = academy("textures/ability/accelerator/skill/crossing_the_abyss/icon.png");
-        public static final Identifier plasma_generation_icon = academy("textures/ability/accelerator/skill/plasma_generation/icon.png");
         public static final Identifier plasma_generation_effect = academy("textures/ability/accelerator/skill/plasma_generation/effect/plasma.png");
         public static final Identifier plasma_generation_cloud = academy("textures/ability/accelerator/skill/plasma_generation/effect/white_smoke_hq.png");
         public static final Identifier dir_strike_icon = academy("textures/ability/accelerator/skill/dir_strike/icon.png");
@@ -194,8 +163,6 @@ public final class R {
         public static final Identifier white_wing = academy("textures/ability/accelerator/skill/white_wing/effect/tornado_ring.png");
         public static final Identifier white_wing_ascension = academy("textures/ability/accelerator/skill/white_wing/effect/ascension_ring.png");
         public static final Identifier platinum_wing_starfield = academy("textures/ability/accelerator/skill/platinum_wing/effect/starfield.png");
-        public static final Identifier vec_accel_icon = academy("textures/ability/accelerator/skill/vec_accel/icon.png");
-        public static final Identifier vector_deviation_icon = academy("textures/ability/accelerator/skill/vector_deviation/icon.png");
         public static final Identifier airflow_jet_icon = academy("textures/ability/aeromanip/skill/airflow_jet/icon.png");
         public static final Identifier air_cushion_icon = academy("textures/ability/aeromanip/skill/air_cushion/icon.png");
         public static final Identifier flow_sense_icon = academy("textures/ability/aeromanip/skill/flow_sense/icon.png");
@@ -211,32 +178,9 @@ public final class R {
         public static final Identifier flight_icon = academy("textures/ability/aeromanip/skill/flight/icon.png");
         public static final Identifier vacuum_domain_icon = academy("textures/ability/aeromanip/skill/vacuum_domain/icon.png");
         public static final Identifier atmospheric_dominion_icon = academy("textures/ability/aeromanip/skill/atmospheric_dominion/icon.png");
-        public static final Identifier brain_domain_development_icon = academy("textures/ability/level0/skill/brain_domain_development/icon.png");
-        public static final Identifier multiple_brain_domain_segmentation_icon = academy("textures/ability/level0/skill/multiple_brain_domain_segmentation/icon.png");
-        public static final Identifier parallel_thought_computation_icon = academy("textures/ability/level0/skill/parallel_thought_computation/icon.png");
-        public static final Identifier complete_consciousness_analysis_icon = academy("textures/ability/level0/skill/complete_consciousness_analysis/icon.png");
-        public static final Identifier absolute_self_control_icon = academy("textures/ability/level0/skill/absolute_self_control/icon.png");
-        public static final Identifier condition_any1 = academy("textures/ability/condition/any1.png");
-        public static final Identifier condition_any2 = academy("textures/ability/condition/any2.png");
-        public static final Identifier condition_any3 = academy("textures/ability/condition/any3.png");
-        public static final Identifier condition_any4 = academy("textures/ability/condition/any4.png");
-        public static final Identifier condition_any5 = academy("textures/ability/condition/any5.png");
         public static final Identifier IMAG_PHASE_DOWSING_ROD = academy("textures/model/imag_phase_dowsing_rod.png");
         public static final Identifier OMNI_CRAFTING_TABLE = academy("textures/model/omni_crafting_table.png");
         public static final Identifier CAT_ENGINE = academy("textures/item/cat_engine.png");
-        public static final Identifier CLEANING_ROBOT = academy("textures/model/cleaning_robot.png");
-        public static final Identifier ICON_SETTINGS = academy("textures/gui/icon/icon_settings.png");
-        private static final String MUSIC = "textures/gui/app/music/";
-        public static final Identifier ICON_NOW_PLAYING = academy(MUSIC + "now_playing.png");
-        public static final Identifier ICON_MUSIC_PLAYER = academy(MUSIC + "icon.png");
-        public static final Identifier ICON_CYCLE = academy(MUSIC + "cycle.png");
-        public static final Identifier ICON_RANDOM_PLAY = academy(MUSIC + "random_play.png");
-        public static final Identifier ICON_SINGLE_CYCLE = academy(MUSIC + "single_cycle.png");
-        public static final Identifier ICON_NEXT = academy(MUSIC + "next.png");
-        public static final Identifier ICON_PREV = academy(MUSIC + "previous.png");
-        public static final Identifier ICON_PAUSE = academy(MUSIC + "pause.png");
-        public static final Identifier ICON_PLAY = academy(MUSIC + "play.png");
-        public static final Identifier ICON_VOLUME = academy(MUSIC + "volume.png");
 
         private textures() {
         }

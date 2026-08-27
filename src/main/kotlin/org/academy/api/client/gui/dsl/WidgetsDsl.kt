@@ -1,8 +1,19 @@
 package org.academy.api.client.gui.dsl
 
 import net.minecraft.resources.Identifier
+import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.widget.*
+
+// ============ 名称生成 ============
+
+/** 生成容器内唯一的默认子控件名: `base`, `base_1`, `base_2`... */
+fun WidgetContainer.nextChildName(base: String): String {
+    if (base !in children) return base
+    var n = 1
+    while ("${base}_$n" in children) n++
+    return "${base}_$n"
+}
 
 // ============ 叶子控件工厂 ============
 
@@ -171,6 +182,14 @@ fun standaloneRow(spacing: Float = 0f, init: LinearLayoutWidget.() -> Unit = {})
     return widget
 }
 
+/** 构造一个未挂载的帧布局. */
+fun standaloneFrame(init: FrameLayoutWidget.() -> Unit = {}): FrameLayoutWidget {
+    val widget = FrameLayoutWidget()
+    widget.layoutParams = FrameLayoutWidget.LayoutParams()
+    widget.init()
+    return widget
+}
+
 // ============ 容器控件工厂 ============
 
 /** 纵向线性布局. */
@@ -212,7 +231,6 @@ fun WidgetContainer.anchor(
     return widget
 }
 
-/** 帧布局. */
 fun WidgetContainer.frame(
     name: String = nextChildName("frame"),
     init: FrameLayoutWidget.() -> Unit = {}
@@ -223,7 +241,6 @@ fun WidgetContainer.frame(
     return widget
 }
 
-/** 等分网格布局. */
 fun WidgetContainer.grid(
     columns: Int,
     name: String = nextChildName("grid"),
@@ -238,7 +255,6 @@ fun WidgetContainer.grid(
     return widget
 }
 
-/** 流式换行布局. */
 fun WidgetContainer.wrap(
     name: String = nextChildName("wrap"),
     init: WrapLayoutWidget.() -> Unit = {}
@@ -249,7 +265,6 @@ fun WidgetContainer.wrap(
     return widget
 }
 
-/** 停靠布局. */
 fun WidgetContainer.dock(
     name: String = nextChildName("dock"),
     init: DockLayoutWidget.() -> Unit = {}
@@ -260,7 +275,6 @@ fun WidgetContainer.dock(
     return widget
 }
 
-/** 堆叠布局 (z-index). */
 fun WidgetContainer.stack(
     name: String = nextChildName("stack"),
     init: StackLayoutWidget.() -> Unit = {}
@@ -317,4 +331,38 @@ fun <T : Widget> WidgetContainer.add(
     addChild(name, widget)
     widget.init()
     return widget
+}
+
+/** 替换同名子控件并保留顺序, 赋予布局参数后执行 init (等价 replaceChild + init). */
+fun <T : Widget> WidgetContainer.replace(
+    name: String,
+    widget: T,
+    init: T.() -> Unit = {}
+): T {
+    replaceChild(name, widget)
+    widget.init()
+    return widget
+}
+
+// ============ 交互辅助 ============
+
+/** 设置点击回调. */
+fun ButtonWidget.onClick(handler: () -> Unit): ButtonWidget {
+    onClickListener = OnClickListener { handler() }
+    return this
+}
+
+fun BlurPanelWidget.onClick(handler: () -> Unit): BlurPanelWidget {
+    onClick = handler
+    return this
+}
+
+fun ToggleButtonWidget.onCheckedChange(handler: (Boolean) -> Unit): ToggleButtonWidget {
+    onCheckedChangeListener =
+        object : ToggleButtonWidget.OnCheckedChangeListener {
+            override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
+                handler(isChecked)
+            }
+        }
+    return this
 }

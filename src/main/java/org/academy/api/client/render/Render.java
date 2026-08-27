@@ -955,8 +955,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS_NO_DEPTH_WRITE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_quads_no_depth_write"))
-                .withVertexShader(R.shaders.POSITION_COLOR)
-                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withVertexShader(R.shaders.position_color)
+                .withFragmentShader(R.shaders.position_color)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
@@ -966,8 +966,8 @@ public final class Render {
 
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS_ADDITIVE = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_quads_additive"))
-                .withVertexShader(R.shaders.POSITION_COLOR)
-                .withFragmentShader(R.shaders.POSITION_COLOR)
+                .withVertexShader(R.shaders.position_color)
+                .withFragmentShader(R.shaders.position_color)
                 .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)

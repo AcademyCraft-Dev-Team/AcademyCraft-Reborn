@@ -74,7 +74,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
     }
 
     private fun ensureMeasured(text: String) {
-        if (text !== measuredText || baseFontSize != measuredFontSize) {
+        if (text != measuredText || baseFontSize != measuredFontSize) {
             measuredText = text
             measuredFontSize = baseFontSize
             measuredTextWidth = getTextWidth(text, baseFontSize)

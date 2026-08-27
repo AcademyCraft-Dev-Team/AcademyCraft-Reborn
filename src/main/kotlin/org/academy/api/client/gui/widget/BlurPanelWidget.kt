@@ -32,7 +32,6 @@ open class BlurPanelWidget(initialRadius: Float = 8f) : AbstractWidget() {
 
     override fun onMousePressed(event: MouseEvent) {
         if (onClick != null && isMouseOver(event.x, event.y)) {
-            // 主动 consume, 拦截点击不透传到下方控件 (如 cover 打开时的技能树节点).
             event.consume()
             onClick?.invoke()
             return
@@ -46,7 +45,7 @@ open class BlurPanelWidget(initialRadius: Float = 8f) : AbstractWidget() {
         val y = getAbsoluteY() + getAbsoluteTranslationY()
         if (width > 0f && height > 0f) {
             context.registerBlurRegion(
-                BlurRegion(x, y, width, height, blurRadius, context.drawOrder().peek())
+                BlurRegion(x, y, width, height, blurRadius, context.commandCounter)
             )
         }
         renderInternal(context)

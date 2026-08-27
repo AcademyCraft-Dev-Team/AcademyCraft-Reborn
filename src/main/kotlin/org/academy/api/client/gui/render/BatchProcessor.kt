@@ -46,7 +46,7 @@ object BatchProcessor {
     }
 
     private fun compareCommands(c1: SubmittedCommand, c2: SubmittedCommand): Int {
-        val orderCompare = c1.drawOrder.toLong().compareTo(c2.drawOrder.toLong())
+        val orderCompare = c1.drawOrder.compareTo(c2.drawOrder)
         if (orderCompare != 0) return orderCompare
 
         val pipelineCompare = c1.command.pipeline.sortKey.compareTo(c2.command.pipeline.sortKey)

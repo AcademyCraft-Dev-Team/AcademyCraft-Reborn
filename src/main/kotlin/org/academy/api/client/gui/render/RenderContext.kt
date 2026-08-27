@@ -16,11 +16,15 @@ class RenderContext {
     private val alphaStack: AlphaStack
     private val blurRegionBuffer = mutableListOf<BlurRegion>()
 
+    /** 命令列表的单调递增渲染序号, 供 BlurRegion 记录分割点喵. */
+    var commandCounter = 0
+        private set
+
     /** 本帧收集到的模糊区域快照。 */
     val blurRegions: List<BlurRegion>
         get() = blurRegionBuffer
 
-    var recordedMax = 0
+    var recordedMax = 0L
         private set
 
     init {
@@ -30,7 +34,7 @@ class RenderContext {
     }
 
     fun resetRecordedMax() {
-        recordedMax = 0
+        recordedMax = 0L
     }
 
     fun submit(command: DrawCommand) {
@@ -38,15 +42,31 @@ class RenderContext {
         val currentScissor = scissorStack.peek()
         val currentDrawOrder = drawOrderStack.peek()
         if (currentDrawOrder > recordedMax) recordedMax = currentDrawOrder
-        commands.add(SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder))
+        commands.add(SubmittedCommand(command, currentPose, currentScissor, currentDrawOrder, commandCounter))
+        commandCounter++
     }
 
     fun addCached(cached: List<SubmittedCommand>, regions: List<BlurRegion> = emptyList()) {
+        if (cached.isEmpty() && regions.isEmpty()) return
+        val anchor = if (cached.isNotEmpty()) cached.first().commandIndex else regions.first().commandIndex
+        val offset = commandCounter - anchor
         for (command in cached) {
             if (command.drawOrder > recordedMax) recordedMax = command.drawOrder
         }
-        commands.addAll(cached)
-        blurRegionBuffer.addAll(regions)
+        if (cached.isNotEmpty()) {
+            val start = commands.size
+            commands.addAll(cached)
+            if (offset != 0) {
+                for (i in start until commands.size) {
+                    val c = commands[i]
+                    commands[i] = SubmittedCommand(c.command, c.pose, c.scissorRect, c.drawOrder, c.commandIndex + offset)
+                }
+            }
+            commandCounter = commands.size
+        }
+        for (region in regions) {
+            blurRegionBuffer.add(BlurRegion(region.x, region.y, region.width, region.height, region.radius, region.commandIndex + offset))
+        }
     }
 
     fun pose(): PoseStack2D {
@@ -90,6 +110,7 @@ class RenderContext {
         drawOrderStack.clear()
         alphaStack.clear()
         blurRegionBuffer.clear()
+        commandCounter = 0
     }
 
     inner class PoseStack2D {
@@ -145,13 +166,13 @@ class RenderContext {
     }
 
     class DrawOrderStack {
-        private val stack = ArrayDeque<Int>()
+        private val stack = ArrayDeque<Long>()
 
         init {
-            stack.push(0)
+            stack.push(0L)
         }
 
-        fun push(x: Int = peek()) {
+        fun push(x: Long = peek()) {
             stack.push(x)
         }
 
@@ -159,18 +180,25 @@ class RenderContext {
             if (stack.size > 1) stack.pop()
         }
 
-        fun advance(x: Int = 1) {
-            stack.push(stack.pop() + x)
+        fun advance(x: Long = 1L) {
+            val next = stack.pop() + x
+            // 防止 coverAllPrev 的 advance(recordedMax+1) 指数增长导致 Long 溢出回绕成负数.
+            // 真实 GUI 的 drawOrder 远小于该上限, 不会触顶, 因此层级顺序不受影响.
+            stack.push(if (next > MAX_ORDER) MAX_ORDER else next)
         }
 
-        fun peek(): Int {
+        fun peek(): Long {
             val value = stack.peek()
-            return value ?: 0
+            return value ?: 0L
         }
 
         fun clear() {
             stack.clear()
-            stack.push(0)
+            stack.push(0L)
+        }
+
+        companion object {
+            const val MAX_ORDER: Long = 1L shl 40
         }
     }
 

@@ -16,13 +16,14 @@ public final class AbilityDevelopmentAccess {
 
     public static boolean canLearnSkill(DevelopmentSource source, int recommendedLevel) {
         if (source == null) return false;
-        return !source.portable()
+        return source instanceof DevelopmentSource.BlockDevelopmentSource
                 || recommendedLevel >= PORTABLE_MIN_SKILL_LEVEL
                 && recommendedLevel <= PORTABLE_MAX_SKILL_LEVEL;
     }
 
     public static boolean canDevelopAbilityLevel(DevelopmentSource source, int targetLevel) {
         if (source == null || targetLevel < 1 || targetLevel > MAX_ABILITY_LEVEL) return false;
-        return !source.portable() || targetLevel <= PORTABLE_MAX_ABILITY_LEVEL;
+        return source instanceof DevelopmentSource.BlockDevelopmentSource
+                || targetLevel <= PORTABLE_MAX_ABILITY_LEVEL;
     }
 }

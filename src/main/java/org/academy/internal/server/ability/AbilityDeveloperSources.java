@@ -20,19 +20,19 @@ public final class AbilityDeveloperSources {
 
     public static @Nullable WirelessUser resolve(ServerPlayer player, DevelopmentSource source) {
         if (player == null || source == null) return null;
-        if (!source.portable()) {
-            var pos = source.blockPos();
-            if (pos == null || !player.level().hasChunkAt(pos)
+        if (source instanceof DevelopmentSource.BlockDevelopmentSource(var pos)) {
+            if (!player.level().hasChunkAt(pos)
                     || player.position().distanceToSqr(Vec3.atCenterOf(pos)) > 64.0) return null;
             var blockEntity = player.level().getBlockEntity(pos);
             return blockEntity instanceof AbilityDeveloperBlockEntity developer && developer.isMain()
                     ? developer
                     : null;
         }
-
-        var hand = source.hand();
-        if (hand == null || !player.getItemInHand(hand).is(Items.ABILITY_CONTROL_TABLET.get())) return null;
-        return new TabletEnergyUser(player, hand);
+        if (source instanceof DevelopmentSource.TabletDevelopmentSource(var hand)) {
+            if (!player.getItemInHand(hand).is(Items.ABILITY_CONTROL_TABLET.get())) return null;
+            return new TabletEnergyUser(player, hand);
+        }
+        return null;
     }
 
     private record TabletEnergyUser(ServerPlayer player, InteractionHand hand) implements WirelessUser {

@@ -3,23 +3,21 @@ package org.academy.internal.client.gui.screen
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
-import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.client.Minecraft
 import net.minecraft.client.input.KeyEvent
-import net.minecraft.core.BlockPos
 import net.minecraft.locale.Language
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.util.Mth
-import net.minecraft.world.InteractionHand
 import net.neoforged.neoforge.common.NeoForge
-import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.gui.animation.*
-import org.academy.api.client.gui.command.*
+import org.academy.api.client.gui.command.GlyphDrawCommand
+import org.academy.api.client.gui.command.ImageDrawCommand
+import org.academy.api.client.gui.command.SkillProgressDrawCommand
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
@@ -29,6 +27,7 @@ import org.academy.api.client.gui.util.GlyphCommandGenerator
 import org.academy.api.client.gui.util.WirelessPanelUtil
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
+import org.academy.api.client.resources.R.textures.gui.developer.*
 import org.academy.api.common.ability.*
 import org.academy.api.common.util.L10n
 import org.academy.api.common.wireless.GetCurrentNodePacket
@@ -55,7 +54,27 @@ internal fun parsePropsConfirmation(input: String): PropsConfirmationAnswer = wh
 }
 
 class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScreen(Component.empty()) {
-    private val blockEntity: AbilityDeveloperBlockEntity?
+    private val blockEntity: AbilityDeveloperBlockEntity? = when (developmentSource) {
+        is DevelopmentSource.TabletDevelopmentSource -> {
+            val player = minecraft.player ?: throw RuntimeException("Player is null")
+            if (!player.getItemInHand(developmentSource.hand).`is`(Items.ABILITY_CONTROL_TABLET.get())) {
+                throw RuntimeException("Ability control tablet is no longer held")
+            }
+            null
+        }
+
+        is DevelopmentSource.BlockDevelopmentSource -> {
+            val level = minecraft.level ?: throw RuntimeException("Level is null")
+            val entity = level.getBlockEntity(developmentSource.blockPos)
+            if (entity is AbilityDeveloperBlockEntity) {
+                entity.setOpen(true)
+                entity
+            } else {
+                throw RuntimeException("Invalid block entity at ${developmentSource.blockPos}")
+            }
+        }
+    }
+    private lateinit var mainWidget: FrameLayoutWidget
     private lateinit var area: FrameLayoutWidget
     private var isConsoleMode: Boolean = false
     private lateinit var consoleOutputs: LinearLayoutWidget
@@ -68,34 +87,13 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private val maxDuSkills = 10f
 
-    init {
-        if (developmentSource.portable()) {
-            val player = minecraft.player ?: throw RuntimeException("Player is null")
-            if (!player.getItemInHand(developmentSource.hand()!!).`is`(Items.ABILITY_CONTROL_TABLET.get())) {
-                throw RuntimeException("Ability control tablet is no longer held")
-            }
-            blockEntity = null
-        } else {
-            val level = minecraft.level ?: throw RuntimeException("Level is null")
-            val entity = level.getBlockEntity(developmentSource.blockPos()!!)
-            if (entity is AbilityDeveloperBlockEntity) {
-                blockEntity = entity
-                entity.setOpen(true)
-            } else {
-                throw RuntimeException("Invalid block entity at ${developmentSource.blockPos()}")
-            }
-        }
-    }
-
-    constructor(mainPos: BlockPos) : this(DevelopmentSource.block(mainPos))
-
-    constructor(hand: InteractionHand) : this(DevelopmentSource.tablet(hand))
-
     private fun currentEnergy(): Int {
         val developer = blockEntity
         if (developer != null) return developer.energyStored
         val player = minecraft.player ?: return 0
-        return AbilityControlTabletItem.storedEnergy(player.getItemInHand(developmentSource.hand()!!))
+        return AbilityControlTabletItem.storedEnergy(
+            player.getItemInHand((developmentSource as DevelopmentSource.TabletDevelopmentSource).hand)
+        )
     }
 
     private fun maxEnergy(): Int = blockEntity?.maxEnergyStorage ?: AbilityControlTabletItem.ENERGY_CAPACITY
@@ -108,10 +106,6 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         NeoForge.EVENT_BUS.unregister(this)
         MisakaNetworkClient.send(StopDevPacket(developmentSource))
         AbilitySystemClient.resetDevState()
-    }
-
-    override fun mouseMoved(mouseX: Double, mouseY: Double) {
-        super.mouseMoved(mouseX, mouseY)
     }
 
     override fun tick() {
@@ -134,89 +128,57 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         skillLineBindings.clear()
         viewedSkillInfo = null
 
-        val main = FrameLayoutWidget()
-        main.layoutParams = FrameLayoutWidget.LayoutParams()
-            .gravity(Gravity.CENTER)
-            .size(PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT)
+        mainWidget = root.frame("main") {
+            gravity(Gravity.CENTER)
+            size(PANEL_MAIN_WIDTH, PANEL_MAIN_HEIGHT)
 
-        val anim = ObjectAnimator.ofFloat(
-            { main.translationY = it },
-            -PANEL_MAIN_HEIGHT, 0f
-        ).setDuration(500L).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
-
-        root.addChild("main", main) {
-            val parentLeft = FrameLayoutWidget()
-            parentLeft.layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-                .margin(4f, 0f, 0f, 0f)
-                .size(108.5f, 187f)
-            main.addChild("parent_left", parentLeft) {
-                val leftBg =
-                    ImageWidget(AcademyCraft.academy("textures/gui/developer/parent_background_developerleft.png"))
-                leftBg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                parentLeft.addChild("left_bg", leftBg)
-
-                val uiLeft = ImageWidget(R.textures.gui.developer.ui_developerleft)
-                uiLeft.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
-                    .size(108.5f, 187f)
-                parentLeft.addChild("ui_left", uiLeft)
-
-                val panelMachine = FrameLayoutWidget()
-                panelMachine.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.TOP_LEFT)
-                    .size(108.5f, 187f)
-                parentLeft.addChild("panel_machine", panelMachine) {
-                    fillMachinePanel(panelMachine)
+            frame("parent_left") {
+                gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                margin(4f, 0f, 0f, 0f)
+                size(108.5f, 187f)
+                image(
+                    parent_background_developerleft,
+                    "left_bg"
+                ) {
+                    matchParent()
                 }
-
-                val panelAbility = FrameLayoutWidget()
-                panelAbility.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-                    .margin(2f, -20f, 0f, 0f)
-                    .size(104f, 32f)
-                parentLeft.addChild("panel_ability", panelAbility) {
-                    fillAbilityPanel(panelAbility)
+                image(ui_developerleft, "ui_left") {
+                    gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
+                    size(108.5f, 187f)
+                }
+                frame("panel_machine") {
+                    gravity(Gravity.TOP_LEFT)
+                    size(108.5f, 187f)
+                    fillMachinePanel(this)
+                }
+                frame("panel_ability") {
+                    gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                    margin(2f, -20f, 0f, 0f)
+                    size(104f, 32f)
+                    fillAbilityPanel(this)
                 }
             }
 
-            val parentRight = FrameLayoutWidget()
-            parentRight.layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
-                .margin(0f, 0f, 4f, 0f)
-                .size(278f, 187f)
-            main.addChild("parent_right", parentRight) {
-                val rightBg =
-                    ImageWidget(AcademyCraft.academy("textures/gui/developer/parent_background_developerright.png"))
-                rightBg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                parentRight.addChild("right_bg", rightBg)
-
-                val uiRight = ImageWidget(R.textures.gui.developer.ui_developerright)
-                uiRight.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
-                    .size(278f, 187f)
-                parentRight.addChild("ui_right", uiRight)
-
-                val category = AbilitySystemClient.getCategory()
-                val a = FrameLayoutWidget()
-                a.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.TOP_LEFT)
-                    .margin(10f, 18f, 0f, 0f)
-                    .size(257f, 139f)
-                area = a
-                if (category !is Level0) {
-                    val courseTabs = LinearLayoutWidget()
-                    courseTabs.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.TOP_LEFT)
-                        .margin(COURSE_TABS_X, COURSE_TABS_Y, 0f, 0f)
-                        .size(COURSE_TABS_WIDTH, COURSE_TAB_HEIGHT)
-                    courseTabs.orientation = Orientation.HORIZONTAL
-                    courseTabs.spacing = COURSE_TAB_GAP
-                    parentRight.addChild("course_tabs", courseTabs) {
-                        fillCourseTabs(courseTabs)
-                    }
+            frame("parent_right") {
+                gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
+                margin(0f, 0f, 4f, 0f)
+                size(278f, 187f)
+                image(
+                    parent_background_developerright,
+                    "right_bg"
+                ) {
+                    matchParent()
                 }
-                parentRight.addChild("area", a) {
+                image(ui_developerright, "ui_right") {
+                    gravity(Gravity.RIGHT or Gravity.CENTER_VERTICAL)
+                    size(278f, 187f)
+                }
+                val category = AbilitySystemClient.getCategory()
+                frame("area") {
+                    gravity(Gravity.TOP_LEFT)
+                    margin(10f, 18f, 0f, 0f)
+                    size(257f, 139f)
+                    area = this
                     if (category !is Level0) {
                         fillSkillTreeArea(area)
                     } else {
@@ -227,6 +189,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             }
         }
 
+        val anim = ObjectAnimator.ofFloat(
+            { mainWidget.translationY = it },
+            -PANEL_MAIN_HEIGHT, 0f
+        ).setDuration(500L).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
         anim.addListener(object : AnimatorListener {
             override fun onAnimationEnd(animation: Animator) {
                 if (isConsoleMode) {
@@ -234,7 +200,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 }
             }
         })
-        main.startAnimation(anim)
+        mainWidget.startAnimation(anim)
     }
 
     private fun fillAbilityPanel(panel: FrameLayoutWidget) {
@@ -244,16 +210,13 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val displayedLevel = if (isLevel0) AbilityLevel.LEVEL0 else level
         val levelProgress = if (isLevel0) 0f else AbilitySystemClient.getAbilityProgress()
 
-        val logoAbility = FrameLayoutWidget()
-        logoAbility.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-            .size(32f, 32f)
-        panel.addChild("logo_ability", logoAbility) {
-            val icon = ImageWidget(category.getDeveloperIcon())
-            icon.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER)
-                .size(32f, 32f)
-            logoAbility.addChild("icon", icon)
+        panel.frame("logo_ability") {
+            gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            size(32f, 32f)
+            image(category.getDeveloperIcon(), "icon") {
+                gravity(Gravity.CENTER)
+                size(32f, 32f)
+            }
         }
 
         val categoryKey = category.key
@@ -261,154 +224,135 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val translatedName = Language.getInstance().getOrDefault(translationKey)
             .takeUnless { it == translationKey }
             ?: category.getDisplayName()
-        val nameLabel = LabelWidget(translatedName)
-        nameLabel.baseFontSize = 13f
-        nameLabel.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .margin(31f, 2f, 0f, 0f)
-            .size(70f, 12f)
-        panel.addChild("text_abilityname", nameLabel)
+        panel.label(translatedName, "text_abilityname") {
+            baseFontSize = 13f
+            gravity(Gravity.TOP_LEFT)
+            margin(31f, 2f, 0f, 0f)
+            size(70f, 12f)
+        }
 
-        val progBack = ProgressBarWidget()
-        progBack.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .margin(31f, 13.25f, 0f, 0f)
-            .size(70f, 1.5f)
-        progBack.backgroundColor = 0x4C666666.toInt()
-        progBack.setProgressColor(0x4C666666.toInt())
-        progBack.setProgress(100f)
-        panel.addChild("logo_progress_back", progBack)
+        panel.progress("logo_progress_back") {
+            gravity(Gravity.TOP_LEFT)
+            margin(31f, 13.25f, 0f, 0f)
+            size(70f, 1.5f)
+            colors(0x4C666666, 0x4C666666)
+            value(100f)
+        }
+        panel.progress("logo_progress") {
+            gravity(Gravity.TOP_LEFT)
+            margin(31f, 13.25f, 0f, 0f)
+            size(70f, 1.5f)
+            colors(0x00000000, -0x1)
+            value(levelProgress * 100f)
+        }
 
-        val progFore = ProgressBarWidget()
-        progFore.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .margin(31f, 13.25f, 0f, 0f)
-            .size(70f, 1.5f)
-        progFore.backgroundColor = 0x00000000.toInt()
-        progFore.setProgressColor(-0x1)
-        progFore.setProgress(levelProgress * 100f)
-        panel.addChild("logo_progress", progFore)
-
-        val expLabel = LabelWidget("EXP ${(levelProgress * 100f).toInt()}%")
-        expLabel.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .margin(30f, 15.5f, 0f, 0f)
-            .size(42f, 10f)
-        panel.addChild("text_exp", expLabel)
+        panel.label("EXP ${(levelProgress * 100f).toInt()}%", "text_exp") {
+            gravity(Gravity.TOP_LEFT)
+            margin(30f, 15.5f, 0f, 0f)
+            size(42f, 10f)
+        }
 
         if (!isLevel0 && AbilitySystemClient.canLevelUp()) {
             val targetLevel = level.levelCode + 1
             val machineRequired = !AbilityDevelopmentAccess.canDevelopAbilityLevel(
                 developmentSource, targetLevel
             )
-            val upgradeBtn = ButtonWidget()
-            upgradeBtn.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.TOP_LEFT)
-                .margin(60f, 14.5f, 0f, 0f)
-                .size(48f, 15f)
-            upgradeBtn.onClickListener = OnClickListener { addCover(createLevelUpCover()) }
-            if (machineRequired) {
-                upgradeBtn.tooltipText =
-                    L10n["academy.ability_developer.portable.level_restricted"]
-            }
-            panel.addChild("btn_upgrade", upgradeBtn) {
-                val btnTex = ImageWidget(AcademyCraft.academy("textures/gui/developer/button_learn.png"))
-                btnTex.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                btnTex.alpha = if (machineRequired) 0.4f else 1.0f
-                upgradeBtn.addChild("tex", btnTex)
+            panel.button("btn_upgrade") {
+                gravity(Gravity.TOP_LEFT)
+                margin(60f, 14.5f, 0f, 0f)
+                size(48f, 15f)
+                onClick { addCover(createLevelUpCover()) }
+                if (machineRequired) {
+                    tooltipText = L10n["academy.ability_developer.portable.level_restricted"]
+                }
+                image(button_learn, "tex") {
+                    matchParent()
+                    alpha = if (machineRequired) 0.4f else 1.0f
+                }
             }
         } else {
-            val levelLabel = LabelWidget("Level ${displayedLevel.levelCode}")
-            levelLabel.baseFontSize = 9f
-            levelLabel.setRed(0.09f)
-            levelLabel.setGreen(0.46f)
-            levelLabel.setBlue(0.84f)
-            levelLabel.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.TOP_RIGHT)
-                .margin(0f, 16f, 3f, 0f)
-                .size(42f, 12f)
-            panel.addChild("text_level", levelLabel)
+            panel.label("Level ${displayedLevel.levelCode}", "text_level") {
+                baseFontSize = 9f
+                rgb(0.09f, 0.46f, 0.84f)
+                gravity(Gravity.TOP_RIGHT)
+                margin(0f, 16f, 3f, 0f)
+                size(42f, 12f)
+            }
         }
     }
 
     private fun fillMachinePanel(panel: FrameLayoutWidget) {
-        val machineBg =
-            ImageWidget(AcademyCraft.academy("textures/gui/developer/parent_background_developermachine.png"))
-        machineBg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        panel.addChild("machine_bg", machineBg)
+        panel.image(
+            parent_background_developermachine,
+            "machine_bg"
+        ) {
+            matchParent()
+        }
 
         val developer = blockEntity
         if (developer != null) {
-            val wirelessLabel = LabelWidget("Current Node:")
-            wirelessLabel.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-                .margin(4.25f, 34f, 0f, 0f)
-                .size(100f, 12f)
-            panel.addChild("text_wireless", wirelessLabel)
-
-            val nodeBtn = ButtonWidget()
-            nodeBtn.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-                .margin(4.25f, 58f, 0f, 0f)
-                .size(100f, 16f)
-            nodeBtn.onClickListener = {
-                // addCover cross-fades this complete page against the developer panel using
-                // the same page-opacity transition as the wireless node screen.
-                val cover = createCover()
-                run {
-                    val wirelessPage = WirelessPanelUtil.create(developer.blockPos, true)
-                    wirelessPage.layoutParams.gravity(Gravity.CENTER)
-                    cover.addChild("wireless_page", wirelessPage)
-                }
-                addCover(cover)
+            panel.label("Current Node:", "text_wireless") {
+                gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                margin(4.25f, 34f, 0f, 0f)
+                size(100f, 12f)
             }
-            panel.addChild("button_wireless", nodeBtn) {
-                val bar = ImageWidget(AcademyCraft.academy("textures/gui/element/element_background300x32.png"))
-                bar.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                nodeBtn.addChild("bar", bar)
 
-                val nodeName = LabelWidget("N/A")
-                nodeName.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.CENTER_LEFT)
-                    .margin(26f, 0f, 0f, 0f)
-                    .size(70f, 12f)
-                nodeBtn.addChild("text_nodename", nodeName)
-
-                val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
-                nodeIcon.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.TOP_LEFT)
-                    .margin(7f, 2f, 0f, 0f)
-                    .size(12f, 12f)
-                nodeBtn.addChild("logo_node", nodeIcon)
+            panel.button("button_wireless") {
+                gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                margin(4.25f, 58f, 0f, 0f)
+                size(100f, 16f)
+                onClick {
+                    val cover = createCover()
+                    val wirelessPage = WirelessPanelUtil.create(developer.blockPos, true).apply {
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
+                    }
+                    cover.addChild("wireless_page", wirelessPage)
+                    addCover(cover)
+                }
+                image(
+                    R.textures.gui.element.element_background300x32,
+                    "bar"
+                ) {
+                    matchParent()
+                }
+                val nodeName = label("N/A", "text_nodename") {
+                    gravity(Gravity.CENTER_LEFT)
+                    margin(26f, 0f, 0f, 0f)
+                    size(70f, 12f)
+                }
+                image(R.textures.gui.icon.icon_node, "logo_node") {
+                    gravity(Gravity.TOP_LEFT)
+                    margin(7f, 2f, 0f, 0f)
+                    size(12f, 12f)
+                }
 
                 MisakaNetworkClient.FUTURE_MANAGER.send(GetCurrentNodePacket(developer.blockPos)) {
                     if (it != null) nodeName.text = it.nodeName
                 }
             }
         } else {
-            val sourceLabel = LabelWidget(L10n["academy.ability_developer.energy_source"])
-            sourceLabel.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-                .margin(4.25f, 34f, 0f, 0f)
-                .size(100f, 12f)
-            panel.addChild("text_energy_source", sourceLabel)
+            panel.label(L10n["academy.ability_developer.energy_source"], "text_energy_source") {
+                gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                margin(4.25f, 34f, 0f, 0f)
+                size(100f, 12f)
+            }
 
-            val tabletLabel = LabelWidget(L10n["academy.ability_developer.energy_source.tablet"])
-            tabletLabel.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-                .margin(4.25f, 58f, 0f, 0f)
-                .size(100f, 16f)
-            panel.addChild("text_tablet", tabletLabel)
+            panel.label(L10n["academy.ability_developer.energy_source.tablet"], "text_tablet") {
+                gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                margin(4.25f, 58f, 0f, 0f)
+                size(100f, 16f)
+            }
         }
 
-        val powerLabel = LabelWidget("Power:")
-        powerLabel.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-            .margin(4.25f, 86f, 0f, 0f)
-            .size(100f, 12f)
-        panel.addChild("text_power", powerLabel)
+        panel.label("Power:", "text_power") {
+            gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            margin(4.25f, 86f, 0f, 0f)
+            size(100f, 12f)
+        }
 
-        val powerBar = object : ProgressBarWidget() {
+        panel.add("progress_power", object : ProgressBarWidget() {
             override fun tick() {
                 super.tick()
                 val capacity = maxEnergy()
@@ -418,44 +362,36 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     else 0f
                 )
             }
+        }) {
+            gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            margin(5.75f, 111f, 0f, 0f)
+            size(97f, 8f)
+            colors(0x40000000, 0xFFFFD45A.toInt())
         }
-        powerBar.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-            .margin(5.75f, 111f, 0f, 0f)
-            .size(97f, 8f)
-        powerBar.backgroundColor = 0x40000000
-        powerBar.setProgressColor(0xFFFFD45A.toInt())
-        panel.addChild("progress_power", powerBar)
 
-        val syncLabel = LabelWidget("Sync Rate:")
-        syncLabel.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-            .margin(4.25f, 132f, 0f, 0f)
-            .size(100f, 12f)
-        panel.addChild("text_syncrate", syncLabel)
+        panel.label("Sync Rate:", "text_syncrate") {
+            gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            margin(4.25f, 132f, 0f, 0f)
+            size(100f, 12f)
+        }
 
-        val syncBar = ProgressBarWidget()
-        syncBar.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
-            .margin(5.75f, 155f, 0f, 0f)
-            .size(97f, 8f)
-        syncBar.backgroundColor = 0x40000000
-        syncBar.setProgressColor(0xFF64C0FF.toInt())
-        syncBar.setProgress(100f)
-        panel.addChild("progress_syncrate", syncBar)
+        panel.progress("progress_syncrate") {
+            gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            margin(5.75f, 155f, 0f, 0f)
+            size(97f, 8f)
+            colors(0x40000000, 0xFF64C0FF.toInt())
+            value(100f)
+        }
     }
 
     private fun fillConsoleArea(area: FrameLayoutWidget) {
-        val scrollPanel = ScrollPanelWidget()
-        scrollPanel.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        consoleScrollPanel = scrollPanel
-        area.addChild("scroll_panel", scrollPanel) {
-            consoleOutputs = LinearLayoutWidget()
-            consoleOutputs.layoutParams = LinearLayoutWidget.LayoutParams()
+        consoleScrollPanel = area.scrollPanel(name = "scroll_panel") {
+            matchParent()
+        }
+        consoleOutputs = consoleScrollPanel.column("outputs", spacing = 4f) {
+            layoutParams = LinearLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .padding(4f)
-            consoleOutputs.spacing = 4f
-            scrollPanel.addChild("outputs", consoleOutputs)
         }
     }
 
@@ -468,10 +404,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     outputs,
                     L10n["academy.ability_developer.console.user_detected"].format(playerName)
                 ) {
-                    val label = LabelWidget("")
-                    label.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.BOTTOM_LEFT)
                     val progressSequence = (1..6).map { it * 10 + (-3..2).random() } + (64..67).random()
+
+                    val label = outputs.label("", "label_progress") {
+                        gravity(Gravity.BOTTOM_LEFT)
+                    }
 
                     val bootAnim = ObjectAnimator.ofFloat(
                         { f ->
@@ -499,34 +436,34 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         }
                     })
                     label.startAnimation(bootAnim)
-                    outputs.addChild("label_progress", label)
                 }
             }
         }
     }
 
     private fun addOutput(outputs: LinearLayoutWidget, text: String, onEnd: () -> Unit = {}) {
-        val label = object : LabelWidget(text) {
-            var progress = 0f
+        val label = outputs.add(
+            "label_${text.hashCode()}_${RandomStringUtils.insecure().nextAlphabetic(4)}",
+            object : LabelWidget(text) {
+                var progress = 0f
 
-            fun setRevealProgress(value: Float) {
-                progress = value.coerceIn(0f, 1f)
-                // LabelWidget caches generated glyph commands. Force regeneration while
-                // the typewriter reveal changes even though the backing text is unchanged.
-                lastText = null
-                invalidate()
-            }
+                fun setRevealProgress(value: Float) {
+                    progress = value.coerceIn(0f, 1f)
+                    lastText = null
+                    invalidate()
+                }
 
-            override fun generateDrawCommands(
-                text: String, fontSize: Float, thickness: Float,
-                red: Float, green: Float, blue: Float, alpha: Float
-            ): MutableList<GlyphDrawCommand> {
-                val list = super.generateDrawCommands(text, fontSize, thickness, red, green, blue, alpha)
-                return list.subList(0, (list.size * progress).toInt().coerceIn(0, list.size))
+                override fun generateDrawCommands(
+                    text: String, fontSize: Float, thickness: Float,
+                    red: Float, green: Float, blue: Float, alpha: Float
+                ): MutableList<GlyphDrawCommand> {
+                    val list = super.generateDrawCommands(text, fontSize, thickness, red, green, blue, alpha)
+                    return list.subList(0, (list.size * progress).toInt().coerceIn(0, list.size))
+                }
             }
+        ) {
+            gravity(Gravity.BOTTOM_LEFT)
         }
-        label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
-        outputs.addChild("label_${text.hashCode()}_${RandomStringUtils.insecure().nextAlphabetic(4)}", label)
 
         label.startAnimation(
             ObjectAnimator.ofFloat(label::setRevealProgress, 0f, 1f)
@@ -542,75 +479,69 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     }
 
     private fun createCommandInputArea(outputs: LinearLayoutWidget): LinearLayoutWidget {
-        val inputArea = LinearLayoutWidget()
-        inputArea.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.BOTTOM_LEFT)
-            .height(8f)
-            .widthMode(SizeMode.MATCH_PARENT)
-        inputArea.orientation = Orientation.HORIZONTAL
-        run {
-            val label = LabelWidget(L10n["academy.ability_developer.console.prompt"])
-            label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
-            inputArea.addChild("label", label)
+        return standaloneRow {
+            gravity(Gravity.BOTTOM_LEFT)
+            height(8f)
+            widthMode(SizeMode.MATCH_PARENT)
+            label(L10n["academy.ability_developer.console.prompt"], "label") {
+                gravity(Gravity.BOTTOM_LEFT)
+            }
 
-            val textBox = TextBoxWidget(8)
-            textBox.layoutParams = LinearLayoutWidget.LayoutParams().apply {
+            textBox(8, "text_box") {
                 gravity(Gravity.BOTTOM_LEFT)
                 width(0f)
                 heightMode(SizeMode.MATCH_PARENT)
                 weight(1f)
-            }
-            textBox.background = null
-            textBox.setWhenEnter { input ->
-                outputs.removeChild("input_area")
-                addOutputLine(
-                    outputs,
-                    "${L10n["academy.ability_developer.console.prompt"]} $input"
-                )
-                val normalizedInput = input.trim().lowercase()
-                if (pendingPropsRecommendation != null) {
-                    when (parsePropsConfirmation(normalizedInput)) {
-                        PropsConfirmationAnswer.ACCEPT -> {
-                            pendingPropsRecommendation = null
-                            requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.ACCEPT_PROPS)
+                background = null
+                enter { input ->
+                    outputs.removeChild("input_area")
+                    addOutputLine(
+                        outputs,
+                        "${L10n["academy.ability_developer.console.prompt"]} $input"
+                    )
+                    val normalizedInput = input.trim().lowercase()
+                    if (pendingPropsRecommendation != null) {
+                        when (parsePropsConfirmation(normalizedInput)) {
+                            PropsConfirmationAnswer.ACCEPT -> {
+                                pendingPropsRecommendation = null
+                                requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.ACCEPT_PROPS)
+                            }
+
+                            PropsConfirmationAnswer.RANDOM -> {
+                                pendingPropsRecommendation = null
+                                requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.RANDOM)
+                            }
+
+                            PropsConfirmationAnswer.INVALID -> {
+                                addOutputLine(
+                                    outputs,
+                                    L10n["academy.ability_developer.console.props_invalid_answer"]
+                                )
+                                attachCommandInput(outputs)
+                            }
+                        }
+                        return@enter
+                    }
+
+                    when (normalizedInput) {
+                        "learn" -> {
+                            addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
+                            AbilitySystemClient.resetDevState()
+                            requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.DIRECT)
                         }
 
-                        PropsConfirmationAnswer.RANDOM -> {
-                            pendingPropsRecommendation = null
-                            requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.RANDOM)
+                        "exit" -> {
+                            onClose()
                         }
 
-                        PropsConfirmationAnswer.INVALID -> {
-                            addOutputLine(
-                                outputs,
-                                L10n["academy.ability_developer.console.props_invalid_answer"]
-                            )
+                        else -> {
+                            addOutputLine(outputs, L10n["academy.ability_developer.console.invalid_command"])
                             attachCommandInput(outputs)
                         }
                     }
-                    return@setWhenEnter
-                }
-
-                when (normalizedInput) {
-                    "learn" -> {
-                        addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
-                        AbilitySystemClient.resetDevState()
-                        requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.DIRECT)
-                    }
-
-                    "exit" -> {
-                        onClose()
-                    }
-
-                    else -> {
-                        addOutputLine(outputs, L10n["academy.ability_developer.console.invalid_command"])
-                        attachCommandInput(outputs)
-                    }
                 }
             }
-            inputArea.addChild("text_box", textBox)
         }
-        return inputArea
     }
 
     private fun requestInitialDevelopment(
@@ -661,9 +592,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private fun startInitialDevelopmentProgress(outputs: LinearLayoutWidget) {
         pendingPropsRecommendation = null
-        val progressLabel = LabelWidget(L10n["academy.ability_developer.progress"] + " 0%")
-        progressLabel.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
-        outputs.addChild("dev_progress", progressLabel)
+        val progressLabel = outputs.label(L10n["academy.ability_developer.progress"] + " 0%", "dev_progress") {
+            gravity(Gravity.BOTTOM_LEFT)
+        }
         consoleScrollPanel.scrollToEnd()
 
         fun poll() {
@@ -699,16 +630,15 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private fun attachCommandInput(outputs: LinearLayoutWidget) {
         outputs.removeChild("input_area")
-        val inputArea = createCommandInputArea(outputs)
-        outputs.addChild("input_area", inputArea)
+        val inputArea = outputs.add("input_area", createCommandInputArea(outputs))
         inputArea.children["text_box"]?.let { inputArea.focusedChild = it }
         scrollConsoleToEndAfterLayout()
     }
 
     private fun addOutputLine(outputs: LinearLayoutWidget, text: String) {
-        val label = LabelWidget(text)
-        label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.BOTTOM_LEFT)
-        outputs.addChild("output_${RandomStringUtils.insecure().nextAlphabetic(8)}", label)
+        outputs.label(text) {
+            gravity(Gravity.BOTTOM_LEFT)
+        }
         scrollConsoleToEndAfterLayout()
     }
 
@@ -733,71 +663,94 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private fun fillSkillTreeArea(area: FrameLayoutWidget) {
         val category = AbilitySystemClient.getCategory()
-        val layoutCategory = category
-        val skillInfos = when (coursePage) {
-            CoursePage.COMMON -> AbilitySystemClient.getCommonSkillInfos()
-            CoursePage.ABILITY -> AbilitySystemClient.getCategorySkillInfos(category)
-        }
-            .filter { info ->
-                SkillTreeVisibility.shouldDisplay(
-                    info.skill.scope,
-                    AbilitySystemClient.isSkillLearned(info.skill),
-                    info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) },
-                    info.skill.devConditions.all { it.accepts() }
-                )
-            }
 
-        val bg = object : ParallaxImageWidget(R.textures.gui.developer.skill_panel_back) {
+        area.add("area_bg", object : ParallaxImageWidget(skill_panel_back) {
             override fun render(context: RenderContext) {
                 setParallaxEnabled(!AbilityDeveloperLayoutEditor.isDebugMode())
                 super.render(context)
             }
+        }) {
+            imageToViewRatio(0.9f, 0.9f)
+            matchParent()
+            sampler(FilterMode.LINEAR, true)
         }
-        bg.setImageToViewRatio(0.9f, 0.9f)
-        bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        bg.setSampler(FilterMode.LINEAR, true)
-        area.addChild("area_bg", bg)
+
+        val pager = area.add("pager", PagerLayoutWidget()) {
+            matchParent()
+            switchDuration(150)
+            interpolator(EasingFunctions.EASE_OUT_CUBIC)
+        }
 
         skillLineBindings.clear()
+        for (page in CoursePage.entries) {
+            val pageContainer = pager.add("page_${page.name.lowercase()}", FrameLayoutWidget()) {
+                matchParent()
+            }
+            fillSkillPage(pageContainer, page, category)
+        }
+
+        pager.jumpToPage(coursePage.ordinal)
+
+        val leftBtn = createSkillPagerButton(-1) { switchSkillPage(pager, -1) }
+        val rightBtn = createSkillPagerButton(1) { switchSkillPage(pager, 1) }
+        area.add("pager_left", leftBtn)
+        area.add("pager_right", rightBtn)
+        updatePagerButtons(pager, leftBtn, rightBtn)
+    }
+
+    private fun fillSkillPage(
+        container: FrameLayoutWidget,
+        page: CoursePage,
+        category: AbilityCategory
+    ) {
+        val skillInfos = when (page) {
+            CoursePage.COMMON -> AbilitySystemClient.getCommonSkillInfos()
+            CoursePage.ABILITY -> AbilitySystemClient.getCategorySkillInfos(category)
+        }.filter { info ->
+            SkillTreeVisibility.shouldDisplay(
+                info.skill.scope,
+                AbilitySystemClient.isSkillLearned(info.skill),
+                info.dependencies.all { AbilitySystemClient.isSkillLearned(it.skill) },
+                info.skill.devConditions.all { it.accepts() }
+            )
+        }
+
         val lineMap = mutableMapOf<String, Widget>()
         for (info in skillInfos) {
             for (dep in info.dependencies) {
-                val line = createSkillLine(layoutCategory, dep, info)
+                val line = createSkillLine(category, dep, info)
                 val key = "line_${info.skill.getKeyString()}_${dep.skill.getKeyString()}"
-                area.addChild(key, line)
+                container.add(key, line)
                 lineMap[key] = line
-                skillLineBindings.add(SkillLineBinding(line, layoutCategory, dep, info))
+                skillLineBindings.add(SkillLineBinding(line, category, dep, info))
             }
         }
 
         val nodeMap = mutableMapOf<String, Widget>()
-        val nodeList = mutableListOf<Pair<AbilitySystemClient.SkillInfo, Widget>>()
         for (idx in skillInfos.indices) {
             val info = skillInfos[idx]
-            val node = createSkillNode(layoutCategory, info)
+            val node = createSkillNode(category, info)
             val key = "node_${info.skill.getKeyString()}"
-            area.addChild(key, node)
+            container.add(key, node)
             nodeMap[key] = node
-            nodeList.add(info to node)
         }
 
-        val debugLabel = object : LabelWidget("") {
+        container.add("layout_debug_status", object : LabelWidget("") {
             override fun render(context: RenderContext) {
                 text = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "LAYOUT: ${layoutCategory.key} / ${coursePage.name.lowercase()}  (drag icons; snap 0.5px)"
+                    "LAYOUT: ${category.key} / ${page.name.lowercase()}  (drag icons; snap 0.5px)"
                 } else {
                     ""
                 }
                 super.render(context)
             }
+        }) {
+            baseFontSize = 6f
+            isEnabled = false
+            gravity(Gravity.TOP_LEFT)
+            margin(2f, 1f, 0f, 0f)
+            size(250f, 8f)
         }
-        debugLabel.baseFontSize = 6f
-        debugLabel.isEnabled = false
-        debugLabel.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .margin(2f, 1f, 0f, 0f)
-            .size(250f, 8f)
-        area.addChild("layout_debug_status", debugLabel)
 
         val nodeStagger = 50L
         val nodeFadeDuration = 400L
@@ -834,23 +787,6 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         }
     }
 
-    private val lineTex = AcademyCraft.academy("textures/gui/developer/line.png")
-    private val outlineTex = AcademyCraft.academy("textures/gui/developer/skill_outline.png")
-    private val radialMaskTex = AcademyCraft.academy("textures/gui/developer/skill_radial_mask.png")
-
-    private class CircleImageWidget(texture: Identifier) : ImageWidget(texture) {
-        override fun generateDrawCommand(
-            texture: GpuTextureView, sampler: GpuSampler,
-            width: Float, height: Float,
-            u0: Float, v0: Float, u1: Float, v1: Float, u2: Float, v2: Float, u3: Float, v3: Float,
-            red: Float, green: Float, blue: Float, alpha: Float
-        ): DrawCommand {
-            return ImageCircleDrawCommand(
-                texture, sampler, width, height, u0, v0, u1, v1, u2, v2, u3, v3, red, green, blue, alpha
-            )
-        }
-    }
-
     private fun createSkillLine(
         category: AbilityCategory,
         child: AbilitySystemClient.SkillInfo,
@@ -865,7 +801,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         }
         val alpha = mAlpha * (if (isChildLearned) 1.0f else 0.4f)
 
-        val line = object : ImageWidget(lineTex) {
+        val line = object : ImageWidget(R.textures.gui.element.line) {
             override fun render(context: RenderContext) {
                 updateSkillLineGeometry(this, category, child, dep)
                 if (AbilityDeveloperLayoutEditor.isDebugMode()) {
@@ -890,9 +826,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 invalidate()
             }
         }
-        line.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .size(0f, 5.5f)
+        line.lp {
+            gravity(Gravity.TOP_LEFT)
+            size(0f, 5.5f)
+        }
         line.originX = 0f
         line.originY = 0.5f
         line.alpha = alpha
@@ -926,232 +863,237 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     }
 
     private fun updateSkillLines() {
-        for (binding in skillLineBindings) {
-            updateSkillLineGeometry(binding.widget, binding.category, binding.child, binding.dependency)
+        for ((widget, category, child, dependency) in skillLineBindings) {
+            updateSkillLineGeometry(widget, category, child, dependency)
         }
     }
 
     private fun createSkillNode(category: AbilityCategory, info: AbilitySystemClient.SkillInfo): ButtonWidget {
-        val isLearned = AbilitySystemClient.isSkillLearned(info.skill)
-        val machineRequired = !isLearned && !AbilityDevelopmentAccess.canLearnSkill(
+        return SkillNode(category, info).apply { buildNode() }
+    }
+
+    private inner class SkillNode(
+        private val category: AbilityCategory,
+        private val info: AbilitySystemClient.SkillInfo
+    ) : ButtonWidget() {
+        private val isLearned = AbilitySystemClient.isSkillLearned(info.skill)
+        private val machineRequired = !isLearned && !AbilityDevelopmentAccess.canLearnSkill(
             developmentSource, info.skill.recommendedLevel.levelCode
         )
-        val hasDepsLearned = info.dependencies.isEmpty() || info.dependencies.all {
+        private val hasDepsLearned = info.dependencies.isEmpty() || info.dependencies.all {
             AbilitySystemClient.isSkillLearned(it.skill)
         }
-        val baseAlpha = when {
+        private val baseAlpha = when {
             isLearned -> 1.0f
             hasDepsLearned -> 0.7f
             else -> 0.25f
         }
-        val mAlpha = if (machineRequired) minOf(baseAlpha, 0.4f) else baseAlpha
+        private val mAlpha = if (machineRequired) minOf(baseAlpha, 0.4f) else baseAlpha
 
-        val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
-        var outlineTexView: GpuTextureView? = null
-        var maskTexView: GpuTextureView? = null
+        private var isLayoutDragging = false
+        private var dragOffsetX = 0f
+        private var dragOffsetY = 0f
+        private lateinit var outlineTexView: GpuTextureView
+        private lateinit var maskTexView: GpuTextureView
 
-        val node = object : ButtonWidget() {
-            private var isLayoutDragging = false
-            private var dragOffsetX = 0f
-            private var dragOffsetY = 0f
-
-            override fun render(context: RenderContext) {
-                val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
-                if (layoutParams.marginLeft != position.x() || layoutParams.marginTop != position.y()) {
-                    layoutParams.marginLeft = position.x()
-                    layoutParams.marginTop = position.y()
-                    updateSkillLines()
-                    area.requestLayout()
-                }
-                tooltipText = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "${category.key}\n${info.skill.getKeyString()}  (${position.x()}, ${position.y()})"
-                } else if (isLearned) {
-                    val proficiency = AbilitySystemClient.getSkillProficiency(info.skill)
-                    "${info.skill.translatedName}\n${L10n["academy.ability_developer.skill_exp"]}" +
-                            String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
-                } else if (machineRequired) {
-                    "${info.skill.translatedName}\n" +
-                            L10n["academy.ability_developer.portable.skill_restricted"]
-                } else {
-                    info.skill.translatedName
-                }
-                if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    translationX = 0f
-                    translationY = 0f
-                } else {
-                    val mc = Minecraft.getInstance()
-                    val mh = mc.mouseHandler
-                    val w = mc.window
-                    val mouseX = mh.getScaledXPos(w)
-                    val mouseY = mh.getScaledYPos(w)
-                    val skillTreeMouseX = (mouseX / w.width).toFloat().coerceIn(0f, 1f)
-                    val skillTreeMouseY = (mouseY / w.height).toFloat().coerceIn(0f, 1f)
-                    translationX = -((skillTreeMouseX - 0.5f) * maxDuSkills)
-                    translationY = -((skillTreeMouseY - 0.5f) * maxDuSkills)
-                }
-                super.render(context)
+        fun buildNode() {
+            val initialPosition = AbilityDeveloperLayoutEditor.getPosition(category, info)
+            lp {
+                gravity(Gravity.TOP_LEFT)
+                margin(initialPosition.x(), initialPosition.y(), 0f, 0f)
+                size(16f, 16f)
             }
+            alpha = mAlpha
 
-            override fun onMouseMoved(event: MouseEvent) {
-                super.onMouseMoved(event)
-                invalidate()
+            image(skill_back, "icon_bg") {
+                gravity(Gravity.CENTER)
+                size(23f, 23f)
             }
-
-            override fun onMousePressed(event: MouseEvent) {
-                if (!AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    super.onMousePressed(event)
-                    return
-                }
-                if (event.button == 0 && isMouseOver(event.x, event.y)) {
-                    val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
-                    dragOffsetX = event.x.toFloat() - area.getAbsoluteX() - position.x()
-                    dragOffsetY = event.y.toFloat() - area.getAbsoluteY() - position.y()
-                    isLayoutDragging = true
-                    event.consume()
-                }
-            }
-
-            override fun onMouseDragged(event: MouseEvent) {
-                if (!isLayoutDragging || event.button != 0) return
-                val maxX = (area.width - 16f).coerceAtLeast(0f)
-                val maxY = (area.height - 16f).coerceAtLeast(0f)
-                val x = AbilityDeveloperLayoutEditor.snap(
-                    event.x.toFloat() - area.getAbsoluteX() - dragOffsetX
-                ).coerceIn(0f, maxX)
-                val y = AbilityDeveloperLayoutEditor.snap(
-                    event.y.toFloat() - area.getAbsoluteY() - dragOffsetY
-                ).coerceIn(0f, maxY)
-                AbilityDeveloperLayoutEditor.setPosition(category, info, x, y)
-                layoutParams.marginLeft = x
-                layoutParams.marginTop = y
-                updateSkillLines()
-                area.requestLayout()
-                event.consume()
-            }
-
-            override fun onMouseReleased(event: MouseEvent) {
-                if (AbilityDeveloperLayoutEditor.isDebugMode() && isLayoutDragging) {
-                    isLayoutDragging = false
-                    event.consume()
-                    return
-                }
-                super.onMouseReleased(event)
-            }
-        }
-        val initialPosition = AbilityDeveloperLayoutEditor.getPosition(category, info)
-        node.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .margin(initialPosition.x(), initialPosition.y(), 0f, 0f)
-            .size(16f, 16f)
-        node.alpha = mAlpha
-        run {
-            val iconBg = ImageWidget(R.textures.gui.developer.skill_back)
-            iconBg.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER)
-                .size(23f, 23f)
-            node.addChild("icon_bg", iconBg)
 
             if (isLearned) {
-                val learnedHighlight = ImageWidget(R.textures.gui.developer.skill_back)
-                learnedHighlight.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.CENTER)
-                    .size(25f, 25f)
-                learnedHighlight.setBrightness(1.25f)
-                learnedHighlight.alpha = 0.32f
-                node.addChild("learned_highlight", learnedHighlight)
+                image(skill_back, "learned_highlight") {
+                    gravity(Gravity.CENTER)
+                    size(25f, 25f)
+                    brightnessOf(1.25f)
+                    alpha = 0.32f
+                }
             }
 
-            val outlineBg = object : ImageWidget(outlineTex) {
+            add("outline_bg", object : ImageWidget(skill_outline) {
                 override fun tick() {
                     super.tick()
                     val full = isLearned && AbilitySystemClient.getSkillProficiencyProgress(info.skill) >= 1f
                     setBrightness(if (full) 1.4f else 0.2f)
                     alpha = if (full) 1f else mAlpha * 0.6f
                 }
+            }) {
+                gravity(Gravity.CENTER)
+                size(31f, 31f)
+                brightnessOf(0.2f)
+                alpha = mAlpha * 0.6f
             }
-            outlineBg.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER)
-                .size(31f, 31f)
-            outlineBg.setBrightness(0.2f)
-            outlineBg.alpha = mAlpha * 0.6f
-            node.addChild("outline_bg", outlineBg)
 
-            val icon = CircleImageWidget(info.texture)
-            icon.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER)
-                .size(14f, 14f)
-            node.addChild("icon", icon)
+            add("icon", CircleImageWidget(info.texture)) {
+                gravity(Gravity.CENTER)
+                size(14f, 14f)
+            }
 
-            val outline = object : AbstractWidget() {
+            add("outline", object : AbstractWidget() {
                 override fun renderInternal(context: RenderContext) {
                     if (!isLearned) return
                     val skillProgress = AbilitySystemClient.getSkillProficiencyProgress(info.skill)
                     if (skillProgress <= 0f) return
 
                     val texManager = Minecraft.getInstance().textureManager
-                    if (outlineTexView?.isClosed != false) {
-                        outlineTexView = texManager.getTexture(outlineTex).getTextureView()
+                    if (!::outlineTexView.isInitialized || outlineTexView.isClosed) {
+                        outlineTexView = texManager.getTexture(skill_outline).getTextureView()
                     }
-                    if (maskTexView?.isClosed != false) {
-                        maskTexView = texManager.getTexture(radialMaskTex).getTextureView()
+                    if (!::maskTexView.isInitialized || maskTexView.isClosed) {
+                        maskTexView = texManager.getTexture(skill_radial_mask).getTextureView()
                     }
-
-                    val o = outlineTexView
-                    val m = maskTexView
-                    if (o == null || m == null) return
 
                     val lp = layoutParams
                     val paddedWidth = width - lp.paddingLeft - lp.paddingRight
                     val paddedHeight = height - lp.paddingTop - lp.paddingBottom
-
                     if (paddedWidth <= 0 || paddedHeight <= 0) return
 
                     val finalAlpha = alpha * context.accumulatedAlpha
 
                     context.pose().pushPose()
-                    run {
-                        context.pose().translate(lp.paddingLeft, lp.paddingTop)
-                        val command = SkillProgressDrawCommand(
-                            o, m, sampler,
+                    context.pose().translate(lp.paddingLeft, lp.paddingTop)
+                    context.submit(
+                        SkillProgressDrawCommand(
+                            outlineTexView, maskTexView,
                             width, height, skillProgress, finalAlpha
                         )
-                        context.submit(command)
-                    }
+                    )
                     context.pose().popPose()
                 }
+            }) {
+                gravity(Gravity.CENTER)
+                size(31f, 31f)
             }
-            outline.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER)
-                .size(31f, 31f)
-            node.addChild("outline", outline)
+
+            val progressRef = AtomicReference(0f)
+            val updater = { p: Float ->
+                progressRef.set(p)
+                val s = 1.0f + 0.2f * p
+                scaleX = s
+                scaleY = s
+            }
+            val animator = StateListAnimator()
+            animator.addState(
+                Widget.HOVERED,
+                ObjectAnimator.ofFloat({ progressRef.get() }, updater, 1.0f)
+                    .setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
+            )
+            animator.addState(
+                Widget.NONE,
+                ObjectAnimator.ofFloat({ progressRef.get() }, updater, 0.0f)
+                    .setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
+            )
+            stateListAnimator = animator
+
+            onClick {
+                viewedSkillInfo = info
+                area.clearChildren()
+                area.add("skill_view", createSkillViewCover(info))
+            }
         }
 
-        val progressRef = AtomicReference(0f)
-        val updater = { p: Float ->
-            progressRef.set(p)
-            val s = 1.0f + 0.2f * p
-            node.scaleX = s
-            node.scaleY = s
-        }
-        val animator = StateListAnimator()
-        animator.addState(
-            Widget.HOVERED,
-            ObjectAnimator.ofFloat({ progressRef.get() }, updater, 1.0f)
-                .setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
-        )
-        animator.addState(
-            Widget.NONE,
-            ObjectAnimator.ofFloat({ progressRef.get() }, updater, 0.0f)
-                .setDuration(100).setInterpolator(EasingFunctions.EASE_OUT_SINE)
-        )
-        node.stateListAnimator = animator
-        node.onClickListener = {
-            viewedSkillInfo = info
-            area.clearChildren()
-            area.addChild("skill_view", createSkillViewCover(info))
+        override fun render(context: RenderContext) {
+            val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
+            if (layoutParams.marginLeft != position.x() || layoutParams.marginTop != position.y()) {
+                applyPosition(position.x(), position.y())
+            }
+            tooltipText = buildTooltip()
+            updateParallax()
+            super.render(context)
         }
 
-        return node
+        override fun onMouseMoved(event: MouseEvent) {
+            super.onMouseMoved(event)
+            invalidate()
+        }
+
+        override fun onMousePressed(event: MouseEvent) {
+            if (!AbilityDeveloperLayoutEditor.isDebugMode()) {
+                super.onMousePressed(event)
+                return
+            }
+            if (event.button == 0 && isMouseOver(event.x, event.y)) {
+                val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
+                dragOffsetX = event.x.toFloat() - area.getAbsoluteX() - position.x()
+                dragOffsetY = event.y.toFloat() - area.getAbsoluteY() - position.y()
+                isLayoutDragging = true
+                event.consume()
+            }
+        }
+
+        override fun onMouseDragged(event: MouseEvent) {
+            if (!isLayoutDragging || event.button != 0) return
+            val maxX = (area.width - 16f).coerceAtLeast(0f)
+            val maxY = (area.height - 16f).coerceAtLeast(0f)
+            val x = AbilityDeveloperLayoutEditor.snap(
+                event.x.toFloat() - area.getAbsoluteX() - dragOffsetX
+            ).coerceIn(0f, maxX)
+            val y = AbilityDeveloperLayoutEditor.snap(
+                event.y.toFloat() - area.getAbsoluteY() - dragOffsetY
+            ).coerceIn(0f, maxY)
+            AbilityDeveloperLayoutEditor.setPosition(category, info, x, y)
+            applyPosition(x, y)
+            event.consume()
+        }
+
+        override fun onMouseReleased(event: MouseEvent) {
+            if (AbilityDeveloperLayoutEditor.isDebugMode() && isLayoutDragging) {
+                isLayoutDragging = false
+                event.consume()
+                return
+            }
+            super.onMouseReleased(event)
+        }
+
+        private fun applyPosition(x: Float, y: Float) {
+            layoutParams.marginLeft = x
+            layoutParams.marginTop = y
+            updateSkillLines()
+            area.requestLayout()
+        }
+
+        private fun buildTooltip(): String {
+            if (AbilityDeveloperLayoutEditor.isDebugMode()) {
+                val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
+                return "${category.key}\n${info.skill.getKeyString()}  (${position.x()}, ${position.y()})"
+            }
+            if (isLearned) {
+                val proficiency = AbilitySystemClient.getSkillProficiency(info.skill)
+                return "${info.skill.translatedName}\n${L10n["academy.ability_developer.skill_exp"]}" +
+                        String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
+            }
+            if (machineRequired) {
+                return "${info.skill.translatedName}\n" +
+                        L10n["academy.ability_developer.portable.skill_restricted"]
+            }
+            return info.skill.translatedName
+        }
+
+        private fun updateParallax() {
+            if (AbilityDeveloperLayoutEditor.isDebugMode()) {
+                translationX = 0f
+                translationY = 0f
+                return
+            }
+            val mc = Minecraft.getInstance()
+            val mh = mc.mouseHandler
+            val w = mc.window
+            val mouseX = mh.getScaledXPos(w)
+            val mouseY = mh.getScaledYPos(w)
+            val skillTreeMouseX = (mouseX / w.width).toFloat().coerceIn(0f, 1f)
+            val skillTreeMouseY = (mouseY / w.height).toFloat().coerceIn(0f, 1f)
+            translationX = -((skillTreeMouseX - 0.5f) * maxDuSkills)
+            translationY = -((skillTreeMouseY - 0.5f) * maxDuSkills)
+        }
     }
 
     private data class SkillLineBinding(
@@ -1170,11 +1112,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         if (activeCover != null) return
         activeCover = cover
         root.addChild("cover", cover)
+        mainWidget.isEnabled = false
         val blur = cover.children[BLUR_KEY] as BlurPanelWidget
-        cover.cancelAnimations()
-        blur.cancelAnimations()
-        cover.alpha = 0f
-        blur.blurRadius = 0f
         cover.startAnimation(
             ObjectAnimator.ofFloat({ cover.alpha = it }, 0f, 1f)
                 .setDuration(COVER_ANIM_MS)
@@ -1204,6 +1143,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     override fun onAnimationEnd(animation: Animator) {
                         root.removeChild("cover")
                         activeCover = null
+                        mainWidget.isEnabled = true
                         if (rebuild) rebuildSkillTree()
                     }
                 })
@@ -1214,18 +1154,16 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         )
     }
 
-    private fun createCover(onClick: () -> Unit = { removeCover() }): FrameLayoutWidget {
-        val cover = FrameLayoutWidget()
-        cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        run {
-            val blur = BlurPanelWidget()
-            blur.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            blur.blurRadius = 0f
-            blur.onClick = { onClick() }
-            cover.addChild(BLUR_KEY, blur)
+    private fun createCover(onClick: () -> Unit = { removeCover() }): FrameLayoutWidget =
+        standaloneFrame {
+            matchParent()
+            blurPanel(name = BLUR_KEY) {
+                matchParent()
+                onClick {
+                    onClick()
+                }
+            }
         }
-        return cover
-    }
 
     private fun rebuildSkillTree() {
         viewedSkillInfo = null
@@ -1245,61 +1183,50 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         }
     }
 
-    private fun fillCourseTabs(tabs: LinearLayoutWidget) {
-        tabs.addChild(
-            "common_course",
-            createCourseTab(CoursePage.COMMON, L10n["academy.ability_developer.course.common"])
-        )
-        tabs.addChild(
-            "ability_course",
-            createCourseTab(CoursePage.ABILITY, L10n["academy.ability_developer.course.ability"])
-        )
+    private fun switchSkillPage(pager: PagerLayoutWidget, delta: Int) {
+        val target = (pager.currentPage + delta).coerceIn(0, pager.pageCount - 1)
+        if (target == pager.currentPage) return
+        coursePage = CoursePage.entries[target]
+        pager.switchToPage(target)
+        val leftBtn = area.children["pager_left"] as? ButtonWidget
+        val rightBtn = area.children["pager_right"] as? ButtonWidget
+        if (leftBtn != null && rightBtn != null) {
+            updatePagerButtons(pager, leftBtn, rightBtn)
+        }
     }
 
-    private fun createCourseTab(page: CoursePage, labelText: String): ButtonWidget {
-        val background = FillWidget(COURSE_TAB_IDLE_COLOR)
-        val label = LabelWidget(labelText)
-        val button = object : ButtonWidget() {
-            override fun render(context: RenderContext) {
-                val selected = coursePage == page
-                background.setColor(
-                    when {
-                        selected -> COURSE_TAB_SELECTED_COLOR
-                        isHovered || isFocused || isPressed -> COURSE_TAB_HOVER_COLOR
-                        else -> COURSE_TAB_IDLE_COLOR
-                    }
-                )
-                val brightness = if (selected || isHovered || isFocused || isPressed) 1.0f else 0.82f
-                label.setRed(brightness)
-                label.setGreen(brightness)
-                label.setBlue(brightness)
-                super.render(context)
-            }
-        }
-        button.layoutParams = WidgetContainer.LayoutParams().size(COURSE_TAB_WIDTH, COURSE_TAB_HEIGHT)
-        button.tooltipText = labelText
-        background.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        button.addChild("background", background)
+    private fun updatePagerButtons(pager: PagerLayoutWidget, left: ButtonWidget, right: ButtonWidget) {
+        left.visibility = if (pager.currentPage > 0) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+        right.visibility =
+            if (pager.currentPage < pager.pageCount - 1) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+    }
 
-        label.baseFontSize = 8f
+    private fun createSkillPagerButton(direction: Int, onClick: () -> Unit): ButtonWidget {
+        val label = LabelWidget(if (direction < 0) "‹" else "›")
+        val button = ButtonWidget()
+
+        button.lp {
+            gravity(if (direction < 0) Gravity.LEFT or Gravity.CENTER_VERTICAL else Gravity.RIGHT or Gravity.CENTER_VERTICAL)
+            margin(2f, 0f, 2f, 0f)
+            size(12f, 20f)
+        }
+        button.tooltipText = if (direction < 0) {
+            L10n["academy.ability_developer.course.common"]
+        } else {
+            L10n["academy.ability_developer.course.ability"]
+        }
+        button.onClick { onClick() }
+        label.baseFontSize = 12f
         label.isEnabled = false
-        label.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.CENTER)
-            .sizeMode(SizeMode.MATCH_PARENT)
-        button.addChild("label", label)
-        button.onClickListener = OnClickListener {
-            if (coursePage == page) return@OnClickListener
-            coursePage = page
-            viewedSkillInfo = null
-            skillLineBindings.clear()
-            area.clearChildren()
-            fillSkillTreeArea(area)
+        button.add("label", label) {
+            gravity(Gravity.CENTER)
+            size(10f, 14f)
         }
         return button
     }
 
     private fun createDevButton(brightnessRef: AtomicReference<Float> = AtomicReference(0.85f)): ButtonWidget {
-        val btnTex = ImageWidget(AcademyCraft.academy("textures/gui/developer/button.png"))
+        val btnTex = ImageWidget(button)
         val btnWid = object : ButtonWidget() {
             override fun render(context: RenderContext) {
                 val target = if (isHovered || isFocused || isPressed) 1.1f else 0.85f
@@ -1310,37 +1237,31 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 super.render(context)
             }
         }
-        btnWid.layoutParams = WidgetContainer.LayoutParams().size(32f, 16f)
-        run {
-            btnTex.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            btnTex.setBrightness(0.85f)
-            btnWid.addChild("tex", btnTex)
+        btnWid.size(32f, 16f)
+        btnWid.add("tex", btnTex) {
+            matchParent()
+            brightnessOf(0.85f)
         }
         return btnWid
     }
 
     private fun createSkillBackButton(): ButtonWidget {
-        val background = FillWidget(COURSE_TAB_SELECTED_COLOR)
         val label = LabelWidget("<")
-        val button = object : ButtonWidget() {
-            override fun render(context: RenderContext) {
-                background.setColor(if (isHovered) COURSE_TAB_HOVER_COLOR else COURSE_TAB_SELECTED_COLOR)
-                super.render(context)
-            }
+        val button = ButtonWidget()
+        button.lp {
+            gravity(Gravity.TOP_RIGHT)
+            margin(0f, 3f, 3f, 0f)
+            size(22f, 14f)
         }
-        button.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.TOP_RIGHT)
-            .margin(0f, 3f, 3f, 0f)
-            .size(22f, 14f)
         button.tooltipText = L10n["academy.ability_developer.back"]
-        button.onClickListener = OnClickListener { rebuildSkillTree() }
+        button.onClick { rebuildSkillTree() }
 
-        background.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        button.addChild("background", background)
         label.baseFontSize = 9f
         label.isEnabled = false
-        label.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.CENTER).size(10f, 10f)
-        button.addChild("label", label)
+        button.add("label", label) {
+            gravity(Gravity.CENTER)
+            size(10f, 10f)
+        }
         return button
     }
 
@@ -1352,13 +1273,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             developmentSource, skill.recommendedLevel.levelCode
         )
 
-        val cover = FrameLayoutWidget()
-        cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        run {
-            val bg = ButtonWidget()
-            bg.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            bg.onClickListener = OnClickListener { rebuildSkillTree() }
-            cover.addChild("bg", bg)
+        val cover = standaloneFrame {
+            matchParent()
+            button("bg") {
+                matchParent()
+                onClick { rebuildSkillTree() }
+            }
         }
         cover.startAnimation(
             ObjectAnimator.ofFloat({ cover.alpha = it }, 0f, 1f).setDuration(500)
@@ -1370,12 +1290,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             if (isLearned) AbilitySystemClient.getSkillProficiencyProgress(skill) else 0f
         )
 
-        val coverCenter = LinearLayoutWidget()
-        coverCenter.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.CENTER)
-        coverCenter.orientation = Orientation.VERTICAL
-        cover.addChild("cover_center", coverCenter) {
-            val iconWid = object : FrameLayoutWidget() {
+        cover.column("cover_center") {
+            gravity(Gravity.CENTER)
+            add("skill_wid", object : FrameLayoutWidget() {
                 override fun render(context: RenderContext) {
                     val finalAlpha = alpha * context.accumulatedAlpha
                     val tracksDevelopment = AbilitySystemClient.getDevTargetId() == skillId
@@ -1389,11 +1306,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         iconProgressRef.get()
                     }
                     val texManager = Minecraft.getInstance().textureManager
-                    val outlineTex = if (progress >= 1.0f) viewOutlineGlowTex else viewOutlineTex
+                    val outlineTex = if (progress >= 1.0f) skill_view_outline_glow else skill_view_outline
                     val backView =
-                        texManager.getTexture(R.textures.gui.developer.skill_back).getTextureView()
+                        texManager.getTexture(skill_back).getTextureView()
                     val outlineView = texManager.getTexture(outlineTex).getTextureView()
-                    val maskView = texManager.getTexture(radialMaskTex).getTextureView()
+                    val maskView = texManager.getTexture(skill_radial_mask).getTextureView()
                     val iconView = texManager.getTexture(info.texture).getTextureView()
                     val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
 
@@ -1436,7 +1353,6 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         SkillProgressDrawCommand(
                             outlineView,
                             maskView,
-                            sampler,
                             50f,
                             50f,
                             progress,
@@ -1445,54 +1361,41 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     )
                     context.pose().popPose()
                 }
+            }) {
+                gravity(Gravity.CENTER)
+                size(50f, 50f)
             }
 
-            iconWid.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.CENTER).size(50f, 50f)
-            coverCenter.addChild("skill_wid", iconWid)
-
-            val textArea = LinearLayoutWidget()
-            textArea.layoutParams = WidgetContainer.LayoutParams().gravity(Gravity.CENTER)
-            textArea.orientation = Orientation.VERTICAL
-            coverCenter.addChild("text_area", textArea) {
+            column("text_area") {
+                gravity(Gravity.CENTER)
                 if (isLearned) {
-                    val nameLabel = LabelWidget(skill.translatedName)
-                    nameLabel.baseFontSize = 10f
-                    nameLabel.wrapText = true
-                    nameLabel.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .width(240f)
-                    textArea.addChild("name", nameLabel)
+                    label(skill.translatedName, "name") {
+                        baseFontSize = 10f
+                        wrapText = true
+                        gravity(Gravity.CENTER)
+                        width(240f)
+                    }
 
-                    val expLabel =
-                        LabelWidget(
-                            L10n["academy.ability_developer.skill_exp"] +
-                                    String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f)
-                        )
-                    expLabel.baseFontSize = 8f
-                    expLabel.setRed(0.63f)
-                    expLabel.setGreen(0.88f)
-                    expLabel.setBlue(1.0f)
-                    expLabel.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                    textArea.addChild("exp", expLabel)
+                    label(
+                        L10n["academy.ability_developer.skill_exp"] +
+                                String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f),
+                        "exp"
+                    ) {
+                        baseFontSize = 8f
+                        rgb(0.63f, 0.88f, 1.0f)
+                        gravity(Gravity.CENTER)
+                    }
 
-                    val detailsPanel = ScrollPanelWidget()
-                    detailsPanel.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .size(240f, 104f)
-                    val details = LinearLayoutWidget()
-                    details.orientation = Orientation.VERTICAL
-                    details.spacing = 2f
-                    details.layoutParams = WidgetContainer.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    val details = standaloneColumn(spacing = 2f) {
+                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    }
 
-                    val descLabel = LabelWidget(skill.translatedDescription)
-                    descLabel.baseFontSize = 7f
-                    descLabel.wrapText = true
-                    descLabel.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .width(228f)
-                    details.addChild("desc", descLabel)
+                    details.label(skill.translatedDescription, "desc") {
+                        baseFontSize = 7f
+                        wrapText = true
+                        gravity(Gravity.CENTER)
+                        width(228f)
+                    }
 
                     if (SkillProficiencyProfiles.isDeclared(skill.keyString)) {
                         val milestone = AbilitySystemClient.getSkillProficiencyMilestone(skill)
@@ -1501,59 +1404,53 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             val next = milestone == index
                             val marker = if (reached) "✓" else if (next) "→" else "•"
                             val key = "${skill.descriptionId}.proficiency.$threshold"
-                            val label = LabelWidget("$marker $threshold  ${Language.getInstance().getOrDefault(key)}")
-                            label.baseFontSize = 5f
-                            label.wrapText = true
-                            label.layoutParams = WidgetContainer.LayoutParams()
-                                .gravity(Gravity.LEFT)
-                                .width(228f)
-                            when {
-                                reached -> {
-                                    label.setRed(0.35f); label.setGreen(0.95f); label.setBlue(1.0f)
-                                }
-
-                                next -> {
-                                    label.setRed(1.0f); label.setGreen(0.78f); label.setBlue(0.25f)
-                                }
-
-                                else -> {
-                                    label.setRed(0.55f); label.setGreen(0.58f); label.setBlue(0.63f)
+                            details.label(
+                                "$marker $threshold  ${Language.getInstance().getOrDefault(key)}",
+                                "proficiency_$threshold"
+                            ) {
+                                baseFontSize = 5f
+                                wrapText = true
+                                gravity(Gravity.LEFT)
+                                width(228f)
+                                when {
+                                    reached -> rgb(0.35f, 0.95f, 1.0f)
+                                    next -> rgb(1.0f, 0.78f, 0.25f)
+                                    else -> rgb(0.55f, 0.58f, 0.63f)
                                 }
                             }
-                            details.addChild("proficiency_$threshold", label)
                         }
                         if (ProficiencyPolicy.clientHasRestriction(skill)) {
-                            val restricted = LabelWidget(L10n["academy.ability_developer.proficiency_restricted"])
-                            restricted.baseFontSize = 8f
-                            restricted.wrapText = true
-                            restricted.setRed(1.0f); restricted.setGreen(0.38f); restricted.setBlue(0.3f)
-                            restricted.layoutParams = WidgetContainer.LayoutParams()
-                                .gravity(Gravity.LEFT)
-                                .width(228f)
-                            details.addChild("proficiency_restricted", restricted)
+                            details.label(
+                                L10n["academy.ability_developer.proficiency_restricted"],
+                                "proficiency_restricted"
+                            ) {
+                                baseFontSize = 8f
+                                wrapText = true
+                                rgb(1.0f, 0.38f, 0.3f)
+                                gravity(Gravity.LEFT)
+                                width(228f)
+                            }
                         }
                     }
-                    detailsPanel.setContent(details)
-                    textArea.addChild("details", detailsPanel)
+                    scrollPanel(name = "details", content = details) {
+                        gravity(Gravity.CENTER)
+                        size(240f, 104f)
+                    }
                 } else {
-                    val lvlLabel = LabelWidget("${skill.translatedName} (LV ${skill.recommendedLevel.levelCode})")
-                    lvlLabel.baseFontSize = 10f
-                    lvlLabel.wrapText = true
-                    lvlLabel.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .width(240f)
-                    textArea.addChild("lvl_name", lvlLabel)
+                    label("${skill.translatedName} (LV ${skill.recommendedLevel.levelCode})", "lvl_name") {
+                        baseFontSize = 10f
+                        wrapText = true
+                        gravity(Gravity.CENTER)
+                        width(240f)
+                    }
 
-                    val notLearnedLabel = LabelWidget(L10n["academy.ability_developer.skill_not_learned"])
-                    notLearnedLabel.baseFontSize = 10f
-                    notLearnedLabel.wrapText = true
-                    notLearnedLabel.setRed(1.0f)
-                    notLearnedLabel.setGreen(0.33f)
-                    notLearnedLabel.setBlue(0.33f)
-                    notLearnedLabel.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .width(240f)
-                    textArea.addChild("not_learned", notLearnedLabel)
+                    label(L10n["academy.ability_developer.skill_not_learned"], "not_learned") {
+                        baseFontSize = 10f
+                        wrapText = true
+                        rgb(1.0f, 0.33f, 0.33f)
+                        gravity(Gravity.CENTER)
+                        width(240f)
+                    }
 
                     val conditions = skill.devConditions.filter { it.shouldDisplay() }
 
@@ -1579,43 +1476,42 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             context.pose().popPose()
                         }
                     }
-                    req.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER)
                     req.orientation = Orientation.HORIZONTAL
-                    textArea.addChild("req", req) {
-                        val reqLabel = LabelWidget(L10n["academy.ability_developer.req"])
-                        reqLabel.layoutParams = WidgetContainer.LayoutParams()
-                            .gravity(Gravity.CENTER_BOTTOM)
-                        reqLabel.baseFontSize = 9f
-                        reqLabel.alpha = 0.66f
-                        req.addChild("label", reqLabel)
+                    add("req", req) {
+                        gravity(Gravity.CENTER)
+                    }
+                    req.label(L10n["academy.ability_developer.req"], "label") {
+                        gravity(Gravity.CENTER_BOTTOM)
+                        baseFontSize = 9f
+                        alpha = 0.66f
+                    }
 
-                        for ((idx, cond) in conditions.withIndex()) {
-                            val accepted = cond.accepts()
-                            val condWid = object : FrameLayoutWidget() {
-                                var condAccepted = accepted
-                                override fun render(context: RenderContext) {
-                                    if (isHovered) {
-                                        req.hintText = "(${cond.getHintText()})"
-                                        if (condAccepted) {
-                                            req.hintRed = 0.93f; req.hintGreen = 1.0f; req.hintBlue = 1.0f
-                                        } else {
-                                            req.hintRed = 0.93f; req.hintGreen = 0.35f; req.hintBlue = 0.35f
-                                        }
-                                        req.invalidate()
+                    for ((idx, cond) in conditions.withIndex()) {
+                        val accepted = cond.accepts()
+                        val condWid = object : FrameLayoutWidget() {
+                            var condAccepted = accepted
+                            override fun render(context: RenderContext) {
+                                if (isHovered) {
+                                    req.hintText = "(${cond.getHintText()})"
+                                    if (condAccepted) {
+                                        req.hintRed = 0.93f; req.hintGreen = 1.0f; req.hintBlue = 1.0f
+                                    } else {
+                                        req.hintRed = 0.93f; req.hintGreen = 0.35f; req.hintBlue = 0.35f
                                     }
-                                    super.render(context)
+                                    req.invalidate()
                                 }
+                                super.render(context)
                             }
-                            condWid.layoutParams = WidgetContainer.LayoutParams()
-                                .gravity(Gravity.CENTER)
-                                .size(14f, 14f)
-                            val condIcon = if (!accepted) MonochromeImageWidget(
-                                cond.getIcon() ?: R.textures.gui.icon.close
-                            ) else ImageWidget(cond.getIcon() ?: R.textures.gui.icon.close)
-                            condIcon.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                            condWid.addChild("icon", condIcon)
-                            req.addChild("cond_$idx", condWid)
+                        }
+                        val condIcon = if (!accepted) MonochromeImageWidget(
+                            cond.getIcon() ?: R.textures.gui.icon.close
+                        ) else ImageWidget(cond.getIcon() ?: R.textures.gui.icon.close)
+                        condWid.add("icon", condIcon) {
+                            matchParent()
+                        }
+                        req.add("cond_$idx", condWid) {
+                            gravity(Gravity.CENTER)
+                            size(14f, 14f)
                         }
                     }
 
@@ -1656,18 +1552,18 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             }
                         }
                     }
-                    messageLabel.baseFontSize = if (machineRequired) 8f else 10f
-                    messageLabel.wrapText = true
-                    messageLabel.alpha = 0.66f
-                    messageLabel.layoutParams = WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER_HORIZONTAL)
-                        .width(240f)
-                    textArea.addChild("message", messageLabel)
+                    add("message", messageLabel) {
+                        baseFontSize = if (machineRequired) 8f else 10f
+                        wrapText = true
+                        alpha = 0.66f
+                        gravity(Gravity.CENTER_HORIZONTAL)
+                        width(240f)
+                    }
 
                     if (!AbilitySystemClient.isDevelopmentActive() && !machineRequired) {
                         val learnBtn = createDevButton()
                         learnBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
-                        learnBtn.onClickListener = OnClickListener {
+                        learnBtn.onClick {
                             if (AbilitySystemClient.getDevTargetId() == skillId
                                 && AbilitySystemClient.getDevState() == DevState.FAILED
                             ) {
@@ -1697,7 +1593,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                     StartSkillDevPacket(skillId, developmentSource)
                                 ) { response ->
                                     if (response != null && response.isSuccess) {
-                                        textArea.removeChild("learn_btn")
+                                        removeChild("learn_btn")
                                     } else {
                                         val failure = response?.message
                                             ?: L10n["academy.ability_developer.dev_failed"]
@@ -1707,12 +1603,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                 }
                             }
                         }
-                        textArea.addChild("learn_btn", learnBtn)
+                        add("learn_btn", learnBtn)
                     }
                 }
             }
         }
-        cover.addChild("back", createSkillBackButton())
+        cover.add("back", createSkillBackButton())
         return cover
     }
 
@@ -1745,182 +1641,173 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
         var shouldRebuild = false
 
-        val cover = FrameLayoutWidget()
-        cover.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        run {
-            val blur = BlurPanelWidget()
-            blur.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            blur.blurRadius = 0f
-            blur.onClick = {
-                if (shouldRebuild) onClose()
-                else removeCover()
-            }
-            cover.addChild(BLUR_KEY, blur)
+        val iconProgressRef = AtomicReference(0f)
+        val levelIconPath = when (level) {
+            AbilityLevel.LEVEL1 -> R.textures.abilities.condition.any2
+            AbilityLevel.LEVEL2 -> R.textures.abilities.condition.any3
+            AbilityLevel.LEVEL3 -> R.textures.abilities.condition.any4
+            else -> R.textures.abilities.condition.any5
         }
 
-        val iconProgressRef = AtomicReference(0f)
-        val levelIconPath =
-            AcademyCraft.academy("textures/ability/condition/any${(level.levelCode + 1).coerceIn(1, 5)}.png")
+        val cover = createCover {
+            if (shouldRebuild) onClose()
+            else removeCover()
+        }
 
-        val coverCenter = LinearLayoutWidget()
-        coverCenter.layoutParams = WidgetContainer.LayoutParams()
-            .gravity(Gravity.CENTER)
-        coverCenter.orientation = Orientation.VERTICAL
-        cover.addChild("cover_center", coverCenter) {
-            val iconWid = object : FrameLayoutWidget() {
-                override fun renderInternal(context: RenderContext) {
-                    super.renderInternal(context)
-                    val finalAlpha = alpha * context.accumulatedAlpha
-                    val progress = iconProgressRef.get()
-                    try {
-                        val texManager = Minecraft.getInstance().textureManager
-                        val outlineTex = if (progress >= 1.0f) viewOutlineGlowTex else viewOutlineTex
-                        val backView = texManager.getTexture(R.textures.gui.developer.skill_back).getTextureView()
-                        val outlineView = texManager.getTexture(outlineTex).getTextureView()
-                        val maskView = texManager.getTexture(radialMaskTex).getTextureView()
-                        val levelView = texManager.getTexture(levelIconPath).getTextureView()
-                        val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
-                        context.pose().pushPose()
-                        context.submit(
-                            ImageDrawCommand(
-                                backView,
-                                sampler,
-                                50f,
-                                50f,
-                                0f,
-                                0f,
-                                1f,
-                                1f,
-                                1f,
-                                1f,
-                                1f,
-                                finalAlpha
+        cover.apply {
+            gravity(Gravity.CENTER)
+            column("cover_center") {
+                gravity(Gravity.CENTER)
+                sizeMode(SizeMode.WRAP_CONTENT)
+
+                add("skill_wid", object : FrameLayoutWidget() {
+                    override fun renderInternal(context: RenderContext) {
+                        super.renderInternal(context)
+                        val finalAlpha = alpha * context.accumulatedAlpha
+                        val progress = iconProgressRef.get()
+                        try {
+                            val texManager = Minecraft.getInstance().textureManager
+                            val outlineTex = if (progress >= 1.0f) skill_view_outline_glow else skill_view_outline
+                            val backView = texManager.getTexture(skill_back).getTextureView()
+                            val outlineView = texManager.getTexture(outlineTex).getTextureView()
+                            val maskView = texManager.getTexture(skill_radial_mask).getTextureView()
+                            val levelView = texManager.getTexture(levelIconPath).getTextureView()
+                            val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+                            context.pose().pushPose()
+                            context.submit(
+                                ImageDrawCommand(
+                                    backView,
+                                    sampler,
+                                    50f,
+                                    50f,
+                                    0f,
+                                    0f,
+                                    1f,
+                                    1f,
+                                    1f,
+                                    1f,
+                                    1f,
+                                    finalAlpha
+                                )
                             )
-                        )
-                        context.pose().translate(11.5f, 11.5f)
-                        context.submit(
-                            ImageDrawCommand(
-                                levelView,
-                                sampler,
-                                27f,
-                                27f,
-                                0f,
-                                0f,
-                                1f,
-                                1f,
-                                1f,
-                                1f,
-                                1f,
-                                finalAlpha
+                            context.pose().translate(11.5f, 11.5f)
+                            context.submit(
+                                ImageDrawCommand(
+                                    levelView,
+                                    sampler,
+                                    27f,
+                                    27f,
+                                    0f,
+                                    0f,
+                                    1f,
+                                    1f,
+                                    1f,
+                                    1f,
+                                    1f,
+                                    finalAlpha
+                                )
                             )
-                        )
-                        context.pose().translate(-11.5f, -11.5f)
-                        context.submit(
-                            SkillProgressDrawCommand(
-                                outlineView,
-                                maskView,
-                                sampler,
-                                50f,
-                                50f,
-                                progress,
-                                finalAlpha
+                            context.pose().translate(-11.5f, -11.5f)
+                            context.submit(
+                                SkillProgressDrawCommand(
+                                    outlineView,
+                                    maskView,
+                                    50f,
+                                    50f,
+                                    progress,
+                                    finalAlpha
+                                )
                             )
-                        )
-                        context.pose().popPose()
-                    } catch (_: Exception) {
+                            context.pose().popPose()
+                        } catch (_: Exception) {
+                        }
                     }
+                }) {
+                    gravity(Gravity.CENTER)
+                    size(50f, 50f)
                 }
-            }
-            iconWid.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER)
-                .size(50f, 50f)
-            coverCenter.addChild("skill_wid", iconWid)
 
-            val textArea = LinearLayoutWidget()
-            textArea.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER)
-            textArea.orientation = Orientation.VERTICAL
-            coverCenter.addChild("text_area", textArea) {
-                val title = LabelWidget(L10n["academy.ability_developer.uplevel"].format(targetLevel))
-                title.baseFontSize = 10f
-                title.wrapText = true
-                title.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.CENTER_HORIZONTAL)
-                    .width(240f)
-                textArea.addChild("title", title)
+                column("text_area") {
+                    gravity(Gravity.CENTER)
+                    label(L10n["academy.ability_developer.uplevel"].format(targetLevel), "title") {
+                        baseFontSize = 10f
+                        wrapText = true
+                        gravity(Gravity.CENTER_HORIZONTAL)
+                        width(240f)
+                    }
 
-                val reqLabel = LabelWidget(L10n["academy.ability_developer.req"] + " " + cost)
-                reqLabel.baseFontSize = 9f
-                reqLabel.layoutParams = WidgetContainer.LayoutParams()
-                    .gravity(Gravity.CENTER_HORIZONTAL)
-                textArea.addChild("req", reqLabel)
+                    label(L10n["academy.ability_developer.req"] + " " + cost, "req") {
+                        baseFontSize = 9f
+                        gravity(Gravity.CENTER_HORIZONTAL)
+                    }
 
-                val hintLabel = LabelWidget("")
-                hintLabel.baseFontSize = if (machineRequired) 8f else 9f
-                hintLabel.wrapText = true
-                hintLabel.text = if (machineRequired) {
-                    L10n["academy.ability_developer.portable.level_restricted"]
-                } else {
-                    L10n["academy.ability_developer.level_question"]
-                }
-                hintLabel.layoutParams =
-                    WidgetContainer.LayoutParams()
-                        .gravity(Gravity.CENTER_HORIZONTAL)
-                        .width(240f)
-                textArea.addChild("hint", hintLabel)
-
-                if (!machineRequired) {
-                    val upgBtn = createDevButton()
-                    upgBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
-                    upgBtn.onClickListener = {
-                        if (!AbilityDevelopmentAccess.canDevelopAbilityLevel(
-                                developmentSource, targetLevel
-                            )
-                        ) {
-                            hintLabel.text =
-                                L10n["academy.ability_developer.portable.level_restricted"]
-                        } else if (currentEnergy() < cost) {
-                            hintLabel.text = L10n["academy.ability_developer.noenergy"]
+                    val hintLabel = label(
+                        if (machineRequired) {
+                            L10n["academy.ability_developer.portable.level_restricted"]
                         } else {
-                            AbilitySystemClient.resetDevState()
+                            L10n["academy.ability_developer.level_question"]
+                        },
+                        "hint"
+                    ) {
+                        baseFontSize = if (machineRequired) 8f else 9f
+                        wrapText = true
+                        gravity(Gravity.CENTER_HORIZONTAL)
+                        width(240f)
+                    }
 
-                            MisakaNetworkClient.FUTURE_MANAGER.send(
-                                StartLevelDevPacket(developmentSource)
+                    if (!machineRequired) {
+                        val upgBtn = createDevButton()
+                        upgBtn.layoutParams.gravity(Gravity.CENTER_HORIZONTAL)
+                        upgBtn.onClick {
+                            if (!AbilityDevelopmentAccess.canDevelopAbilityLevel(
+                                    developmentSource, targetLevel
+                                )
                             ) {
-                                if (it != null && it.isSuccess) {
-                                    fun poll() {
-                                        val state = AbilitySystemClient.getDevState()
-                                        when (state) {
-                                            DevState.DEVELOPING -> {
-                                                hintLabel.text = L10n["academy.ability_developer.dev_developing"]
-                                                iconProgressRef.set(AbilitySystemClient.getDevProgress())
-                                                cover.pollNextFrame { poll() }
-                                            }
+                                hintLabel.text =
+                                    L10n["academy.ability_developer.portable.level_restricted"]
+                            } else if (currentEnergy() < cost) {
+                                hintLabel.text = L10n["academy.ability_developer.noenergy"]
+                            } else {
+                                AbilitySystemClient.resetDevState()
 
-                                            DevState.DONE -> {
-                                                iconProgressRef.set(1.0f)
-                                                hintLabel.text = L10n["academy.ability_developer.dev_successful"]
-                                                shouldRebuild = true
-                                            }
+                                MisakaNetworkClient.FUTURE_MANAGER.send(
+                                    StartLevelDevPacket(developmentSource)
+                                ) {
+                                    if (it != null && it.isSuccess) {
+                                        fun poll() {
+                                            val state = AbilitySystemClient.getDevState()
+                                            when (state) {
+                                                DevState.DEVELOPING -> {
+                                                    hintLabel.text = L10n["academy.ability_developer.dev_developing"]
+                                                    iconProgressRef.set(AbilitySystemClient.getDevProgress())
+                                                    cover.pollNextFrame { poll() }
+                                                }
 
-                                            DevState.FAILED -> {
-                                                hintLabel.text = developmentFailureMessage()
-                                            }
+                                                DevState.DONE -> {
+                                                    iconProgressRef.set(1.0f)
+                                                    hintLabel.text = L10n["academy.ability_developer.dev_successful"]
+                                                    shouldRebuild = true
+                                                }
 
-                                            else -> {
-                                                cover.pollNextFrame { poll() }
+                                                DevState.FAILED -> {
+                                                    hintLabel.text = developmentFailureMessage()
+                                                }
+
+                                                else -> {
+                                                    cover.pollNextFrame { poll() }
+                                                }
                                             }
                                         }
+                                        poll()
+                                    } else {
+                                        hintLabel.text = it?.message ?: L10n["academy.ability_developer.dev_failed"]
                                     }
-                                    poll()
-                                } else {
-                                    hintLabel.text = it?.message ?: L10n["academy.ability_developer.dev_failed"]
                                 }
                             }
                         }
-                        textArea.removeChild("upgrade_btn")
+                        removeChild("upgrade_btn")
+                        add("upgrade_btn", upgBtn)
                     }
-                    textArea.addChild("upgrade_btn", upgBtn)
                 }
             }
         }
@@ -1928,24 +1815,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         return cover
     }
 
-    private val viewOutlineTex = AcademyCraft.academy("textures/gui/developer/skill_view_outline.png")
-    private val viewOutlineGlowTex = AcademyCraft.academy("textures/gui/developer/skill_view_outline_glow.png")
-
     companion object {
         const val PANEL_MAIN_WIDTH: Float = 400f
         const val PANEL_MAIN_HEIGHT: Float = 187f
         private const val BLUR_KEY = "blur"
         private const val COVER_ANIM_MS = 300L
         private const val BLUR_MAX_RADIUS = 8f
-        private const val COURSE_TABS_X = 14f
-        private const val COURSE_TABS_Y = 159f
-        private const val COURSE_TAB_WIDTH = 34f
-        private const val COURSE_TAB_HEIGHT = 14f
-        private const val COURSE_TAB_GAP = 2f
-        private const val COURSE_TABS_WIDTH = COURSE_TAB_WIDTH * 2f + COURSE_TAB_GAP
-        private const val COURSE_TAB_IDLE_COLOR = 0x00000000
-        private const val COURSE_TAB_HOVER_COLOR = 0x30FFFFFF
-        private const val COURSE_TAB_SELECTED_COLOR = 0x50FFFFFF
         private const val CONSOLE_CHAR_DELAY_MS: Long = 10L
     }
 }
