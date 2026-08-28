@@ -3,41 +3,314 @@
   "kind": "vfx",
   "id": "aeromanip_mist_vortex",
   "parameters": [
-    { "id": "mist_alpha", "name": "Vortex Fade", "type": "CURVE", "default": { "type": "CURVE", "curve": [
-      { "t": 0.0, "v": 0.32, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.1, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.72, "v": 0.74, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
-    ] } },
-    { "id": "mist_size", "name": "Vortex Diffusion", "type": "CURVE", "default": { "type": "CURVE", "curve": [
-      { "t": 0.0, "v": 0.62, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.55, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 1.0, "v": 1.3, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
-    ] } }
+    {
+      "id": "mist_alpha",
+      "name": "Vortex Fade",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.05,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.1,
+            "v": 0.84,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.32,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.72,
+            "v": 0.48,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mist_size",
+      "name": "Vortex Diffusion",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.34,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.26,
+            "v": 0.84,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.64,
+            "v": 1.18,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1.62,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    }
   ],
   "contexts": [
-    { "id": "spawn", "type": "SPAWN", "name": "Converging Air Current Bands", "x": 0, "y": 0, "blocks": [
-      { "id": "outer_band", "type": "vfx.block.spawn_burst", "properties": { "count": "38", "lifetime": "1.52", "size": "0.24", "color": "1,1,1,0.075", "vx": "0", "vy": "-0.1", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.88", "half_x": "0.09", "origin_y": "0.38" } },
-      { "id": "middle_band", "type": "vfx.block.spawn_burst", "properties": { "count": "28", "lifetime": "1.28", "size": "0.17", "color": "0.96,0.99,1,0.13", "vx": "0", "vy": "0.04", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.61", "half_x": "0.065" } },
-      { "id": "inner_band", "type": "vfx.block.spawn_burst", "properties": { "count": "20", "lifetime": "1.04", "size": "0.11", "color": "1,1,1,0.22", "vx": "0", "vy": "0.2", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.32", "half_x": "0.04", "origin_y": "-0.32" } },
-      { "id": "descending_streams", "type": "vfx.block.spawn_burst", "properties": { "count": "22", "lifetime": "1.24", "size": "0.16", "color": "0.9,0.96,1,0.09", "vx": "0", "vy": "-0.22", "vz": "0", "layer": "mist", "shape": "cylinder", "radius": "0.72", "cone_height": "1.25", "origin_y": "-0.62" } }
-    ] },
-    { "id": "update", "type": "UPDATE", "name": "Rotating Inward Flow", "x": 500, "y": 0, "blocks": [
-      { "id": "vortex", "type": "vfx.block.update_vortex", "properties": { "strength": "3.4", "pull": "0.48", "vertical_pull": "0.3", "layer": "mist" } },
-      { "id": "turbulence", "type": "vfx.block.update_turbulence", "properties": { "amplitude": "0.22", "frequency": "0.78" } },
-      { "id": "drag", "type": "vfx.block.update_drag", "properties": { "drag": "0.38" } },
-      { "id": "velocity", "type": "vfx.block.update_velocity", "properties": {} },
-      { "id": "age", "type": "vfx.block.update_age", "properties": {} },
-      { "id": "alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "mist_alpha", "layer": "mist" } },
-      { "id": "size", "type": "vfx.block.life_size", "properties": { "curve": "mist_size", "layer": "mist" } }
-    ] },
-    { "id": "output", "type": "OUTPUT", "name": "Readable White Air Vortex", "x": 1000, "y": 0, "blocks": [
-      { "id": "out_mist", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_aeromanip_mist", "shader": "academy:core/vfxgraph_aeromanip_mist", "blend": "translucent", "layer": "mist" } }
-    ] }
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "Nested Volumetric Convergence Bands",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "outer_band",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "38",
+            "lifetime": "1.66",
+            "size": "0.3",
+            "color": "0.96,0.99,1,0.065",
+            "vx": "0",
+            "vy": "-0.1",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.96",
+            "half_x": "0.12",
+            "origin_y": "0.42"
+          }
+        },
+        {
+          "id": "middle_band",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "28",
+            "lifetime": "1.36",
+            "size": "0.2",
+            "color": "0.97,1,1,0.14",
+            "vx": "0",
+            "vy": "0.04",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.64",
+            "half_x": "0.08"
+          }
+        },
+        {
+          "id": "inner_band",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "20",
+            "lifetime": "1.06",
+            "size": "0.12",
+            "color": "1,1,1,0.25",
+            "vx": "0",
+            "vy": "0.22",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.31",
+            "half_x": "0.05",
+            "origin_y": "-0.34"
+          }
+        },
+        {
+          "id": "descending_streams",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "20",
+            "lifetime": "1.32",
+            "size": "0.18",
+            "color": "0.9,0.96,1,0.08",
+            "vx": "0",
+            "vy": "-0.2",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "cylinder",
+            "radius": "0.76",
+            "cone_height": "1.36",
+            "origin_y": "-0.68"
+          }
+        },
+        {
+          "id": "funnel_billows",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "18",
+            "lifetime": "1.48",
+            "size": "0.36",
+            "color": "0.87,0.94,1,0.045",
+            "vx": "0",
+            "vy": "0.1",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "cone",
+            "radius": "0.54",
+            "cone_height": "1.62",
+            "origin_y": "-0.82"
+          }
+        }
+      ]
+    },
+    {
+      "id": "initialize",
+      "type": "INITIALIZE",
+      "name": "Randomize Vortex Cells",
+      "x": 330,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "randomize_billows",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "pos": "0.09",
+            "vel": "0.26",
+            "size": "0.46",
+            "lifetime": "0.24"
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "type": "UPDATE",
+      "name": "Rolling Inward Smoke Convergence",
+      "x": 500,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "vortex",
+          "type": "vfx.block.update_vortex",
+          "properties": {
+            "strength": "3.8",
+            "pull": "0.62",
+            "vertical_pull": "0.38",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "turbulence",
+          "type": "vfx.block.update_turbulence",
+          "properties": {
+            "amplitude": "0.34",
+            "frequency": "0.72"
+          }
+        },
+        {
+          "id": "broad_noise",
+          "type": "vfx.block.update_noise",
+          "properties": {
+            "amplitude": "0.18",
+            "frequency": "0.5"
+          }
+        },
+        {
+          "id": "drag",
+          "type": "vfx.block.update_drag",
+          "properties": {
+            "drag": "0.48"
+          }
+        },
+        {
+          "id": "velocity",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        },
+        {
+          "id": "alpha",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "curve": "mist_alpha",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "size",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "curve": "mist_size",
+            "layer": "mist"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "Readable White Air Vortex",
+      "x": 1000,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "out_mist",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_aeromanip_mist",
+            "shader": "academy:core/vfxgraph_aeromanip_mist",
+            "blend": "translucent",
+            "layer": "mist"
+          }
+        }
+      ]
+    }
   ],
   "operators": [],
-  "flow": [ { "from": "spawn", "to": "update" }, { "from": "update", "to": "output" } ],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "initialize"
+    },
+    {
+      "from": "initialize",
+      "to": "update"
+    },
+    {
+      "from": "update",
+      "to": "output"
+    }
+  ],
   "blockFlows": [],
   "dataEdges": [],
-  "outputs": [ "out_mist" ]
+  "outputs": [
+    "out_mist"
+  ]
 }

@@ -3,41 +3,312 @@
   "kind": "vfx",
   "id": "aeromanip_mist_field",
   "parameters": [
-    { "id": "mist_alpha", "name": "Flow Field Fade", "type": "CURVE", "default": { "type": "CURVE", "curve": [
-      { "t": 0.0, "v": 0.35, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.12, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.72, "v": 0.72, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
-    ] } },
-    { "id": "mist_size", "name": "Field Ribbon Breathing", "type": "CURVE", "default": { "type": "CURVE", "curve": [
-      { "t": 0.0, "v": 0.78, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.5, "v": 1.08, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 1.0, "v": 0.92, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
-    ] } }
+    {
+      "id": "mist_alpha",
+      "name": "Flow Field Fade",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.06,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.12,
+            "v": 0.82,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.38,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.72,
+            "v": 0.42,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mist_size",
+      "name": "Field Ribbon Breathing",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.42,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.32,
+            "v": 0.9,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.68,
+            "v": 1.22,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1.56,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    }
   ],
   "contexts": [
-    { "id": "spawn", "type": "SPAWN", "name": "Three Dimensional Airflow Field", "x": 0, "y": 0, "blocks": [
-      { "id": "field_cage", "type": "vfx.block.spawn_burst", "properties": { "count": "26", "lifetime": "1.18", "size": "0.24", "color": "0.98,1,1,0.065", "vx": "0", "vy": "0.10", "vz": "0", "layer": "mist", "shape": "cylinder", "radius": "0.86", "cone_height": "1.48", "origin_y": "-0.74" } },
-      { "id": "equator_current", "type": "vfx.block.spawn_burst", "properties": { "count": "22", "lifetime": "1.08", "size": "0.16", "color": "1,1,1,0.13", "vx": "0", "vy": "0.04", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.9", "half_x": "0.07" } },
-      { "id": "upper_current", "type": "vfx.block.spawn_burst", "properties": { "count": "14", "lifetime": "0.96", "size": "0.17", "color": "0.93,0.98,1,0.09", "vx": "0", "vy": "-0.08", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.68", "half_x": "0.06", "origin_y": "0.48" } },
-      { "id": "lower_current", "type": "vfx.block.spawn_burst", "properties": { "count": "14", "lifetime": "0.96", "size": "0.17", "color": "0.93,0.98,1,0.09", "vx": "0", "vy": "0.08", "vz": "0", "layer": "mist", "shape": "torus", "radius": "0.68", "half_x": "0.06", "origin_y": "-0.48" } }
-    ] },
-    { "id": "update", "type": "UPDATE", "name": "Circulating Field Currents", "x": 500, "y": 0, "blocks": [
-      { "id": "vortex", "type": "vfx.block.update_vortex", "properties": { "strength": "1.65", "pull": "0.0", "vertical_pull": "0.18", "layer": "mist" } },
-      { "id": "noise", "type": "vfx.block.update_noise", "properties": { "amplitude": "0.18", "frequency": "0.72" } },
-      { "id": "drag", "type": "vfx.block.update_drag", "properties": { "drag": "0.46" } },
-      { "id": "velocity", "type": "vfx.block.update_velocity", "properties": {} },
-      { "id": "age", "type": "vfx.block.update_age", "properties": {} },
-      { "id": "alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "mist_alpha", "layer": "mist" } },
-      { "id": "size", "type": "vfx.block.life_size", "properties": { "curve": "mist_size", "layer": "mist" } }
-    ] },
-    { "id": "output", "type": "OUTPUT", "name": "Readable Atmospheric Flow Field", "x": 1000, "y": 0, "blocks": [
-      { "id": "out_mist", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_aeromanip_mist", "shader": "academy:core/vfxgraph_aeromanip_mist", "blend": "translucent", "layer": "mist" } }
-    ] }
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "Layered Volumetric Airflow Field",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "field_cage",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "28",
+            "lifetime": "1.34",
+            "size": "0.31",
+            "color": "0.96,0.99,1,0.055",
+            "vx": "0",
+            "vy": "0.09",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "cylinder",
+            "radius": "0.88",
+            "cone_height": "1.52",
+            "origin_y": "-0.76"
+          }
+        },
+        {
+          "id": "equator_current",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "24",
+            "lifetime": "1.16",
+            "size": "0.18",
+            "color": "1,1,1,0.14",
+            "vx": "0",
+            "vy": "0.04",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.92",
+            "half_x": "0.09"
+          }
+        },
+        {
+          "id": "upper_current",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "14",
+            "lifetime": "1.02",
+            "size": "0.2",
+            "color": "0.92,0.97,1,0.09",
+            "vx": "0",
+            "vy": "-0.08",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.7",
+            "half_x": "0.08",
+            "origin_y": "0.5"
+          }
+        },
+        {
+          "id": "lower_current",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "14",
+            "lifetime": "1.02",
+            "size": "0.2",
+            "color": "0.92,0.97,1,0.09",
+            "vx": "0",
+            "vy": "0.08",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.7",
+            "half_x": "0.08",
+            "origin_y": "-0.5"
+          }
+        },
+        {
+          "id": "billow_pockets",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "20",
+            "lifetime": "1.42",
+            "size": "0.46",
+            "color": "0.88,0.95,1,0.04",
+            "vx": "0",
+            "vy": "0.12",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "sphere",
+            "radius": "0.74"
+          }
+        }
+      ]
+    },
+    {
+      "id": "initialize",
+      "type": "INITIALIZE",
+      "name": "Break Field Symmetry",
+      "x": 330,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "randomize_billows",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "pos": "0.1",
+            "vel": "0.22",
+            "size": "0.48",
+            "lifetime": "0.22"
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "type": "UPDATE",
+      "name": "Nested Circulating Smoke Currents",
+      "x": 500,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "vortex",
+          "type": "vfx.block.update_vortex",
+          "properties": {
+            "strength": "1.5",
+            "pull": "0.06",
+            "vertical_pull": "0.16",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "noise",
+          "type": "vfx.block.update_noise",
+          "properties": {
+            "amplitude": "0.22",
+            "frequency": "0.58"
+          }
+        },
+        {
+          "id": "fine_turbulence",
+          "type": "vfx.block.update_turbulence",
+          "properties": {
+            "amplitude": "0.18",
+            "frequency": "1.6"
+          }
+        },
+        {
+          "id": "drag",
+          "type": "vfx.block.update_drag",
+          "properties": {
+            "drag": "0.62"
+          }
+        },
+        {
+          "id": "velocity",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        },
+        {
+          "id": "alpha",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "curve": "mist_alpha",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "size",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "curve": "mist_size",
+            "layer": "mist"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "Readable Atmospheric Flow Field",
+      "x": 1000,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "out_mist",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_aeromanip_mist",
+            "shader": "academy:core/vfxgraph_aeromanip_mist",
+            "blend": "translucent",
+            "layer": "mist"
+          }
+        }
+      ]
+    }
   ],
   "operators": [],
-  "flow": [ { "from": "spawn", "to": "update" }, { "from": "update", "to": "output" } ],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "initialize"
+    },
+    {
+      "from": "initialize",
+      "to": "update"
+    },
+    {
+      "from": "update",
+      "to": "output"
+    }
+  ],
   "blockFlows": [],
   "dataEdges": [],
-  "outputs": [ "out_mist" ]
+  "outputs": [
+    "out_mist"
+  ]
 }

@@ -3,40 +3,312 @@
   "kind": "vfx",
   "id": "aeromanip_mist_blade",
   "parameters": [
-    { "id": "mist_alpha", "name": "Blade Fade", "type": "CURVE", "default": { "type": "CURVE", "curve": [
-      { "t": 0.0, "v": 0.5, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.04, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.52, "v": 0.82, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 1.0, "v": 0.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
-    ] } },
-    { "id": "mist_size", "name": "Blade Edge Diffusion", "type": "CURVE", "default": { "type": "CURVE", "curve": [
-      { "t": 0.0, "v": 0.50, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 0.5, "v": 1.0, "it": 0.0, "ot": 0.0, "i": "SMOOTH" },
-      { "t": 1.0, "v": 1.18, "it": 0.0, "ot": 0.0, "i": "SMOOTH" }
-    ] } }
+    {
+      "id": "mist_alpha",
+      "name": "Blade Fade",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.08,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.035,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.34,
+            "v": 0.88,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.72,
+            "v": 0.34,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mist_size",
+      "name": "Blade Edge Diffusion",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.34,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.22,
+            "v": 0.78,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.64,
+            "v": 1.12,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1.58,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    }
   ],
   "contexts": [
-    { "id": "spawn", "type": "SPAWN", "name": "Compressed Laminar Air Blade", "x": 0, "y": 0, "blocks": [
-      { "id": "blade_haze", "type": "vfx.block.spawn_burst", "properties": { "count": "34", "lifetime": "0.68", "size": "0.19", "color": "1,1,1,0.095", "vx": "0", "vy": "1.8", "vz": "0", "layer": "mist", "shape": "box", "half_x": "0.55", "half_y": "2.5", "half_z": "0.045", "origin_y": "2.5" } },
-      { "id": "blade_core", "type": "vfx.block.spawn_burst", "properties": { "count": "24", "lifetime": "0.46", "size": "0.075", "color": "0.96,0.99,1,0.3", "vx": "0", "vy": "2.8", "vz": "0", "layer": "mist", "shape": "box", "half_x": "0.36", "half_y": "2.42", "half_z": "0.018", "origin_y": "2.5" } },
-      { "id": "left_cutting_edge", "type": "vfx.block.spawn_burst", "properties": { "count": "14", "lifetime": "0.5", "size": "0.09", "color": "1,1,1,0.22", "vx": "0", "vy": "2.4", "vz": "0", "layer": "mist", "shape": "box", "half_x": "0.035", "half_y": "2.36", "half_z": "0.018", "origin_x": "-0.55", "origin_y": "2.5" } },
-      { "id": "right_cutting_edge", "type": "vfx.block.spawn_burst", "properties": { "count": "14", "lifetime": "0.5", "size": "0.09", "color": "1,1,1,0.22", "vx": "0", "vy": "2.4", "vz": "0", "layer": "mist", "shape": "box", "half_x": "0.035", "half_y": "2.36", "half_z": "0.018", "origin_x": "0.55", "origin_y": "2.5" } }
-    ] },
-    { "id": "update", "type": "UPDATE", "name": "Sharp Forward Shear", "x": 500, "y": 0, "blocks": [
-      { "id": "noise", "type": "vfx.block.update_noise", "properties": { "amplitude": "0.045", "frequency": "2.1" } },
-      { "id": "drag", "type": "vfx.block.update_drag", "properties": { "drag": "0.42" } },
-      { "id": "velocity", "type": "vfx.block.update_velocity", "properties": {} },
-      { "id": "age", "type": "vfx.block.update_age", "properties": {} },
-      { "id": "alpha", "type": "vfx.block.life_alpha", "properties": { "curve": "mist_alpha", "layer": "mist" } },
-      { "id": "size", "type": "vfx.block.life_size", "properties": { "curve": "mist_size", "layer": "mist" } }
-    ] },
-    { "id": "output", "type": "OUTPUT", "name": "Readable High Pressure Cutting Edge", "x": 1000, "y": 0, "blocks": [
-      { "id": "out_mist", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_aeromanip_mist", "shader": "academy:core/vfxgraph_aeromanip_mist", "blend": "translucent", "layer": "mist" } }
-    ] }
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "Layered Condensation Air Blade",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "blade_haze",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "34",
+            "lifetime": "0.82",
+            "size": "0.23",
+            "color": "0.92,0.97,1,0.09",
+            "vx": "0",
+            "vy": "1.45",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "box",
+            "half_x": "0.62",
+            "half_y": "2.45",
+            "half_z": "0.08",
+            "origin_y": "2.45"
+          }
+        },
+        {
+          "id": "blade_core",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "20",
+            "lifetime": "0.48",
+            "size": "0.07",
+            "color": "0.98,1,1,0.34",
+            "vx": "0",
+            "vy": "3.4",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "box",
+            "half_x": "0.3",
+            "half_y": "2.42",
+            "half_z": "0.018",
+            "origin_y": "2.5"
+          }
+        },
+        {
+          "id": "left_cutting_edge",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "12",
+            "lifetime": "0.44",
+            "size": "0.065",
+            "color": "1,1,1,0.28",
+            "vx": "0",
+            "vy": "3.0",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "box",
+            "half_x": "0.035",
+            "half_y": "2.34",
+            "half_z": "0.024",
+            "origin_x": "-0.58",
+            "origin_y": "2.48"
+          }
+        },
+        {
+          "id": "right_cutting_edge",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "12",
+            "lifetime": "0.44",
+            "size": "0.065",
+            "color": "1,1,1,0.28",
+            "vx": "0",
+            "vy": "3.0",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "box",
+            "half_x": "0.035",
+            "half_y": "2.34",
+            "half_z": "0.024",
+            "origin_x": "0.58",
+            "origin_y": "2.48"
+          }
+        },
+        {
+          "id": "wake_feathers",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "18",
+            "lifetime": "0.96",
+            "size": "0.31",
+            "color": "0.9,0.96,1,0.055",
+            "vx": "0",
+            "vy": "1.05",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "box",
+            "half_x": "0.5",
+            "half_y": "1.86",
+            "half_z": "0.14",
+            "origin_y": "2.7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "initialize",
+      "type": "INITIALIZE",
+      "name": "Break Repeated Smoke Silhouettes",
+      "x": 330,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "randomize_billows",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "pos": "0.045",
+            "vel": "0.14",
+            "size": "0.34",
+            "lifetime": "0.2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "type": "UPDATE",
+      "name": "Sharp Shear With Curl Breakup",
+      "x": 500,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "noise",
+          "type": "vfx.block.update_noise",
+          "properties": {
+            "amplitude": "0.07",
+            "frequency": "2.7"
+          }
+        },
+        {
+          "id": "curl_turbulence",
+          "type": "vfx.block.update_turbulence",
+          "properties": {
+            "amplitude": "0.11",
+            "frequency": "1.35"
+          }
+        },
+        {
+          "id": "drag",
+          "type": "vfx.block.update_drag",
+          "properties": {
+            "drag": "0.5"
+          }
+        },
+        {
+          "id": "velocity",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        },
+        {
+          "id": "alpha",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "curve": "mist_alpha",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "size",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "curve": "mist_size",
+            "layer": "mist"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "Readable High Pressure Cutting Edge",
+      "x": 1000,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "out_mist",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_aeromanip_mist",
+            "shader": "academy:core/vfxgraph_aeromanip_mist",
+            "blend": "translucent",
+            "layer": "mist"
+          }
+        }
+      ]
+    }
   ],
   "operators": [],
-  "flow": [ { "from": "spawn", "to": "update" }, { "from": "update", "to": "output" } ],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "initialize"
+    },
+    {
+      "from": "initialize",
+      "to": "update"
+    },
+    {
+      "from": "update",
+      "to": "output"
+    }
+  ],
   "blockFlows": [],
   "dataEdges": [],
-  "outputs": [ "out_mist" ]
+  "outputs": [
+    "out_mist"
+  ]
 }
