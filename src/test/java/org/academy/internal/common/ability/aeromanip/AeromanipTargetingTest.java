@@ -1,11 +1,30 @@
 package org.academy.internal.common.ability.aeromanip;
 
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AeromanipTargetingTest {
+    @Test
+    void widenedViewRayUsesDistanceToTheCandidateAabb() {
+        var box = new AABB(2.0, 1.0, 3.0, 4.0, 2.0, 5.0);
+        assertEquals(0.0, AeromanipTargeting.distanceToBoxSqr(
+                new Vec3(3.0, 1.5, 4.0), box), 1.0e-9);
+        assertEquals(4.0, AeromanipTargeting.distanceToBoxSqr(
+                new Vec3(6.0, 1.5, 4.0), box), 1.0e-9);
+    }
+
+    @Test
+    void entityAttachmentPointFollowsTheRequestedOutwardDirection() {
+        var box = new AABB(-1.0, 0.0, -0.5, 1.0, 2.0, 0.5);
+        var point = AeromanipTargeting.pointOutside(box, new Vec3(1.0, 0.0, 0.0), 0.08);
+        assertEquals(1.08, point.x, 1.0e-9);
+        assertEquals(1.0, point.y, 1.0e-9);
+        assertEquals(0.0, point.z, 1.0e-9);
+    }
+
     @Test
     void accelerationStartsStationaryTargetsAndStopsAtForwardLimit() {
         var started = AeromanipTargeting.acceleratedVelocity(Vec3.ZERO, new Vec3(2, 0, 0), 0.2, 0.6);

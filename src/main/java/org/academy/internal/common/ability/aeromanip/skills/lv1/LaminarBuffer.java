@@ -37,6 +37,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipChargeContext;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -154,11 +155,13 @@ public final class LaminarBuffer extends Skill {
 
         private static void start() {
             if (AbilitySystemClient.canUseSkill(Skills.LAMINAR_BUFFER.get())) {
+                AeromanipChargeHud.begin(Skills.LAMINAR_BUFFER.get());
                 MisakaNetworkClient.send(StartPacket.INSTANCE);
             }
         }
 
         private static void stop() {
+            AeromanipChargeHud.end(Skills.LAMINAR_BUFFER.get());
             MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 

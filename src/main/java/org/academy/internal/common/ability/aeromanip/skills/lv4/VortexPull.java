@@ -34,6 +34,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.RejectingWind;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -133,11 +134,13 @@ public final class VortexPull extends Skill {
 
         private static void start() {
             if (AbilitySystemClient.canUseSkill(Skills.VORTEX_PULL.get())) {
+                AeromanipChargeHud.begin(Skills.VORTEX_PULL.get());
                 MisakaNetworkClient.send(StartPacket.INSTANCE);
             }
         }
 
         private static void stop() {
+            AeromanipChargeHud.end(Skills.VORTEX_PULL.get());
             MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 

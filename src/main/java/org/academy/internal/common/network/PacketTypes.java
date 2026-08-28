@@ -34,6 +34,7 @@ import org.academy.internal.common.ability.aeromanip.skills.lv1.LaminarBuffer;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.FlowSense;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.TurbulentCavitation;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.RejectingWind;
@@ -275,6 +276,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AtmosphereShield.TogglePacket>>
             ATMOSPHERE_SHIELD_TOGGLE = PACKET_TYPES.register("atmosphere_shield_toggle",
             () -> new PacketType<>(AtmosphereShield.TogglePacket.class, AtmosphereShield.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TurbulentCavitation.TogglePacket>>
+            TURBULENT_CAVITATION_TOGGLE = PACKET_TYPES.register("turbulent_cavitation_toggle",
+            () -> new PacketType<>(TurbulentCavitation.TogglePacket.class, TurbulentCavitation.TogglePacket.CODEC));
 
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Flight.TogglePacket>>
