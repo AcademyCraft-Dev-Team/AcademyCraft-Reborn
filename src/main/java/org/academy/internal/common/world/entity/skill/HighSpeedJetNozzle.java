@@ -142,7 +142,7 @@ public final class HighSpeedJetNozzle extends Entity {
     public void tick() {
         super.tick();
         setDeltaMovement(Vec3.ZERO);
-        if (level().isClientSide()) return;
+        if (!(level() instanceof ServerLevel serverLevel)) return;
         if (hasSupport()) {
             missingSupportTicks = 0;
             snapToSurface();
@@ -150,12 +150,17 @@ public final class HighSpeedJetNozzle extends Entity {
             discard();
             return;
         }
-        var remaining = activeTicks();
-        if (remaining <= 0 || !(level() instanceof ServerLevel serverLevel)) return;
-        entityData.set(ACTIVE_TICKS, remaining - 1);
         var owner = ownerUuid == null ? null
                 : serverLevel.getServer().getPlayerList().getPlayer(ownerUuid);
-        if (owner == null || owner.level() != serverLevel
+        if (owner != null && (owner.level() != serverLevel
+                || HighSpeedJet.isOutsideNozzleRetentionRange(owner.position(), position()))) {
+            discard();
+            return;
+        }
+        var remaining = activeTicks();
+        if (remaining <= 0) return;
+        entityData.set(ACTIVE_TICKS, remaining - 1);
+        if (owner == null
                 || !owner.isAlive() || !Skills.HIGH_SPEED_JET.get().isEnabled(owner)) {
             entityData.set(ACTIVE_TICKS, 0);
             return;
