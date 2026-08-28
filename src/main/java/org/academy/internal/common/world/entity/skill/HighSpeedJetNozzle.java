@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -21,6 +22,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.sounds.SoundEvents;
 
@@ -34,6 +36,10 @@ public final class HighSpeedJetNozzle extends Entity {
             SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> SUPPORT_ENTITY_ID =
             SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> OWNER_UUID =
+            SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<BlockPos> SUPPORT_POS =
+            SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.BLOCK_POS);
     private static final double JET_LENGTH = 14.0;
     private static final double JET_RADIUS = 1.35;
     private static final double MAX_JET_SPEED = 6.0;
@@ -54,12 +60,16 @@ public final class HighSpeedJetNozzle extends Entity {
         builder.define(FACE, Direction.UP.get3DDataValue());
         builder.define(ACTIVE_TICKS, 0);
         builder.define(SUPPORT_ENTITY_ID, -1);
+        builder.define(OWNER_UUID, "");
+        builder.define(SUPPORT_POS, BlockPos.ZERO);
     }
 
     public void attach(UUID ownerUuid, BlockPos supportPos, Direction face) {
         this.ownerUuid = ownerUuid;
         this.supportPos = supportPos.immutable();
         supportEntityUuid = null;
+        entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
+        entityData.set(SUPPORT_POS, this.supportPos);
         entityData.set(SUPPORT_ENTITY_ID, -1);
         entityData.set(FACE, face.get3DDataValue());
         setYRot(face.toYRot());
@@ -72,21 +82,36 @@ public final class HighSpeedJetNozzle extends Entity {
         if (support == null) throw new IllegalArgumentException("support entity cannot be null");
         this.ownerUuid = ownerUuid;
         supportEntityUuid = support.getUUID();
+        entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
+        entityData.set(SUPPORT_POS, BlockPos.ZERO);
         entityData.set(SUPPORT_ENTITY_ID, support.getId());
         setDirection(direction);
         snapToSurface();
     }
 
     public UUID ownerUuid() {
-        return ownerUuid;
+        var syncedOwner = parseUuid(entityData.get(OWNER_UUID));
+        return syncedOwner == null ? ownerUuid : syncedOwner;
     }
 
-    public boolean isOwnedBy(ServerPlayer player) {
-        return player != null && player.getUUID().equals(ownerUuid);
+    public boolean isOwnedBy(Player player) {
+        return player != null && player.getUUID().equals(ownerUuid());
     }
 
     public Direction face() {
         return Direction.from3DDataValue(entityData.get(FACE));
+    }
+
+    public BlockPos supportPos() {
+        return entityData.get(SUPPORT_POS);
+    }
+
+    public int supportEntityId() {
+        return entityData.get(SUPPORT_ENTITY_ID);
+    }
+
+    public boolean isEntityMounted() {
+        return supportEntityUuid != null || supportEntityId() >= 0;
     }
 
     public Vec3 direction() {
@@ -145,9 +170,20 @@ public final class HighSpeedJetNozzle extends Entity {
 
     private void applyJet(ServerLevel level, ServerPlayer owner) {
         var direction = direction();
-        var origin = position().add(direction.scale(0.18));
         var milestone = Skills.HIGH_SPEED_JET.get().getEffectiveProficiencyMilestone(owner);
         var acceleration = 0.12 * (milestone >= 3 ? 1.25 : 1.0);
+        if (isEntityMounted()) {
+            var support = supportEntity();
+            if (support == null || !support.isAlive()) return;
+            EntityMotionGuard.runWithMotionSource(owner, () ->
+                    AeromanipTargeting.accelerateAlong(
+                            support, HighSpeedJet.entityThrustDirection(direction), acceleration,
+                            MAX_JET_SPEED, MAX_JET_SPEED));
+            support.resetFallDistance();
+            return;
+        }
+
+        var origin = position().add(direction.scale(0.18));
         var rangeScale = AeromanipConfig.rangeMultiplier(owner, SkillNames.HIGH_SPEED_JET);
         var resolvedEnd = origin.add(direction.scale(JET_LENGTH * rangeScale));
         var bounds = new AABB(origin, resolvedEnd).inflate(JET_RADIUS * rangeScale);
@@ -248,6 +284,8 @@ public final class HighSpeedJetNozzle extends Entity {
                 .map(HighSpeedJetNozzle::parseUuid)
                 .orElse(null);
         entityData.set(SUPPORT_ENTITY_ID, -1);
+        entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
+        entityData.set(SUPPORT_POS, supportPos);
         entityData.set(FACE, Direction.from3DDataValue(
                 input.getIntOr("academy_face", Direction.UP.get3DDataValue())).get3DDataValue());
         entityData.set(ACTIVE_TICKS, Math.max(0,

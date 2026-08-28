@@ -1944,7 +1944,7 @@
   "skill.academy.flow_sense.proficiency.2000": "Refresh interval falls from 10 to 5 ticks and the sync limit rises from 64 to 96 targets.",
   "skill.academy.flow_sense.proficiency.3000": "Even sneaking players can no longer hide their atmospheric disturbance.",
   "skill.academy.high_speed_jet": "High-Speed Jet",
-  "skill.academy.high_speed_jet.desc": "Hold the install key to preview a block face or entity with a white outline, then release to attach a persistent nozzle; target the same surface or entity again to remove it. Entity nozzles point away from you by default. Fire owned nozzles within 64 blocks remotely; overlapping jets stack acceleration.",
+  "skill.academy.high_speed_jet.desc": "Hold the install key to preview a block face with a white border or an entity with a white silhouette; installed targets remain highlighted until their nozzle is removed. Entity nozzles face you and propel only their host away from you when fired. Owned nozzles within 64 blocks can be fired remotely, and overlapping block jets stack acceleration.",
   "skill.academy.high_speed_jet.proficiency.1000": "The loaded nozzle limit increases from 8 to 12.",
   "skill.academy.high_speed_jet.proficiency.2000": "Jet duration increases from 40 to 60 ticks.",
   "skill.academy.high_speed_jet.proficiency.3000": "Each nozzle's acceleration increases by 25%.",
