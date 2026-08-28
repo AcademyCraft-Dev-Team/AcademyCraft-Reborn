@@ -18,7 +18,6 @@ public final class EnduranceTraining extends Skill {
                 .level(AbilityLevel.LEVEL1)
                 .passive()
                 .energyCost(5_000)
-                .dependsOn(Skills.BRAIN_DOMAIN_DEVELOPMENT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1)));
     }
 
@@ -35,7 +34,7 @@ public final class EnduranceTraining extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addCommonSkillInfo(
                 new AbilitySystemClient.SkillInfo(
                         Skills.ENDURANCE_TRAINING.get(),
-                        List.of(BrainDomainDevelopment.Client.SKILL_INFO),
+                        List.of(),
                         R.textures.ability.level0.skill.multiple_brain_domain_segmentation.icon,
                         75,
                         25

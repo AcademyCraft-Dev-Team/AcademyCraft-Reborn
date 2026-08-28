@@ -22,7 +22,6 @@ public class BrainDomainDevelopment extends Skill {
                 .iterationTicks(40)
                 .energyCost(5000)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
-                .devCondition(new DevCondition.AnySkillOfLevelCondition(3))
         );
     }
 

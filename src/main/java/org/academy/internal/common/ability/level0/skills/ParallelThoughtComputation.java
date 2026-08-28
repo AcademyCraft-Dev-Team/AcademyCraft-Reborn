@@ -23,7 +23,6 @@ public class ParallelThoughtComputation extends Skill {
                 .energyCost(30000)
                 .dependsOn(Skills.MULTIPLE_BRAIN_DOMAIN_SEGMENTATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
-                .devCondition(new DevCondition.AnySkillOfLevelCondition(4))
         );
     }
 
