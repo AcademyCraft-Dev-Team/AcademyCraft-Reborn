@@ -19,6 +19,7 @@ import java.util.*;
 public final class VectorReflectionClientRuntime {
     private static final Map<Integer, Long> PENDING_HURT_CLEARS = new HashMap<>();
     private static final Set<UUID> IMAGINE_BREAKER_MUTATIONS = new HashSet<>();
+    private static final Set<UUID> FORCED_DEACTIVATIONS = new HashSet<>();
     private static WeakReference<LocalPlayer> currentPlayer = new WeakReference<>(null);
 
     private VectorReflectionClientRuntime() {
@@ -61,6 +62,7 @@ public final class VectorReflectionClientRuntime {
         ClassPointerProtectionManager.restoreAllClient();
         PENDING_HURT_CLEARS.clear();
         IMAGINE_BREAKER_MUTATIONS.clear();
+        FORCED_DEACTIVATIONS.clear();
     }
 
     public static boolean isProtected(LocalPlayer player) {
@@ -69,11 +71,17 @@ public final class VectorReflectionClientRuntime {
                 && AbilitySystemClient.getSkillData(Skills.VECTOR_REFLECTION.get())
                 .map(data -> data.isEnabled() && AbilitySystemClient.getAvailableCP() > 0.0f)
                 .orElse(false);
-        return reflection || isVectorDeviationFullyProtected(player);
+        var protectedByVectorDefense = reflection || isVectorDeviationFullyProtected(player);
+        var uuid = player.getUUID();
+        if (!protectedByVectorDefense) {
+            FORCED_DEACTIVATIONS.remove(uuid);
+            return false;
+        }
+        return !FORCED_DEACTIVATIONS.contains(uuid);
     }
 
     public static boolean isReflectionProtected(LocalPlayer player) {
-        return player != null
+        return isProtected(player)
                 && AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
                 && AbilitySystemClient.getSkillData(Skills.VECTOR_REFLECTION.get())
                 .map(data -> data.isEnabled() && AbilitySystemClient.getAvailableCP() > 0.0f)
@@ -119,12 +127,20 @@ public final class VectorReflectionClientRuntime {
 
         var uuid = player.getUUID();
         IMAGINE_BREAKER_MUTATIONS.add(uuid);
+        var depleted = false;
         try {
             var original = player.getHealth();
-            setOriginalHealth(player, Math.max(0.0f, original - amount));
+            var remaining = Math.max(0.0f, original - amount);
+            setOriginalHealth(player, remaining);
+            depleted = remaining <= 0.0f;
         } finally {
             IMAGINE_BREAKER_MUTATIONS.remove(uuid);
         }
+        if (depleted) markImagineBreakerDepleted(player);
+    }
+
+    public static void markImagineBreakerDepleted(LocalPlayer player) {
+        if (player != null) FORCED_DEACTIVATIONS.add(player.getUUID());
     }
 
     public static void sanitize(LocalPlayer player) {

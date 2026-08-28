@@ -578,13 +578,18 @@ public class VectorReflection extends Skill {
             var uuid = player.getUUID();
             var mutations = IMAGINE_BREAKER_MUTATIONS.get();
             mutations.add(uuid);
+            var depleted = false;
             try {
                 var original = player.getHealth();
-                setOriginalHealth(player, Math.max(0.0f, original - amount));
+                var remaining = Math.max(0.0f, original - amount);
+                depleted = remaining <= 0.0f;
+                if (!depleted) setOriginalHealth(player, remaining);
             } finally {
                 mutations.remove(uuid);
                 if (mutations.isEmpty()) IMAGINE_BREAKER_MUTATIONS.remove();
             }
+
+            if (depleted) killAfterImagineBreakerDepletion(player);
         }
 
         public static boolean shouldForceAlive(ServerPlayer player) {
@@ -615,6 +620,12 @@ public class VectorReflection extends Skill {
             }
             VectorReflectionRuntime.deactivateForDeath(player);
             clearProtectionState(player);
+        }
+
+        public static void killAfterImagineBreakerDepletion(ServerPlayer player) {
+            if (player == null) return;
+            forceDeactivateForDeath(player);
+            player.kill(player.level());
         }
 
         private static void clearProtectionState(ServerPlayer player) {
