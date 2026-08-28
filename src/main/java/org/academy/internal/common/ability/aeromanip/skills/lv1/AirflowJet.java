@@ -43,6 +43,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.projectile.PaperAirplane;
@@ -66,11 +67,11 @@ import java.util.WeakHashMap;
  */
 public final class AirflowJet extends Skill {
     static final float INSTANT_CP_COST = 8.0f;
-    static final float INSTANT_AIR_COST = 16.0f;
+    static final float INSTANT_AIR_COST = 4.0f;
     static final float HALF_CP_COST = 14.0f;
-    static final float HALF_AIR_COST = 40.0f;
+    static final float HALF_AIR_COST = 8.0f;
     static final float FULL_CP_COST = 24.0f;
-    static final float FULL_AIR_COST = 96.0f;
+    static final float FULL_AIR_COST = 16.0f;
     private static final double INSTANT_RANGE = 12.0;
     private static final double FULL_RADIUS = 6.0;
     private static final double HALF_LAUNCH_SPEED = 1.35;
@@ -182,10 +183,12 @@ public final class AirflowJet extends Skill {
 
         private static void start() {
             if (!AbilitySystemClient.canUseSkill(Skills.AIRFLOW_JET.get())) return;
+            AeromanipChargeHud.begin(Skills.AIRFLOW_JET.get());
             MisakaNetworkClient.send(StartPacket.INSTANCE);
         }
 
         private static void stop() {
+            AeromanipChargeHud.end(Skills.AIRFLOW_JET.get());
             MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 

@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
@@ -135,11 +136,13 @@ public final class RejectingWind extends Skill {
 
         private static void start() {
             if (AbilitySystemClient.canUseSkill(Skills.REJECTING_WIND.get())) {
+                AeromanipChargeHud.begin(Skills.REJECTING_WIND.get());
                 MisakaNetworkClient.send(StartPacket.INSTANCE);
             }
         }
 
         private static void stop() {
+            AeromanipChargeHud.end(Skills.REJECTING_WIND.get());
             MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 

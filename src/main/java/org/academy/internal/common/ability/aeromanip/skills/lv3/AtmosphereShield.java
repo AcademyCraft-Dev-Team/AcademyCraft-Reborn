@@ -17,8 +17,11 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -39,7 +42,6 @@ import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -48,8 +50,12 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
 
 public final class AtmosphereShield extends Skill {
@@ -58,6 +64,7 @@ public final class AtmosphereShield extends Skill {
             AcademyCraft.academy("atmosphere_shield_attack_knockback");
     private static final Identifier TRUE_RESISTANCE_MODIFIER_ID =
             AcademyCraft.academy("atmosphere_shield_true_resistance");
+    private static final Map<UUID, StoppedProjectile> STOPPED_PROJECTILES = new HashMap<>();
 
     public AtmosphereShield() {
         super(Builder
@@ -71,6 +78,10 @@ public final class AtmosphereShield extends Skill {
                 .dependsOn(Skills.BREATHING_BUBBLE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
         );
+    }
+
+    static float effectAirCost(float configured) {
+        return Float.isFinite(configured) ? Math.max(0.0f, configured) : 8.0f;
     }
 
     @Override
@@ -141,8 +152,8 @@ public final class AtmosphereShield extends Skill {
     }
 
     public static final class Server {
-        private static final Map<ServerPlayer, AeromanipResourceManager.UsageLease> ACTIVE =
-                new WeakHashMap<>();
+        private static final Set<ServerPlayer> ACTIVE =
+                Collections.newSetFromMap(new WeakHashMap<>());
 
         private Server() {
         }
@@ -155,23 +166,25 @@ public final class AtmosphereShield extends Skill {
         }
 
         public static boolean isActive(ServerPlayer player) {
-            return player != null && ACTIVE.containsKey(player)
+            return player != null && ACTIVE.contains(player)
                     && Skills.ATMOSPHERE_SHIELD.get().isEnabled(player);
         }
 
         private static void start(ServerPlayer player) {
-            ACTIVE.computeIfAbsent(player, current -> AbilitySystemServer.getSystem(current)
-                    .getAeromanipResourceManager().beginUse(current));
+            ACTIVE.add(player);
         }
 
         private static void stop(ServerPlayer player) {
-            var lease = ACTIVE.remove(player);
-            if (lease != null) lease.close();
+            ACTIVE.remove(player);
         }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
+        private static final Set<ServerPlayer> BOOSTED_ATTACKERS =
+                Collections.newSetFromMap(new WeakHashMap<>());
+        private static final Map<ServerPlayer, Integer> DEFENSE_DEPTH = new WeakHashMap<>();
+
         private Events() {
         }
 
@@ -189,19 +202,7 @@ public final class AtmosphereShield extends Skill {
                                 * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
                         skill
                 );
-                if (enabled) {
-                    Server.start(player);
-                    if (player.level().getGameTime() % 10 == 0) {
-                        enabled = skill.executeContinuousWithResource(
-                                player,
-                                _ -> 0.0f,
-                                _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
-                                        player, SkillNames.ATMOSPHERE_SHIELD,
-                                        "compressedAirPerInterval", 4.0f)),
-                                (_, _) -> { },
-                                true);
-                    }
-                }
+                if (enabled) Server.start(player);
                 if (!enabled) {
                     Server.stop(player);
                     system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
@@ -212,21 +213,7 @@ public final class AtmosphereShield extends Skill {
             } else {
                 Server.stop(player);
             }
-            var power = enabled
-                    ? AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
-                    : 0;
-            syncModifier(
-                    player.getAttribute(Attributes.ATTACK_KNOCKBACK),
-                    ATTACK_KNOCKBACK_MODIFIER_ID,
-                    0.5 * power,
-                    enabled
-            );
-            PlayerAttributeRuntime.syncTrueResistanceModifier(
-                    player,
-                    TRUE_RESISTANCE_MODIFIER_ID,
-                    6.0,
-                    enabled
-            );
+            if (!enabled) clearTransientEffects(player);
             if (enabled && Server.isActive(player)) {
                 stopNearbyProjectiles(player);
                 if (player.level().getGameTime() % 12 == 0) {
@@ -243,19 +230,17 @@ public final class AtmosphereShield extends Skill {
             var skill = Skills.ATMOSPHERE_SHIELD.get();
             if (!Server.isActive(player)) return;
             if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
-                projectile.setDeltaMovement(Vec3.ZERO);
-                projectile.hurtMarked = true;
-                expireStoppedProjectile(player, projectile, skill);
-                event.setCanceled(true);
+                if (tryStopProjectile(player, projectile, skill)) event.setCanceled(true);
                 return;
             }
             if (event.getSource().is(DamageTypeTags.BYPASSES_SHIELD)) return;
+            if (!canAffordEffectAir(player)) return;
             var system = AbilitySystemServer.getSystem(player);
             var immunityThreshold = skill.hasProficiencyMilestone(player, 3) ? 6.0f : 4.0f;
             var lowDamageCost = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC, 10.0f);
             if (event.getAmount() < immunityThreshold && system.tryTimedOccupation(
                     player.getUUID(), lowDamageCost, skill, 5
-            )) {
+            ) && tryConsumeEffectAir(player)) {
                 event.setCanceled(true);
                 return;
             }
@@ -269,6 +254,8 @@ public final class AtmosphereShield extends Skill {
             if (!system.tryTimedOccupation(player.getUUID(),
                     defenseCost,
                     skill, 5)) return;
+            if (!tryConsumeEffectAir(player)) return;
+            beginDefenseResistance(player);
             event.setAmount(event.getAmount() - prevented);
             player.level().playSound(
                     null,
@@ -280,6 +267,38 @@ public final class AtmosphereShield extends Skill {
             );
         }
 
+        @SubscribeEvent
+        public static void onDamageApplied(LivingDamageEvent.Post event) {
+            if (event.getEntity() instanceof ServerPlayer player) endDefenseResistance(player);
+        }
+
+        @SubscribeEvent
+        public static void onAttack(AttackEntityEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)
+                    || !event.getTarget().isAlive() || !Server.isActive(player)) return;
+            if (!tryConsumeEffectAir(player)) {
+                clearAttackBoost(player);
+                return;
+            }
+            var power = AbilitySystemServer.getSystem(player)
+                    .getPlayerAbilityPowerMultiplier(player.getUUID());
+            syncModifier(
+                    player.getAttribute(Attributes.ATTACK_KNOCKBACK),
+                    ATTACK_KNOCKBACK_MODIFIER_ID,
+                    0.5 * power,
+                    true
+            );
+            BOOSTED_ATTACKERS.add(player);
+        }
+
+        @SubscribeEvent
+        public static void onServerTick(ServerTickEvent.Post event) {
+            for (var player : List.copyOf(BOOSTED_ATTACKERS)) clearAttackBoost(player);
+            for (var player : List.copyOf(DEFENSE_DEPTH.keySet())) clearDefenseResistance(player);
+            var now = event.getServer().overworld().getGameTime();
+            STOPPED_PROJECTILES.values().removeIf(ticket -> ticket.expiresAt() < now);
+        }
+
         private static void stopNearbyProjectiles(ServerPlayer player) {
             var handled = 0;
             var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
@@ -289,10 +308,84 @@ public final class AtmosphereShield extends Skill {
                     projectile -> projectile.isAlive() && projectile.getOwner() != player
             )) {
                 if (handled++ >= cap) break;
-                projectile.setDeltaMovement(Vec3.ZERO);
-                projectile.hurtMarked = true;
-                expireStoppedProjectile(player, projectile, Skills.ATMOSPHERE_SHIELD.get());
+                tryStopProjectile(player, projectile, Skills.ATMOSPHERE_SHIELD.get());
             }
+        }
+
+        private static boolean tryStopProjectile(
+                ServerPlayer player,
+                Projectile projectile,
+                Skill skill
+        ) {
+            var now = player.level().getGameTime();
+            var ticket = STOPPED_PROJECTILES.get(projectile.getUUID());
+            var alreadyStopped = ticket != null
+                    && ticket.ownerId().equals(player.getUUID())
+                    && ticket.expiresAt() >= now;
+            if (!alreadyStopped && !tryConsumeEffectAir(player)) return false;
+            if (!alreadyStopped) {
+                STOPPED_PROJECTILES.put(projectile.getUUID(),
+                        new StoppedProjectile(player.getUUID(), now + 20));
+                expireStoppedProjectile(player, projectile, skill);
+            }
+            projectile.setDeltaMovement(Vec3.ZERO);
+            projectile.hurtMarked = true;
+            return true;
+        }
+
+        private static boolean canAffordEffectAir(ServerPlayer player) {
+            var cost = configuredEffectAirCost(player);
+            return AbilitySystemServer.getSystem(player).getAeromanipResourceManager()
+                    .getCurrent(player) + 1.0e-4f >= cost;
+        }
+
+        private static boolean tryConsumeEffectAir(ServerPlayer player) {
+            var consumed = AbilitySystemServer.getSystem(player).getAeromanipResourceManager()
+                    .tryConsume(player, configuredEffectAirCost(player));
+            if (consumed) Skills.ATMOSPHERE_SHIELD.get().reportActivity(player, true);
+            return consumed;
+        }
+
+        private static float configuredEffectAirCost(ServerPlayer player) {
+            return effectAirCost(AeromanipConfig.skillFloat(
+                    player, SkillNames.ATMOSPHERE_SHIELD,
+                    "compressedAirPerEffect", 8.0f));
+        }
+
+        private static void beginDefenseResistance(ServerPlayer player) {
+            DEFENSE_DEPTH.merge(player, 1, Integer::sum);
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player, TRUE_RESISTANCE_MODIFIER_ID, 6.0, true);
+        }
+
+        private static void endDefenseResistance(ServerPlayer player) {
+            var depth = DEFENSE_DEPTH.getOrDefault(player, 0);
+            if (depth <= 1) {
+                clearDefenseResistance(player);
+            } else {
+                DEFENSE_DEPTH.put(player, depth - 1);
+            }
+        }
+
+        private static void clearDefenseResistance(ServerPlayer player) {
+            DEFENSE_DEPTH.remove(player);
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player, TRUE_RESISTANCE_MODIFIER_ID, 0.0, false);
+        }
+
+        private static void clearAttackBoost(ServerPlayer player) {
+            BOOSTED_ATTACKERS.remove(player);
+            syncModifier(
+                    player.getAttribute(Attributes.ATTACK_KNOCKBACK),
+                    ATTACK_KNOCKBACK_MODIFIER_ID,
+                    0.0,
+                    false
+            );
+        }
+
+        private static void clearTransientEffects(ServerPlayer player) {
+            clearAttackBoost(player);
+            clearDefenseResistance(player);
         }
 
         private static void expireStoppedProjectile(ServerPlayer player, Projectile projectile, Skill skill) {
@@ -327,6 +420,9 @@ public final class AtmosphereShield extends Skill {
                     AttributeModifier.Operation.ADD_VALUE
             ));
         }
+    }
+
+    private record StoppedProjectile(UUID ownerId, long expiresAt) {
     }
 
     @PacketTarget(ThreadType.SERVER)

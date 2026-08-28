@@ -33,6 +33,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipFieldManager;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.FlowSense;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
@@ -143,11 +144,13 @@ public final class TailwindField extends Skill {
 
         private static void start() {
             if (AbilitySystemClient.canUseSkill(Skills.TAILWIND_FIELD.get())) {
+                AeromanipChargeHud.begin(Skills.TAILWIND_FIELD.get());
                 MisakaNetworkClient.send(StartPacket.INSTANCE);
             }
         }
 
         private static void stop() {
+            AeromanipChargeHud.end(Skills.TAILWIND_FIELD.get());
             MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 
