@@ -78,6 +78,11 @@ public final class MentalIntervention extends Skill {
         MentaloutRosterPackets.initServer();
     }
 
+    public static double selectionRange(ServerPlayer player) {
+        var milestone = Skills.MENTAL_INTERVENTION.get().getEffectiveProficiencyMilestone(player);
+        return milestone >= 2 ? 24.0 : milestone >= 1 ? 20.0 : 16.0;
+    }
+
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.MENTALOUT.get(),
@@ -138,7 +143,7 @@ public final class MentalIntervention extends Skill {
                 return;
             }
             var milestone = skill.getEffectiveProficiencyMilestone(player);
-            var range = milestone >= 2 ? 24.0 : milestone >= 1 ? 20.0 : 16.0;
+            var range = selectionRange(player);
             var selected = MentaloutTargeting.findLookedAtLivingExtended(player, range);
             var result = MentaloutControlContext.toggleTarget(player, selected);
             if (result == MentaloutControlContext.ToggleResult.ADDED

@@ -15,6 +15,11 @@ class FlashingTest {
     }
 
     @Test
+    void everyManualFlashIsCappedAtEightBlocks() {
+        assertEquals(8.0, Flashing.DASH_DISTANCE, 0.0);
+    }
+
+    @Test
     void serverDerivesOppositeAndHorizontalDirectionsFromLook() {
         var look = new Vec3(0, 0, 1);
         assertVec(look, Flashing.Server.directionFromLook(look, 0, Flashing.Direction.FORWARD));

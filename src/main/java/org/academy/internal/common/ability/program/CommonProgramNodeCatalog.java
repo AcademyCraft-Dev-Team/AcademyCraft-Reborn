@@ -391,6 +391,12 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 "direction",
                 ProgramValueTypes.DIRECTION
         )));
+        put(result, CommonProgramNodeIds.ENTITY_MOVEMENT_DIRECTION, queryType(unarySchema(
+                "entity",
+                ProgramValueTypes.ENTITY_REFERENCE,
+                "direction",
+                ProgramValueTypes.DIRECTION
+        )));
         put(result, CommonProgramNodeIds.ENTITIES_AROUND, queryType(new ProgramNodeSchema(
                 List.of(
                         ProgramPortDefinition.requiredInput("center", ProgramValueTypes.WORLD_POSITION),

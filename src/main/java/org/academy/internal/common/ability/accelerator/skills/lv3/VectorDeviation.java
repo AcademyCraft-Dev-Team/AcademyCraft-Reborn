@@ -135,7 +135,8 @@ public class VectorDeviation extends Skill {
         Client.registerSettings();
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N, InputConstants.PRESS, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
+                        InputConstants.PRESS, InputConstants.MOD_CONTROL)
         ), ctx -> Client.onToggle());
     }
 

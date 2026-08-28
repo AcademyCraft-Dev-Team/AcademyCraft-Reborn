@@ -24,6 +24,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -114,7 +115,7 @@ public class SpatialSynergy extends Skill {
 
         public static void teleportNearbyTeam(ServerPlayer owner, ServerLevel destinationLevel,
                                               Vec3 ownerDestination) {
-            if (!Skills.SPATIAL_SYNERGY.get().isEnabled(owner) || owner.getTeam() == null) return;
+            if (!Skills.SPATIAL_SYNERGY.get().isEnabled(owner)) return;
             var skill = Skills.SPATIAL_SYNERGY.get();
             var milestone = skill.getEffectiveProficiencyMilestone(owner);
             var radius = milestone >= 2 ? 6.0f : RADIUS;
@@ -123,7 +124,7 @@ public class SpatialSynergy extends Skill {
                     ServerPlayer.class,
                     owner.getBoundingBox().inflate(radius),
                     player -> player != owner && player.isAlive()
-                            && player.getTeam() == owner.getTeam()
+                            && TeamRelations.areTeammates(owner, player)
                             && player.distanceToSqr(owner) <= radius * radius
             );
             for (var teammate : nearby) {

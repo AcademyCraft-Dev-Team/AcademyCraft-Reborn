@@ -56,6 +56,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 public class BloodflowReverse extends Skill {
     public static final double RANGE_BONUS = 2.0;
@@ -88,6 +89,55 @@ public class BloodflowReverse extends Skill {
         var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
         var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
         return dx * dx + dy * dy + dz * dz;
+    }
+
+    public static double targetRange(LivingEntity observer, double additionalRange) {
+        var reach = observer.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
+        return RANGE_BONUS
+                + (reach == null ? 0.0 : Math.max(0.0, reach.getValue()))
+                + Math.max(0.0, additionalRange);
+    }
+
+    public static LivingEntity findTarget(
+            LivingEntity observer,
+            Vec3 eyePosition,
+            Vec3 viewDirection,
+            double additionalRange
+    ) {
+        return findTarget(observer, eyePosition, viewDirection, additionalRange, _ -> true);
+    }
+
+    public static LivingEntity findTarget(
+            LivingEntity observer,
+            Vec3 eyePosition,
+            Vec3 viewDirection,
+            double additionalRange,
+            Predicate<LivingEntity> candidateFilter
+    ) {
+        var direction = viewDirection.normalize();
+        if (direction.lengthSqr() < 1.0e-6) return null;
+        var range = targetRange(observer, additionalRange);
+        var end = eyePosition.add(direction.scale(range));
+        var searchBox = new AABB(eyePosition, end)
+                .inflate(SEARCH_HALF_WIDTH, SEARCH_HALF_HEIGHT, SEARCH_HALF_WIDTH);
+
+        LivingEntity best = null;
+        var bestProjection = Double.MAX_VALUE;
+        for (var candidate : observer.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+                entity -> entity != observer && entity.isAlive() && !entity.isSpectator()
+                        && candidateFilter.test(entity))) {
+            var candidateBox = candidate.getBoundingBox().inflate(TARGET_BOX_INFLATE);
+            var projection = candidateBox.getCenter().subtract(eyePosition).dot(direction);
+            if (projection < 0.0 || projection > range || !observer.hasLineOfSight(candidate)) continue;
+            var closestPoint = eyePosition.add(direction.scale(projection));
+            if (distanceToBoxSqr(closestPoint, candidateBox)
+                    > TARGET_BOX_INFLATE * TARGET_BOX_INFLATE) continue;
+            if (projection < bestProjection) {
+                bestProjection = projection;
+                best = candidate;
+            }
+        }
+        return best;
     }
 
     @Override
@@ -198,30 +248,12 @@ public class BloodflowReverse extends Skill {
 
         private static LivingEntity findTarget(LocalPlayer player, float partialTick) {
             var eyePosition = player.getEyePosition(partialTick);
-            var direction = player.getViewVector(partialTick).normalize();
-            if (direction.lengthSqr() < 1.0e-6) return null;
-            var reach = player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
-            var range = RANGE_BONUS + (reach == null ? 0.0 : Math.max(0.0, reach.getValue()));
-            var end = eyePosition.add(direction.scale(range));
-            var searchBox = new AABB(eyePosition, end)
-                    .inflate(SEARCH_HALF_WIDTH, SEARCH_HALF_HEIGHT, SEARCH_HALF_WIDTH);
-
-            LivingEntity best = null;
-            var bestProjection = Double.MAX_VALUE;
-            for (var candidate : player.level().getEntitiesOfClass(LivingEntity.class, searchBox,
-                    entity -> entity != player && entity.isAlive() && !entity.isSpectator())) {
-                var candidateBox = candidate.getBoundingBox().inflate(TARGET_BOX_INFLATE);
-                var projection = candidateBox.getCenter().subtract(eyePosition).dot(direction);
-                if (projection < 0.0 || projection > range || !player.hasLineOfSight(candidate)) continue;
-                var closestPoint = eyePosition.add(direction.scale(projection));
-                if (distanceToBoxSqr(closestPoint, candidateBox)
-                        > TARGET_BOX_INFLATE * TARGET_BOX_INFLATE) continue;
-                if (projection < bestProjection) {
-                    bestProjection = projection;
-                    best = candidate;
-                }
-            }
-            return best;
+            return BloodflowReverse.findTarget(
+                    player,
+                    eyePosition,
+                    player.getViewVector(partialTick),
+                    0.0
+            );
         }
 
         public static class Config extends KeyBindingConfig {
@@ -343,39 +375,14 @@ public class BloodflowReverse extends Skill {
         }
 
         private static LivingEntity findTarget(ServerPlayer player) {
-            var eyePosition = player.getEyePosition();
-            var direction = player.getLookAngle().normalize();
-            if (direction.lengthSqr() < 1.0e-6) return null;
-            var reach = player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
-            var range = RANGE_BONUS + (reach == null ? 0.0 : Math.max(0.0, reach.getValue()));
-            if (Skills.BLOODFLOW_REVERSE.get().hasProficiencyMilestone(player, 2)) range += 4.0;
-            var end = eyePosition.add(direction.scale(range));
-            var searchBox = new AABB(eyePosition, end)
-                    .inflate(SEARCH_HALF_WIDTH, SEARCH_HALF_HEIGHT, SEARCH_HALF_WIDTH);
-
-            LivingEntity best = null;
-            var bestProjection = Double.MAX_VALUE;
-            for (var candidate : player.level().getEntitiesOfClass(LivingEntity.class, searchBox,
-                    entity -> entity != player && entity.isAlive() && !entity.isSpectator())) {
-                var candidateBox = candidate.getBoundingBox().inflate(TARGET_BOX_INFLATE);
-                var center = candidateBox.getCenter();
-                var projection = center.subtract(eyePosition).dot(direction);
-                if (projection < 0.0 || projection > range || !player.hasLineOfSight(candidate)) continue;
-                var closestPoint = eyePosition.add(direction.scale(projection));
-                if (distanceToBoxSqr(closestPoint, candidateBox) > TARGET_BOX_INFLATE * TARGET_BOX_INFLATE) continue;
-                if (projection < bestProjection) {
-                    bestProjection = projection;
-                    best = candidate;
-                }
-            }
-            return best;
-        }
-
-        private static double distanceToBoxSqr(Vec3 point, AABB box) {
-            var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
-            var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
-            var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
-            return dx * dx + dy * dy + dz * dz;
+            var additionalRange = Skills.BLOODFLOW_REVERSE.get().hasProficiencyMilestone(player, 2)
+                    ? 4.0 : 0.0;
+            return BloodflowReverse.findTarget(
+                    player,
+                    player.getEyePosition(),
+                    player.getLookAngle(),
+                    additionalRange
+            );
         }
 
         private static int getBloodflowStacks(LivingEntity entity) {
