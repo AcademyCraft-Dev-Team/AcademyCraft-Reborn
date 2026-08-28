@@ -378,6 +378,7 @@ public final class AcademyCraftClient {
         ImGuiUtilApi.INSTANCE.close();
         MsdfFontService.INSTANCE.close();
         MsdfAtlasManager.closeAll();
+        SpacialExcisionVfxClient.close();
         PostEffect.close();
         GlowEffect.getInstance().close();
         VfxManager.INSTANCE.close();
