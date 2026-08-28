@@ -23,7 +23,6 @@ public class AbsoluteSelfControl extends Skill {
                 .energyCost(100000)
                 .dependsOn(Skills.COMPLETE_CONSCIOUSNESS_ANALYSIS)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
-                .devCondition(new DevCondition.AnySkillOfLevelCondition(5))
         );
     }
 

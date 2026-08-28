@@ -23,7 +23,6 @@ public class MultipleBrainDomainSegmentation extends Skill {
                 .energyCost(10000)
                 .dependsOn(Skills.BRAIN_DOMAIN_DEVELOPMENT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2))
-                .devCondition(new DevCondition.AnySkillOfLevelCondition(3))
         );
     }
 

@@ -76,7 +76,7 @@ public final class OutputControl extends Skill {
                 .maintenanceCost(0)
                 .iterationTicks(40)
                 .energyCost(30_000)
-                .dependsOn(Skills.PHYSICAL_TRAINING)
+                .dependsOn(Skills.BRAIN_DOMAIN_DEVELOPMENT)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
                 .withCustomData(OutputControlData.ID, OutputControlData.class, OutputControlData::new)
         );
@@ -294,7 +294,7 @@ public final class OutputControl extends Skill {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilitySystemClient.addCommonSkillInfo(new AbilitySystemClient.SkillInfo(
                         Skills.OUTPUT_CONTROL.get(),
-                        List.of(PhysicalTraining.Client.SKILL_INFO),
+                        List.of(BrainDomainDevelopment.Client.SKILL_INFO),
                         R.textures.ability.level0.skill.absolute_self_control.icon,
                         120,
                         100
