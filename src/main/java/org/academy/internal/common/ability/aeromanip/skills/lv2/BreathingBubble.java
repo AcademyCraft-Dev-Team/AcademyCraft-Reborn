@@ -49,6 +49,7 @@ import java.util.WeakHashMap;
 /** Maintains a compressed-air bubble when its owner or nearby allies cannot breathe. */
 public final class BreathingBubble extends Skill {
     static final int REFRESH_INTERVAL_TICKS = 10;
+    static final int PASSIVE_VFX_COOLDOWN_TICKS = 10 * 20;
     private static final float BASE_COMPRESSED_AIR_COST = 4.0f;
     private static final float SHARED_COMPRESSED_AIR_COST = 2.0f;
 
@@ -83,6 +84,11 @@ public final class BreathingBubble extends Skill {
 
     static double activeRadius(int milestone) {
         return milestone >= 3 ? 24.0 : 16.0;
+    }
+
+    static boolean passiveVfxCooldownElapsed(long currentGameTime, long lastGameTime) {
+        return currentGameTime < lastGameTime
+                || currentGameTime - lastGameTime >= PASSIVE_VFX_COOLDOWN_TICKS;
     }
 
     public static final class Client {
@@ -147,6 +153,8 @@ public final class BreathingBubble extends Skill {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
+        private static final Map<ServerPlayer, Long> LAST_PASSIVE_VFX_TICKS = new WeakHashMap<>();
+
         private Events() {
         }
 
@@ -212,10 +220,19 @@ public final class BreathingBubble extends Skill {
         private static void refillAir(ServerPlayer player, List<ServerPlayer> sharedTargets) {
             player.setAirSupply(player.getMaxAirSupply());
             for (var target : sharedTargets) target.setAirSupply(target.getMaxAirSupply());
-            if (player.level() instanceof ServerLevel level) {
+            if (player.level() instanceof ServerLevel level
+                    && shouldPlayPassiveVfx(player, level.getGameTime())) {
                 AeromanipVfx.burst(level, new net.minecraft.world.phys.Vec3(
                         player.getX(), player.getEyeY(), player.getZ()), 0.72);
             }
+        }
+
+        private static boolean shouldPlayPassiveVfx(ServerPlayer player, long gameTime) {
+            var lastGameTime = LAST_PASSIVE_VFX_TICKS.get(player);
+            if (lastGameTime != null
+                    && !passiveVfxCooldownElapsed(gameTime, lastGameTime)) return false;
+            LAST_PASSIVE_VFX_TICKS.put(player, gameTime);
+            return true;
         }
     }
 
