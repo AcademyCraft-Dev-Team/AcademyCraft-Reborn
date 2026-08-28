@@ -24,4 +24,14 @@ class AbilityConfigTest {
         assertEquals(3.0f, settings.playerControlCostMultiplier);
         assertEquals(400, settings.playerControlResistanceTicks);
     }
+
+    @Test
+    void aeromanipResourceDefaultsMatchEffectBasedConsumption() {
+        var skills = AbilityConfig.Action.INSTANCE.getDefault().skills;
+
+        assertEquals(2.0f, skills.get("pneumatic_grasp")
+                .floatMap.get("compressedAirPerInterval"));
+        assertEquals(8.0f, skills.get("atmosphere_shield")
+                .floatMap.get("compressedAirPerEffect"));
+    }
 }

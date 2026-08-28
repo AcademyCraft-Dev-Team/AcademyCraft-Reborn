@@ -6,6 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -68,6 +69,10 @@ public final class Flight extends Skill {
             case 2 -> 0.065f;
             default -> 0.08f;
         };
+    }
+
+    static boolean shouldConsumeCompressedAir(boolean flying, Vec3 movement) {
+        return flying && movement != null && movement.lengthSqr() > 1.0e-4;
     }
 
     @Override
@@ -196,14 +201,21 @@ public final class Flight extends Skill {
                         skill);
             }
             if (enabled) {
-                Server.openUsageLease(player);
-                var interval = Math.max(1, Math.round(AeromanipConfig.skillFloat(
-                        player, SkillNames.FLIGHT, "compressedAirIntervalTicks", 20.0f)));
-                if (player.tickCount % interval == 0) {
-                    var airCost = Math.max(0.0f, AeromanipConfig.skillFloat(
-                            player, SkillNames.FLIGHT, "compressedAirPerInterval", 2.0f));
-                    enabled = skill.executeContinuousWithResource(
-                            player, _ -> 0.0f, _ -> airCost, (_, _) -> { }, true);
+                var moving = shouldConsumeCompressedAir(
+                        player.getAbilities().flying, player.getDeltaMovement());
+                if (moving) {
+                    Server.openUsageLease(player);
+                    var interval = Math.max(1, Math.round(AeromanipConfig.skillFloat(
+                            player, SkillNames.FLIGHT, "compressedAirIntervalTicks", 20.0f)));
+                    if (player.tickCount % interval == 0) {
+                        var airCost = Math.max(0.0f, AeromanipConfig.skillFloat(
+                                player, SkillNames.FLIGHT, "compressedAirPerInterval", 2.0f));
+                        skill.executeContinuousWithResource(
+                                player, _ -> 0.0f, _ -> airCost, (_, _) -> { }, true);
+                    }
+                    skill.reportActivity(player, true);
+                } else {
+                    Server.closeUsageLease(player);
                 }
             }
             if (!enabled) {

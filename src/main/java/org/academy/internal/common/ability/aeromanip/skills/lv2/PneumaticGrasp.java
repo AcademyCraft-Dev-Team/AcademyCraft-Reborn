@@ -225,7 +225,7 @@ public final class PneumaticGrasp extends Skill {
                         _ -> 10.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
                         _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
                                 player, SkillNames.PNEUMATIC_GRASP,
-                                "compressedAirPerInterval", 8.0f)),
+                                "compressedAirPerInterval", 2.0f)),
                         (_, _) -> { },
                         true)) {
                     end();

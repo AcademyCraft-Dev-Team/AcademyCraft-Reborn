@@ -52,7 +52,7 @@ public final class AeromanipDisplacementTracker {
 
     static float damageForDistance(double distance, int milestone) {
         if (!Double.isFinite(distance) || distance <= 0.0) return 0.0f;
-        var perBlock = milestone >= 1 ? 0.45 : 0.35;
+        var perBlock = milestone >= 1 ? 2.0 : 1.0;
         var cap = milestone >= 3 ? 5.0 : 4.0;
         return (float) Math.min(cap, distance * perBlock);
     }

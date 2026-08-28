@@ -22,6 +22,9 @@ class AirflowJetTest {
 
     @Test
     void chargeMilestonesImproveTheMatchingReleaseTier() {
+        assertEquals(4.0f, AirflowJet.INSTANT_AIR_COST);
+        assertEquals(8.0f, AirflowJet.HALF_AIR_COST);
+        assertEquals(16.0f, AirflowJet.FULL_AIR_COST);
         assertEquals(1.5, AirflowJet.instantDamage(false), 1.0E-9);
         assertEquals(2.0, AirflowJet.instantDamage(true), 1.0E-9);
         assertEquals(1.35, AirflowJet.halfLaunchSpeed(false), 1.0E-9);

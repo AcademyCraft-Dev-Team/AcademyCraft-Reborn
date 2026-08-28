@@ -9,10 +9,12 @@ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
-import net.minecraft.util.Mth;
+
+import java.util.function.Predicate;
 
 public final class AeromanipTargeting {
     private static final double MAX_SPEED = 3.0;
@@ -87,6 +89,72 @@ public final class AeromanipTargeting {
         var value = Double.isFinite(current) ? current : minimum;
         var adjustment = Integer.signum(steps) * Math.max(0.0, stepSize);
         return Mth.clamp(value + adjustment, minimum, maximum);
+    }
+
+    /** Selects the nearest living target intersected by a widened view-ray AABB. */
+    public static LivingEntity findLivingTargetAlongView(
+            ServerPlayer owner,
+            double range,
+            double searchHalfWidth,
+            double searchHalfHeight,
+            double targetBoxInflate,
+            Predicate<LivingEntity> predicate
+    ) {
+        if (owner == null || !Double.isFinite(range) || range <= 0.0) return null;
+        var eye = owner.getEyePosition();
+        var direction = owner.getLookAngle().normalize();
+        if (direction.lengthSqr() < 1.0e-6) return null;
+        var resolvedRange = Math.max(0.0, range);
+        var resolvedWidth = Math.max(0.0, searchHalfWidth);
+        var resolvedHeight = Math.max(0.0, searchHalfHeight);
+        var resolvedInflate = Math.max(0.0, targetBoxInflate);
+        var end = eye.add(direction.scale(resolvedRange));
+        var searchBox = new AABB(eye, end)
+                .inflate(resolvedWidth, resolvedHeight, resolvedWidth);
+
+        LivingEntity best = null;
+        var bestProjection = Double.MAX_VALUE;
+        for (var candidate : owner.level().getEntitiesOfClass(
+                LivingEntity.class,
+                searchBox,
+                entity -> entity != owner && entity.isAlive() && !entity.isSpectator()
+                        && (predicate == null || predicate.test(entity)))) {
+            var candidateBox = candidate.getBoundingBox().inflate(resolvedInflate);
+            var projection = candidateBox.getCenter().subtract(eye).dot(direction);
+            if (projection < 0.0 || projection > resolvedRange || !owner.hasLineOfSight(candidate)) continue;
+            var closestPoint = eye.add(direction.scale(projection));
+            if (distanceToBoxSqr(closestPoint, candidateBox)
+                    > resolvedInflate * resolvedInflate) continue;
+            if (projection < bestProjection) {
+                bestProjection = projection;
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    static double distanceToBoxSqr(Vec3 point, AABB box) {
+        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
+        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
+        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    /** Finds a point just outside an AABB along the supplied outward direction. */
+    public static Vec3 pointOutside(AABB box, Vec3 direction, double offset) {
+        var center = box.getCenter();
+        var normalized = direction == null || direction.lengthSqr() <= 1.0e-8
+                ? new Vec3(0.0, 1.0, 0.0)
+                : direction.normalize();
+        var distance = Double.POSITIVE_INFINITY;
+        if (normalized.x > 1.0e-8) distance = Math.min(distance, (box.maxX - center.x) / normalized.x);
+        if (normalized.x < -1.0e-8) distance = Math.min(distance, (box.minX - center.x) / normalized.x);
+        if (normalized.y > 1.0e-8) distance = Math.min(distance, (box.maxY - center.y) / normalized.y);
+        if (normalized.y < -1.0e-8) distance = Math.min(distance, (box.minY - center.y) / normalized.y);
+        if (normalized.z > 1.0e-8) distance = Math.min(distance, (box.maxZ - center.z) / normalized.z);
+        if (normalized.z < -1.0e-8) distance = Math.min(distance, (box.minZ - center.z) / normalized.z);
+        if (!Double.isFinite(distance)) distance = 0.0;
+        return center.add(normalized.scale(Math.max(0.0, distance) + Math.max(0.0, offset)));
     }
 
     static Vec3 acceleratedVelocity(Vec3 velocity, Vec3 direction, double acceleration, double maxForwardSpeed) {

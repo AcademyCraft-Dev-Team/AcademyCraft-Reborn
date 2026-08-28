@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AeromanipDisplacementTrackerTest {
     @Test
     void cavitationScalesWithTravelAndMilestones() {
-        assertEquals(0.7f, AeromanipDisplacementTracker.damageForDistance(2.0, 0), 1.0e-6f);
-        assertEquals(0.9f, AeromanipDisplacementTracker.damageForDistance(2.0, 1), 1.0e-6f);
+        assertEquals(2.0f, AeromanipDisplacementTracker.damageForDistance(2.0, 0), 1.0e-6f);
+        assertEquals(4.0f, AeromanipDisplacementTracker.damageForDistance(2.0, 1), 1.0e-6f);
         assertEquals(24, AeromanipDisplacementTracker.armorWearForDistance(2.0, 0));
         assertEquals(36, AeromanipDisplacementTracker.armorWearForDistance(2.0, 2));
     }

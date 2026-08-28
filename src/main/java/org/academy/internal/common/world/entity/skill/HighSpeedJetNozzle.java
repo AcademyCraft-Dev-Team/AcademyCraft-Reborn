@@ -26,11 +26,13 @@ import org.academy.internal.common.sounds.SoundEvents;
 
 import java.util.UUID;
 
-/** Persistent block-face nozzle placed by High-Speed Jet. */
+/** Persistent block-face or entity-mounted nozzle placed by High-Speed Jet. */
 public final class HighSpeedJetNozzle extends Entity {
     private static final EntityDataAccessor<Integer> FACE =
             SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> ACTIVE_TICKS =
+            SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> SUPPORT_ENTITY_ID =
             SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.INT);
     private static final double JET_LENGTH = 14.0;
     private static final double JET_RADIUS = 1.35;
@@ -38,6 +40,8 @@ public final class HighSpeedJetNozzle extends Entity {
 
     private UUID ownerUuid;
     private BlockPos supportPos = BlockPos.ZERO;
+    private UUID supportEntityUuid;
+    private int missingSupportTicks;
 
     public HighSpeedJetNozzle(EntityType<? extends HighSpeedJetNozzle> type, Level level) {
         super(type, level);
@@ -49,12 +53,27 @@ public final class HighSpeedJetNozzle extends Entity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(FACE, Direction.UP.get3DDataValue());
         builder.define(ACTIVE_TICKS, 0);
+        builder.define(SUPPORT_ENTITY_ID, -1);
     }
 
     public void attach(UUID ownerUuid, BlockPos supportPos, Direction face) {
         this.ownerUuid = ownerUuid;
         this.supportPos = supportPos.immutable();
+        supportEntityUuid = null;
+        entityData.set(SUPPORT_ENTITY_ID, -1);
         entityData.set(FACE, face.get3DDataValue());
+        setYRot(face.toYRot());
+        setXRot(face == Direction.UP ? -90.0f
+                : face == Direction.DOWN ? 90.0f : 0.0f);
+        snapToSurface();
+    }
+
+    public void attach(UUID ownerUuid, Entity support, Vec3 direction) {
+        if (support == null) throw new IllegalArgumentException("support entity cannot be null");
+        this.ownerUuid = ownerUuid;
+        supportEntityUuid = support.getUUID();
+        entityData.set(SUPPORT_ENTITY_ID, support.getId());
+        setDirection(direction);
         snapToSurface();
     }
 
@@ -70,6 +89,21 @@ public final class HighSpeedJetNozzle extends Entity {
         return Direction.from3DDataValue(entityData.get(FACE));
     }
 
+    public Vec3 direction() {
+        var direction = Vec3.directionFromRotation(getXRot(), getYRot());
+        return direction.lengthSqr() <= 1.0e-8 ? new Vec3(0.0, 1.0, 0.0) : direction.normalize();
+    }
+
+    public boolean isAttachedTo(BlockPos pos, Direction face) {
+        return supportEntityUuid == null && entityData.get(SUPPORT_ENTITY_ID) < 0
+                && supportPos.equals(pos) && face() == face;
+    }
+
+    public boolean isAttachedTo(Entity entity) {
+        return entity != null && supportEntityUuid != null
+                && supportEntityUuid.equals(entity.getUUID());
+    }
+
     public int activeTicks() {
         return entityData.get(ACTIVE_TICKS);
     }
@@ -83,9 +117,11 @@ public final class HighSpeedJetNozzle extends Entity {
     public void tick() {
         super.tick();
         setDeltaMovement(Vec3.ZERO);
-        snapToSurface();
         if (level().isClientSide()) return;
-        if ((tickCount % 20) == 0 && !hasSupport()) {
+        if (hasSupport()) {
+            missingSupportTicks = 0;
+            snapToSurface();
+        } else if (++missingSupportTicks > 100) {
             discard();
             return;
         }
@@ -108,7 +144,7 @@ public final class HighSpeedJetNozzle extends Entity {
     }
 
     private void applyJet(ServerLevel level, ServerPlayer owner) {
-        var direction = Vec3.atLowerCornerOf(face().getUnitVec3i());
+        var direction = direction();
         var origin = position().add(direction.scale(0.18));
         var milestone = Skills.HIGH_SPEED_JET.get().getEffectiveProficiencyMilestone(owner);
         var acceleration = 0.12 * (milestone >= 3 ? 1.25 : 1.0);
@@ -116,7 +152,8 @@ public final class HighSpeedJetNozzle extends Entity {
         var resolvedEnd = origin.add(direction.scale(JET_LENGTH * rangeScale));
         var bounds = new AABB(origin, resolvedEnd).inflate(JET_RADIUS * rangeScale);
         for (var target : level.getEntities(this, bounds, target ->
-                target.isAlive() && !(target instanceof HighSpeedJetNozzle))) {
+                target.isAlive() && !(target instanceof HighSpeedJetNozzle)
+                        && !isAttachedTo(target))) {
             if (!insideCapsule(target.getBoundingBox().getCenter(), origin, resolvedEnd,
                     JET_RADIUS * rangeScale + target.getBbWidth() * 0.5)) continue;
             EntityMotionGuard.runWithMotionSource(owner, () ->
@@ -127,24 +164,47 @@ public final class HighSpeedJetNozzle extends Entity {
     }
 
     private void spawnVfx(ServerLevel level) {
-        var direction = Vec3.atLowerCornerOf(face().getUnitVec3i());
+        var direction = direction();
         var origin = position().add(direction.scale(0.25));
         AeromanipVfx.stream(level, origin, direction, JET_LENGTH * 0.72);
     }
 
     private boolean hasSupport() {
+        if (supportEntityUuid != null || entityData.get(SUPPORT_ENTITY_ID) >= 0) {
+            var support = supportEntity();
+            return support != null && support.isAlive() && !support.isRemoved();
+        }
         return !level().getBlockState(supportPos).isAir()
                 && level().getBlockState(supportPos)
                 .isFaceSturdy(level(), supportPos, face());
     }
 
     private void snapToSurface() {
-        var direction = Vec3.atLowerCornerOf(face().getUnitVec3i());
-        var center = Vec3.atCenterOf(supportPos).add(direction.scale(0.535));
+        var direction = direction();
+        var support = supportEntity();
+        var center = support == null
+                ? Vec3.atCenterOf(supportPos).add(direction.scale(0.535))
+                : AeromanipTargeting.pointOutside(support.getBoundingBox(), direction, 0.08);
         setPos(center.x, center.y, center.z);
-        setYRot(face().toYRot());
-        setXRot(face() == Direction.UP ? -90.0f
-                : face() == Direction.DOWN ? 90.0f : 0.0f);
+    }
+
+    private Entity supportEntity() {
+        Entity support = null;
+        var supportId = entityData.get(SUPPORT_ENTITY_ID);
+        if (supportId >= 0) support = level().getEntity(supportId);
+        if (support == null && supportEntityUuid != null && level() instanceof ServerLevel serverLevel) {
+            support = serverLevel.getEntity(supportEntityUuid);
+            if (support != null) entityData.set(SUPPORT_ENTITY_ID, support.getId());
+        }
+        return support;
+    }
+
+    private void setDirection(Vec3 direction) {
+        var normalized = direction == null || direction.lengthSqr() <= 1.0e-8
+                ? new Vec3(0.0, 1.0, 0.0)
+                : direction.normalize();
+        setYRot((float) (Math.toDegrees(Math.atan2(normalized.z, normalized.x)) - 90.0));
+        setXRot((float) -Math.toDegrees(Math.asin(Math.clamp(normalized.y, -1.0, 1.0))));
     }
 
     static boolean insideCapsule(Vec3 point, Vec3 start, Vec3 end, double radius) {
@@ -184,11 +244,20 @@ public final class HighSpeedJetNozzle extends Entity {
                 input.getIntOr("academy_support_x", 0),
                 input.getIntOr("academy_support_y", 0),
                 input.getIntOr("academy_support_z", 0));
+        supportEntityUuid = input.getString("academy_support_entity")
+                .map(HighSpeedJetNozzle::parseUuid)
+                .orElse(null);
+        entityData.set(SUPPORT_ENTITY_ID, -1);
         entityData.set(FACE, Direction.from3DDataValue(
                 input.getIntOr("academy_face", Direction.UP.get3DDataValue())).get3DDataValue());
         entityData.set(ACTIVE_TICKS, Math.max(0,
                 input.getIntOr("academy_active_ticks", 0)));
-        snapToSurface();
+        setYRot(input.getFloatOr("academy_direction_yaw", face().toYRot()));
+        setXRot(input.getFloatOr("academy_direction_pitch",
+                face() == Direction.UP ? -90.0f : face() == Direction.DOWN ? 90.0f : 0.0f));
+        if (supportEntityUuid == null || supportEntity() != null) {
+            snapToSurface();
+        }
     }
 
     @Override
@@ -197,8 +266,13 @@ public final class HighSpeedJetNozzle extends Entity {
         output.putInt("academy_support_x", supportPos.getX());
         output.putInt("academy_support_y", supportPos.getY());
         output.putInt("academy_support_z", supportPos.getZ());
+        if (supportEntityUuid != null) {
+            output.putString("academy_support_entity", supportEntityUuid.toString());
+        }
         output.putInt("academy_face", face().get3DDataValue());
         output.putInt("academy_active_ticks", activeTicks());
+        output.putFloat("academy_direction_yaw", getYRot());
+        output.putFloat("academy_direction_pitch", getXRot());
     }
 
     private static UUID parseUuid(String value) {

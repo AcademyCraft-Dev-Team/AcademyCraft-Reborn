@@ -206,8 +206,8 @@ public class AbilityConfig {
                 defaultConfig.skills.put(skillId, settings);
             }
             defaultConfig.skills.get("breathing_bubble").floatMap.put("activeCompressedAirCost", 24.0f);
-            defaultConfig.skills.get("pneumatic_grasp").floatMap.put("compressedAirPerInterval", 8.0f);
-            defaultConfig.skills.get("atmosphere_shield").floatMap.put("compressedAirPerInterval", 4.0f);
+            defaultConfig.skills.get("pneumatic_grasp").floatMap.put("compressedAirPerInterval", 2.0f);
+            defaultConfig.skills.get("atmosphere_shield").floatMap.put("compressedAirPerEffect", 8.0f);
             defaultConfig.skills.get("high_speed_jet").floatMap.put("maximumNozzles", 8.0f);
             defaultConfig.skills.get("flight").floatMap.put("compressedAirPerInterval", 2.0f);
             defaultConfig.skills.get("flight").floatMap.put("compressedAirIntervalTicks", 20.0f);

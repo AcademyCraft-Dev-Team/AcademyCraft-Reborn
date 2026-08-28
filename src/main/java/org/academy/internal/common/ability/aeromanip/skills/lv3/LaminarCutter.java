@@ -44,6 +44,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipChargeContext;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -113,11 +114,13 @@ public final class LaminarCutter extends Skill {
 
         private static void start() {
             if (AbilitySystemClient.canUseSkill(Skills.LAMINAR_CUTTER.get())) {
+                AeromanipChargeHud.begin(Skills.LAMINAR_CUTTER.get());
                 MisakaNetworkClient.send(StartPacket.INSTANCE);
             }
         }
 
         private static void stop() {
+            AeromanipChargeHud.end(Skills.LAMINAR_CUTTER.get());
             MisakaNetworkClient.send(StopPacket.INSTANCE);
         }
 
