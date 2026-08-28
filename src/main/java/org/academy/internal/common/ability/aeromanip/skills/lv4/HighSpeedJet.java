@@ -40,6 +40,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
@@ -64,6 +65,7 @@ public final class HighSpeedJet extends Skill {
                 .energyCost(60_000)
                 .iterationTicks(15)
                 .maxStacks(5)
+                .dependsOn(Skills.AIRFLOW_JET)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4)));
     }
 
@@ -156,7 +158,7 @@ public final class HighSpeedJet extends Skill {
                         AbilityCategories.AEROMANIP.get(),
                         new AbilitySystemClient.SkillInfo(
                                 Skills.HIGH_SPEED_JET.get(),
-                                List.of(),
+                                List.of(AirflowJet.Client.SKILL_INFO),
                                 R.textures.high_speed_jet_icon,
                                 40,
                                 136));
