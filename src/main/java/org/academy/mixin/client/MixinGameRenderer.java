@@ -79,6 +79,10 @@ public abstract class MixinGameRenderer {
         try (var ignored = SpatialCutFrameProjectionContext.push(frameProjection)) {
             original.call(renderer, resourceAllocator, deltaTracker, renderOutline, cameraState,
                     modelViewMatrix, terrainFog, fogColor, shouldRenderSky);
+            WorldLineOverlayPass.renderWorld(
+                    featureRenderDispatcher,
+                    cameraState.viewRotationMatrix
+            );
         }
     }
 

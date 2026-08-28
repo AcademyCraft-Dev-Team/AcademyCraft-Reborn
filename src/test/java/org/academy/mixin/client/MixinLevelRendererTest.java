@@ -41,4 +41,15 @@ class MixinLevelRendererTest {
         assertFalse(gameRenderer.contains("PostEffect.post();"));
         assertFalse(gameRenderer.contains("GlowEffect.getInstance().process();"));
     }
+
+    @Test
+    void rendersQueuedWorldOverlaysAfterTheLevelRenderer() throws IOException {
+        var source = Files.readString(Path.of(
+                "src/main/java/org/academy/mixin/client/MixinGameRenderer.java"));
+
+        var levelRender = source.indexOf("original.call(renderer");
+        var overlayRender = source.indexOf("WorldLineOverlayPass.renderWorld(");
+        assertTrue(levelRender >= 0);
+        assertTrue(overlayRender > levelRender);
+    }
 }
