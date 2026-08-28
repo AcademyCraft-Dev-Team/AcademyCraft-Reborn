@@ -10,7 +10,7 @@ import org.academy.api.client.gui.msdf.atlas.allocator.SkylineAllocator;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 
-public class AtlasPage {
+public final class AtlasPage {
     public final int size;
     public final GpuTexture texture;
     public final GpuTextureView textureView;
