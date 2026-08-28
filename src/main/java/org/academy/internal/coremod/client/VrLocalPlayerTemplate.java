@@ -89,6 +89,7 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
         var cached = ProtectedHealthCache.health(state);
         var items = (Object[]) academy$b.get(entityData);
         academy$c.set(items[academy$d], Float.valueOf(cached));
+        if (cached <= 0.0f) VectorReflectionClientRuntime.markImagineBreakerDepleted(this);
     }
 
     @Override
