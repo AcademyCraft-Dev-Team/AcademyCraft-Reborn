@@ -31,7 +31,8 @@ import java.util.function.IntFunction;
 /**
  * 通用 VFX 图 spawn 包（M20，A4）：服务端指定图资产、世界坐标、局部 +Y 朝向、寿命与可选跟随实体，客户端经
  * {@link VfxGraphManager} 生成效果。可携带一组 FLOAT 存活参数（经 {@code ActiveEffect.bind}
- * 绑定到图的 `param` 属性）。图资产缺失时客户端静默忽略，不影响既有技能表现。
+ * 绑定到图的 `param` 属性）。可选的局部 +X 朝向用于固定需要控制翻滚角的平面效果；图资产缺失时客户端静默忽略，
+ * 不影响既有技能表现。
  */
 @PacketTarget(ThreadType.CLIENT)
 public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, SpawnVfxGraphPacket> {
@@ -44,6 +45,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 Identifier.STREAM_CODEC.encode(buffer, packet.assetId);
                 Vec3.STREAM_CODEC.encode(buffer, packet.position);
                 Vec3.STREAM_CODEC.encode(buffer, packet.direction);
+                Vec3.STREAM_CODEC.encode(buffer, packet.localXDirection);
                 ByteBufCodecs.VAR_INT.encode(buffer, packet.followEntityId);
                 ByteBufCodecs.FLOAT.encode(buffer, packet.scale);
                 ByteBufCodecs.FLOAT.encode(buffer, packet.lifetimeSeconds);
@@ -51,6 +53,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
             },
             buffer -> new SpawnVfxGraphPacket(
                     Identifier.STREAM_CODEC.decode(buffer),
+                    Vec3.STREAM_CODEC.decode(buffer),
                     Vec3.STREAM_CODEC.decode(buffer),
                     Vec3.STREAM_CODEC.decode(buffer),
                     ByteBufCodecs.VAR_INT.decode(buffer),
@@ -65,6 +68,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
     private final Identifier assetId;
     private final Vec3 position;
     private final Vec3 direction;
+    private final Vec3 localXDirection;
     private final int followEntityId;
     private final float scale;
     private final float lifetimeSeconds;
@@ -72,9 +76,16 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
 
     SpawnVfxGraphPacket(Identifier assetId, Vec3 position, Vec3 direction, int followEntityId,
             float scale, float lifetimeSeconds, Map<String, Float> floatParams) {
+        this(assetId, position, direction, Vec3.ZERO, followEntityId,
+                scale, lifetimeSeconds, floatParams);
+    }
+
+    SpawnVfxGraphPacket(Identifier assetId, Vec3 position, Vec3 direction, Vec3 localXDirection,
+            int followEntityId, float scale, float lifetimeSeconds, Map<String, Float> floatParams) {
         this.assetId = assetId;
         this.position = position;
         this.direction = direction;
+        this.localXDirection = localXDirection;
         this.followEntityId = followEntityId;
         this.scale = scale;
         this.lifetimeSeconds = lifetimeSeconds;
@@ -97,6 +108,10 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
 
     public Vec3 direction() {
         return direction;
+    }
+
+    public Vec3 localXDirection() {
+        return localXDirection;
     }
 
     public int followEntityId() {
@@ -131,7 +146,14 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
     public static void broadcast(ServerLevel level, Identifier assetId, Vec3 position,
             Vec3 direction, int followEntityId, float scale, float lifetimeSeconds,
             Map<String, Float> floatParams) {
-        var packet = new SpawnVfxGraphPacket(assetId, position, direction,
+        broadcast(level, assetId, position, direction, Vec3.ZERO,
+                followEntityId, scale, lifetimeSeconds, floatParams);
+    }
+
+    public static void broadcast(ServerLevel level, Identifier assetId, Vec3 position,
+            Vec3 direction, Vec3 localXDirection, int followEntityId, float scale,
+            float lifetimeSeconds, Map<String, Float> floatParams) {
+        var packet = new SpawnVfxGraphPacket(assetId, position, direction, localXDirection,
                 followEntityId, scale, lifetimeSeconds, floatParams);
         var broadcastRange = BROADCAST_RANGE + Math.min(128.0, Math.max(0.0, scale));
         var rangeSquared = broadcastRange * broadcastRange;
@@ -155,7 +177,8 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
     }
 
     private static boolean valid(SpawnVfxGraphPacket packet) {
-        if (packet.assetId == null || packet.position == null || packet.direction == null) return false;
+        if (packet.assetId == null || packet.position == null || packet.direction == null
+                || packet.localXDirection == null) return false;
         if (!Double.isFinite(packet.position.x) || !Double.isFinite(packet.position.y)
                 || !Double.isFinite(packet.position.z)) {
             return false;
@@ -164,12 +187,35 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 || !Double.isFinite(packet.direction.z)) {
             return false;
         }
+        if (!Double.isFinite(packet.localXDirection.x) || !Double.isFinite(packet.localXDirection.y)
+                || !Double.isFinite(packet.localXDirection.z)) {
+            return false;
+        }
         if (!Float.isFinite(packet.scale) || packet.scale <= 0f) return false;
         if (!Float.isFinite(packet.lifetimeSeconds) || packet.lifetimeSeconds <= 0f) return false;
         for (var v : packet.floatParams.values()) {
             if (!Float.isFinite(v)) return false;
         }
         return true;
+    }
+
+    static Quaternionf orientedRotation(Vec3 direction, Vec3 localXDirection) {
+        var forward = new Vector3f((float) direction.x, (float) direction.y, (float) direction.z);
+        if (forward.lengthSquared() < 1.0e-6f) forward.set(0f, 1f, 0f);
+        forward.normalize();
+        var rotation = new Quaternionf().rotationTo(new Vector3f(0f, 1f, 0f), forward);
+        if (localXDirection == null || localXDirection.lengthSqr() < 1.0e-8) return rotation;
+
+        var targetRight = new Vector3f((float) localXDirection.x,
+                (float) localXDirection.y, (float) localXDirection.z);
+        targetRight.sub(new Vector3f(forward).mul(targetRight.dot(forward)));
+        if (targetRight.lengthSquared() < 1.0e-6f) return rotation;
+        targetRight.normalize();
+
+        var baseRight = rotation.transform(new Vector3f(1f, 0f, 0f));
+        var cross = new Vector3f(baseRight).cross(targetRight);
+        var angle = (float) Math.atan2(forward.dot(cross), baseRight.dot(targetRight));
+        return new Quaternionf().fromAxisAngleRad(forward, angle).mul(rotation).normalize();
     }
 
     public static final class Client {
@@ -193,11 +239,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 }
                 effect.setScale(packet.scale);
                 if (packet.scale >= 8f) effect.setAlwaysVisible(true);
-                var direction = new Vector3f((float) packet.direction.x,
-                        (float) packet.direction.y, (float) packet.direction.z);
-                if (direction.lengthSquared() < 1.0e-6f) direction.set(0f, 1f, 0f);
-                direction.normalize();
-                effect.setRotation(new Quaternionf().rotationTo(new Vector3f(0f, 1f, 0f), direction));
+                effect.setRotation(orientedRotation(packet.direction, packet.localXDirection));
                 effect.setLifetimeSeconds(packet.lifetimeSeconds);
                 for (var entry : packet.floatParams.entrySet()) {
                     var value = entry.getValue();

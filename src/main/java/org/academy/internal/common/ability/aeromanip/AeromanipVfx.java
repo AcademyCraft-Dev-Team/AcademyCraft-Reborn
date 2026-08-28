@@ -50,6 +50,13 @@ public final class AeromanipVfx {
         spawn(level, MIST_BLADE, origin, direction, Math.max(0.05, length / 5.0), 0.8f);
     }
 
+    /** 切割图的局部 +X 为刀刃横轴，可显式固定平面效果的翻滚方向。 */
+    public static void blade(ServerLevel level, Vec3 origin, Vec3 direction,
+            Vec3 bladeRight, double length) {
+        spawn(level, MIST_BLADE, origin, direction, bladeRight,
+                Math.max(0.05, length / 5.0), 0.8f);
+    }
+
     /** 仅发送给施法者的流场感知标记。 */
     public static void marker(ServerPlayer observer, Vec3 center, double radius) {
         SpawnVfxGraphPacket.send(observer, MIST_RING, center, UP,
@@ -58,10 +65,18 @@ public final class AeromanipVfx {
 
     private static void spawn(ServerLevel level, Identifier graph, Vec3 position,
             Vec3 direction, double scale, float lifetimeSeconds) {
+        spawn(level, graph, position, direction, Vec3.ZERO, scale, lifetimeSeconds);
+    }
+
+    private static void spawn(ServerLevel level, Identifier graph, Vec3 position,
+            Vec3 direction, Vec3 localXDirection, double scale, float lifetimeSeconds) {
         var safeDirection = direction != null && direction.lengthSqr() > 1.0e-8
                 ? direction.normalize()
                 : UP;
-        SpawnVfxGraphPacket.broadcast(level, graph, position, safeDirection,
+        var safeLocalXDirection = localXDirection != null && localXDirection.lengthSqr() > 1.0e-8
+                ? localXDirection.normalize()
+                : Vec3.ZERO;
+        SpawnVfxGraphPacket.broadcast(level, graph, position, safeDirection, safeLocalXDirection,
                 -1, finiteScale(scale), lifetimeSeconds, Map.of());
     }
 

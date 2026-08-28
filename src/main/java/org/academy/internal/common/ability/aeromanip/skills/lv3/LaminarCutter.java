@@ -190,6 +190,17 @@ public final class LaminarCutter extends Skill {
             return tier == AeromanipChargeTier.INSTANT ? 0.55 : 1.25;
         }
 
+        static Vec3 bladeRight(Vec3 direction) {
+            if (direction == null || !Double.isFinite(direction.x)
+                    || !Double.isFinite(direction.y) || !Double.isFinite(direction.z)) {
+                return new Vec3(1.0, 0.0, 0.0);
+            }
+            var right = new Vec3(-direction.z, 0.0, direction.x);
+            return right.lengthSqr() < 1.0E-8
+                    ? new Vec3(1.0, 0.0, 0.0)
+                    : right.normalize();
+        }
+
         private static final class ChargeContext extends AeromanipChargeContext {
             private ChargeContext(ServerPlayer player) {
                 super(player, Skills.LAMINAR_CUTTER.get());
@@ -205,8 +216,6 @@ public final class LaminarCutter extends Skill {
                 player.level().playSound(null, player.blockPosition(),
                         SoundEvents.AIRFLOW_IMPACT.get(), SoundSource.PLAYERS,
                         0.45f, tier == AeromanipChargeTier.FULL ? 1.55f : 1.3f);
-                AeromanipVfx.blade(player.level(), player.getEyePosition(),
-                        player.getLookAngle(), tier == AeromanipChargeTier.FULL ? 3.2 : 1.8);
             }
 
             @Override
@@ -281,9 +290,7 @@ public final class LaminarCutter extends Skill {
             if (maximumRange > 0.0f) length = Math.min(length, maximumRange);
             var resolvedLength = length;
             var end = eye.add(direction.scale(length));
-            var bladeRight = new Vec3(-direction.z, 0.0, direction.x);
-            if (bladeRight.lengthSqr() < 1.0E-8) bladeRight = new Vec3(1.0, 0.0, 0.0);
-            bladeRight = bladeRight.normalize();
+            var bladeRight = bladeRight(direction);
             var bladeNormal = direction.cross(bladeRight).normalize();
             var halfWidth = bladeHalfWidth(tier);
             var box = new AABB(eye, end).inflate(halfWidth, 1.5, halfWidth);
@@ -333,7 +340,7 @@ public final class LaminarCutter extends Skill {
             if (tier != AeromanipChargeTier.INSTANT) {
                 clearSoftBlocks(player, level, eye, end, direction, bladeRight, bladeNormal, tier);
             }
-            spawnBladeVisual(level, eye, direction, length);
+            spawnBladeVisual(level, eye, direction, bladeRight, length);
         }
 
         private static boolean intersectsBlade(LivingEntity target, Vec3 start, Vec3 direction,
@@ -355,8 +362,8 @@ public final class LaminarCutter extends Skill {
         }
 
         private static void spawnBladeVisual(ServerLevel level, Vec3 start, Vec3 direction,
-                                             double range) {
-            AeromanipVfx.blade(level, start, direction, range);
+                                             Vec3 bladeRight, double range) {
+            AeromanipVfx.blade(level, start, direction, bladeRight, range);
         }
 
         private static void clearSoftBlocks(net.minecraft.server.level.ServerPlayer player, ServerLevel level,
