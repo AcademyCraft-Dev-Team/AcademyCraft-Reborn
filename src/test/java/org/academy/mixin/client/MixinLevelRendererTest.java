@@ -52,4 +52,17 @@ class MixinLevelRendererTest {
         assertTrue(levelRender >= 0);
         assertTrue(overlayRender > levelRender);
     }
+
+    @Test
+    void enablesVanillaEntityOutlinesForPersistentJetTargets() throws IOException {
+        var levelRenderer = Files.readString(Path.of(
+                "src/main/java/org/academy/mixin/client/MixinLevelRenderer.java"));
+        var entityRenderer = Files.readString(Path.of(
+                "src/main/java/org/academy/mixin/client/MixinEntityRenderer.java"));
+
+        assertTrue(levelRenderer.contains("HighSpeedJetHighlightClient.hasEntityHighlights()"));
+        assertTrue(levelRenderer.contains("levelRenderState.shouldShowEntityOutlines = true;"));
+        assertTrue(entityRenderer.contains("HighSpeedJetHighlightClient.shouldHighlightEntity(entity)"));
+        assertTrue(entityRenderer.contains("state.outlineColor = HighSpeedJetHighlightClient.WHITE_OUTLINE;"));
+    }
 }

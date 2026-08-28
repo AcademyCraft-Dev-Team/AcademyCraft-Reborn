@@ -1944,7 +1944,7 @@
   "skill.academy.flow_sense.proficiency.2000": "刷新间隔由 10 tick 降至 5 tick，单次同步上限由 64 提至 96 个目标。",
   "skill.academy.flow_sense.proficiency.3000": "即使玩家潜行，也无法再隐藏其引发的大气扰动。",
   "skill.academy.high_speed_jet": "高速喷流",
-  "skill.academy.high_speed_jet.desc": "按住安装键时以白色线框预览方块表面或实体；松开可安装持久喷气口，再次对同一面或实体操作即可拆除。实体喷气口默认朝远离玩家的方向，64 格内喷气口可远程启动且气流加速度能够叠加。",
+  "skill.academy.high_speed_jet.desc": "按住安装键时以白色边框预览方块表面、以白色轮廓预览实体；安装后对应方块面或实体会持续高亮，再次操作即可拆除。实体喷气口朝向玩家，启动时仅推动宿主实体远离玩家；64 格内喷气口可远程启动且方块喷口的气流加速度能够叠加。",
   "skill.academy.high_speed_jet.proficiency.1000": "已加载喷气口上限由 8 个提高至 12 个。",
   "skill.academy.high_speed_jet.proficiency.2000": "喷射持续时间由 40 tick 提升至 60 tick。",
   "skill.academy.high_speed_jet.proficiency.3000": "每个喷气口提供的加速度提升 25%。",
