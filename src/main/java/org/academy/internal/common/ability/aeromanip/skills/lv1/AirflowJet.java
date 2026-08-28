@@ -215,6 +215,8 @@ public final class AirflowJet extends Skill {
     public static final class Server {
         private static final Map<ServerPlayer, ChargeContext> CHARGES = new WeakHashMap<>();
         private static final Map<ServerPlayer, PropulsionContext> PROPULSION = new WeakHashMap<>();
+        private static final Map<ServerPlayer, BufferedChargeInput> BUFFERED_INPUTS =
+                new WeakHashMap<>();
         private static final Map<ServerPlayer, Double> MACE_MOMENTUM = new WeakHashMap<>();
 
         private Server() {
@@ -224,16 +226,34 @@ public final class AirflowJet extends Skill {
         public static void handleStart(StartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.AIRFLOW_JET.get();
-            if (CHARGES.containsKey(player) || PROPULSION.containsKey(player) || !skill.isEnabled(player)) return;
-            var context = new ChargeContext(player);
+            if (CHARGES.containsKey(player) || !skill.isEnabled(player)) return;
+            if (PROPULSION.containsKey(player)) {
+                BUFFERED_INPUTS.computeIfAbsent(player,
+                        _ -> BufferedChargeInput.pressed(player.level().getGameTime()));
+                return;
+            }
+            beginCharge(player, player.level().getGameTime());
+        }
+
+        private static void beginCharge(ServerPlayer player, long startGameTime) {
+            if (CHARGES.containsKey(player)) return;
+            var context = new ChargeContext(player, startGameTime);
             CHARGES.put(player, context);
             AbilitySystemServer.registerContext(context);
         }
 
         @SubscribePacket
         public static void handleStop(StopPacket packet) {
-            var context = CHARGES.get(packet.getPacketListener().getPlayer());
-            if (context != null) context.release();
+            var player = packet.getPacketListener().getPlayer();
+            var context = CHARGES.get(player);
+            if (context != null) {
+                context.release();
+                return;
+            }
+            if (PROPULSION.containsKey(player)) {
+                BUFFERED_INPUTS.computeIfPresent(player, (_, input) ->
+                        input.release(player.level().getGameTime()));
+            }
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -270,30 +290,13 @@ public final class AirflowJet extends Skill {
         }
 
         private static final class ChargeContext extends AeromanipChargeContext {
-            private ChargeContext(ServerPlayer player) {
-                super(player, Skills.AIRFLOW_JET.get());
+            private ChargeContext(ServerPlayer player, long startGameTime) {
+                super(player, Skills.AIRFLOW_JET.get(), startGameTime);
             }
 
             @Override
             protected void onReleased(AeromanipChargeTier tier, long chargeTicks) {
-                var skill = Skills.AIRFLOW_JET.get();
-                switch (tier) {
-                    case INSTANT -> skill.executeActiveWithResource(
-                            player,
-                            _ -> cpCost(player, INSTANT_CP_COST),
-                            _ -> INSTANT_AIR_COST,
-                            (_, _) -> castInstant(player, skill));
-                    case HALF -> skill.executeActiveWithResource(
-                            player,
-                            _ -> cpCost(player, HALF_CP_COST),
-                            _ -> HALF_AIR_COST,
-                            (_, _) -> castHalf(player, skill));
-                    case FULL -> skill.executeActiveWithResource(
-                            player,
-                            _ -> cpCost(player, FULL_CP_COST),
-                            _ -> FULL_AIR_COST,
-                            (_, _) -> castFull(player, skill));
-                }
+                castReleasedTier(player, Skills.AIRFLOW_JET.get(), tier);
             }
 
             @Override
@@ -309,6 +312,41 @@ public final class AirflowJet extends Skill {
             @Override
             protected void onChargeEnded(boolean released) {
                 CHARGES.remove(player, this);
+            }
+        }
+
+        private static void castReleasedTier(
+                ServerPlayer player,
+                AirflowJet skill,
+                AeromanipChargeTier tier
+        ) {
+            switch (tier) {
+                case INSTANT -> skill.executeActiveWithResource(
+                        player,
+                        _ -> cpCost(player, INSTANT_CP_COST),
+                        _ -> INSTANT_AIR_COST,
+                        (_, _) -> castInstant(player, skill));
+                case HALF -> skill.executeActiveWithResource(
+                        player,
+                        _ -> cpCost(player, HALF_CP_COST),
+                        _ -> HALF_AIR_COST,
+                        (_, _) -> castHalf(player, skill));
+                case FULL -> skill.executeActiveWithResource(
+                        player,
+                        _ -> cpCost(player, FULL_CP_COST),
+                        _ -> FULL_AIR_COST,
+                        (_, _) -> castFull(player, skill));
+            }
+        }
+
+        private static void consumeBufferedInput(ServerPlayer player, AirflowJet skill) {
+            var input = BUFFERED_INPUTS.remove(player);
+            if (input == null || player.hasDisconnected() || !player.isAlive()
+                    || !skill.isEnabled(player)) return;
+            if (input.isReleased()) {
+                castReleasedTier(player, skill, input.releaseTier());
+            } else {
+                beginCharge(player, input.startGameTime());
             }
         }
 
@@ -403,7 +441,8 @@ public final class AirflowJet extends Skill {
             level.playSound(null, player.blockPosition(), SoundEvents.AIRFLOW_JET.get(),
                     SoundSource.PLAYERS, 1.0f, 0.8f);
             var previous = PROPULSION.remove(player);
-            if (previous != null) previous.stop();
+            if (previous != null) previous.stop(false);
+            BUFFERED_INPUTS.remove(player);
             var propulsion = new PropulsionContext(player, skill);
             PROPULSION.put(player, propulsion);
             AbilitySystemServer.registerContext(propulsion);
@@ -416,6 +455,7 @@ public final class AirflowJet extends Skill {
             private final int durationTicks;
             private int ticks;
             private boolean ended;
+            private boolean consumeBufferedInput;
 
             private PropulsionContext(ServerPlayer player, AirflowJet skill) {
                 super(player);
@@ -426,17 +466,23 @@ public final class AirflowJet extends Skill {
                 durationTicks = fullPropulsionDuration(skill.hasProficiencyMilestone(player, 2));
             }
 
-            private void stop() {
+            private void stop(boolean consumeBufferedInput) {
                 if (ended) return;
                 ended = true;
+                this.consumeBufferedInput = consumeBufferedInput;
                 unregister();
             }
 
             @SubscribeEvent
             public void onTick(ServerTickEvent.Pre event) {
-                if (ended || ticks >= durationTicks || player.hasDisconnected() || !player.isAlive()
+                if (ended) return;
+                if (player.hasDisconnected() || !player.isAlive()
                         || player.level() != initialLevel || !skill.isEnabled(player)) {
-                    stop();
+                    stop(false);
+                    return;
+                }
+                if (ticks >= durationTicks) {
+                    stop(true);
                     return;
                 }
                 var direction = player.getLookAngle().add(0.0, 0.08, 0.0);
@@ -462,6 +508,38 @@ public final class AirflowJet extends Skill {
                 ended = true;
                 usageLease.close();
                 PROPULSION.remove(player, this);
+                if (consumeBufferedInput) {
+                    consumeBufferedInput(player, skill);
+                } else {
+                    BUFFERED_INPUTS.remove(player);
+                }
+            }
+        }
+
+        static record BufferedChargeInput(long startGameTime, long releaseGameTime) {
+            private static final long HELD = Long.MIN_VALUE;
+
+            static BufferedChargeInput pressed(long gameTime) {
+                return new BufferedChargeInput(gameTime, HELD);
+            }
+
+            BufferedChargeInput release(long gameTime) {
+                if (isReleased()) return this;
+                return new BufferedChargeInput(startGameTime, Math.max(startGameTime, gameTime));
+            }
+
+            boolean isReleased() {
+                return releaseGameTime != HELD;
+            }
+
+            long chargeTicks() {
+                return isReleased()
+                        ? AeromanipChargeContext.elapsedTicks(startGameTime, releaseGameTime)
+                        : 0L;
+            }
+
+            AeromanipChargeTier releaseTier() {
+                return AeromanipChargeTier.fromTicks(chargeTicks());
             }
         }
     }
