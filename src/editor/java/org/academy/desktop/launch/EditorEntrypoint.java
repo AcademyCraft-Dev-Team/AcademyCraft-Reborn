@@ -19,7 +19,7 @@ public final class EditorEntrypoint extends Entrypoint {
     private EditorEntrypoint() {
     }
 
-    static void main(String[] args) {
+    public static void main(String[] args) {
         try (var startupResult = startup(args, false, Dist.CLIENT, true)) {
             var main = createMainMethodCallable(startupResult, DEFAULT_MAIN);
             main.invokeExact(startupResult.loader().getProgramArgs().getArguments());
