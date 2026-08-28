@@ -56,7 +56,7 @@ import java.util.List;
 /** Places persistent block-face or entity-mounted jet nozzles and remotely fires them. */
 public final class HighSpeedJet extends Skill {
     private static final double PLACEMENT_RANGE = 8.0;
-    private static final double CONTROL_RANGE = 64.0;
+    public static final double NOZZLE_RETENTION_RANGE = 64.0;
 
     public HighSpeedJet() {
         super(Builder.of(AbilityCategories.AEROMANIP.get())
@@ -97,6 +97,16 @@ public final class HighSpeedJet extends Skill {
         return nozzleDirection == null || nozzleDirection.lengthSqr() <= 1.0e-8
                 ? Vec3.ZERO
                 : nozzleDirection.normalize().scale(-1.0);
+    }
+
+    public static boolean isOutsideNozzleRetentionRange(
+            Vec3 ownerPosition,
+            Vec3 nozzlePosition
+    ) {
+        if (ownerPosition == null || nozzlePosition == null) return false;
+        var distanceSqr = ownerPosition.distanceToSqr(nozzlePosition);
+        return Double.isFinite(distanceSqr)
+                && distanceSqr > NOZZLE_RETENTION_RANGE * NOZZLE_RETENTION_RANGE;
     }
 
     @Override
@@ -331,7 +341,7 @@ public final class HighSpeedJet extends Skill {
                 ServerLevel level,
                 ServerPlayer player
         ) {
-            var range = CONTROL_RANGE
+            var range = NOZZLE_RETENTION_RANGE
                     * AeromanipConfig.rangeMultiplier(player, SkillNames.HIGH_SPEED_JET);
             return level.getEntitiesOfClass(
                     HighSpeedJetNozzle.class,

@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.phys.Vec3;
@@ -67,6 +68,10 @@ public final class LaminarBuffer extends Skill {
     private static final int MILESTONE_TWO_HOVER_DURATION_TICKS = 100;
     private static final int PLATFORM_DURATION_TICKS = 200;
     private static final int MILESTONE_THREE_PLATFORM_DURATION_TICKS = 300;
+    private static final double AIR_HORIZONTAL_DRAG = 0.91;
+    private static final double STANDARD_GROUND_HORIZONTAL_DRAG = 0.54600006;
+    private static final double MAX_RETAINED_HORIZONTAL_SPEED = 1.5;
+    private static final double GROUND_SPEED_TOLERANCE = 1.0e-3;
 
     public LaminarBuffer() {
         super(Builder.of(AbilityCategories.AEROMANIP.get())
@@ -78,16 +83,64 @@ public final class LaminarBuffer extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1)));
     }
 
-    static Vec3 bufferedAirVelocity(Vec3 velocity) {
+    static Vec3 horizontalMovementInput(float strafe, float forward, float yawDegrees) {
+        var input = new Vec3(strafe, 0.0, forward);
+        var lengthSqr = input.lengthSqr();
+        if (lengthSqr < 1.0e-7) return Vec3.ZERO;
+        if (lengthSqr > 1.0) input = input.normalize();
+        var yaw = yawDegrees * Mth.DEG_TO_RAD;
+        var sin = Mth.sin(yaw);
+        var cos = Mth.cos(yaw);
+        return new Vec3(
+                input.x * cos - input.z * sin,
+                0.0,
+                input.z * cos + input.x * sin
+        );
+    }
+
+    static double groundEquivalentHorizontalSpeed(
+            double movementSpeed,
+            boolean sprinting,
+            double inputAmount
+    ) {
+        if (!Double.isFinite(movementSpeed) || !Double.isFinite(inputAmount)) return 0.0;
+        var amount = Math.clamp(inputAmount, 0.0, 1.0);
+        var airborneAcceleration = (sprinting ? 0.026 : 0.02) * amount;
+        var groundDisplacement = Math.max(0.0, movementSpeed) * amount
+                / (1.0 - STANDARD_GROUND_HORIZONTAL_DRAG);
+        return Math.max(0.0, groundDisplacement - airborneAcceleration);
+    }
+
+    static Vec3 bufferedAirVelocity(
+            Vec3 velocity,
+            Vec3 horizontalInput,
+            double groundEquivalentSpeed
+    ) {
         if (velocity == null || !Double.isFinite(velocity.x)
                 || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z)) return Vec3.ZERO;
         var horizontalSpeed = Math.hypot(velocity.x, velocity.z);
+        var fallSpeed = Math.max(-0.12, velocity.y);
+        if (horizontalInput != null && Double.isFinite(horizontalInput.x)
+                && Double.isFinite(horizontalInput.z)
+                && horizontalInput.horizontalDistanceSqr() > 1.0e-7) {
+            var direction = new Vec3(horizontalInput.x, 0.0, horizontalInput.z).normalize();
+            var targetSpeed = Math.max(0.0, groundEquivalentSpeed);
+            var resolvedSpeed = horizontalSpeed > targetSpeed + GROUND_SPEED_TOLERANCE
+                    ? horizontalSpeed
+                    : targetSpeed;
+            return new Vec3(
+                    direction.x * resolvedSpeed,
+                    fallSpeed,
+                    direction.z * resolvedSpeed
+            );
+        }
         var retainedScale = horizontalSpeed > 1.0e-5
-                ? Math.min(1.025, 1.5 / horizontalSpeed)
+                ? Math.min(1.0 / AIR_HORIZONTAL_DRAG,
+                MAX_RETAINED_HORIZONTAL_SPEED / horizontalSpeed)
                 : 1.0;
         return new Vec3(
                 velocity.x * retainedScale,
-                Math.max(-0.12, velocity.y),
+                fallSpeed,
                 velocity.z * retainedScale
         );
     }
@@ -392,7 +445,12 @@ public final class LaminarBuffer extends Skill {
             var owner = findOwner(level, living, skill);
             if (owner == null) return;
             var current = living.getDeltaMovement();
-            var buffered = bufferedAirVelocity(current);
+            var movementInput = horizontalMovementInput(
+                    living.xxa, living.zza, living.getYRot());
+            var groundEquivalentSpeed = groundEquivalentHorizontalSpeed(
+                    living.getSpeed(), living.isSprinting(), movementInput.horizontalDistance());
+            var buffered = bufferedAirVelocity(
+                    current, movementInput, groundEquivalentSpeed);
             if (!buffered.equals(current)) {
                 living.setDeltaMovement(buffered);
                 living.hurtMarked = true;

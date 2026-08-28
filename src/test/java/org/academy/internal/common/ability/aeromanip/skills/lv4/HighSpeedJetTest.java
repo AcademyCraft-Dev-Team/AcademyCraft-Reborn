@@ -5,6 +5,8 @@ import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HighSpeedJetTest {
     @Test
@@ -41,5 +43,14 @@ class HighSpeedJetTest {
         assertEquals(1.0, thrust.x, 1.0e-9);
         assertEquals(0.0, thrust.y, 1.0e-9);
         assertEquals(0.0, thrust.z, 1.0e-9);
+    }
+
+    @Test
+    void nozzleExpiresOnlyAfterItsOwnerMovesBeyondSixtyFourBlocks() {
+        var owner = new Vec3(0.0, 64.0, 0.0);
+
+        assertFalse(HighSpeedJet.isOutsideNozzleRetentionRange(owner, Vec3.ZERO));
+        assertTrue(HighSpeedJet.isOutsideNozzleRetentionRange(
+                owner.add(0.0, 0.001, 0.0), Vec3.ZERO));
     }
 }
