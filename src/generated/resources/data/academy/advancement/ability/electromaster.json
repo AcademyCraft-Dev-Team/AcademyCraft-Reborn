@@ -1,0 +1,27 @@
+{
+  "parent": "academy:ability/root",
+  "criteria": {
+    "achieved": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.academy.ability.electromaster.description"
+    },
+    "frame": "goal",
+    "hidden": true,
+    "icon": {
+      "id": "academy:coin"
+    },
+    "title": {
+      "translate": "advancements.academy.ability.electromaster.title"
+    }
+  },
+  "requirements": [
+    [
+      "achieved"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

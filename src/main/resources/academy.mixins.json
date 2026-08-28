@@ -36,6 +36,7 @@
     "common.MixinPlayerWingFlightPose",
     "common.MixinProjectile",
     "common.MixinSensing",
+    "common.MixinServerAdvancementManager",
     "common.MixinServerEntity",
     "common.MixinServerGamePacketListenerImpl",
     "common.MixinServerLevelVectorDefenseFeedback",
