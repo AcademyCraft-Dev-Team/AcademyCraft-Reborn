@@ -18,6 +18,7 @@ import org.academy.api.client.render.vfx.VfxContexts;
 import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.render.vfx.SpacialExcisionVfxClient;
 import org.joml.Matrix4f;
@@ -76,7 +77,8 @@ public abstract class MixinLevelRenderer {
             SubmitNodeCollector output,
             CallbackInfo ci
     ) {
-        if (MentaloutRosterClientState.hasControlledTargets()) {
+        if (MentaloutRosterClientState.hasControlledTargets()
+                || HighSpeedJetHighlightClient.hasEntityHighlights()) {
             levelRenderState.shouldShowEntityOutlines = true;
         }
         VfxContexts.submit(

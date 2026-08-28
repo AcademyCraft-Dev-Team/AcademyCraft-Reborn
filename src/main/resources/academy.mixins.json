@@ -64,6 +64,7 @@
     "client.MixinClientEntity",
     "client.MixinClientLevelMentalPerception",
     "client.MixinClientLivingEntity",
+    "client.MixinEntityRenderer",
     "client.MixinEntityRenderDispatcher",
     "client.MixinGameRenderer",
     "client.MixinHud",

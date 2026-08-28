@@ -24,13 +24,22 @@ class HighSpeedJetTest {
     }
 
     @Test
-    void entityNozzleDefaultsToTheDirectionAwayFromThePlayer() {
-        var direction = HighSpeedJet.outwardDirection(
+    void entityNozzleFacesTowardThePlayer() {
+        var direction = HighSpeedJet.towardPlayerDirection(
                 new Vec3(0.0, 1.0, 0.0),
                 new AABB(3.0, 0.0, -1.0, 5.0, 2.0, 1.0),
                 Vec3.ZERO);
-        assertEquals(1.0, direction.x, 1.0e-9);
+        assertEquals(-1.0, direction.x, 1.0e-9);
         assertEquals(0.0, direction.y, 1.0e-9);
         assertEquals(0.0, direction.z, 1.0e-9);
+    }
+
+    @Test
+    void entityThrustRunsOppositeThePlayerFacingNozzle() {
+        var thrust = HighSpeedJet.entityThrustDirection(new Vec3(-1.0, 0.0, 0.0));
+
+        assertEquals(1.0, thrust.x, 1.0e-9);
+        assertEquals(0.0, thrust.y, 1.0e-9);
+        assertEquals(0.0, thrust.z, 1.0e-9);
     }
 }

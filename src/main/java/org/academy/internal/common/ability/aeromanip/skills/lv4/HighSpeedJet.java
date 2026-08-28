@@ -35,6 +35,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -82,18 +83,25 @@ public final class HighSpeedJet extends Skill {
         return Math.max(0, nozzleCount) * 8.0f;
     }
 
-    static Vec3 outwardDirection(Vec3 playerEye, AABB targetBounds, Vec3 fallback) {
+    static Vec3 towardPlayerDirection(Vec3 playerEye, AABB targetBounds, Vec3 fallback) {
         var direction = playerEye == null || targetBounds == null
                 ? Vec3.ZERO
-                : targetBounds.getCenter().subtract(playerEye);
+                : playerEye.subtract(targetBounds.getCenter());
         if (direction.lengthSqr() <= 1.0e-8 && fallback != null) direction = fallback;
         return direction.lengthSqr() <= 1.0e-8
                 ? new Vec3(0.0, 1.0, 0.0)
                 : direction.normalize();
     }
 
+    public static Vec3 entityThrustDirection(Vec3 nozzleDirection) {
+        return nozzleDirection == null || nozzleDirection.lengthSqr() <= 1.0e-8
+                ? Vec3.ZERO
+                : nozzleDirection.normalize().scale(-1.0);
+    }
+
     @Override
     public void initClient() {
+        HighSpeedJetHighlightClient.init();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -192,31 +200,27 @@ public final class HighSpeedJet extends Skill {
                     return;
                 }
                 var target = updateTarget(event.getPartialTick());
-                if (target == null) return;
+                if (!(target instanceof BlockPlacement block)) return;
                 var camera = Minecraft.getInstance().gameRenderer.mainCamera().position();
                 var matrices = event.getMatrixStack();
                 matrices.pushPose();
                 matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
                 event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) -> {
-                    if (target instanceof BlockPlacement block) {
-                        var state = player.level().getBlockState(block.pos());
-                        var shape = state.getShape(player.level(), block.pos());
-                        var box = shape.isEmpty()
-                                ? new AABB(block.pos())
-                                : shape.bounds().move(block.pos());
-                        LineBoxRenderer.renderFace(
-                                snapshot, consumer, box, block.face(), 1.0f, 1.0f, 1.0f, 1.0f);
-                    } else if (target instanceof EntityPlacement entity) {
-                        LineBoxRenderer.renderWireframeBox(
-                                snapshot, consumer, entity.entity().getBoundingBox().inflate(0.03),
-                                1.0f, 1.0f, 1.0f, 1.0f);
-                    }
+                    var state = player.level().getBlockState(block.pos());
+                    var shape = state.getShape(player.level(), block.pos());
+                    var box = shape.isEmpty()
+                            ? new AABB(block.pos())
+                            : shape.bounds().move(block.pos());
+                    LineBoxRenderer.renderFace(
+                            snapshot, consumer, box, block.face(), 1.0f, 1.0f, 1.0f, 1.0f);
                 });
                 matrices.popPose();
             }
 
             private PlacementTarget updateTarget(float partialTick) {
                 target = resolvePlacementTarget(player, partialTick);
+                HighSpeedJetHighlightClient.setPreviewEntity(
+                        target instanceof EntityPlacement entity ? entity.entity() : null);
                 return target;
             }
 
@@ -227,6 +231,7 @@ public final class HighSpeedJet extends Skill {
             }
 
             private void cleanup() {
+                HighSpeedJetHighlightClient.clearPreview();
                 AbilitySystemClient.unregisterContext(this);
                 if (placementContext == this) placementContext = null;
             }
@@ -290,7 +295,7 @@ public final class HighSpeedJet extends Skill {
                             nozzle.attach(
                                     player.getUUID(),
                                     entity.entity(),
-                                    outwardDirection(
+                                    towardPlayerDirection(
                                             player.getEyePosition(),
                                             entity.entity().getBoundingBox(),
                                             player.getLookAngle()));
