@@ -50,6 +50,7 @@ public final class SkillProficiencyProfiles {
             Map.entry("vacuum_domain", "compressed-air upkeep, oxygen depletion, and the final radius are resolved together"),
             Map.entry("radiation_intensify", "mark duration and damage segments are resolved by the mark runtime"),
             Map.entry("space_folding_theorem", "passive damage and refund rules have no scalar CP profile"),
+            Map.entry("spacial_excision", "state activation has no proficiency branch"),
             Map.entry("darkmatter_generation", "server-authoritative MP/CP ledger implements its milestones"),
             Map.entry("darkmatter_shaping", "MP cost, integrity lifetime and gamma shaping are resolved together"),
             Map.entry("darkmatter_phase_tuning", "server phase-point cadence implements its milestones"),
@@ -88,7 +89,7 @@ public final class SkillProficiencyProfiles {
         var profiles = new HashMap<String, SkillProficiencyProfile>();
 
         put(profiles, continuous(0.9f), "magnet_manipulation", "current_recharge",
-                "mining_beam", "light_shield", "particle_wave_cannon", "spacial_excision");
+                "mining_beam", "light_shield", "particle_wave_cannon");
         put(profiles, costs(Map.of(MAINTENANCE, 0.9f, CONTINUOUS, 0.9f, DYNAMIC, 0.9f)),
                 "atmosphere_shield");
         put(profiles, maintenance(0.9f),

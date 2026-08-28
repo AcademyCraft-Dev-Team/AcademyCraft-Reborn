@@ -696,6 +696,12 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpacialExcision.ActivatePacket>>
             SPACIAL_EXCISION_ACTIVATE = PACKET_TYPES.register("spacial_excision_activate",
             () -> new PacketType<>(SpacialExcision.ActivatePacket.class, SpacialExcision.ActivatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpacialExcision.SegmentPacket>>
+            SPACIAL_EXCISION_SEGMENT = PACKET_TYPES.register("spacial_excision_segment",
+            () -> new PacketType<>(SpacialExcision.SegmentPacket.class, SpacialExcision.SegmentPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpacialExcision.EndPacket>>
+            SPACIAL_EXCISION_END = PACKET_TYPES.register("spacial_excision_end",
+            () -> new PacketType<>(SpacialExcision.EndPacket.class, SpacialExcision.EndPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TargetMisidentification.UsePacket>>
             TARGET_MISIDENTIFICATION_USE = PACKET_TYPES.register("target_misidentification_use",
