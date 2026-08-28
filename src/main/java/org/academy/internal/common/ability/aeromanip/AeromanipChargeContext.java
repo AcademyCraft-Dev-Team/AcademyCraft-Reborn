@@ -24,10 +24,14 @@ public abstract class AeromanipChargeContext extends ServerContext {
     private boolean released;
 
     protected AeromanipChargeContext(ServerPlayer player, Skill skill) {
+        this(player, skill, player.level().getGameTime());
+    }
+
+    protected AeromanipChargeContext(ServerPlayer player, Skill skill, long startGameTime) {
         super(player);
         this.skill = skill;
         initialLevel = player.level();
-        startGameTime = initialLevel.getGameTime();
+        this.startGameTime = Math.min(startGameTime, initialLevel.getGameTime());
         usageLease = AbilitySystemServer.getSystem(player)
                 .getAeromanipResourceManager()
                 .beginUse(player);
@@ -98,7 +102,7 @@ public abstract class AeromanipChargeContext extends ServerContext {
         }
     }
 
-    static long elapsedTicks(long startGameTime, long currentGameTime) {
+    public static long elapsedTicks(long startGameTime, long currentGameTime) {
         if (currentGameTime <= startGameTime) return 0L;
         var elapsed = currentGameTime - startGameTime;
         return elapsed < 0L ? Long.MAX_VALUE : elapsed;

@@ -1,9 +1,13 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv1;
 
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AirflowJetTest {
     @Test
@@ -38,5 +42,17 @@ class AirflowJetTest {
         assertEquals(2.35, AirflowJet.fullPropulsionSpeed(false, false), 1.0E-9);
         assertEquals(2.82, AirflowJet.fullPropulsionSpeed(true, false), 1.0E-9);
         assertEquals(0.94, AirflowJet.fullPropulsionSpeed(false, true), 1.0E-9);
+    }
+
+    @Test
+    void bufferedChargeInputRetainsItsPressAndReleaseTiming() {
+        var held = AirflowJet.Server.BufferedChargeInput.pressed(100L);
+        assertFalse(held.isReleased());
+
+        var released = held.release(110L);
+        assertTrue(released.isReleased());
+        assertEquals(10L, released.chargeTicks());
+        assertEquals(AeromanipChargeTier.HALF, released.releaseTier());
+        assertSame(released, released.release(130L));
     }
 }
