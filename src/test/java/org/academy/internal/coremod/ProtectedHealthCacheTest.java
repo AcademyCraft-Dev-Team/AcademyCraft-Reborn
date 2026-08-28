@@ -41,4 +41,13 @@ class ProtectedHealthCacheTest {
         assertEquals(35.0f, ProtectedHealthCache.health(damaged));
         assertEquals(40.0f, ProtectedHealthCache.maxHealth(damaged));
     }
+
+    @Test
+    void lethalImagineBreakerDamageReachesZeroHealth() {
+        var initial = ProtectedHealthCache.reconcile(0L, false, 20.0f, 20.0f);
+        var depleted = ProtectedHealthCache.subtract(initial, 20.0f);
+
+        assertEquals(0.0f, ProtectedHealthCache.health(depleted));
+        assertEquals(20.0f, ProtectedHealthCache.maxHealth(depleted));
+    }
 }

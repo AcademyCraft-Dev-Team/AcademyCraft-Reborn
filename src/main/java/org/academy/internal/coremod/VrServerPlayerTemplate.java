@@ -87,6 +87,10 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
         state = ProtectedHealthCache.subtract(state, amount);
         academy$a.put(uuid, state ^ academy$e);
         var cached = ProtectedHealthCache.health(state);
+        if (cached <= 0.0f) {
+            VectorReflection.Server.killAfterImagineBreakerDepletion(this);
+            return;
+        }
         var items = (Object[]) academy$b.get(entityData);
         academy$c.set(items[academy$d], Float.valueOf(cached));
     }
