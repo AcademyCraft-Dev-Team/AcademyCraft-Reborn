@@ -45,7 +45,6 @@ import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
-import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
@@ -73,7 +72,7 @@ public final class LaminarCutter extends Skill {
     public LaminarCutter() {
         super(Builder.of(AbilityCategories.AEROMANIP.get()).damage().level(AbilityLevel.LEVEL3).energyCost(30_000)
                 .cpCost(20).iterationTicks(10).maxStacks(20)
-                .dependsOn(Skills.AIRFLOW_JET, Skills.PNEUMATIC_GRASP)
+                .dependsOn(Skills.PNEUMATIC_GRASP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
 
@@ -98,7 +97,7 @@ public final class LaminarCutter extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.LAMINAR_CUTTER.get(),
-                        List.of(AirflowJet.Client.SKILL_INFO, PneumaticGrasp.Client.SKILL_INFO),
+                        List.of(PneumaticGrasp.Client.SKILL_INFO),
                         R.textures.laminar_cutter_icon, 75, 104));
     }
 

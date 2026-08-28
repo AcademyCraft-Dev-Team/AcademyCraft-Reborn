@@ -37,7 +37,6 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
-import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -65,7 +64,7 @@ public final class RejectingWind extends Skill {
                 .energyCost(30_000)
                 .iterationTicks(10)
                 .maxStacks(4)
-                .dependsOn(Skills.BREATHING_BUBBLE, Skills.TAILWIND_FIELD)
+                .dependsOn(Skills.TAILWIND_FIELD)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
 
@@ -124,7 +123,7 @@ public final class RejectingWind extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.REJECTING_WIND.get(),
-                        List.of(BreathingBubble.Client.SKILL_INFO, TailwindField.Client.SKILL_INFO),
+                        List.of(TailwindField.Client.SKILL_INFO),
                         R.textures.atmosphere_blast_gun_icon,
                         130,
                         104));

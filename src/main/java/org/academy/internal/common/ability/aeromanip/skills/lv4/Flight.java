@@ -27,7 +27,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AeromanipResourceManager;
@@ -58,7 +57,7 @@ public final class Flight extends Skill {
                 .maintenanceCost(30)
                 .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.AIRFLOW_JET, Skills.VORTEX_PULL)
+                .dependsOn(Skills.HIGH_SPEED_JET)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4)));
     }
 
@@ -103,7 +102,7 @@ public final class Flight extends Skill {
                         AbilityCategories.AEROMANIP.get(),
                         new AbilitySystemClient.SkillInfo(
                                 Skills.FLIGHT.get(),
-                                List.of(AirflowJet.Client.SKILL_INFO, VortexPull.Client.SKILL_INFO),
+                                List.of(HighSpeedJet.Client.SKILL_INFO),
                                 R.textures.flight_icon,
                                 120,
                                 136));

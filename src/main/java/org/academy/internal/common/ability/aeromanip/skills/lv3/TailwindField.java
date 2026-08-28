@@ -35,7 +35,6 @@ import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.ability.aeromanip.AirflowField;
-import org.academy.internal.common.ability.aeromanip.skills.lv2.FlowSense;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
@@ -65,7 +64,7 @@ public final class TailwindField extends Skill {
                 .energyCost(30_000)
                 .iterationTicks(10)
                 .maxStacks(3)
-                .dependsOn(Skills.PNEUMATIC_GRASP, Skills.FLOW_SENSE)
+                .dependsOn(Skills.PNEUMATIC_GRASP)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3)));
     }
 
@@ -110,7 +109,7 @@ public final class TailwindField extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.TAILWIND_FIELD.get(),
-                        List.of(PneumaticGrasp.Client.SKILL_INFO, FlowSense.Client.SKILL_INFO),
+                        List.of(PneumaticGrasp.Client.SKILL_INFO),
                         R.textures.tailwind_field_icon,
                         20,
                         104));
