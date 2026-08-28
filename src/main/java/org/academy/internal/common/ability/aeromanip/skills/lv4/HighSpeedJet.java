@@ -119,11 +119,14 @@ public final class HighSpeedJet extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         var defaultPlacementBinding = InputSystem.combo(
                 InputSystem.InputType.KEYBOARD,
-                InputConstants.KEY_G,
+                InputConstants.KEY_H,
                 InputSystem.ANY_ACTION,
                 InputConstants.MOD_ALT);
-        var placementBinding = Client.CONFIG.getKeyBinding(
-                Client.KEY_NAME_PLACE, defaultPlacementBinding);
+        var placementBinding = Client.CONFIG.getKeyBindingMigratingDefaults(
+                Client.KEY_NAME_PLACE,
+                defaultPlacementBinding,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G,
+                        InputSystem.ANY_ACTION, InputConstants.MOD_ALT));
         if (placementBinding.action() != InputSystem.ANY_ACTION) {
             placementBinding = new InputSystem.KeyCombination(
                     placementBinding.type(), placementBinding.keys(), InputSystem.ANY_ACTION,
@@ -137,13 +140,19 @@ public final class HighSpeedJet extends Skill {
                 placementBinding,
                 _ -> Client.startPlacement(),
                 _ -> Client.finishPlacement());
+        var defaultActivationBinding = InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_H,
+                InputConstants.RELEASE,
+                0);
+        var activationBinding = Client.CONFIG.getKeyBindingMigratingDefaults(
+                Client.KEY_NAME_ACTIVATE,
+                defaultActivationBinding,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
+                        InputConstants.RELEASE, InputConstants.MOD_ALT));
         InputSystem.addKeyBinding(
                 Client.KEY_NAME_ACTIVATE,
-                Client.CONFIG.getKeyBinding(
-                        Client.KEY_NAME_ACTIVATE,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD,
-                                InputConstants.KEY_H, InputConstants.RELEASE,
-                                InputConstants.MOD_ALT)),
+                activationBinding,
                 _ -> Client.activate());
     }
 

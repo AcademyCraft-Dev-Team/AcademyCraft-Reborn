@@ -106,11 +106,17 @@ public final class BreathingBubble extends Skill {
             var skill = Skills.BREATHING_BUBBLE.get();
             AcademyCraftConfig.registerTypeHandler(skill.getKey(), Config.Action.INSTANCE);
             CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(skill.getKey());
-            InputSystem.addKeyBinding(KEY_NAME_CAST,
-                    CONFIG.getKeyBinding(KEY_NAME_CAST,
-                            InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
-                                    InputConstants.RELEASE, 0)),
-                    _ -> cast());
+            var defaultBinding = InputSystem.combo(
+                    InputSystem.InputType.KEYBOARD,
+                    InputConstants.KEY_U,
+                    InputConstants.RELEASE,
+                    InputConstants.MOD_ALT);
+            var binding = CONFIG.getKeyBindingMigratingDefaults(
+                    KEY_NAME_CAST,
+                    defaultBinding,
+                    InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_H,
+                            InputConstants.RELEASE, 0));
+            InputSystem.addKeyBinding(KEY_NAME_CAST, binding, _ -> cast());
         }
 
         private static void cast() {
