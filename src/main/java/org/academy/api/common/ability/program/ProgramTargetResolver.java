@@ -42,6 +42,18 @@ public interface ProgramTargetResolver {
 
     Optional<ProgramDirection> lookDirectionOf(Object entityReference);
 
+    default Optional<ProgramDirection> movementDirectionOf(Object entityReference) {
+        if (!(entityReference instanceof Entity entity)) return Optional.empty();
+        var movement = entity.getDeltaMovement();
+        if (!Double.isFinite(movement.x)
+                || !Double.isFinite(movement.y)
+                || !Double.isFinite(movement.z)
+                || movement.lengthSqr() < 1.0e-12) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProgramDirection(movement.x, movement.y, movement.z));
+    }
+
     List<?> entitiesAround(ProgramWorldPosition center, double radius);
 
     Optional<ProgramBlockPosition> raycastBlock(

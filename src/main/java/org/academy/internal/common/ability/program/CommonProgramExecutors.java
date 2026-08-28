@@ -394,6 +394,16 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         ProgramValueTypes.DIRECTION,
                         direction
                 )).orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.ENTITY_MOVEMENT_DIRECTION, (context, _, inputs) ->
+                resolver(context).movementDirectionOf(raw(
+                        inputs,
+                        "entity",
+                        ProgramValueTypes.ENTITY_REFERENCE
+                )).map(direction -> data(
+                        "direction",
+                        ProgramValueTypes.DIRECTION,
+                        direction
+                )).orElseGet(CommonProgramExecutors::emptyData));
         put(result, CommonProgramNodeIds.ENTITIES_AROUND, (context, _, inputs) -> {
             var radius = nonNegative(floatValue(inputs, "radius"), "radius");
             var entities = resolver(context).entitiesAround(worldPosition(inputs, "center"), radius);

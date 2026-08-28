@@ -122,6 +122,7 @@ public final class AcademyCraftCommand {
                 .then(ProfileCommands.register())
                 .then(VectorCompatibilityCommands.register())
         );
+        AcademyTeamsCommand.register(dispatcher);
     }
 
     static IntegerArgumentType abilityLevelArgument() {

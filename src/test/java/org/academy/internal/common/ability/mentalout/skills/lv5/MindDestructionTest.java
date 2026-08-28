@@ -3,6 +3,8 @@ package org.academy.internal.common.ability.mentalout.skills.lv5;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MindDestructionTest {
     @Test
@@ -17,5 +19,11 @@ class MindDestructionTest {
         assertEquals(200, MindDestruction.DURATION_TICKS);
         assertEquals(20, MindDestruction.DAMAGE_INTERVAL_TICKS);
         assertEquals(10, MindDestruction.DURATION_TICKS / MindDestruction.DAMAGE_INTERVAL_TICKS);
+    }
+
+    @Test
+    void onlyMentalInterventionRosterTargetsReceiveStupor() {
+        assertFalse(MindDestruction.shouldApplyStupor(false));
+        assertTrue(MindDestruction.shouldApplyStupor(true));
     }
 }

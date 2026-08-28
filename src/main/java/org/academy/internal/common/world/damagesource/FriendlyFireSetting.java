@@ -13,6 +13,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkServer;
@@ -54,9 +55,10 @@ public final class FriendlyFireSetting {
 
     public static boolean shouldPrevent(Player attacker, LivingEntity target) {
         if (attacker == null || target == null || isFriendlyFireEnabled(attacker)) return false;
-        if (target instanceof Player victim && victim != attacker && attacker.isAlliedTo(victim)) return true;
+        if (target instanceof Player victim && victim != attacker
+                && TeamRelations.areTeammates(attacker, victim)) return true;
         var owner = getOwnerEntity(target);
-        if (owner == attacker || attacker.isAlliedTo(owner)) return true;
+        if (owner == attacker || TeamRelations.areTeammates(attacker, owner)) return true;
         if (isConfluenceFriendly(target)) return true;
         var ownerId = getOwnerUuid(target);
         return ownerId != null && ownerId.equals(attacker.getUUID());

@@ -90,9 +90,9 @@ public final class MindDestruction extends Skill {
                 Client.KEY_NAME_USE,
                 InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_H,
+                        InputConstants.KEY_G,
                         InputConstants.PRESS,
-                        InputConstants.MOD_ALT
+                        0
                 )
         ), _ -> Client.use());
     }
@@ -104,6 +104,10 @@ public final class MindDestruction extends Skill {
 
     public static float damagePerPulse(float maximumHealth) {
         return Math.max(0.0f, maximumHealth) * MAX_HEALTH_DAMAGE_RATIO + BASE_DAMAGE;
+    }
+
+    static boolean shouldApplyStupor(boolean targetInRoster) {
+        return targetInRoster;
     }
 
     public static void tick(MinecraftServer server) {
@@ -155,13 +159,13 @@ public final class MindDestruction extends Skill {
         ACTIVE.clear();
     }
 
-    private static void start(ServerPlayer controller, LivingEntity target) {
+    private static void start(ServerPlayer controller, LivingEntity target, boolean applyStupor) {
         var now = controller.level().getGameTime();
         var key = new EffectKey(controller.getUUID(), target.getUUID());
         var previous = ACTIVE.remove(key);
         if (previous != null) close(previous);
         ControlHandle stupor = null;
-        if (!MentalControlRuntime.isProtectedTarget(target)) {
+        if (applyStupor && !MentalControlRuntime.isProtectedTarget(target)) {
             try {
                 stupor = MentalControlApi.apply(new ControlRequest(
                         controller,
@@ -174,7 +178,7 @@ public final class MindDestruction extends Skill {
             } catch (RuntimeException ignored) {
                 // Mental protection only suppresses stupor; the damage-over-time still starts.
             }
-        } else {
+        } else if (applyStupor) {
             MentalControlRuntime.notifyProtectionBlocked(controller, target);
         }
         var effect = new ActiveEffect(
@@ -210,8 +214,8 @@ public final class MindDestruction extends Skill {
                         Skills.MIND_DESTRUCTION.get(),
                         List.of(SensoryDistortion.Client.SKILL_INFO),
                         R.textures.ability.mentalout.skill.sensory_distortion.icon,
-                        212,
-                        148
+                        200,
+                        100
                 )
         );
         public static final String KEY_NAME_USE = SkillNames.MIND_DESTRUCTION + "_use";
@@ -264,13 +268,14 @@ public final class MindDestruction extends Skill {
                 return;
             }
             var target = MentaloutTargeting.findLookedAtLiving(player, RANGE);
-            var roster = MentaloutControlContext.get(player);
-            if (target == null || roster == null || !roster.contains(target.getUUID())
-                    || FriendlyFireSetting.shouldPrevent(player, target)) {
-                feedback(player, "message.academy.mentalout.mind_destruction.not_in_roster");
+            if (target == null || FriendlyFireSetting.shouldPrevent(player, target)) {
+                feedback(player, "message.academy.mentalout.invalid_target");
                 return;
             }
-            if (!skill.executeActive(player, (_, _) -> start(player, target))) {
+            var roster = MentaloutControlContext.get(player);
+            var applyStupor = shouldApplyStupor(
+                    roster != null && roster.contains(target.getUUID()));
+            if (!skill.executeActive(player, (_, _) -> start(player, target, applyStupor))) {
                 feedback(player, "message.academy.mentalout.insufficient_cp");
             }
         }

@@ -11,6 +11,8 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -42,6 +44,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.ability.teleport.TeleportSync;
+import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -113,6 +116,22 @@ public final class Flashing extends Skill {
         RIGHT
     }
 
+    static Vec3 findDashDestination(
+            LivingEntity player,
+            Vec3 eyePosition,
+            Vec3 direction
+    ) {
+        var targetCenter = TeleportTargeting.findSelfTeleportCenter(
+                player,
+                eyePosition,
+                direction,
+                DASH_DISTANCE
+        );
+        if (targetCenter == null) return null;
+        var dimensions = player.getDimensions(Pose.STANDING);
+        return targetCenter.add(0.0, -dimensions.height() / 2.0, 0.0);
+    }
+
     public static final class Client {
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.TELEPORT.get(),
@@ -160,16 +179,13 @@ public final class Flashing extends Skill {
 
             var partialTick = event.getPartialTick();
             var look = player.getViewVector(partialTick);
-            var origin = player.getPosition(partialTick);
-            var distance = AbilitySystemClient.getSkillProficiencyMilestone(Skills.FLASHING.get()) >= 2
-                    ? 10.0 : DASH_DISTANCE;
+            var eyePosition = player.getEyePosition(partialTick);
             for (var direction : Direction.values()) {
                 if (!isDirectionKeyDown(direction)) continue;
                 var dashDirection = Server.directionFromLook(look, player.getYRot(), direction);
                 if (dashDirection.lengthSqr() < 1.0e-6) continue;
-                var desired = origin.add(dashDirection.scale(distance));
-                var safe = TeleportSafety.findSafe(player, desired);
-                TeleportCursorRenderer.render(event, safe == null ? desired : safe, safe != null);
+                var destination = findDashDestination(player, eyePosition, dashDirection);
+                if (destination != null) TeleportCursorRenderer.render(event, destination, true);
             }
         }
 
@@ -277,9 +293,7 @@ public final class Flashing extends Skill {
             try {
                 var direction = directionFromLook(player.getLookAngle(), player.getYRot(), requestedDirection);
                 if (direction.lengthSqr() < 1.0e-6) return;
-                var destination = TeleportSafety.findSafe(player,
-                        player.position().add(direction.scale(skill.hasProficiencyMilestone(player, 2)
-                                ? 10.0 : DASH_DISTANCE)));
+                var destination = findDashDestination(player, player.getEyePosition(), direction);
                 if (destination == null) return;
 
                 skill.executeActive(player, (context, actualCost) -> {
@@ -372,8 +386,7 @@ public final class Flashing extends Skill {
             var fallbackAngle = player.getRandom().nextDouble() * Mth.TWO_PI;
             var away = autoEscapeDirection(origin, sourcePosition, fallbackAngle);
             var baseAngle = Math.atan2(away.z, away.x);
-            var fullDistance = Skills.FLASHING.get().hasProficiencyMilestone(player, 2)
-                    ? 10.0 : DASH_DISTANCE;
+            var fullDistance = DASH_DISTANCE;
             var distances = new double[]{fullDistance, fullDistance * 0.75, 4.0};
             for (var distance : distances) {
                 for (var angleOffset : AUTO_ESCAPE_ANGLE_OFFSETS) {

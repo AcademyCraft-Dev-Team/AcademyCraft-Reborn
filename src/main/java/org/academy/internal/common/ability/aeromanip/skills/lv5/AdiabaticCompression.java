@@ -40,6 +40,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowReverse;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
@@ -70,10 +71,6 @@ public final class AdiabaticCompression extends Skill {
     static final int DEBUFF_DURATION_TICKS = 60;
     static final int DAMAGE_INTERVAL_TICKS = 10;
     static final float BASE_DAMAGE_PER_STACK = 0.5f;
-    private static final double DEFAULT_TARGET_DISTANCE = 32.0;
-    private static final double TARGET_SEARCH_HALF_WIDTH = 0.85;
-    private static final double TARGET_SEARCH_HALF_HEIGHT = 1.15;
-    private static final double TARGET_BOX_INFLATE = 0.2;
     private static final Identifier MOVEMENT_SLOW_ID =
             AcademyCraft.academy("adiabatic_compression_movement");
     private static final Identifier JUMP_SLOW_ID =
@@ -270,17 +267,14 @@ public final class AdiabaticCompression extends Skill {
             private Vec3 resolveTargetPoint(ServerPlayer owner) {
                 var eye = owner.getEyePosition();
                 var look = owner.getLookAngle();
-                var distance = Math.max(1.0, AeromanipConfig.skillFloat(
-                        owner, SkillNames.ADIABATIC_COMPRESSION,
-                        "targetDistance", (float) DEFAULT_TARGET_DISTANCE));
-                var target = AeromanipTargeting.findLivingTargetAlongView(
+                var target = BloodflowReverse.findTarget(
                         owner,
-                        distance,
-                        TARGET_SEARCH_HALF_WIDTH,
-                        TARGET_SEARCH_HALF_HEIGHT,
-                        TARGET_BOX_INFLATE,
-                        this::canAffect);
+                        eye,
+                        look,
+                        0.0
+                );
                 if (target != null) return target.getBoundingBox().getCenter();
+                var distance = BloodflowReverse.targetRange(owner, 0.0);
                 var end = eye.add(look.normalize().scale(distance));
                 var hit = owner.level().clip(new ClipContext(
                         eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, owner));
