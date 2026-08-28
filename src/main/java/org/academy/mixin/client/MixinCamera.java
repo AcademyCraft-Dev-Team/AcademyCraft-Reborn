@@ -2,6 +2,8 @@ package org.academy.mixin.client;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.world.phys.Vec3;
+import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.client.render.vfx.CameraShakeManager;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,6 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinCamera {
     @Invoker("setRotation")
     protected abstract void academy$setRotation(float yRot, float xRot);
+
+    @Invoker("setPosition")
+    protected abstract void academy$setPosition(Vec3 position);
 
     @Inject(
             method = "update",
@@ -38,5 +43,18 @@ public abstract class MixinCamera {
         if (offset.isZero()) return;
         var camera = (Camera) (Object) this;
         academy$setRotation(camera.yRot() + offset.yaw(), camera.xRot() + offset.pitch());
+    }
+
+    @Inject(method = "update", at = @At("TAIL"))
+    private void academy$alignWithAbilityDeveloperPod(DeltaTracker deltaTracker, CallbackInfo ci) {
+        var camera = (Camera) (Object) this;
+        if (camera.entity() == null) return;
+        var adjustment = AbilityDeveloperSleepClient.cameraAdjustment(
+                camera,
+                deltaTracker.getGameTimeDeltaPartialTick(false)
+        );
+        if (adjustment == null) return;
+        academy$setPosition(adjustment.position());
+        academy$setRotation(camera.yRot(), camera.xRot() + adjustment.pitchOffset());
     }
 }
