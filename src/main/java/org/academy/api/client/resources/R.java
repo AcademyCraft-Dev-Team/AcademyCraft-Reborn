@@ -191,6 +191,9 @@ public final class R {
         public static final Identifier parallel_thought_computation_icon = academy("textures/ability/level0/skill/parallel_thought_computation/icon.png");
         public static final Identifier complete_consciousness_analysis_icon = academy("textures/ability/level0/skill/complete_consciousness_analysis/icon.png");
         public static final Identifier absolute_self_control_icon = academy("textures/ability/level0/skill/absolute_self_control/icon.png");
+        public static final Identifier endurance_training_icon = academy("textures/ability/level0/skill/endurance_training/icon.png");
+        public static final Identifier physical_training_icon = academy("textures/ability/level0/skill/physical_training/icon.png");
+        public static final Identifier output_control_icon = academy("textures/ability/level0/skill/output_control/icon.png");
         public static final Identifier condition_any1 = academy("textures/ability/condition/any1.png");
         public static final Identifier condition_any2 = academy("textures/ability/condition/any2.png");
         public static final Identifier condition_any3 = academy("textures/ability/condition/any3.png");
@@ -434,6 +437,27 @@ public final class R {
                         public static final Identifier icon = academy("textures/ability/level0/skill/absolute_self_control/icon.png");
 
                         private absolute_self_control() {
+                        }
+                    }
+
+                    public static final class endurance_training {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/endurance_training/icon.png");
+
+                        private endurance_training() {
+                        }
+                    }
+
+                    public static final class physical_training {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/physical_training/icon.png");
+
+                        private physical_training() {
+                        }
+                    }
+
+                    public static final class output_control {
+                        public static final Identifier icon = academy("textures/ability/level0/skill/output_control/icon.png");
+
+                        private output_control() {
                         }
                     }
                 }

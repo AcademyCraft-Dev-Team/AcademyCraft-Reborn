@@ -295,7 +295,7 @@ public final class OutputControl extends Skill {
                 AbilitySystemClient.addCommonSkillInfo(new AbilitySystemClient.SkillInfo(
                         Skills.OUTPUT_CONTROL.get(),
                         List.of(BrainDomainDevelopment.Client.SKILL_INFO),
-                        R.textures.ability.level0.skill.absolute_self_control.icon,
+                        R.textures.ability.level0.skill.output_control.icon,
                         120,
                         100
                 ));
