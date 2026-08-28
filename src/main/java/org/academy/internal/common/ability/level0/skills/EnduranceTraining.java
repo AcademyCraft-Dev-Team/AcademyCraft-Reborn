@@ -35,7 +35,7 @@ public final class EnduranceTraining extends Skill {
                 new AbilitySystemClient.SkillInfo(
                         Skills.ENDURANCE_TRAINING.get(),
                         List.of(),
-                        R.textures.ability.level0.skill.multiple_brain_domain_segmentation.icon,
+                        R.textures.ability.level0.skill.endurance_training.icon,
                         75,
                         25
                 )

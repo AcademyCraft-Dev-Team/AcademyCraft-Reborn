@@ -35,7 +35,7 @@ public final class PhysicalTraining extends Skill {
                 new AbilitySystemClient.SkillInfo(
                         Skills.PHYSICAL_TRAINING.get(),
                         List.of(),
-                        R.textures.ability.level0.skill.parallel_thought_computation.icon,
+                        R.textures.ability.level0.skill.physical_training.icon,
                         75,
                         100
                 )
