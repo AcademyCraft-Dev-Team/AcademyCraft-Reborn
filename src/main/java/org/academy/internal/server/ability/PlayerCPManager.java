@@ -20,6 +20,7 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;
@@ -230,6 +231,13 @@ public class PlayerCPManager implements AbilitySubsystem {
         }
 
         dirty |= cpData.tickFoodSpRecovery();
+
+        AbilityDeveloperSleep.refreshNightSleepStatus(player);
+        if (AbilityDeveloperSleep.shouldRecoverSp(player)
+                && cpData.getCurrSP() < cpData.getMaxSP()) {
+            cpData.addSP(1);
+            dirty = true;
+        }
 
         if (dirty || cpData.isDirty()) {
             playerData.markDirty();

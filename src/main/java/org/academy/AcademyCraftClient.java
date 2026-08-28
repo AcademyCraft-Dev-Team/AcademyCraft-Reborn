@@ -59,6 +59,7 @@ import org.academy.api.common.util.UncheckedUtil;
 import org.academy.internal.client.ability.ProficiencySkillSettingsClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
+import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.props.PropsApp;
@@ -461,6 +462,7 @@ public final class AcademyCraftClient {
         event.registerAvatarEntityModifier(new AvatarRenderStateModifier() {
             @Override
             public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState) {
+                AbilityDeveloperSleepClient.extract(avatar, renderState);
                 renderState.setRenderData(ElectromasterWeaponVfx.ENTITY_ID_CONTEXT, avatar.getId());
                 renderState.setRenderData(
                         ElectromasterWeaponVfx.MAGNETIC_CONTEXT,

@@ -268,6 +268,19 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
         }
     }
 
+    public float getPodRotationDegrees(float partialTick) {
+        var ageInTicks = ticks + partialTick;
+        if (standingState.isStarted()) {
+            var elapsedSeconds = standingState.getTimeInMillis(ageInTicks) / 1000.0f;
+            return Mth.clamp(elapsedSeconds - 0.5f, 0.0f, 1.0f) * 60.0f;
+        }
+        if (lyingDownState.isStarted()) {
+            var elapsedSeconds = lyingDownState.getTimeInMillis(ageInTicks) / 1000.0f;
+            return Mth.clamp(1.0f - elapsedSeconds, 0.0f, 1.0f) * 60.0f;
+        }
+        return 0.0f;
+    }
+
     public AABB getRenderBoundingBox() {
         var pos = Vec3.atCenterOf(getBlockPos());
         var radius = 5d;
