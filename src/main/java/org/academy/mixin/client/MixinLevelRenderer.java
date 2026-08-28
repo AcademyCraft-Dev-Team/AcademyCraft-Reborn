@@ -19,6 +19,7 @@ import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
+import org.academy.internal.client.render.vfx.SpacialExcisionVfxClient;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -61,8 +62,10 @@ public abstract class MixinLevelRenderer {
             );
             VfxGraphManager.INSTANCE.renderFrame(target, mainTarget.getDepthTextureView(), graphCamera);
         }
-        GlowEffect.getInstance().process();
+        SpacialExcisionVfxClient.prepareSourceValidation();
         PostEffect.pre();
+        SpacialExcisionVfxClient.renderPost();
+        GlowEffect.getInstance().process();
         PostEffect.post();
     }
 

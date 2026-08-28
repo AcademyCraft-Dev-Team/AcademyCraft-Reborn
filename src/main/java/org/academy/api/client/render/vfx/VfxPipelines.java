@@ -25,6 +25,124 @@ import static org.academy.AcademyCraft.academy;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class VfxPipelines {
+    private static final VertexFormat SPATIAL_CUT_MASK_FORMAT = VertexFormat.builder(0)
+            .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+            .addAttribute("WorldDisplacement", GpuFormat.RGB32_FLOAT)
+            .addAttribute("Coverage", GpuFormat.R32_FLOAT)
+            .build();
+
+    /** Position, color, flow, and portal UV for the main spatial fissure. */
+    public static final VertexFormat SPATIAL_CUT_LINE_FORMAT = VertexFormat.builder(0)
+            .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+            .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
+            .addAttribute("Flow", GpuFormat.R32_FLOAT)
+            .addAttribute("MaterialUv", GpuFormat.RG32_FLOAT)
+            .build();
+
+    /** Draws the narrow End Portal material after the scene displacement pass. */
+    public static final RenderPipeline SPATIAL_CUT_MATERIAL = builder()
+            .withLocation(academy("pipeline/spatial_cut_material"))
+            .withVertexShader(R.shaders.core.spatial_cut_line)
+            .withFragmentShader(R.shaders.core.spatial_cut_material)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(BindGroupLayout.builder()
+                    .withSampler("Sampler0")
+                    .withSampler("Sampler1")
+                    .build())
+            .withBindGroupLayout(BindGroupLayout.builder()
+                    .withUniform("SpatialCutFlow", UniformType.UNIFORM_BUFFER)
+                    .build())
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexBinding(0, SPATIAL_CUT_LINE_FORMAT)
+            .build();
+
+    /** Draws the End Portal material into the bloom input. */
+    public static final RenderPipeline SPATIAL_CUT_GLOW = builder()
+            .withLocation(academy("pipeline/spatial_cut_glow"))
+            .withVertexShader(R.shaders.core.spatial_cut_line)
+            .withFragmentShader(R.shaders.core.spatial_cut_glow)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(BindGroupLayout.builder()
+                    .withSampler("Sampler0")
+                    .withSampler("Sampler1")
+                    .build())
+            .withBindGroupLayout(BindGroupLayout.builder()
+                    .withUniform("SpatialCutFlow", UniformType.UNIFORM_BUFFER)
+                    .build())
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexBinding(0, SPATIAL_CUT_LINE_FORMAT)
+            .build();
+
+    /** Writes a world-space cut mask while reading the main scene depth without modifying it. */
+    public static final RenderPipeline SPATIAL_CUT_MASK = builder()
+            .withLocation(academy("pipeline/spatial_cut_mask"))
+            .withVertexShader(R.shaders.core.spatial_cut_mask)
+            .withFragmentShader(R.shaders.core.spatial_cut_mask)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(
+                    Optional.of(BlendFunction.ADDITIVE),
+                    GpuFormat.RGBA16_FLOAT,
+                    ColorTargetState.WRITE_ALL))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexBinding(0, SPATIAL_CUT_MASK_FORMAT)
+            .build();
+
+    /** Reduces visible overlapping cut planes to the farthest reversed-Z depth. */
+    public static final RenderPipeline SPATIAL_CUT_DEPTH = builder()
+            .withLocation(academy("pipeline/spatial_cut_depth"))
+            .withVertexShader(R.shaders.core.spatial_cut_mask)
+            .withFragmentShader(R.shaders.core.spatial_cut_depth)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(
+                    Optional.empty(), GpuFormat.RGBA8_UNORM, ColorTargetState.WRITE_ALL))
+            .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexBinding(0, SPATIAL_CUT_MASK_FORMAT)
+            .build();
+
+    /** Applies the scene slide from the world-space mask to the copied main scene. */
+    public static final RenderPipeline SPATIAL_CUT_POST = builder()
+            .withLocation(academy("pipeline/spatial_cut_post"))
+            .withVertexShader(R.shaders.core.screen_blit)
+            .withFragmentShader(R.shaders.core.spatial_cut)
+            .withBindGroupLayout(BindGroupLayout.builder()
+                    .withSampler("Sampler0")
+                    .withSampler("Sampler3")
+                    .withSampler("Sampler4")
+                    .withSampler("Sampler5")
+                    .withSampler("Sampler6")
+                    .withSampler("Sampler7")
+                    .withSampler("Sampler8")
+                    .withSampler("Sampler9")
+                    .withSampler("Sampler10")
+                    .withSampler("Sampler11")
+                    .withSampler("Sampler12")
+                    .withSampler("Sampler13")
+                    .withUniform("SpatialCutPost", UniformType.UNIFORM_BUFFER)
+                    .build())
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(
+                    Optional.empty(), GpuFormat.RGBA8_UNORM, ColorTargetState.WRITE_ALL))
+            .withPrimitiveTopology(PrimitiveTopology.QUADS)
+            .withVertexBinding(0, DefaultVertexFormat.POSITION)
+            .build();
+
     public static final RenderPipeline PARTICLE_ADDITIVE = builder()
             .withLocation(academy("pipeline/vfx_particle"))
             .withVertexShader(R.shaders.core.vfx_particle)

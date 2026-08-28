@@ -75,11 +75,17 @@ public final class R {
             public static final Identifier pos_color = academy("core/pos_color");
             public static final Identifier rounded_rect = academy("core/rounded_rect");
             public static final Identifier screen_blit = academy("core/screen_blit");
+            public static final Identifier spatial_cut_depth = academy("core/spatial_cut_depth");
+            public static final Identifier spatial_cut_mask = academy("core/spatial_cut_mask");
+            public static final Identifier spatial_cut_line = academy("core/spatial_cut_line");
+            public static final Identifier spatial_cut_glow = academy("core/spatial_cut_glow");
+            public static final Identifier spatial_cut_material = academy("core/spatial_cut_material");
             public static final Identifier sdf_circle_glow = academy("core/sdf_circle_glow");
             public static final Identifier sdf_sharp_margin = academy("core/sdf_sharp_margin");
             public static final Identifier shockwave = academy("core/shockwave");
             public static final Identifier skill_progress = academy("core/skill_progress");
             public static final Identifier spatial_distortion = academy("core/spatial_distortion");
+            public static final Identifier spatial_cut = academy("core/spatial_cut");
             public static final Identifier trail = academy("core/trail");
             public static final Identifier vfxgraph_particle = academy("core/vfxgraph_particle");
             public static final Identifier vfxgraph_fire = academy("core/vfxgraph_fire");

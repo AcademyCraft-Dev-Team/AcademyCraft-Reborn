@@ -109,7 +109,7 @@
 | `area_teleport_select` 区域传送 | 现行 | L4 / 60k / 50 | 80 格服务端射线选择源区与目标，每轴基础上限 32 格；事务搬移方块、方块实体和非玩家实体，失败回滚。 | `Y↓` 标角；`Alt+Y↓` 设目标；`Shift+Y↓` 启动；高熟练度 `Shift+Alt+Y↓` 变换、`Ctrl+Alt+Y↓` 交换 | `academy:location_teleport` | `AreaTeleportSelect` + 动作处理类 |
 | `flashing` 高速闪现 | 现行 | L5 / 100k / 维持 50；每次 5 | 启用后沿移动方向安全闪现 8 格，客户端每 6 tick 可重复。 | `H↓` | `academy:location_teleport` | `Flashing` |
 | `defensive_teleport` 防御传送 | 现行 | L5 / 100k / 每次 20 | 按住框选前方 5×5×5 区域，松开后把其中敌对生物/投射物传送到位置传送当前坐标。 | `Alt+G↑` | `academy:quick_location_teleport` | `DefensiveTeleport` |
-| `spacial_excision` 空间切除 | 现行 | L5 / 100k / `最大CP`；1000 熟练度后 `0.9×最大CP` | 蓄力 40 tick 后每 10 tick 造成 `20D` 并切除获准方块；半径从 2 按每 tick +0.05 增长，最多持续 200 tick。 | `Alt+Shift+Ctrl+O↓` | `academy:area_teleport_select` | `SpacialExcision` |
+| `spacial_excision` 空间切割 | 现行 | L5 / 100k / 100 CP | 激活后持续 600 tick（30 秒）；仅记录自身成功的同维传送，并在起终点生成世界空间裂缝；裂缝持续伤害轨迹周围 3×3 区域内的生物、吸引 7×7 范围内的非友方生物，并在生成首秒重创轨迹附近的生物；无切块或熟练度强化。 | `Alt+X↓` | `academy:area_teleport_select` | `SpacialExcision` |
 
 ## Darkmatter 未元物质
 

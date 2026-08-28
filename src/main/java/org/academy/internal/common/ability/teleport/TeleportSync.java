@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.misaka.MisakaNetworkServer;
 
@@ -43,6 +44,10 @@ public final class TeleportSync {
                 || EntityMotionGuard.shouldBlockTeleport(entity, destination)) {
             return false;
         }
+        var sourceLevel = (ServerLevel) entity.level();
+        var origin = entity.getBoundingBox().getCenter();
+        var preTeleportYaw = entity.getYRot();
+        var preTeleportPitch = entity.getXRot();
         synchronized (PENDING_ABSOLUTE_SYNCS) {
             PENDING_ABSOLUTE_SYNCS.add(entity);
         }
@@ -70,6 +75,15 @@ public final class TeleportSync {
                 MisakaNetworkServer.send(observer, packet);
             }
         }
+        NeoForge.EVENT_BUS.post(new TeleportCompletedEvent(
+                entity,
+                sourceLevel,
+                destinationLevel,
+                origin,
+                entity.getBoundingBox().getCenter(),
+                preTeleportYaw,
+                preTeleportPitch
+        ));
         return true;
     }
 

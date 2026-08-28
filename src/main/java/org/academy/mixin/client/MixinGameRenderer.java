@@ -1,11 +1,17 @@
 package org.academy.mixin.client;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
@@ -19,11 +25,13 @@ import org.academy.api.client.vanilla.WorldCompositeEvent;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
+import org.academy.internal.client.render.vfx.SpatialCutFrameProjectionContext;
 import org.academy.internal.client.render.vfx.WingAvatarRegistry;
 import org.academy.internal.client.render.vfx.WorldLineOverlayPass;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.joml.Matrix4fc;
+import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -47,6 +55,32 @@ public abstract class MixinGameRenderer {
     @Shadow
     @Final
     private FeatureRenderDispatcher featureRenderDispatcher;
+
+    @WrapOperation(
+            method = "renderLevel",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V"
+            )
+    )
+    private void academy$captureSpatialCutFrameProjection(
+            LevelRenderer renderer,
+            GraphicsResourceAllocator resourceAllocator,
+            DeltaTracker deltaTracker,
+            boolean renderOutline,
+            CameraRenderState cameraState,
+            Matrix4fc modelViewMatrix,
+            GpuBufferSlice terrainFog,
+            Vector4f fogColor,
+            boolean shouldRenderSky,
+            Operation<Void> original,
+            @Local(ordinal = 0) Matrix4f frameProjection
+    ) {
+        try (var ignored = SpatialCutFrameProjectionContext.push(frameProjection)) {
+            original.call(renderer, resourceAllocator, deltaTracker, renderOutline, cameraState,
+                    modelViewMatrix, terrainFog, fogColor, shouldRenderSky);
+        }
+    }
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {

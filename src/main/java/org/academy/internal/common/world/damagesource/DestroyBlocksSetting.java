@@ -28,7 +28,6 @@ public final class DestroyBlocksSetting {
     private static final Set<String> BLOCK_DESTRUCTIVE_SKILLS = Set.of(
             "academy:kinetic_energy_applied",
             "academy:plasma_generation",
-            "academy:spacial_excision",
             "academy:darkmatter_disassemble",
             "academy:mining_beam",
             "academy:scatter_bomb",

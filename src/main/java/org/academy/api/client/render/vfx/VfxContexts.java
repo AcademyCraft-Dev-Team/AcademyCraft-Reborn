@@ -5,6 +5,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
+import org.academy.internal.client.render.vfx.SpatialCutFrameProjectionContext;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -14,12 +15,15 @@ public final class VfxContexts {
     }
 
     public static void submit(DeltaTracker deltaTracker, CameraRenderState cameraState) {
+        var frameProjection = SpatialCutFrameProjectionContext.currentCopy();
+        var projection = frameProjection == null
+                ? new Matrix4f(cameraState.projectionMatrix) : frameProjection;
         var camera = new VfxCamera(
                 new Vector3f((float) cameraState.pos.x, (float) cameraState.pos.y, (float) cameraState.pos.z),
                 new Quaternionf(cameraState.orientation),
-                new Matrix4f(cameraState.projectionMatrix),
+                projection,
                 new Matrix4f(cameraState.viewRotationMatrix),
-                fov(cameraState),
+                fov(projection),
                 RenderSystem.getProjectionMatrixBuffer()
         );
         var partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
@@ -30,7 +34,7 @@ public final class VfxContexts {
         ));
     }
 
-    private static float fov(CameraRenderState cameraState) {
-        return (float) (2.0 * (Math.atan(1.0 / cameraState.projectionMatrix.m11())) * Mth.RAD_TO_DEG);
+    private static float fov(Matrix4f projection) {
+        return (float) (2.0 * (Math.atan(1.0 / projection.m11())) * Mth.RAD_TO_DEG);
     }
 }
