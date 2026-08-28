@@ -109,10 +109,14 @@ public final class LaminarBuffer extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         var defaultBinding = InputSystem.combo(
                 InputSystem.InputType.KEYBOARD,
-                InputConstants.KEY_V,
+                InputConstants.KEY_U,
                 InputSystem.ANY_ACTION,
                 0);
-        var configuredBinding = Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST, defaultBinding);
+        var configuredBinding = Client.CONFIG.getKeyBindingMigratingDefaults(
+                Client.KEY_NAME_CAST,
+                defaultBinding,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_V,
+                        InputSystem.ANY_ACTION, 0));
         if (configuredBinding.action() != InputSystem.ANY_ACTION) {
             configuredBinding = new InputSystem.KeyCombination(
                     configuredBinding.type(), configuredBinding.keys(), InputSystem.ANY_ACTION,

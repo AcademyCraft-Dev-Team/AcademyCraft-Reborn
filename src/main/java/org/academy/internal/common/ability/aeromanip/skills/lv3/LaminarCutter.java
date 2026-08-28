@@ -81,7 +81,14 @@ public final class LaminarCutter extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        var binding = Client.CONFIG.getKeyBinding(Client.KEY_NAME_CAST,
+        var defaultBinding = InputSystem.combo(
+                InputSystem.InputType.MOUSE,
+                InputConstants.MOUSE_BUTTON_RIGHT,
+                InputSystem.ANY_ACTION,
+                InputConstants.MOD_ALT);
+        var binding = Client.CONFIG.getKeyBindingMigratingDefaults(
+                Client.KEY_NAME_CAST,
+                defaultBinding,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_V,
                         InputSystem.ANY_ACTION, InputConstants.MOD_ALT));
         if (binding.action() != InputSystem.ANY_ACTION) {
