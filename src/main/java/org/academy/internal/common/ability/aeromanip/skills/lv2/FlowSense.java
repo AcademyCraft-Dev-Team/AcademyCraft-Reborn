@@ -32,7 +32,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.FlowSensePacket;
-import org.academy.internal.common.ability.aeromanip.skills.lv1.LaminarBuffer;
+import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -57,7 +57,7 @@ public final class FlowSense extends Skill {
                 .initiallyDisabled()
                 .iterationTicks(BASE_INTERVAL_TICKS)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.LAMINAR_BUFFER)
+                .dependsOn(Skills.AIRFLOW_JET)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2)));
     }
 
@@ -90,7 +90,7 @@ public final class FlowSense extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.FLOW_SENSE.get(),
-                        List.of(LaminarBuffer.Client.SKILL_INFO),
+                        List.of(AirflowJet.Client.SKILL_INFO),
                         R.textures.flow_sense_icon,
                         50,
                         72));

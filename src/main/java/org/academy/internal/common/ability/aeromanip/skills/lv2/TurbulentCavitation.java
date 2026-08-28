@@ -38,6 +38,7 @@ public final class TurbulentCavitation extends Skill {
                 .passive()
                 .iterationTicks(1)
                 .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.BREATHING_BUBBLE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2)));
     }
 
@@ -60,7 +61,7 @@ public final class TurbulentCavitation extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.TURBULENT_CAVITATION.get(),
-                        List.of(),
+                        List.of(BreathingBubble.Client.SKILL_INFO),
                         R.textures.pressure_lock_icon,
                         130,
                         104));

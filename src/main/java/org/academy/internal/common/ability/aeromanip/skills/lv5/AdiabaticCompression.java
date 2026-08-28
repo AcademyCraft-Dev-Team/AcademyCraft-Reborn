@@ -43,8 +43,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
-import org.academy.internal.common.ability.aeromanip.skills.lv3.RejectingWind;
-import org.academy.internal.common.ability.aeromanip.skills.lv3.TailwindField;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.server.ability.AeromanipResourceManager;
@@ -90,7 +89,7 @@ public final class AdiabaticCompression extends Skill {
                 .cpCost(12)
                 .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.REJECTING_WIND, Skills.TAILWIND_FIELD)
+                .dependsOn(Skills.VORTEX_PULL)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5)));
     }
 
@@ -150,7 +149,7 @@ public final class AdiabaticCompression extends Skill {
                         AbilityCategories.AEROMANIP.get(),
                         new AbilitySystemClient.SkillInfo(
                                 Skills.ADIABATIC_COMPRESSION.get(),
-                                List.of(RejectingWind.Client.SKILL_INFO, TailwindField.Client.SKILL_INFO),
+                                List.of(VortexPull.Client.SKILL_INFO),
                                 R.textures.adiabatic_compression_icon,
                                 150,
                                 168));
