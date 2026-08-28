@@ -49,7 +49,7 @@ public final class SensoryDistortion extends Skill {
                 Client.KEY_NAME_USE,
                 InputSystem.combo(
                         InputSystem.InputType.KEYBOARD,
-                        InputConstants.KEY_Y,
+                        InputConstants.KEY_G,
                         InputConstants.PRESS,
                         InputConstants.MOD_ALT
                 )

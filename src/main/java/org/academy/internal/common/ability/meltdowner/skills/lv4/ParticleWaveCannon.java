@@ -86,11 +86,11 @@ public final class ParticleWaveCannon extends Skill {
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_START,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.PRESS, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.PRESS, 0)
         ), ctx -> Client.start());
         InputSystem.addKeyBinding(Client.KEY_NAME_STOP, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_STOP,
-                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_C, InputConstants.RELEASE, 0)
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.RELEASE, 0)
         ), ctx -> Client.stop());
     }
 

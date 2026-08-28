@@ -215,7 +215,6 @@ public class AbilityConfig {
             defaultConfig.skills.get("vacuum_domain").floatMap.put("compressedAirIntervalTicks", 10.0f);
             defaultConfig.skills.get("adiabatic_compression").floatMap.put("compressedAirPerInterval", 8.0f);
             defaultConfig.skills.get("adiabatic_compression").floatMap.put("compressedAirIntervalTicks", 10.0f);
-            defaultConfig.skills.get("adiabatic_compression").floatMap.put("targetDistance", 32.0f);
             defaultConfig.skills.get("adiabatic_compression").floatMap.put("damagePerStack", 0.5f);
 
             return defaultConfig;

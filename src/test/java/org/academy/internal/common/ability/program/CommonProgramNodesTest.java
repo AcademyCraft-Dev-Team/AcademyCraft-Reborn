@@ -873,7 +873,7 @@ class CommonProgramNodesTest {
     }
 
     @Test
-    void raycastsAndEntityProjectionCloseAllFourTargetDomains() {
+    void raycastsAndEntityProjectionExposePositionLookAndMovement() {
         var graph = new ProgramGraph(
                 List.of(
                         node(1, PrecisionProgramNodeIds.ON_CAST),
@@ -894,7 +894,10 @@ class CommonProgramNodesTest {
                         node(12, CommonProgramNodeIds.RAYCAST_BLOCK),
                         variableNode(13, CommonProgramNodeIds.VARIABLE_SET, "target_block",
                                 ProgramValueTypes.BLOCK_POSITION.id()),
-                        node(14, CommonProgramNodeIds.STOP)
+                        node(14, CommonProgramNodeIds.ENTITY_MOVEMENT_DIRECTION),
+                        variableNode(15, CommonProgramNodeIds.VARIABLE_SET, "target_movement",
+                                ProgramValueTypes.DIRECTION.id()),
+                        node(16, CommonProgramNodeIds.STOP)
                 ),
                 List.of(
                         edge(1, "flow", 6, "flow"),
@@ -913,11 +916,15 @@ class CommonProgramNodesTest {
                         edge(10, "direction", 12, "direction"),
                         edge(4, "value", 12, "range"),
                         edge(12, "block", 13, "value"),
-                        edge(13, "flow", 14, "flow")
+                        edge(13, "flow", 15, "flow"),
+                        edge(7, "value", 14, "entity"),
+                        edge(14, "direction", 15, "value"),
+                        edge(15, "flow", 16, "flow")
                 )
         );
         var targetPosition = new ProgramWorldPosition(OVERWORLD, 2.0, 64.0, 0.0);
         var targetDirection = new ProgramDirection(0.0, -1.0, 0.0);
+        var targetMovement = new ProgramDirection(1.0, 1.0, 0.0);
         var targetBlock = new ProgramBlockPosition(OVERWORLD, 2, 63, 0);
         var resolver = new ProgramTargetResolver() {
             @Override
@@ -931,6 +938,13 @@ class CommonProgramNodesTest {
             public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
                 return entityReference.equals("target")
                         ? Optional.of(targetDirection)
+                        : Optional.empty();
+            }
+
+            @Override
+            public Optional<ProgramDirection> movementDirectionOf(Object entityReference) {
+                return entityReference.equals("target")
+                        ? Optional.of(targetMovement)
                         : Optional.empty();
             }
 
@@ -963,6 +977,7 @@ class CommonProgramNodesTest {
         assertEquals("target", session.variables().get("target").value());
         assertEquals(targetPosition, session.variables().get("target_position").value());
         assertEquals(targetDirection, session.variables().get("target_direction").value());
+        assertEquals(targetMovement, session.variables().get("target_movement").value());
         assertEquals(targetBlock, session.variables().get("target_block").value());
     }
 

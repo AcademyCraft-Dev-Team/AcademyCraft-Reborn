@@ -8,6 +8,7 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.AttackDecision;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -218,6 +219,8 @@ public abstract class MixinEntity {
         if (decision == AttackDecision.ALLOW || reverseDecision == AttackDecision.ALLOW) {
             cir.setReturnValue(false);
         } else if (decision == AttackDecision.DENY || reverseDecision == AttackDecision.DENY) {
+            cir.setReturnValue(true);
+        } else if (TeamRelations.areTeammates(source, target)) {
             cir.setReturnValue(true);
         }
     }

@@ -21,6 +21,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
+import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntervention;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -41,6 +42,7 @@ public final class MentalIntrusionManager {
     private static final int READY_TIMEOUT_TICKS = 20;
     private static final int PERCEPTION_PRIORITY = 105;
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
+    private static final Map<UUID, DistortionSession> DISTORTIONS = new HashMap<>();
     private static final Map<CooldownKey, Long> PLAYER_COOLDOWNS = new HashMap<>();
     private static final Map<UUID, Long> SESSION_REVISIONS = new HashMap<>();
     private static final Map<UUID, Long> FILTER_REVISIONS = new HashMap<>();
@@ -202,23 +204,21 @@ public final class MentalIntrusionManager {
     }
 
     public static DistortionResult toggleDistortion(ServerPlayer player) {
-        var session = SESSIONS.get(player.getUUID());
         var skill = Skills.SENSORY_DISTORTION.get();
-        if (session == null || !session.confirmed) return DistortionResult.NO_SESSION;
         if (!skill.isEnabled(player)) return DistortionResult.UNAVAILABLE;
-        if (session.distortion != null && !session.distortion.isClosed()) {
-            session.distortion.close();
-            session.distortion = null;
-            session.afterimagePosition = null;
-            session.afterimageUntil = 0L;
-            AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
-                    player.getUUID(),
-                    skill.getKeyString()
-            );
+        var active = DISTORTIONS.get(player.getUUID());
+        if (active != null) {
+            stopDistortion(player.getUUID());
             return DistortionResult.STOPPED;
         }
-        if (MentalControlRuntime.isProtectedTarget(session.target)) {
-            MentalControlRuntime.notifyProtectionBlocked(player, session.target);
+        var target = MentaloutTargeting.findLookedAtLivingExtended(
+                player,
+                MentalIntervention.selectionRange(player)
+        );
+        if (target == null) return DistortionResult.INVALID_TARGET;
+        if (FriendlyFireSetting.shouldPrevent(player, target)) return DistortionResult.PROTECTED;
+        if (MentalControlRuntime.isProtectedTarget(target)) {
+            MentalControlRuntime.notifyProtectionBlocked(player, target);
             return DistortionResult.PROTECTED_NOTIFIED;
         }
         var level = Math.clamp(skill.getLevel(player), 0, 2);
@@ -227,7 +227,7 @@ public final class MentalIntrusionManager {
                 SkillProficiencyProfile.CostKind.MAINTENANCE,
                 MentaloutConfig.sensoryDistortionCost(player, level)
         );
-        cost *= MentaloutControlCost.multiplier(player, session.target);
+        cost *= MentaloutControlCost.multiplier(player, target);
         if (!AbilitySystemServer.getSystem(player).replacePermanentOccupation(
                 player.getUUID(),
                 cost,
@@ -236,20 +236,22 @@ public final class MentalIntrusionManager {
             return DistortionResult.INSUFFICIENT_CP;
         }
         try {
-            var wasVisible = session.target.hasLineOfSight(player);
-            session.distortion = MentalPerceptionRuntime.apply(
+            var wasVisible = target.hasLineOfSight(player);
+            var handle = MentalPerceptionRuntime.apply(
                     player,
-                    session.target,
+                    target,
                     player,
                     skill.getKey(),
                     PERCEPTION_PRIORITY,
-                    session.maximumEnd
+                    Long.MAX_VALUE
             );
+            var session = new DistortionSession(player, target, handle);
             if (wasVisible && skill.hasProficiencyMilestone(player, 3)
-                    && session.target instanceof Mob) {
+                    && target instanceof Mob) {
                 session.afterimagePosition = player.position();
                 session.afterimageUntil = player.level().getGameTime() + 60L;
             }
+            DISTORTIONS.put(player.getUUID(), session);
             player.level().playSound(null, player.blockPosition(),
                     SoundEvents.SENSORY_DISTORTION.get(),
                     SoundSource.PLAYERS, 0.65f, 1.0f);
@@ -259,8 +261,8 @@ public final class MentalIntrusionManager {
                     player.getUUID(),
                     skill.getKeyString()
             );
-            if (MentalControlRuntime.isProtectedTarget(session.target)) {
-                MentalControlRuntime.notifyProtectionBlocked(player, session.target);
+            if (MentalControlRuntime.isProtectedTarget(target)) {
+                MentalControlRuntime.notifyProtectionBlocked(player, target);
                 return DistortionResult.PROTECTED_NOTIFIED;
             }
             return DistortionResult.PROTECTED;
@@ -298,16 +300,34 @@ public final class MentalIntrusionManager {
                     MentalResistanceManager.markAffected(player, subject, false);
                 }
                 Skills.MENTAL_INTRUSION.get().reportActivity(player, session.confirmed);
-                if (session.distortion != null && !session.distortion.isClosed()) {
-                    Skills.SENSORY_DISTORTION.get().reportActivity(player, true);
-                    applyAfterimage(session, now);
-                }
             }
+        }
+        for (var session : List.copyOf(DISTORTIONS.values())) {
+            var player = session.player;
+            var target = session.target;
+            var maxDistance = Skills.MENTAL_INTRUSION.get().hasProficiencyMilestone(player, 2)
+                    ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(player))
+                    : MentaloutConfig.intrusionMaximumDistance(player);
+            var protectedTarget = MentalControlRuntime.isProtectedTarget(target);
+            if (!player.isAlive()
+                    || !Skills.SENSORY_DISTORTION.get().isEnabled(player)
+                    || target.isRemoved()
+                    || !target.isAlive()
+                    || target.level() != player.level()
+                    || target.distanceToSqr(player) > maxDistance * maxDistance
+                    || protectedTarget
+                    || session.handle.isClosed()) {
+                if (protectedTarget) MentalControlRuntime.notifyProtectionBlocked(player, target);
+                stopDistortion(player.getUUID());
+                continue;
+            }
+            Skills.SENSORY_DISTORTION.get().reportActivity(player, true);
+            applyAfterimage(session, now);
         }
         PLAYER_COOLDOWNS.entrySet().removeIf(entry -> entry.getValue() <= now);
     }
 
-    private static void applyAfterimage(Session session, long now) {
+    private static void applyAfterimage(DistortionSession session, long now) {
         if (session.afterimagePosition == null || now >= session.afterimageUntil) {
             session.afterimagePosition = null;
             session.afterimageUntil = 0L;
@@ -330,6 +350,11 @@ public final class MentalIntrusionManager {
                 stop(session.player.getUUID(), true);
             }
         }
+        for (var session : List.copyOf(DISTORTIONS.values())) {
+            if (session.player.getUUID().equals(entityId) || session.target.getUUID().equals(entityId)) {
+                stopDistortion(session.player.getUUID());
+            }
+        }
     }
 
     /** Stops every intrusion observing the target without changing Mental Intervention rosters. */
@@ -338,16 +363,22 @@ public final class MentalIntrusionManager {
         for (var session : List.copyOf(SESSIONS.values())) {
             if (session.target.getUUID().equals(targetId)) stop(session.player.getUUID(), true);
         }
+        for (var session : List.copyOf(DISTORTIONS.values())) {
+            if (session.target.getUUID().equals(targetId)) stopDistortion(session.player.getUUID());
+        }
     }
 
     public static void releaseController(UUID controllerId) {
         stop(controllerId, true);
+        stopDistortion(controllerId);
         MentalPerceptionRuntime.releaseController(controllerId);
     }
 
     public static void clear() {
         List.copyOf(SESSIONS.keySet()).forEach(id -> stop(id, true));
+        List.copyOf(DISTORTIONS.keySet()).forEach(MentalIntrusionManager::stopDistortion);
         SESSIONS.clear();
+        DISTORTIONS.clear();
         PLAYER_COOLDOWNS.clear();
         SESSION_REVISIONS.clear();
         FILTER_REVISIONS.clear();
@@ -389,16 +420,24 @@ public final class MentalIntrusionManager {
     private static void stop(UUID controllerId, boolean notifyClient) {
         var session = SESSIONS.remove(controllerId);
         if (session == null) return;
-        if (session.distortion != null) session.distortion.close();
         var system = AbilitySystemServer.getSystem(session.player);
         if (session.ownsOccupation) {
             system.releaseMaintenanceOccupation(controllerId, Skills.MENTAL_INTRUSION.get().getKeyString());
         }
-        system.releaseMaintenanceOccupation(controllerId, Skills.SENSORY_DISTORTION.get().getKeyString());
         if (notifyClient) {
             var revision = nextRevision(SESSION_REVISIONS, controllerId);
             MisakaNetworkServer.send(session.player, new EndPacket(session.id, revision));
         }
+    }
+
+    private static void stopDistortion(UUID controllerId) {
+        var session = DISTORTIONS.remove(controllerId);
+        if (session == null) return;
+        session.handle.close();
+        AbilitySystemServer.getSystem(session.player).releaseMaintenanceOccupation(
+                controllerId,
+                Skills.SENSORY_DISTORTION.get().getKeyString()
+        );
     }
 
     private static long nextRevision(Map<UUID, Long> revisions, UUID key) {
@@ -434,7 +473,7 @@ public final class MentalIntrusionManager {
     public enum DistortionResult {
         STARTED,
         STOPPED,
-        NO_SESSION,
+        INVALID_TARGET,
         PROTECTED,
         PROTECTED_NOTIFIED,
         INSUFFICIENT_CP,
@@ -475,7 +514,7 @@ public final class MentalIntrusionManager {
             )) return;
             var player = packet.getPacketListener().getPlayer();
             switch (MentalIntrusionManager.toggleDistortion(player)) {
-                case NO_SESSION -> feedback(player, "message.academy.mentalout.no_intrusion_session");
+                case INVALID_TARGET -> feedback(player, "message.academy.mentalout.invalid_target");
                 case PROTECTED -> feedback(player, "message.academy.mentalout.protected_target");
                 case PROTECTED_NOTIFIED -> {
                 }
@@ -735,9 +774,6 @@ public final class MentalIntrusionManager {
         private final long maximumEnd;
         private final boolean ownsOccupation;
         private boolean confirmed;
-        private MentalPerceptionRuntime.Handle distortion;
-        private Vec3 afterimagePosition;
-        private long afterimageUntil;
 
         private Session(
                 UUID id,
@@ -755,6 +791,24 @@ public final class MentalIntrusionManager {
             this.readyDeadline = readyDeadline;
             this.maximumEnd = maximumEnd;
             this.ownsOccupation = ownsOccupation;
+        }
+    }
+
+    private static final class DistortionSession {
+        private final ServerPlayer player;
+        private final LivingEntity target;
+        private final MentalPerceptionRuntime.Handle handle;
+        private Vec3 afterimagePosition;
+        private long afterimageUntil;
+
+        private DistortionSession(
+                ServerPlayer player,
+                LivingEntity target,
+                MentalPerceptionRuntime.Handle handle
+        ) {
+            this.player = player;
+            this.target = target;
+            this.handle = handle;
         }
     }
 }
