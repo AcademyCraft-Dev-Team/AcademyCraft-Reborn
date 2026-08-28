@@ -7,37 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LaminarBufferTest {
     @Test
-    void bufferSlowsFallingAndMatchesStandardGroundMovementSpeed() {
-        var movementInput = LaminarBuffer.horizontalMovementInput(0.0f, 1.0f, 0.0f);
-        var groundSpeed = LaminarBuffer.groundEquivalentHorizontalSpeed(
-                0.1, false, movementInput.horizontalDistance());
-        var result = LaminarBuffer.bufferedAirVelocity(
-                new Vec3(0.04, -0.7, 0.0), movementInput, groundSpeed);
-
-        assertEquals(0.0, result.x, 1.0e-9);
-        assertEquals(-0.12, result.y, 1.0e-9);
-        assertEquals(0.1 / (1.0 - 0.54600006) - 0.02, result.z, 1.0e-9);
-    }
-
-    @Test
-    void bufferCancelsAirDragWhenThereIsNoMovementInput() {
-        var result = LaminarBuffer.bufferedAirVelocity(
-                new Vec3(0.182, -0.2, -0.091), Vec3.ZERO, 0.0);
-
-        assertEquals(0.2, result.x, 1.0e-9);
-        assertEquals(-0.12, result.y, 1.0e-9);
-        assertEquals(-0.1, result.z, 1.0e-9);
-    }
-
-    @Test
-    void bufferDoesNotReduceMomentumThatAlreadyExceedsGroundSpeed() {
-        var movementInput = LaminarBuffer.horizontalMovementInput(1.0f, 0.0f, 0.0f);
-        var result = LaminarBuffer.bufferedAirVelocity(
-                new Vec3(0.6, -0.2, 0.0), movementInput, 0.2);
+    void bufferOnlyLimitsFallingAndLeavesHorizontalVelocityUntouched() {
+        var result = LaminarBuffer.bufferedAirVelocity(new Vec3(0.6, -0.7, -0.25));
 
         assertEquals(0.6, result.x, 1.0e-9);
         assertEquals(-0.12, result.y, 1.0e-9);
-        assertEquals(0.0, result.z, 1.0e-9);
+        assertEquals(-0.25, result.z, 1.0e-9);
     }
 
     @Test
