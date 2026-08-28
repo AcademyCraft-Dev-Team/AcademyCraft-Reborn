@@ -9,15 +9,18 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.util.freetype.FT_Face;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.lwjgl.util.freetype.FreeType.FT_Done_Face;
+import static org.lwjgl.util.freetype.FreeType.FT_Get_Char_Index;
 
-public class MsdfFont {
+public final class MsdfFont {
     public final FontDescriptor descriptor;
     public final FT_Face face;
     public final MsdfAtlas atlas;
     public final ImportFont.FontHandle fontHandle;
     public final MsdfFontMetrics metrics;
+    private final ReentrantLock faceLock = new ReentrantLock();
 
     public MsdfFont(Identifier identifier, FT_Face face, Executor executor) {
         this.face = face;
@@ -37,10 +40,33 @@ public class MsdfFont {
     }
 
     public @Nullable MsdfGlyph getGlyph(int character) {
-        return atlas.getOrGenerate(face, fontHandle, character);
+        return atlas.getOrGenerate(face, faceLock, fontHandle, character);
+    }
+
+    public boolean hasGlyph(int character) {
+        faceLock.lock();
+        try {
+            return FT_Get_Char_Index(face, character) != 0;
+        } finally {
+            faceLock.unlock();
+        }
+    }
+
+    public long getKerning(long left, long right) {
+        faceLock.lock();
+        try {
+            return MsdfKerningManager.getKerning(face, left, right);
+        } finally {
+            faceLock.unlock();
+        }
     }
 
     public void close() {
-        FT_Done_Face(face);
+        faceLock.lock();
+        try {
+            FT_Done_Face(face);
+        } finally {
+            faceLock.unlock();
+        }
     }
 }
