@@ -3,15 +3,18 @@ package org.academy.internal.common.world.level.block;
 import com.mojang.serialization.MapCodec;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -74,19 +77,35 @@ public final class AbilityDeveloperBlock extends MultiBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (!player.isShiftKeyDown()) {
-            var mainBlockEntity = getMainBlockEntity(level, pos);
-            if (level.isClientSide() && mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
-                abilityDeveloper.startOpening();
-            }
+        var mainBlockEntity = getMainBlockEntity(level, pos);
+        if (level.isClientSide() && mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
+            abilityDeveloper.startOpening();
+        }
 
-            if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
-                if (mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
+            if (mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
+                if (player.isShiftKeyDown()) {
+                    AbilityDeveloperSleep.startSleeping(serverPlayer, abilityDeveloper);
+                } else {
                     openScreen(serverPlayer, DevelopmentSource.block(abilityDeveloper.getBlockPos()));
                 }
             }
         }
         return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public boolean isBed(BlockState state, BlockGetter level, BlockPos pos, LivingEntity sleeper) {
+        return true;
+    }
+
+    @Override
+    public void setBedOccupied(BlockState state, Level level, BlockPos pos, LivingEntity sleeper, boolean occupied) {
+    }
+
+    @Override
+    public Direction getBedDirection(BlockState state, LevelReader level, BlockPos pos) {
+        return state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite();
     }
 
     public static void openScreen(ServerPlayer player, DevelopmentSource source) {

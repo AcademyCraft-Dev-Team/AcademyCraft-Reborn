@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
+import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
 import org.academy.internal.client.animation.WingFlightAnimationClient;
 import org.academy.internal.client.render.vfx.WingAvatarRegistry;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -18,6 +19,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(AvatarRenderer.class)
 public abstract class MixinAvatarRenderer {
+    @Inject(method = "setupRotations*", at = @At("HEAD"))
+    private void alignWithAbilityDeveloperPod(
+            AvatarRenderState state,
+            PoseStack poseStack,
+            float bodyRot,
+            float entityScale,
+            CallbackInfo ci
+    ) {
+        AbilityDeveloperSleepClient.applyModelTransform(state, poseStack);
+    }
+
     @Inject(method = "setupRotations*", at = @At("RETURN"))
     private void captureModelRootMatrix(AvatarRenderState state, PoseStack poseStack, float bodyRot, float entityScale, CallbackInfo ci) {
         var matrix = new Matrix4f(poseStack.last().pose());
