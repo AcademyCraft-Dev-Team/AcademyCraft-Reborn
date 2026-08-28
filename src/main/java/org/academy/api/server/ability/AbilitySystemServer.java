@@ -26,6 +26,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.AbilityDevelopmentAccess;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
+import org.academy.internal.common.advancement.AbilityAdvancements;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.skilldata.SkillData;
@@ -56,10 +57,12 @@ public final class AbilitySystemServer {
     private final AeromanipResourceManager aeromanipResourceManager;
     private final PropsManager propsManager;
     private final SyncManager syncManager;
+    private final MinecraftServer minecraftServer;
     private final InitialAbilityRecommendationCache initialAbilityRecommendations =
             new InitialAbilityRecommendationCache();
 
     public AbilitySystemServer(MinecraftServerContext context, WorldData worldData, AbilityConfig abilityConfig) {
+        minecraftServer = context.getMinecraftServer();
         syncManager = new SyncManager(context);
 
         playerDataManager = new PlayerDataManager(worldData, syncManager);
@@ -700,6 +703,14 @@ public final class AbilitySystemServer {
         normalizePlayerLevelForCategory(uuid, abilityCategory);
         playerCPManager.refreshCommonSkillBonuses(uuid);
         playerCPManager.releaseAllOccupations(uuid);
+        var onlinePlayer = minecraftServer.getPlayerList().getPlayer(uuid);
+        if (onlinePlayer != null) {
+            if (clearCategorySkills) {
+                AbilityAdvancements.revokeAll(onlinePlayer);
+            } else if (categoryChanged) {
+                AbilityAdvancements.onCategoryChanged(onlinePlayer, abilityCategory);
+            }
+        }
     }
 
     private void normalizePlayerLevelForCategory(UUID uuid, AbilityCategory category) {
@@ -759,11 +770,24 @@ public final class AbilitySystemServer {
     }
 
     public void addPlayerSkill(ServerPlayer serverPlayer, String skillKey) {
+        var wasLearned = getPlayerData(serverPlayer.getUUID()).isSkillLearned(skillKey);
         skillDataManager.addSkill(serverPlayer, skillKey);
+        if (!wasLearned && getPlayerData(serverPlayer.getUUID()).isSkillLearned(skillKey)) {
+            AbilityAdvancements.onSkillLearned(
+                    serverPlayer,
+                    getPlayerAbilityCategory(serverPlayer.getUUID()),
+                    skillKey
+            );
+        }
     }
 
     public void removePlayerSkill(UUID uuid, String skillKey) {
+        var wasLearned = getPlayerData(uuid).isSkillLearned(skillKey);
         skillDataManager.removeSkill(uuid, skillKey);
+        var player = minecraftServer.getPlayerList().getPlayer(uuid);
+        if (wasLearned && player != null) {
+            AbilityAdvancements.onSkillRemoved(player, skillKey);
+        }
     }
 
     public void toggleSkill(UUID uuid, String skillId) {
@@ -1205,6 +1229,10 @@ public final class AbilitySystemServer {
 
     public void setPlayerLevel(UUID uuid, int level) {
         playerCPManager.setLevel(uuid, level);
+        var player = minecraftServer.getPlayerList().getPlayer(uuid);
+        if (player != null) {
+            AbilityAdvancements.onLevelChanged(player, getPlayerAbilityCategory(uuid), level);
+        }
     }
 
     public float getPlayerAbilityExp(UUID uuid) {

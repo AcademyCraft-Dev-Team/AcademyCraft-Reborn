@@ -1,0 +1,27 @@
+{
+  "criteria": {
+    "tick": {
+      "trigger": "minecraft:tick"
+    }
+  },
+  "display": {
+    "announce_to_chat": false,
+    "background": "academy:gui/advancements/ability_background",
+    "description": {
+      "translate": "advancements.academy.ability.root.description"
+    },
+    "icon": {
+      "id": "academy:icon"
+    },
+    "show_toast": false,
+    "title": {
+      "translate": "advancements.academy.ability.root.title"
+    }
+  },
+  "requirements": [
+    [
+      "tick"
+    ]
+  ],
+  "sends_telemetry_event": true
+}
