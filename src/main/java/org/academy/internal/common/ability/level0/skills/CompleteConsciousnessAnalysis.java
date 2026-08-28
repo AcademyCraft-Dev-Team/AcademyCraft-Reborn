@@ -23,7 +23,6 @@ public class CompleteConsciousnessAnalysis extends Skill {
                 .energyCost(60000)
                 .dependsOn(Skills.PARALLEL_THOUGHT_COMPUTATION)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL4))
-                .devCondition(new DevCondition.AnySkillOfLevelCondition(4))
         );
     }
 
