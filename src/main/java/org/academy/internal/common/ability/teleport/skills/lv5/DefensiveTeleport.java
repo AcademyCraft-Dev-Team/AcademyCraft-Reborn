@@ -153,7 +153,7 @@ public final class DefensiveTeleport extends Skill {
                 var partialTick = event.getPartialTick();
                 var selectionDirection = selectionDirection(
                         player.getViewVector(partialTick),
-                        player.getViewYRot(partialTick),
+                        new Vec3(minecraft.gameRenderer.mainCamera().forwardVector()),
                         minecraft.options.getCameraType().isFirstPerson()
                 );
                 center = player.getEyePosition(partialTick)
@@ -238,8 +238,12 @@ public final class DefensiveTeleport extends Skill {
         );
     }
 
-    static Vec3 selectionDirection(Vec3 viewVector, float yRot, boolean firstPerson) {
-        return firstPerson ? viewVector : Vec3.directionFromRotation(0.0f, yRot);
+    static Vec3 selectionDirection(
+            Vec3 playerViewVector,
+            Vec3 cameraViewVector,
+            boolean firstPerson
+    ) {
+        return firstPerson ? playerViewVector : cameraViewVector;
     }
 
     public static final class Server {
