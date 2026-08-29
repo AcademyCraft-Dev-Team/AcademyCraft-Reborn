@@ -10,6 +10,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviatio
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.effect.StatusEffects;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.lang.StackWalker.StackFrame;
 import java.lang.ref.WeakReference;
@@ -79,6 +80,9 @@ public final class EntityMotionGuard {
     public static boolean canApplyMotionFrom(Entity source, Entity target) {
         if (target == null) return false;
         if (target.level().isClientSide()) return true;
+        if (source instanceof ServerPlayer player
+                && target instanceof LivingEntity living
+                && PvpSetting.shouldPrevent(player, living)) return false;
         var imprisoned = target instanceof LivingEntity living && isImprisoned(living);
         if (imprisoned) return false;
         var protectedPlayer = hasForcedMovementProtection(target);
@@ -97,6 +101,8 @@ public final class EntityMotionGuard {
     public static boolean canManipulateEquipmentFrom(Entity source, LivingEntity target) {
         if (target == null) return false;
         if (target.level().isClientSide()) return true;
+        if (source instanceof ServerPlayer player
+                && PvpSetting.shouldPrevent(player, target)) return false;
         var protectedPlayer = hasForcedMovementProtection(target);
         var shouldProtect = EntityMotionPolicy.shouldBlockExternalManipulation(
                 protectedPlayer,
@@ -295,9 +301,12 @@ public final class EntityMotionGuard {
         if (isInternalCorrection(entity)) return false;
         var imprisoned = entity instanceof LivingEntity living && isImprisoned(living);
         if (imprisoned) return true;
+        var source = currentMotionSourceEntity();
+        if (source instanceof ServerPlayer player
+                && entity instanceof LivingEntity living
+                && PvpSetting.shouldPrevent(player, living)) return true;
         var protectedPlayer = hasForcedMovementProtection(entity);
         if (!protectedPlayer) return false;
-        var source = currentMotionSourceEntity();
         var fallbackSelfSource = source == null && isPlayerSelfSourced((ServerPlayer) entity);
         var shouldProtect = EntityMotionPolicy.shouldBlock(
                 false,

@@ -42,6 +42,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 import org.misaka.MisakaNetworkClient;
@@ -528,6 +529,7 @@ public final class HighSpeedJet extends Skill {
                 player.level(), player, eye, rayEnd,
                 new AABB(eye, rayEnd).inflate(0.6),
                 entity -> entity != player && entity.isAlive() && entity.isPickable()
+                        && !PvpSetting.shouldPrevent(player, entity)
                         && !(entity instanceof HighSpeedJetNozzle),
                 0.2f);
         if (entityHit != null) return new EntityPlacement(entityHit.getEntity());

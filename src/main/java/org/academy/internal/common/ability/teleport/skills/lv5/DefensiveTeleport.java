@@ -46,6 +46,7 @@ import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTele
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -203,6 +204,7 @@ public final class DefensiveTeleport extends Skill {
                     return owner != player && (!player.isAlliedTo(owner));
                 }
                 if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
+                if (PvpSetting.shouldPrevent(player, living)) return false;
                 if (living instanceof Player target) {
                     return !target.isCreative() && !target.isSpectator();
                 }
@@ -330,6 +332,7 @@ public final class DefensiveTeleport extends Skill {
                 return owner != player && (!player.isAlliedTo(owner));
             }
             if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
+            if (PvpSetting.shouldPrevent(player, living)) return false;
             if (living instanceof ServerPlayer target) {
                 return !target.isCreative() && !target.isSpectator();
             }

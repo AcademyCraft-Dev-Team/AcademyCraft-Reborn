@@ -11,6 +11,7 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.util.UUID;
 
@@ -45,6 +46,7 @@ public final class DarkmatterTargeting {
         if (target instanceof Player player && (player.isCreative() || player.isSpectator())) {
             return false;
         }
+        if (PvpSetting.shouldPrevent(owner, target)) return false;
         if (areAllied(owner, target)) return false;
         return !(target instanceof TamableAnimal tame && tame.isOwnedBy(owner));
     }

@@ -39,6 +39,7 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.joml.Quaternionf;
@@ -317,7 +318,8 @@ public final class ArcGenerate extends Skill {
             var candidates = level.getEntitiesOfClass(LivingEntity.class,
                     origin.getBoundingBox().inflate(4.0),
                     target -> target != player && target.isAlive() && !hit.contains(target)
-                            && !player.isAlliedTo(target));
+                            && !player.isAlliedTo(target)
+                            && !PvpSetting.shouldPrevent(player, target));
             candidates.sort(Comparator.comparingDouble(origin::distanceToSqr));
             var factors = new float[]{0.5f, 0.3f};
             for (var index = 0; index < Math.min(2, candidates.size()); index++) {

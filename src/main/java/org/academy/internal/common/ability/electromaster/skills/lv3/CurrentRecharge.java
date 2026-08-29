@@ -39,6 +39,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.util.EnergyChargeHelper;
 import org.jspecify.annotations.Nullable;
@@ -213,7 +214,8 @@ public final class CurrentRecharge extends Skill {
                             && entity != player
                             && entity.isAlive()
                             && entity.isPickable()
-                            && !entity.isSpectator(),
+                            && !entity.isSpectator()
+                            && !PvpSetting.shouldPrevent(player, entity),
                     0.3f
             );
             if (entityHit != null && entityHit.getEntity() instanceof LivingEntity living) {

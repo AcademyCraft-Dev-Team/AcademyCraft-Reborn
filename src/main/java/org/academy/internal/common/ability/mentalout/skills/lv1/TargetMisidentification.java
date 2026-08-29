@@ -26,6 +26,7 @@ import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -140,6 +141,7 @@ public final class TargetMisidentification extends Skill {
             }
             var target = MentaloutTargeting.findLookedAtLivingExtended(player,
                     skill.hasProficiencyMilestone(player, 2) ? 80.0 : 64.0);
+            if (target != null && PvpSetting.shouldPrevent(player, target)) return;
             if (target == null) {
                 feedback(player, "message.academy.mentalout.invalid_target");
                 return;

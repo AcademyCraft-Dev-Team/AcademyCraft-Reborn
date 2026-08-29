@@ -41,6 +41,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -268,6 +269,7 @@ public final class MindDestruction extends Skill {
                 return;
             }
             var target = MentaloutTargeting.findLookedAtLiving(player, RANGE);
+            if (target != null && PvpSetting.shouldPrevent(player, target)) return;
             if (target == null || FriendlyFireSetting.shouldPrevent(player, target)) {
                 feedback(player, "message.academy.mentalout.invalid_target");
                 return;

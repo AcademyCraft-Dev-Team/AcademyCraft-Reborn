@@ -39,6 +39,15 @@ public final class AttachmentTypes {
                     .sync(ByteBufCodecs.BOOL)
                     .build()
     );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> PVP_ENABLED = REGISTER.register(
+            "pvp_enabled",
+            () -> AttachmentType
+                    .builder(DEFAULT_TRUE)
+                    .serialize(Codec.BOOL.fieldOf("enabled"))
+                    .copyOnDeath()
+                    .sync(ByteBufCodecs.BOOL)
+                    .build()
+    );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> DESTROY_BLOCKS_ENABLED = REGISTER.register(
             "destroy_blocks_enabled",
             () -> AttachmentType

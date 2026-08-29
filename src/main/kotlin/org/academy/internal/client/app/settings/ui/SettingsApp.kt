@@ -28,6 +28,7 @@ import org.academy.internal.client.ability.program.AbilityProgramEditorClient
 import org.academy.internal.client.hud.HudLayoutEditorScreen
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
+import org.academy.internal.common.world.damagesource.PvpSetting
 import org.lwjgl.glfw.GLFW
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
@@ -245,6 +246,13 @@ object SettingsApp : App {
                 .sizeMode(SizeMode.MATCH_PARENT)
 
             val player = Minecraft.getInstance().player
+            page.addChild(
+                "pvp", createSettingToggle(
+                    L10n["app.academy.settings.general.pvp"],
+                    player?.let(PvpSetting::isPvpEnabled) ?: true
+                ) { enabled ->
+                    MisakaNetworkClient.send(PvpSetting.SetPacket(enabled))
+                })
             page.addChild(
                 "friendly_fire", createSettingToggle(
                     L10n["app.academy.settings.general.friendly_fire"],
