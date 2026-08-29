@@ -23,6 +23,7 @@ import java.util.OptionalDouble;
 import java.util.Random;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
@@ -896,7 +897,14 @@ public final class VfxGraphRenderer {
      * depthDiff<0 → 粒子被 discard/alpha 灭掉，退回 farView（0.0）保证可见。
      */
     static boolean sceneDepthUsable(RenderSpec.Geometry geometry) {
-        return geometry == RenderSpec.Geometry.QUAD;
+        return sceneDepthUsable(geometry, IrisIntegration.isShaderPackInUse());
+    }
+
+    static boolean sceneDepthUsable(
+            RenderSpec.Geometry geometry,
+            boolean shaderPackInUse
+    ) {
+        return geometry == RenderSpec.Geometry.QUAD && !shaderPackInUse;
     }
 
     private static void clearTarget(GpuDevice device, GpuTextureView target, @Nullable GpuTextureView depth) {
