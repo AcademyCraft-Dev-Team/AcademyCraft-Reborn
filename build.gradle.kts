@@ -50,6 +50,11 @@ java {
     withJavadocJar()
 }
 
+val jbrLauncher = javaToolchains.launcherFor {
+    vendor.set(JvmVendorSpec.JETBRAINS)
+    languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
+}
+
 val generateModMetadata = tasks.register<Sync>("generateModMetadata") {
     description = "generateModMetadata"
     dependsOn(generateModsToml)
@@ -321,6 +326,12 @@ neoForge {
         }
     }
 }
+
+tasks.withType<JavaExec>()
+    .matching { it.name.startsWith("run") }
+    .configureEach {
+        javaLauncher.set(jbrLauncher)
+    }
 
 fun DependencyHandler.apiAndJarJar(dep: Any) {
     api(dep)

@@ -109,21 +109,15 @@ public final class MsdfAtlas {
         var slotWidth = texWidth + padding;
         var slotHeight = texHeight + padding;
 
-        atlasLock.lock();
-        GlyphReservation reservation;
-        try {
-            var existing = glyphCache.get(character);
-            if (existing != null) return existing;
-            reservation = runOnRenderThread(() ->
-                    allocateSlot(character, slotWidth, slotHeight, texWidth, texHeight, advance, bounds, rangeInEM));
-        } finally {
-            atlasLock.unlock();
-        }
+        var reservation = runOnRenderThread(() ->
+                reserveSlot(character, slotWidth, slotHeight, texWidth, texHeight, advance, bounds, rangeInEM));
+
+        var glyph = reservation.glyph();
+        var rect = reservation.rect();
+        if (rect == null) return glyph;
 
         var pixelCount = texWidth * texHeight;
-        var page = reservation.page();
-        var rect = reservation.rect();
-        var glyph = reservation.glyph();
+        var page = glyph.page();
         var upRect = new Rect(rect.x(), rect.y(), texWidth, texHeight);
 
         executor.execute(() -> {
@@ -179,6 +173,22 @@ public final class MsdfAtlas {
     }
 
     @RenderThread
+    private GlyphReservation reserveSlot(
+            int character, int slotWidth, int slotHeight, int texWidth, int texHeight,
+            int advance, Shape.Bounds bounds, double rangeInEM
+    ) {
+        atlasLock.lock();
+        try {
+            var existing = glyphCache.get(character);
+            if (existing != null) return new GlyphReservation(existing, null);
+            return allocateSlot(
+                    character, slotWidth, slotHeight, texWidth, texHeight, advance, bounds, rangeInEM);
+        } finally {
+            atlasLock.unlock();
+        }
+    }
+
+    @RenderThread
     private GlyphReservation allocateSlot(
             int character, int slotWidth, int slotHeight, int texWidth, int texHeight,
             int advance, Shape.Bounds bounds, double rangeInEM
@@ -221,10 +231,10 @@ public final class MsdfAtlas {
                 (float) (bounds.t + rangeInEM)
         );
         glyphCache.put(character, glyph);
-        return new GlyphReservation(page, rect, glyph);
+        return new GlyphReservation(glyph, rect);
     }
 
-    private record GlyphReservation(AtlasPage page, Rect rect, MsdfGlyph glyph) {
+    private record GlyphReservation(MsdfGlyph glyph, @Nullable Rect rect) {
     }
 
     public void close() {
