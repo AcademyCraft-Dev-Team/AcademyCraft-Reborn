@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
+import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeIds;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
@@ -152,6 +153,20 @@ public final class ProgramConfigurationOptions {
             return stringOptions(
                     "screen.academy.program.configuration.aim_mode.",
                     "direction", "target"
+            );
+        }
+        if (id.equals(AeromanipProgramNodeIds.LAMINAR_CUT)
+                && field.equals("charge_tier")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.charge_tier.",
+                    "instant", "half", "full"
+            );
+        }
+        if (id.equals(AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE)
+                && field.equals("target_type")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.nozzle_target.",
+                    "entity", "block"
             );
         }
         if ((id.equals(ElectromasterProgramNodeIds.ENERGY_DETECTION)

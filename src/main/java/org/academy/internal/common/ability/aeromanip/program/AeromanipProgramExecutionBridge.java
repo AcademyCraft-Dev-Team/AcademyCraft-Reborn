@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.aeromanip.program;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.program.*;
+import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.program.*;
 
 import java.util.HashMap;
@@ -92,10 +93,33 @@ public final class AeromanipProgramExecutionBridge {
                 });
         put(result, AeromanipProgramNodeIds.LAMINAR_CUT,
                 (ProgramVmContext context,
-                 AeromanipProgramNodeCatalog.PowerConfiguration configuration,
+                 AeromanipProgramNodeCatalog.LaminarCutConfiguration configuration,
                  ProgramInputView inputs) -> {
                     stage(context, runtime(context).laminarCut(
-                            direction(inputs, "direction"), configuration.power()));
+                            direction(inputs, "direction"),
+                            configuration.power(),
+                            chargeTier(configuration.chargeTier())));
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE,
+                (ProgramVmContext context,
+                 AeromanipProgramNodeCatalog.TemporaryNozzleConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var target = configuration.targetType()
+                            == AeromanipProgramNodeCatalog.NozzleTargetType.ENTITY
+                            ? entity(inputs, "entity")
+                            : blockPosition(inputs, "block");
+                    stage(context, runtime(context).placeTemporaryJetNozzle(
+                            target,
+                            direction(inputs, "direction"),
+                            configuration.targetType()));
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, AeromanipProgramNodeIds.FIRE_JETS,
+                (ProgramVmContext context,
+                 AeromanipProgramNodeCatalog.JetActivationConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    stage(context, runtime(context).fireJets(configuration.duration()));
                     return ProgramNodeStep.next("flow");
                 });
         return Map.copyOf(result);
@@ -124,6 +148,21 @@ public final class AeromanipProgramExecutionBridge {
     private static ProgramDirection direction(ProgramInputView inputs, String port) {
         return (ProgramDirection) inputs.requireCompatible(
                 port, ProgramValueTypes.DIRECTION).value();
+    }
+
+    private static ProgramBlockPosition blockPosition(ProgramInputView inputs, String port) {
+        return (ProgramBlockPosition) inputs.requireCompatible(
+                port, ProgramValueTypes.BLOCK_POSITION).value();
+    }
+
+    private static AeromanipChargeTier chargeTier(
+            AeromanipProgramNodeCatalog.ChargeTier tier
+    ) {
+        return switch (tier) {
+            case INSTANT -> AeromanipChargeTier.INSTANT;
+            case HALF -> AeromanipChargeTier.HALF;
+            case FULL -> AeromanipChargeTier.FULL;
+        };
     }
 
     private static <T> ProgramNodeStep data(
