@@ -151,8 +151,13 @@ public final class DefensiveTeleport extends Skill {
                     return;
                 }
                 var partialTick = event.getPartialTick();
+                var selectionDirection = selectionDirection(
+                        player.getViewVector(partialTick),
+                        player.getViewYRot(partialTick),
+                        minecraft.options.getCameraType().isFirstPerson()
+                );
                 center = player.getEyePosition(partialTick)
-                        .add(player.getViewVector(partialTick).scale(distance));
+                        .add(selectionDirection.scale(distance));
                 var size = AbilitySystemClient.getSkillProficiencyMilestone(Skills.DEFENSIVE_TELEPORT.get()) >= 2
                         ? 7.0 : SELECTION_SIZE;
                 var half = size / 2.0;
@@ -231,6 +236,10 @@ public final class DefensiveTeleport extends Skill {
                 -cameraPosition.y,
                 -cameraPosition.z
         );
+    }
+
+    static Vec3 selectionDirection(Vec3 viewVector, float yRot, boolean firstPerson) {
+        return firstPerson ? viewVector : Vec3.directionFromRotation(0.0f, yRot);
     }
 
     public static final class Server {
