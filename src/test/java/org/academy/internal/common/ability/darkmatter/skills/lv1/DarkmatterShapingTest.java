@@ -138,7 +138,8 @@ class DarkmatterShapingTest {
                 DarkmatterModifiers.SLAUGHTER, DarkmatterModifiers.DRYING,
                 DarkmatterModifiers.EXTINGUISH);
         assertModifierLevel(3, DarkmatterModifiers.LUCKY, DarkmatterModifiers.PULL,
-                DarkmatterModifiers.KNOCKBACK, DarkmatterModifiers.ANTIGRAVITY);
+                DarkmatterModifiers.KNOCKBACK, DarkmatterModifiers.ANTIGRAVITY,
+                DarkmatterModifiers.RETURNING);
         assertModifierLevel(4, DarkmatterModifiers.TELEPORT_SUPPRESSION,
                 DarkmatterModifiers.TELEPORT_PROTECTION, DarkmatterModifiers.EXPLOSIVE,
                 DarkmatterModifiers.FREEZING, DarkmatterModifiers.BURNING,
@@ -155,6 +156,27 @@ class DarkmatterShapingTest {
         assertTrue(locked.hasLevelGateError());
         assertTrue(DarkmatterShaping.Server.validateModifiers(DarkmatterShape.TOOL,
                 Map.of(DarkmatterModifiers.EXPLOSIVE, 1), 4, 3).valid());
+    }
+
+    @Test
+    void returningIsASingleLevelTridentOnlyModifier() {
+        DarkmatterModifiers.bootstrap();
+        var returning = DarkmatterShapingRegistries.modifier(
+                DarkmatterModifiers.RETURNING).orElseThrow();
+        assertEquals(1, returning.maxLevel());
+        assertEquals(1, returning.pointCost());
+        for (var shape : DarkmatterShape.values()) {
+            assertEquals(shape == DarkmatterShape.TRIDENT, returning.supports(shape), shape.id());
+        }
+        assertTrue(DarkmatterShaping.Server.validateModifiers(
+                DarkmatterShape.TRIDENT,
+                Map.of(DarkmatterModifiers.RETURNING, 1), 3, 0).valid());
+        assertFalse(DarkmatterShaping.Server.validateModifiers(
+                DarkmatterShape.TRIDENT,
+                Map.of(DarkmatterModifiers.RETURNING, 2), 3, 0).valid());
+        assertFalse(DarkmatterShaping.Server.validateModifiers(
+                DarkmatterShape.SPEAR,
+                Map.of(DarkmatterModifiers.RETURNING, 1), 3, 0).valid());
     }
 
     private static void assertModifierLevel(int expected, String... ids) {
