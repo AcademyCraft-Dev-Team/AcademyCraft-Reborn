@@ -126,6 +126,7 @@ public final class SkillDamageUtil {
         }
         level.broadcastDamageEvent(target, source);
         if (attacker != null && skill != null) {
+            PvpSetting.recordSkillDamage(attacker, target, inflictedAmount);
             skill.onHurt(attacker, target, inflictedAmount);
         }
 

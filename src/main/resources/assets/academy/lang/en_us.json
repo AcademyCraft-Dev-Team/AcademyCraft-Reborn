@@ -680,6 +680,7 @@
   "message.academy.program.execution.failed": "Custom skill slot %s failed during server execution: %s.",
   "message.academy.program.execution.unsupported": "This ability category does not have executable action nodes yet.",
   "message.academy.pvp.disabled": "PVP is disabled",
+  "message.academy.pvp.switch_cooldown": "PVP switching is on cooldown for %s more seconds",
   "message.academy.pvp.target_disabled": "The target has disabled PVP",
   "message.academy.skill_use.insufficient_cp": "%s requires %s CP; only %s CP is available.",
   "message.academy.skill_use.overload": "%s cannot be used during ability overload.",

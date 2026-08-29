@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.damagesource;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -11,12 +12,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.server.pvp.PvpCooldownData;
+import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -35,8 +41,11 @@ import java.util.WeakHashMap;
  * policy so area skills can continue to affect the rest of their target set.</p>
  */
 public final class PvpSetting {
+    public static final int SWITCH_COOLDOWN_TICKS = 20 * 60;
     private static final int FEEDBACK_COOLDOWN_TICKS = 20;
     private static final Map<ServerPlayer, FeedbackState> FEEDBACK_STATES = new WeakHashMap<>();
+    private static volatile boolean clientPvpEnabled = true;
+    private static volatile boolean clientPvpStateKnown;
     private static boolean serverInitialized;
 
     private PvpSetting() {
@@ -46,18 +55,76 @@ public final class PvpSetting {
         return player == null || player.getData(AttachmentTypes.PVP_ENABLED.get());
     }
 
-    public static void setPvpEnabled(Player player, boolean enabled) {
-        if (player == null) return;
+    private static void setPvpEnabled(ServerPlayer player, boolean enabled) {
         player.setData(AttachmentTypes.PVP_ENABLED.get(), enabled);
-        if (player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.syncData(AttachmentTypes.PVP_ENABLED.get());
-        }
     }
 
     public static void initServer() {
         if (serverInitialized) return;
         serverInitialized = true;
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    public static void initClient() {
+        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+    }
+
+    public static boolean clientPvpEnabled(boolean fallback) {
+        return clientPvpStateKnown ? clientPvpEnabled : fallback;
+    }
+
+    public static void expectClientPvpEnabled(boolean enabled) {
+        clientPvpEnabled = enabled;
+        clientPvpStateKnown = true;
+    }
+
+    private static void resetClientState() {
+        clientPvpEnabled = true;
+        clientPvpStateKnown = false;
+    }
+
+    public static int remainingSwitchCooldownTicks(ServerPlayer player) {
+        if (player == null || player.level().getServer() == null) return 0;
+        return PvpCooldownData.get(player.level().getServer()).remainingTicks(player.getUUID());
+    }
+
+    public static void startSwitchCooldown(ServerPlayer player) {
+        if (player == null || player.level().getServer() == null) return;
+        PvpCooldownData.get(player.level().getServer()).startOrRefresh(
+                player.getUUID(), SWITCH_COOLDOWN_TICKS);
+    }
+
+    public static void recordSkillDamage(ServerPlayer attacker, LivingEntity target, float inflictedDamage) {
+        if (attacker == null || target == null || !shouldStartCooldown(
+                target instanceof Player, target == attacker, inflictedDamage)) return;
+        startSwitchCooldown(attacker);
+    }
+
+    static boolean shouldStartCooldown(boolean playerTarget, boolean samePlayer, float inflictedDamage) {
+        return playerTarget && !samePlayer
+                && inflictedDamage > 0.0f && Float.isFinite(inflictedDamage);
+    }
+
+    public static ChangeResult trySetPvpEnabled(ServerPlayer player, boolean enabled) {
+        if (player == null) return ChangeResult.UNCHANGED;
+        var current = isPvpEnabled(player);
+        var remainingTicks = remainingSwitchCooldownTicks(player);
+        var result = changeResult(current, enabled, remainingTicks);
+        if (result == ChangeResult.APPLIED) {
+            setPvpEnabled(player, enabled);
+            startSwitchCooldown(player);
+        } else if (result == ChangeResult.COOLDOWN) {
+            var remainingSeconds = Math.max(1, (remainingTicks + 19) / 20);
+            player.sendOverlayMessage(Component.translatable(
+                    "message.academy.pvp.switch_cooldown", remainingSeconds));
+        }
+        syncState(player);
+        return result;
+    }
+
+    static ChangeResult changeResult(boolean current, boolean requested, int remainingTicks) {
+        if (current == requested) return ChangeResult.UNCHANGED;
+        return remainingTicks > 0 ? ChangeResult.COOLDOWN : ChangeResult.APPLIED;
     }
 
     public static ProtectionReason protectionReason(Player attacker, LivingEntity target) {
@@ -136,13 +203,46 @@ public final class PvpSetting {
     private record FeedbackState(ProtectionReason reason, long gameTime) {
     }
 
+    public enum ChangeResult {
+        APPLIED,
+        UNCHANGED,
+        COOLDOWN
+    }
+
+    private static void syncState(ServerPlayer player) {
+        player.syncData(AttachmentTypes.PVP_ENABLED.get());
+        MisakaNetworkServer.send(player, new StatePacket(isPvpEnabled(player)));
+    }
+
     public static final class Server {
         private Server() {
         }
 
         @SubscribePacket
         public static void setPvp(SetPacket packet) {
-            setPvpEnabled(packet.getPacketListener().getPlayer(), packet.enabled);
+            trySetPvpEnabled(packet.getPacketListener().getPlayer(), packet.enabled);
+        }
+    }
+
+    public static final class Client {
+        private Client() {
+        }
+
+        @SubscribePacket
+        public static void syncPvp(StatePacket packet) {
+            clientPvpEnabled = packet.enabled;
+            clientPvpStateKnown = true;
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
+    public static final class ClientEvents {
+        private ClientEvents() {
+        }
+
+        @SubscribeEvent
+        public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+            resetClientState();
         }
     }
 
@@ -154,8 +254,15 @@ public final class PvpSetting {
         @SubscribeEvent
         public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
             if (event.getEntity() instanceof ServerPlayer player) {
-                player.syncData(AttachmentTypes.PVP_ENABLED.get());
+                syncState(player);
             }
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)
+                    || player.level().getServer() == null) return;
+            PvpCooldownData.get(player.level().getServer()).tickOnline(player.getUUID());
         }
     }
 
@@ -172,6 +279,22 @@ public final class PvpSetting {
         @Override
         public PacketType<ServerGamePacketListenerImpl, SetPacket> getPacketType() {
             return PacketTypes.PVP_SET.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class StatePacket extends Packet<ClientPacketListener, StatePacket> {
+        public static final StreamCodec<ByteBuf, StatePacket> CODEC =
+                ByteBufCodecs.BOOL.map(StatePacket::new, packet -> packet.enabled);
+        private final boolean enabled;
+
+        public StatePacket(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, StatePacket> getPacketType() {
+            return PacketTypes.PVP_STATE.get();
         }
     }
 }

@@ -3,6 +3,7 @@ package org.academy.internal.common.world.damagesource;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import org.academy.api.common.damage.SkillDamageSource;
 
@@ -25,5 +26,16 @@ public final class SkillDamageEvents {
         if (event.getEntity() instanceof Player player && DamageTypes.isImmunePlayer(player, event.getSource())) {
             event.setCanceled(true);
         }
+    }
+
+    @SubscribeEvent
+    public static void onDamageApplied(LivingDamageEvent.Post event) {
+        if (!(event.getSource() instanceof SkillDamageSource)
+                || event.getInflictedDamage() <= 0.0f) return;
+        PvpSetting.recordSkillDamage(
+                PvpSetting.resolveAttacker(event.getSource()),
+                event.getEntity(),
+                event.getInflictedDamage()
+        );
     }
 }

@@ -680,6 +680,7 @@
   "message.academy.program.execution.failed": "自定义技能槽 %s 在服务端执行失败：%s。",
   "message.academy.program.execution.unsupported": "该能力分类尚未安装可执行的行动节点。",
   "message.academy.pvp.disabled": "已关闭PVP",
+  "message.academy.pvp.switch_cooldown": "PVP切换冷却中，剩余%s秒",
   "message.academy.pvp.target_disabled": "目标已关闭PVP",
   "message.academy.skill_use.insufficient_cp": "%s 需要 %s CP，当前仅有 %s CP。",
   "message.academy.skill_use.overload": "能力过载期间无法使用 %s。",

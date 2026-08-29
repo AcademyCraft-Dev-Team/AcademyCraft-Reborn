@@ -567,6 +567,10 @@ public final class PacketTypes {
             PVP_SET = PACKET_TYPES.register("pvp_set",
             () -> new PacketType<>(PvpSetting.SetPacket.class, PvpSetting.SetPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PvpSetting.StatePacket>>
+            PVP_STATE = PACKET_TYPES.register("pvp_state",
+            () -> new PacketType<>(PvpSetting.StatePacket.class, PvpSetting.StatePacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DestroyBlocksSetting.SetPacket>>
             DESTROY_BLOCKS_SET = PACKET_TYPES.register("destroy_blocks_set",
             () -> new PacketType<>(DestroyBlocksSetting.SetPacket.class, DestroyBlocksSetting.SetPacket.CODEC));
