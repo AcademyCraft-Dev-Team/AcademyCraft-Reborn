@@ -60,6 +60,8 @@ import java.util.Objects;
 public final class DefensiveTeleport extends Skill {
     static final double SELECTION_SIZE = 5.0;
     static final double MAX_SELECTION_DISTANCE = 20.0;
+    static final double MAX_SELECTION_OFFSET_SQR = 2.0
+            * MAX_SELECTION_DISTANCE * MAX_SELECTION_DISTANCE;
 
     public DefensiveTeleport() {
         super(Builder.of(AbilityCategories.TELEPORT.get())
@@ -151,13 +153,16 @@ public final class DefensiveTeleport extends Skill {
                     return;
                 }
                 var partialTick = event.getPartialTick();
-                var selectionDirection = selectionDirection(
+                var camera = minecraft.gameRenderer.mainCamera();
+                var selectionOffset = selectionOffset(
                         player.getViewVector(partialTick),
-                        new Vec3(minecraft.gameRenderer.mainCamera().forwardVector()),
-                        minecraft.options.getCameraType().isFirstPerson()
+                        new Vec3(camera.forwardVector()),
+                        camera.yRot(),
+                        minecraft.options.getCameraType().isFirstPerson(),
+                        distance
                 );
                 center = player.getEyePosition(partialTick)
-                        .add(selectionDirection.scale(distance));
+                        .add(selectionOffset);
                 var size = AbilitySystemClient.getSkillProficiencyMilestone(Skills.DEFENSIVE_TELEPORT.get()) >= 2
                         ? 7.0 : SELECTION_SIZE;
                 var half = size / 2.0;
@@ -172,11 +177,11 @@ public final class DefensiveTeleport extends Skill {
                         .filter(Objects::nonNull)
                         .distinct()
                         .toList();
-                var camera = event.getCameraPosition();
-                var renderBox = cameraRelativeBox(box, camera);
+                var cameraPosition = event.getCameraPosition();
+                var renderBox = cameraRelativeBox(box, cameraPosition);
                 var selectedRenderBoxes = selected.stream()
                         .map(entity -> cameraRelativeBox(
-                                entity.getBoundingBox().inflate(0.04), camera))
+                                entity.getBoundingBox().inflate(0.04), cameraPosition))
                         .toList();
                 event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
                         (snapshot, consumer) -> {
@@ -238,12 +243,23 @@ public final class DefensiveTeleport extends Skill {
         );
     }
 
-    static Vec3 selectionDirection(
+    static Vec3 selectionOffset(
             Vec3 playerViewVector,
             Vec3 cameraViewVector,
-            boolean firstPerson
+            float cameraYRot,
+            boolean firstPerson,
+            double distance
     ) {
-        return firstPerson ? playerViewVector : cameraViewVector;
+        if (firstPerson) return playerViewVector.scale(distance);
+
+        var horizontalForward = new Vec3(cameraViewVector.x, 0.0, cameraViewVector.z);
+        if (horizontalForward.lengthSqr() < 1.0e-6) {
+            horizontalForward = Vec3.directionFromRotation(0.0f, cameraYRot);
+        } else {
+            horizontalForward = horizontalForward.normalize();
+        }
+        return horizontalForward.scale(distance)
+                .add(0.0, cameraViewVector.y * distance, 0.0);
     }
 
     public static final class Server {
@@ -255,7 +271,7 @@ public final class DefensiveTeleport extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var center = packet.center;
             if (!finite(center) || center.distanceToSqr(player.getEyePosition())
-                    > MAX_SELECTION_DISTANCE * MAX_SELECTION_DISTANCE) return;
+                    > MAX_SELECTION_OFFSET_SQR) return;
             var mark = LocationTeleport.Server.getDefensiveMark(player);
             if (mark == null) return;
             var destinationLevel = LocationTeleport.Server.resolveLevel(player, mark);
