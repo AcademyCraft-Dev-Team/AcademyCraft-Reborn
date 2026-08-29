@@ -4,7 +4,6 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import org.academy.api.client.gui.msdf.atlas.MsdfGlyph;
 import org.academy.api.client.gui.msdf.font.MsdfFont;
 import org.academy.api.client.gui.msdf.font.MsdfFontService;
-import org.academy.api.client.gui.msdf.font.MsdfKerningManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,8 +86,7 @@ public final class MsdfTextProcessor {
                 var fontUnitScale = fontSize / unitsPerEM;
 
                 if (prevCode != 0L && prevFontForLine == font) {
-                    currentX += MsdfKerningManager.getKerning(
-                            font.face,
+                    currentX += font.getKerning(
                             prevCode,
                             ch.codePoint
                     ) * fontUnitScale;

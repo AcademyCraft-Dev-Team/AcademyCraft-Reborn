@@ -1,5 +1,7 @@
 package org.academy.api.client.gui.msdf.font;
 
+import com.google.gson.JsonParser;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.environment.UiEnvironment;
@@ -9,14 +11,16 @@ import org.lwjgl.util.freetype.FT_Face;
 import org.lwjgl.util.freetype.FreeType;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MsdfFontService {
+public final class MsdfFontService {
     public static final MsdfFontService INSTANCE = new MsdfFontService();
 
     public static final Identifier DEFAULT_FONT_ID = AcademyCraft.academy(
@@ -31,7 +35,7 @@ public class MsdfFontService {
                 return t;
             }
     );
-    public final ConcurrentHashMap<Identifier, MsdfFont> loadedFonts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Identifier, MsdfFont> loadedFonts = new ConcurrentHashMap<>();
     private final long library;
     private final ConcurrentHashMap<Identifier, ByteBuffer> fontBuffers = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<Identifier> fontSearchOrder = new CopyOnWriteArrayList<>();
@@ -101,8 +105,31 @@ public class MsdfFontService {
     }
 
     public static void genDefaultGlyph() {
-        for (var c = ' '; c <= '~'; c++) {
-            getFont(c).getGlyph(c);
+        var lang = Minecraft.getInstance().getLanguageManager().getSelected();
+        GLYPH_EXECUTOR.execute(() -> {
+            try {
+                for (var c = ' '; c <= '~'; c++) getFont(c).getGlyph(c);
+                genLanguageGlyphs(lang);
+            } catch (Exception e) {
+                AcademyCraft.getLogger().error("Failed to pre-generate default glyphs", e);
+            }
+        });
+    }
+
+    private static void genLanguageGlyphs(String lang) {
+        var id = AcademyCraft.academy("lang/" + lang + ".json");
+        var stream = UiEnvironment.get().openResource(id.getNamespace(), id.getPath());
+        if (stream == null) return;
+        try (stream) {
+            var root = JsonParser.parseReader(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
+            for (var entry : root.entrySet()) {
+                entry.getValue().getAsString()
+                        .codePoints()
+                        .forEach(ch -> getFont(ch).getGlyph(ch));
+            }
+        } catch (Exception e) {
+            AcademyCraft.getLogger().warn("Failed to pre-generate glyphs for language {}", lang, e);
         }
     }
 
@@ -114,9 +141,7 @@ public class MsdfFontService {
     private Identifier findFontIdForChar(int c) {
         for (var id : fontSearchOrder) {
             var font = loadedFonts.get(id);
-            if (font != null) {
-                if (FreeType.FT_Get_Char_Index(font.face, c) != 0) return id;
-            }
+            if (font != null && font.hasGlyph(c)) return id;
         }
         return DEFAULT_FONT_ID;
     }

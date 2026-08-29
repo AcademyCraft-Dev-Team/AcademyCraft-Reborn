@@ -1,30 +1,36 @@
 package org.academy.api.client.gui.msdf.atlas;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import lovely.cane.jmsdfgen.*;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
 import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.client.gui.msdf.atlas.allocator.Rect;
+import org.academy.api.client.thread.RenderThread;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.util.freetype.FT_Face;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
-public class MsdfAtlas {
+public final class MsdfAtlas {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     private final int pageSize;
     private final int glyphSize;
     private final float pxRange;
     private final List<AtlasPage> pages = new ArrayList<>();
-    private final Map<Integer, MsdfGlyph> glyphCache = new HashMap<>();
+    private final Map<Integer, MsdfGlyph> glyphCache = new ConcurrentHashMap<>();
     private final int padding;
     private final Executor executor;
+    private final ReentrantLock atlasLock = new ReentrantLock();
 
     public MsdfAtlas(int pageSize, int glyphSize, float pxRange, Executor executor) {
         this(pageSize, glyphSize, pxRange, 1, executor);
@@ -39,20 +45,34 @@ public class MsdfAtlas {
     }
 
     public List<AtlasPage> getPages() {
-        return pages;
+        atlasLock.lock();
+        try {
+            return List.copyOf(pages);
+        } finally {
+            atlasLock.unlock();
+        }
     }
 
-    public @Nullable MsdfGlyph getOrGenerate(FT_Face face, ImportFont.FontHandle fontHandle, int character) {
-        if (glyphCache.containsKey(character)) return glyphCache.get(character);
-
-        var slot = face.glyph();
-        if (slot == null) return null;
+    public @Nullable MsdfGlyph getOrGenerate(
+            FT_Face face, ReentrantLock faceLock, ImportFont.FontHandle fontHandle, int character
+    ) {
+        var cached = glyphCache.get(character);
+        if (cached != null) return cached;
 
         var shape = new Shape();
 
-        if (ImportFont.loadGlyph(
-                shape, fontHandle, character, ImportFont.FontCoordinateScaling.FONT_SCALING_NONE).isEmpty()
-        ) return null;
+        int advance;
+        faceLock.lock();
+        try {
+            if (ImportFont.loadGlyph(
+                    shape, fontHandle, character, ImportFont.FontCoordinateScaling.FONT_SCALING_NONE).isEmpty()
+            ) return null;
+            var slot = face.glyph();
+            if (slot == null) return null;
+            advance = (int) slot.metrics().horiAdvance();
+        } finally {
+            faceLock.unlock();
+        }
 
         shape.normalize();
         // Shape.orientContours 本身是忠实移植自c++, 没有问题的;
@@ -89,56 +109,23 @@ public class MsdfAtlas {
         var slotWidth = texWidth + padding;
         var slotHeight = texHeight + padding;
 
-        AtlasPage page = null;
-        Rect rect = null;
-
-        for (var p : pages) {
-            var opt = p.reserve(slotWidth, slotHeight);
-            if (opt.isPresent()) {
-                page = p;
-                rect = opt.get();
-                break;
-            }
-        }
-
-        if (page == null) {
-            var newPage = new AtlasPage(pageSize, "msdf_atlas_page_" + pages.size());
-            pages.add(newPage);
-            var newRect = newPage.reserve(slotWidth, slotHeight);
-            if (newRect.isEmpty()) {
-                throw new IllegalStateException(
-                        "Glyph is too large (" + slotWidth + "x" + slotHeight +
-                                ") for atlas page size (" + pageSize + "x" + pageSize + ")"
-                );
-            }
-            page = newPage;
-            rect = newRect.get();
+        atlasLock.lock();
+        GlyphReservation reservation;
+        try {
+            var existing = glyphCache.get(character);
+            if (existing != null) return existing;
+            reservation = runOnRenderThread(() ->
+                    allocateSlot(character, slotWidth, slotHeight, texWidth, texHeight, advance, bounds, rangeInEM));
+        } finally {
+            atlasLock.unlock();
         }
 
         var pixelCount = texWidth * texHeight;
-
-        var u0 = (float) rect.x() / pageSize;
-        var v0 = (float) rect.y() / pageSize;
-        var u1 = (float) (rect.x() + texWidth) / pageSize;
-        var v1 = (float) (rect.y() + texHeight) / pageSize;
-
-        var pLeft = (float) (bounds.l - (pxRange / scale));
-        var pBottom = (float) (bounds.b - (pxRange / scale));
-        var pRight = (float) (bounds.r + (pxRange / scale));
-        var pTop = (float) (bounds.t + (pxRange / scale));
-
-        var metrics = slot.metrics();
-        var advance = (int) metrics.horiAdvance();
-
-        var glyph = new MsdfGlyph(
-                page, u0, v0, u1, v1,
-                advance,
-                pLeft, pBottom, pRight, pTop
-        );
-        glyphCache.put(character, glyph);
-
-        var finalPage = page;
+        var page = reservation.page();
+        var rect = reservation.rect();
+        var glyph = reservation.glyph();
         var upRect = new Rect(rect.x(), rect.y(), texWidth, texHeight);
+
         executor.execute(() -> {
             try {
                 var bitmap = new Bitmap<>(texWidth, texHeight, 3, Float[]::new);
@@ -167,7 +154,7 @@ public class MsdfAtlas {
                 rgbaBuf.put(rgbaArray);
                 rgbaBuf.flip();
                 UiEnvironment.get().runOnMainThread(() -> {
-                    finalPage.upload(upRect, rgbaBuf);
+                    page.upload(upRect, rgbaBuf);
                     MemoryUtil.memFree(rgbaBuf);
                 });
             } catch (Exception e) {
@@ -178,10 +165,77 @@ public class MsdfAtlas {
         return glyph;
     }
 
+    private static <T> T runOnRenderThread(Supplier<T> task) {
+        if (RenderSystem.isOnRenderThread()) return task.get();
+        var future = new CompletableFuture<T>();
+        UiEnvironment.get().runOnMainThread(() -> {
+            try {
+                future.complete(task.get());
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
+            }
+        });
+        return future.join();
+    }
+
+    @RenderThread
+    private GlyphReservation allocateSlot(
+            int character, int slotWidth, int slotHeight, int texWidth, int texHeight,
+            int advance, Shape.Bounds bounds, double rangeInEM
+    ) {
+        AtlasPage page = null;
+        Rect rect = null;
+        for (var p : pages) {
+            var opt = p.reserve(slotWidth, slotHeight);
+            if (opt.isPresent()) {
+                page = p;
+                rect = opt.get();
+                break;
+            }
+        }
+
+        if (page == null) {
+            var newPage = new AtlasPage(pageSize, "msdf_atlas_page_" + pages.size());
+            pages.add(newPage);
+            var newRect = newPage.reserve(slotWidth, slotHeight);
+            if (newRect.isEmpty()) {
+                throw new IllegalStateException(
+                        "Glyph is too large (" + slotWidth + "x" + slotHeight +
+                                ") for atlas page size (" + pageSize + "x" + pageSize + ")"
+                );
+            }
+            page = newPage;
+            rect = newRect.get();
+        }
+
+        var glyph = new MsdfGlyph(
+                page,
+                (float) rect.x() / pageSize,
+                (float) rect.y() / pageSize,
+                (float) (rect.x() + texWidth) / pageSize,
+                (float) (rect.y() + texHeight) / pageSize,
+                advance,
+                (float) (bounds.l - rangeInEM),
+                (float) (bounds.b - rangeInEM),
+                (float) (bounds.r + rangeInEM),
+                (float) (bounds.t + rangeInEM)
+        );
+        glyphCache.put(character, glyph);
+        return new GlyphReservation(page, rect, glyph);
+    }
+
+    private record GlyphReservation(AtlasPage page, Rect rect, MsdfGlyph glyph) {
+    }
+
     public void close() {
-        pages.forEach(AtlasPage::close);
-        pages.clear();
-        glyphCache.clear();
+        atlasLock.lock();
+        try {
+            pages.forEach(AtlasPage::close);
+            pages.clear();
+            glyphCache.clear();
+        } finally {
+            atlasLock.unlock();
+        }
     }
 
     private static boolean isCjk(int codepoint) {
