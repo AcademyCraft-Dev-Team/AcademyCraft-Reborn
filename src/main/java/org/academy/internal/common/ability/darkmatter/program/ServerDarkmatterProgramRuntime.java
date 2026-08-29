@@ -68,11 +68,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
             public void validate() {
                 requireCasterReady(Skills.DARKMATTER_DISASSEMBLE.get());
                 target = requireLocalBlock(block);
-                if (!DarkmatterDisassemble.Server.canProgramDestroyBlock(
-                        player, target, disassembleBlockRange(power))) {
-                    throw new IllegalArgumentException(
-                            "Darkmatter program cannot disassemble this block");
-                }
+                requireDisassembleBlock(target, disassembleBlockRange(power));
             }
 
             @Override
@@ -246,6 +242,22 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
                     "Entity cannot be disassembled by this program");
         }
         return target;
+    }
+
+    private void requireDisassembleBlock(BlockPos target, double maximumRange) {
+        switch (DarkmatterDisassemble.Server.programBlockDestroyStatus(
+                player, target, maximumRange)) {
+            case ALLOWED -> {
+            }
+            case INVALID_TARGET -> throw new IllegalArgumentException(
+                    "Darkmatter block target is invalid");
+            case OUT_OF_RANGE -> throw new IllegalArgumentException(
+                    "Darkmatter block target is outside program range");
+            case DESTRUCTION_DISABLED -> throw new IllegalStateException(
+                    "Darkmatter block destruction is disabled");
+            case UNBREAKABLE_OR_PROTECTED -> throw new IllegalArgumentException(
+                    "Darkmatter target block cannot be broken or is protected");
+        }
     }
 
     private void requireCasterReady(Skill skill) {
