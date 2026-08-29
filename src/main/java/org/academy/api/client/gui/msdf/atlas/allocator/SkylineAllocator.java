@@ -3,7 +3,7 @@ package org.academy.api.client.gui.msdf.atlas.allocator;
 import java.util.ArrayList;
 import java.util.Optional;
 
-public class SkylineAllocator {
+public final class SkylineAllocator {
     private final int width;
     private final int height;
     private final ArrayList<SkylineNode> skyline = new ArrayList<>();
