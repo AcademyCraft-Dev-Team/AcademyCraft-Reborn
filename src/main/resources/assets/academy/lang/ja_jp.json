@@ -1,0 +1,16 @@
+{
+  "skill.academy.adiabatic_compression.desc": "近距離で視線上の対象をロックし、その周囲の大気を継続的に圧縮する。3秒かけて生物の移動能力と跳躍力を5%まで低下させ、無制限に蓄積する防具貫通の熱ダメージを与える。",
+  "skill.academy.lightning_storm.desc": "視線上の対象の周囲に21本の雷を落とす。",
+  "skill.academy.reflection_filter.desc": "モード、ホワイトリスト、ブラックリストを使用して、ベクトル偏向／反射を通過できるステータス効果を設定する。",
+  "skill.academy.storm_wing.desc": "ベクトル飛行を維持する。移動キーで方向を操作し、スペースキーを押し続けると高速推進する。",
+  "skill.academy.threatening_teleport.desc": "長押しで対象を選択し、離すとメインハンドのアイテム1個を対象の体内へ転送してダメージを与える。生物をロックしていない場合、アイテムは視線方向16ブロック先にドロップする。",
+  "skill.academy.thunder_lance.desc": "視線方向にサンダーランスを放ち、32ブロックの経路上にいる対象を攻撃する。",
+  "skill.academy.thunderclap.desc": "視線上の対象地点に落雷を呼び、周囲の生物に最大体力に応じたダメージを与える。",
+  "skill.academy.vector_deviation.desc": "偏向膜を維持し、ダメージを軽減または完全に偏向し、一定確率で飛び道具を逸らす。",
+  "skill.academy.vector_deviation.proficiency.1000": "無効化したダメージに対するCP占有量が、ダメージ値×1まで低下する。",
+  "skill.academy.vector_deviation.proficiency.3000": "更新間隔が10tickから5tickに短縮され、最大CPの1%未満の偏向可能なダメージは動的CPを消費しない。",
+  "skill.academy.vector_reflection.desc": "反射膜を維持し、ダメージと飛び道具を反射する。",
+  "skill.academy.vector_reflection.proficiency.1000": "反射ダメージに対するCP占有量が、ダメージ値×1まで低下する。",
+  "skill.academy.vector_reflection.proficiency.3000": "更新間隔が10tickから5tickに短縮され、最大CPの1%未満の反射可能なダメージは動的CPを消費しない。",
+  "skill.academy.vortex_pull.desc": "即時発動で周囲のエンティティを照準地点へ一度引き寄せる。半チャージで持続する渦を生成し、最大チャージで範囲と牽引力がさらに増加する。"
+}
