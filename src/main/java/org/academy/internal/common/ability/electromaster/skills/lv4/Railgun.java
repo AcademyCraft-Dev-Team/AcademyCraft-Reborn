@@ -60,6 +60,7 @@ import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
@@ -606,7 +607,8 @@ public final class Railgun extends Skill {
                                                    Entity primary) {
                 var source = SkillDamageSource.of(owner, Skills.RAILGUN.get());
                 for (var target : owner.level().getEntities(owner, new AABB(center, center).inflate(4.0),
-                        entity -> entity.isAlive() && entity != primary && !owner.isAlliedTo(entity))) {
+                        entity -> entity.isAlive() && entity != primary && !owner.isAlliedTo(entity)
+                                && !PvpSetting.shouldPrevent(owner, entity))) {
                     target.hurtServer(owner.level(), source, damage);
                     var away = target.position().subtract(center);
                     if (away.lengthSqr() > 1.0e-8) {

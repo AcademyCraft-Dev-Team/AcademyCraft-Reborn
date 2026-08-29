@@ -34,6 +34,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalControlRuntim
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntervention;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -158,6 +159,9 @@ public final class CommandPositioning extends Skill {
                             ? MentaloutTargeting.PROFICIENCY_MAX_SIGHT_RANGE
                             : MentaloutTargeting.MAX_SIGHT_RANGE
             );
+            if (destination instanceof ControlDestination.Entity(var uuid)
+                    && player.level().getEntity(uuid) instanceof LivingEntity living
+                    && PvpSetting.shouldPrevent(player, living)) return;
             if (destination == null) {
                 feedback(player, "message.academy.mentalout.command_positioning.no_destination");
                 return;

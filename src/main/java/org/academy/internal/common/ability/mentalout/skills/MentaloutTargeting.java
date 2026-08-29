@@ -10,6 +10,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.ControlDestination;
 import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.jspecify.annotations.Nullable;
 
 public final class MentaloutTargeting {
@@ -25,18 +26,23 @@ public final class MentaloutTargeting {
     }
 
     public static LivingEntity findLookedAtLiving(ServerPlayer player, double range) {
-        return findLookedAtLiving(player, range, MAX_RANGE);
+        return findLookedAtLiving(player, range, MAX_RANGE, false);
     }
 
     public static LivingEntity findPrecisionLookedAtLiving(ServerPlayer player) {
-        return findLookedAtLiving(player, MAX_SIGHT_RANGE, MAX_SIGHT_RANGE);
+        return findLookedAtLiving(player, MAX_SIGHT_RANGE, MAX_SIGHT_RANGE, true);
     }
 
     public static LivingEntity findLookedAtLivingExtended(ServerPlayer player, double range) {
-        return findLookedAtLiving(player, range, PROFICIENCY_MAX_SIGHT_RANGE);
+        return findLookedAtLiving(player, range, PROFICIENCY_MAX_SIGHT_RANGE, false);
     }
 
-    private static LivingEntity findLookedAtLiving(ServerPlayer player, double range, double maximumRange) {
+    private static LivingEntity findLookedAtLiving(
+            ServerPlayer player,
+            double range,
+            double maximumRange,
+            boolean skipPvpProtectedPlayers
+    ) {
         range = Math.clamp(Double.isFinite(range) ? range : maximumRange, 1.0, maximumRange);
         var level = player.level();
         var eye = player.getEyePosition();
@@ -60,7 +66,8 @@ public final class MentaloutTargeting {
                 eye,
                 entityRayEnd,
                 new AABB(eye, entityRayEnd).inflate(1.0),
-                entity -> isTargetableHitEntity(player, entity),
+                entity -> isTargetableHitEntity(
+                        player, entity, skipPvpProtectedPlayers ? player : null),
                 0.3f
         );
         var living = entityHit == null
@@ -75,6 +82,22 @@ public final class MentaloutTargeting {
     }
 
     public static @Nullable ControlDestination findSightDestination(LivingEntity observer, double range) {
+        return findSightDestination(observer, range, null);
+    }
+
+    public static @Nullable ControlDestination findPrecisionSightDestination(
+            ServerPlayer player,
+            LivingEntity observer,
+            double range
+    ) {
+        return findSightDestination(observer, range, player);
+    }
+
+    private static @Nullable ControlDestination findSightDestination(
+            LivingEntity observer,
+            double range,
+            @Nullable ServerPlayer pvpActor
+    ) {
         if (observer == null || !observer.isAlive() || observer.isRemoved()) return null;
         range = Math.clamp(Double.isFinite(range) ? range : PROFICIENCY_MAX_SIGHT_RANGE,
                 1.0, PROFICIENCY_MAX_SIGHT_RANGE);
@@ -98,7 +121,7 @@ public final class MentaloutTargeting {
                 eye,
                 entityRayEnd,
                 new AABB(eye, entityRayEnd).inflate(1.0),
-                entity -> isSightTarget(observer, entity),
+                entity -> isTargetableHitEntity(observer, entity, pvpActor),
                 0.3f
         );
         var living = entityHit == null
@@ -115,18 +138,19 @@ public final class MentaloutTargeting {
                 : null;
     }
 
-    private static boolean isSightTarget(LivingEntity observer, Entity entity) {
-        return isTargetableHitEntity(observer, entity);
-    }
-
-    private static boolean isTargetableHitEntity(LivingEntity observer, Entity hitEntity) {
+    private static boolean isTargetableHitEntity(
+            LivingEntity observer,
+            Entity hitEntity,
+            @Nullable ServerPlayer pvpActor
+    ) {
         var living = MultipartEntityTargeting.resolveLiving(hitEntity);
         return living != null
                 && living != observer
                 && living.isAlive()
                 && !living.isRemoved()
                 && hitEntity.isPickable()
-                && !living.isSpectator();
+                && !living.isSpectator()
+                && (pvpActor == null || !PvpSetting.shouldPrevent(pvpActor, living));
     }
 
     public static boolean isValidTarget(ServerPlayer player, LivingEntity target, double range) {

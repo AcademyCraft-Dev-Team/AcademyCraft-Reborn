@@ -43,6 +43,7 @@ import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -323,7 +324,8 @@ public final class VectorBlast extends Skill {
                     entity -> entity instanceof LivingEntity living
                             && living != player
                             && living.isAlive()
-                            && !living.isSpectator(),
+                            && !living.isSpectator()
+                            && !PvpSetting.shouldPrevent(player, living),
                     0.3f
             );
             return hit != null && hit.getEntity() instanceof LivingEntity living ? living : null;

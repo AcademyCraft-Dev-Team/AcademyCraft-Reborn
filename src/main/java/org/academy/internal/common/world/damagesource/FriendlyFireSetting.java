@@ -54,7 +54,9 @@ public final class FriendlyFireSetting {
     }
 
     public static boolean shouldPrevent(Player attacker, LivingEntity target) {
-        if (attacker == null || target == null || isFriendlyFireEnabled(attacker)) return false;
+        if (attacker == null || target == null) return false;
+        if (PvpSetting.shouldPrevent(attacker, target)) return true;
+        if (isFriendlyFireEnabled(attacker)) return false;
         if (target instanceof Player victim && victim != attacker
                 && TeamRelations.areTeammates(attacker, victim)) return true;
         var owner = getOwnerEntity(target);

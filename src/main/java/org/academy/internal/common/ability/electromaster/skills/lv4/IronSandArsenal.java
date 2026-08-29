@@ -41,6 +41,7 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -290,6 +291,7 @@ public class IronSandArsenal extends Skill {
                     LivingEntity.class,
                     player.getBoundingBox().inflate(sweepRadius),
                     entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity)
+                            && !PvpSetting.shouldPrevent(player, entity)
             )) {
                 var delta = target.position().subtract(player.position());
                 var horizontal = new Vec3(delta.x, 0, delta.z);

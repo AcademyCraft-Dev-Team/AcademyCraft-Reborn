@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.Skill;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -64,6 +65,8 @@ public final class LinearAttackPayload {
 
     boolean canTarget(Entity target, boolean reflected, @Nullable ServerPlayer reflector) {
         if (target == null || !target.isAlive() || !targetFilter.test(target)) return false;
+        var effectiveAttacker = reflected ? reflector : attacker;
+        if (PvpSetting.shouldPrevent(effectiveAttacker, target)) return false;
         if (reflected) {
             return reflector != null
                     && target != reflector

@@ -109,6 +109,7 @@ import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
 import org.academy.internal.common.attribute.PropsPackets;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.ImagPhaseDowsingRodItem;
 import org.misaka.api.common.network.packet.PacketType;
@@ -561,6 +562,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FriendlyFireSetting.SetPacket>>
             FRIENDLY_FIRE_SET = PACKET_TYPES.register("friendly_fire_set",
             () -> new PacketType<>(FriendlyFireSetting.SetPacket.class, FriendlyFireSetting.SetPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PvpSetting.SetPacket>>
+            PVP_SET = PACKET_TYPES.register("pvp_set",
+            () -> new PacketType<>(PvpSetting.SetPacket.class, PvpSetting.SetPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DestroyBlocksSetting.SetPacket>>
             DESTROY_BLOCKS_SET = PACKET_TYPES.register("destroy_blocks_set",

@@ -38,6 +38,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
@@ -221,6 +222,7 @@ public class MagneticWeapon extends Skill {
 
         private static boolean isEnemy(ServerPlayer player, LivingEntity entity) {
             if (entity == player || !entity.isAlive() || player.isAlliedTo(entity)) return false;
+            if (PvpSetting.shouldPrevent(player, entity)) return false;
             if (entity instanceof ServerPlayer target
                     && (target.isCreative() || target.isSpectator())) return false;
             return player.getLastHurtByMob() == entity

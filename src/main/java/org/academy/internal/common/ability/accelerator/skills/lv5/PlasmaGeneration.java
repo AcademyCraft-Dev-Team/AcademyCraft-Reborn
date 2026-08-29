@@ -39,6 +39,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.Plasma;
 import org.misaka.MisakaNetworkClient;
@@ -244,7 +245,8 @@ public class PlasmaGeneration extends Skill {
             var entityHit = ProjectileUtil.getEntityHitResult(
                     player.level(), player, start, end, searchBox,
                     entity -> entity != player && !entity.isSpectator()
-                            && entity.isAlive() && entity.isPickable(),
+                            && entity.isAlive() && entity.isPickable()
+                            && !PvpSetting.shouldPrevent(player, entity),
                     0.3f
             );
             if (entityHit != null) {

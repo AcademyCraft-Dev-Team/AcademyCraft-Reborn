@@ -39,6 +39,7 @@ import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.electromaster.VanillaLightningEffects;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -243,7 +244,8 @@ public class Thunderclap extends Skill {
                     entity -> entity instanceof LivingEntity
                             && entity != player
                             && entity.isAlive()
-                            && entity.isPickable(),
+                            && entity.isPickable()
+                            && !PvpSetting.shouldPrevent(player, entity),
                     range * range
             );
             return selectNearestTarget(start, blockPos, entityHit == null ? null : entityHit.getLocation());
@@ -267,6 +269,7 @@ public class Thunderclap extends Skill {
                             && entity.distanceToSqr(targetPos) <= radiusSquared
             );
             for (var target : targets) {
+                if (PvpSetting.shouldPrevent(player, target)) continue;
                 target.hurtServer(
                         level,
                         source,

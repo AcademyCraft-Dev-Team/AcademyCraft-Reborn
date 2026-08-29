@@ -31,6 +31,7 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageRecursionGuard;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -154,7 +155,8 @@ public class ElectricalContact extends Skill {
             var box = player.getBoundingBox().inflate(radius);
             var targets = level.getEntitiesOfClass(LivingEntity.class, box,
                     e -> e != player && e.isAlive() && !e.isSpectator()
-                            && !player.isAlliedTo(e));
+                            && !player.isAlliedTo(e)
+                            && !PvpSetting.shouldPrevent(player, e));
 
             if (!(level instanceof ServerLevel serverLevel)) return;
             var damageSource = SkillDamageSource.of(player, skill,
@@ -182,7 +184,8 @@ public class ElectricalContact extends Skill {
 
             var attacker = event.getSource().getEntity();
             if (attacker instanceof LivingEntity livingAttacker && livingAttacker != player
-                    && !player.isAlliedTo(livingAttacker)) {
+                    && !player.isAlliedTo(livingAttacker)
+                    && !PvpSetting.shouldPrevent(player, livingAttacker)) {
                 if (player.level() instanceof ServerLevel serverLevel) {
                     DamageRecursionGuard.runGuarded(RETALIATION_RECURSION_GUARD, () -> {
                         var system = AbilitySystemServer.getSystem(player);
@@ -215,7 +218,8 @@ public class ElectricalContact extends Skill {
             if (!(attacker.level() instanceof ServerLevel level)) return;
             var chained = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(4.0),
                             candidate -> candidate != target && candidate != attacker && candidate.isAlive()
-                                    && !attacker.isAlliedTo(candidate))
+                                    && !attacker.isAlliedTo(candidate)
+                                    && !PvpSetting.shouldPrevent(attacker, candidate))
                     .stream().min(Comparator.comparingDouble(target::distanceToSqr)).orElse(null);
             if (chained != null) {
                 chained.hurtServer(level, SkillDamageSource.of(attacker, skillSource.getSkill(),

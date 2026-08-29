@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.academy.internal.common.ability.electromaster.VanillaLightningEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -236,6 +237,7 @@ public class LightningStorm extends Skill {
                     var fresh = serverLevel.getEntitiesOfClass(LivingEntity.class,
                                     new AABB(center, center).inflate(radius), target -> target != player
                                             && target.isAlive() && !player.isAlliedTo(target)
+                                            && !PvpSetting.shouldPrevent(player, target)
                                             && !struckTargets.contains(target.getUUID()))
                             .stream().min(Comparator.comparingDouble(target -> target.distanceToSqr(center)))
                             .orElse(null);
@@ -262,6 +264,7 @@ public class LightningStorm extends Skill {
                         DamageTypes.ELECTRO_DAMAGE
                 );
                 for (var target : targets) {
+                    if (PvpSetting.shouldPrevent(player, target)) continue;
                     var damage = Server.calculateDamage(target.getMaxHealth(), abilityPower, damageMultiplier);
                     if (target.hurtServer(serverLevel, source, damage)) struckTargets.add(target.getUUID());
                 }
