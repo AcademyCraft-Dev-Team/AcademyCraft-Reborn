@@ -12,7 +12,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -217,8 +216,8 @@ public final class PlatinumWing extends Skill {
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_PLATINUM_WING.get(), false, LAST_BOOST_TICK);
         }
 
-        public static void onEntitySwing(ServerPlayer player, InteractionHand hand) {
-            if (hand != InteractionHand.MAIN_HAND || !isActive(player)) return;
+        public static void onLeftClickSwing(ServerPlayer player) {
+            if (!isActive(player)) return;
             if (!WingFlightSupport.trySweepCost(player, Skills.PLATINUM_WING.get())) return;
             try {
                 WingFlightSupport.broadcastSweep(player, AdvancedWingSweepPacket.WingKind.PLATINUM);
