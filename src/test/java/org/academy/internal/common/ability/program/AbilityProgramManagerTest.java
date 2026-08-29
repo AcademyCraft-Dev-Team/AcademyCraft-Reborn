@@ -142,6 +142,76 @@ class AbilityProgramManagerTest {
         assertFalse(AbilityProgramManager.isSupportedCategory(null));
     }
 
+    @Test
+    void actionFailuresExposePlayerActionableDiagnostics() {
+        assertAll(
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.BLOCK_BREAK_DISABLED,
+                        "Darkmatter block destruction is disabled"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.TARGET_PROTECTED,
+                        "Darkmatter target block cannot be broken or is protected"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.TARGET_OUT_OF_RANGE,
+                        "Darkmatter block target is outside program range"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.POWER_LIMIT,
+                        "Entity displacement exceeds its strength limit"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.WORLD_UNAVAILABLE,
+                        "Teleport destination is not loaded"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.DESTINATION_BLOCKED,
+                        "Block destination is occupied"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.DESTINATION_UNSAFE,
+                        "Entity destination is unsafe"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.INVENTORY_FULL,
+                        "Player inventory cannot hold all collected items"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.INVALID_DIRECTION,
+                        "Darkmatter Cut requires a non-vertical direction"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.TARGET_MOVEMENT_PROTECTED,
+                        "Target rejected forced movement"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.TARGET_MOVEMENT_PROTECTED,
+                        "Entity rejected forced teleportation"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.TARGET_TYPE_UNSUPPORTED,
+                        "Entity target is not magnetic"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.TARGET_TYPE_UNSUPPORTED,
+                        "Mounted entity displacement is not supported"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.TARGET_INVALID,
+                        "Entity cannot be disassembled by this program"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.ACTION_CONDITION_FAILED,
+                        "Kinetic shockwave was rejected"),
+                () -> assertDiagnostic(
+                        ProgramVmDiagnostic.ACTION_REJECTED,
+                        "Unexpected world mutation")
+        );
+    }
+
+    @Test
+    void vmDiagnosticsProvideStableTranslationKeys() {
+        assertEquals(
+                "message.academy.program.execution.diagnostic.block_unbreakable",
+                ProgramVmDiagnostic.BLOCK_UNBREAKABLE.translationKey()
+        );
+    }
+
+    private static void assertDiagnostic(
+            ProgramVmDiagnostic expected,
+            String message
+    ) {
+        assertEquals(expected, AbilityProgramManager.actionDiagnostic(
+                new IllegalStateException(message)));
+    }
+
     private static AbilityProgram program(Identifier category) {
         return new AbilityProgram(
                 AbilityProgram.CURRENT_SCHEMA_VERSION,

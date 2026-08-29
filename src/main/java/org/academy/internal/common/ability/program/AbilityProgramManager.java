@@ -320,15 +320,137 @@ public final class AbilityProgramManager {
             ProgramVmDiagnostic vmDiagnostic
     ) {
         if (transaction == null) return vmDiagnostic;
-        var cause = transaction.cause();
-        var message = cause == null || cause.getMessage() == null
-                ? "" : cause.getMessage().toLowerCase(Locale.ROOT);
+        return actionDiagnostic(transaction.cause());
+    }
+
+    static ProgramVmDiagnostic actionDiagnostic(@Nullable Throwable cause) {
+        var message = failureMessage(cause);
         if (message.contains("insufficient cp")) return ProgramVmDiagnostic.INSUFFICIENT_CP;
-        if (message.contains("outside program range") || message.contains("exceeds its strength limit")) {
+        if (message.contains("skill is unavailable")) return ProgramVmDiagnostic.SKILL_UNAVAILABLE;
+        if (containsAny(message,
+                "block destruction is disabled",
+                "block operations are disabled")) {
+            return ProgramVmDiagnostic.BLOCK_BREAK_DISABLED;
+        }
+        if (message.contains("outside program range")) {
             return ProgramVmDiagnostic.TARGET_OUT_OF_RANGE;
         }
-        if (message.contains("skill is unavailable")) return ProgramVmDiagnostic.SKILL_UNAVAILABLE;
+        if (containsAny(message,
+                "exceeds its power limit",
+                "exceeds its strength limit")) {
+            return ProgramVmDiagnostic.POWER_LIMIT;
+        }
+        if (containsAny(message,
+                "in another dimension",
+                "dimension is unavailable",
+                "not loaded",
+                "outside loaded world bounds",
+                "outside the world border",
+                "not loaded or in bounds")) {
+            return ProgramVmDiagnostic.WORLD_UNAVAILABLE;
+        }
+        if (containsAny(message,
+                "friendly-fire policy protects",
+                "is protected",
+                "is not editable")) {
+            return ProgramVmDiagnostic.TARGET_PROTECTED;
+        }
+        if (containsAny(message,
+                "block destruction",
+                "cannot be broken",
+                "cannot be displaced",
+                "cannot disassemble this block",
+                "unable to break")) {
+            return ProgramVmDiagnostic.BLOCK_UNBREAKABLE;
+        }
+        if (containsAny(message,
+                "destination is occupied",
+                "occupies the block destination",
+                "destination cannot be replaced",
+                "unable to clear",
+                "unable to place",
+                "cannot survive at destination",
+                "cannot survive at target")) {
+            return ProgramVmDiagnostic.DESTINATION_BLOCKED;
+        }
+        if (containsAny(message,
+                "destination is unsafe",
+                "destination is not safe")) {
+            return ProgramVmDiagnostic.DESTINATION_UNSAFE;
+        }
+        if (containsAny(message,
+                "inventory cannot hold",
+                "inventory is full")) {
+            return ProgramVmDiagnostic.INVENTORY_FULL;
+        }
+        if (message.contains("direction") && containsAny(message,
+                "invalid",
+                "non-vertical",
+                "is required")) {
+            return ProgramVmDiagnostic.INVALID_DIRECTION;
+        }
+        if (message.contains("unable to spawn")) return ProgramVmDiagnostic.SPAWN_FAILED;
+        if (containsAny(message,
+                "target rejected forced movement",
+                "entity rejected forced teleportation",
+                "entity rejected forced airflow movement",
+                "atomic jet target rejected movement",
+                "target rejected magnetic movement")) {
+            return ProgramVmDiagnostic.TARGET_MOVEMENT_PROTECTED;
+        }
+        if (containsAny(message,
+                "not magnetic",
+                "not magnetically movable",
+                "not supported",
+                "cannot support a temporary jet nozzle")) {
+            return ProgramVmDiagnostic.TARGET_TYPE_UNSUPPORTED;
+        }
+        if (containsAny(message,
+                "rejected forced",
+                "target rejected",
+                "entity displacement was rejected",
+                "rejected damage")) {
+            return ProgramVmDiagnostic.TARGET_REJECTED;
+        }
+        if (containsAny(message,
+                "target is invalid",
+                "target block is invalid",
+                "entity cannot be",
+                "cannot support",
+                "cannot be pushed",
+                "cannot be teleported",
+                "cannot be disassembled")) {
+            return ProgramVmDiagnostic.TARGET_INVALID;
+        }
+        if (containsAny(message,
+                "was rejected",
+                "cast was rejected",
+                "creation was rejected",
+                "no permitted force",
+                "slot is empty",
+                "empty item stack",
+                "source equals destination",
+                "source and destination are equal")) {
+            return ProgramVmDiagnostic.ACTION_CONDITION_FAILED;
+        }
         return ProgramVmDiagnostic.ACTION_REJECTED;
+    }
+
+    private static String failureMessage(@Nullable Throwable cause) {
+        var result = new StringBuilder();
+        for (var current = cause; current != null; current = current.getCause()) {
+            if (current.getMessage() == null || current.getMessage().isBlank()) continue;
+            if (!result.isEmpty()) result.append(' ');
+            result.append(current.getMessage().toLowerCase(Locale.ROOT));
+        }
+        return result.toString();
+    }
+
+    private static boolean containsAny(String value, String... candidates) {
+        for (var candidate : candidates) {
+            if (value.contains(candidate)) return true;
+        }
+        return false;
     }
 
     private static void writeBytes(ByteBuf buf, byte[] bytes, int maximum) {

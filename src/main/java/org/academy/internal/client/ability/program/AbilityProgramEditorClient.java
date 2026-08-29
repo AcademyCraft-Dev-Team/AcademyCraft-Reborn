@@ -361,8 +361,7 @@ public final class AbilityProgramEditorClient {
                 case INVALID_PROGRAM, OK -> "message.academy.program.editor.invalid_program";
             };
             notify(key, ChatFormatting.RED, slot + 1, Component.translatable(
-                    "message.academy.program.execution.diagnostic."
-                            + vmDiagnostic.name().toLowerCase(Locale.ROOT)));
+                    vmDiagnostic.translationKey()));
         }
         var currentCategory = AbilitySystemClient.category;
         if (screen != null
@@ -374,6 +373,8 @@ public final class AbilityProgramEditorClient {
                     revision,
                     type == AbilityProgramManager.FeedbackType.ERROR ? diagnostic : null,
                     nodeId,
+                    type == AbilityProgramManager.FeedbackType.ERROR
+                            ? vmDiagnostic : ProgramVmDiagnostic.NONE,
                     type != AbilityProgramManager.FeedbackType.ERROR
             );
         }
