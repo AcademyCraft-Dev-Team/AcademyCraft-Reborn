@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
@@ -180,8 +179,7 @@ public class IronSandArsenal extends Skill {
             clearData(player);
         }
 
-        public static void onEntitySwing(ServerPlayer player, InteractionHand hand) {
-            if (hand != InteractionHand.MAIN_HAND) return;
+        public static void onLeftClickSwing(ServerPlayer player) {
             var context = CONTEXT_MAP.get(player);
             if (context != null) context.sweep();
         }

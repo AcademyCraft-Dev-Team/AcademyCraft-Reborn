@@ -6,7 +6,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.InteractionHand;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -179,8 +178,8 @@ public final class WhiteWing extends Skill {
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_WHITE_WING.get(), false, LAST_BOOST_TICK);
         }
 
-        public static void onEntitySwing(ServerPlayer player, InteractionHand hand) {
-            if (hand != InteractionHand.MAIN_HAND || !isActive(player)) return;
+        public static void onLeftClickSwing(ServerPlayer player) {
+            if (!isActive(player)) return;
             if (!WingFlightSupport.trySweepCost(player, Skills.WHITE_WING.get())) return;
             WingFlightSupport.broadcastSweep(player, AdvancedWingSweepPacket.WingKind.WHITE);
             WingFlightSupport.fanAttack(player, Skills.WHITE_WING.get());
