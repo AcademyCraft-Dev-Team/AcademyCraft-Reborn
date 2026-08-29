@@ -3,11 +3,13 @@ package org.academy.internal.client.animation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
@@ -25,7 +27,14 @@ public final class AbilityDeveloperSleepClient {
     }
 
     public static void extract(Avatar avatar, AvatarRenderState renderState) {
-        renderState.setRenderData(CONTEXT_KEY, sample(avatar, renderState.partialTick));
+        var podPose = sample(avatar, renderState.partialTick);
+        renderState.setRenderData(CONTEXT_KEY, podPose);
+        if (podPose == null) return;
+
+        renderState.pose = Pose.SLEEPING;
+        renderState.bedOrientation = podPose.facing().getOpposite();
+        renderState.walkAnimationPos = 0.0f;
+        renderState.walkAnimationSpeed = 0.0f;
     }
 
     public static void applyModelTransform(AvatarRenderState renderState, PoseStack poseStack) {
@@ -52,6 +61,17 @@ public final class AbilityDeveloperSleepClient {
                 pivot.add(rotatedOffset.x, rotatedOffset.y, rotatedOffset.z),
                 podPose.angleDegrees()
         );
+    }
+
+    public static void stabilizeCamera(Camera camera, CameraRenderState renderState) {
+        if (!(camera.entity() instanceof LivingEntity livingEntity)
+                || !AbilityDeveloperSleep.isSleepingAtDeveloper(livingEntity)) {
+            return;
+        }
+
+        renderState.entityRenderState.isSleeping = true;
+        renderState.entityRenderState.backwardsInterpolatedWalkDistance = 0.0f;
+        renderState.entityRenderState.bob = 0.0f;
     }
 
     @Nullable

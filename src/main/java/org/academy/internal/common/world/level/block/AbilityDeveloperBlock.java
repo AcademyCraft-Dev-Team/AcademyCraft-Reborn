@@ -8,9 +8,11 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -23,6 +25,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.api.common.ability.DevelopmentSource;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
@@ -34,6 +39,7 @@ import java.util.List;
 
 public final class AbilityDeveloperBlock extends MultiBlock {
     public static final MapCodec<AbilityDeveloperBlock> CODEC = simpleCodec(AbilityDeveloperBlock::new);
+    private static final VoxelShape SLEEPING_COLLISION_SHAPE = box(0, 0, 0, 16, 9, 16);
 
     public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
             new Vec3i(0, 1, 0),
@@ -77,6 +83,25 @@ public final class AbilityDeveloperBlock extends MultiBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        return interact(level, pos, player);
+    }
+
+    @Override
+    protected InteractionResult useItemOn(
+            ItemStack stack,
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand,
+            BlockHitResult hitResult
+    ) {
+        return player.isShiftKeyDown()
+                ? interact(level, pos, player)
+                : super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+    }
+
+    private InteractionResult interact(Level level, BlockPos pos, Player player) {
         var mainBlockEntity = getMainBlockEntity(level, pos);
         if (level.isClientSide() && mainBlockEntity instanceof AbilityDeveloperBlockEntity abilityDeveloper) {
             abilityDeveloper.startOpening();
@@ -92,6 +117,22 @@ public final class AbilityDeveloperBlock extends MultiBlock {
             }
         }
         return InteractionResult.CONSUME;
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(
+            BlockState state,
+            BlockGetter level,
+            BlockPos pos,
+            CollisionContext context
+    ) {
+        if (context instanceof EntityCollisionContext entityContext
+                && entityContext.getEntity() instanceof LivingEntity sleeper
+                && sleeper.getSleepingPos().filter(pos::equals).isPresent()
+                && AbilityDeveloperSleep.isSleepingAtDeveloper(sleeper)) {
+            return SLEEPING_COLLISION_SHAPE;
+        }
+        return super.getCollisionShape(state, level, pos, context);
     }
 
     @Override

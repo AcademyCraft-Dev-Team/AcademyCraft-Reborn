@@ -2,6 +2,7 @@ package org.academy.mixin.client;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
@@ -56,5 +57,14 @@ public abstract class MixinCamera {
         if (adjustment == null) return;
         academy$setPosition(adjustment.position());
         academy$setRotation(camera.yRot(), camera.xRot() + adjustment.pitchOffset());
+    }
+
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    private void academy$stabilizeAbilityDeveloperView(
+            CameraRenderState renderState,
+            float partialTick,
+            CallbackInfo ci
+    ) {
+        AbilityDeveloperSleepClient.stabilizeCamera((Camera) (Object) this, renderState);
     }
 }

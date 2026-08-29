@@ -3,14 +3,19 @@ package org.academy.internal.common.world.level.block;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.TriState;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.CanContinueSleepingEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 import org.academy.mixin.common.PlayerSleepCounterAccessor;
 import org.jspecify.annotations.Nullable;
@@ -108,5 +113,27 @@ public final class AbilityDeveloperSleep {
         if (isSleepingAtDeveloper(event.getEntity())) {
             event.setContinueSleeping(true);
         }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void enableHeldItemInteraction(PlayerInteractEvent.RightClickBlock event) {
+        var player = event.getEntity();
+        if (!player.isShiftKeyDown()
+                || !(player.level().getBlockEntity(event.getPos()) instanceof AbilityDeveloperBlockEntity)) {
+            return;
+        }
+
+        event.setUseBlock(TriState.TRUE);
+        event.setUseItem(TriState.FALSE);
+    }
+
+    @SubscribeEvent
+    public static void stabilizeDeveloperSleep(PlayerTickEvent.Post event) {
+        var player = event.getEntity();
+        if (!isSleepingAtDeveloper(player)) return;
+
+        player.setPose(Pose.SLEEPING);
+        player.setDeltaMovement(Vec3.ZERO);
+        player.walkAnimation.stop();
     }
 }
