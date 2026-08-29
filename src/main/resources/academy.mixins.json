@@ -44,6 +44,7 @@
     "common.MixinServerPlayer",
     "common.MixinServerPlayerGameMode",
     "common.MixinSignalGetter",
+    "common.MixinThrownTridentDarkmatterReturning",
     "common.MixinThrownTridentVectorPickup",
     "common.MixinVibrationSystemListener",
     "common.MixinWardenDiggingBehavior",
