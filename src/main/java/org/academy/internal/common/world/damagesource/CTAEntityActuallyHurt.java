@@ -87,6 +87,7 @@ public final class CTAEntityActuallyHurt {
                 level, entity, source, amount, inflicted, attacker, skill,
                 expected == 0.0f, false
         );
+        DamageCompletionDeclaration.publish(entity, source, amount, inflicted);
         return true;
     }
 
