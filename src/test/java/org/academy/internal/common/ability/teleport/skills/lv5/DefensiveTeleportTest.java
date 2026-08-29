@@ -31,6 +31,31 @@ class DefensiveTeleportTest {
                 thirdPersonCamera);
     }
 
+    @Test
+    void thirdPersonSelectionUsesHorizontalPlayerFacing() {
+        var direction = DefensiveTeleport.selectionDirection(
+                new Vec3(0.0, -1.0, 0.0),
+                0.0f,
+                false
+        );
+
+        assertEquals(0.0, direction.x, 1.0e-9);
+        assertEquals(0.0, direction.y, 1.0e-9);
+        assertEquals(1.0, direction.z, 1.0e-9);
+        assertEquals(1.0, direction.length(), 1.0e-9);
+    }
+
+    @Test
+    void firstPersonSelectionKeepsVerticalAim() {
+        var viewDirection = new Vec3(0.0, -1.0, 0.0);
+
+        assertEquals(viewDirection, DefensiveTeleport.selectionDirection(
+                viewDirection,
+                90.0f,
+                true
+        ));
+    }
+
     private static void assertRestoresWorldBox(AABB expected, AABB relative, Vec3 camera) {
         var restored = relative.move(camera);
         assertEquals(expected.minX, restored.minX, 1.0e-9);
