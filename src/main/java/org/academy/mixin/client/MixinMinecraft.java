@@ -10,6 +10,8 @@ import org.academy.internal.client.ability.VectorReflectionClientRuntime;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.MentalResistanceClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
+import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
+import org.misaka.MisakaNetworkClient;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,10 +32,34 @@ public abstract class MixinMinecraft {
                 || PlayerControlClientState.blocksWorldInteraction()) cir.setReturnValue(false);
     }
 
+    @Inject(
+            method = "startAttack",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/player/LocalPlayer;swing(Lnet/minecraft/world/InteractionHand;)V",
+                    shift = At.Shift.AFTER
+            )
+    )
+    private void academy$sendClickedLeftSwing(CallbackInfoReturnable<Boolean> cir) {
+        MisakaNetworkClient.send(PlayerLeftClickSwingPacket.INSTANCE);
+    }
+
     @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
     private void academy$blockMentalIntrusionMining(boolean attacking, CallbackInfo ci) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction()) ci.cancel();
+    }
+
+    @Inject(
+            method = "continueAttack",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/player/LocalPlayer;swing(Lnet/minecraft/world/InteractionHand;)V",
+                    shift = At.Shift.AFTER
+            )
+    )
+    private void academy$sendHeldLeftSwing(boolean attacking, CallbackInfo ci) {
+        MisakaNetworkClient.send(PlayerLeftClickSwingPacket.INSTANCE);
     }
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)

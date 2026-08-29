@@ -4,7 +4,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -25,7 +24,6 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.ability.accelerator.skills.lv5.*;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
-import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
@@ -428,16 +426,6 @@ public abstract class MixinLivingEntity {
                         && !reflected.shouldTriggerSkillCallbacks()) return;
                 skillSource.getSkill().onKill(player, (LivingEntity) (Object) this);
             }
-        }
-    }
-
-    @Inject(method = "swing(Lnet/minecraft/world/InteractionHand;Z)V", at = @At("HEAD"))
-    private void academy$onAdvancedWingSwing(InteractionHand hand, boolean updateSelf, CallbackInfo ci) {
-        if ((Object) this instanceof ServerPlayer player) {
-            BlackWing.Server.onEntitySwing(player, hand);
-            WhiteWing.Server.onEntitySwing(player, hand);
-            PlatinumWing.Server.onEntitySwing(player, hand);
-            IronSandArsenal.Server.onEntitySwing(player, hand);
         }
     }
 

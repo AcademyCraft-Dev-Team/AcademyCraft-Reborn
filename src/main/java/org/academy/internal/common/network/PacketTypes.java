@@ -530,6 +530,10 @@ public final class PacketTypes {
             PLATINUM_WING_CONTROL = PACKET_TYPES.register("platinum_wing_control",
             () -> new PacketType<>(PlatinumWing.ControlPacket.class, PlatinumWing.ControlPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerLeftClickSwingPacket>>
+            PLAYER_LEFT_CLICK_SWING = PACKET_TYPES.register("player_left_click_swing",
+            () -> new PacketType<>(PlayerLeftClickSwingPacket.class, PlayerLeftClickSwingPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingSweepPacket>>
             ADVANCED_WING_SWEEP = PACKET_TYPES.register("advanced_wing_sweep",
             () -> new PacketType<>(AdvancedWingSweepPacket.class, AdvancedWingSweepPacket.CODEC));
