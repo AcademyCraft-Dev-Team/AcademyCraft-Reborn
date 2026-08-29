@@ -26,6 +26,7 @@ import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient
 import org.academy.internal.client.hud.HudLayoutEditorScreen
+import org.academy.internal.common.ability.level0.skills.OutputControl
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
 import org.academy.internal.common.world.damagesource.PvpSetting
@@ -420,6 +421,8 @@ object SettingsApp : App {
                 .getConfig<TerminalConfig>(TerminalHud.CONFIG_KEY)
             val abilityConfig = AcademyCraftClient.Config.INSTANCE
                 .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
+            val outputControlConfig = AcademyCraftClient.Config.INSTANCE
+                .getConfig<OutputControl.Client.Config>(OutputControl.Client.CONFIG_KEY)
             val sections = mutableListOf(
                 BindingSection(
                     "general_terminal",
@@ -437,6 +440,17 @@ object SettingsApp : App {
                 ) { updated ->
                     AcademyCraftClient.Config.INSTANCE.setConfig(
                         AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM,
+                        updated
+                    )
+                },
+                BindingSection(
+                    "general_output_control",
+                    L10n["app.academy.settings.keybind.group.output_control"],
+                    R.textures.ability.level0.skill.output_control.icon,
+                    outputControlConfig
+                ) { updated ->
+                    AcademyCraftClient.Config.INSTANCE.setConfig(
+                        OutputControl.Client.CONFIG_KEY,
                         updated
                     )
                 }
