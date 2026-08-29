@@ -5,6 +5,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 
@@ -61,7 +62,7 @@ public final class VectorRedirectExecutor {
                         pathBox,
                         target -> target.isAlive()
                                 && target != plan.redirector()
-                                && !plan.redirector().isAlliedTo(target)
+                                && !TeamRelations.areAllied(plan.redirector(), target)
                                 && !CtaFriendlyFireWhitelist.shouldProtect(plan.redirector(), target)
                                 && target.getBoundingBox().inflate(radius).clip(start, finalEnd).isPresent()
                 ).stream()
@@ -99,7 +100,7 @@ public final class VectorRedirectExecutor {
             living = directLiving;
         }
         if (living == plan.redirector()
-                || plan.redirector().isAlliedTo(living)
+                || TeamRelations.areAllied(plan.redirector(), living)
                 || CtaFriendlyFireWhitelist.shouldProtect(plan.redirector(), living)) {
             return 0;
         }

@@ -23,6 +23,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -155,7 +156,7 @@ public class ElectricalContact extends Skill {
             var box = player.getBoundingBox().inflate(radius);
             var targets = level.getEntitiesOfClass(LivingEntity.class, box,
                     e -> e != player && e.isAlive() && !e.isSpectator()
-                            && !player.isAlliedTo(e)
+                            && !TeamRelations.areAllied(player, e)
                             && !PvpSetting.shouldPrevent(player, e));
 
             if (!(level instanceof ServerLevel serverLevel)) return;
@@ -184,7 +185,7 @@ public class ElectricalContact extends Skill {
 
             var attacker = event.getSource().getEntity();
             if (attacker instanceof LivingEntity livingAttacker && livingAttacker != player
-                    && !player.isAlliedTo(livingAttacker)
+                    && !TeamRelations.areAllied(player, livingAttacker)
                     && !PvpSetting.shouldPrevent(player, livingAttacker)) {
                 if (player.level() instanceof ServerLevel serverLevel) {
                     DamageRecursionGuard.runGuarded(RETALIATION_RECURSION_GUARD, () -> {
@@ -218,7 +219,7 @@ public class ElectricalContact extends Skill {
             if (!(attacker.level() instanceof ServerLevel level)) return;
             var chained = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(4.0),
                             candidate -> candidate != target && candidate != attacker && candidate.isAlive()
-                                    && !attacker.isAlliedTo(candidate)
+                                    && !TeamRelations.areAllied(attacker, candidate)
                                     && !PvpSetting.shouldPrevent(attacker, candidate))
                     .stream().min(Comparator.comparingDouble(target::distanceToSqr)).orElse(null);
             if (chained != null) {

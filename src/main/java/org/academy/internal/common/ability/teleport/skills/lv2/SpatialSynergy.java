@@ -140,7 +140,7 @@ public class SpatialSynergy extends Skill {
                     owner.getBoundingBox().inflate(radius),
                     entity -> entity != owner && !(entity instanceof ServerPlayer)
                             && entity.isAlive() && entity.distanceToSqr(owner) <= radius * radius
-                            && (owner.isAlliedTo(entity)
+                            && (TeamRelations.areAllied(owner, entity)
                             || entity instanceof TamableAnimal tame && tame.isOwnedBy(owner))
             );
             var system = AbilitySystemServer.getSystem(owner);

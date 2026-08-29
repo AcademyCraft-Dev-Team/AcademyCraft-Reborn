@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.jetbrains.annotations.Nullable;
 
@@ -70,7 +71,7 @@ public final class LinearAttackPayload {
         if (reflected) {
             return reflector != null
                     && target != reflector
-                    && !reflector.isAlliedTo(target)
+                    && !TeamRelations.areAllied(reflector, target)
                     && returnTargetFilter.test(target);
         }
         return target != attacker && outboundTargetFilter.test(target);

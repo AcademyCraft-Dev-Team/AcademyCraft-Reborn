@@ -9,6 +9,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -119,7 +120,7 @@ interface PrecisionProgramRuntimeView {
 
         @Override
         public boolean ally(Object value) {
-            return value == player || value instanceof Entity entity && (player.isAlliedTo(entity)
+            return value == player || value instanceof Entity entity && (TeamRelations.areAllied(player, entity)
                     || entity instanceof LivingEntity living
                     && FriendlyFireSetting.shouldPrevent(player, living));
         }

@@ -31,6 +31,7 @@ import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterAbsorption;
@@ -105,7 +106,7 @@ public final class DarkmatterEquipmentEvents {
             if (!(event.getEntity() instanceof ServerPlayer player)
                     || !(player.level() instanceof ServerLevel level)
                     || !(event.getTarget() instanceof LivingEntity target)
-                    || target == player || player.isAlliedTo(target)) return;
+                    || target == player || TeamRelations.areAllied(player, target)) return;
             var held = player.getMainHandItem();
             var nativeEffects = DarkmatterItemUtil.hasNativeItemEffects(held);
             var coating = DarkmatterItemUtil.hasCoating(held);
@@ -146,7 +147,7 @@ public final class DarkmatterEquipmentEvents {
                 for (var nearby : level.getEntitiesOfClass(LivingEntity.class,
                         target.getBoundingBox().inflate(pursuitRange), candidate ->
                                 candidate != target && candidate != player
-                                        && candidate.isAlive() && !player.isAlliedTo(candidate))) {
+                                        && candidate.isAlive() && !TeamRelations.areAllied(player, candidate))) {
                     if (processed++ >= count) break;
                     hurtWithPenetration(level, nearby, source,
                             pursuitDamage, phase.beta() * 0.10f);

@@ -12,6 +12,7 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.*;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
 import java.util.Comparator;
@@ -296,7 +297,7 @@ final class StandardMobControlBindings {
                     || candidate.level() != mob.level()
                     || candidate.position().distanceToSqr(anchor.position()) > detectionRadiusSqr
                     || isControllerAlly(candidate)
-                    || mob.isAlliedTo(candidate)
+                    || TeamRelations.areAllied(mob, candidate)
                     || MentalPerceptionRuntime.decision(mob, candidate)
                     == PerceptionDecision.HIDDEN) {
                 return false;
@@ -318,7 +319,7 @@ final class StandardMobControlBindings {
         }
 
         private boolean isControllerAlly(LivingEntity entity) {
-            return controller.isAlliedTo(entity) || FriendlyFireSetting.shouldPrevent(controller, entity);
+            return TeamRelations.areAllied(controller, entity) || FriendlyFireSetting.shouldPrevent(controller, entity);
         }
 
         private void clearThreatTarget() {
