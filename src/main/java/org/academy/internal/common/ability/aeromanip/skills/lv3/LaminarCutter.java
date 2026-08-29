@@ -180,6 +180,17 @@ public final class LaminarCutter extends Skill {
                     AeromanipChargeTier.INSTANT);
         }
 
+        public static boolean tryProgramCast(
+                ServerPlayer player,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                float baseCost,
+                AeromanipChargeTier tier
+        ) {
+            return tryCast(player, direction, maximumRange, damageScale, baseCost, tier);
+        }
+
         static double bladeHalfWidth(AeromanipChargeTier tier) {
             return tier == AeromanipChargeTier.INSTANT ? BLADE_HALF_WIDTH : 4.0;
         }

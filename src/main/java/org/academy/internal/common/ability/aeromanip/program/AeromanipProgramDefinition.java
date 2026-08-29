@@ -39,6 +39,13 @@ public final class AeromanipProgramDefinition {
                     || id.equals(AeromanipProgramNodeIds.LAMINAR_CUT)) {
                 configuration.addProperty("power", 1.0f);
             }
+            if (id.equals(AeromanipProgramNodeIds.LAMINAR_CUT)) {
+                configuration.addProperty("charge_tier", "instant");
+            } else if (id.equals(AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE)) {
+                configuration.addProperty("target_type", "entity");
+            } else if (id.equals(AeromanipProgramNodeIds.FIRE_JETS)) {
+                configuration.addProperty("duration", 8);
+            }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
             editor.add(
                     id,
