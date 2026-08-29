@@ -38,6 +38,7 @@ import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -247,6 +248,7 @@ public class DirStrike extends Skill {
                                 && target.isAlive()
                                 && !target.isSpectator()
                                 && !player.isAlliedTo(target)
+                                && !PvpSetting.shouldPrevent(player, target)
                                 && target.getY() >= minY
                                 && target.getY() <= maxY
                                 && isInsideStrikeArea(

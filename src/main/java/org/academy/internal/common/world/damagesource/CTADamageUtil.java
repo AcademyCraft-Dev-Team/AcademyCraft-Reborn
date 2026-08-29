@@ -44,6 +44,7 @@ public final class CTADamageUtil {
         if (target == null || attacker == null || source == null || damage <= 0.0f) return;
         if (target == attacker || !target.isAlive()) return;
         if (target instanceof Player player && DamageTypes.isImmunePlayer(player)) return;
+        if (attacker instanceof Player player && PvpSetting.shouldPrevent(player, target)) return;
         if (attacker instanceof Player player && CtaFriendlyFireWhitelist.shouldProtect(player, target)) return;
         new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true);
     }

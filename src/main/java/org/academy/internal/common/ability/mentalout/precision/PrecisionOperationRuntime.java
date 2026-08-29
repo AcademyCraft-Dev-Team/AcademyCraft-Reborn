@@ -28,6 +28,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRun
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
@@ -536,7 +537,8 @@ public final class PrecisionOperationRuntime {
                 ProgramInputView inputs
         ) {
             return switch (kind) {
-                case ROSTER -> output(kind, livingSet(MentaloutControlContext.subjects(player)));
+                case ROSTER -> output(kind, pvpAllowedLiving(
+                        player, MentaloutControlContext.subjects(player)));
                 case INTRUSION_TARGET -> selectedOutput(kind, MentalIntrusionManager.target(player));
                 case LOOK_TARGET -> {
                     var target = MentaloutTargeting.findPrecisionLookedAtLiving(player);
@@ -547,8 +549,8 @@ public final class PrecisionOperationRuntime {
                 }
                 case SIGHT_POSITION -> {
                     var observer = entityInput(inputs, "observer");
-                    var destination = MentaloutTargeting.findSightDestination(
-                            observer, MentaloutTargeting.MAX_SIGHT_RANGE);
+                    var destination = MentaloutTargeting.findPrecisionSightDestination(
+                            player, observer, MentaloutTargeting.MAX_SIGHT_RANGE);
                     if (destination == null) {
                         throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_SIGHT_TARGET);
                     }
@@ -826,10 +828,12 @@ public final class PrecisionOperationRuntime {
             }
         }
 
-        private static ProgramNodeStep selectedOutput(
+        private ProgramNodeStep selectedOutput(
                 PrecisionGraph.NodeKind kind,
                 Object value
         ) {
+            if (value instanceof LivingEntity living
+                    && PvpSetting.shouldPrevent(player, living)) value = null;
             return value == null ? ProgramNodeStep.data(Map.of()) : output(kind, value);
         }
 
@@ -857,7 +861,7 @@ public final class PrecisionOperationRuntime {
         var actions = new ArrayList<PendingAction>();
         var flowTrace = new ArrayList<Integer>();
         var uniqueSubjects = new HashSet<UUID>();
-        var roster = livingSet(MentaloutControlContext.subjects(player));
+        var roster = pvpAllowedLiving(player, MentaloutControlContext.subjects(player));
         var rosterIds = roster.stream().map(LivingEntity::getUUID).collect(Collectors.toSet());
         var reachableActions = new HashSet<Integer>();
         if (!program.actionOrder().isEmpty()) {
@@ -871,7 +875,8 @@ public final class PrecisionOperationRuntime {
                 switch (node.kind()) {
                     case CASTER -> values.put(node.id(), player);
                     case ROSTER -> values.put(node.id(), roster);
-                    case INTRUSION_TARGET -> values.put(node.id(), MentalIntrusionManager.target(player));
+                    case INTRUSION_TARGET -> values.put(
+                            node.id(), pvpAllowedTarget(player, MentalIntrusionManager.target(player)));
                     case LOOK_TARGET -> {
                         var target = MentaloutTargeting.findPrecisionLookedAtLiving(player);
                         if (target == null) {
@@ -881,8 +886,8 @@ public final class PrecisionOperationRuntime {
                     }
                     case SIGHT_POSITION -> {
                         var observer = requireLivingEntity(input(program, values, node, 0));
-                        var destination = MentaloutTargeting.findSightDestination(
-                                observer, MentaloutTargeting.MAX_SIGHT_RANGE);
+                        var destination = MentaloutTargeting.findPrecisionSightDestination(
+                                player, observer, MentaloutTargeting.MAX_SIGHT_RANGE);
                         if (destination == null) {
                             return Evaluation.error(PrecisionGraph.Diagnostic.NO_SIGHT_TARGET, node.id());
                         }
@@ -918,17 +923,21 @@ public final class PrecisionOperationRuntime {
                             .filter(Projectile.class::isInstance).toList());
                     case PLAYER_TARGET -> {
                         var target = player.getLastHurtMob();
+                        target = pvpAllowedTarget(player, target);
                         values.put(node.id(), target != null && target.isAlive() && !target.isRemoved()
                                 && target.level() == player.level() ? target : null);
                     }
                     case CURRENT_TARGET -> {
                         var subject = entity(input(program, values, node, 0));
-                        values.put(node.id(), subject instanceof LivingEntity living
-                                ? effectiveTarget(living) : null);
+                        values.put(node.id(), pvpAllowedTarget(
+                                player,
+                                subject instanceof LivingEntity living ? effectiveTarget(living) : null
+                        ));
                     }
                     case LAST_ATTACKER -> {
                         var subject = entity(input(program, values, node, 0));
                         var attacker = subject instanceof LivingEntity living ? living.getLastHurtByMob() : null;
+                        attacker = pvpAllowedTarget(player, attacker);
                         values.put(node.id(), attacker != null && attacker.isAlive() && !attacker.isRemoved()
                                 && attacker.level() == player.level() ? attacker : null);
                     }
@@ -1245,6 +1254,7 @@ public final class PrecisionOperationRuntime {
                 LivingEntity.class,
                 new AABB(player.position(), player.position()).inflate(range),
                 entity -> entity != player && entity.isAlive() && !entity.isRemoved()
+                        && !PvpSetting.shouldPrevent(player, entity)
         ));
     }
 
@@ -1253,11 +1263,28 @@ public final class PrecisionOperationRuntime {
                 player,
                 new AABB(player.position(), player.position()).inflate(range),
                 entity -> entity.isAlive() && !entity.isRemoved()
+                        && !PvpSetting.shouldPrevent(player, entity)
         ));
     }
 
     private static List<LivingEntity> livingSet(List<? extends LivingEntity> entities) {
         return List.copyOf(new LinkedHashSet<>(entities));
+    }
+
+    private static List<LivingEntity> pvpAllowedLiving(
+            ServerPlayer player,
+            List<? extends LivingEntity> entities
+    ) {
+        return livingSet(entities).stream()
+                .filter(entity -> !PvpSetting.shouldPrevent(player, entity))
+                .toList();
+    }
+
+    private static <T extends LivingEntity> @Nullable T pvpAllowedTarget(
+            ServerPlayer player,
+            @Nullable T target
+    ) {
+        return target == null || PvpSetting.shouldPrevent(player, target) ? null : target;
     }
 
     private static List<Entity> entitySet(List<? extends Entity> entities) {
@@ -1474,6 +1501,9 @@ public final class PrecisionOperationRuntime {
     }
 
     private static void ensureUnprotected(ServerPlayer player, List<LivingEntity> entities) {
+        if (entities.stream().anyMatch(entity -> PvpSetting.shouldPrevent(player, entity))) {
+            throw new ProtectedTargetException();
+        }
         var protectedTarget = entities.stream()
                 .filter(MentalControlRuntime::isProtectedTarget)
                 .findFirst()

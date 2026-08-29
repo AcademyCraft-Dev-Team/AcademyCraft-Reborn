@@ -37,6 +37,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipu
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.ElectromagneticShieldData;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -321,7 +322,8 @@ public final class ElectromagneticShield extends Skill {
             var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
             for (var target : player.level().getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(4.0),
-                    target -> target != player && target.isAlive() && !player.isAlliedTo(target))) {
+                    target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                            && !PvpSetting.shouldPrevent(player, target))) {
                 if (handled++ >= cap) break;
                 var direction = target.position().subtract(player.position());
                 if (direction.lengthSqr() > 1.0e-8) target.push(direction.normalize().x, 0.25, direction.normalize().z);

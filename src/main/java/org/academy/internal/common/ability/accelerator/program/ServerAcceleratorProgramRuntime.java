@@ -28,6 +28,7 @@ import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 
 import java.util.*;
@@ -345,6 +346,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                         entity -> entity.isAlive()
                                 && !entity.isRemoved()
                                 && !entity.isSpectator()
+                                && !PvpSetting.shouldPrevent(player, entity)
                                 && ServerProgramTargetResolver.isWithinRadius(
                                 origin, entity.position(), boundedRadius)
                 ).stream()
@@ -393,6 +395,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                         && entity.isAlive()
                         && !entity.isRemoved()
                         && !entity.isSpectator()
+                        && !PvpSetting.shouldPrevent(player, entity)
                         && entity.isPickable(),
                 0.3f
         );

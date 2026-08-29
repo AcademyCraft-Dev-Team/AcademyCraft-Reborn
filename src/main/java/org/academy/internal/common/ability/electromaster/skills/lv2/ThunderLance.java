@@ -32,6 +32,7 @@ import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects
 import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.misaka.MisakaNetworkClient;
@@ -210,7 +211,9 @@ public class ThunderLance extends Skill {
             if (origin == null) return;
             var target = level.getEntitiesOfClass(LivingEntity.class,
                             origin.getBoundingBox().inflate(6.0), candidate -> candidate != player
-                                    && !hits.contains(candidate) && candidate.isAlive() && !player.isAlliedTo(candidate))
+                                    && !hits.contains(candidate) && candidate.isAlive()
+                                    && !player.isAlliedTo(candidate)
+                                    && !PvpSetting.shouldPrevent(player, candidate))
                     .stream().min(Comparator.comparingDouble(origin::distanceToSqr)).orElse(null);
             if (target != null) {
                 target.hurtServer(level, source, damage * 0.4f);

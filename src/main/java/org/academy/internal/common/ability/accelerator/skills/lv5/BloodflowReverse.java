@@ -47,6 +47,7 @@ import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -125,6 +126,8 @@ public class BloodflowReverse extends Skill {
         var bestProjection = Double.MAX_VALUE;
         for (var candidate : observer.level().getEntitiesOfClass(LivingEntity.class, searchBox,
                 entity -> entity != observer && entity.isAlive() && !entity.isSpectator()
+                        && (!(observer instanceof Player player)
+                        || !PvpSetting.shouldPrevent(player, entity))
                         && candidateFilter.test(entity))) {
             var candidateBox = candidate.getBoundingBox().inflate(TARGET_BOX_INFLATE);
             var projection = candidateBox.getCenter().subtract(eyePosition).dot(direction);

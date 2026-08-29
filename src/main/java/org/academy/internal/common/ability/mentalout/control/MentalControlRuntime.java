@@ -13,6 +13,7 @@ import org.academy.internal.common.ability.mentalout.MentalControlMemory;
 import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
@@ -376,6 +377,19 @@ public final class MentalControlRuntime {
                     : AttackDecision.PASS;
         }
         var now = attacker.level().getGameTime();
+        for (var capability : List.of(
+                ControlCapability.DIRECT_CONTROL,
+                ControlCapability.FORCE_TARGET,
+                ControlCapability.RELATION_CONTROL
+        )) {
+            var controlled = state.leases.effective(attacker.getUUID(), capability, now);
+            if (controlled == null) continue;
+            var controller = attacker.level().getServer().getPlayerList()
+                    .getPlayer(controlled.controllerId());
+            if (controller != null && PvpSetting.shouldPrevent(controller, target)) {
+                return AttackDecision.DENY;
+            }
+        }
         var guard = state.leases.effective(attacker.getUUID(), ControlCapability.GUARD_CONTROL, now);
         if (guard != null && guard.directive() instanceof ControlDirective.Guard guardDirective) {
             UUID selectedGuardTarget;

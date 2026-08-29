@@ -12,6 +12,7 @@ import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.util.Comparator;
 import java.util.List;
@@ -94,6 +95,7 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
                         entity -> entity.isAlive()
                                 && !entity.isRemoved()
                                 && !entity.isSpectator()
+                                && !PvpSetting.shouldPrevent(player, entity)
                                 && isWithinRadius(origin, entity.position(), boundedRadius)
                 ).stream()
                 .sorted(Comparator.comparing(entity -> entity.getUUID().toString()))
@@ -169,6 +171,7 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
                         && entity.isAlive()
                         && !entity.isRemoved()
                         && !entity.isSpectator()
+                        && !PvpSetting.shouldPrevent(player, entity)
                         && entity.isPickable(),
                 0.3f
         );

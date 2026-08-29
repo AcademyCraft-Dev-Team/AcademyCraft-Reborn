@@ -29,6 +29,7 @@ import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -145,6 +146,7 @@ public final class MentalIntervention extends Skill {
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var range = selectionRange(player);
             var selected = MentaloutTargeting.findLookedAtLivingExtended(player, range);
+            if (selected != null && PvpSetting.shouldPrevent(player, selected)) return;
             var result = MentaloutControlContext.toggleTarget(player, selected);
             if (result == MentaloutControlContext.ToggleResult.ADDED
                     && milestone >= 3 && selected != null && !(selected instanceof ServerPlayer)) {

@@ -11,6 +11,7 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -75,6 +76,7 @@ interface PrecisionProgramRuntimeView {
                     LivingEntity.class,
                     bounds(range),
                     entity -> entity != player && entity.isAlive() && !entity.isRemoved()
+                            && !PvpSetting.shouldPrevent(player, entity)
             ));
         }
 
@@ -84,6 +86,7 @@ interface PrecisionProgramRuntimeView {
                     player,
                     bounds(range),
                     entity -> entity.isAlive() && !entity.isRemoved()
+                            && !PvpSetting.shouldPrevent(player, entity)
             ));
         }
 

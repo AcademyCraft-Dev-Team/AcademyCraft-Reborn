@@ -3,12 +3,14 @@ package org.academy.internal.common.ability.teleport;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 
 /**
  * Shared crosshair targeting for Teleport skills.
@@ -40,7 +42,9 @@ public final class TeleportTargeting {
                 .inflate(0.85, 1.15, 0.85);
         var targetProjection = Double.MAX_VALUE;
         for (var candidate : source.level().getEntitiesOfClass(LivingEntity.class, searchBox,
-                entity -> entity != source && entity.isAlive() && !entity.isSpectator())) {
+                entity -> entity != source && entity.isAlive() && !entity.isSpectator()
+                        && (!(source instanceof ServerPlayer player)
+                        || !PvpSetting.shouldPrevent(player, entity)))) {
             var candidateBox = candidate.getBoundingBox().inflate(0.2);
             var projection = candidateBox.getCenter().subtract(start).dot(direction);
             if (projection < 0.0 || projection > maxRange || !source.hasLineOfSight(candidate)) continue;

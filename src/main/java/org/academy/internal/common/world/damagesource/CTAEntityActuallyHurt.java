@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
@@ -37,15 +36,7 @@ public final class CTAEntityActuallyHurt {
     }
 
     private static ServerPlayer resolveOwnerPlayer(DamageSource source) {
-        var attacker = source.getEntity();
-        if (attacker instanceof ServerPlayer player) return player;
-        var direct = source.getDirectEntity();
-        if (direct instanceof ServerPlayer player) return player;
-        if (direct instanceof Projectile projectile && projectile.getOwner() instanceof ServerPlayer player) {
-            return player;
-        }
-        var owner = FriendlyFireSetting.getOwnerEntity(direct);
-        return owner instanceof ServerPlayer player ? player : null;
+        return PvpSetting.resolveAttacker(source);
     }
 
     public boolean actuallyHurt(DamageSource source, float amount, boolean special) {

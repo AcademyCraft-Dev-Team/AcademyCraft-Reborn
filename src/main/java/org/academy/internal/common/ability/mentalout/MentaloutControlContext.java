@@ -19,6 +19,7 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.util.*;
 
@@ -722,7 +723,8 @@ public final class MentaloutControlContext extends ServerContext {
     private boolean isMisidentificationTargetRetained() {
         if (misidentificationTargetUuid == null) return false;
         var target = player.level().getEntity(misidentificationTargetUuid);
-        return target instanceof LivingEntity living && living.isAlive() && !living.isRemoved();
+        return target instanceof LivingEntity living && living.isAlive() && !living.isRemoved()
+                && !PvpSetting.shouldPrevent(player, living);
     }
 
     private void setMisidentificationTarget(UUID targetUuid) {
@@ -1046,7 +1048,8 @@ public final class MentaloutControlContext extends ServerContext {
                     && !subject.isRemoved()
                     && subject.level() == player.level()
                     && (!(subject instanceof ServerPlayer targetPlayer)
-                    || MentaloutConfig.allowPlayerRoster(player) && !targetPlayer.isSpectator());
+                    || MentaloutConfig.allowPlayerRoster(player) && !targetPlayer.isSpectator()
+                    && !PvpSetting.shouldPrevent(player, targetPlayer));
         }
     }
 

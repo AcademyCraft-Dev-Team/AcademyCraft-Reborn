@@ -38,6 +38,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalControlRuntim
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -110,6 +111,7 @@ public final class PlayerControlSessionManager {
                     ? startMob(controller, mob, roster)
                     : StartResult.INVALID_TARGET;
         }
+        if (PvpSetting.shouldPrevent(controller, subject)) return StartResult.PROTECTED;
         if (subject.isSpectator() || !subject.isAlive() || subject.hasDisconnected()
                 || subject.level() != controller.level()
                 || FriendlyFireSetting.shouldPrevent(controller, subject)) {
@@ -509,6 +511,7 @@ public final class PlayerControlSessionManager {
                 && controller.level() == subject.level()
                 && (session.kind == Kind.PATH || Skills.MENTAL_TAKEOVER.get().isEnabled(controller))
                 && (session.handle == null || !session.handle.isClosed())
+                && (controller == subject || !PvpSetting.shouldPrevent(controller, subject))
                 && (controller == subject || !MentalControlRuntime.isProtectedTarget(subject))
                 && (session.kind == Kind.PATH
                 || controller.distanceToSqr(subject) <= maxDistance * maxDistance);
@@ -580,8 +583,8 @@ public final class PlayerControlSessionManager {
         session.lastIntentTick = now;
         var frame = normalizeDirectFrame(session.subject, packet.frame);
         authorize(session, frame, ++session.authorizedSequence);
-        if (frame.attack()) attack(session.subject, frame);
-        if (frame.use()) useCurrentItem(session.subject, frame);
+        if (frame.attack()) attack(session, frame);
+        if (frame.use()) useCurrentItem(session, frame, InteractionHand.MAIN_HAND);
     }
 
     private static void intent(ServerPlayer sender, IntentPacket packet, MobSession session) {
@@ -625,7 +628,7 @@ public final class PlayerControlSessionManager {
             case USE_OFFHAND -> {
                 if (session.lastOffhandUseTick == now) return;
                 session.lastOffhandUseTick = now;
-                useCurrentItem(session.subject, session.authorizedFrame, InteractionHand.OFF_HAND);
+                useCurrentItem(session, session.authorizedFrame, InteractionHand.OFF_HAND);
             }
         }
     }
@@ -718,24 +721,26 @@ public final class PlayerControlSessionManager {
         ));
     }
 
-    private static void attack(ServerPlayer subject, PlayerControlFrame frame) {
+    private static void attack(Session session, PlayerControlFrame frame) {
+        var subject = session.subject;
         var target = raycastEntity(subject, subject.isCreative() ? 5.0 : 3.0, frame.yaw(), frame.pitch());
-        if (target == null || MentalControlRuntime.attackDecision(subject, target) == AttackDecision.DENY) return;
+        if (target == null || target instanceof LivingEntity living
+                && PvpSetting.shouldPrevent(session.controller, living)
+                || MentalControlRuntime.attackDecision(subject, target) == AttackDecision.DENY) return;
         subject.attack(target);
     }
 
-    private static void useCurrentItem(ServerPlayer subject, PlayerControlFrame frame) {
-        useCurrentItem(subject, frame, InteractionHand.MAIN_HAND);
-    }
-
     private static void useCurrentItem(
-            ServerPlayer subject,
+            Session session,
             PlayerControlFrame frame,
             InteractionHand hand
     ) {
+        var subject = session.subject;
         var range = subject.isCreative() ? 5.0 : 4.5;
         var entity = raycastEntity(subject, range, frame.yaw(), frame.pitch());
         if (entity != null) {
+            if (entity instanceof LivingEntity living
+                    && PvpSetting.shouldPrevent(session.controller, living)) return;
             subject.interactOn(
                     entity,
                     hand,

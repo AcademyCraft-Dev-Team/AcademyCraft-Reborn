@@ -59,6 +59,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -514,7 +515,8 @@ public class MagnetManipulation extends Skill {
                     eye,
                     end,
                     player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0),
-                    entity -> entity != player && entity.isAlive() && !entity.isSpectator(),
+                    entity -> entity != player && entity.isAlive() && !entity.isSpectator()
+                            && !PvpSetting.shouldPrevent(player, entity),
                     0.3f
             );
             if (entityHit != null && eye.distanceToSqr(entityHit.getLocation()) < blockDistance) {

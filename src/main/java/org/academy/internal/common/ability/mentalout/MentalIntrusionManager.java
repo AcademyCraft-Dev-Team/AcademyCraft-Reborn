@@ -25,6 +25,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv1.MentalInterventi
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -77,6 +78,7 @@ public final class MentalIntrusionManager {
                 MentaloutConfig.mentalIntrusionRange(player, level)
         );
         if (target == null) return StartResult.INVALID_TARGET;
+        if (PvpSetting.shouldPrevent(player, target)) return StartResult.PVP_NOTIFIED;
         if (MentalControlRuntime.isProtectedTarget(target)) {
             MentalControlRuntime.notifyProtectionBlocked(player, target);
             return StartResult.PROTECTED_NOTIFIED;
@@ -134,6 +136,7 @@ public final class MentalIntrusionManager {
         if (!intrusion.isEnabled(player)) return null;
         var level = Mth.clamp(intrusion.getLevel(player), 0, 2);
         var range = MentaloutConfig.mentalIntrusionRange(player, level);
+        if (PvpSetting.shouldPrevent(player, target)) return null;
         if (MentalControlRuntime.isProtectedTarget(target)) {
             MentalControlRuntime.notifyProtectionBlocked(player, target);
             return null;
@@ -216,6 +219,7 @@ public final class MentalIntrusionManager {
                 MentalIntervention.selectionRange(player)
         );
         if (target == null) return DistortionResult.INVALID_TARGET;
+        if (PvpSetting.shouldPrevent(player, target)) return DistortionResult.PVP_NOTIFIED;
         if (FriendlyFireSetting.shouldPrevent(player, target)) return DistortionResult.PROTECTED;
         if (MentalControlRuntime.isProtectedTarget(target)) {
             MentalControlRuntime.notifyProtectionBlocked(player, target);
@@ -284,12 +288,14 @@ public final class MentalIntrusionManager {
                     ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(player))
                     : MentaloutConfig.intrusionMaximumDistance(player);
             var protectedTarget = MentalControlRuntime.isProtectedTarget(target);
+            var pvpProtected = PvpSetting.shouldPrevent(player, target);
             if (!player.isAlive()
                     || !Skills.MENTAL_INTRUSION.get().isEnabled(player)
                     || target.isRemoved()
                     || !target.isAlive()
                     || target.level() != player.level()
                     || target.distanceToSqr(player) > maxDistance * maxDistance
+                    || pvpProtected
                     || protectedTarget
                     || !session.confirmed && now >= session.readyDeadline
                     || now >= session.maximumEnd) {
@@ -309,12 +315,14 @@ public final class MentalIntrusionManager {
                     ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(player))
                     : MentaloutConfig.intrusionMaximumDistance(player);
             var protectedTarget = MentalControlRuntime.isProtectedTarget(target);
+            var pvpProtected = PvpSetting.shouldPrevent(player, target);
             if (!player.isAlive()
                     || !Skills.SENSORY_DISTORTION.get().isEnabled(player)
                     || target.isRemoved()
                     || !target.isAlive()
                     || target.level() != player.level()
                     || target.distanceToSqr(player) > maxDistance * maxDistance
+                    || pvpProtected
                     || protectedTarget
                     || session.handle.isClosed()) {
                 if (protectedTarget) MentalControlRuntime.notifyProtectionBlocked(player, target);
@@ -465,6 +473,7 @@ public final class MentalIntrusionManager {
         INVALID_TARGET,
         PROTECTED,
         PROTECTED_NOTIFIED,
+        PVP_NOTIFIED,
         COOLDOWN,
         INSUFFICIENT_CP,
         UNAVAILABLE
@@ -476,6 +485,7 @@ public final class MentalIntrusionManager {
         INVALID_TARGET,
         PROTECTED,
         PROTECTED_NOTIFIED,
+        PVP_NOTIFIED,
         INSUFFICIENT_CP,
         UNAVAILABLE
     }
@@ -497,6 +507,8 @@ public final class MentalIntrusionManager {
                 case PROTECTED -> feedback(player, "message.academy.mentalout.protected_target");
                 case PROTECTED_NOTIFIED -> {
                 }
+                case PVP_NOTIFIED -> {
+                }
                 case COOLDOWN -> feedback(player, "message.academy.mentalout.intrusion_cooldown");
                 case INSUFFICIENT_CP -> feedback(player, "message.academy.mentalout.insufficient_cp");
                 case UNAVAILABLE -> feedback(player, "message.academy.mentalout.skill_unavailable");
@@ -517,6 +529,8 @@ public final class MentalIntrusionManager {
                 case INVALID_TARGET -> feedback(player, "message.academy.mentalout.invalid_target");
                 case PROTECTED -> feedback(player, "message.academy.mentalout.protected_target");
                 case PROTECTED_NOTIFIED -> {
+                }
+                case PVP_NOTIFIED -> {
                 }
                 case INSUFFICIENT_CP -> feedback(player, "message.academy.mentalout.insufficient_cp");
                 case UNAVAILABLE -> feedback(player, "message.academy.mentalout.skill_unavailable");

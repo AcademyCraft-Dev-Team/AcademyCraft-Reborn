@@ -11,6 +11,7 @@ import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.util.Comparator;
 import java.util.List;
@@ -101,6 +102,7 @@ final class PrecisionProgramTargetResolver implements ProgramTargetResolver {
                         player,
                         new AABB(origin, origin).inflate(boundedRadius),
                         entity -> entity.isAlive() && !entity.isRemoved() && !entity.isSpectator()
+                                && !PvpSetting.shouldPrevent(player, entity)
                 ).stream()
                 .sorted(Comparator.comparing(entity -> entity.getUUID().toString()))
                 .limit(MAX_QUERY_RESULTS)
@@ -197,6 +199,7 @@ final class PrecisionProgramTargetResolver implements ProgramTargetResolver {
                         && entity.isAlive()
                         && !entity.isRemoved()
                         && !entity.isSpectator()
+                        && !PvpSetting.shouldPrevent(player, entity)
                         && entity.isPickable(),
                 0.3f
         );

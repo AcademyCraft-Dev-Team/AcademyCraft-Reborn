@@ -20,6 +20,7 @@ import org.academy.internal.common.network.MusicSyncPackets;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
 import org.academy.internal.server.world.level.storage.Player;
@@ -75,6 +76,7 @@ public final class AcademyCraftServer {
         worldData = WorldData.getWorldData(worldDataFile);
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
         WirelessManager.initServer();
+        PvpSetting.initServer();
         FriendlyFireSetting.initServer();
         DestroyBlocksSetting.initServer();
         ProficiencySkillSettings.initServer();

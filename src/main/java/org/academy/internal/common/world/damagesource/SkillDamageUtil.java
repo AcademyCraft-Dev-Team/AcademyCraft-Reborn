@@ -33,6 +33,7 @@ public final class SkillDamageUtil {
         if (target == attacker || DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)) {
             return false;
         }
+        if (PvpSetting.shouldPrevent(attacker, target)) return false;
         if (!(target.level() instanceof ServerLevel level)) return false;
 
         var source = SkillDamageSource.of(attacker, skill, type);
@@ -50,6 +51,7 @@ public final class SkillDamageUtil {
         if (DarkmatterTargeting.isNetworkMember(target)
                 && DarkmatterTargeting.isDarkmatterDamage(source)) return false;
         if (!(source.getEntity() instanceof ServerPlayer attacker)) return false;
+        if (PvpSetting.shouldPrevent(attacker, target)) return false;
         if (DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)) {
             return false;
         }

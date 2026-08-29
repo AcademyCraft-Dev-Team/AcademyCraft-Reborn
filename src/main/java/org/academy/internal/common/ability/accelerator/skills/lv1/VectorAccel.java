@@ -53,6 +53,7 @@ import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -502,6 +503,7 @@ public final class VectorAccel extends Skill {
                     LivingEntity.class,
                     player.getBoundingBox().inflate(0.45),
                     entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity)
+                            && !PvpSetting.shouldPrevent(player, entity)
             ).stream().findFirst().orElse(null);
             if (target == null) return;
             TimedSkillEffectRuntime.consume(
