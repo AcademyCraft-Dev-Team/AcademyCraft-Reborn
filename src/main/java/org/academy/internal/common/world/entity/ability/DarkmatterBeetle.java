@@ -45,6 +45,7 @@ import org.academy.api.common.ability.darkmatter.DarkmatterCreaturePartType;
 import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
@@ -277,7 +278,7 @@ public final class DarkmatterBeetle extends Monster {
     public boolean isOwnerAlly(Entity entity) {
         var owner = getOwnerPlayer();
         if (owner == null || entity == null) return false;
-        if (entity == owner || owner.isAlliedTo(entity)) return true;
+        if (entity == owner || TeamRelations.areAllied(owner, entity)) return true;
         return entity instanceof DarkmatterBeetle beetle
                 && beetle.getOwnerUUID().filter(owner.getUUID()::equals).isPresent();
     }

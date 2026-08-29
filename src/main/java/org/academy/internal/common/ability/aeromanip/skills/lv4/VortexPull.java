@@ -23,6 +23,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.ProficiencyPolicy;
@@ -306,7 +307,7 @@ public final class VortexPull extends Skill {
         private static boolean isFriendlyProjectile(ServerPlayer owner, Projectile projectile) {
             var projectileOwner = projectile.getOwner();
             return projectileOwner == owner
-                    || projectileOwner != null && owner.isAlliedTo(projectileOwner);
+                    || projectileOwner != null && TeamRelations.areAllied(owner, projectileOwner);
         }
 
         private static final class ProjectileCapture {

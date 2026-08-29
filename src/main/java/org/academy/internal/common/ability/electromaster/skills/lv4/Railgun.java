@@ -40,6 +40,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
 import org.academy.api.server.sync.ServerSyncManager;
@@ -607,7 +608,7 @@ public final class Railgun extends Skill {
                                                    Entity primary) {
                 var source = SkillDamageSource.of(owner, Skills.RAILGUN.get());
                 for (var target : owner.level().getEntities(owner, new AABB(center, center).inflate(4.0),
-                        entity -> entity.isAlive() && entity != primary && !owner.isAlliedTo(entity)
+                        entity -> entity.isAlive() && entity != primary && !TeamRelations.areAllied(owner, entity)
                                 && !PvpSetting.shouldPrevent(owner, entity))) {
                     target.hurtServer(owner.level(), source, damage);
                     var away = target.position().subtract(center);

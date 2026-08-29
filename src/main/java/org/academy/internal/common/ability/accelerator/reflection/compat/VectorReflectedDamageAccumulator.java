@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSources;
 import org.jetbrains.annotations.Nullable;
@@ -183,7 +184,7 @@ public final class VectorReflectedDamageAccumulator {
                 && target.level() == redirector.level()
                 && amount > 0.0f
                 && Float.isFinite(amount)
-                && !redirector.isAlliedTo(target)
+                && !TeamRelations.areAllied(redirector, target)
                 && !CtaFriendlyFireWhitelist.shouldProtect(redirector, target);
     }
 

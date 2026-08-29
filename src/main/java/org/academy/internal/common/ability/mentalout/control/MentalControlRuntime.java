@@ -8,6 +8,7 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalControlMemory;
 import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
@@ -400,7 +401,7 @@ public final class MentalControlRuntime {
             var protectsDestination = guardDirective.destination() instanceof ControlDestination.Entity(var uuid)
                     && uuid.equals(target.getUUID());
             var protectsController = controller != null && (target == controller
-                    || controller.isAlliedTo(target)
+                    || TeamRelations.areAllied(controller, target)
                     || FriendlyFireSetting.shouldPrevent(controller, target));
             if (protectsDestination || protectsController) return AttackDecision.DENY;
             return target.getUUID().equals(selectedGuardTarget)

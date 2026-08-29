@@ -26,6 +26,7 @@ import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -176,7 +177,7 @@ public final class BreathingBubble extends Skill {
 
             var sharedTargets = skill.hasProficiencyMilestone(player, 2)
                     ? player.level().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(4.0),
-                    target -> target != player && target.isAlive() && player.isAlliedTo(target)
+                    target -> target != player && target.isAlive() && TeamRelations.areAllied(player, target)
                             && target.distanceToSqr(player) <= 16.0 && isHazardous(target))
                     : List.<ServerPlayer>of();
             var hazardous = isHazardous(player);
@@ -289,7 +290,7 @@ public final class BreathingBubble extends Skill {
 
         private static boolean isSupportedTarget(ServerPlayer owner, LivingEntity target) {
             if (target == owner) return true;
-            if (target instanceof Player) return owner.isAlliedTo(target);
+            if (target instanceof Player) return TeamRelations.areAllied(owner, target);
             return target instanceof TamableAnimal animal && animal.isOwnedBy(owner);
         }
     }

@@ -20,6 +20,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -212,7 +213,7 @@ public class ThunderLance extends Skill {
             var target = level.getEntitiesOfClass(LivingEntity.class,
                             origin.getBoundingBox().inflate(6.0), candidate -> candidate != player
                                     && !hits.contains(candidate) && candidate.isAlive()
-                                    && !player.isAlliedTo(candidate)
+                                    && !TeamRelations.areAllied(player, candidate)
                                     && !PvpSetting.shouldPrevent(player, candidate))
                     .stream().min(Comparator.comparingDouble(origin::distanceToSqr)).orElse(null);
             if (target != null) {

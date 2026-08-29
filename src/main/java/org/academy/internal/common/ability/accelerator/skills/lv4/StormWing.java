@@ -30,6 +30,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -332,7 +333,8 @@ public final class StormWing extends Skill {
                 for (var ally : player.level().getEntitiesOfClass(
                         LivingEntity.class,
                         area,
-                        entity -> entity != player && entity.isAlive() && player.isAlliedTo(entity))) {
+                        entity -> entity != player && entity.isAlive()
+                                && TeamRelations.areAllied(player, entity))) {
                     if (TimedSkillEffectRuntime.get(
                             player.getUUID(), ally.getUUID(), skill,
                             "turbulence_ally", now).isPresent()) continue;

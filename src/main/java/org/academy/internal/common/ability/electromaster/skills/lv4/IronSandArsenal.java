@@ -31,6 +31,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfx.ElectromasterWeaponVfx;
 import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
@@ -247,7 +248,7 @@ public class IronSandArsenal extends Skill {
                         LivingEntity.class,
                         player.getBoundingBox().inflate(proximityRadius),
                         entity -> entity != player && entity.isAlive()
-                                && entity instanceof Enemy && !player.isAlliedTo(entity)
+                                && entity instanceof Enemy && !TeamRelations.areAllied(player, entity)
                 )) {
                     if (hitCooldowns.containsKey(target.getId())) continue;
                     if (target.hurtServer(level, SkillDamageSource.of(player, skill),
@@ -290,7 +291,7 @@ public class IronSandArsenal extends Skill {
             for (var target : level.getEntitiesOfClass(
                     LivingEntity.class,
                     player.getBoundingBox().inflate(sweepRadius),
-                    entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity)
+                    entity -> entity != player && entity.isAlive() && !TeamRelations.areAllied(player, entity)
                             && !PvpSetting.shouldPrevent(player, entity)
             )) {
                 var delta = target.position().subtract(player.position());

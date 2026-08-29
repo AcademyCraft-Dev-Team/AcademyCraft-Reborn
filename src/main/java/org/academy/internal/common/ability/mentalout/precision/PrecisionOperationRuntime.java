@@ -18,6 +18,7 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.ability.program.*;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
 import org.academy.internal.common.ability.mentalout.MentaloutConfig;
@@ -1455,7 +1456,7 @@ public final class PrecisionOperationRuntime {
     }
 
     private static boolean isAlly(ServerPlayer player, Entity entity) {
-        return entity == player || player.isAlliedTo(entity)
+        return entity == player || TeamRelations.areAllied(player, entity)
                 || entity instanceof LivingEntity living
                 && FriendlyFireSetting.shouldPrevent(player, living);
     }

@@ -35,6 +35,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -201,9 +202,9 @@ public final class DefensiveTeleport extends Skill {
                 if (entity == player || !entity.isAlive() || entity.isRemoved()) return false;
                 if (entity instanceof Projectile projectile) {
                     var owner = projectile.getOwner();
-                    return owner != player && (!player.isAlliedTo(owner));
+                    return owner != player && !TeamRelations.areAllied(player, owner);
                 }
-                if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
+                if (!(entity instanceof LivingEntity living) || TeamRelations.areAllied(player, living)) return false;
                 if (PvpSetting.shouldPrevent(player, living)) return false;
                 if (living instanceof Player target) {
                     return !target.isCreative() && !target.isSpectator();
@@ -329,9 +330,9 @@ public final class DefensiveTeleport extends Skill {
             if (!EntityMotionGuard.canApplyMotionFrom(player, entity)) return false;
             if (entity instanceof Projectile projectile) {
                 var owner = projectile.getOwner();
-                return owner != player && (!player.isAlliedTo(owner));
+                return owner != player && !TeamRelations.areAllied(player, owner);
             }
-            if (!(entity instanceof LivingEntity living) || player.isAlliedTo(living)) return false;
+            if (!(entity instanceof LivingEntity living) || TeamRelations.areAllied(player, living)) return false;
             if (PvpSetting.shouldPrevent(player, living)) return false;
             if (living instanceof ServerPlayer target) {
                 return !target.isCreative() && !target.isSpectator();
