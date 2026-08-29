@@ -42,6 +42,7 @@ import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
 import org.academy.internal.common.ability.program.ProgramEditorDocument;
 import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
+import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
 
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
@@ -161,6 +162,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private ConnectionDrag connection;
     private QuickInsert quickInsert;
     private PrecisionGraph.Diagnostic serverDiagnostic = PrecisionGraph.Diagnostic.OK;
+    private ProgramVmDiagnostic serverVmDiagnostic = ProgramVmDiagnostic.NONE;
     private int serverDiagnosticNode = -1;
     private PrecisionGraph.Diagnostic transientDiagnostic = PrecisionGraph.Diagnostic.OK;
     private long transientUntil;
@@ -327,16 +329,24 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             long serverRevision,
             ProgramDiagnosticCode diagnostic,
             int nodeId,
+            ProgramVmDiagnostic vmDiagnostic,
             boolean clearDiagnostic
     ) {
         revision = Math.max(revision, serverRevision);
         if (slot != resultSlot) return;
         if (diagnostic != null) {
             serverDiagnostic = mapDiagnostic(diagnostic);
+            serverVmDiagnostic = ProgramVmDiagnostic.NONE;
             serverDiagnosticNode = nodeId;
             showTransient(serverDiagnostic);
+        } else if (vmDiagnostic != null && vmDiagnostic != ProgramVmDiagnostic.NONE) {
+            serverDiagnostic = PrecisionGraph.Diagnostic.ACTION_FAILED;
+            serverVmDiagnostic = vmDiagnostic;
+            serverDiagnosticNode = nodeId;
+            transientUntil = 0L;
         } else if (clearDiagnostic) {
             serverDiagnostic = PrecisionGraph.Diagnostic.OK;
+            serverVmDiagnostic = ProgramVmDiagnostic.NONE;
             serverDiagnosticNode = -1;
         }
     }
@@ -353,12 +363,14 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (slot != resultSlot) return;
         if (type == PrecisionOperationManager.FeedbackType.ERROR) {
             serverDiagnostic = result;
+            serverVmDiagnostic = ProgramVmDiagnostic.NONE;
             serverDiagnosticNode = nodeId;
             showTransient(result);
         } else if (type == PrecisionOperationManager.FeedbackType.STARTED
                 || type == PrecisionOperationManager.FeedbackType.COMPLETED
                 && session.diagnostic(slot) == PrecisionGraph.Diagnostic.OK) {
             serverDiagnostic = PrecisionGraph.Diagnostic.OK;
+            serverVmDiagnostic = ProgramVmDiagnostic.NONE;
             serverDiagnosticNode = -1;
         }
     }
@@ -760,7 +772,10 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 : local == null ? PrecisionGraph.Diagnostic.OK : mapDiagnostic(local.code());
         var nodeId = serverDiagnostic != PrecisionGraph.Diagnostic.OK
                 ? serverDiagnosticNode : local == null ? -1 : local.nodeId();
-        var text = Component.translatable(shown.translationKey()).getString();
+        var text = serverVmDiagnostic != ProgramVmDiagnostic.NONE
+                && shown == serverDiagnostic
+                ? Component.translatable(serverVmDiagnostic.translationKey()).getString()
+                : Component.translatable(shown.translationKey()).getString();
         if (nodeId >= 0) text += "  [#" + nodeId + "]";
         smallText(graphics, text, panelX + 4, panelY + panelH - 11,
                 shown == PrecisionGraph.Diagnostic.OK ? DIM : ERROR, panelW - 8);
@@ -874,8 +889,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 ? serverDiagnosticNode : localError == null ? -1 : localError.nodeId();
         for (var node : reversed(nodes())) {
             if (!insideNode(mouseX, mouseY, node)) continue;
-            var error = node.id() != errorNode ? null : localError == null
-                    ? Component.translatable(serverDiagnostic.translationKey()).getString()
+            var error = node.id() != errorNode ? null
+                    : serverDiagnostic != PrecisionGraph.Diagnostic.OK
+                    ? serverDiagnosticText()
                     : localDiagnostic(node, localError).getString();
             return tooltipLines(node.entry, error);
         }
@@ -1717,6 +1733,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         quickInsert = null;
         configurationInputValidity.clear();
         serverDiagnostic = session.diagnostic(slot);
+        serverVmDiagnostic = ProgramVmDiagnostic.NONE;
         serverDiagnosticNode = session.diagnosticNode(slot);
         session.updateLocalProgram(slot, document.program());
     }
@@ -1727,8 +1744,16 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         if (clearServerDiagnostic) {
             session.clearDiagnostic(slot);
             serverDiagnostic = PrecisionGraph.Diagnostic.OK;
+            serverVmDiagnostic = ProgramVmDiagnostic.NONE;
             serverDiagnosticNode = -1;
         }
+    }
+
+    private String serverDiagnosticText() {
+        var key = serverVmDiagnostic == ProgramVmDiagnostic.NONE
+                ? serverDiagnostic.translationKey()
+                : serverVmDiagnostic.translationKey();
+        return Component.translatable(key).getString();
     }
 
     private ProgramEditorDocument document(AbilityProgram program) {

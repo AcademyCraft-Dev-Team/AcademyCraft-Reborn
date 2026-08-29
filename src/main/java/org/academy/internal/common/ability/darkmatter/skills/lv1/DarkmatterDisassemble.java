@@ -202,19 +202,34 @@ public final class DarkmatterDisassemble extends Skill {
                 BlockPos position,
                 double maximumRange
         ) {
+            return programBlockDestroyStatus(player, position, maximumRange)
+                    == ProgramBlockDestroyStatus.ALLOWED;
+        }
+
+        public static ProgramBlockDestroyStatus programBlockDestroyStatus(
+                ServerPlayer player,
+                BlockPos position,
+                double maximumRange
+        ) {
             if (player == null
                     || position == null
                     || !Double.isFinite(maximumRange)
                     || maximumRange <= 0.0
                     || maximumRange > RANGE
-                    || !(player.level() instanceof ServerLevel level)
-                    || Vec3.atCenterOf(position).distanceToSqr(player.getEyePosition())
-                    > maximumRange * maximumRange
-                    || !DestroyBlocksSetting.canDestroyBlocks(
-                    player, Skills.DARKMATTER_DISASSEMBLE.get())) {
-                return false;
+                    || !(player.level() instanceof ServerLevel level)) {
+                return ProgramBlockDestroyStatus.INVALID_TARGET;
             }
-            return canDestroy(level, player, position);
+            if (Vec3.atCenterOf(position).distanceToSqr(player.getEyePosition())
+                    > maximumRange * maximumRange) {
+                return ProgramBlockDestroyStatus.OUT_OF_RANGE;
+            }
+            if (!DestroyBlocksSetting.canDestroyBlocks(
+                    player, Skills.DARKMATTER_DISASSEMBLE.get())) {
+                return ProgramBlockDestroyStatus.DESTRUCTION_DISABLED;
+            }
+            return canDestroy(level, player, position)
+                    ? ProgramBlockDestroyStatus.ALLOWED
+                    : ProgramBlockDestroyStatus.UNBREAKABLE_OR_PROTECTED;
         }
 
         public static boolean tryProgramDestroyBlock(
@@ -241,6 +256,8 @@ public final class DarkmatterDisassemble extends Skill {
                         fortuneLevel(phase.beta()),
                         context.milestone() >= 3);
                 if (destroyed[0]) {
+                    moveNearbyDropsToPlayer(
+                            level, player, Vec3.atCenterOf(position), 1.5);
                     player.level().playSound(
                             null,
                             position,
@@ -530,14 +547,12 @@ public final class DarkmatterDisassemble extends Skill {
                     }
                 }
                 if (!applied[0]) return;
-                for (var item : level.getEntitiesOfClass(
-                        ItemEntity.class,
-                        new AABB(impact, impact).inflate(
-                                phase.gamma() > 0.0f ? 2.0 + phase.gamma() : 1.5),
-                        ItemEntity::isAlive)) {
-                    item.teleportTo(player.getX(), player.getY() + 0.5, player.getZ());
-                    item.setDeltaMovement(Vec3.ZERO);
-                }
+                moveNearbyDropsToPlayer(
+                        level,
+                        player,
+                        impact,
+                        phase.gamma() > 0.0f ? 2.0 + phase.gamma() : 1.5
+                );
                 level.playSound(null, BlockPos.containing(impact), SoundEvents.GRAVEL_BREAK,
                         SoundSource.PLAYERS, 1.0f, 0.9f);
             });
@@ -716,6 +731,29 @@ public final class DarkmatterDisassemble extends Skill {
                 if (!drop.isEmpty()) Block.popResource(level, pos, drop);
             }
             return true;
+        }
+
+        private static void moveNearbyDropsToPlayer(
+                ServerLevel level,
+                ServerPlayer player,
+                Vec3 center,
+                double radius
+        ) {
+            for (var item : level.getEntitiesOfClass(
+                    ItemEntity.class,
+                    new AABB(center, center).inflate(radius),
+                    ItemEntity::isAlive)) {
+                item.teleportTo(player.getX(), player.getY() + 0.5, player.getZ());
+                item.setDeltaMovement(Vec3.ZERO);
+            }
+        }
+
+        public enum ProgramBlockDestroyStatus {
+            ALLOWED,
+            INVALID_TARGET,
+            OUT_OF_RANGE,
+            DESTRUCTION_DISABLED,
+            UNBREAKABLE_OR_PROTECTED
         }
 
         public static ItemStack createLootTool(RegistryAccess access, int fortune) {
