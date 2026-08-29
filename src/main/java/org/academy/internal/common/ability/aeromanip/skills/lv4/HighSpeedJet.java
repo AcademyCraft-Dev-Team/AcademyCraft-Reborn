@@ -303,26 +303,7 @@ public final class HighSpeedJet extends Skill {
             if (target instanceof BlockPlacement block
                     && !level.getBlockState(block.pos())
                     .isFaceSturdy(level, block.pos(), block.face())) return;
-            skill.executeActiveWithResource(
-                    player,
-                    _ -> 18.0f * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET),
-                    _ -> 12.0f,
-                    (_, _) -> {
-                        var nozzle = new HighSpeedJetNozzle(
-                                EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), level);
-                        if (target instanceof BlockPlacement block) {
-                            nozzle.attach(player.getUUID(), block.pos(), block.face());
-                        } else if (target instanceof EntityPlacement entity) {
-                            nozzle.attach(
-                                    player.getUUID(),
-                                    entity.entity(),
-                                    towardPlayerDirection(
-                                            player.getEyePosition(),
-                                            entity.entity().getBoundingBox(),
-                                            player.getLookAngle()));
-                        }
-                        level.addFreshEntity(nozzle);
-                    });
+            tryPlaceNozzle(player, target, false, null, 1.0f);
         }
 
         @SubscribePacket
@@ -348,7 +329,134 @@ public final class HighSpeedJet extends Skill {
                     (_, _) -> resolvedNozzles.forEach(nozzle -> nozzle.activate(duration)));
         }
 
-        private static List<HighSpeedJetNozzle> ownedNozzles(
+        /**
+         * Places a non-persistent program nozzle on the requested block face.
+         * The direction is reduced to its dominant world axis so it maps to one block face.
+         */
+        public static HighSpeedJetNozzle placeTemporaryBlockNozzle(
+                ServerPlayer player,
+                BlockPos supportPos,
+                Vec3 direction,
+                float costMultiplier
+        ) {
+            var face = nearestFace(direction);
+            return requirePlacedNozzle(player,
+                    new BlockPlacement(supportPos.immutable(), face),
+                    true,
+                    direction,
+                    costMultiplier);
+        }
+
+        /** Places a non-persistent program nozzle on an entity, aimed in the supplied direction. */
+        public static HighSpeedJetNozzle placeTemporaryEntityNozzle(
+                ServerPlayer player,
+                Entity support,
+                Vec3 direction,
+                float costMultiplier
+        ) {
+            if (support == null || !support.isAlive() || support.isRemoved()
+                    || support.level() != player.level()
+                    || support instanceof HighSpeedJetNozzle) {
+                throw new IllegalArgumentException("Entity cannot support a temporary jet nozzle");
+            }
+            return requirePlacedNozzle(player,
+                    new EntityPlacement(support),
+                    true,
+                    normalizedDirection(direction),
+                    costMultiplier);
+        }
+
+        /** Activates every currently retained nozzle owned by the player. */
+        public static List<HighSpeedJetNozzle> activateOwnedNozzles(
+                ServerPlayer player,
+                int durationTicks,
+                float costMultiplier
+        ) {
+            if (!(player.level() instanceof ServerLevel level)
+                    || !Skills.HIGH_SPEED_JET.get().isEnabled(player)) {
+                throw new IllegalStateException("High-Speed Jet is unavailable");
+            }
+            if (durationTicks < 1 || durationTicks > 60 * 20) {
+                throw new IllegalArgumentException("Jet duration must be between 1 and 1200 ticks");
+            }
+            requireCostMultiplier(costMultiplier);
+            var nozzles = List.copyOf(ownedNozzles(level, player));
+            if (nozzles.isEmpty()) {
+                throw new IllegalStateException("No owned jet nozzles are available");
+            }
+            var skill = Skills.HIGH_SPEED_JET.get();
+            var activated = skill.executeActiveWithResource(
+                    player,
+                    _ -> activationCpCost(nozzles.size())
+                            * costMultiplier
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET),
+                    _ -> activationAirCost(nozzles.size()),
+                    (_, _) -> nozzles.forEach(nozzle -> nozzle.activate(durationTicks)));
+            if (!activated) throw new IllegalStateException("Jet activation was rejected");
+            return nozzles;
+        }
+
+        private static HighSpeedJetNozzle requirePlacedNozzle(
+                ServerPlayer player,
+                PlacementTarget target,
+                boolean temporary,
+                Vec3 suppliedDirection,
+                float costMultiplier
+        ) {
+            var nozzle = tryPlaceNozzle(
+                    player, target, temporary, suppliedDirection, costMultiplier);
+            if (nozzle == null) {
+                throw new IllegalStateException("Jet nozzle placement was rejected");
+            }
+            return nozzle;
+        }
+
+        private static HighSpeedJetNozzle tryPlaceNozzle(
+                ServerPlayer player,
+                PlacementTarget target,
+                boolean temporary,
+                Vec3 suppliedDirection,
+                float costMultiplier
+        ) {
+            if (!(player.level() instanceof ServerLevel level)
+                    || !Skills.HIGH_SPEED_JET.get().isEnabled(player)
+                    || target == null) return null;
+            requireCostMultiplier(costMultiplier);
+            var loaded = ownedNozzles(level, player);
+            if (loaded.stream().anyMatch(nozzle -> matches(nozzle, target))) return null;
+            if (loaded.size() >= resolvedMaximumNozzles(
+                    player, Skills.HIGH_SPEED_JET.get())) return null;
+            if (target instanceof BlockPlacement block
+                    && !level.getBlockState(block.pos())
+                    .isFaceSturdy(level, block.pos(), block.face())) return null;
+            var placed = new HighSpeedJetNozzle[1];
+            var skill = Skills.HIGH_SPEED_JET.get();
+            var executed = skill.executeActiveWithResource(
+                    player,
+                    _ -> 18.0f * costMultiplier
+                            * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET),
+                    _ -> 12.0f,
+                    (_, _) -> {
+                        var nozzle = new HighSpeedJetNozzle(
+                                EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), level);
+                        if (target instanceof BlockPlacement block) {
+                            nozzle.attach(player.getUUID(), block.pos(), block.face());
+                        } else if (target instanceof EntityPlacement entity) {
+                            var direction = suppliedDirection == null
+                                    ? towardPlayerDirection(
+                                    player.getEyePosition(),
+                                    entity.entity().getBoundingBox(),
+                                    player.getLookAngle())
+                                    : normalizedDirection(suppliedDirection);
+                            nozzle.attach(player.getUUID(), entity.entity(), direction);
+                        }
+                        if (temporary) nozzle.markTemporary();
+                        if (level.addFreshEntity(nozzle)) placed[0] = nozzle;
+                    });
+            return executed ? placed[0] : null;
+        }
+
+        public static List<HighSpeedJetNozzle> ownedNozzles(
                 ServerLevel level,
                 ServerPlayer player
         ) {
@@ -375,6 +483,36 @@ public final class HighSpeedJet extends Skill {
             return target instanceof EntityPlacement entity
                     && nozzle.isAttachedTo(entity.entity());
         }
+
+        private static float requireCostMultiplier(float multiplier) {
+            if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+                throw new IllegalArgumentException("Program cost multiplier must be positive");
+            }
+            return multiplier;
+        }
+    }
+
+    public static Direction nearestFace(Vec3 direction) {
+        var normalized = normalizedDirection(direction);
+        var absX = Math.abs(normalized.x);
+        var absY = Math.abs(normalized.y);
+        var absZ = Math.abs(normalized.z);
+        if (absY >= absX && absY >= absZ) {
+            return normalized.y >= 0.0 ? Direction.UP : Direction.DOWN;
+        }
+        if (absX >= absZ) return normalized.x >= 0.0 ? Direction.EAST : Direction.WEST;
+        return normalized.z >= 0.0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    private static Vec3 normalizedDirection(Vec3 direction) {
+        if (direction == null
+                || !Double.isFinite(direction.x)
+                || !Double.isFinite(direction.y)
+                || !Double.isFinite(direction.z)
+                || direction.lengthSqr() <= 1.0e-8) {
+            throw new IllegalArgumentException("Jet nozzle direction is invalid");
+        }
+        return direction.normalize();
     }
 
     private static PlacementTarget resolvePlacementTarget(Player player, float partialTick) {

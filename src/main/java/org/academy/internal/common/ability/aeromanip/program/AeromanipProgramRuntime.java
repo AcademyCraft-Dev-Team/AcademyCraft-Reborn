@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.aeromanip.program;
 
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
+import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 
 import java.util.Optional;
@@ -22,6 +23,15 @@ public interface AeromanipProgramRuntime extends ProgramTargetResolver {
 
     ProgramActionTransaction.ProgramAction laminarCut(
             ProgramDirection direction,
-            float power
+            float power,
+            AeromanipChargeTier chargeTier
     );
+
+    ProgramActionTransaction.ProgramAction placeTemporaryJetNozzle(
+            Object target,
+            ProgramDirection direction,
+            AeromanipProgramNodeCatalog.NozzleTargetType targetType
+    );
+
+    ProgramActionTransaction.ProgramAction fireJets(int durationSeconds);
 }

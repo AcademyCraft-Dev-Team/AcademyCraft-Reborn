@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.aeromanip.skills.lv4;
 
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.Direction;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,6 +44,16 @@ class HighSpeedJetTest {
         assertEquals(1.0, thrust.x, 1.0e-9);
         assertEquals(0.0, thrust.y, 1.0e-9);
         assertEquals(0.0, thrust.z, 1.0e-9);
+    }
+
+    @Test
+    void temporaryBlockNozzleUsesTheDominantDirectionAsItsFace() {
+        assertEquals(Direction.UP,
+                HighSpeedJet.nearestFace(new Vec3(0.1, 0.9, -0.2)));
+        assertEquals(Direction.WEST,
+                HighSpeedJet.nearestFace(new Vec3(-4.0, 0.0, 1.0)));
+        assertEquals(Direction.SOUTH,
+                HighSpeedJet.nearestFace(new Vec3(0.0, -0.1, 2.0)));
     }
 
     @Test

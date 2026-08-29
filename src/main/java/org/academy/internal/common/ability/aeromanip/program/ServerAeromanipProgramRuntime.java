@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.aeromanip.program;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -12,14 +13,18 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -105,7 +110,8 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public ProgramActionTransaction.ProgramAction laminarCut(
             ProgramDirection direction,
-            float power
+            float power,
+            AeromanipChargeTier chargeTier
     ) {
         return new ProgramActionTransaction.ProgramAction() {
             private Vec3 normalizedDirection;
@@ -125,11 +131,75 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                         normalizedDirection,
                         laminarRange(power),
                         laminarDamageScale(power),
-                        laminarCost(power) * costMultiplier
+                        laminarCost(power) * costMultiplier,
+                        chargeTier
                 )) {
                     throw new IllegalStateException("Laminar Cutter program cast was rejected");
                 }
                 return ProgramActionTransaction.Undo.NONE;
+            }
+        };
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction placeTemporaryJetNozzle(
+            Object targetReference,
+            ProgramDirection direction,
+            AeromanipProgramNodeCatalog.NozzleTargetType targetType
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private Vec3 normalizedDirection;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.HIGH_SPEED_JET.get());
+                normalizedDirection = normalizedVector(direction);
+                requireNozzleTarget(targetReference, targetType);
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                requireCasterReady(Skills.HIGH_SPEED_JET.get());
+                normalizedDirection = normalizedVector(direction);
+                var target = requireNozzleTarget(targetReference, targetType);
+                var nozzle = targetType == AeromanipProgramNodeCatalog.NozzleTargetType.ENTITY
+                        ? HighSpeedJet.Server.placeTemporaryEntityNozzle(
+                        player, (Entity) target, normalizedDirection, costMultiplier)
+                        : HighSpeedJet.Server.placeTemporaryBlockNozzle(
+                        player, (BlockPos) target, normalizedDirection, costMultiplier);
+                return () -> {
+                    if (!nozzle.isRemoved()) nozzle.discard();
+                };
+            }
+        };
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction fireJets(int durationSeconds) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private int durationTicks;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.HIGH_SPEED_JET.get());
+                durationTicks = requireJetDuration(durationSeconds);
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                requireCasterReady(Skills.HIGH_SPEED_JET.get());
+                durationTicks = requireJetDuration(durationSeconds);
+                var previousTicks = new LinkedHashMap<HighSpeedJetNozzle, Integer>();
+                for (var nozzle : HighSpeedJet.Server.ownedNozzles(targets.level(), player)) {
+                    previousTicks.put(nozzle, nozzle.activeTicks());
+                }
+                var activated = HighSpeedJet.Server.activateOwnedNozzles(
+                        player, durationTicks, costMultiplier);
+                return () -> activated.forEach(nozzle -> {
+                    if (!nozzle.isRemoved()) {
+                        nozzle.restoreActiveTicks(previousTicks.getOrDefault(nozzle, 0));
+                    }
+                });
             }
         };
     }
@@ -170,8 +240,8 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private Entity requirePushTarget(Object value, double range) {
         if (!(value instanceof Entity entity)
                 || !targets.sameUsableLevel(entity)
-                || !AeromanipTargeting.canAffectNegatively(player, entity)
-                || AeromanipTargeting.isBoss(entity)
+                || (entity != player && (!AeromanipTargeting.canAffectNegatively(player, entity)
+                || AeromanipTargeting.isBoss(entity)))
                 || entity.distanceToSqr(player) > range * range) {
             throw new IllegalArgumentException("Entity cannot be pushed by this program");
         }
@@ -182,6 +252,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     }
 
     private double requireForceMultiplier(Entity target) {
+        if (target == player) return 1.0;
         var multiplier = AeromanipTargeting.forceMultiplier(player, target);
         if (!Double.isFinite(multiplier) || multiplier <= 0.0) {
             throw new IllegalArgumentException("Airflow has no permitted force for this target");
@@ -235,6 +306,54 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private static Vec3 vector(ProgramDirection direction) {
         Objects.requireNonNull(direction, "direction");
         return new Vec3(direction.x(), direction.y(), direction.z());
+    }
+
+    private Object requireNozzleTarget(
+            Object targetReference,
+            AeromanipProgramNodeCatalog.NozzleTargetType targetType
+    ) {
+        Objects.requireNonNull(targetType, "targetType");
+        if (targetType == AeromanipProgramNodeCatalog.NozzleTargetType.ENTITY) {
+            if (!(targetReference instanceof Entity entity)
+                    || !targets.sameUsableLevel(entity)
+                    || entity instanceof HighSpeedJetNozzle
+                    || entity.distanceToSqr(player) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+                throw new IllegalArgumentException(
+                        "Entity cannot support a temporary jet nozzle");
+            }
+            return entity;
+        }
+        if (!(targetReference instanceof ProgramBlockPosition block)) {
+            throw new IllegalArgumentException("Temporary nozzle block target is invalid");
+        }
+        var center = targets.requireLocalPosition(new ProgramWorldPosition(
+                block.dimension(), block.x() + 0.5, block.y() + 0.5, block.z() + 0.5));
+        if (center.distanceToSqr(player.position()) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+            throw new IllegalArgumentException("Temporary nozzle block is outside program range");
+        }
+        var pos = new BlockPos(block.x(), block.y(), block.z());
+        if (!targets.level().hasChunkAt(pos)) {
+            throw new IllegalArgumentException("Temporary nozzle block is not loaded");
+        }
+        return pos;
+    }
+
+    private static int requireJetDuration(int durationSeconds) {
+        if (durationSeconds < 1 || durationSeconds > 60) {
+            throw new IllegalArgumentException("Jet duration must be between 1 and 60 seconds");
+        }
+        return durationSeconds * 20;
+    }
+
+    private static Vec3 normalizedVector(ProgramDirection direction) {
+        var value = vector(direction);
+        if (!Double.isFinite(value.x)
+                || !Double.isFinite(value.y)
+                || !Double.isFinite(value.z)
+                || value.lengthSqr() <= 1.0e-12) {
+            throw new IllegalArgumentException("Direction is invalid");
+        }
+        return value.normalize();
     }
 
     private static double pushRange(float power) {

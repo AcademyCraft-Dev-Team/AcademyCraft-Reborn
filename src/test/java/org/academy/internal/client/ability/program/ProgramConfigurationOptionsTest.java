@@ -3,6 +3,8 @@ package org.academy.internal.client.ability.program;
 import com.google.gson.JsonPrimitive;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramNodeCatalog;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramNodeIds;
+import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeCatalog;
+import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeIds;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeCatalog;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
@@ -169,6 +171,20 @@ class ProgramConfigurationOptionsTest {
                 ProgramConfigurationOptions.options(
                         teleport.entry(TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT),
                         "mode", new JsonPrimitive("place"))));
+
+        var aeromanip = AbilityProgramDefinitions.require(
+                AeromanipProgramNodeCatalog.AEROMANIP).editorCatalog();
+        assertEquals(List.of("instant", "half", "full"), values(
+                ProgramConfigurationOptions.options(
+                        aeromanip.entry(AeromanipProgramNodeIds.LAMINAR_CUT),
+                        "charge_tier", new JsonPrimitive("instant"))));
+        assertEquals(List.of("entity", "block"), values(
+                ProgramConfigurationOptions.options(
+                        aeromanip.entry(AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE),
+                        "target_type", new JsonPrimitive("entity"))));
+        assertTrue(ProgramConfigurationOptions.options(
+                aeromanip.entry(AeromanipProgramNodeIds.FIRE_JETS),
+                "duration", new JsonPrimitive(8)).isEmpty());
     }
 
     @Test

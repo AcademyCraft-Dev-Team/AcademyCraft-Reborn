@@ -28,7 +28,7 @@ import org.academy.internal.common.sounds.SoundEvents;
 
 import java.util.UUID;
 
-/** Persistent block-face or entity-mounted nozzle placed by High-Speed Jet. */
+/** Block-face or entity-mounted nozzle shared by High-Speed Jet and ability programs. */
 public final class HighSpeedJetNozzle extends Entity {
     private static final EntityDataAccessor<Integer> FACE =
             SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.INT);
@@ -48,6 +48,7 @@ public final class HighSpeedJetNozzle extends Entity {
     private BlockPos supportPos = BlockPos.ZERO;
     private UUID supportEntityUuid;
     private int missingSupportTicks;
+    private boolean temporary;
 
     public HighSpeedJetNozzle(EntityType<? extends HighSpeedJetNozzle> type, Level level) {
         super(type, level);
@@ -138,6 +139,18 @@ public final class HighSpeedJetNozzle extends Entity {
                 Math.max(activeTicks(), Math.max(1, durationTicks)));
     }
 
+    public void restoreActiveTicks(int durationTicks) {
+        entityData.set(ACTIVE_TICKS, Math.max(0, durationTicks));
+    }
+
+    public void markTemporary() {
+        temporary = true;
+    }
+
+    public boolean isTemporary() {
+        return temporary;
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -163,6 +176,7 @@ public final class HighSpeedJetNozzle extends Entity {
         if (owner == null
                 || !owner.isAlive() || !Skills.HIGH_SPEED_JET.get().isEnabled(owner)) {
             entityData.set(ACTIVE_TICKS, 0);
+            if (temporary) discard();
             return;
         }
         applyJet(serverLevel, owner);
@@ -171,30 +185,40 @@ public final class HighSpeedJetNozzle extends Entity {
             serverLevel.playSound(null, blockPosition(), SoundEvents.AIRFLOW_FIELD.get(),
                     SoundSource.PLAYERS, 0.28f, 1.45f);
         }
+        if (temporary && remaining == 1) discard();
     }
 
     private void applyJet(ServerLevel level, ServerPlayer owner) {
         var direction = direction();
         var milestone = Skills.HIGH_SPEED_JET.get().getEffectiveProficiencyMilestone(owner);
         var acceleration = 0.12 * (milestone >= 3 ? 1.25 : 1.0);
+        Entity support = null;
         if (isEntityMounted()) {
-            var support = supportEntity();
+            support = supportEntity();
             if (support == null || !support.isAlive()) return;
-            EntityMotionGuard.runWithMotionSource(owner, () ->
-                    AeromanipTargeting.accelerateAlong(
-                            support, HighSpeedJet.entityThrustDirection(direction), acceleration,
-                            MAX_JET_SPEED, MAX_JET_SPEED));
-            support.resetFallDistance();
-            return;
+            if (support != owner) {
+                var mountedTarget = support;
+                EntityMotionGuard.runWithMotionSource(owner, () ->
+                        AeromanipTargeting.accelerateAlong(
+                                mountedTarget,
+                                HighSpeedJet.entityThrustDirection(direction),
+                                acceleration,
+                                MAX_JET_SPEED,
+                                MAX_JET_SPEED));
+                support.resetFallDistance();
+            }
         }
 
         var origin = position().add(direction.scale(0.18));
         var rangeScale = AeromanipConfig.rangeMultiplier(owner, SkillNames.HIGH_SPEED_JET);
         var resolvedEnd = origin.add(direction.scale(JET_LENGTH * rangeScale));
         var bounds = new AABB(origin, resolvedEnd).inflate(JET_RADIUS * rangeScale);
+        var mountedTarget = support;
         for (var target : level.getEntities(this, bounds, target ->
-                target.isAlive() && !(target instanceof HighSpeedJetNozzle)
-                        && !isAttachedTo(target))) {
+                target != owner
+                        && target != mountedTarget
+                        && target.isAlive()
+                        && !(target instanceof HighSpeedJetNozzle))) {
             if (!insideCapsule(target.getBoundingBox().getCenter(), origin, resolvedEnd,
                     JET_RADIUS * rangeScale + target.getBbWidth() * 0.5)) continue;
             EntityMotionGuard.runWithMotionSource(owner, () ->
@@ -276,6 +300,11 @@ public final class HighSpeedJetNozzle extends Entity {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean shouldBeSaved() {
+        return !temporary;
     }
 
     @Override

@@ -11,6 +11,9 @@ public final class AeromanipProgramNodeIds {
     public static final Identifier LOOK_TARGET = id("target/look_target");
     public static final Identifier AIRFLOW_PUSH = id("action/airflow_push");
     public static final Identifier LAMINAR_CUT = id("action/laminar_cut");
+    public static final Identifier PLACE_TEMPORARY_JET_NOZZLE =
+            id("action/place_temporary_jet_nozzle");
+    public static final Identifier FIRE_JETS = id("action/fire_jets");
 
     private AeromanipProgramNodeIds() {
     }
