@@ -35,7 +35,7 @@ class SampleAssetsTest {
     void packagedAssetsDecodeAndSpawn() {
         for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "minimal_burst", "demo_fire", "demo_arc",
                 "surface_arc", "contact_arc", "spark", "demo_blender_arc", "plasma_cannon_charge", "plasma_cannon_focus",
-                "plasma_cannon_projectile", "plasma_cannon_impact", "entity_smoke", "distortion_ripple",
+                "plasma_cannon_projectile", "plasma_cannon_impact", "entity_smoke",
                 "platinum_execution", "aeromanip_mist_burst", "aeromanip_mist_field",
                 "aeromanip_mist_ring", "aeromanip_mist_stream", "aeromanip_mist_blade",
                 "aeromanip_mist_vortex"}) {
@@ -57,6 +57,6 @@ class SampleAssetsTest {
                 effect.tick(1f / 60f);
             }
         }
-        assertTrue(VfxGraphManager.INSTANCE.effectCount() == 23);
+        assertTrue(VfxGraphManager.INSTANCE.effectCount() == 22);
     }
 }

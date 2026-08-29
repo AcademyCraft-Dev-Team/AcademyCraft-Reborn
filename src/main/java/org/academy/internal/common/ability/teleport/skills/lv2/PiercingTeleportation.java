@@ -27,7 +27,6 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.DistortionVfxClient;
 import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -73,7 +72,6 @@ public final class PiercingTeleportation extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        DistortionVfxClient.register();
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_START,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
@@ -125,14 +123,6 @@ public final class PiercingTeleportation extends Skill {
             context.cleanup();
             if (!ClientUtil.hasScreen() && valid) {
                 MisakaNetworkClient.send(new TeleportPacket(distance, useDefaultTarget));
-                var player = Minecraft.getInstance().player;
-                if (player != null) {
-                    DistortionVfxClient.trigger(
-                            (float) player.getX(), (float) player.getY() + 1.0f, (float) player.getZ(),
-                            1.0f, 1.0f,
-                            0.5f, 0.2f, 0.8f, 0.7f,
-                            0.1f, 0.0f, 0.3f, 0.0f);
-                }
             }
         }
 
