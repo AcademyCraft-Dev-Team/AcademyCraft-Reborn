@@ -20,13 +20,17 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.gui.screen.OutputControlScreen;
@@ -34,7 +38,6 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
-import org.academy.internal.client.gui.screen.OutputControlScreen;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.OutputControlData;
 import org.lwjgl.glfw.GLFW;
@@ -177,7 +180,7 @@ public final class OutputControl extends Skill {
         }
     }
 
-    /** Executes Precision Operation code without stacking Tab output onto its own power setting. */
+    /** Executes Precision Operation code without stacking adjusted output onto its own power setting. */
     public static <T> T callWithoutOutputAdjustment(Supplier<T> action) {
         OUTPUT_ADJUSTMENT_BYPASS_DEPTH.set(OUTPUT_ADJUSTMENT_BYPASS_DEPTH.get() + 1);
         try {
@@ -291,6 +294,7 @@ public final class OutputControl extends Skill {
     }
 
     public static final class Client {
+        public static final String CONFIG_KEY = "output_control_keybindings";
         public static final AbilitySystemClient.SkillInfo SKILL_INFO =
                 AbilitySystemClient.addCommonSkillInfo(new AbilitySystemClient.SkillInfo(
                         Skills.OUTPUT_CONTROL.get(),
@@ -305,15 +309,21 @@ public final class OutputControl extends Skill {
         }
 
         private static void initialize() {
+            AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, Config.Action.INSTANCE);
+            var config = AcademyCraftClient.Config.INSTANCE.<Config>getConfig(CONFIG_KEY);
             InputSystem.addKeyBinding(
                     KEY_NAME_OPEN,
-                    InputSystem.combo(
+                    config.getKeyBinding(KEY_NAME_OPEN, InputSystem.combo(
                             InputSystem.InputType.KEYBOARD,
                             GLFW.GLFW_KEY_TAB,
                             InputConstants.PRESS,
                             0
-                    ),
+                    )),
                     Client::open
+            );
+            InputSystem.setKeyBindingEnabled(
+                    KEY_NAME_OPEN,
+                    config.isKeyBindingEnabled(KEY_NAME_OPEN)
             );
         }
 
@@ -332,6 +342,25 @@ public final class OutputControl extends Skill {
 
         public static void sendSettings(float abilityOutput, float movementSpeed, float jumpHeight) {
             MisakaNetworkClient.send(new SettingsPacket(abilityOutput, movementSpeed, jumpHeight));
+        }
+
+        public static final class Config extends KeyBindingConfig {
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
         }
     }
 
