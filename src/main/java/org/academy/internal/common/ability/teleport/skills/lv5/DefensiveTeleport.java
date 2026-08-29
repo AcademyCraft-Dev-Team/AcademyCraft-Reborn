@@ -167,21 +167,23 @@ public final class DefensiveTeleport extends Skill {
                         .filter(Objects::nonNull)
                         .distinct()
                         .toList();
-                var camera = minecraft.gameRenderer.mainCamera().position();
-                var matrices = event.getMatrixStack();
-                matrices.pushPose();
-                matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
+                var camera = event.getCameraPosition();
+                var renderBox = cameraRelativeBox(box, camera);
+                var selectedRenderBoxes = selected.stream()
+                        .map(entity -> cameraRelativeBox(
+                                entity.getBoundingBox().inflate(0.04), camera))
+                        .toList();
                 event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
                         (snapshot, consumer) -> {
                             LineBoxRenderer.renderWireframeBox(
-                                    snapshot, consumer, box, 1.0f, 0.25f, 0.75f, 1.0f);
-                            for (var entity : selected) {
+                                    snapshot, consumer, renderBox,
+                                    1.0f, 0.25f, 0.75f, 1.0f);
+                            for (var selectedBox : selectedRenderBoxes) {
                                 LineBoxRenderer.renderWireframeBox(
-                                        snapshot, consumer, entity.getBoundingBox().inflate(0.04),
+                                        snapshot, consumer, selectedBox,
                                         1.0f, 1.0f, 1.0f, 1.0f);
                             }
                         });
-                matrices.popPose();
             }
 
             private static boolean isPreviewThreat(Player player, Entity entity) {
@@ -221,6 +223,14 @@ public final class DefensiveTeleport extends Skill {
                 }
             }
         }
+    }
+
+    static AABB cameraRelativeBox(AABB worldBox, Vec3 cameraPosition) {
+        return worldBox.move(
+                -cameraPosition.x,
+                -cameraPosition.y,
+                -cameraPosition.z
+        );
     }
 
     public static final class Server {
