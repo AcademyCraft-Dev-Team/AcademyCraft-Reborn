@@ -90,7 +90,8 @@ public abstract class MixinLevelRenderer {
                 Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false),
                 new MatrixStack().setFrom(poseStack.last()),
                 poseStack,
-                output
+                output,
+                levelRenderState.cameraRenderState.pos
         );
         NeoForge.EVENT_BUS.post(event);
     }
