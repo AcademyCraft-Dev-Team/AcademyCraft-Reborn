@@ -32,27 +32,48 @@ class DefensiveTeleportTest {
     }
 
     @Test
-    void thirdPersonSelectionUsesRenderedCameraPitch() {
+    void thirdPersonSelectionKeepsHorizontalDistanceAndCameraPitch() {
         var playerViewDirection = new Vec3(0.0, 0.0, 1.0);
         var cameraViewDirection = new Vec3(0.0, -0.5, Math.sqrt(0.75));
-        var direction = DefensiveTeleport.selectionDirection(
+        var offset = DefensiveTeleport.selectionOffset(
                 playerViewDirection,
                 cameraViewDirection,
-                false
+                0.0f,
+                false,
+                6.0
         );
 
-        assertEquals(cameraViewDirection, direction);
+        assertEquals(0.0, offset.x, 1.0e-9);
+        assertEquals(-3.0, offset.y, 1.0e-9);
+        assertEquals(6.0, offset.z, 1.0e-9);
     }
 
     @Test
-    void firstPersonSelectionKeepsPlayerAim() {
+    void verticalThirdPersonViewFallsBackToCameraYawForHorizontalPlacement() {
+        var offset = DefensiveTeleport.selectionOffset(
+                new Vec3(0.0, -1.0, 0.0),
+                new Vec3(0.0, -1.0, 0.0),
+                0.0f,
+                false,
+                6.0
+        );
+
+        assertEquals(0.0, offset.x, 1.0e-9);
+        assertEquals(-6.0, offset.y, 1.0e-9);
+        assertEquals(6.0, offset.z, 1.0e-9);
+    }
+
+    @Test
+    void firstPersonSelectionKeepsPlayerAimAndDistance() {
         var playerViewDirection = new Vec3(0.0, -1.0, 0.0);
         var cameraViewDirection = new Vec3(0.0, 1.0, 0.0);
 
-        assertEquals(playerViewDirection, DefensiveTeleport.selectionDirection(
+        assertEquals(new Vec3(0.0, -6.0, 0.0), DefensiveTeleport.selectionOffset(
                 playerViewDirection,
                 cameraViewDirection,
-                true
+                90.0f,
+                true,
+                6.0
         ));
     }
 
