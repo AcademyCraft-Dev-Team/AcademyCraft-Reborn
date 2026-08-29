@@ -709,6 +709,8 @@
   "modifier.academy.darkmatter_shaping.pull.description": "使命中目标向使用者方向位移；与击退互斥。",
   "modifier.academy.darkmatter_shaping.reach": "延展",
   "modifier.academy.darkmatter_shaping.reach.description": "每级提高方块与实体触及距离。",
+  "modifier.academy.darkmatter_shaping.returning": "回力",
+  "modifier.academy.darkmatter_shaping.returning.description": "投掷后以等同原版忠诚 I 的效果自动返回持有者。",
   "modifier.academy.darkmatter_shaping.shear": "修剪",
   "modifier.academy.darkmatter_shaping.shear.description": "右击可像剪刀一样修剪支持修剪的生物。",
   "modifier.academy.darkmatter_shaping.slaughter": "屠戮",

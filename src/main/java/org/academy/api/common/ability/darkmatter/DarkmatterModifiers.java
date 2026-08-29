@@ -27,6 +27,7 @@ public final class DarkmatterModifiers {
     public static final String BURNING = "burning";
     public static final String LUCKY = "lucky";
     public static final String REACH = "reach";
+    public static final String RETURNING = "returning";
     public static final String ECHO = "echo";
     public static final String LIGHTNING = "lightning";
     public static final String LAW_EROSION = "law_erosion";
@@ -72,6 +73,8 @@ public final class DarkmatterModifiers {
         register(BURNING, 3, 1, 4, allOffense, Set.of(FREEZING));
         register(LUCKY, 3, 1, 3, allOffense);
         register(REACH, 3, 1, 4, melee);
+        registerNativeOnly(RETURNING, 1, 1, 3,
+                EnumSet.of(DarkmatterShape.TRIDENT));
         register(ECHO, 3, 2, 5, allOffense);
         register(LIGHTNING, 3, 2, 4, allOffense);
         register(LAW_EROSION, 3, 1, 5, allOffense);
@@ -92,5 +95,16 @@ public final class DarkmatterModifiers {
         compatibleShapes.add(DarkmatterShape.COATING);
         DarkmatterShapingRegistries.register(new DarkmatterModifierType(
                 id, maxLevel, cost, requiredAbilityLevel, compatibleShapes, conflicts));
+    }
+
+    private static void registerNativeOnly(
+            String id,
+            int maxLevel,
+            int cost,
+            int requiredAbilityLevel,
+            Set<DarkmatterShape> shapes
+    ) {
+        DarkmatterShapingRegistries.register(new DarkmatterModifierType(
+                id, maxLevel, cost, requiredAbilityLevel, shapes, Set.of()));
     }
 }

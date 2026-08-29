@@ -709,6 +709,8 @@
   "modifier.academy.darkmatter_shaping.pull.description": "Moves struck targets toward the user; conflicts with Knockback.",
   "modifier.academy.darkmatter_shaping.reach": "Reach",
   "modifier.academy.darkmatter_shaping.reach.description": "Increases block and entity interaction reach per level.",
+  "modifier.academy.darkmatter_shaping.returning": "Returning",
+  "modifier.academy.darkmatter_shaping.returning.description": "Returns to its owner after being thrown, matching vanilla Loyalty I.",
   "modifier.academy.darkmatter_shaping.shear": "Shear",
   "modifier.academy.darkmatter_shaping.shear.description": "Use on compatible creatures to shear them like shears.",
   "modifier.academy.darkmatter_shaping.slaughter": "Slaughter",

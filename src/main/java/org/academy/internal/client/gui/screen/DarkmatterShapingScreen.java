@@ -1,6 +1,7 @@
 package org.academy.internal.client.gui.screen;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.drawable.ColorDrawable;
@@ -22,9 +23,8 @@ import java.util.*;
 public final class DarkmatterShapingScreen extends UiScreen {
     private static final int PANEL_W = 392;
     private static final int PANEL_H = 210;
-    private static final int MODIFIER_DETAIL_W = 156;
-    private static final int MODIFIER_DETAIL_H = 128;
-    private static final int MODIFIER_DETAIL_GAP = 7;
+    private static final int MODIFIER_TOOLTIP_MAX_WIDTH = 180;
+    private static final int MODIFIER_TOOLTIP_SCREEN_MARGIN = 24;
     private static final int ACCENT = 0xFF7680DE;
 
     private final Map<String, Integer> modifiers = new LinkedHashMap<>();
@@ -39,12 +39,6 @@ public final class DarkmatterShapingScreen extends UiScreen {
     private int alphaPercent = 50;
     private LinearLayoutWidget modifierContent;
     private ScrollPanelWidget modifierScroll;
-    private FrameLayoutWidget modifierDetailPanel;
-    private LabelWidget modifierDetailTitle;
-    private LabelWidget modifierDetailStats;
-    private LabelWidget modifierDetailDescription;
-    private LabelWidget modifierDetailLock;
-    private DarkmatterModifierType hoveredModifier;
     private double lastModifierMouseX = Double.NaN;
     private double lastModifierMouseY = Double.NaN;
     private LabelWidget alphaLabel;
@@ -97,7 +91,6 @@ public final class DarkmatterShapingScreen extends UiScreen {
         buildShapeList(panel);
         buildPhaseEditor(panel);
         buildModifierList(panel);
-        buildModifierDetail(panel);
         buildFooter(panel);
         refreshAll();
     }
@@ -337,68 +330,6 @@ public final class DarkmatterShapingScreen extends UiScreen {
         panel.addChild("modifier_scrollbar", bar);
     }
 
-    private void buildModifierDetail(FrameLayoutWidget panel) {
-        modifierDetailPanel = new FrameLayoutWidget();
-        var hasRightSpace = width >= PANEL_W
-                + (MODIFIER_DETAIL_W + MODIFIER_DETAIL_GAP) * 2;
-        var detailX = hasRightSpace
-                ? PANEL_W + MODIFIER_DETAIL_GAP
-                : -MODIFIER_DETAIL_W - MODIFIER_DETAIL_GAP;
-        modifierDetailPanel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
-                .size(MODIFIER_DETAIL_W, MODIFIER_DETAIL_H)
-                .gravity(Gravity.TOP_LEFT)
-                .margin(detailX, 43, 0, 0));
-        var background = new BlendQuadWidget();
-        background.setAlpha(0.56f);
-        background.setDrawLine(false);
-        background.setLayoutParams(new FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT));
-        modifierDetailPanel.addChild("background", background);
-        modifierDetailPanel.addChild("top_rule", rule(
-                MODIFIER_DETAIL_W - 10, 0xD8FFFFFF, Gravity.TOP_LEFT, 5, 0));
-        modifierDetailPanel.addChild("accent_rule", rule(
-                34, ACCENT, Gravity.TOP_LEFT, 5, 1));
-        modifierDetailPanel.addChild("bottom_rule", rule(
-                MODIFIER_DETAIL_W - 10, 0x68FFFFFF, Gravity.BOTTOM_LEFT, 5, 0));
-
-        modifierDetailTitle = new LabelWidget("");
-        modifierDetailTitle.setBaseFontSize(7.5f);
-        modifierDetailTitle.setLayoutParams(new FrameLayoutWidget.LayoutParams()
-                .size(140, 12).gravity(Gravity.TOP_LEFT).margin(8, 9, 0, 0));
-        modifierDetailPanel.addChild("title", modifierDetailTitle);
-
-        modifierDetailStats = new LabelWidget("");
-        modifierDetailStats.setBaseFontSize(6.0f);
-        modifierDetailStats.setAlpha(0.68f);
-        modifierDetailStats.setLayoutParams(new FrameLayoutWidget.LayoutParams()
-                .size(140, 12).gravity(Gravity.TOP_LEFT).margin(8, 25, 0, 0));
-        modifierDetailPanel.addChild("stats", modifierDetailStats);
-
-        var effect = label("screen.academy.darkmatter_shaping.modifier.detail.effect", 6.0f);
-        effect.setAlpha(0.76f);
-        effect.setLayoutParams(new FrameLayoutWidget.LayoutParams()
-                .size(140, 10).gravity(Gravity.TOP_LEFT).margin(8, 43, 0, 0));
-        modifierDetailPanel.addChild("effect", effect);
-
-        modifierDetailDescription = new LabelWidget("");
-        modifierDetailDescription.setBaseFontSize(6.25f);
-        modifierDetailDescription.setWrapText(true);
-        modifierDetailDescription.setLayoutParams(new FrameLayoutWidget.LayoutParams()
-                .size(140, 50).gravity(Gravity.TOP_LEFT).margin(8, 56, 0, 0));
-        modifierDetailPanel.addChild("description", modifierDetailDescription);
-
-        modifierDetailLock = new LabelWidget("");
-        modifierDetailLock.setBaseFontSize(6.0f);
-        modifierDetailLock.setRed(1.0f);
-        modifierDetailLock.setGreen(0.58f);
-        modifierDetailLock.setBlue(0.42f);
-        modifierDetailLock.setLayoutParams(new FrameLayoutWidget.LayoutParams()
-                .size(140, 10).gravity(Gravity.BOTTOM_LEFT).margin(8, 0, 0, 8));
-        modifierDetailPanel.addChild("lock", modifierDetailLock);
-        modifierDetailPanel.setVisibility(Widget.Visibility.GONE);
-        panel.addChild("modifier_detail", modifierDetailPanel);
-    }
-
     private void buildFooter(FrameLayoutWidget panel) {
         statusLabel = new LabelWidget("");
         statusLabel.setBaseFontSize(6.5f);
@@ -437,7 +368,6 @@ public final class DarkmatterShapingScreen extends UiScreen {
     }
 
     private void rebuildModifierRows() {
-        hideModifierDetail();
         modifierRows.clear();
         modifierRowFills.clear();
         modifierContent.clearChildren();
@@ -494,6 +424,90 @@ public final class DarkmatterShapingScreen extends UiScreen {
     }
 
     @Override
+    public void extractRenderState(
+            GuiGraphicsExtractor graphics,
+            int mouseX,
+            int mouseY,
+            float partialTick
+    ) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        extractModifierTooltip(graphics, mouseX, mouseY);
+    }
+
+    private void extractModifierTooltip(
+            GuiGraphicsExtractor graphics,
+            int mouseX,
+            int mouseY
+    ) {
+        var type = modifierAt(mouseX, mouseY);
+        if (type == null) return;
+        var level = modifiers.getOrDefault(type.id(), 0);
+        var maxWidth = modifierTooltipTextWidth(width);
+        var lines = new ArrayList<Component>();
+        addWrappedTooltipText(lines, Component.translatable(type.nameKey()).getString(),
+                maxWidth, ACCENT & 0xFFFFFF);
+        addWrappedTooltipText(lines, Component.translatable(
+                        "screen.academy.darkmatter_shaping.modifier.detail.stats",
+                        level, type.maxLevel(), type.pointCost()).getString(),
+                maxWidth, 0xAEB7C5);
+        addWrappedTooltipText(lines, Component.translatable(
+                        "screen.academy.darkmatter_shaping.modifier.detail.effect").getString(),
+                maxWidth, 0xD8DCE5);
+        addWrappedTooltipText(lines, Component.translatable(type.descriptionKey()).getString(),
+                maxWidth, 0xFFFFFF);
+        if (!type.isUnlockedAt(currentAbilityLevel())) {
+            addWrappedTooltipText(lines, Component.translatable(
+                            "screen.academy.darkmatter_shaping.modifier.detail.locked",
+                            type.requiredAbilityLevel()).getString(),
+                    maxWidth, 0xFF966C);
+        }
+        graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
+    }
+
+    static int modifierTooltipTextWidth(int screenWidth) {
+        return Math.max(1, Math.min(
+                MODIFIER_TOOLTIP_MAX_WIDTH,
+                screenWidth - MODIFIER_TOOLTIP_SCREEN_MARGIN));
+    }
+
+    private void addWrappedTooltipText(
+            List<Component> lines,
+            String text,
+            int maxWidth,
+            int color
+    ) {
+        for (var paragraph : text.split("\\R", -1)) {
+            if (paragraph.isEmpty()) {
+                lines.add(Component.empty());
+                continue;
+            }
+            var start = 0;
+            while (start < paragraph.length()) {
+                var end = start;
+                var lastBreak = -1;
+                while (end < paragraph.length()) {
+                    var next = paragraph.offsetByCodePoints(end, 1);
+                    if (end > start && font.width(paragraph.substring(start, next)) > maxWidth) {
+                        break;
+                    }
+                    end = next;
+                    if (Character.isWhitespace(paragraph.codePointBefore(end))) {
+                        lastBreak = end;
+                    }
+                }
+                if (end < paragraph.length() && lastBreak > start) end = lastBreak;
+                var line = paragraph.substring(start, end).strip();
+                if (!line.isEmpty()) lines.add(Component.literal(line).withColor(color));
+                start = end;
+                while (start < paragraph.length()
+                        && Character.isWhitespace(paragraph.codePointAt(start))) {
+                    start = paragraph.offsetByCodePoints(start, 1);
+                }
+            }
+        }
+    }
+
+    @Override
     public void mouseMoved(double mouseX, double mouseY) {
         super.mouseMoved(mouseX, mouseY);
         lastModifierMouseX = mouseX;
@@ -525,23 +539,18 @@ public final class DarkmatterShapingScreen extends UiScreen {
     }
 
     private void updateModifierHover(double mouseX, double mouseY) {
-        DarkmatterModifierType selected = null;
-        if (modifierScroll != null && modifierScroll.isMouseOver(mouseX, mouseY)) {
-            for (var entry : modifierRows.entrySet()) {
-                if (entry.getKey().isMouseOver(mouseX, mouseY)) {
-                    selected = entry.getValue();
-                    break;
-                }
-            }
-        }
+        var selected = modifierAt(mouseX, mouseY);
         var selectedRow = rowFor(selected);
         modifierRows.forEach((row, _) -> modifierRowFills.get(row).setColor(
                 row == selectedRow ? 0x507680DE : 0x28000000));
-        if (selected == null) {
-            hideModifierDetail();
-        } else if (selected != hoveredModifier) {
-            showModifierDetail(selected);
+    }
+
+    private DarkmatterModifierType modifierAt(double mouseX, double mouseY) {
+        if (modifierScroll == null || !modifierScroll.isMouseOver(mouseX, mouseY)) return null;
+        for (var entry : modifierRows.entrySet()) {
+            if (entry.getKey().isMouseOver(mouseX, mouseY)) return entry.getValue();
         }
+        return null;
     }
 
     private FrameLayoutWidget rowFor(DarkmatterModifierType type) {
@@ -550,31 +559,6 @@ public final class DarkmatterShapingScreen extends UiScreen {
             if (entry.getValue() == type) return entry.getKey();
         }
         return null;
-    }
-
-    private void showModifierDetail(DarkmatterModifierType type) {
-        hoveredModifier = type;
-        var level = modifiers.getOrDefault(type.id(), 0);
-        modifierDetailTitle.setText(Component.translatable(type.nameKey()).getString());
-        modifierDetailStats.setText(Component.translatable(
-                "screen.academy.darkmatter_shaping.modifier.detail.stats",
-                level,
-                type.maxLevel(),
-                type.pointCost()).getString());
-        modifierDetailDescription.setText(Component.translatable(
-                type.descriptionKey()).getString());
-        var unlocked = type.isUnlockedAt(currentAbilityLevel());
-        modifierDetailLock.setText(unlocked ? "" : Component.translatable(
-                "screen.academy.darkmatter_shaping.modifier.detail.locked",
-                type.requiredAbilityLevel()).getString());
-        modifierDetailPanel.setVisibility(Widget.Visibility.VISIBLE);
-    }
-
-    private void hideModifierDetail() {
-        hoveredModifier = null;
-        if (modifierDetailPanel != null) {
-            modifierDetailPanel.setVisibility(Widget.Visibility.GONE);
-        }
     }
 
     private void changeModifier(DarkmatterModifierType type, int delta) {
