@@ -29,6 +29,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -247,7 +248,7 @@ public class DirStrike extends Skill {
                         target -> target != player
                                 && target.isAlive()
                                 && !target.isSpectator()
-                                && !player.isAlliedTo(target)
+                                && !TeamRelations.areAllied(player, target)
                                 && !PvpSetting.shouldPrevent(player, target)
                                 && target.getY() >= minY
                                 && target.getY() <= maxY

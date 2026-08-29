@@ -27,6 +27,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -236,7 +237,7 @@ public class LightningStorm extends Skill {
                 if (milestone >= 3 && strikeIndex % 3 == 0) {
                     var fresh = serverLevel.getEntitiesOfClass(LivingEntity.class,
                                     new AABB(center, center).inflate(radius), target -> target != player
-                                            && target.isAlive() && !player.isAlliedTo(target)
+                                            && target.isAlive() && !TeamRelations.areAllied(player, target)
                                             && !PvpSetting.shouldPrevent(player, target)
                                             && !struckTargets.contains(target.getUUID()))
                             .stream().min(Comparator.comparingDouble(target -> target.distanceToSqr(center)))

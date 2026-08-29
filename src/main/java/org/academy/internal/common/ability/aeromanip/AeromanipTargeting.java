@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 
@@ -25,7 +26,7 @@ public final class AeromanipTargeting {
     public static boolean canAffectNegatively(ServerPlayer owner, Entity target) {
         if (target == null || target == owner || target.isRemoved() || target.isSpectator()) return false;
         if (target instanceof LivingEntity living && FriendlyFireSetting.shouldPrevent(owner, living)) return false;
-        return !owner.isAlliedTo(target);
+        return !TeamRelations.areAllied(owner, target);
     }
 
     public static boolean isBoss(Entity entity) {

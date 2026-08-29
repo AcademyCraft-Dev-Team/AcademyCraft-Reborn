@@ -24,6 +24,7 @@ public final class AcademyTeamsCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("teams")
+                .requires(AcademyTeamsCommand::canUse)
                 .executes(AcademyTeamsCommand::info)
                 .then(Commands.literal("info").executes(AcademyTeamsCommand::info))
                 .then(Commands.literal("list").executes(AcademyTeamsCommand::list))
@@ -43,6 +44,10 @@ public final class AcademyTeamsCommand {
                                 .executes(AcademyTeamsCommand::kick)))
                 .then(Commands.literal("disband").executes(AcademyTeamsCommand::disband))
         );
+    }
+
+    static boolean canUse(CommandSourceStack ignored) {
+        return true;
     }
 
     private static int info(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

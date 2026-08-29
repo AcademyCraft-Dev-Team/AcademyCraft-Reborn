@@ -28,6 +28,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -318,7 +319,7 @@ public final class ArcGenerate extends Skill {
             var candidates = level.getEntitiesOfClass(LivingEntity.class,
                     origin.getBoundingBox().inflate(4.0),
                     target -> target != player && target.isAlive() && !hit.contains(target)
-                            && !player.isAlliedTo(target)
+                            && !TeamRelations.areAllied(player, target)
                             && !PvpSetting.shouldPrevent(player, target));
             candidates.sort(Comparator.comparingDouble(origin::distanceToSqr));
             var factors = new float[]{0.5f, 0.3f};

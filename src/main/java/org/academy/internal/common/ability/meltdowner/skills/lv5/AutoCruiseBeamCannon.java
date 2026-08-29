@@ -29,6 +29,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -365,7 +366,7 @@ public final class AutoCruiseBeamCannon extends Skill {
             if (target instanceof TamableAnimal tameable && tameable.isOwnedBy(player)) {
                 return false;
             }
-            if (player.isAlliedTo(target)) return false;
+            if (TeamRelations.areAllied(player, target)) return false;
             return target instanceof Enemy || target instanceof Mob mob && mob.getTarget() == player;
         }
 

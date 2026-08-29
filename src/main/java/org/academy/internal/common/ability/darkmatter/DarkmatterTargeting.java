@@ -10,6 +10,7 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 
@@ -31,7 +32,9 @@ public final class DarkmatterTargeting {
     /** Includes owner links that vanilla teams cannot represent for the custom beetle mob. */
     public static boolean areAllied(Entity first, Entity second) {
         if (first == null || second == null) return false;
-        if (first == second || first.isAlliedTo(second) || second.isAlliedTo(first)) return true;
+        if (first == second
+                || TeamRelations.areAllied(first, second)
+                || TeamRelations.areAllied(second, first)) return true;
         if (first instanceof DarkmatterBeetle beetle && beetle.isOwnerAlly(second)) return true;
         return second instanceof DarkmatterBeetle beetle && beetle.isOwnerAlly(first);
     }

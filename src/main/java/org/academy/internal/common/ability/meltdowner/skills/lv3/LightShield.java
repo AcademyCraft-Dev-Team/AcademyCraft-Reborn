@@ -39,6 +39,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -366,7 +367,7 @@ public final class LightShield extends Skill {
                     player.getBoundingBox().inflate(skill.hasProficiencyMilestone(player, 2) ? 4.5 : ATTACK_RADIUS),
                     mob -> mob.isAlive()
                             && mob.getType().getCategory() == MobCategory.MONSTER
-                            && !player.isAlliedTo(mob)
+                            && !TeamRelations.areAllied(player, mob)
             );
             for (var target : targets) {
                 var delta = target.position().subtract(player.position());

@@ -45,6 +45,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -502,7 +503,8 @@ public final class VectorAccel extends Skill {
             var target = player.level().getEntitiesOfClass(
                     LivingEntity.class,
                     player.getBoundingBox().inflate(0.45),
-                    entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity)
+                    entity -> entity != player && entity.isAlive()
+                            && !TeamRelations.areAllied(player, entity)
                             && !PvpSetting.shouldPrevent(player, entity)
             ).stream().findFirst().orElse(null);
             if (target == null) return;

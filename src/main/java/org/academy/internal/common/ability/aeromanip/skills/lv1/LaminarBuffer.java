@@ -29,6 +29,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -420,7 +421,7 @@ public final class LaminarBuffer extends Skill {
                 if (target == owner) return owner;
                 if (!skill.hasProficiencyMilestone(owner, 1)
                         || owner.distanceToSqr(target) > ALLY_RADIUS * ALLY_RADIUS) continue;
-                if (owner.isAlliedTo(target)
+                if (TeamRelations.areAllied(owner, target)
                         || target instanceof TamableAnimal animal && animal.isOwnedBy(owner)) {
                     return owner;
                 }

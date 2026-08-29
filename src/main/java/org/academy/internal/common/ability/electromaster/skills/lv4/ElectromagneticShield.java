@@ -30,6 +30,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.*;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
@@ -322,7 +323,7 @@ public final class ElectromagneticShield extends Skill {
             var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
             for (var target : player.level().getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(4.0),
-                    target -> target != player && target.isAlive() && !player.isAlliedTo(target)
+                    target -> target != player && target.isAlive() && !TeamRelations.areAllied(player, target)
                             && !PvpSetting.shouldPrevent(player, target))) {
                 if (handled++ >= cap) break;
                 var direction = target.position().subtract(player.position());

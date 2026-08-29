@@ -30,6 +30,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -221,7 +222,7 @@ public class MagneticWeapon extends Skill {
         }
 
         private static boolean isEnemy(ServerPlayer player, LivingEntity entity) {
-            if (entity == player || !entity.isAlive() || player.isAlliedTo(entity)) return false;
+            if (entity == player || !entity.isAlive() || TeamRelations.areAllied(player, entity)) return false;
             if (PvpSetting.shouldPrevent(player, entity)) return false;
             if (entity instanceof ServerPlayer target
                     && (target.isCreative() || target.isSpectator())) return false;

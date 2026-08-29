@@ -35,6 +35,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -371,7 +372,8 @@ public final class VectorBlast extends Skill {
                 for (var target : level.getEntitiesOfClass(
                         LivingEntity.class,
                         blastArea,
-                        entity -> entity != player && entity.isAlive() && !player.isAlliedTo(entity))) {
+                        entity -> entity != player && entity.isAlive()
+                                && !TeamRelations.areAllied(player, entity))) {
                     target.hurtServer(level, source, damage * 0.4f);
                 }
             }

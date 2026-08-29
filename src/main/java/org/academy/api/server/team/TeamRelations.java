@@ -25,4 +25,16 @@ public final class TeamRelations {
     public static boolean areTeammates(Player first, Player second) {
         return areTeammates((Entity) first, second);
     }
+
+    /**
+     * Unified gameplay alliance check for ability targeting.
+     *
+     * <p>This preserves entity-specific alliance rules (including mental-control relations and
+     * owned entities) while also admitting members of the self-service {@code /teams} system.</p>
+     */
+    public static boolean areAllied(Entity first, Entity second) {
+        if (first == null || second == null) return false;
+        if (areTeammates(first, second)) return true;
+        return first.isAlliedTo(second);
+    }
 }

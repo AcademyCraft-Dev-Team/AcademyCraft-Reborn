@@ -40,6 +40,7 @@ import org.academy.api.common.ability.event.SkillExecutionFinishEvent;
 import org.academy.api.common.ability.event.SkillExecutionStartEvent;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfx.SpacialExcisionVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -375,7 +376,7 @@ public final class SpacialExcision extends Skill {
         }
 
         private boolean isAttractionTarget(LivingEntity target) {
-            return isEligibleCombatTarget(target) && !player.isAlliedTo(target);
+            return isEligibleCombatTarget(target) && !TeamRelations.areAllied(player, target);
         }
 
         private boolean isOwnerTeleportExecution(Skill.ActiveExecutionContext context) {

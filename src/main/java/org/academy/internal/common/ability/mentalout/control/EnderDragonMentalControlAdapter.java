@@ -14,6 +14,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.*;
+import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
@@ -401,9 +402,9 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
                     || !candidate.isAlive() || candidate.isRemoved()
                     || candidate.level() != dragon.level()
                     || candidate.position().distanceToSqr(anchor.position()) > detectionRadiusSqr
-                    || controller.isAlliedTo(candidate)
+                    || TeamRelations.areAllied(controller, candidate)
                     || FriendlyFireSetting.shouldPrevent(controller, candidate)
-                    || dragon.isAlliedTo(candidate)
+                    || TeamRelations.areAllied(dragon, candidate)
                     || MentalPerceptionRuntime.decision(dragon, candidate)
                     == PerceptionDecision.HIDDEN) return false;
 
@@ -417,7 +418,7 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
 
         private boolean isProtected(LivingEntity entity, LivingEntity anchorEntity) {
             return entity != null && (entity == anchorEntity || entity == controller
-                    || controller.isAlliedTo(entity)
+                    || TeamRelations.areAllied(controller, entity)
                     || FriendlyFireSetting.shouldPrevent(controller, entity));
         }
 
