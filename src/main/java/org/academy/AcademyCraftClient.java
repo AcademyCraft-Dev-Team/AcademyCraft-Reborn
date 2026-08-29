@@ -92,6 +92,7 @@ import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
@@ -134,6 +135,7 @@ public final class AcademyCraftClient {
         InstantTeleportSyncPacket.initClient();
         SpawnVfxGraphPacket.initClient();
         ProficiencyPolicy.initClient();
+        PvpSetting.initClient();
         ProficiencySkillSettingsClient.init();
         ClientSyncManager.init();
         ImagPhaseDowsingRodClient.init();

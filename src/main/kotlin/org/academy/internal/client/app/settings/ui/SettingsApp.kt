@@ -246,11 +246,14 @@ object SettingsApp : App {
                 .sizeMode(SizeMode.MATCH_PARENT)
 
             val player = Minecraft.getInstance().player
+            val pvpEnabled = player?.let(PvpSetting::isPvpEnabled) ?: true
             page.addChild(
                 "pvp", createSettingToggle(
                     L10n["app.academy.settings.general.pvp"],
-                    player?.let(PvpSetting::isPvpEnabled) ?: true
+                    pvpEnabled,
+                    authoritativeState = { PvpSetting.clientPvpEnabled(pvpEnabled) }
                 ) { enabled ->
+                    PvpSetting.expectClientPvpEnabled(enabled)
                     MisakaNetworkClient.send(PvpSetting.SetPacket(enabled))
                 })
             page.addChild(
@@ -311,6 +314,7 @@ object SettingsApp : App {
         private fun createSettingToggle(
             text: String,
             checked: Boolean,
+            authoritativeState: (() -> Boolean)? = null,
             onChanged: (Boolean) -> Unit
         ): LinearLayoutWidget {
             val row = LinearLayoutWidget()
@@ -326,17 +330,28 @@ object SettingsApp : App {
                     .height(0f)
                     .gravity(Gravity.CENTER_LEFT)
             })
-            row.addChild("toggle", ToggleButtonWidget().apply {
+            var applyingAuthoritativeState = false
+            val toggle = object : ToggleButtonWidget() {
+                override fun tick() {
+                    super.tick()
+                    val expected = authoritativeState?.invoke() ?: return
+                    if (isChecked == expected) return
+                    applyingAuthoritativeState = true
+                    setChecked(expected)
+                    applyingAuthoritativeState = false
+                }
+            }.apply {
                 setChecked(checked)
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(20f, 10f)
                     .gravity(Gravity.CENTER)
                 setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
                     override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
-                        onChanged(isChecked)
+                        if (!applyingAuthoritativeState) onChanged(isChecked)
                     }
                 })
-            })
+            }
+            row.addChild("toggle", toggle)
             return row
         }
 
