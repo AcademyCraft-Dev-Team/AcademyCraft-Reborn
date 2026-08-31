@@ -343,7 +343,7 @@ public final class EntityMotionGuard {
                 || VectorDeviation.Server.isActive(player));
     }
 
-    /** Returns the server-thread motion source established by an ability execution, if any. */
+    /** Returns the server-thread source established by an ability or self-initiated action. */
     public static Entity currentMotionSourceEntity() {
         var sources = MOTION_SOURCES.get();
         return sources == null ? null : sources.peek();

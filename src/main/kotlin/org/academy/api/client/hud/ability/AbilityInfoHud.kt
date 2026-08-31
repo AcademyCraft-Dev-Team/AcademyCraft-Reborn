@@ -16,6 +16,7 @@ import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.ability.AbilitySystemClient.SkillInfo
+import org.academy.api.client.config.KeyBindingConfig
 import org.academy.api.client.gui.animation.Animator
 import org.academy.api.client.gui.animation.AnimatorListener
 import org.academy.api.client.gui.animation.EasingFunctions
@@ -62,6 +63,48 @@ private const val WHEEL_ITEM_ENTRANCE_MAX_DELAY = 240L
 
 internal fun shouldShowAbilityResource(category: AbilityCategory, maximum: Float): Boolean {
     return category.resourceSpec.isPresent && maximum.isFinite() && maximum > 0f
+}
+
+internal fun getHudBindingMigratingDefaults(
+    config: KeyBindingConfig,
+    name: String,
+    key: Int,
+    action: Int,
+    vararg obsoleteDefaultKeys: Int
+): InputSystem.KeyCombination {
+    val defaultBinding = InputSystem.combo(
+        InputSystem.InputType.KEYBOARD,
+        key,
+        action,
+        0
+    )
+    val obsoleteDefaults = buildList {
+        add(InputSystem.combo(
+            InputSystem.InputType.KEYBOARD,
+            key,
+            action,
+            InputSystem.ANY_MODIFIER
+        ))
+        obsoleteDefaultKeys.forEach { obsoleteKey ->
+            add(InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                obsoleteKey,
+                action,
+                0
+            ))
+            add(InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                obsoleteKey,
+                action,
+                InputSystem.ANY_MODIFIER
+            ))
+        }
+    }
+    return config.getKeyBindingMigratingDefaults(
+        name,
+        defaultBinding,
+        *obsoleteDefaults.toTypedArray()
+    )
 }
 
 private fun autoLerpColor(progress: Float): Color {
@@ -777,38 +820,11 @@ class AbilityInfoHud private constructor() {
             NeoForge.EVENT_BUS.register(INSTANCE)
             val config = AcademyCraftClient.Config.INSTANCE
                 .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
-            var migratedLegacyBindings = false
-
-            fun hudBinding(
-                name: String,
-                key: Int,
-                action: Int,
-                vararg obsoleteDefaultKeys: Int
-            ): InputSystem.KeyCombination {
-                val defaultBinding = InputSystem.combo(
-                    InputSystem.InputType.KEYBOARD,
-                    key,
-                    action,
-                    0
-                )
-                val configured = config.getKeyBinding(name, defaultBinding)
-                val defaultKeys = obsoleteDefaultKeys.toSet() + key
-                val isLegacyDefault = configured.type == InputSystem.InputType.KEYBOARD
-                        && configured.keys.size == 1
-                        && configured.keys.first() in defaultKeys
-                        && configured.action == action
-                        && (configured.modifiers == 0 || configured.modifiers == InputSystem.ANY_MODIFIER)
-                        && !configured.availableWhenScreen
-                        && !configured.unbound
-                if (!isLegacyDefault || configured == defaultBinding) return configured
-                config.setKeyBinding(name, defaultBinding)
-                migratedLegacyBindings = true
-                return defaultBinding
-            }
 
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_UP,
-                hudBinding(
+                getHudBindingMigratingDefaults(
+                    config,
                     KEY_NAME_WHEEL_UP,
                     InputConstants.KEY_Z,
                     InputConstants.PRESS,
@@ -817,7 +833,8 @@ class AbilityInfoHud private constructor() {
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(-1) }
             InputSystem.addKeyBinding(
                 KEY_NAME_WHEEL_DOWN,
-                hudBinding(
+                getHudBindingMigratingDefaults(
+                    config,
                     KEY_NAME_WHEEL_DOWN,
                     InputConstants.KEY_X,
                     InputConstants.PRESS,
@@ -826,11 +843,18 @@ class AbilityInfoHud private constructor() {
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(1) }
             InputSystem.addKeyBinding(
                 KEY_NAME_RELEASE_SELECTED,
-                hudBinding(KEY_NAME_RELEASE_SELECTED, InputConstants.KEY_C, InputSystem.ANY_ACTION)
+                getHudBindingMigratingDefaults(
+                    config,
+                    KEY_NAME_RELEASE_SELECTED,
+                    InputConstants.KEY_C,
+                    InputSystem.ANY_ACTION
+                )
             ) { binding ->
                 if (AbilitySystemClient.isActiveHUD()) INSTANCE.triggerSelectedSkill(binding)
             }
-            if (migratedLegacyBindings) AcademyCraftClient.Config.INSTANCE.save()
+            // getKeyBindingMigratingDefaults records a one-shot migration fingerprint. Persist it
+            // even when no key changed so a historical default deliberately chosen later is kept.
+            AcademyCraftClient.Config.INSTANCE.save()
         }
     }
 }
