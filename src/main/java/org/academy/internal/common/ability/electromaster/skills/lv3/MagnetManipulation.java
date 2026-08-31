@@ -49,6 +49,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.common.ability.electromaster.MagneticallyManipulable;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -220,6 +221,8 @@ public class MagnetManipulation extends Skill {
     }
 
     public static boolean isMagnetic(Entity entity) {
+        if (entity instanceof MagneticallyManipulable magneticTarget
+                && magneticTarget.canBeMagneticallyManipulated()) return true;
         if (entity instanceof FallingBlockEntity fallingBlock && isMagnetic(fallingBlock.getBlockState())) return true;
         if (entity instanceof ItemEntity itemEntity && isMagnetic(itemEntity.getItem())) return true;
 

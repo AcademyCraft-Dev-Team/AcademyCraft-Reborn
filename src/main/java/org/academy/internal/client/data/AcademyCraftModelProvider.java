@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.properties.numeric.CrossbowPull;
 import net.minecraft.client.renderer.item.properties.numeric.UseDuration;
+import net.minecraft.client.renderer.item.properties.conditional.CustomModelDataProperty;
 import net.minecraft.client.renderer.item.properties.select.Charge;
 import net.minecraft.client.renderer.item.properties.select.DisplayContext;
 import net.minecraft.client.renderer.special.TridentSpecialRenderer;
@@ -195,6 +196,11 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         ),
                         itemModels.modelOutput
                 )
+        ));
+        itemModels.itemModelOutput.accept(Items.MAGNETIC_HOOK.get(), ItemModelUtils.conditional(
+                new CustomModelDataProperty(0),
+                ItemModelUtils.plainModel(academy("item/magnetic_hook_open")),
+                ItemModelUtils.plainModel(academy("item/magnetic_hook"))
         ));
         itemModels.generateFlatItem(Items.ABILITY_DEVELOPER.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
         itemModels.generateFlatItem(Items.WIND_GEN_BASE.get(), ModelTemplates.FLAT_HANDHELD_ITEM);

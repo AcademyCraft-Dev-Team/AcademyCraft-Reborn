@@ -106,6 +106,14 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
                 .unlockedBy("has_paper", has(PAPER))
                 .save(output);
 
+        shaped(RecipeCategory.TOOLS, Items.MAGNETIC_HOOK.get())
+                .define('I', IRON_INGOT)
+                .pattern(" I ")
+                .pattern("III")
+                .pattern(" I ")
+                .unlockedBy("has_iron_ingot", has(IRON_INGOT))
+                .save(output);
+
         shaped(RecipeCategory.REDSTONE, Items.WIRELESS_NODE.get())
                 .define('E', ENDER_PEARL)
                 .define('I', Items.IMAG_PHASE_INGOT.get())
