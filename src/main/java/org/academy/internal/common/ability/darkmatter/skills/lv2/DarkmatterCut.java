@@ -16,6 +16,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -30,6 +31,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -204,11 +206,17 @@ public final class DarkmatterCut extends Skill {
             var origin = player.position().add(0, player.getBbHeight() * 0.5, 0);
             var visualDirection = direction.normalize();
             var look = horizontalLook(visualDirection, player.getYRot());
-            var targets = level.getEntitiesOfClass(LivingEntity.class,
-                    player.getBoundingBox().inflate(radius), target ->
-                            DarkmatterTargeting.isAttackableBy(player, target)
-                                    && insideCone(origin, look, target.getBoundingBox().getCenter(),
-                                    radius, minimumDot));
+            var targets = ViewTargetScanner.scan(
+                    level,
+                    LivingEntity.class,
+                    origin,
+                    look,
+                    radius,
+                    ViewTargetScanner.horizontalCone(radius, minimumDot),
+                    target -> DarkmatterTargeting.isAttackableBy(player, target)
+                            && target.getBoundingBox().getCenter().subtract(origin)
+                            .horizontalDistanceSqr() > 1.0E-6
+            );
             var requestedBaseCost = baseCost < 0.0f ? MATTER_COST : baseCost;
             var cost = matterCost(requestedBaseCost, milestone);
             var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
@@ -370,10 +378,14 @@ public final class DarkmatterCut extends Skill {
         static boolean insideCone(Vec3 origin, Vec3 look, Vec3 target,
                                   double radius, double minimumDot) {
             var offset = target.subtract(origin);
-            if (offset.lengthSqr() > radius * radius) return false;
-            var horizontal = new Vec3(offset.x, 0, offset.z);
-            return horizontal.lengthSqr() > 1.0e-6
-                    && look.dot(horizontal.normalize()) >= minimumDot;
+            return offset.horizontalDistanceSqr() > 1.0E-6
+                    && ViewTargetScanner.matches(
+                    origin,
+                    look,
+                    radius,
+                    ViewTargetScanner.horizontalCone(radius, minimumDot),
+                    new AABB(target, target)
+            );
         }
 
         private static void spawnSlash(

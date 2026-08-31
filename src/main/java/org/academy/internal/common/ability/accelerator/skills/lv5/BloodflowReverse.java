@@ -16,7 +16,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -36,6 +35,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -64,6 +64,12 @@ public class BloodflowReverse extends Skill {
     public static final double TARGET_BOX_INFLATE = 0.2;
     public static final double SEARCH_HALF_WIDTH = 0.85;
     public static final double SEARCH_HALF_HEIGHT = 1.15;
+    private static final ViewTargetScanner.Shape TARGET_SCAN_SHAPE = ViewTargetScanner.widenedRay(
+            SEARCH_HALF_WIDTH,
+            SEARCH_HALF_HEIGHT,
+            TARGET_BOX_INFLATE,
+            TARGET_BOX_INFLATE
+    );
     private static final double BLOOD_SPRAY_RANGE = 5.0;
     private static final double BLOOD_SPRAY_SURFACE_OFFSET = 0.015;
     private static final float[] BLOOD_SPRAY_PITCHES = {
@@ -83,13 +89,6 @@ public class BloodflowReverse extends Skill {
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
                 .devCondition(new DevCondition.DependencyCondition("Vector Reflection", "academy:vector_reflection"))
         );
-    }
-
-    private static double distanceToBoxSqr(Vec3 point, AABB box) {
-        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
-        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
-        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
-        return dx * dx + dy * dy + dz * dz;
     }
 
     public static double targetRange(LivingEntity observer, double additionalRange) {
@@ -115,32 +114,20 @@ public class BloodflowReverse extends Skill {
             double additionalRange,
             Predicate<LivingEntity> candidateFilter
     ) {
-        var direction = viewDirection.normalize();
-        if (direction.lengthSqr() < 1.0e-6) return null;
         var range = targetRange(observer, additionalRange);
-        var end = eyePosition.add(direction.scale(range));
-        var searchBox = new AABB(eyePosition, end)
-                .inflate(SEARCH_HALF_WIDTH, SEARCH_HALF_HEIGHT, SEARCH_HALF_WIDTH);
-
-        LivingEntity best = null;
-        var bestProjection = Double.MAX_VALUE;
-        for (var candidate : observer.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+        return ViewTargetScanner.findFirst(
+                observer.level(),
+                LivingEntity.class,
+                eyePosition,
+                viewDirection,
+                range,
+                TARGET_SCAN_SHAPE,
                 entity -> entity != observer && entity.isAlive() && !entity.isSpectator()
                         && (!(observer instanceof Player player)
                         || !PvpSetting.shouldPrevent(player, entity))
-                        && candidateFilter.test(entity))) {
-            var candidateBox = candidate.getBoundingBox().inflate(TARGET_BOX_INFLATE);
-            var projection = candidateBox.getCenter().subtract(eyePosition).dot(direction);
-            if (projection < 0.0 || projection > range || !observer.hasLineOfSight(candidate)) continue;
-            var closestPoint = eyePosition.add(direction.scale(projection));
-            if (distanceToBoxSqr(closestPoint, candidateBox)
-                    > TARGET_BOX_INFLATE * TARGET_BOX_INFLATE) continue;
-            if (projection < bestProjection) {
-                bestProjection = projection;
-                best = candidate;
-            }
-        }
-        return best;
+                        && observer.hasLineOfSight(entity)
+                        && candidateFilter.test(entity)
+        );
     }
 
     @Override

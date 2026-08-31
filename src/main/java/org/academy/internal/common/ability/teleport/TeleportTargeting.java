@@ -9,6 +9,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.jspecify.annotations.Nullable;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 
@@ -20,43 +21,26 @@ public final class TeleportTargeting {
     private static final double MIN_DIRECTION_LENGTH_SQUARED = 1.0e-8;
     private static final double PLACEMENT_STEP = 0.25;
     private static final double DISTANCE_EPSILON = 1.0e-6;
+    private static final ViewTargetScanner.Shape LIVING_TARGET_SCAN_SHAPE =
+            ViewTargetScanner.widenedRay(0.85, 1.15, 0.2, 0.2);
 
     private TeleportTargeting() {
     }
 
-    private static double distanceToBoxSqr(Vec3 point, AABB box) {
-        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
-        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
-        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
-        return dx * dx + dy * dy + dz * dz;
-    }
-
     public static LivingEntity findFirstLivingEntity(LivingEntity source, double maxRange) {
         if (source == null || maxRange <= 0.0) return null;
-        var start = source.getEyePosition();
-        var direction = source.getLookAngle().normalize();
-        if (direction.lengthSqr() < MIN_DIRECTION_LENGTH_SQUARED) return null;
-        var fullEnd = start.add(direction.scale(maxRange));
-        LivingEntity firstTarget = null;
-        var searchBox = new AABB(start, fullEnd)
-                .inflate(0.85, 1.15, 0.85);
-        var targetProjection = Double.MAX_VALUE;
-        for (var candidate : source.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+        return ViewTargetScanner.findFirst(
+                source.level(),
+                LivingEntity.class,
+                source.getEyePosition(),
+                source.getLookAngle(),
+                maxRange,
+                LIVING_TARGET_SCAN_SHAPE,
                 entity -> entity != source && entity.isAlive() && !entity.isSpectator()
                         && (!(source instanceof ServerPlayer player)
-                        || !PvpSetting.shouldPrevent(player, entity)))) {
-            var candidateBox = candidate.getBoundingBox().inflate(0.2);
-            var projection = candidateBox.getCenter().subtract(start).dot(direction);
-            if (projection < 0.0 || projection > maxRange || !source.hasLineOfSight(candidate)) continue;
-            var closestPoint = start.add(direction.scale(projection));
-            if (distanceToBoxSqr(closestPoint, candidateBox)
-                    > 0.2 * 0.2) continue;
-            if (projection < targetProjection) {
-                targetProjection = projection;
-                firstTarget = candidate;
-            }
-        }
-        return firstTarget;
+                        || !PvpSetting.shouldPrevent(player, entity))
+                        && source.hasLineOfSight(entity)
+        );
     }
 
     public static @Nullable Vec3 findSelfTeleportCenter(LivingEntity source, double selectedDistance) {

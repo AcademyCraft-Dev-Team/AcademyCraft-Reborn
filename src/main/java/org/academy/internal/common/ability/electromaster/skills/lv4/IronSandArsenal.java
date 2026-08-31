@@ -13,6 +13,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
@@ -29,6 +30,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.team.TeamRelations;
@@ -287,17 +289,18 @@ public class IronSandArsenal extends Skill {
             var source = SkillDamageSource.of(player, Skills.IRON_SAND_ARSENAL.get());
             var skill = Skills.IRON_SAND_ARSENAL.get();
             var sweepRadius = skill.hasProficiencyMilestone(player, 2) ? SWEEP_RADIUS * 1.2 : SWEEP_RADIUS;
-            var radiusSquared = sweepRadius * sweepRadius;
-            for (var target : level.getEntitiesOfClass(
+            var origin = player.position();
+            var sweepArea = new HorizontalSweepArea(player.getBoundingBox(), sweepRadius);
+            for (var target : ViewTargetScanner.scan(
+                    level,
                     LivingEntity.class,
-                    player.getBoundingBox().inflate(sweepRadius),
+                    origin,
+                    forward,
+                    sweepRadius,
+                    sweepArea,
                     entity -> entity != player && entity.isAlive() && !TeamRelations.areAllied(player, entity)
                             && !PvpSetting.shouldPrevent(player, entity)
             )) {
-                var delta = target.position().subtract(player.position());
-                var horizontal = new Vec3(delta.x, 0, delta.z);
-                if (horizontal.lengthSqr() > radiusSquared || horizontal.lengthSqr() <= 1.0e-8) continue;
-                if (forward.dot(horizontal.normalize()) < SWEEP_HALF_ANGLE_COS) continue;
                 if (target.hurtServer(level, source,
                         Server.calculateDamage(SWEEP_DAMAGE, abilityPower, multiplier))
                         && skill.hasProficiencyMilestone(player, 3)) {
@@ -312,6 +315,37 @@ public class IronSandArsenal extends Skill {
                 if (observer.distanceToSqr(player) <= 128.0 * 128.0) {
                     MisakaNetworkServer.send(observer, packet);
                 }
+            }
+        }
+
+        private record HorizontalSweepArea(
+                AABB ownerBounds,
+                double radius
+        ) implements ViewTargetScanner.Shape {
+            @Override
+            public AABB searchBounds(
+                    Vec3 origin,
+                    Vec3 normalizedDirection,
+                    double range
+            ) {
+                return ownerBounds.inflate(radius);
+            }
+
+            @Override
+            public double matchDistance(
+                    Vec3 origin,
+                    Vec3 normalizedDirection,
+                    double range,
+                    AABB targetBounds
+            ) {
+                var delta = targetBounds.getCenter().subtract(origin);
+                var horizontal = new Vec3(delta.x, 0.0, delta.z);
+                var distanceSqr = horizontal.lengthSqr();
+                if (distanceSqr <= 1.0E-8 || distanceSqr > radius * radius
+                        || normalizedDirection.dot(horizontal.normalize()) < SWEEP_HALF_ANGLE_COS) {
+                    return Double.POSITIVE_INFINITY;
+                }
+                return Math.sqrt(distanceSqr);
             }
         }
 

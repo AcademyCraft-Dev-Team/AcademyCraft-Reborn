@@ -34,9 +34,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class LevelUtil {
     static final int SILENT_BLOCK_UPDATE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
@@ -471,28 +469,24 @@ public class LevelUtil {
     ) {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
-        var pathBB = new AABB(start, end).inflate(radius);
-        var candidates = serverLevel.getEntities(
+        var path = end.subtract(start);
+        var length = path.length();
+        var direction = length > 1.0E-12
+                ? path.scale(1.0 / length)
+                : new Vec3(0.0, 1.0, 0.0);
+        for (var entity : ViewTargetScanner.scan(
+                serverLevel,
                 excludedEntity,
-                pathBB,
+                Entity.class,
+                start,
+                direction,
+                length,
+                ViewTargetScanner.inflatedAabbSegment(radius),
                 e -> e != excludedEntity
                         && e.isAlive()
                         && e.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get()
-        );
-        var hitSet = new HashSet<Entity>();
-
-        for (var entity : candidates) {
-            processEntityForAttack(serverLevel, entity, start, end, radius, damageSource, damage, hitSet);
-        }
-    }
-
-    private static void processEntityForAttack(ServerLevel serverLevel, Entity entity, Vec3 start, Vec3 end, float radius, DamageSource damageSource, float damage, Set<Entity> hitSet) {
-        if (hitSet.contains(entity)) return;
-
-        var expandedBox = entity.getBoundingBox().inflate(radius);
-        if (getIntersectionT(start, end, expandedBox) <= 1.0) {
+        )) {
             entity.hurtServer(serverLevel, damageSource, damage);
-            hitSet.add(entity);
         }
     }
 

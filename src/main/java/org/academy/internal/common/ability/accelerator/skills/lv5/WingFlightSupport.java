@@ -8,11 +8,13 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
@@ -194,7 +196,7 @@ final class WingFlightSupport {
         var cosThreshold = advancedBlackSweep
                 ? Math.cos(Math.acos(FAN_COS_THRESHOLD) + Math.toRadians(10.0))
                 : FAN_COS_THRESHOLD;
-        var searchBox = player.getBoundingBox().inflate(range);
+        var attackShape = ViewTargetScanner.cone(range, cosThreshold);
         var baseDamage = (float) player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
         var multiplier = AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
         var source = SkillDamageSource.of(
@@ -207,11 +209,19 @@ final class WingFlightSupport {
         level.playSound(null, player, SoundEvents.PLAYER_ATTACK_NODAMAGE,
                 SoundSource.PLAYERS, 0.85f, 0.9f + player.getRandom().nextFloat() * 0.15f);
         CTADamageUtil.runGuarded(player, () -> {
-            for (var target : level.getEntitiesOfClass(LivingEntity.class, searchBox,
-                    entity -> entity != player && entity.isAlive())) {
-                if (CtaFriendlyFireWhitelist.shouldProtect(player, target)) continue;
+            for (var target : ViewTargetScanner.scan(
+                    level,
+                    LivingEntity.class,
+                    origin,
+                    forward,
+                    range,
+                    attackShape,
+                    entity -> entity != player
+                            && entity.isAlive()
+                            && !CtaFriendlyFireWhitelist.shouldProtect(player, entity)
+                            && entity.getBoundingBox().getCenter().distanceToSqr(origin) > 1.0E-6
+            )) {
                 var targetCenter = target.position().add(0, target.getBbHeight() * 0.5, 0);
-                if (!isInFan(origin, forward, targetCenter, range, cosThreshold)) continue;
                 var trueMaxHealth = EntityControlApi.getTrueMaxHealth(target);
                 if (!Float.isFinite(trueMaxHealth) || trueMaxHealth <= 0.0f) {
                     trueMaxHealth = target.getMaxHealth();
@@ -315,9 +325,13 @@ final class WingFlightSupport {
 
     static boolean isInFan(Vec3 origin, Vec3 forward, Vec3 target, double range, double cosThreshold) {
         if (origin == null || forward == null || target == null || range <= 0) return false;
-        var delta = target.subtract(origin);
-        var distanceSqr = delta.lengthSqr();
-        if (distanceSqr <= 1.0E-6 || distanceSqr > range * range) return false;
-        return forward.normalize().dot(delta.normalize()) >= cosThreshold;
+        return target.distanceToSqr(origin) > 1.0E-6
+                && ViewTargetScanner.matches(
+                origin,
+                forward,
+                range,
+                ViewTargetScanner.cone(range, cosThreshold),
+                new AABB(target, target)
+        );
     }
 }

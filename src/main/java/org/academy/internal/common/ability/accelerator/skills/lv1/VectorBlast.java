@@ -33,6 +33,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.team.TeamRelations;
@@ -163,12 +164,14 @@ public final class VectorBlast extends Skill {
     }
 
     static boolean isInsideBeam(Vec3 origin, Vec3 direction, Vec3 target, double length, double radius) {
-        if (direction.lengthSqr() <= 1.0e-6 || length <= 0.0) return false;
-        var normalized = direction.normalize();
-        var relative = target.subtract(origin);
-        var forward = relative.dot(normalized);
-        if (forward <= 0.0 || forward >= length) return false;
-        return relative.subtract(normalized.scale(forward)).lengthSqr() <= radius * radius;
+        return direction.lengthSqr() > 1.0e-6
+                && ViewTargetScanner.matches(
+                origin,
+                direction,
+                length,
+                ViewTargetScanner.openCenteredCylinder(radius),
+                new AABB(target, target)
+        );
     }
 
     public static final class Client {
@@ -359,12 +362,16 @@ public final class VectorBlast extends Skill {
                     skill,
                     DamageTypes.VEC
             );
-            var search = new AABB(origin, end).inflate(beamRadius);
-            for (var target : level.getEntitiesOfClass(
-                    LivingEntity.class, search, entity -> entity != player && entity.isAlive())) {
-                if (isInsideBeam(origin, direction, target.getBoundingBox().getCenter(), range, beamRadius)) {
-                    target.hurtServer(level, source, damage);
-                }
+            for (var target : ViewTargetScanner.scan(
+                    level,
+                    LivingEntity.class,
+                    origin,
+                    direction,
+                    range,
+                    ViewTargetScanner.openCenteredCylinder(beamRadius),
+                    entity -> entity != player && entity.isAlive()
+            )) {
+                target.hurtServer(level, source, damage);
             }
 
             if (skill.hasProficiencyMilestone(player, 3)) {
