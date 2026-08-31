@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "academy-vfxgraph-editor": {
+      "command": "node",
+      "args": [
+        "./scripts/server.mjs",
+        "--project-root=D:/mcmodtest/AcademyCraft-Reborn-26.2"
+      ],
+      "cwd": ".",
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 30
+    }
+  }
+}

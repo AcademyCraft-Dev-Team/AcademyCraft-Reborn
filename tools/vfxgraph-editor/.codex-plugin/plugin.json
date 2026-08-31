@@ -1,0 +1,22 @@
+{
+  "name": "vfxgraph-editor",
+  "version": "0.1.0",
+  "description": "Safely inspect, edit, validate, and live-reload AcademyCraft VFXGraph assets.",
+  "author": {
+    "name": "AcademyCraft Reborn contributors"
+  },
+  "interface": {
+    "displayName": "Academy VFXGraph Editor",
+    "shortDescription": "Edit and live-reload VFXGraph assets without GUI automation.",
+    "longDescription": "Provides guarded VFXGraph reads, node and parameter updates, JSON patches, validation, backups, variants, and live editor preview controls.",
+    "developerName": "AcademyCraft Reborn contributors",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Inspect the current VFXGraph and suggest a safe adjustment.",
+      "Update this effect and reload it in the live editor.",
+      "Validate all VFXGraph assets and summarize any issues."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
