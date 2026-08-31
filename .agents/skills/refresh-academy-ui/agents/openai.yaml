@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refresh AcademyCraft UI"
+  short_description: "Build line-led translucent AcademyCraft GUI/terminal surfaces"
+  default_prompt: "Use $refresh-academy-ui to update this GUI with the line-led, translucent AcademyCraft visual language."
