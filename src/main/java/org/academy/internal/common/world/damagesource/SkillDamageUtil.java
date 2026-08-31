@@ -101,6 +101,13 @@ public final class SkillDamageUtil {
                 level, target, source, amount, healthDamage + absorptionDamage,
                 attacker, skill, target.isDeadOrDying(), true
         );
+        DamageCompletionDeclaration.publish(
+                target,
+                source,
+                container.getOriginalDamage(),
+                container.getInflictedDamage(),
+                container.getNewDamage()
+        );
         return true;
     }
 

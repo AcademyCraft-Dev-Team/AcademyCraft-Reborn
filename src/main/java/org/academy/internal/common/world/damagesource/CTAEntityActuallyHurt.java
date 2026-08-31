@@ -77,7 +77,13 @@ public final class CTAEntityActuallyHurt {
             EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);
         }
         var inflicted = Math.max(0.0f, before - observed);
-        if (!(inflicted > 0.0f)) return false;
+        var declarationDamage = DamageCompletionDeclaration.resolveHealthDamageForDeclaration(
+                before, expected, observed, amount
+        );
+        if (!(inflicted > 0.0f)) {
+            DamageCompletionDeclaration.publish(entity, source, amount, declarationDamage);
+            return false;
+        }
 
         entity.getCombatTracker().recordDamage(source, inflicted);
         entity.invulnerableTime = 0;
@@ -87,7 +93,7 @@ public final class CTAEntityActuallyHurt {
                 level, entity, source, amount, inflicted, attacker, skill,
                 expected == 0.0f, false
         );
-        DamageCompletionDeclaration.publish(entity, source, amount, inflicted);
+        DamageCompletionDeclaration.publish(entity, source, amount, declarationDamage);
         return true;
     }
 
