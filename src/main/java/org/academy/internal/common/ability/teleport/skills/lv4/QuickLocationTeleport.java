@@ -19,6 +19,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -154,24 +155,22 @@ public final class QuickLocationTeleport extends Skill {
         private static Entity pickEntity(ServerPlayer player, double reach) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle().normalize();
-            var end = eye.add(look.scale(reach));
-            var search = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0);
-            var closest = reach * reach;
-            Entity best = null;
-            for (var entity : player.level().getEntities(player, search,
-                    entity -> entity != player && entity.isPickable())) {
-                var hit = entity.getBoundingBox().inflate(0.3).clip(eye, end);
-                if (hit.isEmpty()) continue;
-                var distance = eye.distanceToSqr(hit.get());
-                if (distance < closest) {
-                    var resolved = MultipartEntityTargeting.resolve(entity);
-                    if (resolved == null || resolved == player
-                            || !resolved.isAlive() || resolved.isRemoved()) continue;
-                    closest = distance;
-                    best = resolved;
-                }
-            }
-            return best;
+            var selected = ViewTargetScanner.findFirst(
+                    player.level(),
+                    player,
+                    Entity.class,
+                    eye,
+                    look,
+                    reach,
+                    ViewTargetScanner.openInflatedAabbSegment(0.3),
+                    entity -> {
+                        if (!entity.isPickable()) return false;
+                        var resolved = MultipartEntityTargeting.resolve(entity);
+                        return resolved != null && resolved != player
+                                && resolved.isAlive() && !resolved.isRemoved();
+                    }
+            );
+            return selected == null ? null : MultipartEntityTargeting.resolve(selected);
         }
     }
 

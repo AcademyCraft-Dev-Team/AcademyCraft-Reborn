@@ -24,6 +24,7 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -180,14 +181,22 @@ public class Disintegrate extends Skill {
 
         private static LivingEntity findFirstTarget(ServerLevel level, ServerPlayer player,
                                                     Vec3 start, Vec3 end) {
-            return level.getEntitiesOfClass(
+            var segment = end.subtract(start);
+            var length = segment.length();
+            var direction = length > 1.0E-12
+                    ? segment.scale(1.0 / length)
+                    : new Vec3(0.0, 1.0, 0.0);
+            return ViewTargetScanner.scan(
+                            level,
                             LivingEntity.class,
-                            new AABB(start, end).inflate(1.0),
+                            start,
+                            direction,
+                            length,
+                            ViewTargetScanner.centeredCylinder(1.0),
                             target -> target.isAlive()
                                     && MeltdownerTargeting.canAffectNegatively(player, target)
                                     && (!(target instanceof ServerPlayer serverPlayer)
                                     || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
-                                    && distanceToSegmentSqr(target.getBoundingBox().getCenter(), start, end) <= 1.0
                     ).stream()
                     .min(Comparator.comparingDouble(target -> target.distanceToSqr(start)))
                     .orElse(null);
@@ -227,16 +236,22 @@ public class Disintegrate extends Skill {
 
         private static void markTargetsAlongBeam(ServerPlayer player, Vec3 start, Vec3 end,
                                                  int stage, long now, int milestone) {
-            var search = new AABB(start, end).inflate(0.125);
-            for (var candidate : player.level().getEntitiesOfClass(
+            var segment = end.subtract(start);
+            var length = segment.length();
+            var direction = length > 1.0E-12
+                    ? segment.scale(1.0 / length)
+                    : new Vec3(0.0, 1.0, 0.0);
+            for (var candidate : ViewTargetScanner.scan(
+                    player.level(),
                     LivingEntity.class,
-                    search,
+                    start,
+                    direction,
+                    length,
+                    ViewTargetScanner.inflatedAabbSegment(0.125),
                     target -> target.isAlive()
                             && MeltdownerTargeting.canAffectNegatively(player, target)
                             && (!(target instanceof ServerPlayer serverPlayer)
                             || !serverPlayer.isCreative() && !serverPlayer.isSpectator())
-                            && (target.getBoundingBox().inflate(0.125).contains(start)
-                            || target.getBoundingBox().inflate(0.125).clip(start, end).isPresent())
             )) {
                 mark(player, candidate, stage, now, milestone);
             }
@@ -271,14 +286,6 @@ public class Disintegrate extends Skill {
 
         private static void cleanup(long now) {
             PENDING_STAGES.values().removeIf(stage -> stage.expiresAt() < now);
-        }
-
-        private static double distanceToSegmentSqr(Vec3 point, Vec3 start, Vec3 end) {
-            var segment = end.subtract(start);
-            var lengthSqr = segment.lengthSqr();
-            if (lengthSqr < 1.0e-9) return point.distanceToSqr(start);
-            var progress = Mth.clamp(point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
-            return point.distanceToSqr(start.add(segment.scale(progress)));
         }
 
         private record PendingStage(UUID owner, int stage, long expiresAt, int milestone) {

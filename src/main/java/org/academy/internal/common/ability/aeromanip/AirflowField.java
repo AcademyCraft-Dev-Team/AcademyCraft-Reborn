@@ -4,6 +4,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.util.ViewTargetScanner;
 
 import java.util.UUID;
 
@@ -52,14 +53,6 @@ public record AirflowField(
         proficiencyMilestone = Math.max(0, Math.min(3, proficiencyMilestone));
     }
 
-    static double distanceToSegmentSqr(Vec3 point, Vec3 start, Vec3 end) {
-        var segment = end.subtract(start);
-        var lengthSqr = segment.lengthSqr();
-        if (lengthSqr <= 1.0e-8) return point.distanceToSqr(start);
-        var t = Math.max(0.0, Math.min(1.0, point.subtract(start).dot(segment) / lengthSqr));
-        return point.distanceToSqr(start.add(segment.scale(t)));
-    }
-
     private static boolean finite(Vec3 value) {
         return value != null
                 && Double.isFinite(value.x)
@@ -80,7 +73,8 @@ public record AirflowField(
         var expanded = Math.max(0.0, padding);
         return switch (shape) {
             case SPHERE -> point.distanceToSqr(center) <= square(radius + expanded);
-            case CAPSULE -> distanceToSegmentSqr(point, center, center.add(direction.scale(length)))
+            case CAPSULE -> ViewTargetScanner.distanceToSegmentSqr(
+                    point, center, center.add(direction.scale(length)))
                     <= square(radius + expanded);
             case CONE -> insideCone(point, expanded);
         };

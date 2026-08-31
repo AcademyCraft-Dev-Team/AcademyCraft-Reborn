@@ -7,7 +7,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -18,6 +17,7 @@ import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
@@ -408,29 +408,26 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 * system.getPlayerDamageMultiplier(player.getUUID())
                 * ProgramPowerScale.damageMultiplier(power);
         if (damage <= 0.0f) return;
-        var bounds = new AABB(origin, destination).inflate(1.0);
+        var trajectory = destination.subtract(origin);
+        var trajectoryLength = trajectory.length();
+        var direction = trajectoryLength > 1.0E-12
+                ? trajectory.scale(1.0 / trajectoryLength)
+                : new Vec3(0.0, 1.0, 0.0);
         var source = SkillDamageSource.of(player, Skills.MAGNET_MANIPULATION.get());
-        for (var living : targets.level().getEntitiesOfClass(
+        for (var living : ViewTargetScanner.scan(
+                targets.level(),
                 LivingEntity.class,
-                bounds,
+                origin,
+                direction,
+                trajectoryLength,
+                ViewTargetScanner.centeredCylinder(1.0),
                 value -> value != player
                         && value != launched
                         && value.isAlive()
                         && !CtaFriendlyFireWhitelist.shouldProtect(player, value)
         )) {
-            if (distanceToSegmentSqr(living.getBoundingBox().getCenter(), origin, destination)
-                    <= 1.0) {
-                living.hurtServer(targets.level(), source, damage);
-            }
+            living.hurtServer(targets.level(), source, damage);
         }
-    }
-
-    private static double distanceToSegmentSqr(Vec3 point, Vec3 start, Vec3 end) {
-        var delta = end.subtract(start);
-        var lengthSquared = delta.lengthSqr();
-        if (lengthSquared < 1.0E-12) return point.distanceToSqr(start);
-        var t = Math.clamp(point.subtract(start).dot(delta) / lengthSquared, 0.0, 1.0);
-        return point.distanceToSqr(start.add(delta.scale(t)));
     }
 
     public static void releaseControlled(ServerPlayer player) {

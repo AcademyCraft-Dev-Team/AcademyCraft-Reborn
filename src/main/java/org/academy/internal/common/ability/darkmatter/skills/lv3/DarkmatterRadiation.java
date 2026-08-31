@@ -29,6 +29,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -230,9 +231,13 @@ public final class DarkmatterRadiation extends Skill {
         }
 
         static boolean insideFrontHemisphere(Vec3 eye, Vec3 look, Vec3 target, double range) {
-            var offset = target.subtract(eye);
-            return offset.lengthSqr() <= range * range
-                    && (offset.lengthSqr() <= 1.0e-6 || look.dot(offset.normalize()) >= 0);
+            return ViewTargetScanner.matches(
+                    eye,
+                    look,
+                    range,
+                    ViewTargetScanner.cone(range, 0.0),
+                    new AABB(target, target)
+            );
         }
 
         private static boolean isHostileTarget(ServerPlayer player, LivingEntity target) {
@@ -256,9 +261,18 @@ public final class DarkmatterRadiation extends Skill {
             var alphaMinimumDot = Math.cos(Math.toRadians(alphaHalfAngle(phase.alpha())));
             var betaMinimumDot = Math.cos(Math.toRadians(betaHalfAngle(phase.beta())));
             spawnRadiationVisual(level, player, eye, look, queryRange);
-            var targets = level.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(eye, eye).inflate(queryRange),
-                    target -> isHostileTarget(player, target));
+            var alphaArea = ViewTargetScanner.cone(alphaRange, alphaMinimumDot);
+            var betaArea = ViewTargetScanner.cone(betaRange, betaMinimumDot);
+            var phaseArea = ViewTargetScanner.union(alphaArea, betaArea);
+            var targets = ViewTargetScanner.scan(
+                    level,
+                    LivingEntity.class,
+                    eye,
+                    look,
+                    queryRange,
+                    phaseArea,
+                    target -> isHostileTarget(player, target)
+            );
             if (targets.isEmpty()) {
                 state.exposure.clear();
                 return;
@@ -274,8 +288,11 @@ public final class DarkmatterRadiation extends Skill {
             var betaExposed = new HashSet<UUID>();
             for (var target : targets) {
                 var center = target.getBoundingBox().getCenter();
-                var inAlpha = insidePhaseArea(eye, look, center, alphaRange, alphaMinimumDot);
-                var inBeta = insidePhaseArea(eye, look, center, betaRange, betaMinimumDot);
+                var targetBounds = target.getBoundingBox();
+                var inAlpha = ViewTargetScanner.matches(
+                        eye, look, queryRange, alphaArea, targetBounds);
+                var inBeta = ViewTargetScanner.matches(
+                        eye, look, queryRange, betaArea, targetBounds);
                 if (!inAlpha && !inBeta) continue;
                 target.invulnerableTime = 0;
                 var hit = false;
@@ -453,18 +470,6 @@ public final class DarkmatterRadiation extends Skill {
                 feather.configure(player, target, direction, damage, exposureBurstDamage);
                 level.addFreshEntity(feather);
             }
-        }
-
-        private static boolean insidePhaseArea(
-                Vec3 eye,
-                Vec3 look,
-                Vec3 target,
-                double range,
-                double minimumDot
-        ) {
-            var offset = target.subtract(eye);
-            return offset.lengthSqr() <= range * range
-                    && (offset.lengthSqr() <= 1.0e-6 || look.dot(offset.normalize()) >= minimumDot);
         }
 
         private static void spawnRadiationVisual(ServerLevel level, ServerPlayer player,

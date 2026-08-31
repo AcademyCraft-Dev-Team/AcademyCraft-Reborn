@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
@@ -21,7 +22,6 @@ import java.util.function.Predicate;
 
 public final class LinearReflectionResolver {
     public static final double RETURN_EPSILON = 1.0E-4;
-    private static final double PARALLEL_EPSILON = 1.0E-9;
 
     private LinearReflectionResolver() {
     }
@@ -90,10 +90,13 @@ public final class LinearReflectionResolver {
         }
 
         var radius = payload.radius();
-        var pathBounds = new AABB(segment.start(), segment.end()).inflate(radius);
-        return level.getEntitiesOfClass(
+        return ViewTargetScanner.scan(
+                        level,
                         ServerPlayer.class,
-                        pathBounds,
+                        segment.start(),
+                        segment.direction(),
+                        segment.length(),
+                        ViewTargetScanner.inflatedAabbSegment(radius),
                         player -> payload.canTarget(player, false, null)
                                 && modeResolver.apply(player) != null
                 ).stream()
@@ -238,19 +241,7 @@ public final class LinearReflectionResolver {
     }
 
     public static OptionalDouble intersectionProgress(Vec3 start, Vec3 end, AABB bounds) {
-        if (!finite(start) || !finite(end) || bounds == null) return OptionalDouble.empty();
-        var direction = end.subtract(start);
-        if (!(direction.lengthSqr() > 1.0E-12) || !Double.isFinite(direction.lengthSqr())) {
-            return OptionalDouble.empty();
-        }
-
-        var interval = new double[]{0.0, 1.0};
-        if (!clipAxis(start.x, direction.x, bounds.minX, bounds.maxX, interval)
-                || !clipAxis(start.y, direction.y, bounds.minY, bounds.maxY, interval)
-                || !clipAxis(start.z, direction.z, bounds.minZ, bounds.maxZ, interval)) {
-            return OptionalDouble.empty();
-        }
-        return OptionalDouble.of(interval[0]);
+        return ViewTargetScanner.intersectionProgress(start, end, bounds);
     }
 
     static double projectedProgress(Vec3 start, Vec3 end, Vec3 point) {
@@ -259,29 +250,6 @@ public final class LinearReflectionResolver {
         var lengthSqr = direction.lengthSqr();
         if (!(lengthSqr > 1.0E-12) || !Double.isFinite(lengthSqr)) return 0.0;
         return Mth.clamp(point.subtract(start).dot(direction) / lengthSqr, 0.0, 1.0);
-    }
-
-    private static boolean clipAxis(
-            double start,
-            double direction,
-            double min,
-            double max,
-            double[] interval
-    ) {
-        if (Math.abs(direction) < PARALLEL_EPSILON) {
-            return start >= min && start <= max;
-        }
-        var inverse = 1.0 / direction;
-        var entry = (min - start) * inverse;
-        var exit = (max - start) * inverse;
-        if (entry > exit) {
-            var swap = entry;
-            entry = exit;
-            exit = swap;
-        }
-        interval[0] = Math.max(interval[0], entry);
-        interval[1] = Math.min(interval[1], exit);
-        return interval[0] <= interval[1];
     }
 
     private static boolean finite(Vec3 value) {

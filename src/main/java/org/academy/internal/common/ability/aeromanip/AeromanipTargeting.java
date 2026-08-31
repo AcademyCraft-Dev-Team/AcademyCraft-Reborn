@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -102,43 +103,23 @@ public final class AeromanipTargeting {
             Predicate<LivingEntity> predicate
     ) {
         if (owner == null || !Double.isFinite(range) || range <= 0.0) return null;
-        var eye = owner.getEyePosition();
-        var direction = owner.getLookAngle().normalize();
-        if (direction.lengthSqr() < 1.0e-6) return null;
-        var resolvedRange = Math.max(0.0, range);
-        var resolvedWidth = Math.max(0.0, searchHalfWidth);
-        var resolvedHeight = Math.max(0.0, searchHalfHeight);
         var resolvedInflate = Math.max(0.0, targetBoxInflate);
-        var end = eye.add(direction.scale(resolvedRange));
-        var searchBox = new AABB(eye, end)
-                .inflate(resolvedWidth, resolvedHeight, resolvedWidth);
-
-        LivingEntity best = null;
-        var bestProjection = Double.MAX_VALUE;
-        for (var candidate : owner.level().getEntitiesOfClass(
+        return ViewTargetScanner.findFirst(
+                owner.level(),
                 LivingEntity.class,
-                searchBox,
+                owner.getEyePosition(),
+                owner.getLookAngle(),
+                range,
+                ViewTargetScanner.widenedRay(
+                        Math.max(0.0, searchHalfWidth),
+                        Math.max(0.0, searchHalfHeight),
+                        resolvedInflate,
+                        resolvedInflate
+                ),
                 entity -> entity != owner && entity.isAlive() && !entity.isSpectator()
-                        && (predicate == null || predicate.test(entity)))) {
-            var candidateBox = candidate.getBoundingBox().inflate(resolvedInflate);
-            var projection = candidateBox.getCenter().subtract(eye).dot(direction);
-            if (projection < 0.0 || projection > resolvedRange || !owner.hasLineOfSight(candidate)) continue;
-            var closestPoint = eye.add(direction.scale(projection));
-            if (distanceToBoxSqr(closestPoint, candidateBox)
-                    > resolvedInflate * resolvedInflate) continue;
-            if (projection < bestProjection) {
-                bestProjection = projection;
-                best = candidate;
-            }
-        }
-        return best;
-    }
-
-    static double distanceToBoxSqr(Vec3 point, AABB box) {
-        var dx = Math.max(Math.max(box.minX - point.x, 0.0), point.x - box.maxX);
-        var dy = Math.max(Math.max(box.minY - point.y, 0.0), point.y - box.maxY);
-        var dz = Math.max(Math.max(box.minZ - point.z, 0.0), point.z - box.maxZ);
-        return dx * dx + dy * dy + dz * dz;
+                        && owner.hasLineOfSight(entity)
+                        && (predicate == null || predicate.test(entity))
+        );
     }
 
     /** Finds a point just outside an AABB along the supplied outward direction. */

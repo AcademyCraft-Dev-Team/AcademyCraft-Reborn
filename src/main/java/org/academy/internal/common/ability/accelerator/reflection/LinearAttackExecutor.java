@@ -4,7 +4,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -88,21 +89,22 @@ public final class LinearAttackExecutor {
         if (!segment.hasFiniteCoordinates()) return List.of();
         var pointSegment = !(segment.lengthSqr() > 1.0E-12);
         var hits = new ArrayList<Entity>();
-        var pathBounds = new AABB(segment.start(), segment.end()).inflate(payload.radius());
-        var candidates = level.getEntities(
-                excludedEntity,
-                pathBounds,
-                entity -> entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get()
+        var targetFilter = (java.util.function.Predicate<Entity>) entity ->
+                entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get()
                         && payload.canTarget(entity, reflected, reflector)
                         && (!reflected
                         || !(entity instanceof LivingEntity living)
-                        || !CtaFriendlyFireWhitelist.shouldProtect(reflector, living))
+                        || !CtaFriendlyFireWhitelist.shouldProtect(reflector, living));
+        var candidates = ViewTargetScanner.scanOrdered(
+                level,
+                excludedEntity,
+                Entity.class,
+                segment.start(),
+                pointSegment ? new Vec3(0.0, 1.0, 0.0) : segment.direction(),
+                segment.length(),
+                ViewTargetScanner.inflatedAabbSegment(payload.radius()),
+                targetFilter
         );
-        candidates.sort(Comparator.comparingDouble(entity ->
-                LinearReflectionResolver.intersectionProgress(
-                        segment.start(), segment.end(), entity.getBoundingBox().inflate(payload.radius())
-                ).orElse(Double.POSITIVE_INFINITY)
-        ));
 
         var segmentHits = new HashSet<Entity>();
         var source = reflected
@@ -111,12 +113,6 @@ public final class LinearAttackExecutor {
                 : payload.outgoingDamageSource();
         for (var target : candidates) {
             if (!segmentHits.add(target)) continue;
-            var hitBounds = target.getBoundingBox().inflate(payload.radius());
-            if (pointSegment) {
-                if (!hitBounds.contains(segment.start())) continue;
-            } else if (LinearReflectionResolver.intersectionProgress(
-                    segment.start(), segment.end(), hitBounds
-            ).isEmpty()) continue;
             if (excludedFoldHits != null && excludedFoldHits.contains(target)) continue;
 
             var damage = payload.damage(target);

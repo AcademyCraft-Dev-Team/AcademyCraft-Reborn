@@ -45,6 +45,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -278,27 +279,26 @@ public final class DarkmatterDisassemble extends Skill {
             var end = start.add(direction.scale(range));
             var block = level.clip(new ClipContext(start, end,
                     ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            var bestDistance = block.getType() == HitResult.Type.MISS
-                    ? range * range
-                    : start.distanceToSqr(block.getLocation());
-            LivingEntity best = null;
             // A 0.5-block-wide ray: 0.25 block on each side of its center line.
-            var search = new AABB(start, end).inflate(0.25);
-            for (var candidate : level.getEntitiesOfClass(LivingEntity.class, search,
-                    target -> validTarget(player, target))) {
-                var clipped = candidate.getBoundingBox().inflate(0.25).clip(start, end);
-                if (clipped.isEmpty()) continue;
-                var distance = start.distanceToSqr(clipped.get());
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    best = candidate;
-                }
-            }
+            var best = ViewTargetScanner.findFirst(
+                    level,
+                    LivingEntity.class,
+                    start,
+                    direction,
+                    range,
+                    ViewTargetScanner.openInflatedAabbSegment(0.25),
+                    target -> validTarget(player, target)
+            );
             if (best != null) {
                 var clipped = best.getBoundingBox().inflate(0.25).clip(start, end);
-                return new Hit(best,
-                        block.getType() == HitResult.Type.MISS ? null : block,
-                        clipped.orElse(best.getBoundingBox().getCenter()));
+                if (clipped.isPresent()
+                        && (block.getType() == HitResult.Type.MISS
+                        || start.distanceToSqr(clipped.get())
+                        < start.distanceToSqr(block.getLocation()))) {
+                    return new Hit(best,
+                            block.getType() == HitResult.Type.MISS ? null : block,
+                            clipped.get());
+                }
             }
             if (block.getType() == HitResult.Type.MISS) return null;
             return new Hit(null, block, block.getLocation());

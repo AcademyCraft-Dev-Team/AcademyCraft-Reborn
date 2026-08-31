@@ -33,6 +33,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -310,7 +311,7 @@ public final class LaminarCutter extends Skill {
             var bladeRight = bladeRight(direction);
             var bladeNormal = direction.cross(bladeRight).normalize();
             var halfWidth = bladeHalfWidth(tier);
-            var box = new AABB(eye, end).inflate(halfWidth, 1.5, halfWidth);
+            var bladeArea = new BladeArea(bladeRight, bladeNormal, halfWidth);
             var source = SkillDamageSource.of(player, Skills.LAMINAR_CUTTER.get(), DamageTypes.LAMINAR_CUT);
             level.playSound(null, player.blockPosition(),
                     SoundEvents.AIRFLOW_IMPACT.get(),
@@ -319,22 +320,18 @@ public final class LaminarCutter extends Skill {
                     * context.system().getPlayerAbilityPowerMultiplier(player.getUUID())
                     * context.system().getPlayerDamageMultiplier(player.getUUID())
                     * damageScale;
-            var finalBladeRight = bladeRight;
-            var finalBladeNormal = bladeNormal;
-            for (var target : level.getEntitiesOfClass(LivingEntity.class, box,
+            for (var target : ViewTargetScanner.scan(
+                    level,
+                    LivingEntity.class,
+                    eye,
+                    direction,
+                    resolvedLength,
+                    bladeArea,
                     living -> living != player
                             && living.isAlive()
                             && AeromanipTargeting.canAffectNegatively(player, living)
                             && player.hasLineOfSight(living)
-                            && intersectsBlade(
-                            living,
-                            eye,
-                            direction,
-                            finalBladeRight,
-                            finalBladeNormal,
-                            resolvedLength,
-                            halfWidth
-                    ))) {
+            )) {
                 var hurt = tier == AeromanipChargeTier.FULL
                         ? SkillDamageUtil.applyDirect(level, target, source, damage)
                         : target.hurtServer(level, source, damage);
@@ -369,13 +366,46 @@ public final class LaminarCutter extends Skill {
         private static boolean intersectsBlade(LivingEntity target, Vec3 start, Vec3 direction,
                                                Vec3 bladeRight, Vec3 bladeNormal, double range,
                                                double halfWidth) {
-            var relative = target.getBoundingBox().getCenter().subtract(start);
-            var forward = relative.dot(direction);
-            if (forward < -target.getBbWidth() || forward > range + target.getBbWidth()) return false;
-            var lateral = Math.abs(relative.dot(bladeRight));
-            if (lateral > halfWidth + target.getBbWidth() * 0.5) return false;
-            return Math.abs(relative.dot(bladeNormal))
-                    <= BLADE_HALF_THICKNESS + target.getBbHeight() * 0.5;
+            return ViewTargetScanner.matches(
+                    start,
+                    direction,
+                    range,
+                    new BladeArea(bladeRight, bladeNormal, halfWidth),
+                    target.getBoundingBox()
+            );
+        }
+
+        private record BladeArea(
+                Vec3 bladeRight,
+                Vec3 bladeNormal,
+                double halfWidth
+        ) implements ViewTargetScanner.Shape {
+            @Override
+            public AABB searchBounds(Vec3 origin, Vec3 normalizedDirection, double range) {
+                return new AABB(origin, origin.add(normalizedDirection.scale(range)))
+                        .inflate(halfWidth, 1.5, halfWidth);
+            }
+
+            @Override
+            public double matchDistance(
+                    Vec3 origin,
+                    Vec3 normalizedDirection,
+                    double range,
+                    AABB targetBounds
+            ) {
+                var relative = targetBounds.getCenter().subtract(origin);
+                var targetWidth = Math.max(targetBounds.getXsize(), targetBounds.getZsize());
+                var forward = relative.dot(normalizedDirection);
+                if (forward < -targetWidth || forward > range + targetWidth) {
+                    return Double.POSITIVE_INFINITY;
+                }
+                if (Math.abs(relative.dot(bladeRight)) > halfWidth + targetWidth * 0.5
+                        || Math.abs(relative.dot(bladeNormal))
+                        > BLADE_HALF_THICKNESS + targetBounds.getYsize() * 0.5) {
+                    return Double.POSITIVE_INFINITY;
+                }
+                return Math.max(0.0, forward);
+            }
         }
 
         private static void spawnBladeVisual(ServerLevel level, Vec3 start, Vec3 direction,
