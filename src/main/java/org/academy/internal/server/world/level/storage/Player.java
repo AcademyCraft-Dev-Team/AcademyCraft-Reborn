@@ -45,7 +45,8 @@ public final class Player {
             Map.entry("pressure_lock", "turbulent_cavitation"),
             Map.entry("atmosphere_blast_gun", "rejecting_wind"),
             Map.entry("wind_corridor", "high_speed_jet"),
-            Map.entry("atmospheric_dominion", "adiabatic_compression")
+            Map.entry("atmospheric_dominion", "adiabatic_compression"),
+            Map.entry("precision_operation", "wide_area_interference")
     );
     private static final Set<String> RETIRED_SKILLS = Set.of(
             "academy:hell_flare",

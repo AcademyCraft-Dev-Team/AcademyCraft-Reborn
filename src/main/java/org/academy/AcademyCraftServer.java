@@ -13,7 +13,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
-import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
 import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;
 import org.academy.internal.common.network.MusicSyncPackets;
@@ -85,7 +85,6 @@ public final class AcademyCraftServer {
         PlayerLeftClickSwingPacket.initServer();
         MagneticHookActionPacket.initServer();
         AbilityProgramManager.initServer();
-        PrecisionOperationManager.initServer();
     }
 
     @SubscribeEvent
@@ -100,7 +99,7 @@ public final class AcademyCraftServer {
         var instance = context.getAcademyCraftServer();
         ServerProgramScheduler.clear(event.getServer());
         AbilityProgramManager.clear();
-        PrecisionOperationManager.clear(event.getServer());
+        PrecisionOperationRuntime.clear(event.getServer());
         instance.abilitySystemServer.onServerStopping();
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();

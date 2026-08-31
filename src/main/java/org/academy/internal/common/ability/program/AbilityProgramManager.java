@@ -32,9 +32,12 @@ import org.academy.internal.common.ability.electromaster.program.ServerElectroma
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramExecutionBridge;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
+import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramExecutionBridge;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
@@ -47,7 +50,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.*;
 
 /**
- * Server-authoritative program books and execution gateway for non-mentalout categories.
+ * Server-authoritative program books and execution gateway for every programmable category.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AbilityProgramManager {
@@ -67,6 +70,8 @@ public final class AbilityProgramManager {
             AbilityProgramManager::executeElectromaster,
             MeltdownerProgramNodeCatalog.MELTDOWNER,
             AbilityProgramManager::executeMeltdowner,
+            PrecisionProgramNodeCatalog.MENTALOUT,
+            AbilityProgramManager::executeMentalout,
             TeleportProgramNodeCatalog.TELEPORT,
             AbilityProgramManager::executeTeleport
     );
@@ -84,7 +89,6 @@ public final class AbilityProgramManager {
     public static boolean isSupportedCategory(@Nullable Identifier category) {
         return category != null
                 && !category.equals(AcademyCraft.academy(AbilityCategoryNames.LEVEL0))
-                && !category.equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))
                 && AbilityProgramDefinitions.find(category) != null;
     }
 
@@ -148,7 +152,7 @@ public final class AbilityProgramManager {
         var category = currentCategory.getKey();
         var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
         if (playerData == null) return;
-        var current = book(playerData, category);
+        var current = book(playerData, category, player.getUUID());
         var definition = AbilityProgramDefinitions.require(category);
         var adapter = EXECUTION_ADAPTERS.get(category);
         if (adapter == null) return;
@@ -162,8 +166,9 @@ public final class AbilityProgramManager {
                     : ProgramTriggers.matches(program, trigger, movement, gameTime);
             if (!matches) continue;
             var compiled = definition.compile(program, capabilities);
+            var executionSlot = slot;
             if (compiled.valid()) OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(
-                    compiled.program(), player, ProgramTriggers.costMultiplier(program)));
+                    compiled.program(), player, ProgramTriggers.costMultiplier(program), executionSlot));
         }
     }
 
@@ -179,8 +184,37 @@ public final class AbilityProgramManager {
         }
     }
 
-    private static ProgramBook book(Player playerData, Identifier category) {
-        return decodeStoredBook(category, playerData.getAbilityProgramBook(category.toString()));
+    private static ProgramBook book(Player playerData, Identifier category, UUID ownerId) {
+        var current = decodeStoredBook(
+                category, playerData.getAbilityProgramBook(category.toString()));
+        if (!category.equals(PrecisionProgramNodeCatalog.MENTALOUT)) {
+            return current;
+        }
+
+        var skills = playerData.getSkillDataMap();
+        var legacyKey = AcademyCraft.academy("precision_operation").toString();
+        var replacementKey = AcademyCraft.academy("wide_area_interference").toString();
+        var raw = skills.get(replacementKey);
+        if (!(raw instanceof PrecisionOperation.Data)) raw = skills.get(legacyKey);
+        if (!(raw instanceof PrecisionOperation.Data legacy)) return current;
+
+        var migrated = empty(current)
+                ? legacy.programBook(ownerId).resize(SLOT_COUNT)
+                : current;
+        var replacement = new CommonSkillData();
+        replacement.setProficiency(legacy.getProficiency());
+        replacement.setEnabled(legacy.isEnabled());
+        var existing = skills.get(replacementKey);
+        if (existing != null && existing != legacy) {
+            replacement.setProficiency(Math.max(
+                    replacement.getProficiency(), existing.getProficiency()));
+            replacement.setEnabled(replacement.isEnabled() || existing.isEnabled());
+        }
+        skills.remove(legacyKey);
+        skills.put(replacementKey, replacement);
+        playerData.markDirty();
+        if (empty(current)) store(playerData, category, migrated);
+        return migrated;
     }
 
     private static boolean empty(ProgramBook book) {
@@ -222,7 +256,8 @@ public final class AbilityProgramManager {
     private static ExecutionOutcome executeAccelerator(
             CompiledProgram program,
             ServerPlayer player,
-            float costMultiplier
+            float costMultiplier,
+            int slot
     ) {
         var execution = AcceleratorProgramExecutionBridge.executeServer(
                 program, player, costMultiplier);
@@ -238,7 +273,8 @@ public final class AbilityProgramManager {
     private static ExecutionOutcome executeAeromanip(
             CompiledProgram program,
             ServerPlayer player,
-            float costMultiplier
+            float costMultiplier,
+            int slot
     ) {
         var execution = AeromanipProgramExecutionBridge.executeServer(
                 program, player, costMultiplier);
@@ -254,7 +290,8 @@ public final class AbilityProgramManager {
     private static ExecutionOutcome executeDarkmatter(
             CompiledProgram program,
             ServerPlayer player,
-            float costMultiplier
+            float costMultiplier,
+            int slot
     ) {
         var execution = DarkmatterProgramExecutionBridge.executeServer(
                 program, player, costMultiplier);
@@ -270,7 +307,8 @@ public final class AbilityProgramManager {
     private static ExecutionOutcome executeElectromaster(
             CompiledProgram program,
             ServerPlayer player,
-            float costMultiplier
+            float costMultiplier,
+            int slot
     ) {
         var execution = ElectromasterProgramExecutionBridge.executeServer(
                 program, player, costMultiplier);
@@ -286,7 +324,8 @@ public final class AbilityProgramManager {
     private static ExecutionOutcome executeTeleport(
             CompiledProgram program,
             ServerPlayer player,
-            float costMultiplier
+            float costMultiplier,
+            int slot
     ) {
         var execution = TeleportProgramExecutionBridge.executeServer(
                 program, player, costMultiplier);
@@ -302,7 +341,8 @@ public final class AbilityProgramManager {
     private static ExecutionOutcome executeMeltdowner(
             CompiledProgram program,
             ServerPlayer player,
-            float costMultiplier
+            float costMultiplier,
+            int slot
     ) {
         var execution = MeltdownerProgramExecutionBridge.executeServer(
                 program, player, costMultiplier);
@@ -312,6 +352,24 @@ public final class AbilityProgramManager {
                 false,
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
+        );
+    }
+
+    private static ExecutionOutcome executeMentalout(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier,
+            int slot
+    ) {
+        var execution = PrecisionOperationRuntime.execute(
+                player, slot, program, false, costMultiplier);
+        if (execution.state() != PrecisionOperationRuntime.ExecutionState.FAILED) {
+            return ExecutionOutcome.success();
+        }
+        return new ExecutionOutcome(
+                false,
+                execution.nodeId(),
+                ProgramVmDiagnostic.ACTION_REJECTED
         );
     }
 
@@ -521,7 +579,7 @@ public final class AbilityProgramManager {
             var category = parseCategory(packet.category);
             if (!isSupportedCategory(category) || !ownsCategory(player, category)) return;
             var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
-            sync(player, category, book(data, category));
+            sync(player, category, book(data, category, player.getUUID()));
         }
 
         @SubscribePacket
@@ -536,7 +594,7 @@ public final class AbilityProgramManager {
             }
             var playerData = AbilitySystemServer.getSystem(player)
                     .getPlayerData(player.getUUID());
-            var current = book(playerData, category);
+            var current = book(playerData, category, player.getUUID());
             if (packet.expectedRevision != current.revision() || !empty(current)) {
                 result(player, packet.category, current.selectedSlot(), FeedbackType.ERROR,
                         current.revision(), ResultCode.REVISION_CONFLICT,
@@ -591,7 +649,7 @@ public final class AbilityProgramManager {
             }
             var playerData = AbilitySystemServer.getSystem(player)
                     .getPlayerData(player.getUUID());
-            var current = book(playerData, category);
+            var current = book(playerData, category, player.getUUID());
             if (packet.slot < 0 || packet.slot >= SLOT_COUNT
                     || packet.expectedRevision != current.revision()) {
                 result(player, packet.category, packet.slot, FeedbackType.ERROR,
@@ -649,7 +707,7 @@ public final class AbilityProgramManager {
                     || !acceptSequence(player, packet.sequence)) return;
             var playerData = AbilitySystemServer.getSystem(player)
                     .getPlayerData(player.getUUID());
-            var current = book(playerData, category);
+            var current = book(playerData, category, player.getUUID());
             var program = current.slot(packet.slot).program();
             if (program == null || program.graph().nodes().isEmpty()) {
                 result(player, packet.category, packet.slot, FeedbackType.ERROR,
@@ -675,7 +733,7 @@ public final class AbilityProgramManager {
                 return;
             }
             var outcome = OutputControl.callWithoutOutputAdjustment(
-                    () -> adapter.execute(compiled.program(), player, 1.0f));
+                    () -> adapter.execute(compiled.program(), player, 1.0f, packet.slot));
             result(player, packet.category, packet.slot,
                     outcome.successful ? FeedbackType.COMPLETED : FeedbackType.ERROR,
                     current.revision(),
@@ -1042,7 +1100,8 @@ public final class AbilityProgramManager {
         ExecutionOutcome execute(
                 CompiledProgram program,
                 ServerPlayer player,
-                float costMultiplier
+                float costMultiplier,
+                int slot
         );
     }
 

@@ -20,6 +20,7 @@ import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
+import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.academy.internal.client.render.vfx.SpacialExcisionVfxClient;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -52,6 +53,11 @@ public abstract class MixinLevelRenderer {
             boolean shouldRenderSky,
             CallbackInfo ci
     ) {
+        WideAreaInterferenceClientState.captureRenderCamera(
+                cameraState.pos,
+                cameraState.viewRotationMatrix,
+                cameraState.projectionMatrix
+        );
         VfxManager.INSTANCE.renderFrame();
         var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         var target = mainTarget.getColorTextureView();
@@ -77,7 +83,8 @@ public abstract class MixinLevelRenderer {
             SubmitNodeCollector output,
             CallbackInfo ci
     ) {
-        if (MentaloutRosterClientState.hasControlledTargets()
+        if (WideAreaInterferenceClientState.isRtsView()
+                || MentaloutRosterClientState.hasControlledTargets()
                 || HighSpeedJetHighlightClient.hasEntityHighlights()) {
             levelRenderState.shouldShowEntityOutlines = true;
         }

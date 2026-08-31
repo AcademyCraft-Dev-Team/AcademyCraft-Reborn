@@ -19,6 +19,9 @@ class MentaloutRosterPacketsTest {
                 Float.NaN,
                 -5.0f,
                 Float.NaN,
+                0,
+                64,
+                0,
                 (byte) 0,
                 (byte) 0,
                 -20
@@ -42,6 +45,9 @@ class MentaloutRosterPacketsTest {
                 20.0f,
                 20.0f,
                 3.0f,
+                0,
+                64,
+                0,
                 (byte) 0,
                 (byte) 0,
                 0

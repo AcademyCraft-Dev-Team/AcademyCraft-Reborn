@@ -701,6 +701,19 @@ public final class Render {
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
                 .build();
 
+        /** Draws captured RGB frames without allowing their framebuffer alpha to reveal lower layers. */
+        public static final RenderPipeline IMAGE_OPAQUE = builder()
+                .withLocation(academy("pipeline/image_opaque"))
+                .withVertexShader(R.shaders.position_tex_color)
+                .withFragmentShader(R.shaders.position_tex_color)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                .withCull(true)
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .build();
+
         public static final RenderPipeline IMAGE_PREMULTIPLIED_ALPHA = builder()
                 .withLocation(academy("pipeline/image_premultiplied_alpha"))
                 .withVertexShader(R.shaders.position_tex_color)

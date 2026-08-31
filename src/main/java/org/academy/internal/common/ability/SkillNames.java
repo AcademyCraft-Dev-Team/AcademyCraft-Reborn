@@ -100,6 +100,8 @@ public final class SkillNames {
     public static final String IMPRESSION_MANIPULATION = "impression_manipulation";
     public static final String MENTAL_STUPOR = "mental_stupor";
     public static final String COMMAND_POSITIONING = "command_positioning";
+    public static final String WIDE_AREA_INTERFERENCE = "wide_area_interference";
+    /** Legacy program-data identifier; Precision Operation is now a category-level system. */
     public static final String PRECISION_OPERATION = "precision_operation";
     public static final String MIND_DESTRUCTION = "mind_destruction";
     public static final String BRAIN_DOMAIN_DEVELOPMENT = "brain_domain_development";

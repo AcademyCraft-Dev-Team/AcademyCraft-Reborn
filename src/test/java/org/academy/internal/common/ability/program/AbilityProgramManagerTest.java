@@ -131,10 +131,10 @@ class AbilityProgramManagerTest {
     }
 
     @Test
-    void supportedRoutingExcludesPrecisionAndLevelZero() {
+    void supportedRoutingIncludesMentaloutAndExcludesLevelZero() {
         assertTrue(AbilityProgramManager.isSupportedCategory(
                 AcademyCraft.academy(AbilityCategoryNames.ACCELERATOR)));
-        assertFalse(AbilityProgramManager.isSupportedCategory(
+        assertTrue(AbilityProgramManager.isSupportedCategory(
                 AcademyCraft.academy(AbilityCategoryNames.MENTALOUT)));
         assertFalse(AbilityProgramManager.isSupportedCategory(
                 AcademyCraft.academy(AbilityCategoryNames.LEVEL0)));

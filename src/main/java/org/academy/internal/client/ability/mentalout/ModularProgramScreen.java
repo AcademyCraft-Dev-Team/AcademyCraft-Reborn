@@ -1805,7 +1805,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private boolean branchUnlocked() {
         return !session.precisionRules() || ProficiencyPolicy.client().enabled()
                 && AbilitySystemClient.getSkillProficiencyMilestone(
-                Skills.PRECISION_OPERATION.get()) >= 3;
+                Skills.WIDE_AREA_INTERFERENCE.get()) >= 3;
     }
 
     private Endpoint firstCompatibleEndpoint(NodeView node, Endpoint anchor) {

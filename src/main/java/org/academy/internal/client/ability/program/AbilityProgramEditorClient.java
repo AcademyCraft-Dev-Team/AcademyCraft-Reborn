@@ -9,7 +9,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -22,9 +21,7 @@ import org.academy.api.common.ability.program.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.internal.client.ability.mentalout.ModularProgramEditorSession;
 import org.academy.internal.client.ability.mentalout.ModularProgramScreen;
-import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
 import org.academy.internal.common.ability.AbilityCategoryNames;
-import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.program.*;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -35,7 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Shared precision-operation entry and category program cache, including Mentalout routing.
+ * Shared precision-operation entry and category program cache for every ability category.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class AbilityProgramEditorClient {
@@ -100,8 +97,6 @@ public final class AbilityProgramEditorClient {
         if (networkHandlersInitialized) return;
         networkHandlersInitialized = true;
         MisakaNetworkClient.NETWORK_MANAGER.register(AbilityProgramManager.Client.class);
-        MisakaNetworkClient.NETWORK_MANAGER.register(PrecisionOperationManager.Client.class);
-        NeoForge.EVENT_BUS.register(PrecisionOperationClient.class);
     }
 
     public static void openEditor() {
@@ -116,10 +111,6 @@ public final class AbilityProgramEditorClient {
             return;
         }
         if (AbilitySystemClient.getLevel().getLevelCode() < 5) return;
-        if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
-            PrecisionOperationClient.openEditor();
-            return;
-        }
         var state = state(player.getUUID(), category.getKey());
         screen = new ModularProgramScreen(new Session(category, state));
         minecraft.gui.setScreen(screen);
@@ -173,10 +164,6 @@ public final class AbilityProgramEditorClient {
         var player = Minecraft.getInstance().player;
         var category = AbilitySystemClient.category;
         if (player == null || !isSupportedCategory(category)) return;
-        if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
-            PrecisionOperationClient.executeSelected();
-            return;
-        }
         var state = state(player.getUUID(), category.getKey());
         execute(state.saved.selectedSlot());
     }
@@ -190,10 +177,6 @@ public final class AbilityProgramEditorClient {
             return;
         }
         if (AbilitySystemClient.getLevel().getLevelCode() < 5) return;
-        if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
-            PrecisionOperationClient.execute(slot);
-            return;
-        }
         MisakaNetworkClient.send(new AbilityProgramManager.ExecutePacket(
                 category.getKey(),
                 Math.clamp(slot, 0, SLOT_COUNT - 1),
