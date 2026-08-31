@@ -95,14 +95,15 @@ public class BallLightning extends Skill {
                 InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
                 InputConstants.PRESS, InputConstants.MOD_CONTROL
         );
-        var configured = Client.CONFIG.getKeyBinding(KEY_NAME_ACTIVATE, newDefault);
-        if (configured.equals(legacyDefault) || configured.equals(previousDefault)
-                || configured.equals(obsoleteXDefault)) {
-            configured = newDefault;
-            Client.CONFIG.setKeyBinding(KEY_NAME_ACTIVATE, configured);
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
-            AcademyCraftClient.Config.INSTANCE.save();
-        }
+        var configured = Client.CONFIG.getKeyBindingMigratingDefaults(
+                KEY_NAME_ACTIVATE,
+                newDefault,
+                legacyDefault,
+                previousDefault,
+                obsoleteXDefault
+        );
+        AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
+        AcademyCraftClient.Config.INSTANCE.save();
         InputSystem.addKeyBinding(KEY_NAME_ACTIVATE, configured, ctx -> Client.handler());
     }
 

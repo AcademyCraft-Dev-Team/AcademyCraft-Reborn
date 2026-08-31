@@ -54,13 +54,10 @@ public final class AbilityProgramEditorClient {
         initNetworkHandlers();
         AcademyCraftConfig.registerTypeHandler(CONFIG_KEY, Config.Action.INSTANCE);
         config = AcademyCraftClient.Config.INSTANCE.getConfig(CONFIG_KEY);
-        var openKey = config.getKeyBinding(KEY_NAME_OPEN, defaultOpenKey());
-        if (legacyDefaultOpenKey().equals(openKey)) {
-            openKey = defaultOpenKey();
-            config.setKeyBinding(KEY_NAME_OPEN, openKey);
-            AcademyCraftClient.Config.INSTANCE.setConfig(CONFIG_KEY, config);
-            AcademyCraftClient.Config.INSTANCE.save();
-        }
+        var openKey = config.getKeyBindingMigratingDefaults(
+                KEY_NAME_OPEN, defaultOpenKey(), legacyDefaultOpenKey());
+        AcademyCraftClient.Config.INSTANCE.setConfig(CONFIG_KEY, config);
+        AcademyCraftClient.Config.INSTANCE.save();
         InputSystem.addKeyBinding(
                 KEY_NAME_OPEN,
                 openKey,

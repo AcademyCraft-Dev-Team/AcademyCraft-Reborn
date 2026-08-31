@@ -42,6 +42,7 @@ import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
 import org.lwjgl.glfw.GLFW;
@@ -94,6 +95,9 @@ public final class ReflectionFilter extends Skill {
 
     public static boolean shouldAcceptEffect(ServerPlayer player, MobEffectInstance effect) {
         if (player == null) return shouldAcceptEffect(new Data(), effect);
+        // Consumable effects run inside the user's explicit source context. They are voluntary,
+        // so the external-effect filter must not reflect them back at the player.
+        if (EntityMotionGuard.currentMotionSourceEntity() == player) return true;
         var filter = Skills.REFLECTION_FILTER.get();
         if (!filter.isEnabled(player)) return shouldAcceptEffect(new Data(), effect);
         return shouldAcceptEffect(Server.getOrCreateData(player), effect);
@@ -212,13 +216,10 @@ public final class ReflectionFilter extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        var openKey = Client.CONFIG.getKeyBinding(Client.KEY_NAME_OPEN, defaultOpenKey());
-        if (legacyDefaultOpenKey().equals(openKey)) {
-            openKey = defaultOpenKey();
-            Client.CONFIG.setKeyBinding(Client.KEY_NAME_OPEN, openKey);
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
-            AcademyCraftClient.Config.INSTANCE.save();
-        }
+        var openKey = Client.CONFIG.getKeyBindingMigratingDefaults(
+                Client.KEY_NAME_OPEN, defaultOpenKey(), legacyDefaultOpenKey());
+        AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
+        AcademyCraftClient.Config.INSTANCE.save();
         InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, openKey, _ -> Client.open());
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
     }

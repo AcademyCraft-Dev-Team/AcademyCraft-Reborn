@@ -52,6 +52,7 @@
     "common.PlayerSleepCounterAccessor",
     "common.ShulkerBulletVectorAccessor",
     "common.item.MixinItemEntityDarkmatterFireImmune",
+    "common.item.MixinConsumable",
     "common.item.MixinItemStackDarkmatterEnchantment",
     "common.item.MixinMaceItemAirflowMomentum"
   ],

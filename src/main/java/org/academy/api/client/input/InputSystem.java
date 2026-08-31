@@ -270,6 +270,7 @@ public final class InputSystem {
             return 0;
         }
         if (keyName.equals(skillName + "_start") || keyName.equals(skillName + ".start")
+                || keyName.equals(skillName + "_charge") || keyName.equals(skillName + ".charge")
                 || keyName.equals(skillName + "_end") || keyName.equals(skillName + ".end")
                 || keyName.equals(skillName + "_stop") || keyName.equals(skillName + ".stop")
                 || keyName.equals(skillName + "_release") || keyName.equals(skillName + ".release")) {
