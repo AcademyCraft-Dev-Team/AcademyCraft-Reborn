@@ -85,7 +85,7 @@ public final class DarkmatterRadiation extends Skill {
                 InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
                 InputSystem.ANY_ACTION, 0
         );
-        var binding = Client.CONFIG.getMaintainedKeyBinding(
+        Client.CONFIG.getMaintainedKeyBinding(
                 Client.KEY_NAME_CAST,
                 defaultBinding,
                 Client.LEGACY_KEY_NAME_CAST,
@@ -98,10 +98,8 @@ public final class DarkmatterRadiation extends Skill {
                 InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
                 InputSystem.ANY_ACTION, 0
         );
-        if (binding.equals(obsoleteDefault)) {
-            binding = defaultBinding;
-            Client.CONFIG.setKeyBinding(Client.KEY_NAME_CAST, binding);
-        }
+        var binding = Client.CONFIG.getKeyBindingMigratingDefaults(
+                Client.KEY_NAME_CAST, defaultBinding, obsoleteDefault);
         AcademyCraftClient.Config.INSTANCE.save();
         InputSystem.addMaintainedKeyBinding(
                 Client.KEY_NAME_CAST,

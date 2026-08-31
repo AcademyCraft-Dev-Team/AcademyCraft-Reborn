@@ -30,6 +30,14 @@ class InputSystemPrimaryBindingTest {
     }
 
     @Test
+    void chargeAndReleaseRemainOnePrimaryMaintainedGesture() {
+        assertEquals(
+                InputSystem.primaryBindingPriority("plasma_generation_charge", "plasma_generation"),
+                InputSystem.primaryBindingPriority("plasma_generation_release", "plasma_generation")
+        );
+    }
+
+    @Test
     void gestureMatchingIgnoresPhaseButKeepsModifiers() {
         InputSystem.addKeyBinding(
                 TEST_BINDING,
