@@ -547,6 +547,13 @@ public final class R {
                         private precision_operation() {
                         }
                     }
+
+                    public static final class wide_area_interference {
+                        public static final Identifier icon = precision_operation.icon;
+
+                        private wide_area_interference() {
+                        }
+                    }
                 }
             }
 

@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
@@ -44,13 +45,16 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Moves every compatible roster member to the block or entity under the caster's crosshair.
  */
 public final class CommandPositioning extends Skill {
-    private static final int CONTROL_PRIORITY = 250;
+    public static final int CONTROL_PRIORITY = 250;
 
     public CommandPositioning() {
         super(Builder
@@ -90,6 +94,109 @@ public final class CommandPositioning extends Skill {
 
     private boolean executeCommand(ServerPlayer player, float cost, Runnable action) {
         return executeActive(player, _ -> cost, (_, _) -> action.run());
+    }
+
+    /**
+     * Applies the same permanent path-control effect used by command positioning to an
+     * explicit subject subset. Higher-level command surfaces can reuse this without
+     * reimplementing protection, capability, formation, or control-lease semantics.
+     */
+    public static PositioningResult applyToSubjects(
+            ServerPlayer player,
+            Collection<? extends LivingEntity> requestedSubjects,
+            ControlDestination destination,
+            Identifier source,
+            int priority,
+            boolean formationEnabled
+    ) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(requestedSubjects, "requestedSubjects");
+        Objects.requireNonNull(destination, "destination");
+        Objects.requireNonNull(source, "source");
+
+        var unique = new LinkedHashMap<java.util.UUID, LivingEntity>();
+        requestedSubjects.forEach(subject -> {
+            if (subject != null) unique.putIfAbsent(subject.getUUID(), subject);
+        });
+        var destinationEntity = destination instanceof ControlDestination.Entity(var uuid)
+                ? uuid : null;
+        var eligible = new ArrayList<LivingEntity>();
+        var skipped = 0;
+        LivingEntity protectedTarget = null;
+        for (var subject : unique.values()) {
+            if (MentalControlRuntime.isProtectedTarget(subject)) {
+                if (protectedTarget == null) protectedTarget = subject;
+                skipped++;
+                continue;
+            }
+            if (!subject.isAlive() || subject.isRemoved() || subject.level() != player.level()
+                    || subject.getUUID().equals(destinationEntity)
+                    || !MentalControlApi.evaluate(
+                    subject, ControlCapability.PATH_CONTROL).supported()) {
+                skipped++;
+                continue;
+            }
+            eligible.add(subject);
+        }
+
+        var handles = new LinkedHashMap<java.util.UUID, AutoCloseable>();
+        var applied = 0;
+        var failed = 0;
+        var formationIndex = 0;
+        for (var subject : eligible) {
+            try {
+                var subjectDestination = formationDestination(
+                        destination,
+                        subject,
+                        formationIndex++,
+                        eligible.size(),
+                        formationEnabled
+                );
+                handles.put(subject.getUUID(), MentalControlApi.apply(new ControlRequest(
+                        player,
+                        subject,
+                        source,
+                        priority,
+                        Long.MAX_VALUE,
+                        List.of(new ControlDirective.MoveTo(subjectDestination))
+                )));
+                applied++;
+            } catch (RuntimeException exception) {
+                failed++;
+            }
+        }
+        return new PositioningResult(
+                applied, skipped, failed, handles, protectedTarget);
+    }
+
+    public record PositioningResult(
+            int applied,
+            int skipped,
+            int failed,
+            java.util.Map<java.util.UUID, AutoCloseable> handles,
+            LivingEntity protectedTarget
+    ) {
+        public PositioningResult {
+            handles = java.util.Map.copyOf(handles);
+        }
+    }
+
+    private static ControlDestination formationDestination(
+            ControlDestination destination,
+            LivingEntity subject,
+            int index,
+            int count,
+            boolean enabled
+    ) {
+        if (!enabled || !(destination instanceof ControlDestination.Position(
+                var dimension, var value
+        )) || count <= 1) return destination;
+        var spacing = Math.max(1.25, subject.getBbWidth() + 0.5);
+        var radius = Math.max(1.5, count * spacing / (Math.PI * 2.0));
+        var angle = Math.PI * 2.0 * index / count;
+        var offset = new Vec3(
+                Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
+        return new ControlDestination.Position(dimension, value.add(offset));
     }
 
     public static final class Client {
@@ -207,26 +314,18 @@ public final class CommandPositioning extends Skill {
             var handles = new ArrayList<AutoCloseable>();
             var applied = new int[1];
             var failed = new int[1];
-            var formationIndex = new int[1];
             var cast = skill.executeCommand(player, cost, () -> {
-                for (var subject : subjects) {
-                    try {
-                        var subjectDestination = formationDestination(
-                                destination, subject, formationIndex[0]++, subjects.size(),
-                                skill.hasProficiencyMilestone(player, 3));
-                        handles.add(MentalControlApi.apply(new ControlRequest(
-                                player,
-                                subject,
-                                skill.getKey(),
-                                CONTROL_PRIORITY,
-                                Long.MAX_VALUE,
-                                List.of(new ControlDirective.MoveTo(subjectDestination))
-                        )));
-                        applied[0]++;
-                    } catch (RuntimeException exception) {
-                        failed[0]++;
-                    }
-                }
+                var result = applyToSubjects(
+                        player,
+                        subjects,
+                        destination,
+                        skill.getKey(),
+                        CONTROL_PRIORITY,
+                        skill.hasProficiencyMilestone(player, 3)
+                );
+                handles.addAll(result.handles().values());
+                applied[0] = result.applied();
+                failed[0] = result.failed();
             });
             if (!cast) {
                 feedback(player, "message.academy.mentalout.insufficient_cp");
@@ -242,25 +341,6 @@ public final class CommandPositioning extends Skill {
             if (protectedTarget != null) {
                 MentalControlRuntime.notifyProtectionBlocked(player, protectedTarget);
             }
-        }
-
-        private static ControlDestination formationDestination(
-                ControlDestination destination,
-                LivingEntity subject,
-                int index,
-                int count,
-                boolean enabled
-        ) {
-            if (!enabled || !(destination instanceof ControlDestination.Position(
-                    var dimension, var value
-            ))
-                    || count <= 1) return destination;
-            var spacing = Math.max(1.25, subject.getBbWidth() + 0.5);
-            var radius = Math.max(1.5, count * spacing / (Math.PI * 2.0));
-            var angle = Math.PI * 2.0 * index / count;
-            var offset = new Vec3(
-                    Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
-            return new ControlDestination.Position(dimension, value.add(offset));
         }
 
         private static void feedback(ServerPlayer player, String key, Object... arguments) {

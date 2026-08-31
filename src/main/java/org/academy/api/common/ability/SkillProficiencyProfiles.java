@@ -34,7 +34,7 @@ public final class SkillProficiencyProfiles {
             "darkmatter_repair", "darkmatter_creation", "darkmatter_six_wings",
             "mental_intervention", "target_misidentification", "mental_stupor", "impression_manipulation",
             "mental_intrusion", "mental_takeover", "sensory_distortion", "command_positioning",
-            "mind_destruction", "precision_operation"
+            "mind_destruction", "wide_area_interference"
     );
     private static final Map<String, String> CUSTOM_PROFILE_REASONS = Map.ofEntries(
             Map.entry("airflow_jet", "release-tier damage, movement, and duration milestones are resolved together"),
@@ -59,7 +59,8 @@ public final class SkillProficiencyProfiles {
             Map.entry("darkmatter_interference", "continuous MP cadence, exposure and gamma blades are resolved together"),
             Map.entry("darkmatter_repair", "productive MP consumption and repair target counts are resolved together"),
             Map.entry("darkmatter_creation", "blueprint investment, reservation and module values are resolved together"),
-            Map.entry("darkmatter_six_wings", "dynamic CP maintenance and gamma multipliers are resolved together")
+            Map.entry("darkmatter_six_wings", "dynamic CP maintenance and gamma multipliers are resolved together"),
+            Map.entry("wide_area_interference", "adapter-backed group orders reserve their proficiency tiers for future commands")
     );
     private static final Map<String, SkillProficiencyProfile> PROFILES = createProfiles();
 
@@ -110,7 +111,7 @@ public final class SkillProficiencyProfiles {
                 "electromagnetic_shield", "flashing", "defensive_teleport");
         put(profiles, costs(Map.of(CAST, 0.9f, CONTINUOUS, 0.9f, MAINTENANCE, 0.9f)),
                 "auto_cruise_beam_cannon");
-        put(profiles, costs(Map.of(DYNAMIC, 0.9f)), "command_positioning", "precision_operation");
+        put(profiles, costs(Map.of(DYNAMIC, 0.9f)), "command_positioning");
         put(profiles, costsByTier(DYNAMIC, 1.0f, 0.9f, 0.8f, 0.8f),
                 "mental_stupor", "impression_manipulation");
         put(profiles, costsByTier(CAST, 1.0f, 0.9f, 0.8f, 0.7f),

@@ -26,6 +26,9 @@ class MentaloutRosterClientStateTest {
                 20.0f,
                 20.0f,
                 3.0f,
+                0,
+                64,
+                0,
                 MentaloutRosterClientState.SUPPORT_FULL,
                 (byte) 0,
                 0

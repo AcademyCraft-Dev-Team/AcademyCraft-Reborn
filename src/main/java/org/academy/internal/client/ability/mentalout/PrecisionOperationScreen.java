@@ -1351,7 +1351,7 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private boolean branchUnlocked() {
         return ProficiencyPolicy.client().enabled()
                 && AbilitySystemClient.getSkillProficiencyMilestone(
-                Skills.PRECISION_OPERATION.get()) >= 3;
+                Skills.WIDE_AREA_INTERFERENCE.get()) >= 3;
     }
 
     private Endpoint firstCompatibleEndpoint(PrecisionGraph.Node node, Endpoint anchor) {

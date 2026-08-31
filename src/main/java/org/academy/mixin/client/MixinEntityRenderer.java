@@ -4,6 +4,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
 import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient;
+import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,7 +19,9 @@ public abstract class MixinEntityRenderer<T extends Entity, S extends EntityRend
             float partialTick,
             CallbackInfo ci
     ) {
-        if (HighSpeedJetHighlightClient.shouldHighlightEntity(entity)) {
+        if (WideAreaInterferenceClientState.shouldOutline(entity)) {
+            state.outlineColor = WideAreaInterferenceClientState.outlineColor(entity);
+        } else if (HighSpeedJetHighlightClient.shouldHighlightEntity(entity)) {
             state.outlineColor = HighSpeedJetHighlightClient.WHITE_OUTLINE;
         }
     }

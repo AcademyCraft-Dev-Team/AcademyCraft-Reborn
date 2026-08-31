@@ -117,6 +117,9 @@ public final class MentaloutRosterPackets {
         buf.writeFloat(entry.health);
         buf.writeFloat(entry.maxHealth);
         buf.writeFloat(entry.distance);
+        ByteBufCodecs.VAR_INT.encode(buf, entry.blockX);
+        ByteBufCodecs.VAR_INT.encode(buf, entry.blockY);
+        ByteBufCodecs.VAR_INT.encode(buf, entry.blockZ);
         buf.writeByte(entry.support);
         buf.writeByte(entry.flags);
         ByteBufCodecs.VAR_INT.encode(buf, entry.misidentificationTicks);
@@ -131,6 +134,9 @@ public final class MentaloutRosterPackets {
                 buf.readFloat(),
                 buf.readFloat(),
                 buf.readFloat(),
+                ByteBufCodecs.VAR_INT.decode(buf),
+                ByteBufCodecs.VAR_INT.decode(buf),
+                ByteBufCodecs.VAR_INT.decode(buf),
                 buf.readByte(),
                 buf.readByte(),
                 ByteBufCodecs.VAR_INT.decode(buf)
@@ -154,6 +160,9 @@ public final class MentaloutRosterPackets {
             float health,
             float maxHealth,
             float distance,
+            int blockX,
+            int blockY,
+            int blockZ,
             byte support,
             byte flags,
             int misidentificationTicks
@@ -228,6 +237,9 @@ public final class MentaloutRosterPackets {
                     entry.health,
                     entry.maxHealth,
                     entry.distance,
+                    entry.blockX,
+                    entry.blockY,
+                    entry.blockZ,
                     entry.support,
                     entry.flags,
                     entry.misidentificationTicks

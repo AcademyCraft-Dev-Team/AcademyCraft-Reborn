@@ -7,6 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -36,6 +37,8 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public final class TargetMisidentification extends Skill {
     public TargetMisidentification() {
@@ -72,6 +75,33 @@ public final class TargetMisidentification extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    /**
+     * Reuses target misidentification's permanent control and CP handling for an explicit
+     * roster subset. Explicit subsets are independent commands: selecting the same target
+     * for another subject never toggles or clears an earlier subject's command.
+     */
+    public static ApplicationResult applyToSubjects(
+            ServerPlayer player,
+            LivingEntity target,
+            Set<UUID> subjectIds
+    ) {
+        var context = MentaloutControlContext.get(player);
+        if (context == null || target == null) {
+            return new ApplicationResult(MentaloutControlContext.BatchResult.NONE, false);
+        }
+        var clearing = subjectIds == null && context.isTargetMisidentificationTarget(target);
+        var result = subjectIds == null
+                ? context.applyTargetMisidentification(target)
+                : context.applyTargetMisidentification(target, subjectIds);
+        return new ApplicationResult(result, clearing);
+    }
+
+    public record ApplicationResult(
+            MentaloutControlContext.BatchResult batch,
+            boolean clearing
+    ) {
     }
 
     public static final class Client {
@@ -147,9 +177,9 @@ public final class TargetMisidentification extends Skill {
                 return;
             }
 
-            var clearing = context.isTargetMisidentificationTarget(target);
-            var result = context.applyTargetMisidentification(target);
-            if (clearing) {
+            var application = applyToSubjects(player, target, null);
+            var result = application.batch();
+            if (application.clearing()) {
                 feedback(player, "message.academy.mentalout.target_misidentification.cleared");
             } else if (result.insufficientCp()) {
                 feedback(player, "message.academy.mentalout.insufficient_cp");

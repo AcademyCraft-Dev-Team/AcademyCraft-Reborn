@@ -10,9 +10,6 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.common.ability.AbilityCategoryNames;
-import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 
 import java.util.*;
 
@@ -116,14 +113,7 @@ public final class AbilityProgramTriggerRuntime {
         var id = player.getUUID();
         if (!EXECUTING.add(id)) return;
         try {
-            var category = AbilitySystemServer.getSystem(player)
-                    .getPlayerAbilityCategory(id);
-            if (category == null) return;
-            if (category.getKey().equals(AcademyCraft.academy(AbilityCategoryNames.MENTALOUT))) {
-                PrecisionOperationManager.executeTriggered(player, type, movement);
-            } else {
-                AbilityProgramManager.executeTriggered(player, type, movement);
-            }
+            AbilityProgramManager.executeTriggered(player, type, movement);
         } finally {
             EXECUTING.remove(id);
         }

@@ -91,6 +91,8 @@ class WorldDataMigrationTest {
                 Player.canonicalizeSkillId("academy:wind_corridor"));
         assertEquals("academy:adiabatic_compression",
                 Player.canonicalizeSkillId("academy:atmospheric_dominion"));
+        assertEquals("academy:wide_area_interference",
+                Player.canonicalizeSkillId("academy:precision_operation"));
     }
 
     @Test
