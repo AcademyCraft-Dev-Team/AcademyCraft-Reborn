@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.projectile.PaperAirplane;
+import org.academy.internal.common.world.entity.projectile.MagneticHook;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.academy.internal.common.world.entity.projectile.DarkmatterCreatureProjectile;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
@@ -30,6 +31,11 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "paper_airplane", PaperAirplane::new, MobCategory.MISC,
                     builder -> builder.sized(0.45f, 0.12f).clientTrackingRange(64).updateInterval(1)
+            );
+    public static final DeferredHolder<EntityType<?>, EntityType<MagneticHook>> MAGNETIC_HOOK =
+            ENTITY_TYPES.registerEntityType(
+                    "magnetic_hook", MagneticHook::new, MobCategory.MISC,
+                    builder -> builder.sized(0.55f, 0.55f).clientTrackingRange(96).updateInterval(1)
             );
     public static final DeferredHolder<EntityType<?>, EntityType<HighSpeedJetNozzle>> HIGH_SPEED_JET_NOZZLE =
             ENTITY_TYPES.registerEntityType(
