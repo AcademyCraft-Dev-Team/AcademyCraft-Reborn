@@ -14,7 +14,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.ability.program.*;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -77,7 +76,7 @@ public final class PrecisionOperationRuntime {
         }
         var slots = ACTIVE.computeIfAbsent(player.getUUID(), _ -> new ActiveContext[SLOT_COUNT]);
         var previous = slots[slot];
-        var skill = Skills.PRECISION_OPERATION.get();
+        var skill = Skills.WIDE_AREA_INTERFERENCE.get();
         if (AbilitySystemServer.getSystem(player).getPlayerLevel(player.getUUID()) < 5) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
         }
@@ -385,11 +384,11 @@ public final class PrecisionOperationRuntime {
         var now = server.overworld().getGameTime();
         for (var entry : List.copyOf(ACTIVE.entrySet())) {
             var player = server.getPlayerList().getPlayer(entry.getKey());
-            if (player == null || !player.isAlive() || !Skills.PRECISION_OPERATION.get().isEnabled(player)) {
+            if (player == null || !player.isAlive()
+                    || AbilitySystemServer.getSystem(player).getPlayerLevel(player.getUUID()) < 5) {
                 releaseController(entry.getKey(), player);
                 continue;
             }
-            Skills.PRECISION_OPERATION.get().reportActivity(player, true);
             var changed = false;
             for (var slot = 0; slot < entry.getValue().length; slot++) {
                 var context = entry.getValue()[slot];
@@ -414,10 +413,10 @@ public final class PrecisionOperationRuntime {
                 var system = AbilitySystemServer.getSystem(player);
                 if (remaining <= 0.0f) {
                     system.releaseMaintenanceOccupation(
-                            player.getUUID(), Skills.PRECISION_OPERATION.get().getKeyString());
+                            player.getUUID(), Skills.WIDE_AREA_INTERFERENCE.get().getKeyString());
                 } else {
                     system.replacePermanentOccupation(
-                            player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
+                            player.getUUID(), remaining, Skills.WIDE_AREA_INTERFERENCE.get());
                 }
             }
             if (Arrays.stream(entry.getValue()).allMatch(Objects::isNull)) {
@@ -450,10 +449,10 @@ public final class PrecisionOperationRuntime {
                 var system = AbilitySystemServer.getSystem(player);
                 if (remaining <= 0.0f) {
                     system.releaseMaintenanceOccupation(
-                            player.getUUID(), Skills.PRECISION_OPERATION.get().getKeyString());
+                            player.getUUID(), Skills.WIDE_AREA_INTERFERENCE.get().getKeyString());
                 } else {
                     system.replacePermanentOccupation(
-                            player.getUUID(), remaining, Skills.PRECISION_OPERATION.get());
+                            player.getUUID(), remaining, Skills.WIDE_AREA_INTERFERENCE.get());
                 }
             }
             if (Arrays.stream(entry.getValue()).allMatch(Objects::isNull)) {
@@ -1589,13 +1588,13 @@ public final class PrecisionOperationRuntime {
             if (remaining <= 0.0f) {
                 system.releaseMaintenanceOccupation(
                         player.getUUID(),
-                        Skills.PRECISION_OPERATION.get().getKeyString()
+                        Skills.WIDE_AREA_INTERFERENCE.get().getKeyString()
                 );
             } else {
                 system.replacePermanentOccupation(
                         player.getUUID(),
                         remaining,
-                        Skills.PRECISION_OPERATION.get()
+                        Skills.WIDE_AREA_INTERFERENCE.get()
                 );
             }
         }
@@ -1638,8 +1637,7 @@ public final class PrecisionOperationRuntime {
                     player, Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2));
             default -> 0.0f;
         };
-        return Skills.PRECISION_OPERATION.get().adjustProficiencyCost(
-                player, SkillProficiencyProfile.CostKind.DYNAMIC, baseCost);
+        return baseCost;
     }
 
     private static void applyDirective(
@@ -1662,7 +1660,7 @@ public final class PrecisionOperationRuntime {
             var handle = MentalControlApi.apply(new ControlRequest(
                     player,
                     subject,
-                    Skills.PRECISION_OPERATION.get().getKey(),
+                    Skills.WIDE_AREA_INTERFERENCE.get().getKey(),
                     PRIORITY,
                     expiresAt,
                     List.of(directive)
@@ -1734,11 +1732,7 @@ public final class PrecisionOperationRuntime {
             Map<UUID, Float> subjectCosts
     ) {
         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
-        var cost = Skills.PRECISION_OPERATION.get().adjustProficiencyCost(
-                player,
-                SkillProficiencyProfile.CostKind.DYNAMIC,
-                MentaloutConfig.precisionSensoryCost(player, sensoryLevel)
-        );
+        var cost = MentaloutConfig.precisionSensoryCost(player, sensoryLevel);
         for (var observer : observers) {
             if (MentalControlRuntime.isProtectedTarget(observer)) {
                 MentalControlRuntime.notifyProtectionBlocked(player, observer);
@@ -1748,7 +1742,7 @@ public final class PrecisionOperationRuntime {
                     player,
                     observer,
                     hidden,
-                    Skills.PRECISION_OPERATION.get().getKey(),
+                    Skills.WIDE_AREA_INTERFERENCE.get().getKey(),
                     PRIORITY,
                     expiresAt
             );
@@ -1767,13 +1761,13 @@ public final class PrecisionOperationRuntime {
         if (permanentCost(player, slots) <= 0.0f) {
             AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                     player.getUUID(),
-                    Skills.PRECISION_OPERATION.get().getKeyString()
+                    Skills.WIDE_AREA_INTERFERENCE.get().getKeyString()
             );
         } else {
             AbilitySystemServer.getSystem(player).replacePermanentOccupation(
                     player.getUUID(),
                     permanentCost(player, slots),
-                    Skills.PRECISION_OPERATION.get()
+                    Skills.WIDE_AREA_INTERFERENCE.get()
             );
         }
         if (Arrays.stream(slots).allMatch(Objects::isNull)) {
@@ -1796,13 +1790,13 @@ public final class PrecisionOperationRuntime {
         if (knownPlayer != null) {
             AbilitySystemServer.getSystem(knownPlayer).releaseMaintenanceOccupation(
                     controllerId,
-                    Skills.PRECISION_OPERATION.get().getKeyString()
+                    Skills.WIDE_AREA_INTERFERENCE.get().getKeyString()
             );
         }
     }
 
     private static float permanentCost(ServerPlayer player, ActiveContext[] slots) {
-        var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
+        var share = true;
         var shared = new HashSet<SharedCostKey>();
         var result = 0.0f;
         var ordered = Arrays.stream(slots)
@@ -1833,7 +1827,7 @@ public final class PrecisionOperationRuntime {
             long now,
             float costMultiplier
     ) {
-        var share = Skills.PRECISION_OPERATION.get().hasProficiencyMilestone(player, 2);
+        var share = true;
         var sharedPermanent = new HashSet<SharedCostKey>();
         var sharedTimed = new HashSet<SharedCostKey>();
         var permanentCost = 0.0f;
@@ -1883,11 +1877,7 @@ public final class PrecisionOperationRuntime {
     private static float fixedActionCost(ServerPlayer player, PrecisionGraph.NodeKind kind) {
         if (kind != PrecisionGraph.NodeKind.START_INTRUSION) return 0.0f;
         var level = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
-        return Skills.PRECISION_OPERATION.get().adjustProficiencyCost(
-                player,
-                SkillProficiencyProfile.CostKind.DYNAMIC,
-                MentaloutConfig.precisionIntrusionCost(player, level)
-        );
+        return MentaloutConfig.precisionIntrusionCost(player, level);
     }
 
     static int durationIterationPoints(long now, long expiresAt) {

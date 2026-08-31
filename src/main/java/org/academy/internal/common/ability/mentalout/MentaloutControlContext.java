@@ -18,6 +18,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 
@@ -140,6 +141,24 @@ public final class MentaloutControlContext extends ServerContext {
         var added = context.add(target);
         if (added != ToggleResult.ADDED || existing != null) return added;
 
+        registerNewContext(player, context, target);
+        return ToggleResult.ADDED;
+    }
+
+    /** Adds a subject without the toggle/removal behavior used by the single-target key bind. */
+    public static ToggleResult addTarget(ServerPlayer player, LivingEntity target) {
+        var existing = get(player);
+        if (existing != null && target != null && existing.entries.containsKey(target.getUUID())) {
+            return ToggleResult.INVALID;
+        }
+        if (!MentaloutTargetValidation.isValidRosterTarget(player, target)) {
+            return ToggleResult.INVALID;
+        }
+        if (!supportsAnyControl(target)) return ToggleResult.UNSUPPORTED;
+
+        var context = existing == null ? new MentaloutControlContext(player) : existing;
+        var added = context.add(target);
+        if (added != ToggleResult.ADDED || existing != null) return added;
         registerNewContext(player, context, target);
         return ToggleResult.ADDED;
     }
@@ -269,18 +288,36 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     public BatchResult applyTargetMisidentification(LivingEntity forcedTarget) {
-        if (ended || forcedTarget == null || !MentaloutTargetValidation.isValidForcedTarget(player, forcedTarget)) {
-            return BatchResult.NONE;
-        }
         if (isTargetMisidentificationTarget(forcedTarget)) {
             clearTargetMisidentification(true);
             return BatchResult.NONE;
         }
+        return applyTargetMisidentification(forcedTarget, entries.keySet(), true);
+    }
+
+    /** Applies an independent target-misidentification command only to the requested retained subjects. */
+    public BatchResult applyTargetMisidentification(
+            LivingEntity forcedTarget,
+            Set<UUID> subjectIds
+    ) {
+        return applyTargetMisidentification(forcedTarget, subjectIds, false);
+    }
+
+    private BatchResult applyTargetMisidentification(
+            LivingEntity forcedTarget,
+            Set<UUID> subjectIds,
+            boolean globalTarget
+    ) {
+        if (ended || forcedTarget == null || !MentaloutTargetValidation.isValidForcedTarget(player, forcedTarget)) {
+            return BatchResult.NONE;
+        }
+        var requested = subjectIds == null ? Set.<UUID>of() : Set.copyOf(subjectIds);
         var candidates = entries.values().stream()
+                .filter(entry -> requested.contains(entry.subject.getUUID()))
                 .filter(entry -> entry.subject != forcedTarget)
                 .filter(entry -> MentalControlApi.supports(entry.subject, ControlCapability.FORCE_TARGET))
                 .toList();
-        if (candidates.isEmpty()) return new BatchResult(0, entries.size(), 0, false, false);
+        if (candidates.isEmpty()) return new BatchResult(0, requested.size(), 0, false, false);
 
         var skill = Skills.TARGET_MISIDENTIFICATION.get();
         var castCost = skill.adjustProficiencyCost(
@@ -319,23 +356,30 @@ public final class MentaloutControlContext extends ServerContext {
             replacements.values().forEach(MentaloutControlContext::close);
             return new BatchResult(
                     0,
-                    entries.size() - candidates.size(),
+                    requested.size() - candidates.size(),
                     result[1],
                     false,
                     !attempted[0]
             );
         }
-        for (var entry : entries.values()) {
+        for (var entry : candidates) {
             var replacement = replacements.get(entry);
             close(entry.misidentification);
             entry.misidentification = replacement;
+            entry.globalMisidentification = replacement != null && globalTarget;
         }
-        setMisidentificationTarget(forcedTarget.getUUID());
-        misidentificationAutoTransferred = false;
+        if (globalTarget) {
+            setMisidentificationTarget(forcedTarget.getUUID());
+            misidentificationAutoTransferred = false;
+        } else if (entries.values().stream().noneMatch(entry -> entry.globalMisidentification
+                && entry.misidentification != null && !entry.misidentification.isClosed())) {
+            detachMisidentificationTarget();
+            misidentificationAutoTransferred = false;
+        }
         sendFullUpdate();
         return new BatchResult(
                 result[0],
-                entries.size() - candidates.size(),
+                requested.size() - candidates.size(),
                 result[1],
                 result[0] > 0,
                 false
@@ -416,6 +460,66 @@ public final class MentaloutControlContext extends ServerContext {
         return new BatchResult(applied, entries.size() - candidates.size(), failed, stuporEnabled, false);
     }
 
+    /** Toggles Mental Stupor only for a selected subset without changing the global auto-apply mode. */
+    public BatchResult toggleStupor(Set<UUID> subjectIds) {
+        if (ended || subjectIds == null || subjectIds.isEmpty()) return BatchResult.NONE;
+        var requested = Set.copyOf(subjectIds);
+        var candidates = entries.values().stream()
+                .filter(entry -> requested.contains(entry.subject.getUUID()))
+                .filter(entry -> MentalControlApi.supports(entry.subject, ControlCapability.FREEZE_AI))
+                .toList();
+        if (candidates.isEmpty()) return new BatchResult(0, requested.size(), 0, false, false);
+        var enable = candidates.stream().anyMatch(entry -> entry.stupor == null || entry.stupor.isClosed());
+        if (!enable) {
+            for (var entry : candidates) {
+                close(entry.stupor);
+                entry.stupor = null;
+                entry.stuporStartedAt = Long.MAX_VALUE;
+                if (entry.subject instanceof ServerPlayer subject) {
+                    PlayerControlSessionManager.grantResistance(subject);
+                }
+            }
+            replacePermanentOccupations();
+            sendFullUpdate();
+            return new BatchResult(0, requested.size() - candidates.size(), 0, false, false);
+        }
+        var missing = candidates.stream()
+                .filter(entry -> entry.stupor == null || entry.stupor.isClosed()).toList();
+        var futureCost = currentStuporCost()
+                + (float) missing.stream().mapToDouble(this::stuporCost).sum();
+        var skill = Skills.MENTAL_STUPOR.get();
+        var system = AbilitySystemServer.getSystem(player);
+        if (!system.canCastWithPermanentOccupations(
+                player, skill, 0.0f, Map.of(skill, futureCost))) {
+            return new BatchResult(0, requested.size() - candidates.size(), 0, false, true);
+        }
+        var applied = 0;
+        var failed = 0;
+        var activated = new ArrayList<Entry>();
+        for (var entry : missing) {
+            try {
+                entry.stupor = applyPermanent(entry.subject, skill.getKey(), new ControlDirective.FreezeAi());
+                entry.stuporStartedAt = player.level().getGameTime();
+                activated.add(entry);
+                applied++;
+            } catch (RuntimeException exception) {
+                failed++;
+            }
+        }
+        if (applied > 0 && !system.replacePermanentOccupation(
+                player.getUUID(), currentStuporCost(), skill)) {
+            for (var entry : activated) {
+                close(entry.stupor);
+                entry.stupor = null;
+                entry.stuporStartedAt = Long.MAX_VALUE;
+            }
+            sendFullUpdate();
+            return new BatchResult(0, requested.size() - candidates.size(), failed + applied, false, true);
+        }
+        sendFullUpdate();
+        return new BatchResult(applied, requested.size() - candidates.size(), failed, true, false);
+    }
+
     public BatchResult toggleImpression() {
         if (ended || entries.isEmpty()) return BatchResult.NONE;
         if (impressionEnabled) {
@@ -489,6 +593,63 @@ public final class MentaloutControlContext extends ServerContext {
         return new BatchResult(applied, entries.size() - candidates.size(), failed, impressionEnabled, false);
     }
 
+    /** Toggles Impression Manipulation only for a selected subset. */
+    public BatchResult toggleImpression(Set<UUID> subjectIds) {
+        if (ended || subjectIds == null || subjectIds.isEmpty()) return BatchResult.NONE;
+        var requested = Set.copyOf(subjectIds);
+        var candidates = entries.values().stream()
+                .filter(entry -> requested.contains(entry.subject.getUUID()))
+                .filter(entry -> MentalControlApi.supports(entry.subject, ControlCapability.RELATION_CONTROL))
+                .toList();
+        if (candidates.isEmpty()) return new BatchResult(0, requested.size(), 0, false, false);
+        var enable = candidates.stream().anyMatch(entry -> entry.impression == null || entry.impression.isClosed());
+        if (!enable) {
+            for (var entry : candidates) {
+                close(entry.impression);
+                entry.impression = null;
+                entry.removeImpressionBuff();
+            }
+            replacePermanentOccupations();
+            sendFullUpdate();
+            return new BatchResult(0, requested.size() - candidates.size(), 0, false, false);
+        }
+        var missing = candidates.stream()
+                .filter(entry -> entry.impression == null || entry.impression.isClosed()).toList();
+        var futureCost = currentImpressionCost()
+                + (float) missing.stream().mapToDouble(this::impressionCost).sum();
+        var skill = Skills.IMPRESSION_MANIPULATION.get();
+        var system = AbilitySystemServer.getSystem(player);
+        if (!system.canCastWithPermanentOccupations(
+                player, skill, 0.0f, Map.of(skill, futureCost))) {
+            return new BatchResult(0, requested.size() - candidates.size(), 0, false, true);
+        }
+        var applied = 0;
+        var failed = 0;
+        var activated = new ArrayList<Entry>();
+        for (var entry : missing) {
+            try {
+                entry.impression = applyPermanent(
+                        entry.subject, skill.getKey(), new ControlDirective.ImpressionAlliance());
+                activated.add(entry);
+                applied++;
+            } catch (RuntimeException exception) {
+                failed++;
+            }
+        }
+        if (applied > 0 && !system.replacePermanentOccupation(
+                player.getUUID(), currentImpressionCost(), skill)) {
+            for (var entry : activated) {
+                close(entry.impression);
+                entry.impression = null;
+                entry.removeImpressionBuff();
+            }
+            sendFullUpdate();
+            return new BatchResult(0, requested.size() - candidates.size(), failed + applied, false, true);
+        }
+        sendFullUpdate();
+        return new BatchResult(applied, requested.size() - candidates.size(), failed, true, false);
+    }
+
     @SubscribeEvent
     public void onTick(ServerTickEvent.Pre event) {
         if (ended) return;
@@ -501,17 +662,19 @@ public final class MentaloutControlContext extends ServerContext {
                 || entries.values().stream().anyMatch(entry -> entry.misidentification != null)) {
             Skills.TARGET_MISIDENTIFICATION.get().reportActivity(player, true);
         }
-        if (stuporEnabled) Skills.MENTAL_STUPOR.get().reportActivity(player, true);
-        if (impressionEnabled) Skills.IMPRESSION_MANIPULATION.get().reportActivity(player, true);
+        if (hasActiveStupor()) Skills.MENTAL_STUPOR.get().reportActivity(player, true);
+        if (hasActiveImpression()) Skills.IMPRESSION_MANIPULATION.get().reportActivity(player, true);
 
         var hasMisidentificationState = misidentificationTargetUuid != null
                 || entries.values().stream().anyMatch(entry -> entry.misidentification != null);
-        var clearMisidentification = hasMisidentificationState
-                && (!Skills.TARGET_MISIDENTIFICATION.get().isEnabled(player)
-                || !isMisidentificationTargetRetained());
-        var clearStupor = stuporEnabled && !Skills.MENTAL_STUPOR.get().isEnabled(player);
-        var clearImpression = impressionEnabled && !Skills.IMPRESSION_MANIPULATION.get().isEnabled(player);
-        var batchCleanup = clearMisidentification || clearStupor || clearImpression;
+        var clearAllMisidentification = hasMisidentificationState
+                && !Skills.TARGET_MISIDENTIFICATION.get().isEnabled(player);
+        var clearGlobalMisidentification = misidentificationTargetUuid != null
+                && !isMisidentificationTargetRetained();
+        var clearStupor = hasActiveStupor() && !Skills.MENTAL_STUPOR.get().isEnabled(player);
+        var clearImpression = hasActiveImpression() && !Skills.IMPRESSION_MANIPULATION.get().isEnabled(player);
+        var batchCleanup = clearAllMisidentification || clearGlobalMisidentification
+                || clearStupor || clearImpression;
         if (clearStupor) stuporEnabled = false;
         if (clearImpression) impressionEnabled = false;
         var occupationsChanged = clearStupor || clearImpression;
@@ -522,10 +685,12 @@ public final class MentaloutControlContext extends ServerContext {
                 continue;
             }
             var changed = false;
-            if (entry.misidentification != null && (clearMisidentification
+            if (entry.misidentification != null && (clearAllMisidentification
+                    || clearGlobalMisidentification && entry.globalMisidentification
                     || entry.misidentification.isClosed())) {
                 close(entry.misidentification);
                 entry.misidentification = null;
+                entry.globalMisidentification = false;
                 changed = true;
             }
             if (entry.stupor != null && (clearStupor || entry.stupor.isClosed())) {
@@ -547,7 +712,10 @@ public final class MentaloutControlContext extends ServerContext {
             }
             if (changed) changedEntries.add(entry);
         }
-        if (clearMisidentification) detachMisidentificationTarget();
+        if (clearAllMisidentification || clearGlobalMisidentification) {
+            detachMisidentificationTarget();
+            misidentificationAutoTransferred = false;
+        }
         if (ended) return;
         updateDeepStupor();
         updateImpressionFormationBuffs(clearImpression);
@@ -633,6 +801,10 @@ public final class MentaloutControlContext extends ServerContext {
         var entry = entries.remove(targetUuid);
         if (entry == null) return;
         entry.closeAll();
+        if (entries.values().stream().noneMatch(candidate -> candidate.globalMisidentification
+                && candidate.misidentification != null && !candidate.misidentification.isClosed())) {
+            detachMisidentificationTarget();
+        }
         var owners = BY_SUBJECT.get(targetUuid);
         if (owners != null) {
             owners.remove(this);
@@ -657,8 +829,13 @@ public final class MentaloutControlContext extends ServerContext {
         entry.stupor = null;
         entry.impression = null;
         entry.misidentification = null;
+        entry.globalMisidentification = false;
         entry.stuporStartedAt = Long.MAX_VALUE;
         entry.removeImpressionBuff();
+        if (entries.values().stream().noneMatch(candidate -> candidate.globalMisidentification
+                && candidate.misidentification != null && !candidate.misidentification.isClosed())) {
+            detachMisidentificationTarget();
+        }
         replacePermanentOccupations();
         sendUpsert(entry);
     }
@@ -757,7 +934,8 @@ public final class MentaloutControlContext extends ServerContext {
         }
         var replacements = new HashMap<Entry, ControlHandle>();
         for (var entry : entries.values()) {
-            if (entry.misidentification == null || entry.misidentification.isClosed()) continue;
+            if (!entry.globalMisidentification
+                    || entry.misidentification == null || entry.misidentification.isClosed()) continue;
             try {
                 replacements.put(entry, applyPermanent(
                         entry.subject,
@@ -768,8 +946,10 @@ public final class MentaloutControlContext extends ServerContext {
             }
         }
         for (var entry : entries.values()) {
+            if (!entry.globalMisidentification) continue;
             close(entry.misidentification);
             entry.misidentification = replacements.get(entry);
+            entry.globalMisidentification = entry.misidentification != null;
         }
         if (replacements.isEmpty()) {
             clearTargetMisidentification(true);
@@ -780,8 +960,16 @@ public final class MentaloutControlContext extends ServerContext {
         sendFullUpdate();
     }
 
+    private boolean hasActiveStupor() {
+        return entries.values().stream().anyMatch(entry -> entry.stupor != null && !entry.stupor.isClosed());
+    }
+
+    private boolean hasActiveImpression() {
+        return entries.values().stream().anyMatch(entry -> entry.impression != null && !entry.impression.isClosed());
+    }
+
     private void updateDeepStupor() {
-        if (!stuporEnabled || !Skills.MENTAL_STUPOR.get().hasProficiencyMilestone(player, 3)) return;
+        if (!hasActiveStupor() || !Skills.MENTAL_STUPOR.get().hasProficiencyMilestone(player, 3)) return;
         var now = player.level().getGameTime();
         for (var entry : entries.values()) {
             if (entry.subject instanceof ServerPlayer || entry.stupor == null || entry.stupor.isClosed()
@@ -793,7 +981,7 @@ public final class MentaloutControlContext extends ServerContext {
 
     private void updateImpressionFormationBuffs(boolean clearImmediately) {
         var now = player.level().getGameTime();
-        if (clearImmediately || !impressionEnabled
+        if (clearImmediately || !hasActiveImpression()
                 || !Skills.IMPRESSION_MANIPULATION.get().hasProficiencyMilestone(player, 3)) {
             entries.values().forEach(Entry::removeImpressionBuff);
             return;
@@ -829,9 +1017,10 @@ public final class MentaloutControlContext extends ServerContext {
     private boolean clearTargetMisidentification(boolean sync) {
         var changed = misidentificationTargetUuid != null;
         for (var entry : entries.values()) {
-            if (entry.misidentification == null) continue;
+            if (!entry.globalMisidentification || entry.misidentification == null) continue;
             close(entry.misidentification);
             entry.misidentification = null;
+            entry.globalMisidentification = false;
             changed = true;
         }
         detachMisidentificationTarget();
@@ -927,6 +1116,9 @@ public final class MentaloutControlContext extends ServerContext {
                 quantize(subject.getHealth(), 0.25f),
                 quantize(subject.getMaxHealth(), 0.25f),
                 quantize(player.distanceTo(subject), 0.5f),
+                subject.getBlockX(),
+                subject.getBlockY(),
+                subject.getBlockZ(),
                 supportLevel(subject),
                 flags,
                 remaining
@@ -972,6 +1164,7 @@ public final class MentaloutControlContext extends ServerContext {
         private ControlHandle stupor;
         private ControlHandle impression;
         private ControlHandle misidentification;
+        private boolean globalMisidentification;
         private long stuporStartedAt = Long.MAX_VALUE;
         private long impressionBuffUntil;
         private int lastFingerprint;
@@ -988,6 +1181,7 @@ public final class MentaloutControlContext extends ServerContext {
             stupor = null;
             impression = null;
             misidentification = null;
+            globalMisidentification = false;
             stuporStartedAt = Long.MAX_VALUE;
             removeImpressionBuff();
         }
@@ -1035,12 +1229,8 @@ public final class MentaloutControlContext extends ServerContext {
         }
 
         private static boolean isValidForcedTarget(ServerPlayer player, LivingEntity target) {
-            return target != player
-                    && target.isAlive()
-                    && !target.isRemoved()
-                    && target.level() == player.level()
-                    && target.getBoundingBox().distanceToSqr(player.getEyePosition())
-                    <= MentaloutTargetingRange.MAX_RANGE_SQR;
+            return MentaloutTargeting.isValidExtendedTarget(
+                    player, target, MentaloutTargeting.PROFICIENCY_MAX_SIGHT_RANGE);
         }
 
         private static boolean isRetained(ServerPlayer player, LivingEntity subject) {
@@ -1053,10 +1243,4 @@ public final class MentaloutControlContext extends ServerContext {
         }
     }
 
-    private static final class MentaloutTargetingRange {
-        private static final double MAX_RANGE_SQR = 16.0 * 16.0;
-
-        private MentaloutTargetingRange() {
-        }
-    }
 }

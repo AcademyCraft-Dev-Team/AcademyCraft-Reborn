@@ -69,7 +69,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv2.SensoryDistortio
 import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.ability.mentalout.skills.lv4.MentalTakeover;
-import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
+import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
 import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.ability.teleport.skills.lv1.SpaceFoldingTheorem;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
@@ -218,8 +218,8 @@ public final class Skills {
             SKILLS.register(SkillNames.SENSORY_DISTORTION, SensoryDistortion::new);
     public static final DeferredHolder<Skill, CommandPositioning> COMMAND_POSITIONING =
             SKILLS.register(SkillNames.COMMAND_POSITIONING, CommandPositioning::new);
-    public static final DeferredHolder<Skill, PrecisionOperation> PRECISION_OPERATION =
-            SKILLS.register(SkillNames.PRECISION_OPERATION, PrecisionOperation::new);
+    public static final DeferredHolder<Skill, WideAreaInterference> WIDE_AREA_INTERFERENCE =
+            SKILLS.register(SkillNames.WIDE_AREA_INTERFERENCE, WideAreaInterference::new);
     public static final DeferredHolder<Skill, MindDestruction> MIND_DESTRUCTION =
             SKILLS.register(SkillNames.MIND_DESTRUCTION, MindDestruction::new);
     /**

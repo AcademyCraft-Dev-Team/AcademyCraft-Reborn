@@ -88,6 +88,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
 import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
+import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
 import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
@@ -899,6 +900,19 @@ public final class PacketTypes {
             MENTALOUT_ROSTER_RESYNC = PACKET_TYPES.register("mentalout_roster_resync",
             () -> new PacketType<>(MentaloutRosterPackets.ResyncPacket.class,
                     MentaloutRosterPackets.ResyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WideAreaInterference.EnrollPacket>>
+            WIDE_AREA_INTERFERENCE_ENROLL = PACKET_TYPES.register("wide_area_interference_enroll",
+            () -> new PacketType<>(WideAreaInterference.EnrollPacket.class,
+                    WideAreaInterference.EnrollPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WideAreaInterference.CommandPacket>>
+            WIDE_AREA_INTERFERENCE_COMMAND = PACKET_TYPES.register("wide_area_interference_command",
+            () -> new PacketType<>(WideAreaInterference.CommandPacket.class,
+                    WideAreaInterference.CommandPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, WideAreaInterference.FeedbackPacket>>
+            WIDE_AREA_INTERFERENCE_FEEDBACK = PACKET_TYPES.register("wide_area_interference_feedback",
+            () -> new PacketType<>(WideAreaInterference.FeedbackPacket.class,
+                    WideAreaInterference.FeedbackPacket.CODEC));
 
     /**
      * Development packets

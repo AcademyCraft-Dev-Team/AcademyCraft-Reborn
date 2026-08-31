@@ -37,6 +37,15 @@ public final class MentaloutTargeting {
         return findLookedAtLiving(player, range, PROFICIENCY_MAX_SIGHT_RANGE, false);
     }
 
+    /** Validates a target against the same extended range used by target misidentification. */
+    public static boolean isValidExtendedTarget(
+            ServerPlayer player,
+            LivingEntity target,
+            double range
+    ) {
+        return isValidTarget(player, target, range, PROFICIENCY_MAX_SIGHT_RANGE);
+    }
+
     private static LivingEntity findLookedAtLiving(
             ServerPlayer player,
             double range,

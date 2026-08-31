@@ -262,6 +262,9 @@ public final class MentaloutRosterClientState {
             float health,
             float maxHealth,
             float distance,
+            int blockX,
+            int blockY,
+            int blockZ,
             byte support,
             byte flags,
             int misidentificationTicks

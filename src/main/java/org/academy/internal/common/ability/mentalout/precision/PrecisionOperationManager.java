@@ -12,7 +12,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PrecisionOperationClient;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
 import org.academy.internal.common.ability.program.*;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class PrecisionOperationManager {
+    private static final String LEGACY_SKILL_KEY = "academy:precision_operation";
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     private static final Map<UUID, CachedPrograms> COMPILED = new HashMap<>();
     private static boolean serverInitialized;
@@ -45,21 +45,20 @@ public final class PrecisionOperationManager {
     }
 
     public static PrecisionOperation.Data getOrCreateData(ServerPlayer player) {
-        var skill = Skills.PRECISION_OPERATION.get();
         var system = AbilitySystemServer.getSystem(player);
         var playerData = system.getPlayerData(player.getUUID());
         if (playerData == null) return new PrecisionOperation.Data();
         var map = playerData.getSkillDataMap();
-        var raw = map.get(skill.getKeyString());
+        var raw = map.get(LEGACY_SKILL_KEY);
         if (raw instanceof PrecisionOperation.Data data) {
             var schemaVersion = data.schemaVersion();
             var normalized = PrecisionOperation.normalizeData(player.getUUID(), data);
             if (schemaVersion != normalized.schemaVersion()) playerData.markDirty();
             return normalized;
         }
-        var data = (PrecisionOperation.Data) skill.createData();
+        var data = new PrecisionOperation.Data();
         if (raw != null) mergeProgress(data, raw);
-        map.put(skill.getKeyString(), data);
+        map.put(LEGACY_SKILL_KEY, data);
         playerData.markDirty();
         return data;
     }

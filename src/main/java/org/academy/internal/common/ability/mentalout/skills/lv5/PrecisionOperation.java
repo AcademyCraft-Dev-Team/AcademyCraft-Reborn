@@ -4,22 +4,10 @@ import com.google.gson.annotations.SerializedName;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
-import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.KeyBindingConfig;
-import org.academy.api.client.resources.R;
-import org.academy.api.common.ability.AbilityLevel;
-import org.academy.api.common.ability.DevCondition;
-import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
-import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
-import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
-import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.skilldata.SkillData;
 
@@ -28,25 +16,13 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
-public final class PrecisionOperation extends Skill {
+/**
+ * Save-only codec for importing program books from the retired Mentalout placeholder skill.
+ */
+public final class PrecisionOperation {
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
 
-    public PrecisionOperation() {
-        super(Builder
-                .of(AbilityCategories.MENTALOUT.get())
-                .level(AbilityLevel.LEVEL5)
-                .energyCost(100_000)
-                .cpCost(0)
-                .iterationTicks(0)
-                .maxStacks(NO_STACK_LIMIT)
-                .dependsOn(Skills.IMPRESSION_MANIPULATION, Skills.MENTAL_STUPOR)
-                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
-                .devCondition(new DevCondition.DependencyCondition(
-                        "Impression Manipulation", "academy:impression_manipulation"))
-                .devCondition(new DevCondition.DependencyCondition(
-                        "Mental Stupor", "academy:mental_stupor"))
-                .withCustomData(Data.ID, Data.class, Data::new)
-        );
+    private PrecisionOperation() {
     }
 
     public static Data normalizeData(Data data) {
@@ -106,16 +82,6 @@ public final class PrecisionOperation extends Skill {
         return book.slots().stream().allMatch(slot -> slot.empty()
                 || slot.program().schemaVersion() == AbilityProgram.CURRENT_SCHEMA_VERSION
                 && slot.program().category().equals(AbilityCategories.MENTALOUT.get().getKey()));
-    }
-
-    @Override
-    public void initClient() {
-        // Placeholder skill: the category-wide precision editor owns GUI and key bindings.
-    }
-
-    @Override
-    public void initServer(MinecraftServerContext context) {
-        // Placeholder skill: the global program runtime owns network initialization.
     }
 
     public static final class Data extends SkillData {
@@ -234,45 +200,4 @@ public final class PrecisionOperation extends Skill {
         }
     }
 
-    public static final class Client {
-        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
-                AbilityCategories.MENTALOUT.get(),
-                new AbilitySystemClient.SkillInfo(
-                        Skills.PRECISION_OPERATION.get(),
-                        List.of(
-                                ImpressionManipulation.Client.SKILL_INFO,
-                                MentalStupor.Client.SKILL_INFO
-                        ),
-                        R.textures.ability.mentalout.skill.precision_operation.icon,
-                        116,
-                        148
-                )
-        );
-        public static final String KEY_NAME_EXECUTE_SELECTED = SkillNames.PRECISION_OPERATION + "_execute_selected";
-        public static final String KEY_NAME_EDIT = SkillNames.PRECISION_OPERATION + "_edit";
-        public static final String KEY_NAME_SLOT_PREFIX = SkillNames.PRECISION_OPERATION + "_slot_";
-        public static Config CONFIG = new Config();
-
-        private Client() {
-        }
-
-        public static final class Config extends KeyBindingConfig {
-            public static final class Action implements TypeHandler<Config> {
-                public static final TypeHandler<Config> INSTANCE = new Action();
-
-                private Action() {
-                }
-
-                @Override
-                public Config getDefault() {
-                    return new Config();
-                }
-
-                @Override
-                public Class<Config> getTypeClass() {
-                    return Config.class;
-                }
-            }
-        }
-    }
 }

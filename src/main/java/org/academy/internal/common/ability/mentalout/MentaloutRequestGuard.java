@@ -64,6 +64,7 @@ public final class MentaloutRequestGuard {
         MENTAL_TAKEOVER,
         SENSORY_DISTORTION,
         COMMAND_POSITIONING,
+        WIDE_AREA_INTERFERENCE,
         PRECISION_OPERATION,
         MIND_DESTRUCTION
     }
