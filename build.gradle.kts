@@ -115,10 +115,10 @@ val generateModsToml = tasks.register("generateModsToml") {
         config.set<MutableList<Config>>("mixins", mutableListOf(mixinConfig))
 
         val dependencies = mutableListOf<Config>()
-        fun addDep(modId: String, versionRange: String) {
+        fun addDep(modId: String, versionRange: String, type: String = "required") {
             val dep = Config.inMemory().apply {
                 set<String>("modId", modId)
-                set<String>("type", "required")
+                set<String>("type", type)
                 set<String>("versionRange", versionRange)
                 set<String>("ordering", "NONE")
                 set<String>("side", "BOTH")
@@ -129,6 +129,7 @@ val generateModsToml = tasks.register("generateModsToml") {
         addDep("minecraft", minecraftVersionRange)
         addDep("kotlinforforge", loaderVersionRange)
         addDep("misaka_network", misakaVersion)
+        addDep("curios", "[16.0.0,)", "optional")
 
         config.set<MutableList<Config>>(listOf("dependencies", modId), dependencies)
 
@@ -186,6 +187,13 @@ repositories {
         setUrl("https://maven.blamejared.com/")
         content {
             includeGroup("mezz.jei")
+        }
+    }
+    maven {
+        name = "Curios"
+        setUrl("https://maven.theillusivec4.top/")
+        content {
+            includeGroup("top.theillusivec4.curios")
         }
     }
     maven {
@@ -393,6 +401,10 @@ dependencies {
     implementation(libs.kotlinforforge)
 
     compileOnly(libs.jei.api)
+    compileOnly("top.theillusivec4.curios:curios-neoforge:${libs.versions.curios.get()}:api")
+    if (isCompat) {
+        runtimeOnly(libs.curios)
+    }
 
     compat(libs.sodium)
     compat(libs.iris)

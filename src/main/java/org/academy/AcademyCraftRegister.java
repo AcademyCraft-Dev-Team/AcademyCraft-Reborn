@@ -7,6 +7,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -30,6 +31,7 @@ import org.academy.internal.common.arc.PathModifierTypes;
 import org.academy.internal.common.arc.PathTypes;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.compatibility.MagneticHookCuriosCompat;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.network.syncher.EntityDataSerializers;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -121,6 +123,9 @@ public final class AcademyCraftRegister {
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            if (ModList.get().isLoaded("curios")) {
+                MagneticHookCuriosCompat.register();
+            }
             MentalControlApi.registerAdapter(
                     Identifier.fromNamespaceAndPath(MODID, "warden"),
                     100,

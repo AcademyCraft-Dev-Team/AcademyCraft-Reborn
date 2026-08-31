@@ -17,6 +17,8 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.THROWN_COIN.get(), ThrownCoinRenderer::new);
         event.registerEntityRenderer(EntityTypes.PAPER_AIRPLANE.get(),
                 context -> new ThrownItemRenderer<>(context, 0.75f, true));
+        event.registerEntityRenderer(EntityTypes.MAGNETIC_HOOK.get(),
+                context -> new ThrownItemRenderer<>(context, 0.6f, false));
         event.registerEntityRenderer(EntityTypes.HIGH_SPEED_JET_NOZZLE.get(),
                 HighSpeedJetNozzleRenderer::new);
         event.registerEntityRenderer(EntityTypes.RAILGUN_RAY.get(), RailgunRayRenderer::new);

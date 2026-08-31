@@ -17,6 +17,7 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionOperatio
 import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;
 import org.academy.internal.common.network.MusicSyncPackets;
+import org.academy.internal.common.network.MagneticHookActionPacket;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -82,6 +83,7 @@ public final class AcademyCraftServer {
         ProficiencySkillSettings.initServer();
         MusicSyncPackets.initServer();
         PlayerLeftClickSwingPacket.initServer();
+        MagneticHookActionPacket.initServer();
         AbilityProgramManager.initServer();
         PrecisionOperationManager.initServer();
     }

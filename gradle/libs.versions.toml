@@ -15,6 +15,7 @@ sodium = "mc26.2-0.9.1-neoforge"
 iris = "1.11.2+26.2-neoforge"
 jade = "26.2.8+neoforge"
 jei = "30.11.0.66"
+curios = "16.0.0+26.2"
 misaka = "26.2.0.1"
 jmsdfgen = "0.0.2"
 
@@ -34,6 +35,7 @@ iris = { group = "maven.modrinth", name = "iris", version.ref = "iris" }
 jade = { group = "maven.modrinth", name = "jade", version.ref = "jade" }
 jei = { group = "mezz.jei", name = "jei-26.2-neoforge", version.ref = "jei" }
 jei-api = { group = "mezz.jei", name = "jei-26.2-neoforge-api", version.ref = "jei" }
+curios = { group = "top.theillusivec4.curios", name = "curios-neoforge", version.ref = "curios" }
 misaka = { group = "org.academy", name = "misaka-network", version.ref = "misaka" }
 jmsdfgen-core = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-core", version.ref = "jmsdfgen" }
 jmsdfgen-ext = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-ext", version.ref = "jmsdfgen" }
