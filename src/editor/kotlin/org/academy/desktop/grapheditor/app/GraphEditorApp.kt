@@ -26,6 +26,7 @@ import org.academy.api.client.render.vfxgraph.operator.VfxOperators
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec
 import org.academy.api.client.render.vfxgraph.serialize.VfxGraphSchemaVersion
 import org.academy.desktop.grapheditor.canvas.*
+import org.academy.desktop.grapheditor.bridge.VfxGraphMcpBridge
 import org.academy.desktop.grapheditor.clipboard.GraphClipboard
 import org.academy.desktop.grapheditor.commandpalette.CommandPalette
 import org.academy.desktop.grapheditor.container.VfxContainerCanvas
@@ -95,6 +96,7 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
     private val recentFiles: RecentFiles
     private lateinit var shaderWatcher: ShaderHotReload
     private lateinit var graphWatcher: GraphHotReload
+    private lateinit var mcpBridge: VfxGraphMcpBridge
     private var mode: GraphMode = GraphMode.SHADER
 
     /** 右键弹窗目标节点 id：弹窗打开期间跨帧存活（contextRequest 每帧被清空）。 */
@@ -145,6 +147,7 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             { listOf(packagedGraphDir(), graphDir()) },
             ::reloadGraphFile,
         )
+        mcpBridge = VfxGraphMcpBridge(workingDir().resolve("vfxgraph-mcp").resolve("bridge"), ::handleMcpCommand)
     }
 
     override val usesImGui: Boolean get() = true
@@ -154,6 +157,7 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         vfxPreview.close()
         shaderWatcher.close()
         graphWatcher.close()
+        mcpBridge.close()
     }
 
     override fun createRoot(): WidgetContainer = FrameLayoutWidget()
@@ -171,6 +175,8 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
 
     override fun renderImGui() {
         ensureImGuiIni()
+        // MCP 命令在渲染线程执行，避免跨线程修改文档、ImGui 或实时预览状态。
+        mcpBridge.poll()
         // 着色器/图资产热重载：每帧 mtime 轮询（节流）
         shaderWatcher.scanNow()
         graphWatcher.scanNow()
@@ -1103,6 +1109,92 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
             println("[graph-hot-reload] reload failed: ${e.message}")
         }
     }
+
+    /** 本地 MCP 文件桥命令；路径严格限制在打包 VFX 资产与 run/academy/graphs。 */
+    private fun handleMcpCommand(request: JsonObject): JsonObject {
+        return when (request.get("action")?.asString ?: error("missing action")) {
+            "status" -> mcpEditorState()
+            "open" -> {
+                val target = resolveMcpGraphPath(request.get("path")?.asString ?: error("missing path"))
+                require(Files.isRegularFile(target)) { "graph does not exist: $target" }
+                val openIndex = documents.list().indexOfFirst { samePath(it.path, target) }
+                if (openIndex >= 0) activateDoc(openIndex) else loadGraph(target)
+                mcpEditorState()
+            }
+            "reload" -> {
+                val target = request.get("path")?.asString?.let(::resolveMcpGraphPath)
+                    ?: documents.current().path
+                    ?: error("active document has no path")
+                require(Files.isRegularFile(target)) { "graph does not exist: $target" }
+                if (documents.list().none { samePath(it.path, target) }) loadGraph(target)
+                else reloadGraphFile(target)
+                mcpEditorState()
+            }
+            "save" -> {
+                save()
+                mcpEditorState()
+            }
+            "play" -> {
+                vfxPreview.playing = true
+                mcpEditorState()
+            }
+            "pause" -> {
+                vfxPreview.playing = false
+                mcpEditorState()
+            }
+            "set_playback" -> {
+                request.get("playing")?.let { vfxPreview.playing = it.asBoolean }
+                request.get("loop")?.let { vfxPreview.loop = it.asBoolean }
+                mcpEditorState()
+            }
+            "reset" -> {
+                vfxPreview.reset()
+                mcpEditorState()
+            }
+            "step" -> {
+                vfxPreview.stepOnce()
+                mcpEditorState()
+            }
+            else -> error("unsupported action: ${request.get("action")}")
+        }
+    }
+
+    private fun mcpEditorState(): JsonObject = JsonObject().apply {
+        val current = documents.current()
+        addProperty("title", title)
+        addProperty("activeDocument", current.name)
+        current.path?.let { addProperty("activePath", it.toAbsolutePath().normalize().toString()) }
+        addProperty("mode", current.mode.name.lowercase())
+        addProperty("playing", vfxPreview.playing)
+        addProperty("loop", vfxPreview.loop)
+        addProperty("time", vfxPreview.time)
+        addProperty("particleCount", vfxPreview.particleCount)
+        vfxPreview.error?.let { addProperty("previewError", it) }
+        add("documents", com.google.gson.JsonArray().apply {
+            documents.list().forEach { doc ->
+                add(JsonObject().apply {
+                    addProperty("name", doc.name)
+                    addProperty("mode", doc.mode.name.lowercase())
+                    addProperty("active", doc === current)
+                    doc.path?.let { addProperty("path", it.toAbsolutePath().normalize().toString()) }
+                })
+            }
+        })
+    }
+
+    private fun resolveMcpGraphPath(value: String): Path {
+        val supplied = Path.of(value)
+        val resolved = (if (supplied.isAbsolute) supplied else environment.workingDir.resolve(supplied))
+            .toAbsolutePath().normalize()
+        val allowed = listOf(packagedGraphDir(), graphDir()).map { it.toAbsolutePath().normalize() }
+        require(allowed.any(resolved::startsWith)) { "path is outside VFXGraph roots: $resolved" }
+        val name = resolved.fileName.toString()
+        require(name.endsWith(".json") && !name.endsWith(".editor.json")) { "not a VFXGraph JSON file: $resolved" }
+        return resolved
+    }
+
+    private fun samePath(left: Path?, right: Path): Boolean =
+        left?.toAbsolutePath()?.normalize() == right.toAbsolutePath().normalize()
 
     private fun writeSidecar(editorFile: Path) {
         metadata.frames.clear()
