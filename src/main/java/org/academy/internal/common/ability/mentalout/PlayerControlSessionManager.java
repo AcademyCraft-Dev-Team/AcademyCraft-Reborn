@@ -34,6 +34,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.mentalout.control.ImpressionRidingManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
@@ -350,6 +351,7 @@ public final class PlayerControlSessionManager {
 
     public static boolean blocksUntrustedWorldAction(ServerPlayer player) {
         if (player == null) return false;
+        if (ImpressionRidingManager.blocksUntrustedWorldAction(player)) return true;
         var controlled = BY_SUBJECT.get(player.getUUID());
         if (controlled != null && controlled.state == State.ACTIVE) return true;
         var controlling = BY_CONTROLLER.get(player.getUUID());
@@ -404,6 +406,7 @@ public final class PlayerControlSessionManager {
      * Returns true when the packet was corrected and vanilla handling must be cancelled.
      */
     public static boolean validateMovePlayer(ServerPlayer player, ServerboundMovePlayerPacket packet) {
+        if (ImpressionRidingManager.validateControlledPlayerMovement(player)) return true;
         var controlled = BY_SUBJECT.get(player.getUUID());
         if (controlled != null && controlled.state == State.ACTIVE) {
             return validateControlledMovement(controlled, packet);
