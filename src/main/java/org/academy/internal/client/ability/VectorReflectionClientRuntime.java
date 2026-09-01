@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.ProficiencyPolicy;
@@ -12,6 +13,7 @@ import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
 import org.academy.internal.coremod.ProtectionBackend;
+import org.academy.mixin.common.LivingEntityDamageInvoker;
 
 import java.lang.ref.WeakReference;
 import java.util.*;
@@ -145,8 +147,10 @@ public final class VectorReflectionClientRuntime {
 
     public static void sanitize(LocalPlayer player) {
         if (player.isRemoved()) player.revive();
+        ((LivingEntityDamageInvoker) player).academy$setDead(false);
         clearHurtState(player);
         player.deathTime = 0;
+        if (player.getPose() == Pose.DYING) player.setPose(Pose.STANDING);
         player.invulnerableTime = 0;
         player.setTicksFrozen(0);
         player.setInvisible(false);
