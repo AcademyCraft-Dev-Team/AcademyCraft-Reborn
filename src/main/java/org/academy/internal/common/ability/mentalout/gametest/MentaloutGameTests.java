@@ -225,22 +225,31 @@ public final class MentaloutGameTests {
     }
 
     private enum Scenario {
-        MOB_FORCE_TARGET("mob_force_target", 40) {
+        MOB_FORCE_TARGET("mob_force_target", 70) {
             @Override
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
                 var zombie = helper.spawn(EntityTypes.ZOMBIE, 1, 2, 1);
                 var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
                 zombie.setPersistenceRequired();
+                zombie.setNoAi(true);
                 cow.setPersistenceRequired();
-                var handle = forceTarget(controller, zombie, cow, 30L);
+                cow.setNoAi(true);
+                var initialHealth = cow.getHealth();
+                var handle = forceTarget(controller, zombie, cow, 60L);
 
-                helper.runAtTickTime(5L, () -> {
+                helper.runAtTickTime(2L, () -> {
                     helper.assertTrue(
                             MentalControlRuntime.getForcedTarget(zombie) == cow,
                             "Zombie lost the effective forced target"
                     );
                     helper.assertTrue(zombie.getTarget() == cow, "Zombie did not adopt the forced target");
+                    helper.assertTrue(zombie.isAggressive(),
+                            "Generic forced-combat executor did not activate immediately");
+                });
+                helper.runAtTickTime(50L, () -> {
+                    helper.assertTrue(cow.getHealth() < initialHealth,
+                            "Generic forced-combat executor did not damage its target with native AI disabled");
                     finish(helper, controller, handle);
                 });
             }
@@ -597,6 +606,7 @@ public final class MentaloutGameTests {
             @Override
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
+                controller.setInvulnerable(true);
                 var guardian = helper.spawn(EntityTypes.ZOMBIE, 3, 2, 1);
                 var threat = helper.spawn(EntityTypes.SKELETON, 6, 2, 1);
                 guardian.setPersistenceRequired();
@@ -1134,25 +1144,35 @@ public final class MentaloutGameTests {
                 });
             }
         },
-        WARDEN_FORCE_TARGET("warden_force_target", 40) {
+        WARDEN_FORCE_TARGET("warden_force_target", 90) {
             @Override
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
                 var warden = helper.spawn(EntityTypes.WARDEN, 1, 2, 1);
-                var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
+                var target = helper.spawn(EntityTypes.WARDEN, 3, 2, 1);
                 warden.setPersistenceRequired();
-                cow.setPersistenceRequired();
-                var handle = forceTarget(controller, warden, cow, 30L);
+                target.setPersistenceRequired();
+                target.setNoAi(true);
+                var initialHealth = target.getHealth();
+                var handle = forceTarget(controller, warden, target, 80L);
 
-                helper.runAtTickTime(5L, () -> {
+                helper.runAtTickTime(2L, () -> {
                     helper.assertTrue(
-                            MentalControlRuntime.getForcedTarget(warden) == cow,
+                            MentalControlRuntime.getForcedTarget(warden) == target,
                             "Warden lost the effective forced target"
                     );
                     helper.assertTrue(
-                            warden.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) == cow,
+                            warden.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) == target,
                             "Warden brain did not retain ATTACK_TARGET"
                     );
+                    helper.assertFalse(warden.canTargetEntity(target),
+                            "Test fixture no longer exercises an entity-specific target rejection");
+                    helper.assertTrue(warden.isAggressive(),
+                            "Generic forced-combat executor did not activate immediately");
+                });
+                helper.runAtTickTime(70L, () -> {
+                    helper.assertTrue(target.getHealth() < initialHealth,
+                            "Controlled Warden did not damage another Warden within 3.5 seconds");
                     finish(helper, controller, handle);
                 });
             }

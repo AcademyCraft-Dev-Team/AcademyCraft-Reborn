@@ -11,6 +11,11 @@ import net.minecraft.world.entity.monster.warden.Warden;
 import org.academy.api.common.entitycontrol.*;
 
 public final class VanillaMobMentalControlAdapter implements MentalControlAdapter {
+    /**
+     * This is the lowest-priority generic fallback despite the historical class name. It
+     * intentionally matches unknown third-party Mob subclasses unless they register a more
+     * specific adapter through {@link MentalControlApi#registerAdapter}.
+     */
     @Override
     public boolean matches(LivingEntity subject) {
         return subject instanceof Mob

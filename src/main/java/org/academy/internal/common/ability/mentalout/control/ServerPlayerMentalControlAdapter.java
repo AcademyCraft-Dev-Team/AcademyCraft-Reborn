@@ -22,7 +22,7 @@ public final class ServerPlayerMentalControlAdapter implements MentalControlAdap
     public ControlSupport support(LivingEntity subject, ControlCapability capability) {
         if (!matches(subject)) return ControlSupport.UNSUPPORTED;
         return switch (capability) {
-            case FORCE_TARGET, FREEZE_AI, RELATION_CONTROL, PATH_CONTROL, VIEW_CONTROL, DIRECT_CONTROL ->
+            case AI_CONTROL, FORCE_TARGET, FREEZE_AI, RELATION_CONTROL, PATH_CONTROL, VIEW_CONTROL, DIRECT_CONTROL ->
                     ControlSupport.FULL;
             case GUARD_CONTROL -> ControlSupport.UNSUPPORTED;
         };

@@ -15,6 +15,11 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.common.entitycontrol.ControlDestination;
+import org.academy.api.common.entitycontrol.ControlDirective;
+import org.academy.api.common.entitycontrol.ControlHandle;
+import org.academy.api.common.entitycontrol.ControlRequest;
+import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.common.ability.Skills;
@@ -337,6 +342,7 @@ public final class MentalIntrusionManager {
 
     private static void applyAfterimage(DistortionSession session, long now) {
         if (session.afterimagePosition == null || now >= session.afterimageUntil) {
+            session.closeAfterimageMovement();
             session.afterimagePosition = null;
             session.afterimageUntil = 0L;
             return;
@@ -345,10 +351,24 @@ public final class MentalIntrusionManager {
                 || mob.getTarget() != null
                 || MentalControlRuntime.getForcedTarget(mob) != null
                 || mob.isNoAi()) {
+            session.closeAfterimageMovement();
             return;
         }
-        var position = session.afterimagePosition;
-        mob.getNavigation().moveTo(position.x, position.y, position.z, 1.0);
+        if (session.afterimageMovement != null
+                && !session.afterimageMovement.state().isTerminal()) return;
+        session.closeAfterimageMovement();
+        session.afterimageMovement = MentalControlApi.apply(new ControlRequest(
+                session.player,
+                session.target,
+                Skills.SENSORY_DISTORTION.get().getKey(),
+                session.afterimageScope,
+                PERCEPTION_PRIORITY,
+                session.afterimageUntil,
+                List.of(new ControlDirective.MoveTo(new ControlDestination.Position(
+                        session.target.level().dimension().identifier(),
+                        session.afterimagePosition
+                )))
+        ));
     }
 
     public static void releaseEntity(UUID entityId) {
@@ -441,6 +461,7 @@ public final class MentalIntrusionManager {
     private static void stopDistortion(UUID controllerId) {
         var session = DISTORTIONS.remove(controllerId);
         if (session == null) return;
+        session.closeAfterimageMovement();
         session.handle.close();
         AbilitySystemServer.getSystem(session.player).releaseMaintenanceOccupation(
                 controllerId,
@@ -812,6 +833,8 @@ public final class MentalIntrusionManager {
         private final ServerPlayer player;
         private final LivingEntity target;
         private final MentalPerceptionRuntime.Handle handle;
+        private final UUID afterimageScope = UUID.randomUUID();
+        private ControlHandle afterimageMovement;
         private Vec3 afterimagePosition;
         private long afterimageUntil;
 
@@ -823,6 +846,11 @@ public final class MentalIntrusionManager {
             this.player = player;
             this.target = target;
             this.handle = handle;
+        }
+
+        private void closeAfterimageMovement() {
+            if (afterimageMovement != null) afterimageMovement.close();
+            afterimageMovement = null;
         }
     }
 }

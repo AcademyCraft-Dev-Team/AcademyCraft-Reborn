@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import java.util.Set;
 
 public enum ControlCapability {
+    AI_CONTROL(ControlDomain.AI_EXECUTION),
     FORCE_TARGET(ControlDomain.TARGET),
     FREEZE_AI(ControlDomain.MOVEMENT, ControlDomain.ACTION),
     RELATION_CONTROL(ControlDomain.RELATION),

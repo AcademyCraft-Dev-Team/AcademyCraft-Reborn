@@ -6,19 +6,24 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 public record ControlRequest(
         ServerPlayer controller,
         LivingEntity subject,
         Identifier source,
+        UUID scopeId,
         int priority,
         long expiresAt,
         List<ControlDirective> directives
 ) {
+    public static final UUID DEFAULT_SCOPE = new UUID(0L, 0L);
+
     public ControlRequest {
         Objects.requireNonNull(controller, "controller");
         Objects.requireNonNull(subject, "subject");
         Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(scopeId, "scopeId");
         directives = List.copyOf(Objects.requireNonNull(directives, "directives"));
         if (expiresAt < 0L) {
             throw new IllegalArgumentException("expiresAt must not be negative");
@@ -31,6 +36,21 @@ public record ControlRequest(
         }
     }
 
+    /**
+     * Compatibility constructor. Requests with the same controller, subject and source replace
+     * one another just as they did before scoped sessions were introduced.
+     */
+    public ControlRequest(
+            ServerPlayer controller,
+            LivingEntity subject,
+            Identifier source,
+            int priority,
+            long expiresAt,
+            List<ControlDirective> directives
+    ) {
+        this(controller, subject, source, DEFAULT_SCOPE, priority, expiresAt, directives);
+    }
+
     public static ControlRequest permanent(
             ServerPlayer controller,
             LivingEntity subject,
@@ -38,7 +58,20 @@ public record ControlRequest(
             int priority,
             List<ControlDirective> directives
     ) {
-        return new ControlRequest(controller, subject, source, priority, Long.MAX_VALUE, directives);
+        return new ControlRequest(
+                controller, subject, source, DEFAULT_SCOPE, priority, Long.MAX_VALUE, directives);
+    }
+
+    public static ControlRequest scopedPermanent(
+            ServerPlayer controller,
+            LivingEntity subject,
+            Identifier source,
+            UUID scopeId,
+            int priority,
+            List<ControlDirective> directives
+    ) {
+        return new ControlRequest(
+                controller, subject, source, scopeId, priority, Long.MAX_VALUE, directives);
     }
 
     public static ControlRequest permanent(

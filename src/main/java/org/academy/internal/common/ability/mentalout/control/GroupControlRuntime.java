@@ -10,6 +10,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -31,9 +32,8 @@ import java.util.*;
 
 /** Internal scheduler and default living-entity adapter for public group-control orders. */
 public final class GroupControlRuntime {
-    private static final int CONTROL_LEASE_TICKS = 200;
     private static final int PATH_GRACE_TICKS = 40;
-    private static final int PATH_STALL_TICKS = 100;
+    private static final int PATH_STALL_TICKS = 200;
     private static final int FARM_RESCAN_TICKS = 20;
     private static final List<AdapterEntry> ADAPTERS = new ArrayList<>();
     private static final Map<TaskKey, DefaultTask> TASKS = new HashMap<>();
@@ -57,6 +57,7 @@ public final class GroupControlRuntime {
 
     public static synchronized GroupControlResult dispatch(GroupControlRequest request) {
         ensureDefaultAdapter();
+        var sharedWork = SharedWorkPlan.create(request.command());
         var handles = new ArrayList<GroupControlHandle>();
         var applied = 0;
         var unsupported = 0;
@@ -72,7 +73,9 @@ public final class GroupControlRuntime {
                 continue;
             }
             try {
-                var handle = adapter.start(request, subject, index);
+                var handle = adapter == DefaultAdapter.INSTANCE
+                        ? DefaultAdapter.INSTANCE.start(request, subject, index, sharedWork)
+                        : adapter.start(request, subject, index);
                 if (handle == null || handle.isClosed()) {
                     failed++;
                 } else {
@@ -80,6 +83,12 @@ public final class GroupControlRuntime {
                     applied++;
                 }
             } catch (RuntimeException exception) {
+                AcademyCraft.LOGGER.error(
+                        "Failed to start group-control task {} for {}",
+                        request.command().getClass().getSimpleName(),
+                        subject.getUUID(),
+                        exception
+                );
                 failed++;
             }
         }
@@ -90,6 +99,23 @@ public final class GroupControlRuntime {
         for (var task : List.copyOf(TASKS.values())) {
             if (task.controllerId.equals(controllerId) && task.source.equals(source)) task.close();
         }
+    }
+
+    public static synchronized Optional<GroupControlInspection> inspect(LivingEntity subject) {
+        if (subject == null) return Optional.empty();
+        return TASKS.values().stream()
+                .filter(task -> task.subject.getUUID().equals(subject.getUUID()))
+                .findFirst()
+                .map(task -> new GroupControlInspection(
+                        subject.getUUID(),
+                        task.command.getClass().getSimpleName(),
+                        Optional.ofNullable(task.currentBlock),
+                        task.sharedWork == null
+                                ? task.pendingBlocks.size()
+                                : task.sharedWork.pendingCount(),
+                        Optional.ofNullable(task.movement).map(ControlHandle::state),
+                        task.stalledTicks
+                ));
     }
 
     public static synchronized void cancelSubjects(
@@ -125,6 +151,12 @@ public final class GroupControlRuntime {
             try {
                 task.tick(server);
             } catch (RuntimeException exception) {
+                AcademyCraft.LOGGER.error(
+                        "Group-control task {} failed for {}",
+                        task.command.getClass().getSimpleName(),
+                        task.subject.getUUID(),
+                        exception
+                );
                 task.finish(GroupControlTaskEvent.Status.PATH_FAILED);
             }
         }
@@ -136,7 +168,10 @@ public final class GroupControlRuntime {
         @Override
         public boolean supports(LivingEntity subject, GroupControlCommand command) {
             return subject != null && subject.isAlive() && !subject.isRemoved()
-                    && MentalControlApi.supports(subject, ControlCapability.PATH_CONTROL);
+                    && MentalControlApi.supports(subject, ControlCapability.PATH_CONTROL)
+                    && (!(command instanceof GroupControlCommand.GatherResources
+                    || command instanceof GroupControlCommand.Farm)
+                    || MentalControlApi.supports(subject, ControlCapability.AI_CONTROL));
         }
 
         @Override
@@ -145,10 +180,20 @@ public final class GroupControlRuntime {
                 LivingEntity subject,
                 int subjectIndex
         ) {
+            return start(request, subject, subjectIndex, SharedWorkPlan.create(request.command()));
+        }
+
+        private GroupControlHandle start(
+                GroupControlRequest request,
+                LivingEntity subject,
+                int subjectIndex,
+                SharedWorkPlan sharedWork
+        ) {
             var key = new TaskKey(request.controller().getUUID(), request.source(), subject.getUUID());
             var previous = TASKS.remove(key);
             if (previous != null) previous.close();
-            var task = new DefaultTask(key, request, subject, subjectIndex);
+            var task = new DefaultTask(key, request, subject, subjectIndex, sharedWork);
+            task.retainExclusiveWorkOrder(request.controller());
             TASKS.put(key, task);
             task.notifyObserver(GroupControlTaskEvent.Status.ACCEPTED);
             return task;
@@ -165,9 +210,13 @@ public final class GroupControlRuntime {
         private final int priority;
         private final int subjectIndex;
         private final int subjectCount;
+        private final SharedWorkPlan sharedWork;
+        private final UUID scopeId = UUID.randomUUID();
         private final ArrayDeque<BlockPos> pendingBlocks = new ArrayDeque<>();
+        private final HashSet<BlockPos> queuedBlocks = new HashSet<>();
         private final ArrayList<ItemStack> bufferedDrops = new ArrayList<>();
         private ControlHandle movement;
+        private ControlHandle aiControl;
         private BlockPos currentBlock;
         private BlockPos workApproachBlock;
         private Vec3 workApproachPoint;
@@ -185,7 +234,8 @@ public final class GroupControlRuntime {
                 TaskKey key,
                 GroupControlRequest request,
                 LivingEntity subject,
-                int subjectIndex
+                int subjectIndex,
+                SharedWorkPlan sharedWork
         ) {
             this.key = key;
             controllerId = request.controller().getUUID();
@@ -196,14 +246,65 @@ public final class GroupControlRuntime {
             priority = request.priority();
             this.subjectIndex = subjectIndex;
             subjectCount = request.subjects().size();
-            if (command instanceof GroupControlCommand.GatherResources(var region)) partitionAll(region);
+            this.sharedWork = sharedWork;
+            if (sharedWork == null
+                    && command instanceof GroupControlCommand.GatherResources(var region)) {
+                partitionAll(region);
+            }
         }
 
         private void partitionAll(BlockWorkRegion region) {
             var index = 0;
             for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
-                if (index++ % subjectCount == subjectIndex) pendingBlocks.add(pos.immutable());
+                if (index++ % subjectCount == subjectIndex) enqueueBlock(pos);
             }
+        }
+
+        private void enqueueBlock(BlockPos pos) {
+            if (sharedWork != null) {
+                sharedWork.defer(pos);
+                return;
+            }
+            var immutable = pos.immutable();
+            if (queuedBlocks.add(immutable)) pendingBlocks.addLast(immutable);
+        }
+
+        private BlockPos pollBlock() {
+            if (sharedWork != null) return sharedWork.claimNearest(subject);
+            var block = pendingBlocks.pollFirst();
+            if (block != null) queuedBlocks.remove(block);
+            return block;
+        }
+
+        private boolean isExclusiveWorkOrder() {
+            return command instanceof GroupControlCommand.GatherResources
+                    || command instanceof GroupControlCommand.Farm;
+        }
+
+        private void retainExclusiveWorkOrder(ServerPlayer controller) {
+            if (!isExclusiveWorkOrder() || aiControl != null) return;
+            aiControl = MentalControlApi.apply(ControlRequest.scopedPermanent(
+                    controller,
+                    subject,
+                    source,
+                    scopeId,
+                    priority,
+                    List.of(new ControlDirective.TakeoverAi())
+            ));
+            if (subject instanceof Mob mob) {
+                mob.getNavigation().stop();
+                mob.setTarget(null);
+                mob.setAggressive(false);
+                mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                mob.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+                mob.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
+                mob.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+            }
+        }
+
+        private void releaseExclusiveWorkOrder() {
+            if (aiControl != null) aiControl.close();
+            aiControl = null;
         }
 
         private void tick(MinecraftServer server) {
@@ -213,6 +314,17 @@ public final class GroupControlRuntime {
                     || !subject.isAlive() || subject.isRemoved()
                     || controller.level() != subject.level()) {
                 finish(GroupControlTaskEvent.Status.CANCELLED);
+                return;
+            }
+            if (isExclusiveWorkOrder() && aiControl != null
+                    && aiControl.state() != ControlState.ACTIVE) {
+                if (aiControl.state().isTerminal()) {
+                    finish(GroupControlTaskEvent.Status.CANCELLED);
+                } else {
+                    // Atomic work ownership: pause the complete job while AI execution is
+                    // preempted instead of continuing movement/action with only half the rights.
+                    closeMovement();
+                }
                 return;
             }
             if (command instanceof GroupControlCommand.MoveTo(var destination)) {
@@ -239,10 +351,11 @@ public final class GroupControlRuntime {
                 finish(GroupControlTaskEvent.Status.COMPLETED);
                 return;
             }
-            ensureMovement(controller,
+            if (!ensureMovement(controller,
                     resolvedMoveDestination == null ? destination : resolvedMoveDestination,
-                    1.25);
-            checkPathProgress(point);
+                    1.25) || hasStalledPath(point)) {
+                finish(GroupControlTaskEvent.Status.PATH_FAILED);
+            }
         }
 
         private Vec3 resolveMove(ControlDestination destination, ServerPlayer controller) {
@@ -251,7 +364,7 @@ public final class GroupControlRuntime {
             }
             if (resolvedMovePoint != null) return resolvedMovePoint;
             if (!dimension.equals(subject.level().dimension().identifier())) return null;
-            resolvedMovePoint = GroupControlNavigation.findNearestOccupablePosition(subject, value)
+            resolvedMovePoint = GroupControlNavigation.findNearestReachablePosition(subject, value)
                     .orElse(null);
             if (resolvedMovePoint != null) {
                 resolvedMoveDestination = new ControlDestination.Position(dimension, resolvedMovePoint);
@@ -270,18 +383,18 @@ public final class GroupControlRuntime {
             if (subject.distanceToSqr(target) > 12.25) {
                 var approach = workApproach(currentBlock);
                 if (approach == null) {
-                    advanceBlock();
+                    deferCurrentBlock();
                     return;
                 }
-                ensureMovement(controller,
-                        new ControlDestination.Position(region.dimension(), approach), 1.5);
-                checkPathProgress(approach);
+                if (!ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1.5)
+                        || hasStalledPath(approach)) deferCurrentBlock();
                 return;
             }
             closeMovement();
             if (!(subject.level() instanceof ServerLevel level)) return;
             var state = level.getBlockState(currentBlock);
-            var tool = miningTool();
+            var tool = miningTool(state);
             if (!isHarvestable(state, tool)) {
                 advanceBlock();
                 return;
@@ -303,11 +416,11 @@ public final class GroupControlRuntime {
         private void tickFarm(ServerPlayer controller, BlockWorkRegion region) {
             var now = subject.level().getGameTime();
             if (currentBlock == null) {
-                if (pendingBlocks.isEmpty() && now >= nextFarmScanTick) {
+                if (now >= nextFarmScanTick) {
                     populateMatureCrops(region);
                     nextFarmScanTick = now + FARM_RESCAN_TICKS;
                 }
-                currentBlock = pendingBlocks.pollFirst();
+                currentBlock = pollBlock();
             }
             if (currentBlock == null) {
                 depositFarmDrops(controller, region, false);
@@ -320,13 +433,12 @@ public final class GroupControlRuntime {
             if (subject.distanceToSqr(target) > 12.25) {
                 var approach = workApproach(currentBlock);
                 if (approach == null) {
-                    currentBlock = null;
-                    clearWorkApproach();
+                    deferCurrentBlock();
                     return;
                 }
-                ensureMovement(controller,
-                        new ControlDestination.Position(region.dimension(), approach), 1.5);
-                checkPathProgress(approach);
+                if (!ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1.5)
+                        || hasStalledPath(approach)) deferCurrentBlock();
                 return;
             }
             closeMovement();
@@ -334,31 +446,48 @@ public final class GroupControlRuntime {
                 harvestCrop(controller, level, currentBlock);
                 depositFarmDrops(controller, region, false);
             }
-            currentBlock = null;
-            clearWorkApproach();
+            advanceBlock();
         }
 
         private void populateMatureCrops(BlockWorkRegion region) {
+            if (sharedWork != null) {
+                sharedWork.refreshCrops(subject.level(), subject.level().getGameTime());
+                return;
+            }
             var index = 0;
             for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
                 if (index++ % subjectCount != subjectIndex) continue;
                 var state = subject.level().getBlockState(pos);
                 if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) {
-                    pendingBlocks.add(pos.immutable());
+                    enqueueBlock(pos);
                 }
             }
         }
 
         private BlockPos nextMiningBlock() {
-            while (!pendingBlocks.isEmpty()) {
-                var candidate = pendingBlocks.removeFirst();
+            while (sharedWork != null ? sharedWork.hasPending() : !pendingBlocks.isEmpty()) {
+                var candidate = pollBlock();
+                if (candidate == null) return null;
                 var state = subject.level().getBlockState(candidate);
-                if (!state.isAir() && isHarvestable(state, miningTool())) return candidate;
+                if (!state.isAir() && isHarvestable(state, miningTool(state))) return candidate;
+                if (sharedWork != null) sharedWork.complete(candidate);
             }
             return null;
         }
 
         private void advanceBlock() {
+            if (sharedWork != null && currentBlock != null) sharedWork.complete(currentBlock);
+            currentBlock = null;
+            miningProgressTicks = 0;
+            clearWorkApproach();
+        }
+
+        private void deferCurrentBlock() {
+            if (currentBlock != null) {
+                if (sharedWork != null) sharedWork.defer(currentBlock);
+                else enqueueBlock(currentBlock);
+            }
+            closeMovement();
             currentBlock = null;
             miningProgressTicks = 0;
             clearWorkApproach();
@@ -378,9 +507,20 @@ public final class GroupControlRuntime {
             workApproachPoint = null;
         }
 
-        private ItemStack miningTool() {
+        private ItemStack miningTool(net.minecraft.world.level.block.state.BlockState state) {
             var held = subject.getMainHandItem();
-            return held.isEmpty() ? new ItemStack(Items.IRON_PICKAXE) : held;
+            var ironPickaxe = new ItemStack(Items.IRON_PICKAXE);
+            if (held.isEmpty()) return ironPickaxe;
+            var heldCorrect = held.isCorrectToolForDrops(state);
+            var ironCorrect = ironPickaxe.isCorrectToolForDrops(state);
+            if (ironCorrect && (!heldCorrect
+                    || ironPickaxe.getDestroySpeed(state) > held.getDestroySpeed(state))) {
+                return ironPickaxe;
+            }
+            if (heldCorrect || held.getDestroySpeed(state) > ironPickaxe.getDestroySpeed(state)) {
+                return held;
+            }
+            return ironPickaxe;
         }
 
         private static boolean isHarvestable(
@@ -413,39 +553,52 @@ public final class GroupControlRuntime {
             return null;
         }
 
-        private void ensureMovement(
+        private boolean ensureMovement(
                 ServerPlayer controller,
                 ControlDestination destination,
                 double arrivalRadius
         ) {
-            if (movement != null && !movement.isClosed()) return;
+            if (movement != null) {
+                if (movement.state() == ControlState.ACTIVE
+                        || movement.state() == ControlState.PREEMPTED) return true;
+                if (movement.failureReason().isPresent()) {
+                    movement = null;
+                    return false;
+                }
+            }
             movement = MentalControlApi.apply(new ControlRequest(
                     controller,
                     subject,
                     source,
+                    scopeId,
                     priority,
-                    subject.level().getGameTime() + CONTROL_LEASE_TICKS,
+                    Long.MAX_VALUE,
                     List.of(new ControlDirective.MoveTo(destination, arrivalRadius))
             ));
             movementStartedTick = subject.level().getGameTime();
             lastMovementDistance = Double.MAX_VALUE;
             stalledTicks = 0;
+            return !movement.isClosed() || movement.failureReason().isEmpty();
         }
 
-        private void checkPathProgress(Vec3 target) {
+        private boolean hasStalledPath(Vec3 target) {
+            if (movement != null && movement.state() == ControlState.PREEMPTED) {
+                movementStartedTick = subject.level().getGameTime();
+                stalledTicks = 0;
+                lastMovementDistance = subject.distanceToSqr(target);
+                return false;
+            }
             var distance = subject.distanceToSqr(target);
             var now = subject.level().getGameTime();
             if (lastMovementDistance - distance > 0.25) {
                 lastMovementDistance = distance;
                 stalledTicks = 0;
-                return;
+                return false;
             }
-            if (now - movementStartedTick < PATH_GRACE_TICKS) return;
+            if (now - movementStartedTick < PATH_GRACE_TICKS) return false;
             stalledTicks++;
             var navigationStopped = subject instanceof Mob mob && mob.getNavigation().isDone();
-            if (stalledTicks >= PATH_STALL_TICKS || navigationStopped && stalledTicks >= 20) {
-                finish(GroupControlTaskEvent.Status.PATH_FAILED);
-            }
+            return stalledTicks >= PATH_STALL_TICKS || navigationStopped && stalledTicks >= 20;
         }
 
         private void harvestCrop(ServerPlayer controller, ServerLevel level, BlockPos pos) {
@@ -486,7 +639,10 @@ public final class GroupControlRuntime {
             if (bufferedDrops.isEmpty() || !(subject.level() instanceof ServerLevel level)) return;
             var containers = new ArrayList<Container>();
             var identities = Collections.newSetFromMap(new IdentityHashMap<Container, Boolean>());
-            for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
+            var positions = sharedWork == null
+                    ? BlockPos.betweenClosed(region.minimum(), region.maximum())
+                    : sharedWork.containerPositions(level);
+            for (var pos : positions) {
                 var container = HopperBlockEntity.getContainerAt(level, pos);
                 if (container != null && identities.add(container)) containers.add(container);
             }
@@ -577,6 +733,9 @@ public final class GroupControlRuntime {
             if (closed) return;
             closed = true;
             closeMovement();
+            if (sharedWork != null && currentBlock != null) sharedWork.defer(currentBlock);
+            currentBlock = null;
+            releaseExclusiveWorkOrder();
             TASKS.remove(key, this);
         }
     }
@@ -601,5 +760,101 @@ public final class GroupControlRuntime {
     }
 
     private record AdapterEntry(Identifier id, int priority, GroupControlAdapter adapter) {
+    }
+
+    /** One region scan and one work-stealing queue shared by every worker in a dispatch. */
+    private static final class SharedWorkPlan {
+        private static final int FARM_SCAN_INTERVAL_TICKS = 20;
+        private final BlockWorkRegion region;
+        private final boolean farming;
+        private final ArrayDeque<BlockPos> pending = new ArrayDeque<>();
+        private final Set<BlockPos> queued = new HashSet<>();
+        private final Set<BlockPos> claimed = new HashSet<>();
+        private List<BlockPos> containerPositions;
+        private long nextFarmScanTick = Long.MIN_VALUE;
+
+        private SharedWorkPlan(BlockWorkRegion region, boolean farming) {
+            this.region = region;
+            this.farming = farming;
+            if (!farming) {
+                for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
+                    queue(pos);
+                }
+            }
+        }
+
+        private static SharedWorkPlan create(GroupControlCommand command) {
+            return switch (command) {
+                case GroupControlCommand.GatherResources gather ->
+                        new SharedWorkPlan(gather.region(), false);
+                case GroupControlCommand.Farm farm -> new SharedWorkPlan(farm.region(), true);
+                case GroupControlCommand.MoveTo ignored -> null;
+            };
+        }
+
+        private synchronized void queue(BlockPos position) {
+            var immutable = position.immutable();
+            if (queued.contains(immutable) || claimed.contains(immutable)) return;
+            queued.add(immutable);
+            pending.addLast(immutable);
+        }
+
+        private synchronized BlockPos claimNearest(LivingEntity subject) {
+            if (pending.isEmpty()) return null;
+            BlockPos nearest = null;
+            var nearestDistance = Double.MAX_VALUE;
+            for (var candidate : pending) {
+                var distance = subject.distanceToSqr(Vec3.atCenterOf(candidate));
+                if (distance < nearestDistance) {
+                    nearest = candidate;
+                    nearestDistance = distance;
+                }
+            }
+            if (nearest == null) return null;
+            pending.remove(nearest);
+            queued.remove(nearest);
+            claimed.add(nearest);
+            return nearest;
+        }
+
+        private synchronized void complete(BlockPos position) {
+            claimed.remove(position);
+        }
+
+        private synchronized void defer(BlockPos position) {
+            var immutable = position.immutable();
+            claimed.remove(immutable);
+            queue(immutable);
+        }
+
+        private synchronized boolean hasPending() {
+            return !pending.isEmpty();
+        }
+
+        private synchronized int pendingCount() {
+            return pending.size();
+        }
+
+        private synchronized void refreshCrops(net.minecraft.world.level.Level level, long now) {
+            if (!farming || now < nextFarmScanTick) return;
+            nextFarmScanTick = now + FARM_SCAN_INTERVAL_TICKS;
+            for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
+                var state = level.getBlockState(pos);
+                if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) queue(pos);
+            }
+        }
+
+        private synchronized List<BlockPos> containerPositions(ServerLevel level) {
+            if (containerPositions == null) {
+                var found = new ArrayList<BlockPos>();
+                for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
+                    if (HopperBlockEntity.getContainerAt(level, pos) != null) {
+                        found.add(pos.immutable());
+                    }
+                }
+                containerPositions = List.copyOf(found);
+            }
+            return containerPositions;
+        }
     }
 }
