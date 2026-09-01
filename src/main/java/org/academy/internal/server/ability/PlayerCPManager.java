@@ -9,6 +9,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
@@ -32,6 +33,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class PlayerCPManager implements AbilitySubsystem {
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     static final float BASE_MAX_CP = 100.0f;
     static final float MAX_SKILL_PROFICIENCY_CP_BONUS = 300.0f;
     static final float MAX_CHALLENGE_CP_BONUS = 200.0f;
@@ -209,7 +213,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (playerData == null) return;
 
         var cpData = playerData.getCpData();
-        var occupations = playerData.getCpOccupations();
+        var occupations = playerData.getMutableCpOccupations();
 
         var dirty = false;
 
@@ -253,7 +257,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         MisakaNetworkServer.send(serverPlayer, new SyncAbilityDataPacket(
                 cpData.copyWithMaxCP(getMaxCP(serverPlayer.getUUID())),
                 getCalculationIntensity(serverPlayer.getUUID()),
-                player.getCpOccupations()
+                player.getMutableCpOccupations()
         ));
         cpData.clearDirty();
     }
@@ -426,7 +430,7 @@ public class PlayerCPManager implements AbilitySubsystem {
                 || !Float.isFinite(mpAmount) || mpAmount < 0.0f) return false;
 
         var cpData = playerData.getCpData();
-        var occupations = playerData.getCpOccupations();
+        var occupations = playerData.getMutableCpOccupations();
         var skillData = playerData.getSkillDataMap().get(skill.getKeyString());
         var level = (skillData != null) ? skill.getLevelForProficiency(skillData.getProficiency()) : 0;
 
@@ -493,7 +497,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         modify(uuid, cpData -> {
             var playerData = playerDataManager.getData(uuid);
             if (playerData == null) return;
-            var occupations = playerData.getCpOccupations();
+            var occupations = playerData.getMutableCpOccupations();
 
             var it = occupations.iterator();
             while (it.hasNext()) {
@@ -510,7 +514,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         modify(uuid, cpData -> {
             var playerData = playerDataManager.getData(uuid);
             if (playerData == null) return;
-            var occupations = playerData.getCpOccupations();
+            var occupations = playerData.getMutableCpOccupations();
             occupations.clear();
             cpIterationProgress.remove(uuid);
             var maxCP = getMaxCP(uuid);
@@ -523,7 +527,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
 
-        var matching = playerData.getCpOccupations().stream()
+        var matching = playerData.getMutableCpOccupations().stream()
                 .filter(occupation -> occupation.isPermanent()
                         && skill.getKeyString().equals(occupation.getSkillId()))
                 .toList();
@@ -552,7 +556,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         var playerData = plan.playerData();
         var cpData = playerData.getCpData();
-        var occupations = playerData.getCpOccupations();
+        var occupations = playerData.getMutableCpOccupations();
         occupations.removeIf(occupation -> occupation.isPermanent()
                 && plan.replacementIds().contains(occupation.getSkillId()));
         for (var entry : plan.permanentAmounts().entrySet()) {
@@ -606,7 +610,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
         var playerData = plan.playerData();
         var cpData = playerData.getCpData();
-        var occupations = playerData.getCpOccupations();
+        var occupations = playerData.getMutableCpOccupations();
         occupations.removeIf(occupation -> occupation.isPermanent()
                 && plan.skill().getKeyString().equals(occupation.getSkillId()));
         if (plan.permanentAmount() > 0.0f) {
@@ -635,7 +639,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     ) {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null || skill == null || timedCharges == null) return false;
-        var permanentAmount = playerData.getCpOccupations().stream()
+        var permanentAmount = playerData.getMutableCpOccupations().stream()
                 .filter(AbilityData.CpOccupationData::isPermanent)
                 .filter(occupation -> skill.getKeyString().equals(occupation.getSkillId()))
                 .mapToDouble(AbilityData.CpOccupationData::getAmount)
@@ -679,7 +683,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             if (!Float.isFinite(timedTotal)) return null;
         }
 
-        var occupations = playerData.getCpOccupations();
+        var occupations = playerData.getMutableCpOccupations();
         var maxStacks = getMaxStacks(uuid, skill, getSkillLevel(playerData, skill));
         if (maxStacks != Skill.NO_STACK_LIMIT) {
             var currentStacks = occupations.stream()
@@ -736,7 +740,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             if (!Float.isFinite(replacementTotal)) return null;
         }
 
-        var occupations = playerData.getCpOccupations();
+        var occupations = playerData.getMutableCpOccupations();
         if (timedAmount > 0) {
             var maxStacks = getMaxStacks(
                     uuid,
@@ -798,7 +802,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         var level = skillData == null ? 0 : skill.getLevelForProficiency(skillData.getProficiency());
         var maxStacks = getMaxStacks(uuid, skill, level);
         if (maxStacks != Skill.NO_STACK_LIMIT) {
-            var currentStacks = playerData.getCpOccupations().stream()
+            var currentStacks = playerData.getMutableCpOccupations().stream()
                     .filter(occupation -> !occupation.isPermanent())
                     .filter(occupation -> skill.getKeyString().equals(occupation.getSkillId()))
                     .count();
@@ -975,6 +979,24 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public void setStatus(UUID uuid, AbilityData.Status status) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != PlayerCPManager.class
+                        || !frame.getMethodName().equals("setStatus"))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+        var callerDomain = caller == null ? null : caller.getProtectionDomain();
+        var academyDomain = AcademyCraft.class.getProtectionDomain();
+        var allowed = callerDomain != null && callerDomain == academyDomain;
+        if (!allowed && callerDomain != null && callerDomain.getCodeSource() != null) {
+            var callerLocation = callerDomain.getCodeSource().getLocation();
+            var academyLocation = academyDomain == null || academyDomain.getCodeSource() == null
+                    ? null : academyDomain.getCodeSource().getLocation();
+            allowed = callerLocation != null && callerLocation.equals(academyLocation);
+        }
+        if (!allowed) return;
+
         modify(uuid, cpData -> cpData.setStatus(status));
     }
 
@@ -983,6 +1005,24 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public void setStateTimer(UUID uuid, int stateTimer) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != PlayerCPManager.class
+                        || !frame.getMethodName().equals("setStateTimer"))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+        var callerDomain = caller == null ? null : caller.getProtectionDomain();
+        var academyDomain = AcademyCraft.class.getProtectionDomain();
+        var allowed = callerDomain != null && callerDomain == academyDomain;
+        if (!allowed && callerDomain != null && callerDomain.getCodeSource() != null) {
+            var callerLocation = callerDomain.getCodeSource().getLocation();
+            var academyLocation = academyDomain == null || academyDomain.getCodeSource() == null
+                    ? null : academyDomain.getCodeSource().getLocation();
+            allowed = callerLocation != null && callerLocation.equals(academyLocation);
+        }
+        if (!allowed) return;
+
         modify(uuid, cpData -> cpData.setStateTimer(stateTimer));
     }
 

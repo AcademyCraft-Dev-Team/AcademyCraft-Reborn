@@ -21,6 +21,9 @@ import java.util.UUID;
 
 public final class PlayerDataManager implements AbilitySubsystem {
     private static final Logger LOGGER = AcademyCraft.getLogger();
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     private final SyncManager syncManager;
     private final Map<UUID, Player> playerDataMap;
 
@@ -31,8 +34,10 @@ public final class PlayerDataManager implements AbilitySubsystem {
 
     @Override
     public void onPlayerLogin(ServerPlayer serverPlayer) {
-        playerDataMap.computeIfAbsent(serverPlayer.getUUID(), this::createDefaultPlayerData);
-        syncManager.schedulePlayerSync(serverPlayer.getUUID(), SyncTypes.ABILITY_CATEGORY);
+        var uuid = serverPlayer.getUUID();
+        playerDataMap.computeIfAbsent(uuid, this::createDefaultPlayerData);
+        bindAbilityStatusProtection(uuid);
+        syncManager.schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
     }
 
     @Override
@@ -52,6 +57,24 @@ public final class PlayerDataManager implements AbilitySubsystem {
     }
 
     public void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != PlayerDataManager.class
+                        || !frame.getMethodName().equals("setPlayerAbilityCategory"))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+        var callerDomain = caller == null ? null : caller.getProtectionDomain();
+        var academyDomain = AcademyCraft.class.getProtectionDomain();
+        var allowed = callerDomain != null && callerDomain == academyDomain;
+        if (!allowed && callerDomain != null && callerDomain.getCodeSource() != null) {
+            var callerLocation = callerDomain.getCodeSource().getLocation();
+            var academyLocation = academyDomain == null || academyDomain.getCodeSource() == null
+                    ? null : academyDomain.getCodeSource().getLocation();
+            allowed = callerLocation != null && callerLocation.equals(academyLocation);
+        }
+        if (!allowed) return;
+
         var key = Registries.ABILITY_CATEGORIES.getKey(abilityCategory);
         if (key == null) {
             LOGGER.warn("Tried to set unregistered AbilityCategory for player {}", uuid);
@@ -60,6 +83,7 @@ public final class PlayerDataManager implements AbilitySubsystem {
         var data = getData(uuid);
         if (data != null) {
             data.setAbilityCategory(key.toString());
+            data.getCpData().bindStatusProtection(abilityCategory.getClass());
             syncManager.schedulePlayerSync(uuid, SyncTypes.ABILITY_CATEGORY);
         }
     }
@@ -74,5 +98,11 @@ public final class PlayerDataManager implements AbilitySubsystem {
         var player = new Player();
         player.markDirty();
         return player;
+    }
+
+    private void bindAbilityStatusProtection(UUID uuid) {
+        var data = getData(uuid);
+        if (data == null) return;
+        data.getCpData().bindStatusProtection(getPlayerAbilityCategory(uuid).getClass());
     }
 }

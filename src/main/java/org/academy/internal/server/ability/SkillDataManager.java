@@ -2,6 +2,7 @@ package org.academy.internal.server.ability;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.AbilityData;
@@ -17,6 +18,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class SkillDataManager implements AbilitySubsystem {
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     private final SyncManager syncManager;
     private final PlayerDataManager playerDataManager;
     private final Map<UUID, Map<String, SkillActivity>> pendingActivities = new ConcurrentHashMap<>();
@@ -71,6 +75,8 @@ public class SkillDataManager implements AbilitySubsystem {
 
     @Override
     public void onPlayerLogin(ServerPlayer player) {
+        var playerData = playerDataManager.getData(player.getUUID());
+        if (playerData != null) maintainSkillActivationStates(playerData);
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.SKILL_DATA);
     }
 
@@ -85,10 +91,11 @@ public class SkillDataManager implements AbilitySubsystem {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return;
 
+        var activationStateChanged = maintainSkillActivationStates(playerData);
         var activities = pendingActivities.remove(uuid);
         var category = playerDataManager.getPlayerAbilityCategory(uuid);
         var overload = playerData.getCpData().getStatus() == AbilityData.Status.OVERLOAD;
-        var changed = false;
+        var changed = activationStateChanged;
         var crossedThreshold = false;
 
         for (var entry : playerData.getSkillDataMap().entrySet()) {
@@ -137,6 +144,7 @@ public class SkillDataManager implements AbilitySubsystem {
         if (playerData == null) return false;
         var data = playerData.getSkillDataMap().get(skillId);
         if (!type.isInstance(data)) return false;
+        bindSkillActivationState(playerData, skillId, data);
 
         action.accept(type.cast(data));
         playerData.markDirty();
@@ -233,15 +241,14 @@ public class SkillDataManager implements AbilitySubsystem {
         if (playerData == null) return;
 
         Registries.SKILLS.get(Identifier.parse(skillKey)).ifPresent(skillReference -> {
-            var skillData = playerData.getSkillDataMap().putIfAbsent(
+            var skillData = playerData.getMutableSkillDataMap().putIfAbsent(
                     skillKey,
                     skillReference.value().createData()
             );
             if (skillData == null) {
-                playerData.restoreRetainedSkillProficiency(
-                        skillKey,
-                        playerData.getSkillDataMap().get(skillKey)
-                );
+                var addedData = playerData.getSkillDataMap().get(skillKey);
+                playerData.restoreRetainedSkillProficiency(skillKey, addedData);
+                bindSkillActivationState(playerData, skillKey, addedData);
                 playerData.markDirty();
                 syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
                 onSkillSetChanged.accept(uuid);
@@ -250,10 +257,39 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public void removeSkill(UUID uuid, String skillKey) {
+        var skillId = Identifier.tryParse(skillKey);
+        var skill = skillId == null ? null : Registries.SKILLS.get(skillId)
+                .map(reference -> reference.value())
+                .orElse(null);
+        if (skill == null) return;
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != SkillDataManager.class
+                        || !frame.getMethodName().equals("removeSkill"))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+        var callerDomain = caller == null ? null : caller.getProtectionDomain();
+        var academyDomain = AcademyCraft.class.getProtectionDomain();
+        var ownerDomain = skill.getClass().getProtectionDomain();
+        var allowed = callerDomain != null
+                && (callerDomain == academyDomain || callerDomain == ownerDomain);
+        if (!allowed && callerDomain != null && callerDomain.getCodeSource() != null) {
+            var callerLocation = callerDomain.getCodeSource().getLocation();
+            var academyLocation = academyDomain == null || academyDomain.getCodeSource() == null
+                    ? null : academyDomain.getCodeSource().getLocation();
+            var ownerLocation = ownerDomain == null || ownerDomain.getCodeSource() == null
+                    ? null : ownerDomain.getCodeSource().getLocation();
+            allowed = callerLocation != null
+                    && (callerLocation.equals(academyLocation) || callerLocation.equals(ownerLocation));
+        }
+        if (!allowed) return;
+
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return;
-        var removed = playerData.getSkillDataMap().remove(skillKey);
+        var removed = playerData.getMutableSkillDataMap().remove(skillKey);
         if (removed == null) return;
+        playerData.removePersistedSkillEnabled(skillKey);
         if (resolveSkillScope(skillKey) != SkillScope.COMMON) {
             playerData.retainSkillProficiency(skillKey, removed);
         }
@@ -263,22 +299,115 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public void clearCategorySkills(UUID uuid) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != SkillDataManager.class
+                        || !frame.getMethodName().equals("clearCategorySkills"))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+        var callerDomain = caller == null ? null : caller.getProtectionDomain();
+        var academyDomain = AcademyCraft.class.getProtectionDomain();
+        var allowed = callerDomain != null && callerDomain == academyDomain;
+        if (!allowed && callerDomain != null && callerDomain.getCodeSource() != null) {
+            var callerLocation = callerDomain.getCodeSource().getLocation();
+            var academyLocation = academyDomain == null || academyDomain.getCodeSource() == null
+                    ? null : academyDomain.getCodeSource().getLocation();
+            allowed = callerLocation != null && callerLocation.equals(academyLocation);
+        }
+        if (!allowed) return;
+
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return;
+        var removedSkillIds = playerData.getSkillDataMap().keySet().stream()
+                .filter(skillId -> resolveSkillScope(skillId) != SkillScope.COMMON)
+                .toList();
         playerData.getSkillDataMap().forEach((skillId, data) -> {
             if (resolveSkillScope(skillId) != SkillScope.COMMON) {
                 playerData.retainSkillProficiency(skillId, data);
             }
         });
-        var removed = removeCategorySkills(playerData.getSkillDataMap(), SkillDataManager::resolveSkillScope);
+        var removed = removeCategorySkills(
+                playerData.getMutableSkillDataMap(),
+                SkillDataManager::resolveSkillScope
+        );
         if (removed == 0) return;
+        removedSkillIds.forEach(playerData::removePersistedSkillEnabled);
         playerData.markDirty();
         syncManager.schedulePlayerSync(uuid, SyncTypes.SKILL_DATA);
         onSkillSetChanged.accept(uuid);
     }
 
     public void toggleSkill(UUID uuid, String skillId) {
+        var id = Identifier.tryParse(skillId);
+        var skill = id == null ? null : Registries.SKILLS.get(id)
+                .map(reference -> reference.value())
+                .orElse(null);
+        if (skill == null) return;
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != SkillDataManager.class
+                        || !frame.getMethodName().equals("toggleSkill"))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+        var callerDomain = caller == null ? null : caller.getProtectionDomain();
+        var academyDomain = AcademyCraft.class.getProtectionDomain();
+        var ownerDomain = skill.getClass().getProtectionDomain();
+        var allowed = callerDomain != null
+                && (callerDomain == academyDomain || callerDomain == ownerDomain);
+        if (!allowed && callerDomain != null && callerDomain.getCodeSource() != null) {
+            var callerLocation = callerDomain.getCodeSource().getLocation();
+            var academyLocation = academyDomain == null || academyDomain.getCodeSource() == null
+                    ? null : academyDomain.getCodeSource().getLocation();
+            var ownerLocation = ownerDomain == null || ownerDomain.getCodeSource() == null
+                    ? null : ownerDomain.getCodeSource().getLocation();
+            allowed = callerLocation != null
+                    && (callerLocation.equals(academyLocation) || callerLocation.equals(ownerLocation));
+        }
+        if (!allowed) return;
+
         mutate(uuid, skillId, SkillData.class, SkillData::toggleEnabled);
+    }
+
+    private boolean maintainSkillActivationStates(
+            org.academy.internal.server.world.level.storage.Player playerData
+    ) {
+        var changed = false;
+        for (var entry : playerData.getSkillDataMap().entrySet()) {
+            var data = entry.getValue();
+            if (data == null) continue;
+            changed |= bindSkillActivationState(playerData, entry.getKey(), data);
+        }
+        return changed | playerData.consumeSkillActivationSyncDirty();
+    }
+
+    private boolean bindSkillActivationState(
+            org.academy.internal.server.world.level.storage.Player playerData,
+            String skillId,
+            SkillData data
+    ) {
+        var id = Identifier.tryParse(skillId);
+        if (id == null) return false;
+        var skill = Registries.SKILLS.get(id).map(reference -> reference.value()).orElse(null);
+        if (skill == null) return false;
+
+        if (!data.isActivationProtectedFor(skill.getClass())) {
+            data.bindActivationProtection(
+                    skill.getClass(),
+                    enabled -> playerData.setPersistedSkillEnabled(skillId, enabled)
+            );
+        }
+
+        var persisted = playerData.getPersistedSkillEnabled(skillId);
+        if (persisted.isEmpty()) {
+            return playerData.setPersistedSkillEnabled(skillId, data.isEnabled());
+        }
+        if (data.isEnabled() == persisted.get()) return false;
+        data.applyPersistedEnabled(persisted.get());
+        if (data.isEnabled() != persisted.get()) return false;
+        playerData.markDirty();
+        return true;
     }
 
     public void setOnSkillLevelUp(BiConsumer<UUID, Integer> onSkillLevelUp) {
