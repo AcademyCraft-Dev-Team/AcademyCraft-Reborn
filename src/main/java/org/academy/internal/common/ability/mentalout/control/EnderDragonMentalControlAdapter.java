@@ -124,7 +124,9 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
 
         @Override
         public void tick() {
-            var input = PlayerControlSessionManager.mobDirectInput(dragon).orElse(null);
+            var input = PlayerControlSessionManager.mobDirectInput(dragon)
+                    .or(() -> ImpressionRidingManager.directInput(dragon))
+                    .orElse(null);
             if (input == null) {
                 frame = PlayerControlFrame.NEUTRAL;
                 setFlightTarget(dragon, dragon.position());

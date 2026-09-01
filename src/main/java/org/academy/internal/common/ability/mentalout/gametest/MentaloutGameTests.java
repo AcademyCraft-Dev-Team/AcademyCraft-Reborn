@@ -24,6 +24,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
@@ -35,6 +36,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.ability.mentalout.control.CubeMobMoveControlAccess;
+import org.academy.internal.common.ability.mentalout.control.ImpressionRidingManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
@@ -285,7 +287,110 @@ public final class MentaloutGameTests {
                 });
             }
         },
-        PLAYER_PATH_REQUIRES_CLIENT_READY("player_path_requires_client_ready", 55) {
+        IMPRESSION_RIDING_FLIGHT("impression_riding_flight", 45) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var allay = helper.spawn(EntityTypes.ALLAY, 3, 2, 1);
+                allay.setPersistenceRequired();
+                var relation = impression(controller, allay);
+                var initialPosition = allay.position();
+                var result = ImpressionRidingManager.requestMount(controller, allay);
+                helper.assertValueEqual(
+                        result,
+                        ImpressionRidingManager.MountResult.PENDING,
+                        "Impression riding request"
+                );
+
+                helper.runAtTickTime(3L, () -> {
+                    helper.assertTrue(controller.getVehicle() == allay,
+                            "Controller did not mount the impression target after releasing Shift");
+                    controller.setYRot(0.0f);
+                    controller.setXRot(-30.0f);
+                    controller.setLastClientInput(new Input(
+                            true, false, false, false, false, false, true
+                    ));
+                });
+                helper.runAtTickTime(25L, () -> {
+                    helper.assertTrue(allay.position().distanceToSqr(initialPosition) > 1.0,
+                            "Rider input did not move the impression target: initial="
+                                    + initialPosition + ", current=" + allay.position()
+                                    + ", velocity=" + allay.getDeltaMovement()
+                                    + ", vehicle=" + controller.getVehicle()
+                                    + ", direct=" + MentalControlApi.inspect(
+                                    allay, ControlCapability.DIRECT_CONTROL).orElse(null));
+                    helper.assertTrue(allay.getY() > initialPosition.y + 0.25,
+                            "Flying impression target did not follow upward rider view input");
+                    relation.close();
+                });
+                helper.runAtTickTime(30L, () -> {
+                    helper.assertFalse(controller.isPassenger(),
+                            "Rider remained mounted after impression control ended");
+                    helper.assertTrue(MentalControlApi.inspect(
+                                    allay, ControlCapability.DIRECT_CONTROL).isEmpty(),
+                            "Riding direct-control lease survived impression release");
+                    finish(helper, controller, relation);
+                });
+            }
+        },
+        IMPRESSION_RIDING_PLAYER("impression_riding_player", 45) {
+            @Override
+            void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var subject = createController(helper);
+                var subjectPosition = helper.absoluteVec(Vec3.atBottomCenterOf(
+                        new BlockPos(4, 2, 1)
+                ));
+                subject.snapTo(
+                        subjectPosition.x,
+                        subjectPosition.y,
+                        subjectPosition.z,
+                        0.0f,
+                        0.0f
+                );
+                subject.getAbilities().flying = true;
+                subject.onUpdateAbilities();
+                var relation = impression(controller, subject);
+                var initialPosition = subject.position();
+                var result = ImpressionRidingManager.requestMount(controller, subject);
+                helper.assertValueEqual(
+                        result,
+                        ImpressionRidingManager.MountResult.PENDING,
+                        "Player impression riding request"
+                );
+
+                helper.runAtTickTime(3L, () -> {
+                    helper.assertTrue(controller.getVehicle() == subject,
+                            "Controller did not mount the impressed player");
+                    controller.setYRot(0.0f);
+                    controller.setXRot(-30.0f);
+                    controller.setLastClientInput(new Input(
+                            true, false, false, false, false, false, true
+                    ));
+                });
+                helper.runAtTickTime(25L, () -> {
+                    helper.assertTrue(subject.position().distanceToSqr(initialPosition) > 1.0,
+                            "Rider input did not move the impressed player");
+                    helper.assertTrue(subject.getY() > initialPosition.y + 0.25,
+                            "Rider input did not control the impressed player's flight");
+                    helper.assertTrue(
+                            ImpressionRidingManager.blocksUntrustedWorldAction(subject),
+                            "Impressed player's own actions were not blocked while ridden"
+                    );
+                    relation.close();
+                });
+                helper.runAtTickTime(30L, () -> {
+                    helper.assertFalse(controller.isPassenger(),
+                            "Controller remained mounted after player impression ended");
+                    helper.assertTrue(MentalControlApi.inspect(
+                                    subject, ControlCapability.DIRECT_CONTROL).isEmpty(),
+                            "Player riding direct-control lease survived impression release");
+                    helper.getLevel().getServer().getPlayerList().remove(subject);
+                    finish(helper, controller, relation);
+                });
+            }
+        },
+        PLAYER_PATH_SERVER_FALLBACK("player_path_server_fallback", 55) {
             @Override
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
@@ -297,6 +402,7 @@ public final class MentaloutGameTests {
                 var destination = helper.absoluteVec(Vec3.atBottomCenterOf(
                         new BlockPos(8, 2, 1)
                 ));
+                var initialDistanceSqr = subject.position().distanceToSqr(destination);
                 var handle = MentalControlApi.apply(ControlRequest.permanent(
                         controller,
                         subject,
@@ -305,16 +411,13 @@ public final class MentaloutGameTests {
                         new ControlDirective.MoveTo(new ControlDestination.Position(
                                 helper.getLevel().dimension().identifier(), destination))
                 ));
-
-                helper.runAtTickTime(5L, () -> helper.assertFalse(
-                        handle.isClosed(), "Player path closed before the Ready deadline"));
                 helper.runAtTickTime(32L, () -> {
-                    helper.assertTrue(handle.isClosed(), "Unconfirmed player path did not time out");
-                    helper.assertValueEqual(
-                            handle.failureReason().orElse(null),
-                            ControlFailureReason.CLIENT_TIMEOUT,
-                            "Player path handshake failure reason"
-                    );
+                    helper.assertTrue(handle.failureReason().isEmpty(),
+                            "Server-authoritative player path failed without client Ready: "
+                                    + handle.failureReason().orElse(null));
+                    helper.assertTrue(subject.position().distanceToSqr(destination)
+                                    < initialDistanceSqr,
+                            "Unconfirmed player client did not use server-authoritative movement");
                     helper.getLevel().getServer().getPlayerList().remove(subject);
                     finish(helper, controller, handle);
                 });

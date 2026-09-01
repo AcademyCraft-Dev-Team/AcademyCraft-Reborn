@@ -1,5 +1,6 @@
 package org.academy.mixin.common;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -10,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.mentalout.control.ImpressionRidingManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
@@ -25,6 +27,25 @@ import java.util.Set;
 
 @Mixin(Entity.class)
 public abstract class MixinEntity {
+    @ModifyExpressionValue(
+            method = "startRiding(Lnet/minecraft/world/entity/Entity;ZZ)Z",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/EntityType;canSerialize()Z"
+            )
+    )
+    private boolean academy$allowImpressionControlledPlayerVehicle(
+            boolean serializable,
+            Entity vehicle,
+            boolean force,
+            boolean emitGameEvent
+    ) {
+        return serializable || ImpressionRidingManager.permitsNonSerializableVehicle(
+                (Entity) (Object) this,
+                vehicle
+        );
+    }
+
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     private void academy$guardMovement(MoverType moverType, Vec3 movement, CallbackInfo ci) {
         if (EntityMotionGuard.shouldBlockMovement((Entity) (Object) this, movement)) ci.cancel();

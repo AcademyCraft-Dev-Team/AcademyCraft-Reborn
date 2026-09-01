@@ -8,6 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.animal.allay.Allay;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.monster.RangedAttackMob;
@@ -45,7 +46,9 @@ final class MobDirectControlBinding implements ControlBinding {
 
     @Override
     public void tick() {
-        var input = PlayerControlSessionManager.mobDirectInput(mob).orElse(null);
+        var input = PlayerControlSessionManager.mobDirectInput(mob)
+                .or(() -> ImpressionRidingManager.directInput(mob))
+                .orElse(null);
         if (input == null) {
             frame = PlayerControlFrame.NEUTRAL;
             applyMovement();
@@ -115,7 +118,7 @@ final class MobDirectControlBinding implements ControlBinding {
             mob.setAggressive(frame.attack());
             return;
         }
-        if (mob instanceof Vex) {
+        if (isFreeFlying(mob)) {
             var destination = movementInput.lengthSqr() <= 1.0E-6
                     ? mob.position()
                     : mob.position().add(movementInput.scale(4.0));
@@ -124,16 +127,6 @@ final class MobDirectControlBinding implements ControlBinding {
                     movementInput.lengthSqr() <= 1.0E-6 ? 0.0 : frame.sprint() ? 1.3 : 1.0
             );
             mob.setAggressive(frame.attack());
-            return;
-        }
-        if (mob instanceof Allay) {
-            var destination = movementInput.lengthSqr() <= 1.0E-6
-                    ? mob.position()
-                    : mob.position().add(movementInput.scale(4.0));
-            mob.getMoveControl().setWantedPosition(
-                    destination.x, destination.y, destination.z,
-                    movementInput.lengthSqr() <= 1.0E-6 ? 0.0 : frame.sprint() ? 1.3 : 1.0
-            );
             return;
         }
         mob.getMoveControl().strafe(frame.forward(), frame.strafe());
@@ -171,15 +164,39 @@ final class MobDirectControlBinding implements ControlBinding {
     }
 
     private Vec3 movementInput() {
-        var yaw = frame.yaw() * Mth.DEG_TO_RAD;
-        var sin = Mth.sin(yaw);
-        var cos = Mth.cos(yaw);
-        var movement = new Vec3(
-                -sin * frame.forward() + cos * frame.strafe(),
-                (frame.jump() ? 1.0 : 0.0) - (frame.sneak() ? 1.0 : 0.0),
-                cos * frame.forward() + sin * frame.strafe()
-        );
+        return movementInput(frame, isFreeFlying(mob));
+    }
+
+    static Vec3 movementInput(PlayerControlFrame frame, boolean freeFlying) {
+        Vec3 movement;
+        if (freeFlying) {
+            var forward = Vec3.directionFromRotation(frame.pitch(), frame.yaw());
+            var left = new Vec3(forward.z, 0.0, -forward.x);
+            if (left.lengthSqr() > 1.0E-6) left = left.normalize();
+            movement = forward.scale(frame.forward()).add(left.scale(frame.strafe())).add(
+                    0.0,
+                    (frame.jump() ? 1.0 : 0.0) - (frame.sneak() ? 1.0 : 0.0),
+                    0.0
+            );
+        } else {
+            var yaw = frame.yaw() * Mth.DEG_TO_RAD;
+            var sin = Mth.sin(yaw);
+            var cos = Mth.cos(yaw);
+            movement = new Vec3(
+                    -sin * frame.forward() + cos * frame.strafe(),
+                    (frame.jump() ? 1.0 : 0.0) - (frame.sneak() ? 1.0 : 0.0),
+                    cos * frame.forward() + sin * frame.strafe()
+            );
+        }
         return movement.lengthSqr() > 1.0 ? movement.normalize() : movement;
+    }
+
+    static boolean isFreeFlying(Mob mob) {
+        return mob instanceof Vex
+                || mob instanceof Allay
+                || mob instanceof DirectMobMovementAccess
+                || mob.getNavigation() instanceof FlyingPathNavigation
+                || mob.isNoGravity();
     }
 
     private void attackFromView() {
