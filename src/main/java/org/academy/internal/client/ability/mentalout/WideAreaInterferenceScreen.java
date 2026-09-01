@@ -15,7 +15,12 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.client.gui.layout.SizeMode;
+import org.academy.api.client.gui.render.RenderContext;
 import org.academy.api.client.gui.screen.UiScreen;
+import org.academy.api.client.gui.widget.AbstractWidget;
+import org.academy.api.client.gui.widget.FrameLayoutWidget;
+import org.academy.api.client.gui.widget.LabelWidget;
 import org.academy.api.client.render.Render;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
@@ -36,12 +41,17 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     private static final int DISABLED = 0x45FFFFFF;
     private static final int SELECTION = 0xFF1177D6;
     private static final int CONTROLLED = 0xFFFF7A18;
-    private static final int ROW_HEIGHT = 26;
-    private static final int GAP = 4;
-    private static final int INSET = 10;
-    private static final int HEADER_HEIGHT = 24;
-    private static final int ACTION_HEIGHT = 22;
     private static final int MAX_VIEW_RANGE = 96;
+    private static final float DESIGN_WIDTH = 960.0f;
+    private static final float DESIGN_HEIGHT = 540.0f;
+    private static final String[] OPERATION_LABELS = {
+            "screen.academy.wide_area_interference.move",
+            "screen.academy.wide_area_interference.misidentification",
+            "screen.academy.wide_area_interference.stupor",
+            "screen.academy.wide_area_interference.impression",
+            "screen.academy.wide_area_interference.gather",
+            "screen.academy.wide_area_interference.farm"
+    };
 
     private final LinkedHashSet<UUID> selectedTargets = new LinkedHashSet<>();
     private final LinkedHashSet<UUID> viewedTargets = new LinkedHashSet<>();
@@ -56,6 +66,21 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     private Rect viewModeButton;
     private Rect[] actionButtons;
     private Rect[] reservedButtons;
+    private OverlaySurface overlaySurface;
+    private float uiScale;
+    private float bodyFontSize;
+    private float captionFontSize;
+    private float headingFontSize;
+    private int gap;
+    private int inset;
+    private int headerHeight;
+    private int rowHeight;
+    private int actionHeight;
+    private int reservedHeight;
+    private int rosterFooterHeight;
+    private int controlsFooterHeight;
+    private int controlsHeaderHeight;
+    private int actionColumns;
     private WideAreaInterference.Action armedAction;
     private DragMode dragMode = DragMode.NONE;
     private double dragStartX;
@@ -75,47 +100,141 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     @Override
     protected void onInit() {
         updateLayout();
+        overlaySurface = new OverlaySurface();
+        overlaySurface.setCoverAllPrev(true);
+        overlaySurface.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT));
+        getRoot().addChild("wide_area_interference_overlay", overlaySurface);
         WideAreaInterferenceClientState.open();
     }
 
     private void updateLayout() {
-        var outerWidth = Math.max(360, width - 24);
-        var outerHeight = Math.max(240, height - 24);
-        panel = new Rect((width - outerWidth) / 2, (height - outerHeight) / 2, outerWidth, outerHeight);
-        var contentY = panel.y + HEADER_HEIGHT;
-        var contentHeight = panel.height - HEADER_HEIGHT;
-        var rosterWidth = Math.clamp(Math.round(outerWidth * 0.19f), 210, 330);
-        roster = new Rect(panel.x, contentY, rosterWidth, contentHeight);
-        var rightX = roster.right() + GAP;
-        var rightWidth = panel.right() - rightX;
-        var controlsHeight = Math.clamp(Math.round(contentHeight * 0.20f), 104, 132);
-        display = new Rect(rightX, contentY, rightWidth, contentHeight - controlsHeight - GAP);
-        controls = new Rect(rightX, display.bottom() + GAP, rightWidth, controlsHeight);
-        selectAllButton = new Rect(roster.right() - 53, roster.y + 4, 47, 16);
-        viewModeButton = new Rect(display.x + 6, display.y + 6, 110, 20);
+        uiScale = Math.clamp(Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT), 0.60f, 1.50f);
+        bodyFontSize = ProgramUiGraphics.BODY_FONT_SIZE * uiScale;
+        captionFontSize = ProgramUiGraphics.CAPTION_FONT_SIZE * uiScale;
+        headingFontSize = ProgramUiGraphics.HEADING_FONT_SIZE * uiScale;
+        gap = scaled(4.0f);
+        inset = scaled(8.0f);
+        headerHeight = scaled(22.0f);
+        rowHeight = scaled(22.0f);
+        actionHeight = scaled(20.0f);
+        reservedHeight = scaled(12.0f);
+        rosterFooterHeight = scaled(17.0f);
+        controlsFooterHeight = scaled(16.0f);
+        controlsHeaderHeight = scaled(19.0f);
 
-        var actionY = controls.y + 29;
-        var available = controls.width - INSET * 2 - GAP * 5;
-        var actionWidth = Math.max(68, available / 6);
-        actionButtons = new Rect[6];
+        var margin = scaled(8.0f);
+        var outerWidth = Math.max(1, width - margin * 2);
+        var outerHeight = Math.max(1, height - margin * 2);
+        panel = new Rect((width - outerWidth) / 2, (height - outerHeight) / 2, outerWidth, outerHeight);
+        var contentY = panel.y + headerHeight;
+        var contentHeight = Math.max(1, panel.height - headerHeight);
+        var rosterWidth = Math.clamp(
+                Math.round(outerWidth * 0.165f),
+                scaled(132.0f),
+                scaled(180.0f)
+        );
+        rosterWidth = Math.min(rosterWidth, Math.max(scaled(84.0f), outerWidth - scaled(180.0f)));
+        roster = new Rect(panel.x, contentY, rosterWidth, contentHeight);
+        var rightX = roster.right() + gap;
+        var rightWidth = Math.max(1, panel.right() - rightX);
+        actionColumns = calculateActionColumns(rightWidth);
+        var actionRows = (OPERATION_LABELS.length + actionColumns - 1) / actionColumns;
+        var controlsHeight = controlsHeaderHeight
+                + actionRows * actionHeight + Math.max(0, actionRows - 1) * gap
+                + gap + reservedHeight + controlsFooterHeight;
+        display = new Rect(rightX, contentY, rightWidth,
+                Math.max(1, contentHeight - controlsHeight - gap));
+        controls = new Rect(rightX, display.bottom() + gap, rightWidth, controlsHeight);
+
+        var selectAllWidth = Math.clamp(
+                Math.round(LabelWidget.Companion.getTextWidth(
+                        Component.translatable("screen.academy.wide_area_interference.select_all").getString(),
+                        bodyFontSize)) + scaled(12.0f),
+                scaled(34.0f),
+                Math.max(scaled(34.0f), roster.width / 2)
+        );
+        selectAllButton = new Rect(
+                roster.right() - inset - selectAllWidth,
+                roster.y + scaled(3.0f),
+                selectAllWidth,
+                scaled(16.0f)
+        );
+        var switchWidth = Math.clamp(
+                Math.round(Math.max(
+                        LabelWidget.Companion.getTextWidth(Component.translatable(
+                                "screen.academy.wide_area_interference.switch.target").getString(), bodyFontSize),
+                        LabelWidget.Companion.getTextWidth(Component.translatable(
+                                "screen.academy.wide_area_interference.switch.rts").getString(), bodyFontSize)
+                )) + scaled(14.0f),
+                scaled(72.0f),
+                Math.max(scaled(72.0f), display.width / 2)
+        );
+        viewModeButton = new Rect(
+                display.x + scaled(5.0f),
+                display.y + scaled(5.0f),
+                switchWidth,
+                scaled(18.0f)
+        );
+
+        var actionY = controls.y + controlsHeaderHeight;
+        var available = Math.max(1, controls.width - inset * 2);
+        actionButtons = new Rect[OPERATION_LABELS.length];
         for (var index = 0; index < actionButtons.length; index++) {
-            var x = controls.x + INSET + index * (actionWidth + GAP);
-            var actualWidth = index == actionButtons.length - 1
-                    ? controls.right() - INSET - x : actionWidth;
-            actionButtons[index] = new Rect(x, actionY, actualWidth, ACTION_HEIGHT);
+            var column = index % actionColumns;
+            var row = index / actionColumns;
+            var x = controls.x + inset + distributedStart(available, actionColumns, column);
+            var nextX = controls.x + inset + distributedStart(available, actionColumns, column + 1);
+            actionButtons[index] = new Rect(
+                    x,
+                    actionY + row * (actionHeight + gap),
+                    Math.max(1, nextX - x - (column == actionColumns - 1 ? 0 : gap)),
+                    actionHeight
+            );
         }
-        var reservedY = actionY + ACTION_HEIGHT + GAP;
+
+        var reservedY = actionY + actionRows * actionHeight + Math.max(0, actionRows - 1) * gap + gap;
         reservedButtons = new Rect[6];
         for (var index = 0; index < reservedButtons.length; index++) {
-            var source = actionButtons[index];
-            reservedButtons[index] = new Rect(source.x, reservedY, source.width, ACTION_HEIGHT);
+            var x = controls.x + inset + distributedStart(available, reservedButtons.length, index);
+            var nextX = controls.x + inset + distributedStart(available, reservedButtons.length, index + 1);
+            reservedButtons[index] = new Rect(
+                    x,
+                    reservedY,
+                    Math.max(1, nextX - x - (index == reservedButtons.length - 1 ? 0 : gap)),
+                    reservedHeight
+            );
         }
+    }
+
+    private int calculateActionColumns(int controlsWidth) {
+        var minimumWidth = scaled(52.0f);
+        for (var key : OPERATION_LABELS) {
+            minimumWidth = Math.max(minimumWidth,
+                    Math.round(LabelWidget.Companion.getTextWidth(
+                            Component.translatable(key).getString(), bodyFontSize)) + scaled(18.0f));
+        }
+        var available = Math.max(1, controlsWidth - inset * 2);
+        if (available >= minimumWidth * 6 + gap * 5) return 6;
+        if (available >= minimumWidth * 3 + gap * 2) return 3;
+        return 2;
+    }
+
+    private int distributedStart(int available, int columns, int column) {
+        var gapWidth = gap * Math.max(0, columns - 1);
+        var contentWidth = Math.max(columns, available - gapWidth);
+        return column * contentWidth / columns + Math.min(column, columns - 1) * gap;
+    }
+
+    private int scaled(float designPixels) {
+        return Math.max(1, Math.round(designPixels * uiScale));
     }
 
     @Override
     public void tick() {
         super.tick();
         updateLayout();
+        if (overlaySurface != null) overlaySurface.invalidate();
         var forward = (movementKeys[0] ? 1.0 : 0.0) - (movementKeys[1] ? 1.0 : 0.0);
         var right = (movementKeys[3] ? 1.0 : 0.0) - (movementKeys[2] ? 1.0 : 0.0);
         WideAreaInterferenceClientState.setMovementInput(forward, right);
@@ -165,47 +284,77 @@ public final class WideAreaInterferenceScreen extends UiScreen {
             int mouseY,
             float partialTick
     ) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         updateLayout();
         syncWorldState();
         if (WideAreaInterferenceClientState.isTargetView()) renderPlayerBackground(graphics);
         graphics.fill(panel.x, panel.y, panel.right(), panel.bottom(), 0x26000000);
+        if (WideAreaInterferenceClientState.isTargetView()) {
+            graphics.fill(display.x, display.y, display.right(), display.bottom(), 0xFF000000);
+            renderTargetGridImages(graphics);
+        }
+        if (overlaySurface != null) overlaySurface.invalidate();
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private final class OverlaySurface extends AbstractWidget {
+        @Override
+        protected void renderInternal(RenderContext context) {
+            super.renderInternal(context);
+            updateLayout();
+            var window = minecraft.getWindow();
+            var mouseX = (int) Math.round(minecraft.mouseHandler.getScaledXPos(window));
+            var mouseY = (int) Math.round(minecraft.mouseHandler.getScaledYPos(window));
+            renderOverlay(new ProgramUiGraphics(context), mouseX, mouseY);
+        }
+    }
+
+    private void renderOverlay(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         graphics.fill(roster.x, roster.y, roster.right(), roster.bottom(), PANEL);
         graphics.fill(controls.x, controls.y, controls.right(), controls.bottom(), PANEL);
-        graphics.fill(panel.x, panel.y, panel.right(), panel.y + HEADER_HEIGHT, PANEL_SOFT);
+        graphics.fill(panel.x, panel.y, panel.right(), panel.y + headerHeight, PANEL_SOFT);
         border(graphics, panel, PRIMARY);
         border(graphics, roster, 0x88FFFFFF);
         border(graphics, display, PRIMARY);
         border(graphics, controls, 0x88FFFFFF);
-        graphics.fill(panel.x + 4, panel.y + HEADER_HEIGHT - 1,
-                panel.right() - 4, panel.y + HEADER_HEIGHT, PRIMARY);
-        graphics.centeredText(font, title, panel.x + panel.width / 2, panel.y + 8, PRIMARY);
+        graphics.fill(panel.x + scaled(4.0f), panel.y + headerHeight - 1,
+                panel.right() - scaled(4.0f), panel.y + headerHeight, PRIMARY);
+        centeredText(graphics, title.getString(), panel.x + panel.width / 2.0f,
+                panel.y + centeredTextY(headerHeight, headingFontSize), PRIMARY,
+                headingFontSize, panel.width - inset * 2);
 
-        if (WideAreaInterferenceClientState.isTargetView()) {
-            graphics.fill(display.x, display.y, display.right(), display.bottom(), 0xFF000000);
-            renderTargetGrid(graphics);
-        }
+        if (WideAreaInterferenceClientState.isTargetView()) renderTargetGridOverlay(graphics);
         renderRoster(graphics, mouseX, mouseY);
         renderDisplayOverlay(graphics, mouseX, mouseY);
         renderControls(graphics, mouseX, mouseY);
     }
 
-    private void renderRoster(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        graphics.text(font, Component.translatable("screen.academy.wide_area_interference.roster"),
-                roster.x + 6, roster.y + 7, PRIMARY, false);
+    private void renderRoster(ProgramUiGraphics graphics, int mouseX, int mouseY) {
+        text(graphics,
+                Component.translatable("screen.academy.wide_area_interference.roster").getString(),
+                roster.x + scaled(5.0f),
+                roster.y + centeredTextY(headerHeight, bodyFontSize),
+                PRIMARY,
+                bodyFontSize,
+                Math.max(1, selectAllButton.x - roster.x - scaled(8.0f)));
         button(graphics, selectAllButton,
                 Component.translatable("screen.academy.wide_area_interference.select_all"),
                 mouseX, mouseY, true, false);
         var entries = MentaloutRosterClientState.snapshot().entries();
-        var listTop = roster.y + HEADER_HEIGHT;
-        var listBottom = roster.bottom() - 18;
-        var visible = Math.max(1, (listBottom - listTop) / ROW_HEIGHT);
+        var listTop = roster.y + headerHeight;
+        var listBottom = roster.bottom() - rosterFooterHeight;
+        var visible = Math.max(1, (listBottom - listTop) / rowHeight);
         rosterScroll = Mth.clamp(rosterScroll, 0, Math.max(0, entries.size() - visible));
         graphics.enableScissor(roster.x + 2, listTop, roster.right() - 2, listBottom);
         if (entries.isEmpty()) {
-            graphics.text(font,
-                    Component.translatable("screen.academy.wide_area_interference.roster.empty"),
-                    roster.x + 8, listTop + 8, SECONDARY, false);
+            wrappedText(graphics,
+                    Component.translatable("screen.academy.wide_area_interference.roster.empty").getString(),
+                    roster.x + inset,
+                    listTop + inset,
+                    SECONDARY,
+                    captionFontSize,
+                    roster.width - inset * 2,
+                    scaled(8.0f),
+                    3);
         }
         for (var visualRow = 0; visualRow < visible && rosterScroll + visualRow < entries.size(); visualRow++) {
             var entry = entries.get(rosterScroll + visualRow);
@@ -219,23 +368,37 @@ public final class WideAreaInterferenceScreen extends UiScreen {
             var eye = eyeButton(bounds);
             var textRight = eye.x - 3;
             var nameWidth = Math.max(4, textRight - bounds.x - 7);
-            graphics.text(font, Component.literal(trimToWidth(entry.displayName(), nameWidth)),
-                    bounds.x + 5, bounds.y + 3, selected ? PRIMARY : SECONDARY, false);
+            text(graphics,
+                    ProgramUiGraphics.fit(entry.displayName(), nameWidth, bodyFontSize),
+                    bounds.x + scaled(4.0f),
+                    bounds.y + scaled(2.0f),
+                    selected ? PRIMARY : SECONDARY,
+                    bodyFontSize,
+                    nameWidth);
             var coordinates = "[" + entry.blockX() + ", " + entry.blockY() + ", " + entry.blockZ() + "]";
             var status = statusText(entry);
             var detail = coordinates + (status.isEmpty() ? "" : "  " + status);
-            graphics.text(font, Component.literal(trimToWidth(detail, nameWidth)),
-                    bounds.x + 5, bounds.y + 14,
+            text(graphics,
+                    ProgramUiGraphics.fit(detail, nameWidth, captionFontSize),
+                    bounds.x + scaled(4.0f),
+                    bounds.y + rowHeight - scaled(8.0f),
                     entry.hasFlag(MentaloutRosterClientState.FLAG_MISIDENTIFICATION)
-                            ? CONTROLLED : 0x99FFFFFF, false);
+                            ? CONTROLLED : 0x99FFFFFF,
+                    captionFontSize,
+                    nameWidth);
             iconButton(graphics, eye, "◉", mouseX, mouseY, true,
                     viewedTargets.contains(entry.targetUuid()));
             iconButton(graphics, remove, "×", mouseX, mouseY, true, false);
         }
         graphics.disableScissor();
-        graphics.text(font, Component.translatable(
-                        "screen.academy.wide_area_interference.selected", selectedTargets.size()),
-                roster.x + 6, roster.bottom() - 13, SECONDARY, false);
+        text(graphics,
+                Component.translatable(
+                        "screen.academy.wide_area_interference.selected", selectedTargets.size()).getString(),
+                roster.x + scaled(5.0f),
+                roster.bottom() - rosterFooterHeight + centeredTextY(rosterFooterHeight, captionFontSize),
+                SECONDARY,
+                captionFontSize,
+                roster.width - scaled(10.0f));
     }
 
     private String statusText(MentaloutRosterClientState.Entry entry) {
@@ -252,23 +415,10 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         return String.join("/", values);
     }
 
-    private void renderTargetGrid(GuiGraphicsExtractor graphics) {
-        var ids = WideAreaInterferenceClientState.viewedTargets();
-        if (ids.isEmpty()) return;
-        var count = ids.size();
-        var columns = count == 1 ? 1 : count <= 4 ? 2 : 3;
-        var rows = (count + columns - 1) / columns;
-        var tileWidth = display.width / columns;
-        var tileHeight = display.height / rows;
-        for (var index = 0; index < count; index++) {
-            var column = index % columns;
-            var row = index / columns;
-            var tile = new Rect(
-                    display.x + column * tileWidth,
-                    display.y + row * tileHeight,
-                    column == columns - 1 ? display.right() - display.x - column * tileWidth : tileWidth,
-                    row == rows - 1 ? display.bottom() - display.y - row * tileHeight : tileHeight);
-            var texture = WideAreaInterferenceClientState.targetFrame(ids.get(index));
+    private void renderTargetGridImages(GuiGraphicsExtractor graphics) {
+        for (var target : targetTiles()) {
+            var tile = target.bounds();
+            var texture = WideAreaInterferenceClientState.targetFrame(target.targetId());
             if (texture != null) {
                 graphics.innerBlit(
                         Render.RenderPipelines.IMAGE_OPAQUE,
@@ -279,14 +429,48 @@ public final class WideAreaInterferenceScreen extends UiScreen {
             } else {
                 graphics.fill(tile.x, tile.y, tile.right(), tile.bottom(), 0xD0000000);
             }
-            border(graphics, tile, 0x99FFFFFF);
-            var entry = findEntry(ids.get(index));
-            if (entry != null) {
-                graphics.fill(tile.x + 1, tile.bottom() - 15, tile.right() - 1, tile.bottom() - 1, 0xA0000000);
-                graphics.text(font, Component.literal(trimToWidth(entry.displayName(), tile.width - 8)),
-                        tile.x + 4, tile.bottom() - 12, PRIMARY, false);
-            }
         }
+    }
+
+    private void renderTargetGridOverlay(ProgramUiGraphics graphics) {
+        var labelHeight = scaled(14.0f);
+        for (var target : targetTiles()) {
+            var tile = target.bounds();
+            border(graphics, tile, 0x99FFFFFF);
+            var entry = findEntry(target.targetId());
+            if (entry == null) continue;
+            graphics.fill(tile.x + 1, tile.bottom() - labelHeight,
+                    tile.right() - 1, tile.bottom() - 1, 0xA0000000);
+            text(graphics,
+                    entry.displayName(),
+                    tile.x + scaled(3.0f),
+                    tile.bottom() - labelHeight + centeredTextY(labelHeight, captionFontSize),
+                    PRIMARY,
+                    captionFontSize,
+                    tile.width - scaled(6.0f));
+        }
+    }
+
+    private List<TargetTile> targetTiles() {
+        var ids = WideAreaInterferenceClientState.viewedTargets();
+        if (ids.isEmpty()) return List.of();
+        var count = ids.size();
+        var columns = count == 1 ? 1 : count <= 4 ? 2 : 3;
+        var rows = (count + columns - 1) / columns;
+        var tileWidth = display.width / columns;
+        var tileHeight = display.height / rows;
+        var tiles = new ArrayList<TargetTile>(count);
+        for (var index = 0; index < count; index++) {
+            var column = index % columns;
+            var row = index / columns;
+            var tile = new Rect(
+                    display.x + column * tileWidth,
+                    display.y + row * tileHeight,
+                    column == columns - 1 ? display.right() - display.x - column * tileWidth : tileWidth,
+                    row == rows - 1 ? display.bottom() - display.y - row * tileHeight : tileHeight);
+            tiles.add(new TargetTile(ids.get(index), tile));
+        }
+        return List.copyOf(tiles);
     }
 
     private void renderPlayerBackground(GuiGraphicsExtractor graphics) {
@@ -301,7 +485,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 0.0f, 1.0f, 1.0f, 0.0f, -1);
     }
 
-    private void renderDisplayOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderDisplayOverlay(ProgramUiGraphics graphics, int mouseX, int mouseY) {
         var canSwitch = WideAreaInterferenceClientState.hasTargetViews();
         var key = WideAreaInterferenceClientState.isRtsView()
                 ? "screen.academy.wide_area_interference.switch.target"
@@ -312,8 +496,18 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         var modeKey = WideAreaInterferenceClientState.isRtsView()
                 ? "screen.academy.wide_area_interference.mode.god"
                 : "screen.academy.wide_area_interference.mode.target";
-        graphics.text(font, Component.translatable(modeKey), display.right() - 90,
-                display.y + 12, SECONDARY, false);
+        var mode = Component.translatable(modeKey).getString();
+        var modeWidth = Math.min(
+                Math.round(LabelWidget.Companion.getTextWidth(mode, captionFontSize)),
+                Math.max(1, display.width / 3)
+        );
+        text(graphics,
+                mode,
+                display.right() - inset - modeWidth,
+                display.y + scaled(10.0f),
+                SECONDARY,
+                captionFontSize,
+                modeWidth);
         if (WideAreaInterferenceClientState.isRtsView()) {
             if (dragMode != DragMode.NONE && dragMode != DragMode.PAN) {
                 var selection = normalizedDrag();
@@ -328,42 +522,59 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     || armedAction == WideAreaInterference.Action.FARM
                     ? Component.translatable("screen.academy.wide_area_interference.drag_region", regionHeight)
                     : Component.translatable("screen.academy.wide_area_interference.place_target");
-            graphics.centeredText(font, prompt, display.x + display.width / 2, display.bottom() - 14, PRIMARY);
+            centeredText(graphics,
+                    prompt.getString(),
+                    display.x + display.width / 2.0f,
+                    display.bottom() - scaled(13.0f),
+                    PRIMARY,
+                    bodyFontSize,
+                    display.width - inset * 2);
         }
         if ((dragMode == DragMode.REGION || dragMode == DragMode.HIDE)
                 && regionFirst != null && regionLast != null) {
             var sizes = regionDimensions();
-            graphics.centeredText(font, Component.literal(sizes[0] + " × " + sizes[1] + " × " + sizes[2]),
-                    display.x + display.width / 2, display.bottom() - 27, PRIMARY);
+            centeredText(graphics,
+                    sizes[0] + " × " + sizes[1] + " × " + sizes[2],
+                    display.x + display.width / 2.0f,
+                    display.bottom() - scaled(25.0f),
+                    PRIMARY,
+                    bodyFontSize,
+                    display.width - inset * 2);
         }
     }
 
-    private void renderControls(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        graphics.text(font, Component.translatable("screen.academy.wide_area_interference.operations"),
-                controls.x + INSET, controls.y + 9, PRIMARY, false);
+    private void renderControls(ProgramUiGraphics graphics, int mouseX, int mouseY) {
+        text(graphics,
+                Component.translatable("screen.academy.wide_area_interference.operations").getString(),
+                controls.x + inset,
+                controls.y + centeredTextY(controlsHeaderHeight, bodyFontSize),
+                PRIMARY,
+                bodyFontSize,
+                controls.width - inset * 2);
         var enabled = WideAreaInterferenceClientState.isRtsView() && !selectedTargets.isEmpty();
-        var labels = new String[]{
-                "screen.academy.wide_area_interference.move",
-                "screen.academy.wide_area_interference.misidentification",
-                "screen.academy.wide_area_interference.stupor",
-                "screen.academy.wide_area_interference.impression",
-                "screen.academy.wide_area_interference.gather",
-                "screen.academy.wide_area_interference.farm"
-        };
         var actions = operationActions();
         for (var index = 0; index < actionButtons.length; index++) {
-            button(graphics, actionButtons[index], Component.translatable(labels[index]),
+            button(graphics, actionButtons[index], Component.translatable(OPERATION_LABELS[index]),
                     mouseX, mouseY, enabled, armedAction == actions[index]);
-            graphics.text(font, Component.literal(Integer.toString(index + 1)),
-                    actionButtons[index].x + 3, actionButtons[index].y + 7,
-                    enabled ? SECONDARY : DISABLED, false);
+            text(graphics,
+                    Integer.toString(index + 1),
+                    actionButtons[index].x + scaled(3.0f),
+                    actionButtons[index].y + centeredTextY(actionButtons[index].height, captionFontSize),
+                    enabled ? SECONDARY : DISABLED,
+                    captionFontSize,
+                    scaled(8.0f));
         }
         for (var reserved : reservedButtons) {
             button(graphics, reserved, Component.literal("+"), mouseX, mouseY, false, false);
         }
-        graphics.text(font, Component.translatable("screen.academy.wide_area_interference.god_only"),
-                controls.x + INSET, controls.bottom() - 14,
-                WideAreaInterferenceClientState.isRtsView() ? SECONDARY : DISABLED, false);
+        text(graphics,
+                Component.translatable("screen.academy.wide_area_interference.god_only").getString(),
+                controls.x + inset,
+                controls.bottom() - controlsFooterHeight
+                        + centeredTextY(controlsFooterHeight, captionFontSize),
+                WideAreaInterferenceClientState.isRtsView() ? SECONDARY : DISABLED,
+                captionFontSize,
+                controls.width - inset * 2);
     }
 
     @Override
@@ -783,26 +994,38 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     }
 
     private int rosterVisualRowAt(double mouseX, double mouseY) {
-        var listTop = roster.y + HEADER_HEIGHT;
-        var listBottom = roster.bottom() - 18;
+        var listTop = roster.y + headerHeight;
+        var listBottom = roster.bottom() - rosterFooterHeight;
         if (mouseX < roster.x || mouseX >= roster.right()
                 || mouseY < listTop || mouseY >= listBottom) return -1;
-        var visual = (int) ((mouseY - listTop) / ROW_HEIGHT);
+        var visual = (int) ((mouseY - listTop) / rowHeight);
         var index = rosterScroll + visual;
         return index >= 0 && index < MentaloutRosterClientState.snapshot().entries().size() ? visual : -1;
     }
 
     private Rect rowBounds(int visualRow) {
-        return new Rect(roster.x + 3, roster.y + HEADER_HEIGHT + visualRow * ROW_HEIGHT,
-                roster.width - 6, ROW_HEIGHT - 1);
+        var rowInset = scaled(2.0f);
+        return new Rect(
+                roster.x + rowInset,
+                roster.y + headerHeight + visualRow * rowHeight,
+                roster.width - rowInset * 2,
+                rowHeight - 1
+        );
     }
 
-    private static Rect removeButton(Rect row) {
-        return new Rect(row.right() - 18, row.y + 3, 15, 19);
+    private Rect removeButton(Rect row) {
+        var inset = scaled(2.0f);
+        var width = scaled(14.0f);
+        return new Rect(row.right() - inset - width, row.y + inset,
+                width, Math.max(1, row.height - inset * 2));
     }
 
-    private static Rect eyeButton(Rect row) {
-        return new Rect(row.right() - 37, row.y + 3, 17, 19);
+    private Rect eyeButton(Rect row) {
+        var inset = scaled(2.0f);
+        var width = scaled(15.0f);
+        var remove = removeButton(row);
+        return new Rect(remove.x - scaled(2.0f) - width, row.y + inset,
+                width, Math.max(1, row.height - inset * 2));
     }
 
     private void toggleSelection(UUID id) {
@@ -812,15 +1035,6 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     private MentaloutRosterClientState.Entry findEntry(UUID id) {
         return MentaloutRosterClientState.snapshot().entries().stream()
                 .filter(entry -> entry.targetUuid().equals(id)).findFirst().orElse(null);
-    }
-
-    private String trimToWidth(String value, int maximumWidth) {
-        if (value == null || value.isEmpty() || maximumWidth <= 0) return "";
-        if (font.width(value) <= maximumWidth) return value;
-        var suffix = "…";
-        var end = value.length();
-        while (end > 0 && font.width(value.substring(0, end) + suffix) > maximumWidth) end--;
-        return value.substring(0, end) + suffix;
     }
 
     private boolean controlDown() {
@@ -846,7 +1060,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         };
     }
 
-    private static void border(GuiGraphicsExtractor graphics, Rect rect, int color) {
+    private static void border(ProgramUiGraphics graphics, Rect rect, int color) {
         graphics.fill(rect.x, rect.y, rect.right(), rect.y + 1, color);
         graphics.fill(rect.x, rect.bottom() - 1, rect.right(), rect.bottom(), color);
         graphics.fill(rect.x, rect.y, rect.x + 1, rect.bottom(), color);
@@ -854,7 +1068,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     }
 
     private void button(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             Rect bounds,
             Component label,
             int mouseX,
@@ -866,12 +1080,20 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         graphics.fill(bounds.x, bounds.y, bounds.right(), bounds.bottom(),
                 selected ? ROW_SELECTED : hover ? ROW_HOVER : enabled ? ROW : 0x10000000);
         if (selected) graphics.fill(bounds.x, bounds.bottom() - 2, bounds.right(), bounds.bottom(), SELECTION);
-        graphics.centeredText(font, label, bounds.x + bounds.width / 2, bounds.y + 7,
-                enabled ? PRIMARY : DISABLED);
+        var labelText = label.getString();
+        var fontSize = fitFontSize(labelText, bodyFontSize, captionFontSize * 0.86f,
+                Math.max(1, bounds.width - scaled(6.0f)));
+        centeredText(graphics,
+                labelText,
+                bounds.x + bounds.width / 2.0f,
+                bounds.y + centeredTextY(bounds.height, fontSize),
+                enabled ? PRIMARY : DISABLED,
+                fontSize,
+                Math.max(1, bounds.width - scaled(6.0f)));
     }
 
     private void iconButton(
-            GuiGraphicsExtractor graphics,
+            ProgramUiGraphics graphics,
             Rect bounds,
             String glyph,
             int mouseX,
@@ -883,8 +1105,73 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         graphics.fill(bounds.x, bounds.y, bounds.right(), bounds.bottom(),
                 selected ? ROW_SELECTED : hover ? ROW_HOVER : 0x10000000);
         if (selected) graphics.fill(bounds.x, bounds.bottom() - 2, bounds.right(), bounds.bottom(), SELECTION);
-        graphics.centeredText(font, Component.literal(glyph),
-                bounds.x + bounds.width / 2, bounds.y + 6, enabled ? PRIMARY : DISABLED);
+        var fontSize = Math.min(bodyFontSize, bounds.height * 0.60f);
+        centeredText(graphics,
+                glyph,
+                bounds.x + bounds.width / 2.0f,
+                bounds.y + centeredTextY(bounds.height, fontSize),
+                enabled ? PRIMARY : DISABLED,
+                fontSize,
+                bounds.width - 2);
+    }
+
+    private void text(
+            ProgramUiGraphics graphics,
+            String value,
+            float x,
+            float y,
+            int color,
+            float fontSize,
+            float maximumWidth
+    ) {
+        graphics.text(value, x, y, color, fontSize, maximumWidth);
+    }
+
+    private void centeredText(
+            ProgramUiGraphics graphics,
+            String value,
+            float centerX,
+            float y,
+            int color,
+            float fontSize,
+            float maximumWidth
+    ) {
+        graphics.centeredText(value, centerX, y, color, fontSize, maximumWidth);
+    }
+
+    private int wrappedText(
+            ProgramUiGraphics graphics,
+            String value,
+            int x,
+            int y,
+            int color,
+            float fontSize,
+            int maximumWidth,
+            int lineHeight,
+            int maximumLines
+    ) {
+        var lines = ProgramUiGraphics.wrap(value, maximumWidth, fontSize);
+        var count = Math.min(maximumLines, lines.size());
+        for (var index = 0; index < count; index++) {
+            var line = lines.get(index);
+            if (index == count - 1 && lines.size() > count) {
+                line = ProgramUiGraphics.fit(line + "…", maximumWidth, fontSize);
+            }
+            text(graphics, line, x, y + index * lineHeight, color, fontSize, maximumWidth);
+        }
+        return count * lineHeight;
+    }
+
+    private float fitFontSize(String value, float preferred, float minimum, float maximumWidth) {
+        if (value == null || value.isEmpty() || maximumWidth <= 0.0f) return preferred;
+        var width = LabelWidget.Companion.getTextWidth(value, preferred);
+        if (width <= maximumWidth) return preferred;
+        return Math.max(minimum, preferred * maximumWidth / width);
+    }
+
+    private int centeredTextY(int height, float fontSize) {
+        var textHeight = LabelWidget.Companion.getTextHeight("Ag", fontSize);
+        return Math.max(0, Math.round((height - textHeight) / 2.0f));
     }
 
     @Override
@@ -921,6 +1208,9 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     }
 
     private record ScreenPoint(double x, double y) {
+    }
+
+    private record TargetTile(UUID targetId, Rect bounds) {
     }
 
     private record ProjectedBounds(double minX, double minY, double maxX, double maxY) {
