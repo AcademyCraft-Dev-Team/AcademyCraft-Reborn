@@ -53,8 +53,10 @@ public final class WideAreaInterferenceClientState {
     private static int captureTargetEntityId = -1;
     private static int captureIndex;
     private static CapturePass capturePass = CapturePass.NONE;
-    private static @Nullable TextureTarget playerFrame;
+    private static @Nullable TextureTarget playerFrameDisplay;
+    private static @Nullable TextureTarget playerFrameCapture;
     private static boolean playerFrameCaptured;
+    private static boolean playerFramePending;
     private static Vec3 godFocus = Vec3.ZERO;
     private static float godYaw = 45.0f;
     private static double godDistance = 24.0;
@@ -166,9 +168,9 @@ public final class WideAreaInterferenceClientState {
         clearHiddenBlocks();
         for (var frame : VIEW_FRAMES.values()) frame.close();
         VIEW_FRAMES.clear();
-        if (playerFrame != null) playerFrame.destroyBuffers();
-        playerFrame = null;
+        destroyPlayerFrames();
         playerFrameCaptured = false;
+        playerFramePending = false;
         SELECTED_TARGETS.clear();
         workPreviewBounds = null;
         var minecraft = Minecraft.getInstance();
@@ -214,8 +216,8 @@ public final class WideAreaInterferenceClientState {
     }
 
     public static @Nullable GpuTextureView playerFrame() {
-        return !playerFrameCaptured || playerFrame == null
-                ? null : playerFrame.getColorTextureView();
+        return !playerFrameCaptured || playerFrameDisplay == null
+                ? null : playerFrameDisplay.getColorTextureView();
     }
 
     public static boolean hasCameraOverride() {
@@ -472,6 +474,7 @@ public final class WideAreaInterferenceClientState {
 
     private static void captureCurrentFrame() {
         if (mode != Mode.TARGETS || capturePass == CapturePass.NONE) return;
+        publishPendingPlayerFrame();
         var minecraft = Minecraft.getInstance();
         var main = minecraft.gameRenderer.mainRenderTarget();
         var source = main.getColorTexture();
@@ -482,10 +485,10 @@ public final class WideAreaInterferenceClientState {
         if (capturePass == CapturePass.PLAYER) {
             if (minecraft.player != null && minecraft.getCameraEntity() == minecraft.player) {
                 ensurePlayerFrameSize(main.width, main.height);
-                var destination = playerFrame == null ? null : playerFrame.getColorTexture();
+                var destination = playerFrameCapture == null ? null : playerFrameCapture.getColorTexture();
                 if (destination != null) {
                     copyFrame(source, destination, main.width, main.height);
-                    playerFrameCaptured = true;
+                    playerFramePending = true;
                 }
             }
             if (!scheduleTargetCapture(minecraft)) schedulePlayerCapture(minecraft);
@@ -506,13 +509,41 @@ public final class WideAreaInterferenceClientState {
     }
 
     private static void ensurePlayerFrameSize(int width, int height) {
-        if (playerFrame == null) {
-            playerFrame = new TextureTarget(
-                    "WideAreaInterference player background", width, height, false, GpuFormat.RGBA8_UNORM);
-        } else if (playerFrame.width != width || playerFrame.height != height) {
-            playerFrame.resize(width, height);
+        if (playerFrameDisplay == null || playerFrameCapture == null) {
+            destroyPlayerFrames();
+            playerFrameDisplay = new TextureTarget(
+                    "WideAreaInterference player background display",
+                    width, height, false, GpuFormat.RGBA8_UNORM);
+            playerFrameCapture = new TextureTarget(
+                    "WideAreaInterference player background capture",
+                    width, height, false, GpuFormat.RGBA8_UNORM);
             playerFrameCaptured = false;
+            playerFramePending = false;
+        } else if (playerFrameDisplay.width != width || playerFrameDisplay.height != height
+                || playerFrameCapture.width != width || playerFrameCapture.height != height) {
+            playerFrameDisplay.resize(width, height);
+            playerFrameCapture.resize(width, height);
+            playerFrameCaptured = false;
+            playerFramePending = false;
         }
+    }
+
+    private static void publishPendingPlayerFrame() {
+        if (!playerFramePending || playerFrameDisplay == null || playerFrameCapture == null) return;
+        var previousDisplay = playerFrameDisplay;
+        playerFrameDisplay = playerFrameCapture;
+        playerFrameCapture = previousDisplay;
+        playerFramePending = false;
+        playerFrameCaptured = true;
+    }
+
+    private static void destroyPlayerFrames() {
+        if (playerFrameDisplay != null) playerFrameDisplay.destroyBuffers();
+        if (playerFrameCapture != null && playerFrameCapture != playerFrameDisplay) {
+            playerFrameCapture.destroyBuffers();
+        }
+        playerFrameDisplay = null;
+        playerFrameCapture = null;
     }
 
     private static void copyFrame(
@@ -575,9 +606,11 @@ public final class WideAreaInterferenceClientState {
         @SubscribeEvent
         public static void onResizeDisplay(ResizeDisplayEvent event) {
             for (var frame : VIEW_FRAMES.values()) frame.resize(event.getWidth(), event.getHeight());
-            if (playerFrame != null) {
-                playerFrame.resize(event.getWidth(), event.getHeight());
+            if (playerFrameDisplay != null && playerFrameCapture != null) {
+                playerFrameDisplay.resize(event.getWidth(), event.getHeight());
+                playerFrameCapture.resize(event.getWidth(), event.getHeight());
                 playerFrameCaptured = false;
+                playerFramePending = false;
             }
         }
     }
