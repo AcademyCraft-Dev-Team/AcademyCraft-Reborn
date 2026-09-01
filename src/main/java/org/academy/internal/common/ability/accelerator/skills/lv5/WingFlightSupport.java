@@ -31,6 +31,7 @@ import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
@@ -235,10 +236,9 @@ final class WingFlightSupport {
                     var marked = TimedSkillEffectRuntime.consume(
                             player.getUUID(), target.getUUID(), skill, "vector_mark", now);
                     if (marked.isPresent()) {
-                        target.hurtServer(
-                                level,
-                                SkillDamageSource.of(player, skill,
-                                        DamageTypes.VEC),
+                        SkillDamageUtil.applyVerifiedTrueHealth(
+                                target,
+                                SkillDamageSource.of(player, skill, DamageTypes.VEC),
                                 damage * 0.3f
                         );
                         var pull = origin.subtract(targetCenter);

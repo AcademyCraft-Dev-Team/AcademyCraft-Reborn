@@ -55,6 +55,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -514,10 +515,9 @@ public final class VectorAccel extends Skill {
             var damage = impact.value()
                     * system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     * system.getPlayerDamageMultiplier(player.getUUID());
-            target.hurtServer(
-                    player.level(),
-                    SkillDamageSource.of(player, skill,
-                            DamageTypes.VEC),
+            SkillDamageUtil.applyVerifiedTrueHealth(
+                    target,
+                    SkillDamageSource.of(player, skill, DamageTypes.VEC),
                     damage
             );
             var direction = Server.normalizeDashDirection(player.getLookAngle());

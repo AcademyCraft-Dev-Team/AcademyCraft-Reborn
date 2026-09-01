@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.gameevent.GameEvent;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
@@ -40,6 +41,19 @@ public final class CTAEntityActuallyHurt {
     }
 
     public boolean actuallyHurt(DamageSource source, float amount, boolean special) {
+        return actuallyHurt(source, amount, special, true);
+    }
+
+    boolean actuallyHurtFromHurtServer(DamageSource source, float amount, boolean special) {
+        return actuallyHurt(source, amount, special, false);
+    }
+
+    private boolean actuallyHurt(
+            DamageSource source,
+            float amount,
+            boolean special,
+            boolean notifyCustomHurt
+    ) {
         if (entity == null || source == null || !(entity.level() instanceof ServerLevel level)) return false;
         if (!Float.isFinite(amount) || amount <= 0.0f || entity.isDeadOrDying()) return false;
         if (entity instanceof Player player && DamageTypes.isImmunePlayer(player)) return false;
@@ -49,6 +63,10 @@ public final class CTAEntityActuallyHurt {
                 ? PlayerAttributeRuntime.reduceDamage(player, amount, 0.08)
                 : amount;
         var adjustedAmount = OutputControl.adjustDamage(source, reducedAmount);
+        if (!(adjustedAmount > 0.0f) || !Float.isFinite(adjustedAmount)) return false;
+        if (notifyCustomHurt) {
+            TrueDamageCompatibility.notifyCustomHurt(entity, level, source, adjustedAmount);
+        }
         var applied = new boolean[1];
         OutputControl.runWithoutDamageScaling(
                 () -> PlayerAttributeRuntime.runWithoutResistance(
@@ -87,11 +105,19 @@ public final class CTAEntityActuallyHurt {
 
         entity.getCombatTracker().recordDamage(source, inflicted);
         entity.invulnerableTime = 0;
+        entity.hurtDuration = 10;
+        entity.hurtTime = entity.hurtDuration;
+        entity.hurtMarked = true;
+        entity.walkAnimation.setSpeed(1.5f);
+        entity.gameEvent(GameEvent.ENTITY_DAMAGE);
+        if (entity instanceof Player player) {
+            player.getFoodData().addExhaustion(source.getFoodExhaustion());
+        }
         var attacker = resolveOwnerPlayer(source);
         var skill = source instanceof SkillDamageSource skillSource ? skillSource.getSkill() : null;
         SkillDamageUtil.completeDirectDamage(
                 level, entity, source, amount, inflicted, attacker, skill,
-                expected == 0.0f, false
+                expected == 0.0f, true
         );
         DamageCompletionDeclaration.publish(entity, source, amount, declarationDamage);
         return true;

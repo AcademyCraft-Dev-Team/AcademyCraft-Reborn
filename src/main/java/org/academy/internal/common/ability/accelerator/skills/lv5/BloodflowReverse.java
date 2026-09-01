@@ -48,6 +48,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -296,12 +297,15 @@ public class BloodflowReverse extends Skill {
                         var duration = skill.hasProficiencyMilestone(player, 2) ? 250 : 200;
 
                         var damage = calculateDamage(target.getMaxHealth());
-                        var damaged = target.hurtServer(serverLevel,
+                        var damaged = SkillDamageUtil.applyVerifiedTrueHealth(
+                                target,
                                 SkillDamageSource.of(
                                         player,
                                         Skills.BLOODFLOW_REVERSE.get(),
                                         DamageTypes.VEC
-                                ), damage);
+                                ),
+                                damage
+                        );
                         if (!damaged) return;
 
                         target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, amplifier));

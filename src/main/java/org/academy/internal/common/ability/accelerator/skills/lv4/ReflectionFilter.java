@@ -343,7 +343,7 @@ public final class ReflectionFilter extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
             if (playerData == null) return new Data();
-            var map = playerData.getSkillDataMap();
+            var map = playerData.getMutableSkillDataMap();
             var raw = map.get(skill.getKeyString());
             if (raw instanceof Data data) return normalizeData(data);
 
