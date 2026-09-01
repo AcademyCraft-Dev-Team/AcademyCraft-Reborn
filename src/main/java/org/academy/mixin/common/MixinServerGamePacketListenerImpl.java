@@ -73,6 +73,24 @@ public abstract class MixinServerGamePacketListenerImpl {
         if (academy$blocksUntrustedAction()) ci.cancel();
     }
 
+    @Inject(method = "handlePlayerCommand", at = @At(value = "INVOKE", target = ENSURE_MAIN_THREAD,
+            shift = At.Shift.AFTER), cancellable = true)
+    private void academy$blockControlledPlayerCommand(
+            ServerboundPlayerCommandPacket packet,
+            CallbackInfo ci
+    ) {
+        if (academy$blocksUntrustedAction()) ci.cancel();
+    }
+
+    @Inject(method = "handlePlayerAbilities", at = @At(value = "INVOKE", target = ENSURE_MAIN_THREAD,
+            shift = At.Shift.AFTER), cancellable = true)
+    private void academy$blockControlledPlayerAbilities(
+            ServerboundPlayerAbilitiesPacket packet,
+            CallbackInfo ci
+    ) {
+        if (academy$blocksUntrustedAction()) ci.cancel();
+    }
+
     private boolean academy$blocksUntrustedAction() {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
         return PlayerControlSessionManager.blocksUntrustedWorldAction(player)

@@ -79,6 +79,7 @@ public final class MentalControlEvents {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onServerTick(ServerTickEvent.Pre event) {
         PlayerNavigationRuntime.beginServerTick(event.getServer().overworld().getGameTime());
+        ImpressionRidingManager.tick(event.getServer());
         MentalControlRuntime.tick(event.getServer());
         MentalIntrusionManager.tick(event.getServer());
         PlayerControlSessionManager.tick(event.getServer());
@@ -92,6 +93,7 @@ public final class MentalControlEvents {
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
         var entityId = event.getEntity().getUUID();
+        ImpressionRidingManager.releaseEntity(entityId);
         MentaloutControlContext.releaseMisidentificationTarget(entityId);
         MentaloutControlContext.releaseSubject(entityId);
         MentalControlRuntime.releaseBySubject(level.getServer(), entityId);
@@ -113,6 +115,7 @@ public final class MentalControlEvents {
     public static void onLivingDeath(LivingDeathEvent event) {
         if (!(event.getEntity().level() instanceof ServerLevel level)) return;
         var entityId = event.getEntity().getUUID();
+        ImpressionRidingManager.releaseEntity(entityId);
         MentaloutControlContext.onMisidentificationTargetDeath(event.getEntity());
         MentaloutControlContext.releaseSubject(entityId);
         MentalControlRuntime.releaseBySubject(level.getServer(), entityId);
@@ -133,6 +136,7 @@ public final class MentalControlEvents {
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        ImpressionRidingManager.releaseEntity(player.getUUID());
         MentaloutRequestGuard.release(player.getUUID());
         MentalControlRecall.releaseController(player.getUUID());
         MentaloutControlContext.releaseController(player.getUUID());
@@ -149,6 +153,7 @@ public final class MentalControlEvents {
     @SubscribeEvent
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        ImpressionRidingManager.releaseEntity(player.getUUID());
         MentaloutControlContext.releaseMisidentificationTarget(player.getUUID());
         MentalControlRecall.releaseController(player.getUUID());
         MentaloutControlContext.releaseController(player.getUUID());
@@ -165,6 +170,7 @@ public final class MentalControlEvents {
 
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
+        ImpressionRidingManager.clear();
         MentaloutRequestGuard.clear();
         MentalControlRecall.clear();
         MentaloutControlContext.clearAll();
