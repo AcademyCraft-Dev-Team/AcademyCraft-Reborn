@@ -58,6 +58,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.security.CodeSource;
 import java.util.*;
 
 public class VectorReflection extends Skill {
@@ -175,6 +176,9 @@ public class VectorReflection extends Skill {
         private static final Map<UUID, Long> LAST_SOUND_TICK = new HashMap<>();
         private static final ThreadLocal<Set<UUID>> IMAGINE_BREAKER_MUTATIONS =
                 ThreadLocal.withInitial(HashSet::new);
+        private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+                StackWalker.Option.RETAIN_CLASS_REFERENCE
+        );
 
         private Server() {
         }
@@ -268,6 +272,10 @@ public class VectorReflection extends Skill {
 
         public static void forceDeactivate(ServerPlayer player) {
             if (player == null) return;
+            if (!isTrustedLifecycleCaller("forceDeactivate")) {
+                if (usesFullInstanceProtection(player)) maintainProtection(player);
+                return;
+            }
             var skill = Skills.VECTOR_REFLECTION.get();
             var data = skill.getRuntimeData(player).orElse(null);
             if (data != null && data.isEnabled()) {
@@ -602,12 +610,20 @@ public class VectorReflection extends Skill {
 
         public static void clearProtection(ServerPlayer player) {
             if (player == null) return;
+            if (!isTrustedLifecycleCaller("clearProtection")) {
+                if (usesFullInstanceProtection(player)) maintainProtection(player);
+                return;
+            }
             VectorReflectionRuntime.deactivate(player);
             clearProtectionState(player);
         }
 
         public static void forceDeactivateForDeath(ServerPlayer player) {
             if (player == null) return;
+            if (!isTrustedLifecycleCaller("forceDeactivateForDeath")) {
+                if (usesFullInstanceProtection(player)) maintainProtection(player);
+                return;
+            }
             if (VectorDeviation.Server.canMaintain(player)) {
                 VectorDeviation.Server.forceDeactivate(player);
             }
@@ -642,6 +658,25 @@ public class VectorReflection extends Skill {
             PlayerAttributeRuntime.runWithoutResistance(
                     () -> EntityControlApi.forceSetTrueHealth(player, health)
             );
+        }
+
+        private static boolean isTrustedLifecycleCaller(String entryMethod) {
+            var caller = STATE_STACK_WALKER.walk(frames -> frames
+                    .dropWhile(frame -> frame.getDeclaringClass() != Server.class
+                            || !frame.getMethodName().equals(entryMethod))
+                    .skip(1)
+                    .map(StackWalker.StackFrame::getDeclaringClass)
+                    .findFirst()
+                    .orElse(Server.class));
+            if (caller == Server.class) return true;
+            try {
+                CodeSource callerSource = caller.getProtectionDomain().getCodeSource();
+                CodeSource academySource = AcademyCraft.class.getProtectionDomain().getCodeSource();
+                return callerSource != null && academySource != null
+                        && Objects.equals(callerSource.getLocation(), academySource.getLocation());
+            } catch (SecurityException ignored) {
+                return false;
+            }
         }
 
         public static void deactivateAfterVectorChargeIfNeeded(ServerPlayer player) {
