@@ -748,7 +748,7 @@ public class KineticEnergyApplied extends Skill {
             var playerData = system.getPlayerData(player.getUUID());
             if (playerData == null) return;
 
-            var map = playerData.getSkillDataMap();
+            var map = playerData.getMutableSkillDataMap();
             var legacySuperposition = map.remove(LEGACY_KINETIC_SUPERPOSITION);
             var legacyDirectedShock = map.remove(LEGACY_DIRECTED_SHOCK);
             var changed = legacySuperposition != null || legacyDirectedShock != null;

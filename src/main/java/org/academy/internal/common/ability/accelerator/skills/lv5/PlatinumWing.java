@@ -52,6 +52,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -250,10 +251,9 @@ public final class PlatinumWing extends Skill {
                 var damage = trueMaxHealth * 0.15f
                         * AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
-                living.hurtServer(
-                        level,
-                        SkillDamageSource.of(player, skill,
-                                DamageTypes.VEC),
+                SkillDamageUtil.applyVerifiedTrueHealth(
+                        living,
+                        SkillDamageSource.of(player, skill, DamageTypes.VEC),
                         damage
                 );
                 level.playSound(null, target, SoundEvents.PLAYER_ATTACK_CRIT,

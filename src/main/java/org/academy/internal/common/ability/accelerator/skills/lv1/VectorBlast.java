@@ -46,6 +46,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -371,7 +372,7 @@ public final class VectorBlast extends Skill {
                     ViewTargetScanner.openCenteredCylinder(beamRadius),
                     entity -> entity != player && entity.isAlive()
             )) {
-                target.hurtServer(level, source, damage);
+                SkillDamageUtil.applyVerifiedTrueHealth(target, source, damage);
             }
 
             if (skill.hasProficiencyMilestone(player, 3)) {
@@ -381,7 +382,7 @@ public final class VectorBlast extends Skill {
                         blastArea,
                         entity -> entity != player && entity.isAlive()
                                 && !TeamRelations.areAllied(player, entity))) {
-                    target.hurtServer(level, source, damage * 0.4f);
+                    SkillDamageUtil.applyVerifiedTrueHealth(target, source, damage * 0.4f);
                 }
             }
 

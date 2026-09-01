@@ -238,7 +238,7 @@ public final class LightShield extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
             if (playerData == null) return;
-            var map = playerData.getSkillDataMap();
+            var map = playerData.getMutableSkillDataMap();
             var changed = false;
 
             var legacyBarrier = map.remove(LEGACY_ELECTRON_BARRIER);

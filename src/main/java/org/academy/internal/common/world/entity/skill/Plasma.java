@@ -19,6 +19,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import org.jspecify.annotations.Nullable;
 
@@ -164,7 +165,7 @@ public class Plasma extends RenderOnlyEntity {
                             && target.isAlive()
                             && target.distanceToSqr(impact) <= radiusSquared
             )) {
-                target.hurtServer(level, source, damage);
+                SkillDamageUtil.applyVerifiedTrueHealth(target, source, damage);
             }
             if (proficiencyMilestone >= 3) {
                 for (var pulse = 1; pulse <= 5; pulse++) {
@@ -175,7 +176,8 @@ public class Plasma extends RenderOnlyEntity {
                                 area,
                                 entity -> entity != owner && entity.isAlive()
                                         && entity.distanceToSqr(impact) <= radiusSquared)) {
-                            target.hurtServer(level, source, damage * 0.08f);
+                            SkillDamageUtil.applyVerifiedTrueHealth(
+                                    target, source, damage * 0.08f);
                         }
                     });
                 }

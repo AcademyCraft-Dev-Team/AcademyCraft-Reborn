@@ -33,6 +33,7 @@ import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
+import org.academy.internal.common.world.damagesource.TrueDamageCompatibility;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
 import org.academy.internal.coremod.ProtectionBackend;
 import org.spongepowered.asm.mixin.Mixin;
@@ -57,6 +58,10 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         var victim = (LivingEntity) (Object) this;
+        if (TrueDamageCompatibility.isHurtProbe(victim, source)) {
+            cir.setReturnValue(true);
+            return;
+        }
         if (victim instanceof ServerPlayer player && Flashing.Server.isDashInvulnerable(player)) {
             cir.setReturnValue(false);
             return;
@@ -82,7 +87,7 @@ public abstract class MixinLivingEntity {
             return;
         }
         if (source instanceof SkillDamageSource skillSource && DamageTypes.usesDirectActuallyHurt(source)) {
-            cir.setReturnValue(SkillDamageUtil.applyDirect(
+            cir.setReturnValue(SkillDamageUtil.applyDirectFromHurtServer(
                     level,
                     (LivingEntity) (Object) this,
                     skillSource,
@@ -415,6 +420,11 @@ public abstract class MixinLivingEntity {
                 skillSource.getSkill().onHurt(player, (LivingEntity) (Object) this, damage);
             }
         }
+    }
+
+    @Inject(method = "die", at = @At("HEAD"))
+    private void academy$trackTrueDamageDeathEntry(DamageSource source, CallbackInfo ci) {
+        TrueDamageCompatibility.onVanillaDieEntered((LivingEntity) (Object) this, source);
     }
 
     @Inject(method = "die", at = @At("HEAD"))

@@ -247,7 +247,7 @@ public final class BioelectricOperation extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
             if (playerData == null) return;
-            var map = playerData.getSkillDataMap();
+            var map = playerData.getMutableSkillDataMap();
             var legacy = map.remove(LEGACY_BIOELECTRIC_SURGE);
             if (legacy != null) {
                 var skill = Skills.BIOELECTRIC_OPERATION.get();
