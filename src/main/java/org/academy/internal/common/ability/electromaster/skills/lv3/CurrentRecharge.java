@@ -265,7 +265,7 @@ public final class CurrentRecharge extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
             if (playerData == null) return;
-            var map = playerData.getSkillDataMap();
+            var map = playerData.getMutableSkillDataMap();
             var legacy = map.remove(LEGACY_PULSE_CHARGE);
             if (legacy != null) {
                 var skill = Skills.CURRENT_RECHARGE.get();

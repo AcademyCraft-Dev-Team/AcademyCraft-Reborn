@@ -46,6 +46,6 @@ public final class CTADamageUtil {
         if (target instanceof Player player && DamageTypes.isImmunePlayer(player)) return;
         if (attacker instanceof Player player && PvpSetting.shouldPrevent(player, target)) return;
         if (attacker instanceof Player player && CtaFriendlyFireWhitelist.shouldProtect(player, target)) return;
-        new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true);
+        SkillDamageUtil.applyVerifiedTrueHealth(target, source, damage);
     }
 }

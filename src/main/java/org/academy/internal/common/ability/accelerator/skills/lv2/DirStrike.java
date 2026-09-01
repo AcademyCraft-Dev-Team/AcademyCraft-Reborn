@@ -40,6 +40,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -260,7 +261,7 @@ public class DirStrike extends Skill {
                                 look
                         ));
                 for (var target : targets) {
-                    target.hurtServer(level, source, damage);
+                    SkillDamageUtil.applyVerifiedTrueHealth(target, source, damage);
                     var velocity = target.getDeltaMovement();
                     var centerTarget = skill.hasProficiencyMilestone(player, 3)
                             && target.distanceToSqr(center) <= 16.0;
@@ -269,7 +270,8 @@ public class DirStrike extends Skill {
                     if (centerTarget) {
                         TimedSkillEffectRuntime.schedule(player, 6, () -> {
                             if (!target.isAlive() || target.level() != level) return;
-                            target.hurtServer(level, source, damage * 0.4f);
+                            SkillDamageUtil.applyVerifiedTrueHealth(
+                                    target, source, damage * 0.4f);
                         });
                     }
                 }

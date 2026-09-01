@@ -38,7 +38,7 @@ public final class SkillDamageUtil {
 
         var source = SkillDamageSource.of(attacker, skill, type);
         if (DamageTypes.usesVerifiedTrueHealth(type)) {
-            return new CTAEntityActuallyHurt(target).actuallyHurt(source, amount, true);
+            return applyVerifiedTrueHealth(target, source, amount);
         }
         if (DamageTypes.usesDirectActuallyHurt(type)) {
             return applyDirectWithFallback(level, attacker, target, skill, source, amount);
@@ -48,6 +48,25 @@ public final class SkillDamageUtil {
 
     public static boolean applyDirect(ServerLevel level, LivingEntity target,
                                       SkillDamageSource source, float amount) {
+        return applyDirect(level, target, source, amount, true);
+    }
+
+    public static boolean applyDirectFromHurtServer(
+            ServerLevel level,
+            LivingEntity target,
+            SkillDamageSource source,
+            float amount
+    ) {
+        return applyDirect(level, target, source, amount, false);
+    }
+
+    private static boolean applyDirect(
+            ServerLevel level,
+            LivingEntity target,
+            SkillDamageSource source,
+            float amount,
+            boolean notifyCustomHurt
+    ) {
         if (DarkmatterTargeting.isNetworkMember(target)
                 && DarkmatterTargeting.isDarkmatterDamage(source)) return false;
         if (!(source.getEntity() instanceof ServerPlayer attacker)) return false;
@@ -56,9 +75,34 @@ public final class SkillDamageUtil {
             return false;
         }
         if (DamageTypes.usesVerifiedTrueHealth(source)) {
-            return new CTAEntityActuallyHurt(target).actuallyHurt(source, amount, true);
+            var handler = new CTAEntityActuallyHurt(target);
+            return notifyCustomHurt
+                    ? handler.actuallyHurt(source, amount, true)
+                    : handler.actuallyHurtFromHurtServer(source, amount, true);
         }
         return applyDirectWithFallback(level, attacker, target, source.getSkill(), source, amount);
+    }
+
+    /**
+     * Applies CTA/VEC through the verified authoritative-health route. Callers should use this
+     * instead of invoking {@code hurtServer} when the original amount must not be clipped by a
+     * custom entity override. The override still receives a non-mutating compatibility callback.
+     */
+    public static boolean applyVerifiedTrueHealth(
+            LivingEntity target,
+            DamageSource source,
+            float amount
+    ) {
+        if (target == null || source == null
+                || !(amount > 0.0f) || !Float.isFinite(amount)
+                || !target.isAlive()) return false;
+        if (!DamageTypes.usesVerifiedTrueHealth(source)) return false;
+        if (!(target.level() instanceof ServerLevel)) return false;
+        if (source.getEntity() == target || source.getDirectEntity() == target) return false;
+        var attacker = PvpSetting.resolveAttacker(source);
+        if (attacker != null && PvpSetting.shouldPrevent(attacker, target)) return false;
+        if (DamageTypes.isImmunePlayer(target instanceof Player player ? player : null)) return false;
+        return new CTAEntityActuallyHurt(target).actuallyHurt(source, amount, true);
     }
 
     private static boolean applyDirectWithFallback(ServerLevel level, ServerPlayer attacker,
@@ -127,10 +171,14 @@ public final class SkillDamageUtil {
             boolean confirmedLethal,
             boolean checkDeathProtection
     ) {
+        var invoker = (LivingEntityDamageInvoker) target;
         if (attacker != null) {
             target.setLastHurtByPlayer(attacker, 100);
             target.setLastHurtByMob(attacker);
         }
+        invoker.academy$setLastHurt(originalAmount);
+        invoker.academy$setLastDamageSource(source);
+        invoker.academy$setLastDamageStamp(level.getGameTime());
         level.broadcastDamageEvent(target, source);
         if (attacker != null && skill != null) {
             PvpSetting.recordSkillDamage(attacker, target, inflictedAmount);
@@ -148,9 +196,49 @@ public final class SkillDamageUtil {
             );
         }
 
-        if (!confirmedLethal) return;
+        for (var effect : target.getActiveEffects()) {
+            try {
+                effect.onMobHurt(level, target, source, inflictedAmount);
+            } catch (Throwable error) {
+                AcademyCraft.getLogger().warn(
+                        "A direct-damage effect callback failed for {}",
+                        target.getStringUUID(),
+                        error
+                );
+            }
+        }
+
+        var completion = new DamageContainer(source, originalAmount);
+        completion.setNewDamage(inflictedAmount);
+        completion.captureInflictedDamage();
+        completion.setNewDamage(inflictedAmount);
+        completion.setPostAttackInvulnerabilityTicks(0);
+        completion.setShouldCauseSideEffects(false);
+        try {
+            target.onDamageTaken(completion);
+        } catch (Throwable error) {
+            AcademyCraft.getLogger().warn(
+                    "A direct-damage completion callback failed for {}",
+                    target.getStringUUID(),
+                    error
+            );
+        }
+
+        if (!confirmedLethal) {
+            invoker.academy$playHurtSound(source);
+            invoker.academy$playSecondaryHurtSound(source);
+            return;
+        }
+
         var protectedFromDeath = checkDeathProtection
-                && ((LivingEntityDamageInvoker) target).academy$checkTotemDeathProtection(source);
-        if (!protectedFromDeath) target.die(source);
+                && invoker.academy$checkTotemDeathProtection(source);
+        if (protectedFromDeath) return;
+
+        var deathSound = invoker.academy$getDeathSound();
+        if (deathSound != null) {
+            target.playSound(deathSound, invoker.academy$getSoundVolume(), target.getVoicePitch());
+        }
+        invoker.academy$playSecondaryHurtSound(source);
+        TrueDamageCompatibility.completeLethalDamage(level, target, source);
     }
 }
