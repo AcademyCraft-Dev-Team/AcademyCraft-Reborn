@@ -16,11 +16,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class PlayerControlProtocolTest {
     @Test
-    void activeTakeoverDoesNotExpireOnlyBecauseClientFramesAreSilent() {
-        assertFalse(PlayerControlSessionManager.shouldEndForMissingAppliedFrame(
-                false, 120L, 0L));
-        assertTrue(PlayerControlSessionManager.shouldEndForMissingAppliedFrame(
-                true, 20L, 0L));
+    void serverFallbackStartsWithoutSubjectHandshakeOrAfterAppliedFramesStall() {
+        assertFalse(PlayerControlSessionManager.shouldUseServerFallback(false, 2L, 1L));
+        assertTrue(PlayerControlSessionManager.shouldUseServerFallback(false, 3L, 1L));
+        assertFalse(PlayerControlSessionManager.shouldUseServerFallback(true, 3L, 1L));
+        assertTrue(PlayerControlSessionManager.shouldUseServerFallback(true, 4L, 1L));
     }
 
     @Test
