@@ -37,6 +37,7 @@ import java.util.stream.IntStream;
 
 public final class PrecisionOperationRuntime {
     public static final int PRIORITY = 200;
+    private static final Identifier CONTROL_SOURCE = AcademyCraft.academy("precision_operation");
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     private static final Map<UUID, ActiveContext[]> ACTIVE = new HashMap<>();
     private static long nextContextSequence;
@@ -302,18 +303,18 @@ public final class PrecisionOperationRuntime {
         try {
             switch (action.kind) {
                 case TARGET_MISIDENTIFICATION -> applyMisidentification(
-                        player, action.entities, action.entity, action.expiresAt,
+                        player, action.entities, action.entity, action.scopeId, action.expiresAt,
                         subjectHandles, subjectCosts);
                 case MENTAL_STUPOR -> applyDirective(
                         player, action.entities, new ControlDirective.FreezeAi(),
-                        PrecisionGraph.NodeKind.MENTAL_STUPOR, action.expiresAt,
+                        PrecisionGraph.NodeKind.MENTAL_STUPOR, action.scopeId, action.expiresAt,
                         subjectHandles, subjectCosts);
                 case IMPRESSION_MANIPULATION -> applyDirective(
                         player, action.entities, new ControlDirective.ImpressionAlliance(),
-                        PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, action.expiresAt,
+                        PrecisionGraph.NodeKind.IMPRESSION_MANIPULATION, action.scopeId, action.expiresAt,
                         subjectHandles, subjectCosts);
                 case PERCEPTION_MASK -> applyPerception(
-                        player, action.entities, action.entity, action.expiresAt,
+                        player, action.entities, action.entity, action.scopeId, action.expiresAt,
                         subjectHandles, subjectCosts);
                 case START_INTRUSION -> {
                     intrusionSession = MentalIntrusionManager.startPrecision(
@@ -333,15 +334,15 @@ public final class PrecisionOperationRuntime {
                 }
                 case PATH_TO -> applyDirective(
                         player, action.entities, new ControlDirective.MoveTo(action.destination),
-                        PrecisionGraph.NodeKind.PATH_TO, action.expiresAt,
+                        PrecisionGraph.NodeKind.PATH_TO, action.scopeId, action.expiresAt,
                         subjectHandles, subjectCosts);
                 case VIEW_CONTROL -> applyDirective(
                         player, action.entities, new ControlDirective.LookAt(action.entity.getUUID()),
-                        PrecisionGraph.NodeKind.VIEW_CONTROL, action.expiresAt,
+                        PrecisionGraph.NodeKind.VIEW_CONTROL, action.scopeId, action.expiresAt,
                         subjectHandles, subjectCosts);
                 case GUARD_MODE -> applyDirective(
                         player, action.entities, new ControlDirective.Guard(action.destination),
-                        PrecisionGraph.NodeKind.GUARD_MODE, action.expiresAt,
+                        PrecisionGraph.NodeKind.GUARD_MODE, action.scopeId, action.expiresAt,
                         subjectHandles, subjectCosts);
             }
         } catch (RuntimeException exception) {
@@ -1645,6 +1646,7 @@ public final class PrecisionOperationRuntime {
             List<LivingEntity> subjects,
             ControlDirective directive,
             PrecisionGraph.NodeKind kind,
+            UUID scopeId,
             long expiresAt,
             Map<UUID, List<AutoCloseable>> subjectHandles,
             Map<UUID, Float> subjectCosts
@@ -1660,7 +1662,8 @@ public final class PrecisionOperationRuntime {
             var handle = MentalControlApi.apply(new ControlRequest(
                     player,
                     subject,
-                    Skills.WIDE_AREA_INTERFERENCE.get().getKey(),
+                    CONTROL_SOURCE,
+                    scopeId,
                     PRIORITY,
                     expiresAt,
                     List.of(directive)
@@ -1674,6 +1677,7 @@ public final class PrecisionOperationRuntime {
             ServerPlayer player,
             List<LivingEntity> subjects,
             LivingEntity target,
+            UUID scopeId,
             long expiresAt,
             Map<UUID, List<AutoCloseable>> subjectHandles,
             Map<UUID, Float> subjectCosts
@@ -1684,6 +1688,7 @@ public final class PrecisionOperationRuntime {
                     List.of(subject),
                     new ControlDirective.ForceTarget(target.getUUID()),
                     PrecisionGraph.NodeKind.TARGET_MISIDENTIFICATION,
+                    scopeId,
                     expiresAt,
                     subjectHandles,
                     subjectCosts
@@ -1727,6 +1732,7 @@ public final class PrecisionOperationRuntime {
             ServerPlayer player,
             List<LivingEntity> observers,
             LivingEntity hidden,
+            UUID scopeId,
             long expiresAt,
             Map<UUID, List<AutoCloseable>> subjectHandles,
             Map<UUID, Float> subjectCosts
@@ -1742,7 +1748,7 @@ public final class PrecisionOperationRuntime {
                     player,
                     observer,
                     hidden,
-                    Skills.WIDE_AREA_INTERFERENCE.get().getKey(),
+                    CONTROL_SOURCE,
                     PRIORITY,
                     expiresAt
             );
@@ -1994,13 +2000,14 @@ public final class PrecisionOperationRuntime {
     private record PendingAction(
             int nodeId,
             PrecisionGraph.NodeKind kind,
+            UUID scopeId,
             List<LivingEntity> entities,
             LivingEntity entity,
             ControlDestination destination,
             long expiresAt
     ) {
         private static PendingAction empty(int nodeId, PrecisionGraph.NodeKind kind, long expiresAt) {
-            return new PendingAction(nodeId, kind, List.of(), null, null, expiresAt);
+            return new PendingAction(nodeId, kind, UUID.randomUUID(), List.of(), null, null, expiresAt);
         }
 
         private static PendingAction withSet(
@@ -2009,7 +2016,8 @@ public final class PrecisionOperationRuntime {
                 List<LivingEntity> entities,
                 long expiresAt
         ) {
-            return new PendingAction(nodeId, kind, List.copyOf(entities), null, null, expiresAt);
+            return new PendingAction(
+                    nodeId, kind, UUID.randomUUID(), List.copyOf(entities), null, null, expiresAt);
         }
 
         private static PendingAction withEntity(
@@ -2018,7 +2026,8 @@ public final class PrecisionOperationRuntime {
                 LivingEntity entity,
                 long expiresAt
         ) {
-            return new PendingAction(nodeId, kind, List.of(), entity, null, expiresAt);
+            return new PendingAction(
+                    nodeId, kind, UUID.randomUUID(), List.of(), entity, null, expiresAt);
         }
 
         private static PendingAction withBoth(
@@ -2028,7 +2037,8 @@ public final class PrecisionOperationRuntime {
                 LivingEntity entity,
                 long expiresAt
         ) {
-            return new PendingAction(nodeId, kind, List.copyOf(entities), entity, null, expiresAt);
+            return new PendingAction(
+                    nodeId, kind, UUID.randomUUID(), List.copyOf(entities), entity, null, expiresAt);
         }
 
         private static PendingAction withDestination(
@@ -2038,7 +2048,8 @@ public final class PrecisionOperationRuntime {
                 ControlDestination destination,
                 long expiresAt
         ) {
-            return new PendingAction(nodeId, kind, List.copyOf(entities), null, destination, expiresAt);
+            return new PendingAction(
+                    nodeId, kind, UUID.randomUUID(), List.copyOf(entities), null, destination, expiresAt);
         }
 
         private Set<UUID> dependencyIds() {

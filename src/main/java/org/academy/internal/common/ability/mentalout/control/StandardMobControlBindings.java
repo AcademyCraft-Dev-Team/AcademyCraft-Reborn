@@ -3,14 +3,20 @@ package org.academy.internal.common.ability.mentalout.control;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.Ghast;
+import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.monster.Vex;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -26,6 +32,7 @@ final class StandardMobControlBindings {
 
     static ControlBinding create(ControlContext context, Mob mob, ControlDirective directive) {
         return switch (directive) {
+            case ControlDirective.TakeoverAi ignored -> ControlBinding.noop();
             case ControlDirective.ForceTarget forceTarget -> new ForceTargetBinding(mob, forceTarget.targetUuid());
             case ControlDirective.FreezeAi ignored -> new FreezeBinding(mob);
             case ControlDirective.ImpressionAlliance ignored -> new RelationBinding(mob);
@@ -64,16 +71,164 @@ final class StandardMobControlBindings {
         FAILED
     }
 
-    private record ForceTargetBinding(Mob mob, UUID targetId) implements ControlBinding {
+    /**
+     * Generic forced-combat fallback for vanilla and third-party {@link Mob} subclasses.
+     * It deliberately does not consult the subject's overridable target predicates: the public
+     * control policy has already validated and authorized the target. Adapter-specific AI remains
+     * free to attack first; its successful attacks postpone this fallback to avoid double hits.
+     */
+    private static final class ForceTargetBinding implements ControlBinding {
+        private static final int FALLBACK_GRACE_TICKS = 2;
+        private static final int ATTACK_INTERVAL_TICKS = 20;
+        private static final double MAX_RANGED_ATTACK_DISTANCE = 16.0;
+
+        private final Mob mob;
+        private final UUID targetId;
+        private final DestinationNavigator navigator;
+        private LivingEntity target;
+        private ResolvedDestination destination;
+        private long nextFallbackAttackTime;
+        private int lastObservedAttackTimestamp;
+        private boolean rangedFallbackDisabled;
+
+        private ForceTargetBinding(Mob mob, UUID targetId) {
+            this.mob = mob;
+            this.targetId = targetId;
+            navigator = new DestinationNavigator(mob, 1.0);
+            nextFallbackAttackTime = mob.level().getGameTime() + FALLBACK_GRACE_TICKS;
+            lastObservedAttackTimestamp = mob.getLastHurtMobTimestamp();
+        }
 
         @Override
         public void tick() {
-            if (!mob.isAlive() || mob.isRemoved()) return;
+            if (!mob.isAlive() || mob.isRemoved()) {
+                navigator.stop();
+                return;
+            }
+            var forcedTarget = MentalControlRuntime.getForcedTarget(mob);
+            if (forcedTarget == null || !forcedTarget.getUUID().equals(targetId)) {
+                target = null;
+                destination = null;
+                navigator.stop();
+                return;
+            }
+            target = forcedTarget;
+            destination = new ResolvedDestination(target.position(), target);
             MentalControlRuntime.maintainTarget(mob);
+            reassertCombatIntent();
+            observeAdapterAttack();
+
+            if (!canExecuteCombat()) {
+                navigator.stop();
+                return;
+            }
+            if (isInAttackPosition()) {
+                navigator.stop();
+                attackIfReady();
+            } else {
+                navigator.advance(destination, 1.1, true);
+            }
+        }
+
+        @Override
+        public void beforeNavigationTick() {
+            if (!canExecuteCombat() || destination == null || isInAttackPosition()) return;
+            navigator.advance(destination, 1.1, true);
+        }
+
+        @Override
+        public void beforeMoveControlTick() {
+            if (!canExecuteCombat() || destination == null || isInAttackPosition()) return;
+            navigator.reassert(destination, 1.1, true);
+            reassertCombatIntent();
+        }
+
+        @Override
+        public void beforeLookControlTick() {
+            reassertCombatIntent();
+        }
+
+        private boolean canExecuteCombat() {
+            if (target == null || !target.isAlive() || target.isRemoved()
+                    || target.level() != mob.level() || MentalControlRuntime.isFrozen(mob)) return false;
+            // A separately arbitrated movement/action command keeps ownership. Target policy is
+            // still maintained, but its generic combat fallback must not steal that executor.
+            return MentalControlRuntime.effectiveDirective(mob, ControlCapability.PATH_CONTROL).isEmpty()
+                    && MentalControlRuntime.effectiveDirective(mob, ControlCapability.DIRECT_CONTROL).isEmpty()
+                    && MentalControlRuntime.effectiveDirective(mob, ControlCapability.GUARD_CONTROL).isEmpty();
+        }
+
+        private boolean isInAttackPosition() {
+            if (target == null || !hasClearAttackLine()) return false;
+            if (mob instanceof RangedAttackMob && !rangedFallbackDisabled) {
+                return mob.distanceToSqr(target)
+                        <= MAX_RANGED_ATTACK_DISTANCE * MAX_RANGED_ATTACK_DISTANCE;
+            }
+            return mob.isWithinMeleeAttackRange(target);
+        }
+
+        private boolean hasClearAttackLine() {
+            var hit = mob.level().clip(new ClipContext(
+                    mob.getEyePosition(),
+                    target.getEyePosition(),
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    mob
+            ));
+            return hit.getType() == HitResult.Type.MISS;
+        }
+
+        private void observeAdapterAttack() {
+            var timestamp = mob.getLastHurtMobTimestamp();
+            if (timestamp == lastObservedAttackTimestamp) return;
+            lastObservedAttackTimestamp = timestamp;
+            if (mob.getLastHurtMob() == target) {
+                nextFallbackAttackTime = Math.max(
+                        nextFallbackAttackTime,
+                        mob.level().getGameTime() + ATTACK_INTERVAL_TICKS
+                );
+            }
+        }
+
+        private void attackIfReady() {
+            var gameTime = mob.level().getGameTime();
+            if (gameTime < nextFallbackAttackTime
+                    || !(mob.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+
+            var attacked = false;
+            if (mob instanceof RangedAttackMob ranged && !rangedFallbackDisabled) {
+                try {
+                    ranged.performRangedAttack(target, 1.0F);
+                    attacked = true;
+                } catch (RuntimeException exception) {
+                    rangedFallbackDisabled = true;
+                    AcademyCraft.LOGGER.debug(
+                            "Forced-combat ranged fallback is unavailable for {}; using melee",
+                            mob.getType(),
+                            exception
+                    );
+                }
+            }
+            if (!attacked && mob.isWithinMeleeAttackRange(target)) {
+                mob.swing(InteractionHand.MAIN_HAND, true);
+                mob.doHurtTarget(level, target);
+                attacked = true;
+            }
+            lastObservedAttackTimestamp = mob.getLastHurtMobTimestamp();
+            nextFallbackAttackTime = gameTime + (attacked
+                    ? ATTACK_INTERVAL_TICKS
+                    : FALLBACK_GRACE_TICKS);
+        }
+
+        private void reassertCombatIntent() {
+            if (target == null || !target.isAlive() || target.isRemoved()) return;
+            mob.setAggressive(true);
+            mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
         }
 
         @Override
         public void close() {
+            navigator.stop();
             if (!(mob instanceof MentalControlMobAccess access)) return;
             var current = access.academy$getRawMentalControlTarget();
             if (current != null && current.getUUID().equals(targetId)
@@ -85,6 +240,7 @@ final class StandardMobControlBindings {
                     && MentalControlRuntime.getForcedTarget(mob) == null) {
                 mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
             }
+            if (MentalControlRuntime.getForcedTarget(mob) == null) mob.setAggressive(false);
         }
     }
 
@@ -127,6 +283,7 @@ final class StandardMobControlBindings {
         private ResolvedDestination target;
         private boolean complete;
         private ControlFailureReason failureReason;
+        private int invalidDestinationTicks;
 
         private PathBinding(Mob mob, ControlDestination destination, double arrivalRadius) {
             this.mob = mob;
@@ -147,6 +304,20 @@ final class StandardMobControlBindings {
             if (mob.position().distanceToSqr(target.position()) <= arrivalRadiusSqr) {
                 complete = true;
                 navigator.stop();
+                return;
+            }
+            if (target.entity() == null && !navigator.canOccupyTarget(target.position())) {
+                if (++invalidDestinationTicks >= 10) {
+                    fail(ControlFailureReason.UNREACHABLE_DESTINATION);
+                }
+                return;
+            }
+            invalidDestinationTicks = 0;
+            switch (navigator.advance(target, 1.0, false)) {
+                case ARRIVED -> complete = true;
+                case FAILED -> fail(ControlFailureReason.UNREACHABLE_DESTINATION);
+                case MOVING -> {
+                }
             }
         }
 
@@ -248,6 +419,7 @@ final class StandardMobControlBindings {
                 if (mob.getTarget() != threat) mob.setTarget(threat);
                 mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, threat);
                 desired = new ResolvedDestination(threat.position(), threat);
+                advanceDesired();
                 return;
             }
 
@@ -258,6 +430,17 @@ final class StandardMobControlBindings {
                 return;
             }
             desired = anchor;
+            advanceDesired();
+        }
+
+        private void advanceDesired() {
+            if (complete || desired == null) return;
+            var result = navigator.advance(desired, threat == null ? 1.0 : 1.1, threat != null);
+            if (result == NavigationResult.FAILED) {
+                failureReason = ControlFailureReason.UNREACHABLE_DESTINATION;
+                complete = true;
+                clearThreat();
+            }
         }
 
         @Override
@@ -387,11 +570,14 @@ final class StandardMobControlBindings {
     }
 
     private static final class DestinationNavigator {
-        private static final int REPATH_INTERVAL_TICKS = 10;
-        private static final int DYNAMIC_REPATH_INTERVAL_TICKS = 10;
-        private static final int MAX_CONSECUTIVE_FAILURES = 3;
-        private static final double MAX_DIRECT_APPROACH_DISTANCE = 3.25;
+        private static final int REPATH_INTERVAL_TICKS = 2;
+        private static final int DYNAMIC_REPATH_INTERVAL_TICKS = 4;
+        private static final int NO_PROGRESS_TIMEOUT_TICKS = 160;
+        private static final int STALLED_PATH_REPLAN_TICKS = 20;
+        private static final int INVALID_DESTINATION_GRACE_TICKS = 10;
+        private static final double MAX_DIRECT_APPROACH_DISTANCE = 8.0;
         private static final double DIRECT_COLLISION_SAMPLE_STEP = 0.25;
+        private static final double DIRECT_STEP = 0.12;
 
         private final Mob mob;
         private final int reachRange;
@@ -403,7 +589,8 @@ final class StandardMobControlBindings {
         private long nextDynamicPathRefreshTime;
         private long nextDirectProgressCheckTime;
         private long lastAdvanceTime = Long.MIN_VALUE;
-        private int consecutiveFailures;
+        private long lastProgressTime;
+        private double bestDistanceSqr = Double.MAX_VALUE;
         private double lastDirectDistanceSqr = Double.NaN;
         private Vec3 lastDirectPosition;
         private boolean directApproach;
@@ -444,12 +631,15 @@ final class StandardMobControlBindings {
                 requestedEntity = targetEntity;
                 activePath = null;
                 directApproach = false;
-                consecutiveFailures = 0;
+                lastProgressTime = gameTime;
+                bestDistanceSqr = mob.position().distanceToSqr(target.position());
                 nextPathAttemptTime = gameTime;
                 nextDynamicPathRefreshTime = gameTime + DYNAMIC_REPATH_INTERVAL_TICKS;
                 lastDirectDistanceSqr = Double.NaN;
                 lastDirectPosition = null;
             }
+
+            recordProgress(target, gameTime);
 
             if (usesDirectMovement()) return advanceDirect(target, speed);
 
@@ -466,10 +656,19 @@ final class StandardMobControlBindings {
             }
             if (activePath != null && !activePath.isDone()) {
                 directApproach = false;
+                if (gameTime - lastProgressTime >= STALLED_PATH_REPLAN_TICKS) {
+                    navigation.stop();
+                    activePath = null;
+                    nextPathAttemptTime = gameTime;
+                    if (isCubeMob() || hasClearDirectApproach(target.position())) {
+                        return advanceDirect(target, speed);
+                    }
+                }
+            }
+            if (activePath != null && !activePath.isDone()) {
                 if (navigation.getPath() == activePath) {
                     lastDirectDistanceSqr = Double.NaN;
                     lastDirectPosition = null;
-                    consecutiveFailures = 0;
                     reinforceSpecialMovement(target, speed, aggressive);
                     return NavigationResult.MOVING;
                 }
@@ -477,7 +676,6 @@ final class StandardMobControlBindings {
                 if (navigation.moveTo(activePath, speed)) {
                     lastDirectDistanceSqr = Double.NaN;
                     lastDirectPosition = null;
-                    consecutiveFailures = 0;
                     reinforceSpecialMovement(target, speed, aggressive);
                     return NavigationResult.MOVING;
                 }
@@ -496,7 +694,9 @@ final class StandardMobControlBindings {
             if (target.entity() == null && !canOccupy(target.position())) {
                 activePath = null;
                 nextPathAttemptTime = gameTime + REPATH_INTERVAL_TICKS;
-                return recordFailure();
+                return gameTime - lastProgressTime >= INVALID_DESTINATION_GRACE_TICKS
+                        ? NavigationResult.FAILED
+                        : NavigationResult.MOVING;
             }
 
             activePath = target.entity() != null
@@ -521,7 +721,6 @@ final class StandardMobControlBindings {
                 return recordFailure();
             }
             directApproach = false;
-            consecutiveFailures = 0;
             reinforceSpecialMovement(target, speed, aggressive);
             return NavigationResult.MOVING;
         }
@@ -530,6 +729,8 @@ final class StandardMobControlBindings {
             directApproach = true;
             mob.getNavigation().stop();
             applyDirectMovement(target, speed);
+            advanceDirectPosition(target.position(), speed);
+            recordProgress(target, mob.level().getGameTime());
 
             var distanceSqr = mob.position().distanceToSqr(target.position());
             if (!Double.isFinite(lastDirectDistanceSqr)) {
@@ -547,7 +748,7 @@ final class StandardMobControlBindings {
             if (distanceSqr < lastDirectDistanceSqr - 0.01
                     || lastDirectPosition == null
                     || position.distanceToSqr(lastDirectPosition) > 0.04) {
-                consecutiveFailures = 0;
+                recordProgress(target, mob.level().getGameTime());
             } else if (recordFailure() == NavigationResult.FAILED) {
                 stop();
                 return NavigationResult.FAILED;
@@ -569,6 +770,16 @@ final class StandardMobControlBindings {
                         target.position().z,
                         speed
                 );
+            }
+        }
+
+        private void advanceDirectPosition(Vec3 destination, double speed) {
+            var delta = destination.subtract(mob.position());
+            var distance = delta.length();
+            if (distance <= 1.0E-6) return;
+            var step = delta.scale(Math.min(distance, DIRECT_STEP * speed) / distance);
+            if (mob.level().noCollision(mob, mob.getBoundingBox().move(step))) {
+                mob.move(MoverType.SELF, step);
             }
         }
 
@@ -612,6 +823,10 @@ final class StandardMobControlBindings {
         private boolean canOccupy(Vec3 position) {
             var offset = position.subtract(mob.position());
             return mob.level().noCollision(mob, mob.getBoundingBox().move(offset));
+        }
+
+        private boolean canOccupyTarget(Vec3 position) {
+            return canOccupy(position);
         }
 
         private boolean hasClearDirectApproach(Vec3 position) {
@@ -685,10 +900,17 @@ final class StandardMobControlBindings {
         }
 
         private NavigationResult recordFailure() {
-            consecutiveFailures++;
-            return consecutiveFailures >= MAX_CONSECUTIVE_FAILURES
+            return mob.level().getGameTime() - lastProgressTime >= NO_PROGRESS_TIMEOUT_TICKS
                     ? NavigationResult.FAILED
                     : NavigationResult.MOVING;
+        }
+
+        private void recordProgress(ResolvedDestination target, long gameTime) {
+            var distanceSqr = mob.position().distanceToSqr(target.position());
+            if (distanceSqr < bestDistanceSqr - 0.01) {
+                bestDistanceSqr = distanceSqr;
+                lastProgressTime = gameTime;
+            }
         }
     }
 }

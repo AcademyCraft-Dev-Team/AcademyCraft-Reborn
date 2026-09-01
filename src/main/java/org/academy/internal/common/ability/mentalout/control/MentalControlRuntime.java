@@ -107,6 +107,7 @@ public final class MentalControlRuntime {
                     controller.getUUID(),
                     subject.getUUID(),
                     request.source(),
+                    request.scopeId(),
                     request.priority(),
                     request.expiresAt(),
                     controller.level().dimension().identifier(),
@@ -116,7 +117,8 @@ public final class MentalControlRuntime {
                     guardianRelationLeaseId
             );
             var snapshot = state.leases.snapshotState();
-            leaseId = state.leases.add(input);
+            var addition = state.leases.addWithRemoval(input);
+            leaseId = addition.leaseId();
             var invalidGuards = state.leases.removeInvalidImpressionGuards(
                     Set.of(subject.getUUID()),
                     now
@@ -136,7 +138,10 @@ public final class MentalControlRuntime {
                         failure.getCause()
                 );
             }
-            reconcileTargets(server, state, invalidGuards);
+            recordTerminalStates(
+                    state, addition.replacement().leaseIds(), ControlState.CANCELLED);
+            addition.replacement().merge(invalidGuards);
+            reconcileTargets(server, state, addition.replacement());
         }
         if (subject instanceof Mob mob && directives.containsKey(ControlDomain.TARGET)) {
             maintainTarget(mob);
@@ -145,7 +150,7 @@ public final class MentalControlRuntime {
             enforceTargetWhitelist(mob);
         }
         MentalControlMemory.remember(controller, subject);
-        var handle = new RuntimeHandle(server, leaseId);
+        var handle = new RuntimeHandle(server, leaseId, Set.copyOf(directives.keySet()));
         synchronized (state) {
             state.handles.put(leaseId, new WeakReference<>(handle));
         }
@@ -211,6 +216,7 @@ public final class MentalControlRuntime {
                 effective.leaseId(),
                 effective.controllerId(),
                 effective.source(),
+                effective.scopeId(),
                 effective.priority(),
                 effective.expiresAt(),
                 effective.directive()
@@ -222,6 +228,15 @@ public final class MentalControlRuntime {
             ControlCapability capability
     ) {
         return inspect(subject, capability).map(ControlInspection::directive);
+    }
+
+    public static ControlSnapshot snapshot(LivingEntity subject) {
+        Objects.requireNonNull(subject, "subject");
+        var controls = new EnumMap<ControlCapability, ControlInspection>(ControlCapability.class);
+        for (var capability : ControlCapability.values()) {
+            inspect(subject, capability).ifPresent(value -> controls.put(capability, value));
+        }
+        return new ControlSnapshot(subject.getUUID(), subject.level().getGameTime(), controls);
     }
 
 
@@ -246,6 +261,17 @@ public final class MentalControlRuntime {
         return state != null && state.leases.isFrozen(subject.getUUID(), subject.level().getGameTime());
     }
 
+    /** Returns whether a control session currently owns autonomous AI execution. */
+    public static boolean hasAiTakeover(LivingEntity subject) {
+        Objects.requireNonNull(subject, "subject");
+        var state = stateIfPresent(subject.level().getServer());
+        return state != null && state.leases.effective(
+                subject.getUUID(),
+                ControlCapability.AI_CONTROL,
+                subject.level().getGameTime()
+        ) != null;
+    }
+
     /**
      * Returns whether vanilla target acquisition must yield to an explicit mental-control policy.
      * Relation control keeps the normal goal selector available for permitted retaliation; its
@@ -256,7 +282,8 @@ public final class MentalControlRuntime {
         var state = stateIfPresent(subject.level().getServer());
         if (state == null) return false;
         var now = subject.level().getGameTime();
-        return state.leases.effective(subject.getUUID(), ControlCapability.FORCE_TARGET, now) != null
+        return state.leases.effective(subject.getUUID(), ControlCapability.AI_CONTROL, now) != null
+                || state.leases.effective(subject.getUUID(), ControlCapability.FORCE_TARGET, now) != null
                 || state.leases.effective(subject.getUUID(), ControlCapability.PATH_CONTROL, now) != null
                 || state.leases.effective(subject.getUUID(), ControlCapability.DIRECT_CONTROL, now) != null
                 || state.leases.effective(subject.getUUID(), ControlCapability.GUARD_CONTROL, now) != null
@@ -274,15 +301,15 @@ public final class MentalControlRuntime {
         if (state == null) return false;
         var now = subject.level().getGameTime();
         return state.leases.effective(
+                subject.getUUID(), ControlCapability.AI_CONTROL, now) != null
+                || state.leases.effective(
                 subject.getUUID(), ControlCapability.PATH_CONTROL, now) != null
                 || state.leases.effective(
                 subject.getUUID(), ControlCapability.DIRECT_CONTROL, now) != null;
     }
 
     public static boolean suppressesAutonomousBrain(Mob subject) {
-        var state = stateIfPresent(subject.level().getServer());
-        if (state == null) return false;
-        var now = subject.level().getGameTime();
+        if (hasAiTakeover(subject)) return true;
         var hasExclusivePolicy = suppressesAutonomousTargeting(subject);
         if (!hasExclusivePolicy) return false;
         var explicitTarget = getForcedTarget(subject);
@@ -378,6 +405,14 @@ public final class MentalControlRuntime {
                     : AttackDecision.PASS;
         }
         var now = attacker.level().getGameTime();
+        var takeover = state.leases.effective(
+                attacker.getUUID(), ControlCapability.AI_CONTROL, now);
+        if (takeover != null
+                && state.leases.forcedTarget(attacker.getUUID(), now) == null
+                && state.leases.effective(
+                        attacker.getUUID(), ControlCapability.GUARD_CONTROL, now) == null) {
+            return AttackDecision.DENY;
+        }
         for (var capability : List.of(
                 ControlCapability.DIRECT_CONTROL,
                 ControlCapability.FORCE_TARGET,
@@ -543,7 +578,8 @@ public final class MentalControlRuntime {
         if (forcedTarget != null) {
             return targetId.equals(forcedTarget) ? AttackDecision.ALLOW : AttackDecision.DENY;
         }
-        if (leases.effective(attackerId, ControlCapability.PATH_CONTROL, now) != null
+        if (leases.effective(attackerId, ControlCapability.AI_CONTROL, now) != null
+                || leases.effective(attackerId, ControlCapability.PATH_CONTROL, now) != null
                 || leases.effective(attackerId, ControlCapability.FREEZE_AI, now) != null) {
             return AttackDecision.DENY;
         }
@@ -675,12 +711,14 @@ public final class MentalControlRuntime {
 
     public static void enforceTargetWhitelist(Mob mob) {
         var state = stateIfPresent(mob.level().getServer());
-        if (state == null) return;
+        var hasExclusiveWorkOrder = hasAiTakeover(mob);
+        var suppressesAutonomousTargeting = suppressesAutonomousTargeting(mob);
+        if (state == null && !suppressesAutonomousTargeting) return;
         var now = mob.level().getGameTime();
         var forcedTarget = getForcedTarget(mob);
         var guardTarget = getGuardTarget(mob);
         var commandedTarget = forcedTarget != null ? forcedTarget : guardTarget;
-        if (suppressesAutonomousTargeting(mob)) {
+        if (suppressesAutonomousTargeting) {
             enforceAngerWhitelist(mob);
             if (commandedTarget != null) {
                 if (getRawTarget(mob) != commandedTarget) mob.setTarget(commandedTarget);
@@ -691,6 +729,12 @@ public final class MentalControlRuntime {
                 mob.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
             }
         }
+        if (hasExclusiveWorkOrder) {
+            mob.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            mob.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
+            mob.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        }
+        if (state == null) return;
         var relation = state.leases.effective(
                 mob.getUUID(),
                 ControlCapability.RELATION_CONTROL,
@@ -776,6 +820,7 @@ public final class MentalControlRuntime {
             // ServerTickEvent.Pre runs immediately before levels advance their game time.
             var effectiveNow = now + 1L;
             var removal = state.leases.expire(effectiveNow);
+            recordTerminalStates(state, removal.leaseIds(), ControlState.EXPIRED);
             state.targetWhitelist.expire(effectiveNow);
             var invalidLeaseIds = new HashSet<UUID>();
             var unavailableTargetLeaseIds = new HashSet<UUID>();
@@ -814,7 +859,9 @@ public final class MentalControlRuntime {
                 }
             }
             recordFailures(state, unavailableTargetLeaseIds, ControlFailureReason.TARGET_UNAVAILABLE);
-            removal.merge(state.leases.removeAll(invalidLeaseIds));
+            var invalid = state.leases.removeAll(invalidLeaseIds);
+            recordTerminalStates(state, invalid.leaseIds(), ControlState.CANCELLED);
+            removal.merge(invalid);
             reconcileRecovering(server, state, removal);
 
             var failedBindings = new HashSet<UUID>();
@@ -871,6 +918,7 @@ public final class MentalControlRuntime {
                             recordFailure(state, active.leaseId(), reason));
                 }
                 var completed = state.leases.removeAll(completedLeases);
+                recordTerminalStates(state, completed.leaseIds(), ControlState.COMPLETED);
                 reconcileRecovering(server, state, completed);
             }
 
@@ -971,6 +1019,7 @@ public final class MentalControlRuntime {
         synchronized (state) {
             state.targetWhitelist.releaseEntity(controllerId);
             var removal = state.leases.removeByController(controllerId);
+            recordTerminalStates(state, removal.leaseIds(), ControlState.CANCELLED);
             reconcileRecovering(server, state, removal);
         }
         removeEmptyState(server, state);
@@ -991,6 +1040,7 @@ public final class MentalControlRuntime {
             state.guardTargets.remove(subjectId);
             state.guardTargets.entrySet().removeIf(entry -> entry.getValue().equals(subjectId));
             var removal = state.leases.removeBySubject(subjectId);
+            recordTerminalStates(state, removal.leaseIds(), ControlState.CANCELLED);
             reconcileRecovering(server, state, removal);
         }
         removeEmptyState(server, state);
@@ -1011,6 +1061,7 @@ public final class MentalControlRuntime {
         if (state == null) return;
         synchronized (state) {
             var removal = state.leases.removeByControllerSourceSubject(controllerId, source, subjectId);
+            recordTerminalStates(state, removal.leaseIds(), ControlState.CANCELLED);
             reconcileRecovering(server, state, removal);
         }
         removeEmptyState(server, state);
@@ -1025,6 +1076,7 @@ public final class MentalControlRuntime {
         if (state == null) return;
         synchronized (state) {
             var removal = state.leases.clear();
+            recordTerminalStates(state, removal.leaseIds(), ControlState.CANCELLED);
             closeAllBindings(state);
             reconcileTargets(server, state, removal);
         }
@@ -1226,6 +1278,7 @@ public final class MentalControlRuntime {
         if (state == null) return;
         synchronized (state) {
             var removal = state.leases.removePlayerInputBySubject(subjectId);
+            recordTerminalStates(state, removal.leaseIds(), ControlState.CANCELLED);
             reconcileRecovering(server, state, removal);
         }
         removeEmptyState(server, state);
@@ -1313,6 +1366,18 @@ public final class MentalControlRuntime {
         if (handle != null) handle.recordFailure(reason);
     }
 
+    private static void recordTerminalStates(
+            ServerState state,
+            Iterable<UUID> leaseIds,
+            ControlState terminalState
+    ) {
+        for (var leaseId : leaseIds) {
+            var reference = state.handles.get(leaseId);
+            var handle = reference == null ? null : reference.get();
+            if (handle != null) handle.recordTerminal(terminalState);
+        }
+    }
+
     private static void reconcileRecovering(
             MinecraftServer server,
             ServerState state,
@@ -1335,6 +1400,7 @@ public final class MentalControlRuntime {
                         failure.leaseId(),
                         failure.getCause()
                 );
+                recordFailure(state, failure.leaseId(), ControlFailureReason.ADAPTER_ERROR);
                 var failed = state.leases.remove(failure.leaseId());
                 removal.merge(failed);
                 pending.addAll(failed.subjects());
@@ -1385,6 +1451,7 @@ public final class MentalControlRuntime {
                     controller,
                     subject,
                     effective.source(),
+                    effective.scopeId(),
                     effective.priority(),
                     effective.expiresAt()
             );
@@ -1655,12 +1722,15 @@ public final class MentalControlRuntime {
     private static final class RuntimeHandle implements ControlHandle {
         private final WeakReference<MinecraftServer> server;
         private final UUID id;
+        private final Set<ControlDomain> requestedDomains;
         private final AtomicBoolean closed = new AtomicBoolean();
         private volatile ControlFailureReason failureReason;
+        private volatile ControlState terminalState;
 
-        private RuntimeHandle(MinecraftServer server, UUID id) {
+        private RuntimeHandle(MinecraftServer server, UUID id, Set<ControlDomain> requestedDomains) {
             this.server = new WeakReference<>(server);
             this.id = id;
+            this.requestedDomains = Set.copyOf(requestedDomains);
         }
 
         @Override
@@ -1670,8 +1740,40 @@ public final class MentalControlRuntime {
 
         @Override
         public boolean isClosed() {
+            return state().isTerminal();
+        }
+
+        @Override
+        public ControlState state() {
+            var terminal = terminalState;
+            if (terminal != null) return terminal;
             var currentServer = server.get();
-            return closed.get() || currentServer == null || !isLeaseActive(currentServer, id);
+            if (currentServer == null) return ControlState.CANCELLED;
+            var state = stateIfPresent(currentServer);
+            if (state == null) return ControlState.CANCELLED;
+            synchronized (state) {
+                if (!state.leases.isActive(id)) {
+                    terminal = terminalState;
+                    return terminal != null ? terminal : ControlState.CANCELLED;
+                }
+                var effective = state.leases.effectiveDomains(
+                        id, currentServer.overworld().getGameTime());
+                return effective.containsAll(requestedDomains)
+                        ? ControlState.ACTIVE
+                        : ControlState.PREEMPTED;
+            }
+        }
+
+        @Override
+        public Set<ControlDomain> effectiveDomains() {
+            if (terminalState != null) return Set.of();
+            var currentServer = server.get();
+            var state = currentServer == null ? null : stateIfPresent(currentServer);
+            if (state == null) return Set.of();
+            synchronized (state) {
+                return state.leases.effectiveDomains(
+                        id, currentServer.overworld().getGameTime());
+            }
         }
 
         @Override
@@ -1681,11 +1783,18 @@ public final class MentalControlRuntime {
 
         private void recordFailure(ControlFailureReason reason) {
             if (failureReason == null) failureReason = reason;
+            terminalState = ControlState.FAILED;
+        }
+
+        private void recordTerminal(ControlState state) {
+            if (!state.isTerminal()) throw new IllegalArgumentException("State must be terminal");
+            if (terminalState == null) terminalState = state;
         }
 
         @Override
         public void close() {
             if (!closed.compareAndSet(false, true)) return;
+            recordTerminal(ControlState.CANCELLED);
             var currentServer = server.get();
             if (currentServer != null) releaseLease(currentServer, id);
         }
@@ -1695,6 +1804,7 @@ public final class MentalControlRuntime {
             UUID controllerId,
             UUID subjectId,
             Identifier source,
+            UUID scopeId,
             int priority,
             long expiresAt,
             Identifier controllerDimension,
@@ -1707,10 +1817,37 @@ public final class MentalControlRuntime {
             Objects.requireNonNull(controllerId, "controllerId");
             Objects.requireNonNull(subjectId, "subjectId");
             Objects.requireNonNull(source, "source");
+            Objects.requireNonNull(scopeId, "scopeId");
             Objects.requireNonNull(controllerDimension, "controllerDimension");
             Objects.requireNonNull(subjectDimension, "subjectDimension");
             directives = new EnumMap<>(Objects.requireNonNull(directives, "directives"));
             selections = Map.copyOf(Objects.requireNonNull(selections, "selections"));
+        }
+
+        LeaseInput(
+                UUID controllerId,
+                UUID subjectId,
+                Identifier source,
+                UUID scopeId,
+                int priority,
+                long expiresAt,
+                Identifier controllerDimension,
+                Identifier subjectDimension,
+                EnumMap<ControlDomain, ControlDirective> directives
+        ) {
+            this(
+                    controllerId,
+                    subjectId,
+                    source,
+                    scopeId,
+                    priority,
+                    expiresAt,
+                    controllerDimension,
+                    subjectDimension,
+                    directives,
+                    Map.of(),
+                    null
+            );
         }
 
         LeaseInput(
@@ -1727,6 +1864,7 @@ public final class MentalControlRuntime {
                     controllerId,
                     subjectId,
                     source,
+                    ControlRequest.DEFAULT_SCOPE,
                     priority,
                     expiresAt,
                     controllerDimension,
@@ -1752,6 +1890,7 @@ public final class MentalControlRuntime {
                     controllerId,
                     subjectId,
                     source,
+                    ControlRequest.DEFAULT_SCOPE,
                     priority,
                     expiresAt,
                     controllerDimension,
@@ -1768,6 +1907,7 @@ public final class MentalControlRuntime {
             UUID controllerId,
             UUID subjectId,
             Identifier source,
+            UUID scopeId,
             Identifier controllerDimension,
             Identifier subjectDimension,
             Set<UUID> referencedTargets,
@@ -1790,31 +1930,45 @@ public final class MentalControlRuntime {
         private long sequence;
 
         synchronized UUID add(LeaseInput input) {
+            return addWithRemoval(input).leaseId();
+        }
+
+        synchronized AddResult addWithRemoval(LeaseInput input) {
             var leaseId = UUID.randomUUID();
             var leaseSequence = ++sequence;
             var record = new LeaseRecord(leaseId, input, leaseSequence);
             leases.put(leaseId, record);
+            var replacement = new RemovalResult();
             var subject = subjects.computeIfAbsent(input.subjectId(), ignored -> new SubjectState());
             for (var entry : input.directives().entrySet()) {
                 var domainLease = new DomainLease(
                         leaseId,
                         input.controllerId(),
                         input.source(),
+                        input.scopeId(),
                         input.priority(),
                         leaseSequence,
                         input.expiresAt(),
                         entry.getValue()
                 );
                 var replaced = subject.domain(entry.getKey()).put(domainLease);
-                if (replaced != null) detach(replaced, entry.getKey());
+                if (replaced != null) detach(replaced, replacement);
                 record.entries().put(entry.getKey(), domainLease);
             }
             expirations.add(new ExpiryEntry(input.expiresAt(), leaseSequence, leaseId));
-            return leaseId;
+            return new AddResult(leaseId, replacement);
         }
 
         synchronized boolean isActive(UUID leaseId) {
             return leases.containsKey(leaseId);
+        }
+
+        synchronized Set<ControlDomain> effectiveDomains(UUID leaseId, long now) {
+            var record = leases.get(leaseId);
+            if (record == null || !effectiveLeaseIds(record.input().subjectId(), now).contains(leaseId)) {
+                return Set.of();
+            }
+            return Collections.unmodifiableSet(EnumSet.copyOf(record.input().directives().keySet()));
         }
 
         synchronized boolean isEmpty() {
@@ -1914,6 +2068,7 @@ public final class MentalControlRuntime {
                     first.leaseId(),
                     first.controllerId(),
                     first.source(),
+                    first.scopeId(),
                     first.priority(),
                     first.expiresAt(),
                     first.directive(),
@@ -1986,6 +2141,7 @@ public final class MentalControlRuntime {
                     lease.input().controllerId(),
                     lease.input().subjectId(),
                     lease.input().source(),
+                    lease.input().scopeId(),
                     lease.input().controllerDimension(),
                     lease.input().subjectDimension(),
                     lease.entries().values().stream()
@@ -2045,21 +2201,57 @@ public final class MentalControlRuntime {
         }
 
         private @Nullable DomainLease winner(UUID subjectId, ControlDomain domain, long now) {
-            var subject = subjects.get(subjectId);
-            if (subject == null) return null;
-            return subject.domainIfPresent(domain).map(state -> state.winner(now)).orElse(null);
+            for (var leaseId : effectiveLeaseIds(subjectId, now)) {
+                var record = leases.get(leaseId);
+                if (record == null) continue;
+                var entry = record.entries().get(domain);
+                if (entry != null) return entry;
+            }
+            return null;
         }
 
-        private void detach(DomainLease lease, ControlDomain domain) {
-            var oldRecord = leases.get(lease.leaseId());
-            if (oldRecord == null) return;
-            oldRecord.entries().remove(domain, lease);
-            if (oldRecord.entries().isEmpty()) leases.remove(oldRecord.id());
+        /**
+         * Selects complete requests in priority order. A request either owns every domain it
+         * declared or owns none, so a partially replaced multi-domain request cannot black-hole
+         * one of the remaining domains while its binding is inactive.
+         */
+        private Set<UUID> effectiveLeaseIds(UUID subjectId, long now) {
+            var candidates = leases.values().stream()
+                    .filter(lease -> lease.input().subjectId().equals(subjectId))
+                    .filter(lease -> lease.input().expiresAt() > now)
+                    .filter(lease -> lease.entries().keySet().containsAll(
+                            lease.input().directives().keySet()))
+                    .sorted((left, right) -> {
+                        var priorityOrder = Integer.compare(
+                                right.input().priority(), left.input().priority());
+                        if (priorityOrder != 0) return priorityOrder;
+                        var sequenceOrder = Long.compare(right.sequence(), left.sequence());
+                        if (sequenceOrder != 0) return sequenceOrder;
+                        return left.id().compareTo(right.id());
+                    })
+                    .toList();
+            var claimed = EnumSet.noneOf(ControlDomain.class);
+            var selected = new LinkedHashSet<UUID>();
+            for (var candidate : candidates) {
+                var domains = candidate.input().directives().keySet();
+                if (!Collections.disjoint(claimed, domains)) continue;
+                claimed.addAll(domains);
+                selected.add(candidate.id());
+            }
+            return selected;
+        }
+
+        private void detach(DomainLease lease, RemovalResult replacement) {
+            // A same-controller/source/scope command replaces its prior request as one unit.
+            // This prevents a permanent multi-domain lease from surviving forever with only a
+            // subset of its requested domains after one domain has been refreshed.
+            removeInto(lease.leaseId(), replacement);
         }
 
         private void removeInto(UUID leaseId, RemovalResult result) {
             var lease = leases.remove(leaseId);
             if (lease == null) return;
+            result.addLease(leaseId);
             var subjectId = lease.input().subjectId();
             result.addSubject(subjectId);
             var subject = subjects.get(subjectId);
@@ -2100,7 +2292,8 @@ public final class MentalControlRuntime {
             private @Nullable DomainLease currentWinner;
 
             private @Nullable DomainLease put(DomainLease lease) {
-                var key = new ReplacementKey(lease.controllerId(), lease.source());
+                var key = new ReplacementKey(
+                        lease.controllerId(), lease.source(), lease.scopeId());
                 var replaced = bySource.put(key, lease);
                 if (replaced != null) ordered.remove(replaced);
                 ordered.add(lease);
@@ -2109,7 +2302,8 @@ public final class MentalControlRuntime {
             }
 
             private void remove(DomainLease lease) {
-                var key = new ReplacementKey(lease.controllerId(), lease.source());
+                var key = new ReplacementKey(
+                        lease.controllerId(), lease.source(), lease.scopeId());
                 bySource.remove(key, lease);
                 ordered.remove(lease);
                 refreshWinner();
@@ -2133,11 +2327,15 @@ public final class MentalControlRuntime {
             UUID leaseId,
             UUID controllerId,
             Identifier source,
+            UUID scopeId,
             int priority,
             long expiresAt,
             ControlDirective directive,
             @Nullable AdapterSelection selection
     ) {
+    }
+
+    private record AddResult(UUID leaseId, RemovalResult replacement) {
     }
 
     private record ImpressionSubject(UUID subjectId, long expiresAt) {
@@ -2169,6 +2367,7 @@ public final class MentalControlRuntime {
             UUID leaseId,
             UUID controllerId,
             Identifier source,
+            UUID scopeId,
             int priority,
             long sequence,
             long expiresAt,
@@ -2176,7 +2375,7 @@ public final class MentalControlRuntime {
     ) {
     }
 
-    private record ReplacementKey(UUID controllerId, Identifier source) {
+    private record ReplacementKey(UUID controllerId, Identifier source, UUID scopeId) {
     }
 
     private record ExpiryEntry(long expiresAt, long sequence, UUID leaseId)
@@ -2191,6 +2390,7 @@ public final class MentalControlRuntime {
     static final class RemovalResult {
         private final Map<UUID, Set<UUID>> removedTargets = new HashMap<>();
         private final Set<UUID> subjects = new HashSet<>();
+        private final Set<UUID> leaseIds = new HashSet<>();
 
         private void addTarget(UUID subjectId, UUID targetId) {
             removedTargets.computeIfAbsent(subjectId, ignored -> new HashSet<>()).add(targetId);
@@ -2200,8 +2400,13 @@ public final class MentalControlRuntime {
             subjects.add(subjectId);
         }
 
+        private void addLease(UUID leaseId) {
+            leaseIds.add(leaseId);
+        }
+
         void merge(RemovalResult other) {
             subjects.addAll(other.subjects);
+            leaseIds.addAll(other.leaseIds);
             other.removedTargets.forEach((subjectId, targets) ->
                     removedTargets.computeIfAbsent(subjectId, ignored -> new HashSet<>()).addAll(targets));
         }
@@ -2212,6 +2417,10 @@ public final class MentalControlRuntime {
 
         Set<UUID> subjects() {
             return subjects;
+        }
+
+        Set<UUID> leaseIds() {
+            return leaseIds;
         }
     }
 }

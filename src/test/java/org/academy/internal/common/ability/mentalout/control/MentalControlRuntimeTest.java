@@ -84,6 +84,12 @@ class MentalControlRuntimeTest {
         return directives;
     }
 
+    private static EnumMap<ControlDomain, ControlDirective> aiTakeover() {
+        var directives = new EnumMap<ControlDomain, ControlDirective>(ControlDomain.class);
+        directives.put(ControlDomain.AI_EXECUTION, new ControlDirective.TakeoverAi());
+        return directives;
+    }
+
     private static MentalControlRuntime.AdapterRegistration registration(String path, int priority) {
         return new MentalControlRuntime.AdapterRegistration(
                 Identifier.fromNamespaceAndPath("academy", path),
@@ -239,7 +245,7 @@ class MentalControlRuntimeTest {
     }
 
     @Test
-    void partiallyReplacedMultiDomainLeaseRemainsOpenForItsOtherDomains() {
+    void refreshingOneDomainReplacesThePriorScopedRequestAsOneUnit() {
         var table = new MentalControlRuntime.LeaseTable();
         var controller = UUID.randomUUID();
         var subject = UUID.randomUUID();
@@ -257,9 +263,10 @@ class MentalControlRuntimeTest {
                 target(replacementTarget)
         ));
 
-        assertTrue(table.isActive(original));
+        assertFalse(table.isActive(original));
         assertTrue(table.isActive(targetReplacement));
-        assertTrue(table.isFrozen(subject, 0));
+        assertFalse(table.isFrozen(subject, 0));
+        assertTrue(table.effectiveDomains(original, 0).isEmpty());
         assertEquals(replacementTarget, table.forcedTarget(subject, 0));
 
         table.remove(original);
@@ -268,6 +275,103 @@ class MentalControlRuntimeTest {
         assertTrue(table.isActive(targetReplacement));
         assertFalse(table.isFrozen(subject, 0));
         assertEquals(replacementTarget, table.forcedTarget(subject, 0));
+    }
+
+    @Test
+    void independentScopesFromTheSameSourceCanPreemptAndResume() {
+        var table = new MentalControlRuntime.LeaseTable();
+        var controller = UUID.randomUUID();
+        var subject = UUID.randomUUID();
+        var firstScope = UUID.randomUUID();
+        var secondScope = UUID.randomUUID();
+        var firstTarget = UUID.randomUUID();
+        var secondTarget = UUID.randomUUID();
+        var first = table.add(new MentalControlRuntime.LeaseInput(
+                controller,
+                subject,
+                SOURCE_A,
+                firstScope,
+                10,
+                100,
+                DIMENSION,
+                DIMENSION,
+                target(firstTarget)
+        ));
+        var second = table.add(new MentalControlRuntime.LeaseInput(
+                controller,
+                subject,
+                SOURCE_A,
+                secondScope,
+                20,
+                100,
+                DIMENSION,
+                DIMENSION,
+                target(secondTarget)
+        ));
+
+        assertTrue(table.isActive(first));
+        assertTrue(table.isActive(second));
+        assertTrue(table.effectiveDomains(first, 0).isEmpty());
+        assertEquals(Set.of(ControlDomain.TARGET), table.effectiveDomains(second, 0));
+        assertEquals(secondTarget, table.forcedTarget(subject, 0));
+
+        table.remove(second);
+
+        assertEquals(Set.of(ControlDomain.TARGET), table.effectiveDomains(first, 0));
+        assertEquals(firstTarget, table.forcedTarget(subject, 0));
+    }
+
+    @Test
+    void disjointAiAndNavigationDomainsCanBeOwnedByOneScopedJob() {
+        var table = new MentalControlRuntime.LeaseTable();
+        var controller = UUID.randomUUID();
+        var subject = UUID.randomUUID();
+        var scope = UUID.randomUUID();
+        var ai = table.add(new MentalControlRuntime.LeaseInput(
+                controller, subject, SOURCE_A, scope, 100, 100,
+                DIMENSION, DIMENSION, aiTakeover()));
+        var movement = table.add(new MentalControlRuntime.LeaseInput(
+                controller, subject, SOURCE_A, scope, 100, 100,
+                DIMENSION, DIMENSION, path(UUID.randomUUID())));
+
+        assertEquals(Set.of(ControlDomain.AI_EXECUTION), table.effectiveDomains(ai, 0));
+        assertEquals(
+                Set.of(ControlDomain.MOVEMENT, ControlDomain.ACTION),
+                table.effectiveDomains(movement, 0)
+        );
+        assertEquals(
+                AttackDecision.DENY,
+                MentalControlRuntime.controlledAttackDecision(
+                        table,
+                        new MentalControlRuntime.TargetWhitelist(),
+                        subject,
+                        UUID.randomUUID(),
+                        0
+                )
+        );
+    }
+
+    @Test
+    void multiDomainLoserOwnsNothingAndResumesAfterWinnerCloses() {
+        var table = new MentalControlRuntime.LeaseTable();
+        var subject = UUID.randomUUID();
+        var freeze = table.add(input(
+                UUID.randomUUID(), subject, SOURCE_A, 10, 100, freeze()));
+        var path = table.add(input(
+                UUID.randomUUID(), subject, SOURCE_B, 20, 100, path(UUID.randomUUID())));
+
+        assertTrue(table.effectiveDomains(freeze, 0).isEmpty());
+        assertEquals(
+                Set.of(ControlDomain.MOVEMENT, ControlDomain.ACTION),
+                table.effectiveDomains(path, 0)
+        );
+
+        table.remove(path);
+
+        assertEquals(
+                Set.of(ControlDomain.MOVEMENT, ControlDomain.ACTION),
+                table.effectiveDomains(freeze, 0)
+        );
     }
 
     @Test

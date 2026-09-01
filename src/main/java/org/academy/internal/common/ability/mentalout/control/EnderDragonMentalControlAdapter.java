@@ -95,6 +95,7 @@ public final class EnderDragonMentalControlAdapter implements MentalControlAdapt
             throw new IllegalArgumentException("Ender Dragon adapter requires an Ender Dragon subject");
         }
         return switch (directive) {
+            case ControlDirective.TakeoverAi ignored -> ControlBinding.noop();
             case ControlDirective.ForceTarget forceTarget -> new ForceTargetBinding(dragon, forceTarget.targetUuid());
             case ControlDirective.FreezeAi ignored -> new FreezeBinding(dragon);
             case ControlDirective.ImpressionAlliance ignored -> ControlBinding.noop();

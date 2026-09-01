@@ -79,6 +79,14 @@ public final class MentalControlApi {
         return MentalControlRuntime.hasActiveControl(subject);
     }
 
+    public static ControlSnapshot snapshot(LivingEntity subject) {
+        return MentalControlRuntime.snapshot(subject);
+    }
+
+    public static boolean hasAiTakeover(LivingEntity subject) {
+        return MentalControlRuntime.hasAiTakeover(subject);
+    }
+
     public static void releaseByControllerSourceAndSubject(
             MinecraftServer server,
             UUID controllerId,

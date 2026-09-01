@@ -188,15 +188,20 @@ public final class CommandPositioning extends Skill {
             int count,
             boolean enabled
     ) {
-        if (!enabled || !(destination instanceof ControlDestination.Position(
-                var dimension, var value
-        )) || count <= 1) return destination;
-        var spacing = Math.max(1.25, subject.getBbWidth() + 0.5);
-        var radius = Math.max(1.5, count * spacing / (Math.PI * 2.0));
-        var angle = Math.PI * 2.0 * index / count;
-        var offset = new Vec3(
-                Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius);
-        return new ControlDestination.Position(dimension, value.add(offset));
+        if (!(destination instanceof ControlDestination.Position(var dimension, var value))) {
+            return destination;
+        }
+        var requested = value;
+        if (enabled && count > 1) {
+            var spacing = Math.max(1.25, subject.getBbWidth() + 0.5);
+            var radius = Math.max(1.5, count * spacing / (Math.PI * 2.0));
+            var angle = Math.PI * 2.0 * index / count;
+            requested = value.add(new Vec3(
+                    Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius));
+        }
+        var resolved = GroupControlNavigation.findNearestReachablePosition(subject, requested)
+                .orElse(requested);
+        return new ControlDestination.Position(dimension, resolved);
     }
 
     public static final class Client {
