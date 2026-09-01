@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
+import org.academy.AcademyCraft;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.event.*;
 import org.academy.api.common.data.AbilityData;
@@ -29,11 +30,16 @@ import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
 import org.jetbrains.annotations.Nullable;
 
+import java.net.URL;
+import java.security.ProtectionDomain;
 import java.util.*;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
     public static final int MAX_CP_ITERATION_TICKS = 20;
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     /**
      * Keep disabled until the skill stack system is redesigned and verified.
      */
@@ -357,6 +363,7 @@ public abstract class Skill {
     }
 
     public final void toggle(ServerPlayer player) {
+        if (!isStateMutationCallerAllowed("toggle", getClass())) return;
         var uuid = player.getUUID();
         var system = AbilitySystemServer.getSystem(player);
         var runtimeData = getRuntimeData(player);
@@ -398,6 +405,41 @@ public abstract class Skill {
         return LearningHelper.isSkillAvailableForCategory(
                 system.getPlayerAbilityCategory(player.getUUID()), this
         ) && getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
+    }
+
+    private static boolean isStateMutationCallerAllowed(String entryMethod, Class<?> owner) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                        .dropWhile(frame -> frame.getDeclaringClass() != Skill.class
+                                || !frame.getMethodName().equals(entryMethod))
+                        .skip(1)
+                        .map(StackWalker.StackFrame::getDeclaringClass)
+                        .findFirst()
+                        .orElse(null));
+        return sameStateCodeSource(caller, AcademyCraft.class)
+                || sameStateCodeSource(caller, owner);
+    }
+
+    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+        if (left == null || right == null) return false;
+        var leftDomain = stateProtectionDomain(left);
+        var rightDomain = stateProtectionDomain(right);
+        if (leftDomain != null && leftDomain == rightDomain) return true;
+        var leftLocation = stateCodeSourceLocation(leftDomain);
+        var rightLocation = stateCodeSourceLocation(rightDomain);
+        return leftLocation != null && leftLocation.equals(rightLocation);
+    }
+
+    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+        try {
+            return type.getProtectionDomain();
+        } catch (SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+        return domain == null || domain.getCodeSource() == null
+                ? null : domain.getCodeSource().getLocation();
     }
 
     public SkillData createData() {

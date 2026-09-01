@@ -3,10 +3,19 @@ package org.academy.internal.common.skilldata;
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
+import org.academy.AcademyCraft;
+
+import java.net.URL;
+import java.security.ProtectionDomain;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 public abstract class SkillData {
     public static final float MIN_PROFICIENCY = 0.0f;
     public static final float MAX_PROFICIENCY = 3000.0f;
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     @SerializedName("proficiency")
     private float proficiency;
     /* Legacy progression fields. They are read by SkillDataSerializer and removed on write. */
@@ -19,6 +28,8 @@ public abstract class SkillData {
     @SerializedName("enabled")
     private boolean enabled = true;
     private transient boolean legacyProgress;
+    private transient Class<?> activationOwner;
+    private transient Consumer<Boolean> activationStateListener;
 
     public SkillData() {
         proficiency = 0;
@@ -122,12 +133,80 @@ public abstract class SkillData {
         return enabled;
     }
 
-    public void setEnabled(boolean enabled) {
+    public final void setEnabled(boolean enabled) {
+        if (activationOwner != null
+                && !isStateMutationCallerAllowed("setEnabled", activationOwner)) return;
+        setEnabledAndNotify(enabled);
+    }
+
+    public final void bindActivationProtection(
+            Class<?> owner,
+            Consumer<Boolean> activationStateListener
+    ) {
+        if (!isStateMutationCallerAllowed("bindActivationProtection", AcademyCraft.class)) return;
+        activationOwner = Objects.requireNonNull(owner, "owner");
+        this.activationStateListener = Objects.requireNonNull(
+                activationStateListener,
+                "activationStateListener"
+        );
+    }
+
+    public final boolean isActivationProtectedFor(Class<?> owner) {
+        return activationOwner == owner && activationStateListener != null;
+    }
+
+    public final void applyPersistedEnabled(boolean enabled) {
+        if (!isStateMutationCallerAllowed("applyPersistedEnabled", AcademyCraft.class)) return;
         this.enabled = enabled;
     }
 
-    public void toggleEnabled() {
-        enabled = !enabled;
+    public final void toggleEnabled() {
+        if (activationOwner != null
+                && !isStateMutationCallerAllowed("toggleEnabled", activationOwner)) return;
+        setEnabledAndNotify(!enabled);
+    }
+
+    private void setEnabledAndNotify(boolean enabled) {
+        if (activationOwner != null
+                && !isStateMutationCallerAllowed("setEnabledAndNotify", activationOwner)) return;
+        if (this.enabled == enabled) return;
+        this.enabled = enabled;
+        if (activationStateListener != null) activationStateListener.accept(enabled);
+    }
+
+    private static boolean isStateMutationCallerAllowed(String entryMethod, Class<?> owner) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                        .dropWhile(frame -> frame.getDeclaringClass() != SkillData.class
+                                || !frame.getMethodName().equals(entryMethod))
+                        .skip(1)
+                        .map(StackWalker.StackFrame::getDeclaringClass)
+                        .findFirst()
+                        .orElse(null));
+        return sameStateCodeSource(caller, AcademyCraft.class)
+                || sameStateCodeSource(caller, owner);
+    }
+
+    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+        if (left == null || right == null) return false;
+        var leftDomain = stateProtectionDomain(left);
+        var rightDomain = stateProtectionDomain(right);
+        if (leftDomain != null && leftDomain == rightDomain) return true;
+        var leftLocation = stateCodeSourceLocation(leftDomain);
+        var rightLocation = stateCodeSourceLocation(rightDomain);
+        return leftLocation != null && leftLocation.equals(rightLocation);
+    }
+
+    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+        try {
+            return type.getProtectionDomain();
+        } catch (SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+        return domain == null || domain.getCodeSource() == null
+                ? null : domain.getCodeSource().getLocation();
     }
 
     /**

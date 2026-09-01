@@ -67,6 +67,62 @@ class WorldDataMigrationTest {
     }
 
     @Test
+    void createsPersistentActivationStateForExistingSaves() {
+        var json = """
+                {
+                  "players": {
+                    "d96a465b-b8ca-4f14-a047-65289d9ae91c": {
+                      "skillData": {
+                        "academy:vector_reflection": {
+                          "proficiency": 1800.0,
+                          "enabled": false
+                        }
+                      }
+                    }
+                  }
+                }
+                """;
+
+        var worldData = WorldData.createGson().fromJson(json, WorldData.class);
+        assertTrue(worldData.migrateLegacyData());
+
+        var player = worldData.getPlayers().get(PLAYER_ID);
+        assertEquals(
+                false,
+                player.getPersistedSkillEnabled("academy:vector_reflection").orElseThrow()
+        );
+        assertTrue(WorldData.createGson().toJson(worldData).contains("skillActivationStates"));
+    }
+
+    @Test
+    void preservesIndependentActivationStateWhenRuntimeDataWasTamperedWith() {
+        var json = """
+                {
+                  "players": {
+                    "d96a465b-b8ca-4f14-a047-65289d9ae91c": {
+                      "skillData": {
+                        "academy:vector_reflection": {
+                          "proficiency": 1800.0,
+                          "enabled": false
+                        }
+                      },
+                      "skillActivationStates": {
+                        "academy:vector_reflection": true
+                      }
+                    }
+                  }
+                }
+                """;
+
+        var worldData = WorldData.createGson().fromJson(json, WorldData.class);
+        worldData.migrateLegacyData();
+
+        var player = worldData.getPlayers().get(PLAYER_ID);
+        assertTrue(player.getPersistedSkillEnabled("academy:vector_reflection").orElseThrow());
+        assertFalse(player.getSkillDataMap().get("academy:vector_reflection").isEnabled());
+    }
+
+    @Test
     void migratesRenamedCurrentSkillIdentifiers() {
         assertEquals("academy:current_recharge", Player.canonicalizeSkillId("academy:pulse_charge"));
         assertEquals("academy:vector_deviation", Player.canonicalizeSkillId("academy:vector_reduction"));

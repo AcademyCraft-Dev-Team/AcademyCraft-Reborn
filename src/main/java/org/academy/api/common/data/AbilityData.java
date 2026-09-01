@@ -1,10 +1,18 @@
 package org.academy.api.common.data;
 
 import net.minecraft.util.Mth;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
+
+import java.net.URL;
+import java.security.ProtectionDomain;
+import java.util.Objects;
 
 public class AbilityData {
     public static final int FIXED_MAX_SP = 1_000;
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
 
     private float maxCP = 100;
     private float availableCP = 100;
@@ -24,6 +32,7 @@ public class AbilityData {
     private float abilityExp = 0;
 
     private transient boolean isDirty = false;
+    private transient Class<?> statusOwner;
 
     public AbilityData() {
     }
@@ -45,6 +54,8 @@ public class AbilityData {
     }
 
     public void tickStateTimer() {
+        if (statusOwner != null
+                && !isStateMutationCallerAllowed("tickStateTimer", statusOwner)) return;
         if (stateTimer > 0) {
             stateTimer--;
         }
@@ -123,8 +134,10 @@ public class AbilityData {
         return status;
     }
 
-    public void setStatus(Status status) {
-        this.status = status;
+    public final void setStatus(Status status) {
+        if (statusOwner != null
+                && !isStateMutationCallerAllowed("setStatus", statusOwner)) return;
+        this.status = Objects.requireNonNull(status, "status");
         markDirty();
     }
 
@@ -132,9 +145,51 @@ public class AbilityData {
         return stateTimer;
     }
 
-    public void setStateTimer(int stateTimer) {
+    public final void setStateTimer(int stateTimer) {
+        if (statusOwner != null
+                && !isStateMutationCallerAllowed("setStateTimer", statusOwner)) return;
         this.stateTimer = stateTimer;
         markDirty();
+    }
+
+    public final void bindStatusProtection(Class<?> owner) {
+        if (!isStateMutationCallerAllowed("bindStatusProtection", AcademyCraft.class)) return;
+        statusOwner = Objects.requireNonNull(owner, "owner");
+    }
+
+    private static boolean isStateMutationCallerAllowed(String entryMethod, Class<?> owner) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                        .dropWhile(frame -> frame.getDeclaringClass() != AbilityData.class
+                                || !frame.getMethodName().equals(entryMethod))
+                        .skip(1)
+                        .map(StackWalker.StackFrame::getDeclaringClass)
+                        .findFirst()
+                        .orElse(null));
+        return sameStateCodeSource(caller, AcademyCraft.class)
+                || sameStateCodeSource(caller, owner);
+    }
+
+    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+        if (left == null || right == null) return false;
+        var leftDomain = stateProtectionDomain(left);
+        var rightDomain = stateProtectionDomain(right);
+        if (leftDomain != null && leftDomain == rightDomain) return true;
+        var leftLocation = stateCodeSourceLocation(leftDomain);
+        var rightLocation = stateCodeSourceLocation(rightDomain);
+        return leftLocation != null && leftLocation.equals(rightLocation);
+    }
+
+    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+        try {
+            return type.getProtectionDomain();
+        } catch (SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+        return domain == null || domain.getCodeSource() == null
+                ? null : domain.getCodeSource().getLocation();
     }
 
     public int getCurrSP() {
@@ -369,6 +424,7 @@ public class AbilityData {
         }
 
         public void setAmount(float amount) {
+            if (!isOccupationMutationCallerAllowed("setAmount")) return;
             this.amount = Math.max(0.0f, amount);
         }
 
@@ -377,6 +433,7 @@ public class AbilityData {
         }
 
         public void setIterationTicks(int iterationTicks) {
+            if (!isOccupationMutationCallerAllowed("setIterationTicks")) return;
             this.iterationTicks = iterationTicks;
         }
 
@@ -390,6 +447,17 @@ public class AbilityData {
 
         public boolean isPermanent() {
             return isPermanent;
+        }
+
+        private static boolean isOccupationMutationCallerAllowed(String entryMethod) {
+            var caller = STATE_STACK_WALKER.walk(frames -> frames
+                            .dropWhile(frame -> frame.getDeclaringClass() != CpOccupationData.class
+                                    || !frame.getMethodName().equals(entryMethod))
+                            .skip(1)
+                            .map(StackWalker.StackFrame::getDeclaringClass)
+                            .findFirst()
+                            .orElse(null));
+            return AbilityData.sameStateCodeSource(caller, AcademyCraft.class);
         }
     }
 }

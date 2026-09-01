@@ -6,8 +6,8 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.server.world.level.storage.Player;
+import org.academy.internal.server.world.level.storage.WorldData;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -49,10 +49,15 @@ class AbilityProgramManagerTest {
 
     @Test
     void learnedSkillIdsBecomeServerCompileCapabilities() {
-        var player = new Player();
         var vectorAccel = AcademyCraft.academy(SkillNames.VECTOR_ACCEL);
-        player.getSkillDataMap().put(vectorAccel.toString(), new CommonSkillData());
-        player.getSkillDataMap().put("invalid identifier", new CommonSkillData());
+        var player = WorldData.createGson().fromJson("""
+                {
+                  "skillData": {
+                    "academy:vector_accel": {"proficiency": 0.0},
+                    "invalid identifier": {"proficiency": 0.0}
+                  }
+                }
+                """, Player.class);
 
         var capabilities = AbilityProgramManager.learnedCapabilities(player);
 

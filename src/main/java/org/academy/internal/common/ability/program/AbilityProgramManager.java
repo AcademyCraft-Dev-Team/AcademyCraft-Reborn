@@ -191,7 +191,7 @@ public final class AbilityProgramManager {
             return current;
         }
 
-        var skills = playerData.getSkillDataMap();
+        var skills = playerData.getMutableSkillDataMap();
         var legacyKey = AcademyCraft.academy("precision_operation").toString();
         var replacementKey = AcademyCraft.academy("wide_area_interference").toString();
         var raw = skills.get(replacementKey);

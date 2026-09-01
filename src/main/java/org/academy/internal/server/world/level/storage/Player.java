@@ -11,9 +11,14 @@ import org.academy.internal.common.ability.darkmatter.DarkmatterStateData;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 
+import java.net.URL;
+import java.security.ProtectionDomain;
 import java.util.*;
 
 public final class Player {
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     private static final Map<String, String> LEGACY_SKILL_ALIASES = Map.ofEntries(
             Map.entry("pulse_charge", "current_recharge"),
             Map.entry("vector_reduction", "vector_deviation"),
@@ -55,6 +60,8 @@ public final class Player {
     );
     @SerializedName("skillData")
     private final Map<String, SkillData> skillDataMap = new HashMap<>();
+    @SerializedName("skillActivationStates")
+    private final Map<String, Boolean> skillActivationStates = new HashMap<>();
     @SerializedName("retainedSkillProficiencies")
     private final Map<String, Float> retainedSkillProficiencies = new HashMap<>();
     @SerializedName("abilityProgramBooks")
@@ -90,6 +97,7 @@ public final class Player {
     private Float legacyComputingPowerRecoverySpeed;
 
     private transient volatile boolean isDirty = false;
+    private transient boolean skillActivationSyncDirty;
 
     static String canonicalizeSkillId(String skillId) {
         if (skillId == null || skillId.isBlank()) return skillId;
@@ -134,6 +142,7 @@ public final class Player {
     }
 
     public void setAbilityCategory(String abilityCategory) {
+        if (!isStateMutationCallerAllowed("setAbilityCategory")) return;
         if (!Objects.equals(this.abilityCategory, abilityCategory)) {
             this.abilityCategory = abilityCategory;
             markDirty();
@@ -141,7 +150,42 @@ public final class Player {
     }
 
     public Map<String, SkillData> getSkillDataMap() {
+        return Collections.unmodifiableMap(skillDataMap);
+    }
+
+    public Map<String, SkillData> getMutableSkillDataMap() {
+        if (!isStateMutationCallerAllowed("getMutableSkillDataMap")) return Map.of();
         return skillDataMap;
+    }
+
+    public Optional<Boolean> getPersistedSkillEnabled(String skillId) {
+        if (skillId == null) return Optional.empty();
+        return Optional.ofNullable(skillActivationStates.get(skillId));
+    }
+
+    public boolean setPersistedSkillEnabled(String skillId, boolean enabled) {
+        if (!isStateMutationCallerAllowed("setPersistedSkillEnabled")) return false;
+        if (skillId == null || skillId.isBlank()) return false;
+        var previous = skillActivationStates.put(skillId, enabled);
+        if (previous != null && previous == enabled) return false;
+        skillActivationSyncDirty = true;
+        markDirty();
+        return true;
+    }
+
+    public boolean removePersistedSkillEnabled(String skillId) {
+        if (!isStateMutationCallerAllowed("removePersistedSkillEnabled")) return false;
+        if (skillId == null || skillActivationStates.remove(skillId) == null) return false;
+        skillActivationSyncDirty = true;
+        markDirty();
+        return true;
+    }
+
+    public boolean consumeSkillActivationSyncDirty() {
+        if (!isStateMutationCallerAllowed("consumeSkillActivationSyncDirty")) return false;
+        var dirty = skillActivationSyncDirty;
+        skillActivationSyncDirty = false;
+        return dirty;
     }
 
     public DarkmatterStateData getDarkmatterState() {
@@ -193,6 +237,7 @@ public final class Player {
     }
 
     public void setCpData(AbilityData cpData) {
+        if (!isStateMutationCallerAllowed("setCpData")) return;
         if (!Objects.equals(this.cpData, cpData)) {
             this.cpData = cpData;
             markDirty();
@@ -200,12 +245,52 @@ public final class Player {
     }
 
     public List<AbilityData.CpOccupationData> getCpOccupations() {
+        return Collections.unmodifiableList(cpOccupations);
+    }
+
+    public List<AbilityData.CpOccupationData> getMutableCpOccupations() {
+        if (!isStateMutationCallerAllowed("getMutableCpOccupations")) return List.of();
         return cpOccupations;
     }
 
     public void setCpOccupations(List<AbilityData.CpOccupationData> cpOccupations) {
+        if (!isStateMutationCallerAllowed("setCpOccupations")) return;
         this.cpOccupations = cpOccupations;
         markDirty();
+    }
+
+    private static boolean isStateMutationCallerAllowed(String entryMethod) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                        .dropWhile(frame -> frame.getDeclaringClass() != Player.class
+                                || !frame.getMethodName().equals(entryMethod))
+                        .skip(1)
+                        .map(StackWalker.StackFrame::getDeclaringClass)
+                        .findFirst()
+                        .orElse(null));
+        return sameStateCodeSource(caller, AcademyCraft.class);
+    }
+
+    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+        if (left == null || right == null) return false;
+        var leftDomain = stateProtectionDomain(left);
+        var rightDomain = stateProtectionDomain(right);
+        if (leftDomain != null && leftDomain == rightDomain) return true;
+        var leftLocation = stateCodeSourceLocation(leftDomain);
+        var rightLocation = stateCodeSourceLocation(rightDomain);
+        return leftLocation != null && leftLocation.equals(rightLocation);
+    }
+
+    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+        try {
+            return type.getProtectionDomain();
+        } catch (SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+        return domain == null || domain.getCodeSource() == null
+                ? null : domain.getCodeSource().getLocation();
     }
 
     public float getAppliedCommonSkillMaxCpBonus() {
@@ -252,6 +337,7 @@ public final class Player {
         var changed = migrateAbilityCategory();
         changed |= migrateSkillData();
         changed |= migrateLegacySkillSet();
+        changed |= migrateSkillActivationStates();
         changed |= migrateRetainedSkillProficiencies();
         changed |= repairAbilityProgramBooks();
         changed |= removeRetiredSkills();
@@ -323,8 +409,36 @@ public final class Player {
         return true;
     }
 
+    private boolean migrateSkillActivationStates() {
+        var original = new ArrayList<>(skillActivationStates.entrySet());
+        var migrated = new HashMap<String, Boolean>();
+        var changed = false;
+        for (var entry : original) {
+            var sourceId = entry.getKey();
+            var enabled = entry.getValue();
+            if (sourceId == null || enabled == null) {
+                changed = true;
+                continue;
+            }
+            var targetId = canonicalizeSkillId(sourceId);
+            changed |= !sourceId.equals(targetId);
+            migrated.merge(targetId, enabled, Boolean::logicalOr);
+        }
+        for (var entry : skillDataMap.entrySet()) {
+            var data = entry.getValue();
+            if (data == null || migrated.containsKey(entry.getKey())) continue;
+            migrated.put(entry.getKey(), data.isEnabled());
+            changed = true;
+        }
+        if (!changed && migrated.equals(skillActivationStates)) return false;
+        skillActivationStates.clear();
+        skillActivationStates.putAll(migrated);
+        return true;
+    }
+
     private boolean removeRetiredSkills() {
         var changed = skillDataMap.keySet().removeIf(RETIRED_SKILLS::contains);
+        changed |= skillActivationStates.keySet().removeIf(RETIRED_SKILLS::contains);
         changed |= cpOccupations.removeIf(occupation ->
                 RETIRED_SKILLS.contains(canonicalizeSkillId(occupation.getSkillId()))
         );
