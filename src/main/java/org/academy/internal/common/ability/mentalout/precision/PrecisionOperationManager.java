@@ -48,7 +48,7 @@ public final class PrecisionOperationManager {
         var system = AbilitySystemServer.getSystem(player);
         var playerData = system.getPlayerData(player.getUUID());
         if (playerData == null) return new PrecisionOperation.Data();
-        var map = playerData.getSkillDataMap();
+        var map = playerData.getMutableSkillDataMap();
         var raw = map.get(LEGACY_SKILL_KEY);
         if (raw instanceof PrecisionOperation.Data data) {
             var schemaVersion = data.schemaVersion();

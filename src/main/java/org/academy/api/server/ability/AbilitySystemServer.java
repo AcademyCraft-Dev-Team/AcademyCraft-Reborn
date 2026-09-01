@@ -40,6 +40,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
 import org.slf4j.Logger;
 
+import java.net.URL;
+import java.security.ProtectionDomain;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
@@ -47,6 +49,9 @@ import java.util.function.Consumer;
 
 public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     private static final ConcurrentHashMap<UUID, DevelopData> DEVELOP_DATA_MAP = new ConcurrentHashMap<>();
     private static volatile boolean DEV_MODE = false;
     private final Map<UUID, Set<ServerContext>> activeContexts;
@@ -655,10 +660,12 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        if (!isStateMutationCallerAllowed("setPlayerAbilityCategory", AcademyCraft.class)) return;
         changePlayerAbilityCategory(uuid, abilityCategory, false);
     }
 
     public void replacePlayerAbilityCategory(UUID uuid, AbilityCategory abilityCategory) {
+        if (!isStateMutationCallerAllowed("replacePlayerAbilityCategory", AcademyCraft.class)) return;
         changePlayerAbilityCategory(uuid, abilityCategory, true);
     }
 
@@ -667,6 +674,7 @@ public final class AbilitySystemServer {
             AbilityCategory abilityCategory,
             boolean clearCategorySkills
     ) {
+        if (!isStateMutationCallerAllowed("changePlayerAbilityCategory", AcademyCraft.class)) return;
         initialAbilityRecommendations.clear(uuid);
         var previousCategory = playerDataManager.getPlayerAbilityCategory(uuid);
         var categoryChanged = previousCategory != abilityCategory;
@@ -782,6 +790,12 @@ public final class AbilitySystemServer {
     }
 
     public void removePlayerSkill(UUID uuid, String skillKey) {
+        var skillId = Identifier.tryParse(skillKey);
+        var skill = skillId == null ? null : Registries.SKILLS.get(skillId)
+                .map(reference -> reference.value())
+                .orElse(null);
+        if (skill == null
+                || !isStateMutationCallerAllowed("removePlayerSkill", skill.getClass())) return;
         var wasLearned = getPlayerData(uuid).isSkillLearned(skillKey);
         skillDataManager.removeSkill(uuid, skillKey);
         var player = minecraftServer.getPlayerList().getPlayer(uuid);
@@ -791,6 +805,11 @@ public final class AbilitySystemServer {
     }
 
     public void toggleSkill(UUID uuid, String skillId) {
+        var id = Identifier.tryParse(skillId);
+        var skill = id == null ? null : Registries.SKILLS.get(id)
+                .map(reference -> reference.value())
+                .orElse(null);
+        if (skill == null || !isStateMutationCallerAllowed("toggleSkill", skill.getClass())) return;
         skillDataManager.toggleSkill(uuid, skillId);
         var playerData = getPlayerData(uuid);
         var skillData = playerData == null ? null : playerData.getSkillDataMap().get(skillId);
@@ -800,6 +819,12 @@ public final class AbilitySystemServer {
     }
 
     public void releaseMaintenanceOccupation(UUID uuid, String skillId) {
+        var id = Identifier.tryParse(skillId);
+        var skill = id == null ? null : Registries.SKILLS.get(id)
+                .map(reference -> reference.value())
+                .orElse(null);
+        if (skill != null
+                && !isStateMutationCallerAllowed("releaseMaintenanceOccupation", skill.getClass())) return;
         playerCPManager.releaseMaintenanceOccupation(uuid, skillId);
     }
 
@@ -1228,6 +1253,7 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerLevel(UUID uuid, int level) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerLevel")) return;
         playerCPManager.setLevel(uuid, level);
         var player = minecraftServer.getPlayerList().getPlayer(uuid);
         if (player != null) {
@@ -1240,6 +1266,7 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerAbilityExp(UUID uuid, float amount) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerAbilityExp")) return;
         playerCPManager.setAbilityExp(uuid, amount);
     }
 
@@ -1256,6 +1283,7 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerAvailableCP(UUID uuid, float availableCP) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerAvailableCP")) return;
         playerCPManager.setAvailableCP(uuid, availableCP);
     }
 
@@ -1264,10 +1292,12 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerMaxCP(UUID uuid, float maxCP) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerMaxCP")) return;
         playerCPManager.setMaxCP(uuid, maxCP);
     }
 
     public void setPlayerBaseMaxCP(UUID uuid, float maxCP) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerBaseMaxCP")) return;
         playerCPManager.setBaseMaxCP(uuid, maxCP);
     }
 
@@ -1276,6 +1306,7 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerStatus(UUID uuid, AbilityData.Status status) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerStatus")) return;
         playerCPManager.setStatus(uuid, status);
     }
 
@@ -1284,6 +1315,7 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerStateTimer(UUID uuid, int stateTimer) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerStateTimer")) return;
         playerCPManager.setStateTimer(uuid, stateTimer);
     }
 
@@ -1292,10 +1324,12 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerCurrSP(UUID uuid, int currSP) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerCurrSP")) return;
         playerCPManager.setCurrSP(uuid, currSP);
     }
 
     public void addPlayerCurrSP(UUID uuid, int currSP) {
+        if (!allowCurrentCategoryMutation(uuid, "addPlayerCurrSP")) return;
         playerCPManager.addCurrSP(uuid, currSP);
     }
 
@@ -1304,6 +1338,7 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerMaxSP(UUID uuid, int maxSP) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerMaxSP")) return;
         playerCPManager.setMaxSP(uuid, maxSP);
     }
 
@@ -1340,10 +1375,12 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerCurrMP(UUID uuid, float currMP) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerCurrMP")) return;
         playerCPManager.setCurrMP(uuid, currMP);
     }
 
     public void addPlayerCurrMP(UUID uuid, float addMP) {
+        if (!allowCurrentCategoryMutation(uuid, "addPlayerCurrMP")) return;
         playerCPManager.addCurrMP(uuid, addMP);
     }
 
@@ -1356,7 +1393,48 @@ public final class AbilitySystemServer {
     }
 
     public void setPlayerMaxMP(UUID uuid, float maxMP) {
+        if (!allowCurrentCategoryMutation(uuid, "setPlayerMaxMP")) return;
         playerCPManager.setMaxMP(uuid, maxMP);
+    }
+
+    private boolean allowCurrentCategoryMutation(UUID uuid, String entryMethod) {
+        var category = playerDataManager.getPlayerAbilityCategory(uuid);
+        return isStateMutationCallerAllowed(entryMethod, category.getClass());
+    }
+
+    private static boolean isStateMutationCallerAllowed(String entryMethod, Class<?> owner) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                        .dropWhile(frame -> frame.getDeclaringClass() != AbilitySystemServer.class
+                                || !frame.getMethodName().equals(entryMethod))
+                        .skip(1)
+                        .map(StackWalker.StackFrame::getDeclaringClass)
+                        .findFirst()
+                        .orElse(null));
+        return sameStateCodeSource(caller, AcademyCraft.class)
+                || sameStateCodeSource(caller, owner);
+    }
+
+    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+        if (left == null || right == null) return false;
+        var leftDomain = stateProtectionDomain(left);
+        var rightDomain = stateProtectionDomain(right);
+        if (leftDomain != null && leftDomain == rightDomain) return true;
+        var leftLocation = stateCodeSourceLocation(leftDomain);
+        var rightLocation = stateCodeSourceLocation(rightDomain);
+        return leftLocation != null && leftLocation.equals(rightLocation);
+    }
+
+    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+        try {
+            return type.getProtectionDomain();
+        } catch (SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+        return domain == null || domain.getCodeSource() == null
+                ? null : domain.getCodeSource().getLocation();
     }
 
     public static final class SubsystemRegistry {
