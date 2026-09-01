@@ -43,6 +43,9 @@ public interface LivingEntityDamageInvoker {
     @Accessor("dead")
     boolean academy$isDead();
 
+    @Accessor("dead")
+    void academy$setDead(boolean dead);
+
     @Accessor("lastHurt")
     void academy$setLastHurt(float amount);
 
