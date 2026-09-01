@@ -55,7 +55,8 @@ public final class PlayerControlSessionManager {
     public static final int DIRECT_CONTROL_PRIORITY = 300;
     private static final int READY_TIMEOUT_TICKS = 20;
     private static final int NEUTRAL_AFTER_TICKS = 5;
-    private static final int CLIENT_TIMEOUT_TICKS = 20;
+    private static final int SERVER_FALLBACK_AFTER_TICKS = 2;
+    private static final int ACTION_FEEDBACK_COOLDOWN_TICKS = 10;
     private static final StreamCodec<ByteBuf, Tag> ITEM_STACK_TAG_CODEC = ByteBufCodecs.tagCodec(
             () -> NbtAccounter.create(1024L * 1024L));
     private static final Map<UUID, Session> BY_CONTROLLER = new HashMap<>();
@@ -241,6 +242,7 @@ public final class PlayerControlSessionManager {
         );
         BY_SUBJECT.put(subject.getUUID(), session);
         sendBegin(session, subject, context.controller() == subject ? Role.SELF : Role.SUBJECT);
+        activate(session, now);
         return new PathSessionToken(session.id, session.revision, subject.getUUID());
     }
 
@@ -296,18 +298,16 @@ public final class PlayerControlSessionManager {
                 if (now >= session.readyDeadline) stop(session, EndReason.CLIENT_TIMEOUT, true);
                 continue;
             }
-            if (shouldEndForMissingAppliedFrame(
-                    session.kind == Kind.PATH, now, session.lastAppliedTick)) {
-                stop(session, EndReason.CLIENT_TIMEOUT, true);
-                continue;
+            if (session.kind == Kind.DIRECT) {
+                Skills.MENTAL_TAKEOVER.get().reportActivity(session.controller, true);
+                if (now - session.lastIntentTick >= NEUTRAL_AFTER_TICKS
+                        && session.lastNeutralTick != now) {
+                    session.lastNeutralTick = now;
+                    authorize(session, PlayerControlFrame.NEUTRAL, ++session.authorizedSequence);
+                }
             }
+            applyServerFallback(session, now);
             if (session.kind == Kind.PATH) continue;
-            Skills.MENTAL_TAKEOVER.get().reportActivity(session.controller, true);
-            if (now - session.lastIntentTick >= NEUTRAL_AFTER_TICKS
-                    && session.lastNeutralTick != now) {
-                session.lastNeutralTick = now;
-                authorize(session, PlayerControlFrame.NEUTRAL, ++session.authorizedSequence);
-            }
             if (now % 5L == 0L) sendStatus(session);
             if (now - session.lastViewSnapshotTick >= 2L) sendTargetViewState(session, now);
         }
@@ -432,6 +432,17 @@ public final class PlayerControlSessionManager {
 
     private static boolean validateControlledMovement(Session session, ServerboundMovePlayerPacket packet) {
         var player = session.subject;
+        var now = player.level().getGameTime();
+        if (shouldUseServerFallback(session.subjectReady, now, session.lastAppliedTick)) {
+            var frame = session.authorizedFrame;
+            correct(
+                    player,
+                    new Anchor(session.lastGoodPosition, frame.yaw(), frame.pitch()),
+                    frame.yaw(),
+                    frame.pitch()
+            );
+            return true;
+        }
         var yaw = packet.getYRot(player.getYRot());
         var pitch = packet.getXRot(player.getXRot());
         var next = player.position();
@@ -481,12 +492,15 @@ public final class PlayerControlSessionManager {
         };
     }
 
-    static boolean shouldEndForMissingAppliedFrame(
-            boolean pathSession,
+    static boolean shouldUseServerFallback(
+            boolean subjectReady,
             long currentTick,
             long lastAppliedTick
     ) {
-        return pathSession && currentTick - lastAppliedTick >= CLIENT_TIMEOUT_TICKS;
+        var elapsed = currentTick - lastAppliedTick;
+        return elapsed >= (subjectReady
+                ? SERVER_FALLBACK_AFTER_TICKS + 1L
+                : SERVER_FALLBACK_AFTER_TICKS);
     }
 
     private static void correct(ServerPlayer player, Anchor anchor, float yaw, float pitch) {
@@ -538,21 +552,37 @@ public final class PlayerControlSessionManager {
             ready(sender, packet, MOB_BY_CONTROLLER.get(sender.getUUID()));
             return;
         }
-        if (!matches(session, packet.sessionId, packet.revision) || session.state != State.HANDSHAKE) return;
+        if (!matches(session, packet.sessionId, packet.revision)
+                || session.state == State.CLOSED) return;
         if (!packet.ready) {
-            stop(session, EndReason.CLIENT_REJECTED, true);
+            if (sender == session.controller && session.kind == Kind.DIRECT) {
+                stop(session, EndReason.CLIENT_REJECTED, true);
+            } else if (sender == session.subject) {
+                session.subjectReady = false;
+                notifyServerFallback(session);
+            }
             return;
         }
         if (sender == session.controller) session.controllerReady = true;
-        if (sender == session.subject) session.subjectReady = true;
-        if ((session.kind == Kind.DIRECT && !session.controllerReady) || !session.subjectReady) return;
+        if (sender == session.subject) {
+            session.subjectReady = true;
+            authorize(session, session.authorizedFrame, ++session.authorizedSequence);
+        }
+        if (session.kind == Kind.DIRECT && session.controllerReady) {
+            activate(session, sender.level().getGameTime());
+        }
+    }
+
+    private static void activate(Session session, long now) {
+        if (session.state == State.CLOSED) return;
+        var newlyActive = session.state != State.ACTIVE;
         session.state = State.ACTIVE;
-        session.lastIntentTick = sender.level().getGameTime();
-        session.lastAppliedTick = session.lastIntentTick;
-        authorize(session, PlayerControlFrame.NEUTRAL, ++session.authorizedSequence);
-        if (session.kind == Kind.DIRECT) {
+        session.lastIntentTick = now;
+        session.lastAppliedTick = now;
+        authorize(session, session.authorizedFrame, ++session.authorizedSequence);
+        if (newlyActive && session.kind == Kind.DIRECT) {
             sendStatus(session);
-            sendTargetViewState(session, session.lastIntentTick);
+            sendTargetViewState(session, now);
         }
     }
 
@@ -712,6 +742,68 @@ public final class PlayerControlSessionManager {
         );
     }
 
+    /**
+     * Applies authorized input on the server whenever the controlled player's client has not
+     * confirmed that it is injecting frames. Client injection remains the smooth path; it is no
+     * longer a correctness dependency for pathing, direct movement, or server-side actions.
+     */
+    private static void applyServerFallback(Session session, long now) {
+        if (!shouldUseServerFallback(session.subjectReady, now, session.lastAppliedTick)) return;
+        notifyServerFallback(session);
+        var subject = session.subject;
+        var frame = session.authorizedFrame;
+        var oldPosition = subject.position();
+        var oldYaw = subject.getYRot();
+        var oldPitch = subject.getXRot();
+        try {
+            subject.setYRot(frame.yaw());
+            subject.setXRot(frame.pitch());
+            subject.setYHeadRot(frame.yaw());
+            subject.setYBodyRot(frame.yaw());
+            subject.setShiftKeyDown(frame.sneak());
+            subject.setSprinting(frame.sprint()
+                    && (Math.abs(frame.forward()) > 0.01f || Math.abs(frame.strafe()) > 0.01f));
+
+            var verticalInput = switch (frame.mode()) {
+                case CLIMB, SWIM, FLY -> frame.jump() ? 1.0 : frame.sneak() ? -1.0 : 0.0;
+                default -> 0.0;
+            };
+            EntityMotionGuard.runWithMotionSource(session.controller, () -> {
+                if (frame.jump() && subject.onGround()
+                        && frame.mode() != PlayerMovementMode.SWIM
+                        && frame.mode() != PlayerMovementMode.FLY) {
+                    var velocity = subject.getDeltaMovement();
+                    subject.setDeltaMovement(velocity.x, Math.max(0.42, velocity.y), velocity.z);
+                }
+                subject.travel(new Vec3(frame.strafe(), verticalInput, frame.forward()));
+            });
+            session.lastGoodPosition = subject.position();
+            subject.hurtMarked = true;
+
+            if (oldPosition.distanceToSqr(subject.position()) > 1.0e-8
+                    || Math.abs(Mth.wrapDegrees(oldYaw - frame.yaw())) > 0.01f
+                    || Math.abs(oldPitch - frame.pitch()) > 0.01f) {
+                var position = subject.position();
+                EntityMotionGuard.runInternalCorrection(subject, () -> subject.connection.teleport(
+                        position.x, position.y, position.z, frame.yaw(), frame.pitch()
+                ));
+            }
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                    "Failed to apply server-side controlled-player frame to {}",
+                    subject.getGameProfile().name(),
+                    exception
+            );
+            stop(session, EndReason.LIFECYCLE, true);
+        }
+    }
+
+    private static void notifyServerFallback(Session session) {
+        if (session.kind != Kind.DIRECT || session.serverFallbackNotified) return;
+        session.serverFallbackNotified = true;
+        feedback(session.controller, "message.academy.mentalout.control.server_fallback");
+    }
+
     private static void authorize(Session session, PlayerControlFrame frame, long sequence) {
         session.authorizedFrame = frame;
         session.authorizedFrames.addLast(new AuthorizedFrame(sequence, frame));
@@ -724,10 +816,26 @@ public final class PlayerControlSessionManager {
     private static void attack(Session session, PlayerControlFrame frame) {
         var subject = session.subject;
         var target = raycastEntity(subject, subject.isCreative() ? 5.0 : 3.0, frame.yaw(), frame.pitch());
-        if (target == null || target instanceof LivingEntity living
-                && PvpSetting.shouldPrevent(session.controller, living)
-                || MentalControlRuntime.attackDecision(subject, target) == AttackDecision.DENY) return;
+        if (target == null) {
+            feedbackAction(session, "message.academy.mentalout.control.attack_no_target");
+            return;
+        }
+        if (PvpSetting.shouldPrevent(session.controller, target)) return;
+        if (MentalControlRuntime.attackDecision(subject, target) == AttackDecision.DENY) {
+            feedbackAction(session, "message.academy.mentalout.control.attack_blocked");
+            return;
+        }
         subject.attack(target);
+        subject.swing(InteractionHand.MAIN_HAND, true);
+    }
+
+    private static void feedbackAction(Session session, String key) {
+        var now = session.controller.level().getGameTime();
+        if (key.equals(session.lastActionFeedbackKey)
+                && now - session.lastActionFeedbackTick < ACTION_FEEDBACK_COOLDOWN_TICKS) return;
+        session.lastActionFeedbackKey = key;
+        session.lastActionFeedbackTick = now;
+        feedback(session.controller, key);
     }
 
     private static void useCurrentItem(
@@ -812,6 +920,7 @@ public final class PlayerControlSessionManager {
             var end = new EndPacket(session.id, session.revision, reason);
             if (session.kind == Kind.DIRECT) MisakaNetworkServer.send(session.controller, end);
             MisakaNetworkServer.send(session.subject, end);
+            if (session.kind == Kind.DIRECT) feedbackControlEnd(session.controller, reason);
         }
         if (wasActive && session.kind == Kind.DIRECT) MentalIntrusionManager.stopAny(session.controller);
     }
@@ -948,6 +1057,23 @@ public final class PlayerControlSessionManager {
 
     private static void feedback(ServerPlayer player, String key) {
         player.sendOverlayMessage(Component.translatable(key));
+    }
+
+    private static void feedbackControlEnd(ServerPlayer controller, EndReason reason) {
+        switch (reason) {
+            case CLIENT_TIMEOUT -> feedback(
+                    controller, "message.academy.mentalout.control.controller_timeout");
+            case CLIENT_REJECTED -> feedback(
+                    controller, "message.academy.mentalout.control.controller_rejected");
+            case ILLEGAL_MOVEMENT -> feedback(
+                    controller, "message.academy.mentalout.control.input_conflict");
+            case CONTROLLER_DAMAGED -> feedback(
+                    controller, "message.academy.mentalout.control.controller_damaged");
+            case LIFECYCLE -> feedback(
+                    controller, "message.academy.mentalout.control.target_unavailable");
+            default -> {
+            }
+        }
     }
 
     private static void writeFrame(ByteBuf buf, PlayerControlFrame frame) {
@@ -1134,6 +1260,8 @@ public final class PlayerControlSessionManager {
                     packet.sequence)) return;
             var player = packet.getPacketListener().getPlayer();
             switch (PlayerControlSessionManager.toggle(player)) {
+                case STARTED -> feedback(player, "message.academy.mentalout.takeover.started");
+                case STOPPED -> feedback(player, "message.academy.mentalout.takeover.stopped");
                 case NOT_IN_ROSTER -> feedback(player, "message.academy.mentalout.takeover.not_in_roster");
                 case INVALID_TARGET -> feedback(player, "message.academy.mentalout.invalid_target");
                 case PROTECTED -> {
@@ -1818,6 +1946,7 @@ public final class PlayerControlSessionManager {
         private State state = State.HANDSHAKE;
         private boolean controllerReady;
         private boolean subjectReady;
+        private boolean serverFallbackNotified;
         private long lastIntentTick;
         private long lastIntentAcceptedTick = Long.MIN_VALUE;
         private long lastNeutralTick = Long.MIN_VALUE;
@@ -1832,6 +1961,8 @@ public final class PlayerControlSessionManager {
         private long lastAppliedTick;
         private long lastViewSnapshotTick = Long.MIN_VALUE;
         private long viewSnapshotSequence;
+        private long lastActionFeedbackTick = Long.MIN_VALUE;
+        private String lastActionFeedbackKey = "";
         private int invalidMoves;
         private Vec3 lastGoodPosition;
         private PlayerControlFrame authorizedFrame = PlayerControlFrame.NEUTRAL;
