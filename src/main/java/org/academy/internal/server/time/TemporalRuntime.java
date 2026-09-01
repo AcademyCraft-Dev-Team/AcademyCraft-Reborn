@@ -1,13 +1,20 @@
 package org.academy.internal.server.time;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.TickingBlockEntity;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.server.time.TemporalAccumulator;
 import org.academy.api.server.time.TemporalApi;
+import org.academy.api.server.time.TemporalChannel;
+import org.academy.api.server.time.TemporalField;
+import org.academy.api.server.time.TemporalFieldLease;
 import org.academy.api.server.time.TemporalImmunityLease;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.time.TemporalService;
@@ -19,6 +26,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -38,11 +46,20 @@ public final class TemporalRuntime implements TemporalService {
     private static final long SERVER_TICK_NANOS = 50_000_000L;
     private static final long MAX_WALL_CLOCK_DEBT_NANOS = 1_000_000_000L;
     private static final int MAX_WALL_CLOCK_FORCED_TICKS_PER_PASS = 2;
+    private static final int MAX_LOGICAL_TICKS_PER_PASS = 8;
+    private static final long STALE_ACCUMULATOR_HEARTBEATS = 400L;
 
     private final MinecraftServer server;
     private final TemporalSavedData savedData;
     private final TemporalImmunityState transientImmunities =
             new TemporalImmunityState();
+    private final Map<UUID, TemporalField> temporalFields = new LinkedHashMap<>();
+    private final Map<UUID, AccumulatorState> entityTickAccumulators =
+            new HashMap<>();
+    private final Map<TickingBlockEntity, AccumulatorState> blockEntityTickAccumulators =
+            new IdentityHashMap<>();
+    private final Map<ResourceKey<Level>, AccumulatorState> levelClockAccumulators =
+            new HashMap<>();
     private final Map<UUID, TickSnapshot> serverTickSnapshots = new HashMap<>();
     private final Map<ServerLevel, Map<UUID, TickSnapshot>> levelTickSnapshots =
             new IdentityHashMap<>();
@@ -52,6 +69,10 @@ public final class TemporalRuntime implements TemporalService {
             ThreadLocal.withInitial(HashSet::new);
     private final ThreadLocal<Set<UUID>> fallbackTickStack =
             ThreadLocal.withInitial(HashSet::new);
+    private final ThreadLocal<Set<UUID>> scaledEntityTickStack =
+            ThreadLocal.withInitial(HashSet::new);
+    private final ThreadLocal<Set<ResourceKey<Level>>> scaledLevelClockStack =
+            ThreadLocal.withInitial(HashSet::new);
     private long heartbeat;
     private long stateRevision;
     private boolean stopped;
@@ -59,6 +80,55 @@ public final class TemporalRuntime implements TemporalService {
     public TemporalRuntime(MinecraftServer server) {
         this.server = server;
         savedData = TemporalSavedData.get(server);
+    }
+
+    @Override
+    public TemporalFieldLease acquireField(TemporalField field) {
+        requireServerThread();
+        requireActive();
+        if (field == null) {
+            throw new IllegalArgumentException("Temporal field cannot be null.");
+        }
+
+        var fieldId = UUID.randomUUID();
+        var owner = leaseOwnerAfterAcquire("acquireField");
+        temporalFields.put(fieldId, field);
+        resetScaleAccumulators();
+        return new FieldLease(fieldId, field, owner);
+    }
+
+    @Override
+    public double effectiveScale(ServerLevel level, TemporalChannel channel) {
+        if (stopped || level == null || level.getServer() != server) return 1.0D;
+        return resolveScale(level.dimension(), null, null, channel);
+    }
+
+    @Override
+    public double effectiveScale(Entity entity, TemporalChannel channel) {
+        if (stopped || entity == null
+                || !(entity.level() instanceof ServerLevel level)
+                || level.getServer() != server) {
+            return 1.0D;
+        }
+        return resolveScale(level.dimension(), entity.position(), entity, channel);
+    }
+
+    @Override
+    public double effectiveScale(
+            ServerLevel level,
+            BlockPos position,
+            TemporalChannel channel
+    ) {
+        if (stopped || level == null || position == null
+                || level.getServer() != server) {
+            return 1.0D;
+        }
+        var center = new Vec3(
+                position.getX() + 0.5D,
+                position.getY() + 0.5D,
+                position.getZ() + 0.5D
+        );
+        return resolveScale(level.dimension(), center, null, channel);
     }
 
     @Override
@@ -75,7 +145,7 @@ public final class TemporalRuntime implements TemporalService {
 
         var ownedSources = EnumSet.copyOf(sources);
         var entityId = entity.getUUID();
-        var owner = leaseOwnerAfterAcquire();
+        var owner = leaseOwnerAfterAcquire("acquireImmunity");
         transientImmunities.acquire(entityId, ownedSources);
         publishClientState();
         return new Lease(entityId, ownedSources, owner);
@@ -94,6 +164,100 @@ public final class TemporalRuntime implements TemporalService {
         if (stopped || entity.level().getServer() != server) return false;
         var entityId = entity.getUUID();
         return transientImmunities.hasAny(entityId) || savedData.hasAny(entityId);
+    }
+
+    /**
+     * Dispatches zero or more complete root-entity ticks for one server pass.
+     * Returns true when the injected outer invocation must be cancelled.
+     */
+    public boolean dispatchEntityTicks(ServerLevel level, Entity entity) {
+        requireHookCaller("dispatchEntityTicks", ServerLevel.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server || entity.isRemoved()) return false;
+
+        var entityId = entity.getUUID();
+        var inProgress = scaledEntityTickStack.get();
+        if (inProgress.contains(entityId)) return false;
+
+        var scale = effectiveScale(entity, TemporalChannel.ENTITY);
+        var logicalTicks = logicalTicks(entityTickAccumulators, entityId, scale);
+        if (logicalTicks == 1) return false;
+        if (logicalTicks == 0) return true;
+
+        inProgress.add(entityId);
+        try {
+            for (var index = 0; index < logicalTicks && !entity.isRemoved(); index++) {
+                level.tickNonPassenger(entity);
+            }
+        } finally {
+            inProgress.remove(entityId);
+            if (inProgress.isEmpty()) scaledEntityTickStack.remove();
+        }
+        return true;
+    }
+
+    /** Runs a block-entity ticker according to its effective local scale. */
+    public void dispatchBlockEntityTicks(
+            ServerLevel level,
+            TickingBlockEntity ticker
+    ) {
+        requireHookCaller("dispatchBlockEntityTicks", Level.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) {
+            ticker.tick();
+            return;
+        }
+
+        var scale = effectiveScale(
+                level,
+                ticker.getPos(),
+                TemporalChannel.BLOCK_ENTITY
+        );
+        var logicalTicks = logicalTicks(
+                blockEntityTickAccumulators,
+                ticker,
+                scale
+        );
+        for (var index = 0; index < logicalTicks && !ticker.isRemoved(); index++) {
+            ticker.tick();
+        }
+    }
+
+    /**
+     * Dispatches the protected level clock according to its level-wide scale.
+     * Returns true when the injected outer invocation must be cancelled.
+     */
+    public boolean dispatchLevelClockTicks(
+            ServerLevel level,
+            Runnable vanillaTickTime
+    ) {
+        requireHookCaller("dispatchLevelClockTicks", ServerLevel.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) return false;
+
+        var dimension = level.dimension();
+        var inProgress = scaledLevelClockStack.get();
+        if (inProgress.contains(dimension)) return false;
+
+        var scale = effectiveScale(level, TemporalChannel.LEVEL_CLOCK);
+        var logicalTicks = logicalTicks(
+                levelClockAccumulators,
+                dimension,
+                scale
+        );
+        if (logicalTicks == 1) return false;
+        if (logicalTicks == 0) return true;
+
+        inProgress.add(dimension);
+        try {
+            for (var index = 0; index < logicalTicks; index++) {
+                vanillaTickTime.run();
+            }
+        } finally {
+            inProgress.remove(dimension);
+            if (inProgress.isEmpty()) scaledLevelClockStack.remove();
+        }
+        return true;
     }
 
     /** Internal persistence boundary for ability-state reconciliation. */
@@ -139,6 +303,7 @@ public final class TemporalRuntime implements TemporalService {
         requireServerThread();
         if (stopped) return;
         heartbeat++;
+        if (heartbeat % 200L == 0L) pruneStaleAccumulators();
         snapshotTrackedEntities(null, serverTickSnapshots);
         if (heartbeat % 40L == 0L) {
             lastFallbackHeartbeats.entrySet().removeIf(
@@ -249,12 +414,67 @@ public final class TemporalRuntime implements TemporalService {
         if (stopped) return;
         stopped = true;
         transientImmunities.clear();
+        temporalFields.clear();
+        resetScaleAccumulators();
         serverTickSnapshots.clear();
         levelTickSnapshots.clear();
         lastFallbackHeartbeats.clear();
         wallClockDebtStates.clear();
         guardBypassStack.remove();
         fallbackTickStack.remove();
+        scaledEntityTickStack.remove();
+        scaledLevelClockStack.remove();
+    }
+
+    private double resolveScale(
+            ResourceKey<Level> dimension,
+            Vec3 position,
+            Entity subject,
+            TemporalChannel channel
+    ) {
+        return TemporalFieldResolver.resolve(
+                temporalFields.values(),
+                dimension,
+                position,
+                channel,
+                source -> subject != null && isImmune(subject, source)
+        );
+    }
+
+    private <K> int logicalTicks(
+            Map<K, AccumulatorState> accumulators,
+            K key,
+            double scale
+    ) {
+        if (scale == 1.0D) {
+            accumulators.remove(key);
+            return 1;
+        }
+        var state = accumulators.computeIfAbsent(
+                key,
+                ignored -> new AccumulatorState()
+        );
+        state.lastAccessHeartbeat = heartbeat;
+        return state.accumulator.advance(scale, MAX_LOGICAL_TICKS_PER_PASS);
+    }
+
+    private void resetScaleAccumulators() {
+        entityTickAccumulators.clear();
+        blockEntityTickAccumulators.clear();
+        levelClockAccumulators.clear();
+    }
+
+    private void pruneStaleAccumulators() {
+        var oldestHeartbeat = heartbeat - STALE_ACCUMULATOR_HEARTBEATS;
+        entityTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        blockEntityTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        levelClockAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
     }
 
     private void snapshotTrackedEntities(
@@ -419,10 +639,10 @@ public final class TemporalRuntime implements TemporalService {
                 .orElse(null));
     }
 
-    private static Class<?> leaseOwnerAfterAcquire() {
+    private static Class<?> leaseOwnerAfterAcquire(String entryMethod) {
         return STATE_STACK_WALKER.walk(frames -> frames
                 .dropWhile(frame -> frame.getDeclaringClass() != TemporalRuntime.class
-                        || !frame.getMethodName().equals("acquireImmunity"))
+                        || !frame.getMethodName().equals(entryMethod))
                 .skip(1)
                 .map(StackWalker.StackFrame::getDeclaringClass)
                 .filter(type -> type != TemporalService.class && type != TemporalApi.class)
@@ -433,6 +653,16 @@ public final class TemporalRuntime implements TemporalService {
     private static Class<?> leaseCallerAfterClose() {
         return STATE_STACK_WALKER.walk(frames -> frames
                 .dropWhile(frame -> frame.getDeclaringClass() != Lease.class
+                        || !frame.getMethodName().equals("close"))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+    }
+
+    private static Class<?> fieldLeaseCallerAfterClose() {
+        return STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != FieldLease.class
                         || !frame.getMethodName().equals("close"))
                 .skip(1)
                 .map(StackWalker.StackFrame::getDeclaringClass)
@@ -474,6 +704,57 @@ public final class TemporalRuntime implements TemporalService {
         SERVER_LEVEL,
         SERVER_HEARTBEAT,
         WALL_CLOCK_DEBT
+    }
+
+    private static final class AccumulatorState {
+        private final TemporalAccumulator accumulator = new TemporalAccumulator();
+        private long lastAccessHeartbeat;
+    }
+
+    private final class FieldLease implements TemporalFieldLease {
+        private final UUID fieldId;
+        private final TemporalField field;
+        private final Class<?> owner;
+        private boolean active = true;
+
+        private FieldLease(
+                UUID fieldId,
+                TemporalField field,
+                Class<?> owner
+        ) {
+            this.fieldId = fieldId;
+            this.field = field;
+            this.owner = owner;
+        }
+
+        @Override
+        public UUID fieldId() {
+            return fieldId;
+        }
+
+        @Override
+        public TemporalField field() {
+            return field;
+        }
+
+        @Override
+        public boolean isActive() {
+            return active && !stopped;
+        }
+
+        @Override
+        public void close() {
+            var caller = fieldLeaseCallerAfterClose();
+            if (!sameStateCodeSource(caller, owner)) {
+                throw new SecurityException("Only the temporal field owner may close it.");
+            }
+            requireServerThread();
+            if (!active) return;
+            active = false;
+            if (!stopped && temporalFields.remove(fieldId) != null) {
+                resetScaleAccumulators();
+            }
+        }
     }
 
     private final class Lease implements TemporalImmunityLease {

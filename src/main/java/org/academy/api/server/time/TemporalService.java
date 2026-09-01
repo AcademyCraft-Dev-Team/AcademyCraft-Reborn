@@ -1,11 +1,32 @@
 package org.academy.api.server.time;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Set;
 
 /** Server-authoritative entry point for time-control state. */
 public interface TemporalService {
+    /**
+     * Adds an owner-bound temporal field. Field mutation and lease closure
+     * must happen on the server thread.
+     */
+    TemporalFieldLease acquireField(TemporalField field);
+
+    /** Effective non-spatial scale for a level-wide channel. */
+    double effectiveScale(ServerLevel level, TemporalChannel channel);
+
+    /** Effective scale at an entity, including source-specific immunity. */
+    double effectiveScale(Entity entity, TemporalChannel channel);
+
+    /** Effective scale at a block position. */
+    double effectiveScale(
+            ServerLevel level,
+            BlockPos position,
+            TemporalChannel channel
+    );
+
     /**
      * Adds a transient immunity contribution for an entity.
      *
