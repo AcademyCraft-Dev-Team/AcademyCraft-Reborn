@@ -4,13 +4,23 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-public sealed interface ControlDirective permits ControlDirective.ForceTarget,
+public sealed interface ControlDirective permits ControlDirective.TakeoverAi, ControlDirective.ForceTarget,
         ControlDirective.FreezeAi, ControlDirective.ImpressionAlliance, ControlDirective.MoveTo,
         ControlDirective.LookAt, ControlDirective.DirectControl, ControlDirective.Guard {
     ControlCapability capability();
 
     default Set<ControlDomain> domains() {
         return capability().domains();
+    }
+
+    /**
+     * Acquires autonomous-AI execution without consuming navigation or action domains.
+     */
+    record TakeoverAi() implements ControlDirective {
+        @Override
+        public ControlCapability capability() {
+            return ControlCapability.AI_CONTROL;
+        }
     }
 
     record ForceTarget(UUID targetUuid) implements ControlDirective {

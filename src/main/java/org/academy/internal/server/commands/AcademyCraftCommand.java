@@ -18,6 +18,8 @@ import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -27,6 +29,8 @@ import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.profiler.ProfileDump;
+import org.academy.api.common.entitycontrol.GroupControlApi;
+import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -94,6 +98,7 @@ public final class AcademyCraftCommand {
                                 .executes(AcademyCraftCommand::toggleSkillDebugMode))
                         .then(CPDebugCommands.register())
                         .then(DarkmatterDebugCommands.register())
+                        .then(ControlDebugCommands.register())
                 )
                 .then(Commands.literal("dev")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
@@ -728,6 +733,58 @@ public final class AcademyCraftCommand {
                     Arrays.stream(AbilityData.Status.values()).map(Enum::name),
                     builder
             );
+        }
+    }
+
+    private static final class ControlDebugCommands {
+        private static LiteralArgumentBuilder<CommandSourceStack> register() {
+            return Commands.literal("mental_control")
+                    .then(Commands.argument("target", EntityArgument.entity())
+                            .executes(ControlDebugCommands::inspect));
+        }
+
+        private static int inspect(CommandContext<CommandSourceStack> context)
+                throws CommandSyntaxException {
+            var entity = EntityArgument.getEntity(context, "target");
+            if (!(entity instanceof LivingEntity living)) {
+                context.getSource().sendFailure(Component.literal(
+                        "[Mental Control] Target is not a living entity"));
+                return 0;
+            }
+            var snapshot = MentalControlApi.snapshot(living);
+            var text = new StringBuilder()
+                    .append("§e[Mental Control]§r ")
+                    .append(living.getDisplayName().getString())
+                    .append(" (").append(living.getUUID()).append(") tick=")
+                    .append(snapshot.gameTime()).append('\n');
+            if (snapshot.controls().isEmpty()) {
+                text.append("  no effective control\n");
+            } else {
+                snapshot.controls().forEach((capability, control) -> text
+                        .append("  ").append(capability)
+                        .append(" controller=").append(control.controllerId())
+                        .append(" source=").append(control.source())
+                        .append(" scope=").append(control.scopeId())
+                        .append(" priority=").append(control.priority())
+                        .append(" expires=").append(control.expiresAt())
+                        .append(" directive=").append(control.directive())
+                        .append('\n'));
+            }
+            GroupControlApi.inspect(living).ifPresent(task -> text
+                    .append("  task=").append(task.command())
+                    .append(" block=").append(task.currentBlock().orElse(null))
+                    .append(" pending=").append(task.pendingWork())
+                    .append(" movement=").append(task.movementState().orElse(null))
+                    .append(" stalledTicks=").append(task.stalledTicks())
+                    .append('\n'));
+            if (living instanceof Mob mob) {
+                var path = mob.getNavigation().getPath();
+                text.append("  navigationDone=").append(mob.getNavigation().isDone())
+                        .append(" path=").append(path == null ? "none" :
+                                "nodes=" + path.getNodeCount() + ", reachable=" + path.canReach());
+            }
+            context.getSource().sendSuccess(() -> Component.literal(text.toString()), false);
+            return snapshot.controls().size();
         }
     }
 

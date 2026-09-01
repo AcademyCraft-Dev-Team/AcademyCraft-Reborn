@@ -2,8 +2,11 @@ package org.academy.api.common.entitycontrol;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -38,13 +41,39 @@ public final class GroupControlNavigation {
         return Optional.empty();
     }
 
+    /**
+     * Resolves a clicked position to a collision-safe landing point with an actually reachable
+     * path for ordinary mobs. Direct-movement entities and non-mobs fall back to collision checks.
+     */
+    public static Optional<Vec3> findNearestReachablePosition(
+            LivingEntity subject,
+            Vec3 preferred
+    ) {
+        if (subject == null || preferred == null || !isFinite(preferred)) return Optional.empty();
+        var candidates = java.util.Arrays.stream(SEARCH_OFFSETS)
+                .map(offset -> preferred.add(offset[0], offset[1], offset[2]))
+                .filter(candidate -> canOccupy(subject, candidate))
+                .toList();
+        if (!(subject instanceof Mob mob)) return candidates.stream().findFirst();
+        return candidates.stream()
+                .map(candidate -> new ReachableCandidate(
+                        candidate,
+                        mob.getNavigation().createPath(BlockPos.containing(candidate), 0)
+                ))
+                .filter(candidate -> candidate.path() != null && candidate.path().canReach())
+                .min(Comparator
+                        .comparingInt((ReachableCandidate candidate) -> candidate.path().getNodeCount())
+                        .thenComparingDouble(candidate -> subject.distanceToSqr(candidate.position())))
+                .map(ReachableCandidate::position);
+    }
+
     /** Finds a collision-free position from which the subject can reach a work block. */
     public static Optional<Vec3> findNearestWorkPosition(
             LivingEntity subject,
             BlockPos workBlock
     ) {
         if (subject == null || workBlock == null) return Optional.empty();
-        return Stream.of(
+        var candidates = Stream.of(
                         workBlock.above(),
                         workBlock.north(), workBlock.south(), workBlock.west(), workBlock.east(),
                         workBlock.north().west(), workBlock.north().east(),
@@ -56,7 +85,20 @@ public final class GroupControlNavigation {
                 .map(BlockPos::immutable)
                 .map(Vec3::atBottomCenterOf)
                 .filter(candidate -> canOccupy(subject, candidate))
-                .min(java.util.Comparator.comparingDouble(subject::distanceToSqr));
+                .toList();
+        if (!(subject instanceof Mob mob)) {
+            return candidates.stream().min(Comparator.comparingDouble(subject::distanceToSqr));
+        }
+        return candidates.stream()
+                .map(candidate -> new ReachableCandidate(
+                        candidate,
+                        mob.getNavigation().createPath(BlockPos.containing(candidate), 0)
+                ))
+                .filter(candidate -> candidate.path() != null && candidate.path().canReach())
+                .min(Comparator
+                        .comparingInt((ReachableCandidate candidate) -> candidate.path().getNodeCount())
+                        .thenComparingDouble(candidate -> subject.distanceToSqr(candidate.position())))
+                .map(ReachableCandidate::position);
     }
 
     /** Checks the loaded world, border, and the subject's full collision box. */
@@ -73,5 +115,8 @@ public final class GroupControlNavigation {
 
     private static boolean isFinite(Vec3 value) {
         return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
+    }
+
+    private record ReachableCandidate(Vec3 position, net.minecraft.world.level.pathfinder.Path path) {
     }
 }

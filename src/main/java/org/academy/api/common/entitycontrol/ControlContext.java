@@ -14,6 +14,7 @@ public record ControlContext(
         ServerPlayer controller,
         LivingEntity subject,
         Identifier source,
+        UUID scopeId,
         int priority,
         long expiresAt
 ) {
@@ -23,5 +24,27 @@ public record ControlContext(
         Objects.requireNonNull(controller, "controller");
         Objects.requireNonNull(subject, "subject");
         Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(scopeId, "scopeId");
+    }
+
+    public ControlContext(
+            MinecraftServer server,
+            UUID leaseId,
+            ServerPlayer controller,
+            LivingEntity subject,
+            Identifier source,
+            int priority,
+            long expiresAt
+    ) {
+        this(
+                server,
+                leaseId,
+                controller,
+                subject,
+                source,
+                ControlRequest.DEFAULT_SCOPE,
+                priority,
+                expiresAt
+        );
     }
 }
