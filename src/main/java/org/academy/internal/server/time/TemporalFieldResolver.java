@@ -7,6 +7,7 @@ import org.academy.api.server.time.TemporalChannel;
 import org.academy.api.server.time.TemporalField;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.time.TemporalScale;
+import org.academy.api.server.time.TemporalScope;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -56,6 +57,28 @@ final class TemporalFieldResolver {
                 continue;
             }
             scales.add(field.scale());
+        }
+        return TemporalScale.compose(
+                scales,
+                false,
+                TemporalScale.DEFAULT_MAX_SCALE
+        );
+    }
+
+    /** Resolves only save-scoped contributions for a server-global clock. */
+    static double resolveSave(
+            Iterable<TemporalField> fields,
+            TemporalChannel channel
+    ) {
+        if (channel == null) {
+            throw new IllegalArgumentException("Temporal channel cannot be null.");
+        }
+        var scales = new ArrayList<Double>();
+        for (var field : fields) {
+            if (field.scope() instanceof TemporalScope.Save
+                    && field.channels().contains(channel)) {
+                scales.add(field.scale());
+            }
         }
         return TemporalScale.compose(
                 scales,

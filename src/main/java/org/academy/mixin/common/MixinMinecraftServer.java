@@ -1,6 +1,7 @@
 package org.academy.mixin.common;
 
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.clock.ServerClockManager;
 import org.academy.AcademyCraftServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
@@ -10,6 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BooleanSupplier;
@@ -43,6 +45,22 @@ public abstract class MixinMinecraftServer implements MinecraftServerContext {
     ) {
         var runtime = academy$temporalRuntime();
         if (runtime != null) runtime.finishServerHeartbeat();
+    }
+
+    @Redirect(
+            method = "tickChildren",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/clock/ServerClockManager;tick()V"
+            )
+    )
+    private void academy$dispatchServerClockTicks(ServerClockManager manager) {
+        var runtime = academy$temporalRuntime();
+        if (runtime == null) {
+            manager.tick();
+            return;
+        }
+        runtime.dispatchServerClockTicks(manager::tick);
     }
 
     @Inject(method = "waitUntilNextTick", at = @At("RETURN"), require = 0)
