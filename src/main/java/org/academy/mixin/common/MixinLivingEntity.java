@@ -16,6 +16,8 @@ import org.academy.api.client.util.QuantumUtil;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
+import org.academy.api.server.entity.SurvivalDefense;
+import org.academy.api.server.entity.SurvivalDefenseAspect;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
@@ -152,6 +154,7 @@ public abstract class MixinLivingEntity {
                     ? health
                     : current;
         }
+        health = SurvivalDefense.clampHealthWrite(entity, health);
         return EntityControlApi.clampHealthWrite(entity, health);
     }
 
@@ -226,9 +229,14 @@ public abstract class MixinLivingEntity {
             cir.setReturnValue(Math.max(1.0f, cir.getReturnValue()));
             return;
         }
-        cir.setReturnValue(EntityControlApi.applyHealthReadGuards(
-                (LivingEntity) (Object) this,
+        var entity = (LivingEntity) (Object) this;
+        var guarded = EntityControlApi.applyHealthReadGuards(
+                entity,
                 cir.getReturnValue()
+        );
+        cir.setReturnValue(SurvivalDefense.applyHealthReadGuard(
+                entity,
+                guarded
         ));
     }
 
@@ -242,7 +250,9 @@ public abstract class MixinLivingEntity {
 
     @Inject(method = "isDeadOrDying", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionDyingState(CallbackInfoReturnable<Boolean> cir) {
-        if ((Object) this instanceof ServerPlayer player
+        var entity = (LivingEntity) (Object) this;
+        if (SurvivalDefense.protects(entity, SurvivalDefenseAspect.DEATH_STATE)
+                || (Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.shouldForceAlive(player)) {
             cir.setReturnValue(false);
         }
@@ -250,7 +260,9 @@ public abstract class MixinLivingEntity {
 
     @Inject(method = "isAlive", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionLivingAlive(CallbackInfoReturnable<Boolean> cir) {
-        if ((Object) this instanceof ServerPlayer player
+        var entity = (LivingEntity) (Object) this;
+        if (SurvivalDefense.protects(entity, SurvivalDefenseAspect.DEATH_STATE)
+                || (Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.shouldForceAlive(player)) {
             cir.setReturnValue(true);
         }
@@ -261,17 +273,24 @@ public abstract class MixinLivingEntity {
             Entity.RemovalReason reason,
             CallbackInfo ci
     ) {
-        if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)
+        var entity = (LivingEntity) (Object) this;
+        if ((SurvivalDefense.protects(entity, SurvivalDefenseAspect.REMOVAL)
+                || entity instanceof ServerPlayer player
+                && VectorReflection.Server.usesFullInstanceProtection(player))
                 && reason != Entity.RemovalReason.CHANGED_DIMENSION
-                && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
+                && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER
+                && reason != Entity.RemovalReason.UNLOADED_TO_CHUNK) {
             ci.cancel();
         }
     }
 
     @Inject(method = "kill", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionLivingKill(ServerLevel level, CallbackInfo ci) {
-        if ((Object) this instanceof ServerPlayer player
+        var entity = (LivingEntity) (Object) this;
+        if (SurvivalDefense.protects(entity, SurvivalDefenseAspect.DEATH_STATE)) {
+            SurvivalDefense.repairNow(entity);
+            ci.cancel();
+        } else if (entity instanceof ServerPlayer player
                 && VectorReflection.Server.usesFullInstanceProtection(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
@@ -280,11 +299,23 @@ public abstract class MixinLivingEntity {
 
     @Inject(method = "die", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionDeath(DamageSource source, CallbackInfo ci) {
-        if ((Object) this instanceof ServerPlayer player
+        var entity = (LivingEntity) (Object) this;
+        if (SurvivalDefense.protects(entity, SurvivalDefenseAspect.DEATH_STATE)) {
+            SurvivalDefense.repairNow(entity);
+            ci.cancel();
+        } else if (entity instanceof ServerPlayer player
                 && VectorReflection.Server.usesFullInstanceProtection(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
+    }
+
+    @Inject(method = "tickDeath", at = @At("HEAD"), cancellable = true)
+    private void academy$protectSurvivalDefenseDeathTick(CallbackInfo ci) {
+        var entity = (LivingEntity) (Object) this;
+        if (!SurvivalDefense.protects(entity, SurvivalDefenseAspect.DEATH_STATE)) return;
+        SurvivalDefense.repairNow(entity);
+        ci.cancel();
     }
 
     @Inject(

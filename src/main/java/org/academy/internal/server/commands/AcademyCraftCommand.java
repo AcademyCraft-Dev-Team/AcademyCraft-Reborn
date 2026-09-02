@@ -99,6 +99,7 @@ public final class AcademyCraftCommand {
                         .then(CPDebugCommands.register())
                         .then(DarkmatterDebugCommands.register())
                         .then(ControlDebugCommands.register())
+                        .then(TemporalTickDebugCommands.register())
                 )
                 .then(Commands.literal("dev")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))

@@ -3,13 +3,20 @@ package org.academy.internal.common.ability.accelerator.reflection;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.server.entity.SurvivalDefense;
+import org.academy.api.server.entity.SurvivalDefenseLease;
+import org.academy.api.server.entity.SurvivalDefenseProfile;
+import org.academy.api.server.time.TemporalApi;
+import org.academy.api.server.time.TemporalImmunityLease;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
 
 import java.lang.ref.WeakReference;
+import java.security.CodeSource;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -17,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Server-side class-pointer integrity, removal recovery, and observer reconstruction.
  */
 public final class VectorReflectionRuntime {
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
     private static final Map<UUID, Anchor> ANCHORS = new ConcurrentHashMap<>();
     private static final long OBSERVER_REBUILD_COOLDOWN = 20L;
 
@@ -28,6 +38,7 @@ public final class VectorReflectionRuntime {
         var anchor = ANCHORS.computeIfAbsent(player.getUUID(), ignored -> new Anchor(player));
         var previous = anchor.player.get();
         if (previous != null && previous != player) {
+            closeSurvivalDefense(anchor);
             EntityControlApi.allowExternalRemoval(previous);
             ClassPointerProtectionManager.restore(previous);
         }
@@ -37,6 +48,8 @@ public final class VectorReflectionRuntime {
         anchor.player = new WeakReference<>(player);
 
         EntityControlApi.protectFromExternalRemoval(player);
+        maintainSurvivalDefense(player, anchor);
+        maintainTemporalImmunity(player, anchor);
         sanitize(player, anchor);
         recoverLevelRegistration(player, anchor);
         rebuildObserversIfRequested(player, anchor);
@@ -44,16 +57,20 @@ public final class VectorReflectionRuntime {
 
     public static void deactivate(ServerPlayer player) {
         if (player == null) return;
+        if (!isAcademyStateCaller("deactivate")) return;
         restoreOriginalInstance(player);
     }
 
     public static void deactivateForDeath(ServerPlayer player) {
         if (player == null) return;
+        if (!isAcademyStateCaller("deactivateForDeath")) return;
         restoreOriginalInstance(player);
     }
 
     private static void restoreOriginalInstance(ServerPlayer player) {
         var anchor = ANCHORS.remove(player.getUUID());
+        closeSurvivalDefense(anchor);
+        closeTemporalImmunity(anchor);
         var previous = anchor == null ? null : anchor.player.get();
         if (previous != null && previous != player) {
             EntityControlApi.allowExternalRemoval(previous);
@@ -80,14 +97,49 @@ public final class VectorReflectionRuntime {
     }
 
     public static void shutdown() {
+        if (!isAcademyStateCaller("shutdown")) return;
         for (var anchor : ANCHORS.values()) {
             var player = anchor.player.get();
+            closeSurvivalDefense(anchor);
+            closeTemporalImmunity(anchor);
             if (player == null) continue;
             EntityControlApi.allowExternalRemoval(player);
             ClassPointerProtectionManager.restore(player);
         }
         ANCHORS.clear();
         ClassPointerProtectionManager.restoreAllServer();
+    }
+
+    private static void maintainSurvivalDefense(ServerPlayer player, Anchor anchor) {
+        if (anchor.survivalDefense == null || !anchor.survivalDefense.isActive()) {
+            anchor.survivalDefense = SurvivalDefense.acquire(
+                    player,
+                    SurvivalDefenseProfile.absolute(1.0f)
+            );
+        }
+        SurvivalDefense.repairNow(player);
+    }
+
+    private static void closeSurvivalDefense(Anchor anchor) {
+        if (anchor == null || anchor.survivalDefense == null) return;
+        anchor.survivalDefense.close();
+        anchor.survivalDefense = null;
+    }
+
+    private static void maintainTemporalImmunity(ServerPlayer player, Anchor anchor) {
+        if (!VectorReflection.Server.isActive(player)) {
+            closeTemporalImmunity(anchor);
+            return;
+        }
+        if (anchor.temporalImmunity != null && anchor.temporalImmunity.isActive()) return;
+        anchor.temporalImmunity = TemporalApi.get(player)
+                .acquireTimeStopImmunity(player);
+    }
+
+    private static void closeTemporalImmunity(Anchor anchor) {
+        if (anchor == null || anchor.temporalImmunity == null) return;
+        anchor.temporalImmunity.close();
+        anchor.temporalImmunity = null;
     }
 
     private static void sanitize(ServerPlayer player, Anchor anchor) {
@@ -189,12 +241,33 @@ public final class VectorReflectionRuntime {
                 && Double.isFinite(value.z);
     }
 
+    private static boolean isAcademyStateCaller(String entryMethod) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != VectorReflectionRuntime.class
+                        || !frame.getMethodName().equals(entryMethod))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(VectorReflectionRuntime.class));
+        if (caller == VectorReflectionRuntime.class) return true;
+        try {
+            CodeSource callerSource = caller.getProtectionDomain().getCodeSource();
+            CodeSource academySource = AcademyCraft.class.getProtectionDomain().getCodeSource();
+            return callerSource != null && academySource != null
+                    && Objects.equals(callerSource.getLocation(), academySource.getLocation());
+        } catch (SecurityException ignored) {
+            return false;
+        }
+    }
+
     private static final class Anchor {
         private volatile WeakReference<ServerPlayer> player;
         private volatile Vec3 lastSafePosition;
         private volatile boolean observerRebuildRequested;
         private volatile long lastObserverRebuildTick = Long.MIN_VALUE / 2L;
         private volatile long lastFailureLogNanos;
+        private SurvivalDefenseLease survivalDefense;
+        private TemporalImmunityLease temporalImmunity;
 
         private Anchor(ServerPlayer player) {
             this.player = new WeakReference<>(player);
