@@ -198,6 +198,27 @@ class PlayerControlProtocolTest {
     }
 
     @Test
+    void targetViewStateSanitizesNonFiniteModdedAttributes() {
+        var hotbar = new ArrayList<ItemStack>();
+        for (var slot = 0; slot < 9; slot++) hotbar.add(ItemStack.EMPTY);
+
+        var state = new PlayerControlSessionManager.TargetViewState(
+                hotbar, 0, ItemStack.EMPTY,
+                Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY,
+                0, 20, Float.NaN,
+                300, 300, Float.NaN, 0, Float.POSITIVE_INFINITY,
+                false, InteractionHand.MAIN_HAND, 0
+        );
+
+        assertEquals(0.0f, state.health());
+        assertEquals(20.0f, state.maxHealth());
+        assertEquals(0.0f, state.absorption());
+        assertEquals(0.0f, state.saturation());
+        assertEquals(0.0f, state.experienceProgress());
+        assertEquals(0.0f, state.attackStrength());
+    }
+
+    @Test
     void ordinaryPlayersHaveNoInputResistanceForNow() {
         assertFalse(PlayerControlSessionManager.isResistant(null));
         assertEquals(0L, PlayerControlSessionManager.resistanceUntil(null));

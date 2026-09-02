@@ -143,7 +143,13 @@ public abstract class MixinGameRenderer {
         if (PlayerControlClientState.isController()) {
             var entity = PlayerControlClientState.controlledViewEntity();
             var state = PlayerControlClientState.targetViewState();
-            if (entity instanceof AbstractClientPlayer player && !cameraState.isPanoramicMode && minecraft.options.getCameraType().isFirstPerson() && !cameraState.entityRenderState.isSleeping && !minecraft.gameRenderer.gameRenderState().guiRenderState.isHudHidden && minecraft.gameMode != null && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR) {
+            if (state != null && entity instanceof AbstractClientPlayer player
+                    && !cameraState.isPanoramicMode
+                    && minecraft.options.getCameraType().isFirstPerson()
+                    && !cameraState.entityRenderState.isSleeping
+                    && !minecraft.gameRenderer.gameRenderState().guiRenderState.isHudHidden
+                    && minecraft.gameMode != null
+                    && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR) {
                 var poseStack = new PoseStack();
                 poseStack.pushPose();
                 poseStack.mulPose(modelViewMatrix.invert(new Matrix4f()));
