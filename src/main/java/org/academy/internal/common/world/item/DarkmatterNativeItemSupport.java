@@ -16,18 +16,24 @@ import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
  * Shared construction and durability behavior for vanilla-derived shaped item classes.
  */
 public final class DarkmatterNativeItemSupport {
+    public static final int ENCHANTABILITY = 25;
+
     private DarkmatterNativeItemSupport() {
     }
 
+    public static Item.Properties enchantableProperties(Item.Properties properties) {
+        return properties.enchantable(ENCHANTABILITY);
+    }
+
     public static Item.Properties equipmentProperties(Item.Properties properties) {
-        return properties.durability(Integer.MAX_VALUE).setNoCombineRepair()
+        return enchantableProperties(properties).durability(Integer.MAX_VALUE).setNoCombineRepair()
                 .component(ItemDataComponents.DARKMATTER_INTEGRITY.get(), DarkmatterIntegrity.FULL)
                 .component(ItemDataComponents.DARKMATTER_SHAPING_PROFILE.get(),
                         DarkmatterShapingProfile.DEFAULT);
     }
 
     public static Item.Properties ammunitionProperties(Item.Properties properties) {
-        return properties.stacksTo(64).component(
+        return enchantableProperties(properties).stacksTo(64).component(
                 ItemDataComponents.DARKMATTER_SHAPING_PROFILE.get(),
                 DarkmatterShapingProfile.DEFAULT);
     }

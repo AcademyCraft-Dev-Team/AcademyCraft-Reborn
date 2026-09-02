@@ -21,6 +21,7 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityTypes;
@@ -46,6 +47,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
@@ -394,6 +396,26 @@ public final class DarkmatterResourceGameTests {
                                 org.academy.internal.common.world.item.Items.DARKMATTER_ARROW.get())
                                 && fallback.has(DataComponents.INTANGIBLE_PROJECTILE),
                         "No-ammo fallback is not an intangible dark-matter arrow");
+                var darkmatterItems = player.registryAccess().lookupOrThrow(Registries.ITEM)
+                        .getOrThrow(TagKey.create(
+                                Registries.ITEM, AcademyCraft.academy("darkmatter_items")));
+                helper.assertTrue(darkmatterItems.size() == 16,
+                        "Dark-matter enchantable tag does not contain every item: "
+                                + darkmatterItems.size());
+                var darkmatterEnchantment = player.registryAccess()
+                        .lookupOrThrow(Registries.ENCHANTMENT)
+                        .getOrThrow(DarkmatterEnchantments.DARKMATTER);
+                for (var item : darkmatterItems) {
+                    var enchantable = new ItemStack(item.value());
+                    helper.assertTrue(enchantable.isEnchantable()
+                                    && enchantable.supportsEnchantment(darkmatterEnchantment),
+                            "Dark-matter item is not enchantable: " + item.getKey());
+                }
+                var sword = new ItemStack(
+                        org.academy.internal.common.world.item.Items.DARKMATTER_SWORD.get());
+                helper.assertTrue(sword.getItem().canPerformAction(
+                                sword, ItemAbilities.SWORD_SWEEP),
+                        "Native sword does not expose the sweep attack action");
                 assertClose(helper, 15.0f, manager.getView(player).totalMatter(),
                         "Shaped tool plus inventory material consumed the wrong MP total");
                 removePlayer(helper, player);

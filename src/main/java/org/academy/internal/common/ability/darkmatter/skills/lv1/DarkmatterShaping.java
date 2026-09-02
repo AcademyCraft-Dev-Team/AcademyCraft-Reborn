@@ -54,7 +54,6 @@ public final class DarkmatterShaping extends Skill {
 
     public DarkmatterShaping() {
         super(Builder.of(AbilityCategories.DARKMATTER.get())
-                .damage()
                 .level(AbilityLevel.LEVEL1)
                 .energyCost(5_000)
                 .cpCost(50)

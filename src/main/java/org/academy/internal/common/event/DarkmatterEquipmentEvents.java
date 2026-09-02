@@ -301,10 +301,6 @@ public final class DarkmatterEquipmentEvents {
 
         @SubscribeEvent
         public static void onAnvilUpdate(AnvilUpdateEvent event) {
-            if (DarkmatterItemUtil.isNativeEquipment(event.getLeft())) {
-                event.setCanceled(true);
-                return;
-            }
             if (event.getLeft().isEmpty() || !DarkmatterItemUtil.isDarkmatter(event.getRight())) return;
             var result = DarkmatterItemUtil.createAnvilUpgradeResult(
                     event.getPlayer().registryAccess(), event.getLeft(), event.getName());

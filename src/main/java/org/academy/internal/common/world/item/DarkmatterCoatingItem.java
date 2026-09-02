@@ -9,7 +9,7 @@ import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
  */
 public final class DarkmatterCoatingItem extends Item implements DarkmatterShapedItem {
     public DarkmatterCoatingItem(Properties properties) {
-        super(properties.stacksTo(1).component(
+        super(DarkmatterNativeItemSupport.enchantableProperties(properties).stacksTo(1).component(
                 ItemDataComponents.DARKMATTER_SHAPING_PROFILE.get(),
                 DarkmatterShapingProfile.DEFAULT));
     }

@@ -178,7 +178,8 @@ public final class DarkmatterModifierRuntime {
                 var angle = Math.PI * 2.0 * index / Math.max(1, feathers);
                 feather.configure(attacker, target,
                         new Vec3(Math.cos(angle), 0.1, Math.sin(angle)),
-                        0.5f + 0.35f * DarkmatterItemUtil.effectAlphaPower(weapon), 0.0f);
+                        0.5f + 0.35f * DarkmatterItemUtil.effectAlphaPower(weapon),
+                        0.0f, true);
                 level.addFreshEntity(feather);
             }
         }

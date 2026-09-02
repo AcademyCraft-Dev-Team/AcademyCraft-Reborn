@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
  */
 public final class DarkmatterBlockItem extends BlockItem implements DarkmatterShapedItem {
     public DarkmatterBlockItem(DarkmatterConfigurableBlock block, Properties properties) {
-        super(block, properties
+        super(block, DarkmatterNativeItemSupport.enchantableProperties(properties)
                 .component(ItemDataComponents.DARKMATTER_SHAPING_PROFILE.get(),
                         DarkmatterShapingProfile.DEFAULT)
                 .component(ItemDataComponents.DARKMATTER_BLOCK_PROFILE.get(),
