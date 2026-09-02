@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.BlockEventData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
@@ -74,7 +75,9 @@ public final class TemporalRuntime implements TemporalService {
                     TemporalChannel.BLOCK_ENTITY,
                     TemporalChannel.SCHEDULED_BLOCK,
                     TemporalChannel.SCHEDULED_FLUID,
-                    TemporalChannel.RANDOM_TICK
+                    TemporalChannel.RANDOM_TICK,
+                    TemporalChannel.WEATHER_AND_RAID,
+                    TemporalChannel.BLOCK_EVENT
             )
     );
     private static final Map<LevelTicks<?>, ScheduledQueueBinding<?>>
@@ -96,6 +99,12 @@ public final class TemporalRuntime implements TemporalService {
     private final Map<TickingBlockEntity, AccumulatorState> blockEntityTickAccumulators =
             new IdentityHashMap<>();
     private final Map<ResourceKey<Level>, AccumulatorState> levelClockAccumulators =
+            new HashMap<>();
+    private final Map<ResourceKey<Level>, AccumulatorState> weatherTickAccumulators =
+            new HashMap<>();
+    private final Map<ResourceKey<Level>, AccumulatorState> raidTickAccumulators =
+            new HashMap<>();
+    private final Map<BlockEventKey, AccumulatorState> blockEventAccumulators =
             new HashMap<>();
     private final Map<UUID, TickSnapshot> serverTickSnapshots = new HashMap<>();
     private final Map<ServerLevel, Map<UUID, TickSnapshot>> levelTickSnapshots =
@@ -269,7 +278,10 @@ public final class TemporalRuntime implements TemporalService {
                 new TemporalTickDiagnostics.AccumulatorState(
                         entityTickAccumulators.size(),
                         blockEntityTickAccumulators.size(),
-                        levelClockAccumulators.size()
+                        levelClockAccumulators.size(),
+                        weatherTickAccumulators.size(),
+                        raidTickAccumulators.size(),
+                        blockEventAccumulators.size()
                 ),
                 entityState
         );
@@ -507,6 +519,65 @@ public final class TemporalRuntime implements TemporalService {
             if (inProgress.isEmpty()) scaledLevelClockStack.remove();
         }
         return true;
+    }
+
+    /** Runs the dimension weather state machine at its effective level rate. */
+    public void dispatchWeatherTicks(
+            ServerLevel level,
+            Runnable vanillaWeatherTick
+    ) {
+        requireHookCaller("dispatchWeatherTicks", ServerLevel.class);
+        dispatchLevelSubsystemTicks(
+                level,
+                vanillaWeatherTick,
+                weatherTickAccumulators,
+                TemporalChannel.WEATHER_AND_RAID
+        );
+    }
+
+    /** Runs the dimension raid manager at the same effective level rate. */
+    public void dispatchRaidTicks(
+            ServerLevel level,
+            Runnable vanillaRaidTick
+    ) {
+        requireHookCaller("dispatchRaidTicks", ServerLevel.class);
+        dispatchLevelSubsystemTicks(
+                level,
+                vanillaRaidTick,
+                raidTickAccumulators,
+                TemporalChannel.WEATHER_AND_RAID
+        );
+    }
+
+    /**
+     * Defers a one-shot block event until its local temporal credit reaches
+     * one logical invocation. Events are never duplicated by acceleration.
+     */
+    public boolean deferBlockEvent(
+            ServerLevel level,
+            BlockEventData eventData
+    ) {
+        requireHookCaller("deferBlockEvent", ServerLevel.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) return false;
+
+        var key = new BlockEventKey(
+                level.dimension(),
+                eventData.pos().immutable(),
+                eventData.block(),
+                eventData.paramA(),
+                eventData.paramB()
+        );
+        var scale = effectiveScale(
+                level,
+                eventData.pos(),
+                TemporalChannel.BLOCK_EVENT
+        );
+        if (scale >= 1.0D) {
+            blockEventAccumulators.remove(key);
+            return false;
+        }
+        return logicalTicks(blockEventAccumulators, key, scale) == 0;
     }
 
     /** Wraps one vanilla scheduled-tick queue pass with safe rebasing. */
@@ -1187,10 +1258,34 @@ public final class TemporalRuntime implements TemporalService {
         return state.accumulator.advance(scale, MAX_LOGICAL_TICKS_PER_PASS);
     }
 
+    private void dispatchLevelSubsystemTicks(
+            ServerLevel level,
+            Runnable vanillaTick,
+            Map<ResourceKey<Level>, AccumulatorState> accumulators,
+            TemporalChannel channel
+    ) {
+        requireServerThread();
+        if (stopped || level.getServer() != server) {
+            vanillaTick.run();
+            return;
+        }
+        var logicalTicks = logicalTicks(
+                accumulators,
+                level.dimension(),
+                effectiveScale(level, channel)
+        );
+        for (var index = 0; index < logicalTicks; index++) {
+            vanillaTick.run();
+        }
+    }
+
     private void resetScaleAccumulators() {
         entityTickAccumulators.clear();
         blockEntityTickAccumulators.clear();
         levelClockAccumulators.clear();
+        weatherTickAccumulators.clear();
+        raidTickAccumulators.clear();
+        blockEventAccumulators.clear();
     }
 
     private void pruneStaleAccumulators() {
@@ -1202,6 +1297,15 @@ public final class TemporalRuntime implements TemporalService {
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
         levelClockAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        weatherTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        raidTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        blockEventAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
     }
@@ -1446,6 +1550,15 @@ public final class TemporalRuntime implements TemporalService {
     private static final class AccumulatorState {
         private final TemporalAccumulator accumulator = new TemporalAccumulator();
         private long lastAccessHeartbeat;
+    }
+
+    private record BlockEventKey(
+            ResourceKey<Level> dimension,
+            BlockPos position,
+            Block block,
+            int paramA,
+            int paramB
+    ) {
     }
 
     private record ScheduledTickKey(Object type, BlockPos position) {

@@ -4,24 +4,37 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.raid.Raids;
+import net.minecraft.world.level.BlockEventData;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.ticks.LevelTicks;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.server.time.TemporalRuntime;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.List;
 import java.util.function.BiConsumer;
 
 @Mixin(value = ServerLevel.class, priority = 1900)
 public abstract class MixinServerLevelTemporalScaling {
     @Shadow
     protected abstract void tickTime();
+
+    @Shadow
+    @Final
+    private List<BlockEventData> blockEventsToReschedule;
+
+    @Invoker("advanceWeatherCycle")
+    protected abstract void academy$invokeAdvanceWeatherCycle();
 
     @Inject(method = "tickNonPassenger", at = @At("HEAD"), cancellable = true)
     private void academy$dispatchScaledEntityTicks(
@@ -44,6 +57,59 @@ public abstract class MixinServerLevelTemporalScaling {
         var runtime = (TemporalRuntime) context.getAcademyCraftServer()
                 .getTemporalService();
         if (runtime.dispatchLevelClockTicks(level, this::tickTime)) ci.cancel();
+    }
+
+    @Redirect(
+            method = "tick",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/level/ServerLevel;advanceWeatherCycle()V"
+            )
+    )
+    private void academy$dispatchWeatherTicks(ServerLevel level) {
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) {
+            academy$invokeAdvanceWeatherCycle();
+            return;
+        }
+        ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
+                .dispatchWeatherTicks(
+                        level,
+                        this::academy$invokeAdvanceWeatherCycle
+                );
+    }
+
+    @Redirect(
+            method = "tick",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/raid/Raids;tick(Lnet/minecraft/server/level/ServerLevel;)V"
+            )
+    )
+    private void academy$dispatchRaidTicks(Raids raids, ServerLevel level) {
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) {
+            raids.tick(level);
+            return;
+        }
+        ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
+                .dispatchRaidTicks(level, () -> raids.tick(level));
+    }
+
+    @Inject(method = "doBlockEvent", at = @At("HEAD"), cancellable = true)
+    private void academy$deferScaledBlockEvent(
+            BlockEventData eventData,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        var level = (ServerLevel) (Object) this;
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) return;
+        var runtime = (TemporalRuntime) context.getAcademyCraftServer()
+                .getTemporalService();
+        if (runtime.deferBlockEvent(level, eventData)) {
+            blockEventsToReschedule.add(eventData);
+            cir.setReturnValue(false);
+        }
     }
 
     @Redirect(

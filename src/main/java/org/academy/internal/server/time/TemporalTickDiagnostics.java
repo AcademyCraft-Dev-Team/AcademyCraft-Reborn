@@ -110,7 +110,10 @@ public record TemporalTickDiagnostics(
     public record AccumulatorState(
             int entities,
             int blockEntities,
-            int levelClocks
+            int levelClocks,
+            int weather,
+            int raids,
+            int blockEvents
     ) {
     }
 

@@ -592,6 +592,9 @@ final class TemporalTickDebugCommands {
                 .append(accumulators.entities())
                 .append(" blockEntity=").append(accumulators.blockEntities())
                 .append(" levelClock=").append(accumulators.levelClocks())
+                .append(" weather=").append(accumulators.weather())
+                .append(" raid=").append(accumulators.raids())
+                .append(" blockEvent=").append(accumulators.blockEvents())
                 .append(" debugImmunityGroups=")
                 .append(snapshot.debugImmunities().size());
         return text.toString();
