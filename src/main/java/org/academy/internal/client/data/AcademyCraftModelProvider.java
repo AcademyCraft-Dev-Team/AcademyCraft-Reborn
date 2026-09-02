@@ -18,6 +18,7 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import org.academy.AcademyCraft;
 import org.academy.api.client.resources.model.cuboid.CoinModelGenerator;
@@ -128,6 +129,28 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.registerSimpleItemModel(configurableDarkmatterBlock,
                 ModelLocationUtils.getModelLocation(configurableDarkmatterBlock));
         blockModels.createTrivialBlock(Blocks.COMPRESSED_AIR_PLATFORM.get(), providerW);
+
+        registerTrivialBlockWithItem(
+                blockModels,
+                Blocks.LABORATORY_LIGHT_WALL_PANEL.get(),
+                TexturedModel.COLUMN
+        );
+        registerTrivialBlockWithItem(
+                blockModels,
+                Blocks.LABORATORY_GRAY_WALL_PANEL.get(),
+                TexturedModel.COLUMN
+        );
+        registerTrivialBlockWithItem(
+                blockModels,
+                Blocks.LABORATORY_DARK_WALL_PANEL.get(),
+                TexturedModel.COLUMN
+        );
+        registerTrivialBlockWithItem(blockModels, Blocks.LABORATORY_LIGHT_BRICKS.get(), TexturedModel.CUBE);
+        registerTrivialBlockWithItem(blockModels, Blocks.LABORATORY_DARK_BRICKS.get(), TexturedModel.CUBE);
+        registerTrivialBlockWithItem(blockModels, Blocks.LABORATORY_LIGHT_GRATE.get(), TexturedModel.CUBE);
+        registerTrivialBlockWithItem(blockModels, Blocks.LABORATORY_GRAY_GRATE.get(), TexturedModel.CUBE);
+        registerTrivialBlockWithItem(blockModels, Blocks.LABORATORY_DARK_GRATE.get(), TexturedModel.CUBE);
+        blockModels.createTrapdoor(Blocks.LABORATORY_METAL_TRAPDOOR.get());
 
         var vegetationBlock = Blocks.IMAG_PHASE_VEGETATION.get();
         blockModels.createTrivialBlock(vegetationBlock, imagPhaseVegetation);
@@ -299,6 +322,15 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         SolarGenSpecialRenderer.Unbaked.INSTANCE
                 )
         );
+    }
+
+    private static void registerTrivialBlockWithItem(
+            BlockModelGenerators blockModels,
+            Block block,
+            TexturedModel.Provider modelProvider
+    ) {
+        blockModels.createTrivialBlock(block, modelProvider);
+        blockModels.registerSimpleItemModel(block, ModelLocationUtils.getModelLocation(block));
     }
 
     private static void generateDarkmatterSpear(ItemModelGenerators itemModels) {

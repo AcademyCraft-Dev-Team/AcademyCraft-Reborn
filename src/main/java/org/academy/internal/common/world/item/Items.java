@@ -103,6 +103,24 @@ public final class Items {
             ITEMS.registerItem("paper_airplane", properties -> new PaperAirplaneItem(properties.stacksTo(64)));
     public static final DeferredHolder<Item, MagneticHookItem> MAGNETIC_HOOK =
             ITEMS.registerItem("magnetic_hook", MagneticHookItem::new);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_LIGHT_WALL_PANEL =
+            ITEMS.registerSimpleBlockItem("laboratory_light_wall_panel", Blocks.LABORATORY_LIGHT_WALL_PANEL);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_GRAY_WALL_PANEL =
+            ITEMS.registerSimpleBlockItem("laboratory_gray_wall_panel", Blocks.LABORATORY_GRAY_WALL_PANEL);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_DARK_WALL_PANEL =
+            ITEMS.registerSimpleBlockItem("laboratory_dark_wall_panel", Blocks.LABORATORY_DARK_WALL_PANEL);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_LIGHT_BRICKS =
+            ITEMS.registerSimpleBlockItem("laboratory_light_bricks", Blocks.LABORATORY_LIGHT_BRICKS);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_DARK_BRICKS =
+            ITEMS.registerSimpleBlockItem("laboratory_dark_bricks", Blocks.LABORATORY_DARK_BRICKS);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_LIGHT_GRATE =
+            ITEMS.registerSimpleBlockItem("laboratory_light_grate", Blocks.LABORATORY_LIGHT_GRATE);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_GRAY_GRATE =
+            ITEMS.registerSimpleBlockItem("laboratory_gray_grate", Blocks.LABORATORY_GRAY_GRATE);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_DARK_GRATE =
+            ITEMS.registerSimpleBlockItem("laboratory_dark_grate", Blocks.LABORATORY_DARK_GRATE);
+    public static final DeferredHolder<Item, BlockItem> LABORATORY_METAL_TRAPDOOR =
+            ITEMS.registerSimpleBlockItem("laboratory_metal_trapdoor", Blocks.LABORATORY_METAL_TRAPDOOR);
     public static final DeferredHolder<Item, BlockItem> WIRELESS_NODE =
             ITEMS.registerSimpleBlockItem("wireless_node", Blocks.WIRELESS_NODE);
     public static final DeferredHolder<Item, BlockItem> WIND_GEN_BASE =
