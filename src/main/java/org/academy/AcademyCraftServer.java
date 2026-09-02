@@ -10,6 +10,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.time.TemporalService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
@@ -24,6 +25,8 @@ import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
+import org.academy.internal.server.entity.SurvivalDefenseRuntime;
+import org.academy.internal.server.time.TemporalRuntime;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.Nullable;
@@ -46,6 +49,7 @@ public final class AcademyCraftServer {
     private final AbilitySystemServer abilitySystemServer;
     private final AbilityConfig abilityConfig;
     private final GenericConfig genericConfig;
+    private final TemporalRuntime temporalRuntime;
     private final MinecraftServer server;
     private long lastSaveTick = 0;
 
@@ -75,6 +79,7 @@ public final class AcademyCraftServer {
         serverConfig.save();
 
         worldData = WorldData.getWorldData(worldDataFile);
+        temporalRuntime = new TemporalRuntime(server);
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
         WirelessManager.initServer();
         PvpSetting.initServer();
@@ -101,6 +106,8 @@ public final class AcademyCraftServer {
         AbilityProgramManager.clear();
         PrecisionOperationRuntime.clear(event.getServer());
         instance.abilitySystemServer.onServerStopping();
+        SurvivalDefenseRuntime.shutdown();
+        instance.temporalRuntime.shutdown();
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();
         instance.serverConfig.save();
@@ -117,6 +124,10 @@ public final class AcademyCraftServer {
         return genericConfig;
     }
 
+    public TemporalService getTemporalService() {
+        return temporalRuntime;
+    }
+
     public AbilityConfig getAbilityConfig() {
         return abilityConfig;
     }
@@ -125,6 +136,7 @@ public final class AcademyCraftServer {
     public static void onServerTick(ServerTickEvent.Post event) {
         var server = event.getServer();
         var instance = server.getAcademyCraftServer();
+        SurvivalDefenseRuntime.tickAll(server);
         ServerProgramScheduler.tick(server);
         long currentTick = server.getTickCount();
         if (currentTick - instance.lastSaveTick >= SAVE_INTERVAL_TICKS) {
