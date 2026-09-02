@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.item.Items;
 
 import java.util.UUID;
@@ -28,6 +29,7 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
     private float damage = 1.0f;
     private float exposureBurstDamage;
     private int maximumLifetime = 40;
+    private boolean outputAdjustmentBypassed;
 
     public DarkmatterFeatherProjectile(EntityType<? extends AbstractArrow> type, Level level) {
         super(type, level);
@@ -42,11 +44,23 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
             float damage,
             float exposureBurstDamage
     ) {
+        configure(owner, target, direction, damage, exposureBurstDamage, false);
+    }
+
+    public void configure(
+            ServerPlayer owner,
+            LivingEntity target,
+            Vec3 direction,
+            float damage,
+            float exposureBurstDamage,
+            boolean outputAdjustmentBypassed
+    ) {
         setOwner(owner);
         targetId = target == null ? null : target.getUUID();
         this.damage = Math.max(0.0f, Float.isFinite(damage) ? damage : 0.0f);
         this.exposureBurstDamage = Math.max(
                 0.0f, Float.isFinite(exposureBurstDamage) ? exposureBurstDamage : 0.0f);
+        this.outputAdjustmentBypassed = outputAdjustmentBypassed;
         snapTo(owner.getX(), owner.getEyeY() - 0.15, owner.getZ(),
                 owner.getYRot(), owner.getXRot());
         var initial = target == null
@@ -94,13 +108,27 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         }
         var source = SkillDamageSource.of(owner, Skills.DARKMATTER_RADIATION.get());
         target.invulnerableTime = 0;
+        var hit = outputAdjustmentBypassed
+                ? OutputControl.callWithoutOutputAdjustment(() -> hurtTarget(
+                level, target, source, damage, exposureBurstDamage))
+                : hurtTarget(level, target, source, damage, exposureBurstDamage);
+        if (hit) Skills.DARKMATTER_RADIATION.get().reportActivity(owner, true);
+        discard();
+    }
+
+    private static boolean hurtTarget(
+            ServerLevel level,
+            LivingEntity target,
+            SkillDamageSource source,
+            float damage,
+            float exposureBurstDamage
+    ) {
         var hit = damage > 0.0f && DarkmatterTargeting.hurt(level, target, source, damage);
         if (exposureBurstDamage > 0.0f && target.isAlive()) {
             target.invulnerableTime = 0;
             hit |= DarkmatterTargeting.hurt(level, target, source, exposureBurstDamage);
         }
-        if (hit) Skills.DARKMATTER_RADIATION.get().reportActivity(owner, true);
-        discard();
+        return hit;
     }
 
     @Override
@@ -132,6 +160,8 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         exposureBurstDamage = input.getIntOr(
                 "academy_exposure_burst_milli", 0) / 1_000.0f;
         maximumLifetime = Math.max(5, input.getIntOr("academy_maximum_lifetime", 40));
+        outputAdjustmentBypassed = input.getIntOr(
+                "academy_output_adjustment_bypassed", 0) != 0;
     }
 
     @Override
@@ -142,5 +172,7 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         output.putInt("academy_exposure_burst_milli",
                 Math.round(exposureBurstDamage * 1_000.0f));
         output.putInt("academy_maximum_lifetime", maximumLifetime);
+        output.putInt("academy_output_adjustment_bypassed",
+                outputAdjustmentBypassed ? 1 : 0);
     }
 }

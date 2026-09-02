@@ -14,7 +14,8 @@ public final class Items {
     public static final DeferredHolder<Item, Item> ICON =
             ITEMS.registerItem("icon", Item::new);
     public static final DeferredHolder<Item, Item> DARKMATTER =
-            ITEMS.registerItem("darkmatter", Item::new);
+            ITEMS.registerItem("darkmatter", properties -> new Item(
+                    DarkmatterNativeItemSupport.enchantableProperties(properties)));
     public static final DeferredHolder<Item, DarkmatterCoatingItem> DARKMATTER_COATING =
             ITEMS.registerItem("darkmatter_coating", DarkmatterCoatingItem::new);
     public static final DeferredHolder<Item, DarkmatterBlockItem> DARKMATTER_BLOCK =
@@ -62,7 +63,8 @@ public final class Items {
     public static final DeferredHolder<Item, DarkmatterArrowItem> DARKMATTER_ARROW =
             ITEMS.registerItem("darkmatter_arrow", DarkmatterArrowItem::new);
     public static final DeferredHolder<Item, Item> DARKMATTER_FEATHER =
-            ITEMS.registerItem("darkmatter_feather", Item::new);
+            ITEMS.registerItem("darkmatter_feather", properties -> new Item(
+                    DarkmatterNativeItemSupport.enchantableProperties(properties)));
     public static final DeferredHolder<Item, Item> IMAG_PHASE_INGOT =
             ITEMS.registerItem("imag_phase_ingot", Item::new);
     public static final DeferredHolder<Item, Item> IMAG_PHASE_CRYSTAL =
