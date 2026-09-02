@@ -4,6 +4,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.WaterloggedTransparentBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.PushReaction;
@@ -31,6 +32,40 @@ public final class Blocks {
             BLOCKS.registerBlock("cat_engine", CatEngineBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, SolarGenBlock> SOLAR_GEN =
             BLOCKS.registerBlock("solar_gen", SolarGenBlock::new, Blocks::machineProperties);
+    public static final DeferredHolder<Block, Block> LABORATORY_LIGHT_WALL_PANEL =
+            BLOCKS.registerSimpleBlock("laboratory_light_wall_panel", Blocks::laboratoryBlockProperties);
+    public static final DeferredHolder<Block, Block> LABORATORY_GRAY_WALL_PANEL =
+            BLOCKS.registerSimpleBlock("laboratory_gray_wall_panel", Blocks::laboratoryBlockProperties);
+    public static final DeferredHolder<Block, Block> LABORATORY_DARK_WALL_PANEL =
+            BLOCKS.registerSimpleBlock("laboratory_dark_wall_panel", Blocks::laboratoryBlockProperties);
+    public static final DeferredHolder<Block, Block> LABORATORY_LIGHT_BRICKS =
+            BLOCKS.registerSimpleBlock("laboratory_light_bricks", Blocks::laboratoryBlockProperties);
+    public static final DeferredHolder<Block, Block> LABORATORY_DARK_BRICKS =
+            BLOCKS.registerSimpleBlock("laboratory_dark_bricks", Blocks::laboratoryBlockProperties);
+    public static final DeferredHolder<Block, WaterloggedTransparentBlock> LABORATORY_LIGHT_GRATE =
+            BLOCKS.registerBlock(
+                    "laboratory_light_grate",
+                    WaterloggedTransparentBlock::new,
+                    Blocks::laboratoryGrateProperties
+            );
+    public static final DeferredHolder<Block, WaterloggedTransparentBlock> LABORATORY_GRAY_GRATE =
+            BLOCKS.registerBlock(
+                    "laboratory_gray_grate",
+                    WaterloggedTransparentBlock::new,
+                    Blocks::laboratoryGrateProperties
+            );
+    public static final DeferredHolder<Block, WaterloggedTransparentBlock> LABORATORY_DARK_GRATE =
+            BLOCKS.registerBlock(
+                    "laboratory_dark_grate",
+                    WaterloggedTransparentBlock::new,
+                    Blocks::laboratoryGrateProperties
+            );
+    public static final DeferredHolder<Block, LaboratoryMetalTrapdoorBlock> LABORATORY_METAL_TRAPDOOR =
+            BLOCKS.registerBlock(
+                    "laboratory_metal_trapdoor",
+                    LaboratoryMetalTrapdoorBlock::new,
+                    Blocks::laboratoryTrapdoorProperties
+            );
     public static final DeferredHolder<Block, LiquidBlock> IMAG_PHASE =
             BLOCKS.registerBlock(
                     "imag_phase",
@@ -92,6 +127,31 @@ public final class Blocks {
         return BlockBehaviour.Properties.of()
                 .strength(5.0F, 1200.0F)
                 .requiresCorrectToolForDrops();
+    }
+
+    private static BlockBehaviour.Properties laboratoryBlockProperties() {
+        return BlockBehaviour.Properties.of()
+                .strength(3.0F, 6.0F)
+                .sound(SoundType.METAL)
+                .requiresCorrectToolForDrops();
+    }
+
+    private static BlockBehaviour.Properties laboratoryGrateProperties() {
+        return laboratoryBlockProperties()
+                .sound(SoundType.COPPER_GRATE)
+                .noOcclusion()
+                .isValidSpawn((state, level, pos, entityType) -> false)
+                .isRedstoneConductor((state, level, pos) -> false)
+                .isSuffocating((state, level, pos) -> false)
+                .isViewBlocking((state, level, pos) -> false);
+    }
+
+    private static BlockBehaviour.Properties laboratoryTrapdoorProperties() {
+        return BlockBehaviour.Properties.of()
+                .strength(5.0F)
+                .requiresCorrectToolForDrops()
+                .noOcclusion()
+                .isValidSpawn((state, level, pos, entityType) -> false);
     }
 
     private Blocks() {
