@@ -30,6 +30,10 @@ class TemporalTickDebugCommandsTest {
         assertNotNull(add.getChild("dimension"));
         assertNotNull(add.getChild("sphere"));
         assertNotNull(add.getChild("entities"));
+        assertNotNull(add.getChild("entities")
+                .getChild("targets")
+                .getChild("scale")
+                .getChild("channels"));
         assertNotNull(tick.getChild("immunity").getChild("add"));
     }
 
@@ -37,12 +41,18 @@ class TemporalTickDebugCommandsTest {
     void aliasesAndCommaSeparatedControlSetsAreParsed() throws Exception {
         assertEquals(TemporalChannel.worldSimulation(),
                 TemporalTickDebugCommands.parseChannels("world"));
+        assertEquals(TemporalChannel.worldSimulation(),
+                TemporalTickDebugCommands.parseChannels("integrated"));
         assertEquals(Set.of(
+                        TemporalChannel.WEATHER_AND_RAID,
+                        TemporalChannel.NATURAL_SPAWNING,
                         TemporalChannel.ENTITY,
                         TemporalChannel.BLOCK_ENTITY,
                         TemporalChannel.SCHEDULED_BLOCK,
                         TemporalChannel.SCHEDULED_FLUID,
-                        TemporalChannel.RANDOM_TICK
+                        TemporalChannel.RANDOM_TICK,
+                        TemporalChannel.BLOCK_EVENT,
+                        TemporalChannel.ACADEMY_SCHEDULER
                 ),
                 TemporalTickDebugCommands.parseChannels("spatial"));
         assertEquals(Set.of(
@@ -114,7 +124,10 @@ class TemporalTickDebugCommandsTest {
                         1,
                         2,
                         1,
-                        3
+                        3,
+                        1,
+                        2,
+                        1
                 ),
                 null
         );
@@ -128,5 +141,8 @@ class TemporalTickDebugCommandsTest {
         assertTrue(report.contains("Queue SCHEDULED_FLUID: pending=3 frozen=1"));
         assertTrue(report.contains("weather=1 raid=1 blockEvent=2"));
         assertTrue(report.contains("serverClock=1 academyScheduler=3"));
+        assertTrue(report.contains(
+                "worldBorder=1 customSpawner=2 dragonFight=1"
+        ));
     }
 }
