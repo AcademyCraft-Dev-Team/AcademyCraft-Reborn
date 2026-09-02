@@ -3,14 +3,18 @@ package org.academy.internal.server.time;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.ServerTickRateManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.TickingBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.ticks.LevelTicks;
 import net.minecraft.world.ticks.ScheduledTick;
@@ -23,6 +27,7 @@ import org.academy.api.server.time.TemporalFieldLease;
 import org.academy.api.server.time.TemporalImmunityLease;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.time.TemporalService;
+import org.academy.api.server.time.TemporalScope;
 import org.academy.internal.common.network.TemporalImmunitySyncPacket;
 import org.academy.mixin.common.LevelTicksAccessor;
 
@@ -30,6 +35,7 @@ import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -37,6 +43,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -60,6 +67,16 @@ public final class TemporalRuntime implements TemporalService {
     private static final int MAX_WALL_CLOCK_FORCED_TICKS_PER_PASS = 2;
     private static final int MAX_LOGICAL_TICKS_PER_PASS = 8;
     private static final long STALE_ACCUMULATOR_HEARTBEATS = 400L;
+    private static final Set<TemporalChannel> INTEGRATED_CHANNELS = Set.copyOf(
+            EnumSet.of(
+                    TemporalChannel.LEVEL_CLOCK,
+                    TemporalChannel.ENTITY,
+                    TemporalChannel.BLOCK_ENTITY,
+                    TemporalChannel.SCHEDULED_BLOCK,
+                    TemporalChannel.SCHEDULED_FLUID,
+                    TemporalChannel.RANDOM_TICK
+            )
+    );
     private static final Map<LevelTicks<?>, ScheduledQueueBinding<?>>
             SCHEDULED_QUEUE_BINDINGS = Collections.synchronizedMap(
                     new WeakHashMap<>()
@@ -70,6 +87,10 @@ public final class TemporalRuntime implements TemporalService {
     private final TemporalImmunityState transientImmunities =
             new TemporalImmunityState();
     private final Map<UUID, TemporalField> temporalFields = new LinkedHashMap<>();
+    private final Map<UUID, TemporalFieldLease> debugFieldLeases =
+            new LinkedHashMap<>();
+    private final Map<UUID, DebugImmunityGroup> debugImmunityGroups =
+            new LinkedHashMap<>();
     private final Map<UUID, AccumulatorState> entityTickAccumulators =
             new HashMap<>();
     private final Map<TickingBlockEntity, AccumulatorState> blockEntityTickAccumulators =
@@ -146,6 +167,217 @@ public final class TemporalRuntime implements TemporalService {
                 position.getZ() + 0.5D
         );
         return resolveScale(level.dimension(), center, null, channel);
+    }
+
+    /** Captures a read-only operator snapshot for {@code /academy debug tick}. */
+    public TemporalTickDiagnostics debugSnapshot(
+            ServerLevel level,
+            BlockPos position,
+            Entity entity
+    ) {
+        requireServerThread();
+        if (level == null || level.getServer() != server) {
+            throw new IllegalArgumentException(
+                    "Tick diagnostics require a level owned by this runtime."
+            );
+        }
+        if (position == null) {
+            throw new IllegalArgumentException(
+                    "Tick diagnostics require a sample position."
+            );
+        }
+        if (entity != null && entity.level() != level) {
+            throw new IllegalArgumentException(
+                    "The diagnostic entity must be in the sampled level."
+            );
+        }
+
+        var channelStates = new ArrayList<TemporalTickDiagnostics.ChannelState>();
+        for (var channel : TemporalChannel.values()) {
+            channelStates.add(new TemporalTickDiagnostics.ChannelState(
+                    channel,
+                    INTEGRATED_CHANNELS.contains(channel),
+                    effectiveScale(level, channel),
+                    effectiveScale(level, position, channel),
+                    entity == null ? null : effectiveScale(entity, channel)
+            ));
+        }
+
+        var center = Vec3.atCenterOf(position);
+        var fieldStates = new ArrayList<TemporalTickDiagnostics.FieldState>();
+        for (var entry : temporalFields.entrySet()) {
+            var fieldId = entry.getKey();
+            var field = entry.getValue();
+            fieldStates.add(new TemporalTickDiagnostics.FieldState(
+                    fieldId,
+                    debugFieldLeases.containsKey(fieldId),
+                    describeScope(field.scope()),
+                    field.channels(),
+                    field.scale(),
+                    field.pauseSource(),
+                    field.scope().contains(
+                            level.dimension(),
+                            center,
+                            entity == null ? null : entity.getUUID()
+                    )
+            ));
+        }
+
+        var debugImmunities = debugImmunityGroups.entrySet().stream()
+                .map(entry -> new TemporalTickDiagnostics.ImmunityControlState(
+                        entry.getKey(),
+                        entry.getValue().entityIds(),
+                        entry.getValue().entityNames(),
+                        entry.getValue().sources()
+                ))
+                .toList();
+
+        var tickRateManager = level.tickRateManager();
+        var vanillaState = new TemporalTickDiagnostics.VanillaTickState(
+                tickRateManager.tickrate(),
+                tickRateManager.isFrozen(),
+                tickRateManager.runsNormally(),
+                tickRateManager.isSteppingForward(),
+                tickRateManager.frozenTicksToRun(),
+                tickRateManager instanceof ServerTickRateManager manager
+                        && manager.isSprinting()
+        );
+        var entityState = entity == null ? null : debugEntityState(
+                level,
+                entity
+        );
+
+        return new TemporalTickDiagnostics(
+                level.dimension().identifier(),
+                position,
+                level.getGameTime(),
+                level.getDefaultClockTime(),
+                heartbeat,
+                stopped,
+                vanillaState,
+                channelStates,
+                fieldStates,
+                debugImmunities,
+                debugQueueState(
+                        level.getBlockTicks(),
+                        TemporalChannel.SCHEDULED_BLOCK
+                ),
+                debugQueueState(
+                        level.getFluidTicks(),
+                        TemporalChannel.SCHEDULED_FLUID
+                ),
+                new TemporalTickDiagnostics.AccumulatorState(
+                        entityTickAccumulators.size(),
+                        blockEntityTickAccumulators.size(),
+                        levelClockAccumulators.size()
+                ),
+                entityState
+        );
+    }
+
+    /** Adds one operator-owned field for tick-system validation. */
+    public UUID addDebugField(TemporalField field) {
+        requireAcademyStateCaller("addDebugField");
+        requireServerThread();
+        requireActive();
+        var lease = acquireField(field);
+        debugFieldLeases.put(lease.fieldId(), lease);
+        return lease.fieldId();
+    }
+
+    /** Removes one field created by the tick debugger. */
+    public boolean removeDebugField(UUID fieldId) {
+        requireAcademyStateCaller("removeDebugField");
+        requireServerThread();
+        var lease = debugFieldLeases.remove(fieldId);
+        if (lease == null) return false;
+        lease.close();
+        return true;
+    }
+
+    /** Removes every field created by the tick debugger. */
+    public int clearDebugFields() {
+        requireAcademyStateCaller("clearDebugFields");
+        requireServerThread();
+        var leases = List.copyOf(debugFieldLeases.values());
+        debugFieldLeases.clear();
+        for (var lease : leases) lease.close();
+        return leases.size();
+    }
+
+    /** Adds one removable immunity contribution to every selected entity. */
+    public UUID addDebugImmunity(
+            Collection<? extends Entity> entities,
+            Set<TemporalPauseSource> sources
+    ) {
+        requireAcademyStateCaller("addDebugImmunity");
+        requireServerThread();
+        requireActive();
+        if (entities == null || entities.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Debug immunity requires at least one entity."
+            );
+        }
+        if (sources == null || sources.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Debug immunity requires at least one pause source."
+            );
+        }
+
+        var uniqueEntities = new LinkedHashMap<UUID, Entity>();
+        for (var entity : entities) {
+            requireOwnedEntity(entity);
+            uniqueEntities.put(entity.getUUID(), entity);
+        }
+        var leases = new ArrayList<TemporalImmunityLease>();
+        try {
+            for (var entity : uniqueEntities.values()) {
+                leases.add(acquireImmunity(entity, sources));
+            }
+        } catch (RuntimeException exception) {
+            for (var lease : leases) lease.close();
+            throw exception;
+        }
+
+        var controlId = UUID.randomUUID();
+        debugImmunityGroups.put(controlId, new DebugImmunityGroup(
+                List.copyOf(uniqueEntities.keySet()),
+                uniqueEntities.values().stream()
+                        .map(entity -> entity.getDisplayName().getString())
+                        .toList(),
+                Set.copyOf(sources),
+                List.copyOf(leases)
+        ));
+        return controlId;
+    }
+
+    /** Removes one grouped immunity contribution created by the debugger. */
+    public boolean removeDebugImmunity(UUID controlId) {
+        requireAcademyStateCaller("removeDebugImmunity");
+        requireServerThread();
+        var group = debugImmunityGroups.remove(controlId);
+        if (group == null) return false;
+        for (var lease : group.leases()) lease.close();
+        return true;
+    }
+
+    /** Removes every immunity contribution created by the debugger. */
+    public int clearDebugImmunities() {
+        requireAcademyStateCaller("clearDebugImmunities");
+        requireServerThread();
+        var groups = List.copyOf(debugImmunityGroups.values());
+        debugImmunityGroups.clear();
+        for (var group : groups) {
+            for (var lease : group.leases()) lease.close();
+        }
+        return groups.size();
+    }
+
+    /** Clears all command-owned temporal test state. */
+    public int clearDebugControls() {
+        requireAcademyStateCaller("clearDebugControls");
+        requireServerThread();
+        return clearDebugFields() + clearDebugImmunities();
     }
 
     @Override
@@ -369,6 +601,56 @@ public final class TemporalRuntime implements TemporalService {
         return binding.runtime.deferScheduledTick(binding, tick);
     }
 
+    /** Dispatches one selected block random tick at its local temporal rate. */
+    public void dispatchRandomBlockTick(
+            BlockState originalState,
+            ServerLevel level,
+            BlockPos position,
+            RandomSource random
+    ) {
+        requireHookCaller("dispatchRandomBlockTick", ServerLevel.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) {
+            originalState.randomTick(level, position, random);
+            return;
+        }
+
+        var invocations = TemporalRandomTickMath.invocationCount(
+                effectiveScale(level, position, TemporalChannel.RANDOM_TICK),
+                random::nextDouble
+        );
+        for (var index = 0; index < invocations; index++) {
+            var currentState = level.getBlockState(position);
+            if (!currentState.isRandomlyTicking()) break;
+            currentState.randomTick(level, position, random);
+        }
+    }
+
+    /** Dispatches one selected fluid random tick at its local temporal rate. */
+    public void dispatchRandomFluidTick(
+            FluidState originalState,
+            ServerLevel level,
+            BlockPos position,
+            RandomSource random
+    ) {
+        requireHookCaller("dispatchRandomFluidTick", ServerLevel.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) {
+            originalState.randomTick(level, position, random);
+            return;
+        }
+
+        var invocations = TemporalRandomTickMath.invocationCount(
+                effectiveScale(level, position, TemporalChannel.RANDOM_TICK),
+                random::nextDouble
+        );
+        for (var index = 0; index < invocations; index++) {
+            var currentState = level.getFluidState(position);
+            if (!currentState.isRandomlyTicking()) break;
+            currentState.randomTick(level, position, random);
+        }
+    }
+
     /** Internal persistence boundary for ability-state reconciliation. */
     public void setPersistentImmunity(
             Entity entity,
@@ -523,6 +805,8 @@ public final class TemporalRuntime implements TemporalService {
         requireServerThread();
         if (stopped) return;
         stopped = true;
+        debugFieldLeases.clear();
+        debugImmunityGroups.clear();
         transientImmunities.clear();
         temporalFields.clear();
         resetScaleAccumulators();
@@ -552,6 +836,81 @@ public final class TemporalRuntime implements TemporalService {
                 level,
                 TemporalChannel.SCHEDULED_FLUID
         ));
+    }
+
+    private TemporalTickDiagnostics.EntityState debugEntityState(
+            ServerLevel level,
+            Entity entity
+    ) {
+        var immuneSources = EnumSet.noneOf(TemporalPauseSource.class);
+        for (var source : TemporalPauseSource.values()) {
+            if (isImmune(entity, source)) immuneSources.add(source);
+        }
+        return new TemporalTickDiagnostics.EntityState(
+                entity.getUUID(),
+                entity.getDisplayName().getString(),
+                isTimeStopImmune(entity),
+                immuneSources,
+                level.tickRateManager().isEntityFrozen(entity)
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> TemporalTickDiagnostics.QueueState debugQueueState(
+            LevelTicks<T> queue,
+            TemporalChannel channel
+    ) {
+        var containers = ((LevelTicksAccessor<T>) queue)
+                .academy$getAllContainers();
+        long pendingTicks = 0L;
+        for (var container : containers.values()) {
+            pendingTicks += container.getAll().count();
+        }
+
+        ScheduledQueueBinding<T> binding;
+        synchronized (SCHEDULED_QUEUE_BINDINGS) {
+            binding = (ScheduledQueueBinding<T>) SCHEDULED_QUEUE_BINDINGS.get(queue);
+        }
+        var owned = binding != null && binding.runtime == this;
+        return new TemporalTickDiagnostics.QueueState(
+                channel,
+                owned,
+                clampDiagnosticCount(pendingTicks),
+                owned ? binding.frozenRemaining.size() : 0,
+                owned && binding.dispatching,
+                owned ? clampDiagnosticCount(binding.appliedFields.stream()
+                        .filter(field -> field.channels().contains(channel))
+                        .count()) : 0
+        );
+    }
+
+    private static int clampDiagnosticCount(long value) {
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, value));
+    }
+
+    private static String describeScope(TemporalScope scope) {
+        if (scope instanceof TemporalScope.Save) return "save";
+        if (scope instanceof TemporalScope.Dimension dimension) {
+            return "dimension " + dimension.dimension().identifier();
+        }
+        if (scope instanceof TemporalScope.Sphere sphere) {
+            return String.format(
+                    Locale.ROOT,
+                    "sphere %s (%.1f, %.1f, %.1f) r=%.1f",
+                    sphere.dimension().identifier(),
+                    sphere.center().x,
+                    sphere.center().y,
+                    sphere.center().z,
+                    sphere.radius()
+            );
+        }
+        if (scope instanceof TemporalScope.Entities entities) {
+            return "entities " + entities.entityIds().stream()
+                    .map(UUID::toString)
+                    .sorted()
+                    .collect(java.util.stream.Collectors.joining(","));
+        }
+        return scope.toString();
     }
 
     private <T> ScheduledQueueBinding<T> bindScheduledQueue(
@@ -805,6 +1164,7 @@ public final class TemporalRuntime implements TemporalService {
                 temporalFields.values(),
                 dimension,
                 position,
+                subject == null ? null : subject.getUUID(),
                 channel,
                 source -> subject != null && isImmune(subject, source)
         );
@@ -1066,6 +1426,14 @@ public final class TemporalRuntime implements TemporalService {
             int tickCount,
             ResourceKey<Level> dimension,
             long heartbeat
+    ) {
+    }
+
+    private record DebugImmunityGroup(
+            List<UUID> entityIds,
+            List<String> entityNames,
+            Set<TemporalPauseSource> sources,
+            List<TemporalImmunityLease> leases
     ) {
     }
 

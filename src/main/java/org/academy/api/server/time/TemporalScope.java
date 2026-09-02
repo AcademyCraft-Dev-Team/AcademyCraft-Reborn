@@ -4,7 +4,10 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.Collection;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Immutable spatial boundary of a temporal field.
@@ -14,7 +17,7 @@ import java.util.Objects;
  * radius.</p>
  */
 public sealed interface TemporalScope permits TemporalScope.Save,
-        TemporalScope.Dimension, TemporalScope.Sphere {
+        TemporalScope.Dimension, TemporalScope.Sphere, TemporalScope.Entities {
     static Save save() {
         return Save.INSTANCE;
     }
@@ -31,11 +34,28 @@ public sealed interface TemporalScope permits TemporalScope.Save,
         return new Sphere(dimension, center, radius);
     }
 
+    /** Selects specific entities by UUID, across dimension changes. */
+    static Entities entities(Collection<UUID> entityIds) {
+        return new Entities(Set.copyOf(entityIds));
+    }
+
     /**
      * Tests this scope against a dimension and optional position.
      * Spatial scopes never match when {@code position} is {@code null}.
      */
     boolean contains(ResourceKey<Level> dimension, Vec3 position);
+
+    /**
+     * Tests this scope with an optional entity subject. Spatial and world
+     * scopes retain their ordinary behavior; entity scopes require a UUID.
+     */
+    default boolean contains(
+            ResourceKey<Level> dimension,
+            Vec3 position,
+            UUID entityId
+    ) {
+        return contains(dimension, position);
+    }
 
     /** True when this scope requires a world position to match. */
     boolean isSpatial();
@@ -104,6 +124,40 @@ public sealed interface TemporalScope permits TemporalScope.Save,
         @Override
         public boolean isSpatial() {
             return true;
+        }
+    }
+
+    /** A non-spatial scope that follows one or more entities by UUID. */
+    record Entities(Set<UUID> entityIds) implements TemporalScope {
+        public Entities {
+            Objects.requireNonNull(entityIds, "entityIds");
+            if (entityIds.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Entity temporal scope requires at least one UUID."
+                );
+            }
+            entityIds = Set.copyOf(entityIds);
+        }
+
+        @Override
+        public boolean contains(ResourceKey<Level> dimension, Vec3 position) {
+            return false;
+        }
+
+        @Override
+        public boolean contains(
+                ResourceKey<Level> dimension,
+                Vec3 position,
+                UUID entityId
+        ) {
+            return dimension != null
+                    && entityId != null
+                    && entityIds.contains(entityId);
+        }
+
+        @Override
+        public boolean isSpatial() {
+            return false;
         }
     }
 }
