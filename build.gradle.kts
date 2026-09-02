@@ -288,6 +288,15 @@ neoForge {
             type.set("gameTestServer")
             environment("IS_DEV", "true")
             gameDirectory.set(file("run/gametest"))
+            providers.gradleProperty("academyGameTests").orNull?.let {
+                programArguments.addAll("--tests", it)
+            }
+        }
+        register("serverCompat") {
+            server()
+            environment("IS_DEV", "true")
+            gameDirectory.set(file("run/server-compat"))
+            programArguments.add("--nogui")
         }
         register("uiEditor") {
             client()
