@@ -5,7 +5,12 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.academy.api.client.hud.HudLayoutRegion;
+import org.academy.api.client.hud.HudLayoutRegistry;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class HudLayoutEditorScreen extends Screen {
     private static final long LONG_PRESS_MS = 200L;
@@ -21,7 +26,7 @@ public final class HudLayoutEditorScreen extends Screen {
     private static final int HANDLE = 0xC0FFE34D;
     private static final int TEXT = 0xFFFFFFFF;
     private final @Nullable Screen previousScreen;
-    private @Nullable HudLayout.Region grabbed;
+    private @Nullable EditableRegion grabbed;
     private Mode mode = Mode.NONE;
     private long pressTime;
     private double pressX;
@@ -37,7 +42,7 @@ public final class HudLayoutEditorScreen extends Screen {
     }
 
     private static boolean overHandle(
-            HudLayout.Region region, HudLayout.Rect rect, double mouseX, double mouseY
+            EditableRegion region, HudLayout.Rect rect, double mouseX, double mouseY
     ) {
         var left = rect.x();
         var right = rect.x() + rect.width();
@@ -47,8 +52,8 @@ public final class HudLayoutEditorScreen extends Screen {
                 && mouseY >= bottom - HANDLE_SIZE && mouseY <= bottom;
     }
 
-    private static boolean usesLeftHandle(HudLayout.Region region) {
-        return region == HudLayout.Region.SKILL_WHEEL;
+    private static boolean usesLeftHandle(EditableRegion region) {
+        return region.usesLeftHandle();
     }
 
     private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
@@ -84,9 +89,9 @@ public final class HudLayoutEditorScreen extends Screen {
         graphics.centeredText(font, Component.translatable("hud.academy.layout.hint"), width / 2, 20, 0xFFB0B0B0);
 
         var minecraft = Minecraft.getInstance();
-        for (var region : HudLayout.Region.values()) {
+        for (var region : editableRegions()) {
             var rect = region.rect(minecraft);
-            var active = grabbed == region && activated;
+            var active = region.equals(grabbed) && activated;
             var x0 = Math.round(rect.x());
             var y0 = Math.round(rect.y());
             var x1 = Math.round(rect.x() + rect.width());
@@ -99,7 +104,7 @@ public final class HudLayoutEditorScreen extends Screen {
             graphics.fill(handleX, handleY, handleX + Math.round(HANDLE_SIZE), y1, HANDLE);
             border(graphics, handleX, handleY, Math.round(HANDLE_SIZE), Math.round(HANDLE_SIZE), 0xFF000000);
 
-            var label = Component.translatable(region.nameKey()).getString()
+            var label = region.name().getString()
                     + "  " + Math.round(region.scale() * 100.0f) + "%";
             graphics.text(font, label, x0 + 2, Math.max(0, y0 + 2), active ? BOX_ACTIVE : TEXT, true);
         }
@@ -121,7 +126,9 @@ public final class HudLayoutEditorScreen extends Screen {
         var doneX = width / 2 + BUTTON_GAP / 2;
         if (inside(mouseX, mouseY, resetX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)) {
             HudLayout.resetAll();
+            HudLayoutRegistry.resetAll();
             HudLayoutConfig.save();
+            HudLayoutRegistry.save();
             return true;
         }
         if (inside(mouseX, mouseY, doneX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)) {
@@ -130,14 +137,14 @@ public final class HudLayoutEditorScreen extends Screen {
         }
 
         var minecraft = Minecraft.getInstance();
-        for (var region : HudLayout.Region.values()) {
+        for (var region : editableRegions()) {
             var rect = region.rect(minecraft);
             if (overHandle(region, rect, mouseX, mouseY)) {
                 beginGrab(region, Mode.RESIZE, rect, mouseX, mouseY);
                 return true;
             }
         }
-        for (var region : HudLayout.Region.values()) {
+        for (var region : editableRegions()) {
             var rect = region.rect(minecraft);
             if (rect.contains(mouseX, mouseY)) {
                 beginGrab(region, Mode.MOVE, rect, mouseX, mouseY);
@@ -169,7 +176,10 @@ public final class HudLayoutEditorScreen extends Screen {
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         if (event.button() == 0 && grabbed != null) {
-            if (activated) HudLayoutConfig.save();
+            if (activated) {
+                HudLayoutConfig.save();
+                HudLayoutRegistry.save();
+            }
             grabbed = null;
             mode = Mode.NONE;
             activated = false;
@@ -181,11 +191,12 @@ public final class HudLayoutEditorScreen extends Screen {
     @Override
     public void onClose() {
         HudLayoutConfig.save();
+        HudLayoutRegistry.save();
         Minecraft.getInstance().gui.setScreen(previousScreen);
     }
 
     private void beginGrab(
-            HudLayout.Region region, Mode mode, HudLayout.Rect rect, double mouseX, double mouseY
+            EditableRegion region, Mode mode, HudLayout.Rect rect, double mouseX, double mouseY
     ) {
         grabbed = region;
         this.mode = mode;
@@ -208,4 +219,87 @@ public final class HudLayoutEditorScreen extends Screen {
     }
 
     private enum Mode {NONE, MOVE, RESIZE}
+
+    private static List<EditableRegion> editableRegions() {
+        var result = new ArrayList<EditableRegion>();
+        for (var region : HudLayout.Region.values()) result.add(new BuiltinRegion(region));
+        for (var region : HudLayoutRegistry.regions()) result.add(new ExternalRegion(region));
+        return result;
+    }
+
+    private interface EditableRegion {
+        Component name();
+
+        float scale();
+
+        void setScale(float scale);
+
+        HudLayout.Rect rect(Minecraft minecraft);
+
+        void setTopLeft(double left, double top, Minecraft minecraft);
+
+        default boolean usesLeftHandle() {
+            return false;
+        }
+    }
+
+    private record BuiltinRegion(HudLayout.Region delegate) implements EditableRegion {
+        @Override
+        public Component name() {
+            return Component.translatable(delegate.nameKey());
+        }
+
+        @Override
+        public float scale() {
+            return delegate.scale();
+        }
+
+        @Override
+        public void setScale(float scale) {
+            delegate.setScale(scale);
+        }
+
+        @Override
+        public HudLayout.Rect rect(Minecraft minecraft) {
+            return delegate.rect(minecraft);
+        }
+
+        @Override
+        public void setTopLeft(double left, double top, Minecraft minecraft) {
+            delegate.setTopLeft(left, top, minecraft);
+        }
+
+        @Override
+        public boolean usesLeftHandle() {
+            return delegate == HudLayout.Region.SKILL_WHEEL;
+        }
+    }
+
+    private record ExternalRegion(HudLayoutRegion delegate) implements EditableRegion {
+        @Override
+        public Component name() {
+            return delegate.name();
+        }
+
+        @Override
+        public float scale() {
+            return delegate.scale();
+        }
+
+        @Override
+        public void setScale(float scale) {
+            delegate.setScale(scale);
+        }
+
+        @Override
+        public HudLayout.Rect rect(Minecraft minecraft) {
+            var rect = delegate.rect(minecraft);
+            return new HudLayout.Rect(rect.x(), rect.y(), rect.width(), rect.height());
+        }
+
+        @Override
+        public void setTopLeft(double left, double top, Minecraft minecraft) {
+            delegate.setTopLeft(left, top, minecraft);
+        }
+    }
 }
