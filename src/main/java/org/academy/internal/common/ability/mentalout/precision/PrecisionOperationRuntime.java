@@ -37,6 +37,7 @@ import java.util.stream.IntStream;
 
 public final class PrecisionOperationRuntime {
     public static final int PRIORITY = 200;
+    private static final float UNLOCKED_DYNAMIC_COST_MULTIPLIER = 0.9f;
     private static final Identifier CONTROL_SOURCE = AcademyCraft.academy("precision_operation");
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
     private static final Map<UUID, ActiveContext[]> ACTIVE = new HashMap<>();
@@ -1638,7 +1639,7 @@ public final class PrecisionOperationRuntime {
                     player, Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2));
             default -> 0.0f;
         };
-        return baseCost;
+        return unlockedDynamicCost(baseCost);
     }
 
     private static void applyDirective(
@@ -1738,7 +1739,7 @@ public final class PrecisionOperationRuntime {
             Map<UUID, Float> subjectCosts
     ) {
         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
-        var cost = MentaloutConfig.precisionSensoryCost(player, sensoryLevel);
+        var cost = unlockedDynamicCost(MentaloutConfig.precisionSensoryCost(player, sensoryLevel));
         for (var observer : observers) {
             if (MentalControlRuntime.isProtectedTarget(observer)) {
                 MentalControlRuntime.notifyProtectionBlocked(player, observer);
@@ -1883,7 +1884,11 @@ public final class PrecisionOperationRuntime {
     private static float fixedActionCost(ServerPlayer player, PrecisionGraph.NodeKind kind) {
         if (kind != PrecisionGraph.NodeKind.START_INTRUSION) return 0.0f;
         var level = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
-        return MentaloutConfig.precisionIntrusionCost(player, level);
+        return unlockedDynamicCost(MentaloutConfig.precisionIntrusionCost(player, level));
+    }
+
+    static float unlockedDynamicCost(float baseCost) {
+        return baseCost * UNLOCKED_DYNAMIC_COST_MULTIPLIER;
     }
 
     static int durationIterationPoints(long now, long expiresAt) {

@@ -92,7 +92,7 @@ public final class PlayerControlClientState {
         role = requestedRole;
         subjectUuid = requestedSubjectUuid;
         PlayerControlClientState.subjectEntityId = subjectEntityId;
-        authorizedFrame = PlayerControlFrame.NEUTRAL;
+        authorizedFrame = neutralFrame(minecraft.player);
         authorizedSequence = -1L;
         clientSequence = 0L;
         lastSentGameTick = Long.MIN_VALUE;
@@ -254,9 +254,9 @@ public final class PlayerControlClientState {
         return true;
     }
 
-    public static boolean blocksWorldInteraction() {
+    public static boolean blocksWorldInteraction(boolean attempted) {
         if (isSelfControlled()) {
-            requestStop();
+            if (attempted) requestStop();
             return false;
         }
         return isActive();
@@ -441,6 +441,13 @@ public final class PlayerControlClientState {
         if (player.isInWater()) return PlayerMovementMode.SWIM;
         if (player.onClimbable()) return PlayerMovementMode.CLIMB;
         return PlayerMovementMode.WALK;
+    }
+
+    private static PlayerControlFrame neutralFrame(LocalPlayer player) {
+        return new PlayerControlFrame(
+                0.0f, 0.0f, player.getYRot(), player.getXRot(),
+                false, false, false, false, false, movementMode(player)
+        );
     }
 
     private static void clearSessionKeys() {

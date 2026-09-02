@@ -266,7 +266,10 @@ public final class PlayerControlSessionManager {
     public static void submitPathFrame(PathSessionToken token, PlayerControlFrame frame) {
         var session = pathSession(token);
         if (session == null || session.state != State.ACTIVE) return;
-        authorize(session, normalizePathFrame(frame), ++session.authorizedSequence);
+        var requested = frame == PlayerControlFrame.NEUTRAL
+                ? neutralFrame(session.subject)
+                : frame;
+        authorize(session, normalizePathFrame(requested), ++session.authorizedSequence);
     }
 
     public static void closePath(PathSessionToken token, boolean applyResistance) {
@@ -304,7 +307,7 @@ public final class PlayerControlSessionManager {
                 if (now - session.lastIntentTick >= NEUTRAL_AFTER_TICKS
                         && session.lastNeutralTick != now) {
                     session.lastNeutralTick = now;
-                    authorize(session, PlayerControlFrame.NEUTRAL, ++session.authorizedSequence);
+                    authorize(session, neutralFrame(session.subject), ++session.authorizedSequence);
                 }
             }
             applyServerFallback(session, now);
@@ -479,7 +482,7 @@ public final class PlayerControlSessionManager {
         }
         session.invalidMoves++;
         var frame = session.acknowledgedFrames.isEmpty()
-                ? PlayerControlFrame.NEUTRAL : session.acknowledgedFrames.getLast().frame;
+                ? neutralFrame(player) : session.acknowledgedFrames.getLast().frame;
         correct(player, new Anchor(session.lastGoodPosition, frame.yaw(), frame.pitch()),
                 frame.yaw(), frame.pitch());
         if (session.invalidMoves >= 3) stop(session, EndReason.ILLEGAL_MOVEMENT, true);
@@ -733,6 +736,13 @@ public final class PlayerControlSessionManager {
                 frame.forward(), frame.strafe(), Mth.wrapDegrees(frame.yaw()), frame.pitch(),
                 frame.jump(), frame.sneak(), frame.sprint(), frame.attack(), frame.use(), mode
         );
+    }
+
+    private static PlayerControlFrame neutralFrame(ServerPlayer subject) {
+        return normalizeDirectFrame(subject, new PlayerControlFrame(
+                0.0f, 0.0f, subject.getYRot(), subject.getXRot(),
+                false, false, false, false, false, PlayerMovementMode.WALK
+        ));
     }
 
     /**
@@ -1915,23 +1925,31 @@ public final class PlayerControlSessionManager {
             hotbar = hotbar.stream().map(ItemStack::copy).toList();
             selectedSlot = Mth.clamp(selectedSlot, 0, 8);
             offhand = offhand.copy();
-            health = Math.max(0.0f, health);
-            maxHealth = Math.max(1.0f, maxHealth);
-            absorption = Math.max(0.0f, absorption);
+            health = finiteAtLeast(health, 0.0f, 0.0f);
+            maxHealth = finiteAtLeast(maxHealth, 1.0f, 20.0f);
+            absorption = finiteAtLeast(absorption, 0.0f, 0.0f);
             armor = Mth.clamp(armor, 0, 20);
             food = Mth.clamp(food, 0, 20);
-            saturation = Math.max(0.0f, saturation);
+            saturation = finiteAtLeast(saturation, 0.0f, 0.0f);
             air = Math.max(0, air);
             maxAir = Math.max(1, maxAir);
-            experienceProgress = Mth.clamp(experienceProgress, 0.0f, 1.0f);
+            experienceProgress = Float.isFinite(experienceProgress)
+                    ? Mth.clamp(experienceProgress, 0.0f, 1.0f)
+                    : 0.0f;
             experienceLevel = Math.max(0, experienceLevel);
-            attackStrength = Mth.clamp(attackStrength, 0.0f, 1.0f);
+            attackStrength = Float.isFinite(attackStrength)
+                    ? Mth.clamp(attackStrength, 0.0f, 1.0f)
+                    : 0.0f;
             useHand = Objects.requireNonNull(useHand, "useHand");
             useRemainingTicks = Math.max(0, useRemainingTicks);
         }
 
         public ItemStack selectedItem() {
             return hotbar.get(selectedSlot);
+        }
+
+        private static float finiteAtLeast(float value, float minimum, float fallback) {
+            return Float.isFinite(value) ? Math.max(minimum, value) : fallback;
         }
     }
 
@@ -1968,7 +1986,7 @@ public final class PlayerControlSessionManager {
         private String lastActionFeedbackKey = "";
         private int invalidMoves;
         private Vec3 lastGoodPosition;
-        private PlayerControlFrame authorizedFrame = PlayerControlFrame.NEUTRAL;
+        private PlayerControlFrame authorizedFrame;
 
         private Session(
                 UUID id,
@@ -1993,6 +2011,7 @@ public final class PlayerControlSessionManager {
             this.lastIntentTick = now;
             this.lastAppliedTick = now;
             this.lastGoodPosition = lastGoodPosition;
+            this.authorizedFrame = neutralFrame(subject);
         }
     }
 

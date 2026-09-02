@@ -8,7 +8,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
-import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.UiScreen;
@@ -19,8 +18,6 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.program.*;
@@ -1248,11 +1245,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
             showTransient(validation.diagnostic());
             return;
         }
-        if (!branchUnlocked() && graph.nodes().stream()
-                .anyMatch(node -> node.kind().isConditionalBranch())) {
-            showTransient(PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED);
-            return;
-        }
         PrecisionOperationClient.saveProgram(slot, graph.nodes().isEmpty() ? null : document.program(), revision);
     }
 
@@ -1326,7 +1318,6 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
     private List<PrecisionGraph.NodeKind> visibleKinds() {
         var query = search == null ? "" : search.getValue().strip().toLowerCase(Locale.ROOT);
         return Arrays.stream(PrecisionGraph.NodeKind.values())
-                .filter(kind -> !kind.isConditionalBranch() || branchUnlocked())
                 .filter(kind -> {
                     if (query.isEmpty()) return kind.group() == selectedGroup;
                     var label = nodeLabel(kind).getString().toLowerCase(Locale.ROOT);
@@ -1339,19 +1330,12 @@ public final class PrecisionOperationScreen extends UiScreen implements Serializ
 
     private List<PrecisionGraph.NodeKind> compatibleKinds(Endpoint anchor) {
         return Arrays.stream(PrecisionGraph.NodeKind.values())
-                .filter(kind -> !kind.isConditionalBranch() || branchUnlocked())
                 .filter(kind -> anchor.input
                         ? kind.outputDefinitions().stream().anyMatch(port ->
                         PrecisionGraph.isPortCompatible(port.type(), anchor.type))
                         : kind.inputDefinitions().stream().anyMatch(port ->
                         PrecisionGraph.isPortCompatible(anchor.type, port.type())))
                 .toList();
-    }
-
-    private boolean branchUnlocked() {
-        return ProficiencyPolicy.client().enabled()
-                && AbilitySystemClient.getSkillProficiencyMilestone(
-                Skills.WIDE_AREA_INTERFERENCE.get()) >= 3;
     }
 
     private Endpoint firstCompatibleEndpoint(PrecisionGraph.Node node, Endpoint anchor) {

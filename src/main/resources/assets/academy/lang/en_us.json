@@ -672,7 +672,7 @@
   "message.academy.precision_operation.non_finite_value": "Node values must be finite.",
   "message.academy.precision_operation.ok": "Program is valid.",
   "message.academy.precision_operation.planning_budget_exhausted": "The navigation planning budget remained exhausted, so the action ended.",
-  "message.academy.precision_operation.proficiency_required": "Conditional branches require 3000 Precision Operation proficiency.",
+  "message.academy.precision_operation.proficiency_required": "Conditional branches are available immediately in Precision Operation.",
   "message.academy.precision_operation.protected_target": "A target is protected from mental influence.",
   "message.academy.precision_operation.revision_conflict": "The server program changed; its latest version was restored.",
   "message.academy.precision_operation.skill_unavailable": "Precision Operation is not currently available.",

@@ -29,7 +29,7 @@ public abstract class MixinMinecraft {
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     private void academy$blockMentalIntrusionAttack(CallbackInfoReturnable<Boolean> cir) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
-                || PlayerControlClientState.blocksWorldInteraction()) cir.setReturnValue(false);
+                || PlayerControlClientState.blocksWorldInteraction(true)) cir.setReturnValue(false);
     }
 
     @Inject(
@@ -47,7 +47,7 @@ public abstract class MixinMinecraft {
     @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
     private void academy$blockMentalIntrusionMining(boolean attacking, CallbackInfo ci) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
-                || PlayerControlClientState.blocksWorldInteraction()) ci.cancel();
+                || PlayerControlClientState.blocksWorldInteraction(attacking)) ci.cancel();
     }
 
     @Inject(
@@ -65,7 +65,7 @@ public abstract class MixinMinecraft {
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void academy$blockMentalIntrusionUse(CallbackInfo ci) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
-                || PlayerControlClientState.blocksWorldInteraction()) ci.cancel();
+                || PlayerControlClientState.blocksWorldInteraction(true)) ci.cancel();
     }
 
     @Inject(method = "runTick", at = @At("HEAD"))
