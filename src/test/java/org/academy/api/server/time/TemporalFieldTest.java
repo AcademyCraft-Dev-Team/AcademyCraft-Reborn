@@ -43,6 +43,9 @@ class TemporalFieldTest {
         assertTrue(channels.contains(TemporalChannel.ENTITY));
         assertTrue(channels.contains(TemporalChannel.LEVEL_CLOCK));
         assertTrue(channels.contains(TemporalChannel.SERVER_CLOCK));
+        assertTrue(channels.contains(TemporalChannel.WORLD_BORDER));
+        assertTrue(channels.contains(TemporalChannel.NATURAL_SPAWNING));
+        assertTrue(channels.contains(TemporalChannel.DRAGON_FIGHT));
         assertFalse(channels.contains(TemporalChannel.CLIENT_VISUAL));
     }
 
