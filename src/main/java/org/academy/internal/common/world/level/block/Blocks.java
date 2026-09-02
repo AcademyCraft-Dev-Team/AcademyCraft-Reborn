@@ -1,7 +1,6 @@
 package org.academy.internal.common.world.level.block;
 
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.WaterloggedTransparentBlock;
@@ -10,7 +9,6 @@ import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import org.academy.internal.common.world.level.material.Fluids;
 
 import static org.academy.AcademyCraft.MODID;
 
@@ -66,13 +64,10 @@ public final class Blocks {
                     LaboratoryMetalTrapdoorBlock::new,
                     Blocks::laboratoryTrapdoorProperties
             );
-    public static final DeferredHolder<Block, LiquidBlock> IMAG_PHASE =
+    public static final DeferredHolder<Block, ImagPhaseLiquidBlock> IMAG_PHASE =
             BLOCKS.registerBlock(
                     "imag_phase",
-                    properties -> new LiquidBlock(
-                            Fluids.IMAG_PHASE.get(),
-                            properties
-                    ),
+                    ImagPhaseLiquidBlock::new,
                     () -> BlockBehaviour.Properties.of()
                             .replaceable()
                             .noCollision()
