@@ -38,11 +38,11 @@ class TemporalFieldTest {
     }
 
     @Test
-    void worldPresetExcludesIndependentAndPresentationClocks() {
+    void worldPresetIncludesLogicalServerClockButExcludesPresentationClock() {
         var channels = TemporalChannel.worldSimulation();
         assertTrue(channels.contains(TemporalChannel.ENTITY));
         assertTrue(channels.contains(TemporalChannel.LEVEL_CLOCK));
-        assertFalse(channels.contains(TemporalChannel.SERVER_CLOCK));
+        assertTrue(channels.contains(TemporalChannel.SERVER_CLOCK));
         assertFalse(channels.contains(TemporalChannel.CLIENT_VISUAL));
     }
 

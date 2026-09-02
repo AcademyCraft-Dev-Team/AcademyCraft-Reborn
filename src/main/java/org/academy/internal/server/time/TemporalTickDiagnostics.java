@@ -113,7 +113,9 @@ public record TemporalTickDiagnostics(
             int levelClocks,
             int weather,
             int raids,
-            int blockEvents
+            int blockEvents,
+            int serverClocks,
+            int academySchedulers
     ) {
     }
 

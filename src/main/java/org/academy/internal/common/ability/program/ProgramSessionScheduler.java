@@ -59,26 +59,41 @@ public final class ProgramSessionScheduler<K> {
 
     public void tick(long gameTime) {
         if (gameTime < 0) throw new IllegalArgumentException("Scheduler tick cannot be negative");
-        for (var entry : List.copyOf(sessions.entrySet())) {
-            var key = entry.getKey();
-            var running = entry.getValue();
-            if (sessions.get(key) != running) continue;
-            if (gameTime - running.startedAt >= running.maxLifetimeTicks) {
-                terminate(key, running, Termination.expired(running.vm.currentNodeId()));
-                continue;
-            }
-            var result = running.vm.run(
-                    gameTime,
-                    running.fuelPerTick,
-                    running.executors,
-                    running.attachment
+        for (var key : List.copyOf(sessions.keySet())) {
+            tick(key, gameTime);
+        }
+    }
+
+    /** Advances one session without exposing its mutable runtime state. */
+    public void tick(K key, long gameTime) {
+        Objects.requireNonNull(key, "key");
+        if (gameTime < 0) {
+            throw new IllegalArgumentException("Scheduler tick cannot be negative");
+        }
+        var running = sessions.get(key);
+        if (running == null) return;
+        if (gameTime - running.startedAt >= running.maxLifetimeTicks) {
+            terminate(key, running, Termination.expired(running.vm.currentNodeId()));
+            return;
+        }
+        var result = running.vm.run(
+                gameTime,
+                running.fuelPerTick,
+                running.executors,
+                running.attachment
+        );
+        switch (result.status()) {
+            case COMPLETED -> terminate(
+                    key,
+                    running,
+                    Termination.completed(result.nodeId())
             );
-            switch (result.status()) {
-                case COMPLETED -> terminate(key, running, Termination.completed(result.nodeId()));
-                case FAILED -> terminate(key, running, Termination.failed(
-                        result.nodeId(), result.diagnostic()));
-                case FUEL_EXHAUSTED, SUSPENDED -> {
-                }
+            case FAILED -> terminate(
+                    key,
+                    running,
+                    Termination.failed(result.nodeId(), result.diagnostic())
+            );
+            case FUEL_EXHAUSTED, SUSPENDED -> {
             }
         }
     }
@@ -100,6 +115,10 @@ public final class ProgramSessionScheduler<K> {
 
     public boolean contains(K key) {
         return sessions.containsKey(key);
+    }
+
+    public List<K> keys() {
+        return List.copyOf(sessions.keySet());
     }
 
     private void terminate(K key, RunningSession<K> running, Termination termination) {

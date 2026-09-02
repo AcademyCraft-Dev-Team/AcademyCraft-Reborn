@@ -130,4 +130,31 @@ class TemporalFieldResolverTest {
                 ignored -> false
         ), 1.0E-12D);
     }
+
+    @Test
+    void serverGlobalResolutionAcceptsOnlySaveScopes() {
+        var channel = Set.of(TemporalChannel.SERVER_CLOCK);
+        var fields = List.of(
+                TemporalField.scale(TemporalScope.save(), channel, 0.5D),
+                TemporalField.pause(
+                        TemporalScope.dimension(DIMENSION),
+                        channel,
+                        TemporalPauseSource.ACADEMY_PAUSE
+                ),
+                TemporalField.scale(
+                        TemporalScope.sphere(DIMENSION, Vec3.ZERO, 8.0D),
+                        channel,
+                        2.0D
+                )
+        );
+
+        assertEquals(
+                0.5D,
+                TemporalFieldResolver.resolveSave(
+                        fields,
+                        TemporalChannel.SERVER_CLOCK
+                ),
+                1.0E-12D
+        );
+    }
 }
