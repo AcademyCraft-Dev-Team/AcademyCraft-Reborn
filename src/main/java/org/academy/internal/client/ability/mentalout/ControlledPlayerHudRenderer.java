@@ -16,6 +16,7 @@ import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager
  * Draws the controlled player's combat HUD without mutating the controller's inventory.
  */
 public final class ControlledPlayerHudRenderer {
+    private static final int MAX_VISIBLE_HEART_CONTAINERS = 40;
     private static final Identifier HOTBAR = vanilla("hud/hotbar");
     private static final Identifier HOTBAR_SELECTION = vanilla("hud/hotbar_selection");
     private static final Identifier OFFHAND_LEFT = vanilla("hud/hotbar_offhand_left");
@@ -133,7 +134,10 @@ public final class ControlledPlayerHudRenderer {
         var absorptionHalves = Mth.ceil(state.absorption());
         var healthContainers = Mth.ceil(maxHealthHalves / 2.0f);
         var absorptionContainers = Mth.ceil(absorptionHalves / 2.0f);
-        var containers = healthContainers + absorptionContainers;
+        var containers = Math.min(
+                MAX_VISIBLE_HEART_CONTAINERS,
+                healthContainers + absorptionContainers
+        );
         var rows = Math.max(1, Mth.ceil(containers / 10.0f));
         var rowHeight = Math.max(10 - (rows - 2), 3);
 

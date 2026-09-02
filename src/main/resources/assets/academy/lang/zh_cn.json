@@ -672,7 +672,7 @@
   "message.academy.precision_operation.non_finite_value": "节点数值必须为有限值。",
   "message.academy.precision_operation.ok": "程序校验通过。",
   "message.academy.precision_operation.planning_budget_exhausted": "寻路规划预算持续耗尽，行动已终止。",
-  "message.academy.precision_operation.proficiency_required": "条件分支需要精密操作熟练度达到 3000。",
+  "message.academy.precision_operation.proficiency_required": "精密操作的条件分支现已直接开放。",
   "message.academy.precision_operation.protected_target": "程序包含受到精神保护的目标。",
   "message.academy.precision_operation.revision_conflict": "服务端程序已更新，已恢复最新版本。",
   "message.academy.precision_operation.skill_unavailable": "精密操作当前不可用。",

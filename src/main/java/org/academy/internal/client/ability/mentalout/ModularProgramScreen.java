@@ -11,7 +11,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.environment.UiEnvironment;
@@ -27,12 +26,8 @@ import org.academy.api.common.ability.program.*;
 import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
-import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
 import org.academy.internal.client.ability.program.ProgramClipboardCodec;
-import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.AbilityCategoryNames;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.program.AbilityProgramDefinition;
@@ -1701,15 +1696,6 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             showTransient(PrecisionGraph.Diagnostic.EMPTY_PROGRAM);
             return;
         }
-        var locked = session.precisionRules()
-                && document.program().graph().nodes().stream().anyMatch(node ->
-                node.type().equals(CommonProgramNodeIds.BRANCH)
-                        || Optional.ofNullable(PrecisionProgramNodeIds.kind(node.type()))
-                        .map(PrecisionGraph.NodeKind::isConditionalBranch).orElse(false));
-        if (locked && !branchUnlocked()) {
-            showTransient(PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED);
-            return;
-        }
         session.saveProgram(
                 slot,
                 document.program().graph().nodes().isEmpty() ? null : document.program(),
@@ -1795,17 +1781,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private boolean entryUnlocked(ProgramEditorNodeCatalog.Entry entry) {
-        if (!capabilities.containsAll(entry.type().scope().requiredCapabilities())) return false;
-        if (!session.precisionRules()) return true;
-        var kind = entry.metadata(PrecisionGraph.NodeKind.class).orElse(null);
-        return branchUnlocked() || !entry.id().equals(CommonProgramNodeIds.BRANCH)
-                && (kind == null || !kind.isConditionalBranch());
-    }
-
-    private boolean branchUnlocked() {
-        return !session.precisionRules() || ProficiencyPolicy.client().enabled()
-                && AbilitySystemClient.getSkillProficiencyMilestone(
-                Skills.WIDE_AREA_INTERFERENCE.get()) >= 3;
+        return capabilities.containsAll(entry.type().scope().requiredCapabilities());
     }
 
     private Endpoint firstCompatibleEndpoint(NodeView node, Endpoint anchor) {
