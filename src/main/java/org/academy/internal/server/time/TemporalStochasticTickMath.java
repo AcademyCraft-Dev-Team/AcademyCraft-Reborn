@@ -3,11 +3,11 @@ package org.academy.internal.server.time;
 import java.util.Objects;
 import java.util.function.DoubleSupplier;
 
-/** Statistical scaling rules for one vanilla random-tick selection. */
-final class TemporalRandomTickMath {
+/** Statistical scaling rules for one stochastic simulation callback. */
+final class TemporalStochasticTickMath {
     private static final double INTEGER_EPSILON = 1.0E-12D;
 
-    private TemporalRandomTickMath() {
+    private TemporalStochasticTickMath() {
     }
 
     static int invocationCount(
@@ -16,7 +16,7 @@ final class TemporalRandomTickMath {
     ) {
         if (!Double.isFinite(scale) || scale < 0.0D) {
             throw new IllegalArgumentException(
-                    "Random-tick scale must be finite and non-negative."
+                    "Stochastic tick scale must be finite and non-negative."
             );
         }
         if (scale == 0.0D) return 0;
@@ -33,7 +33,7 @@ final class TemporalRandomTickMath {
         var sample = fractionalSample.getAsDouble();
         if (!Double.isFinite(sample) || sample < 0.0D || sample >= 1.0D) {
             throw new IllegalArgumentException(
-                    "Random-tick fractional sample must be in [0, 1)."
+                    "Stochastic fractional sample must be in [0, 1)."
             );
         }
         return wholeInvocations + (sample < fraction ? 1 : 0);

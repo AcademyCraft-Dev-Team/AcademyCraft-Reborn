@@ -13,7 +13,10 @@ import java.util.Set;
 public enum TemporalChannel {
     SERVER_CLOCK,
     LEVEL_CLOCK,
+    WORLD_BORDER,
     WEATHER_AND_RAID,
+    NATURAL_SPAWNING,
+    DRAGON_FIGHT,
     ENTITY,
     BLOCK_ENTITY,
     SCHEDULED_BLOCK,
@@ -27,7 +30,10 @@ public enum TemporalChannel {
             EnumSet.of(
                     SERVER_CLOCK,
                     LEVEL_CLOCK,
+                    WORLD_BORDER,
                     WEATHER_AND_RAID,
+                    NATURAL_SPAWNING,
+                    DRAGON_FIGHT,
                     ENTITY,
                     BLOCK_ENTITY,
                     SCHEDULED_BLOCK,

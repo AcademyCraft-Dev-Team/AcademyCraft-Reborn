@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerTickRateManager;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockEventData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.TickingBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -73,12 +75,15 @@ public final class TemporalRuntime implements TemporalService {
             EnumSet.of(
                     TemporalChannel.LEVEL_CLOCK,
                     TemporalChannel.SERVER_CLOCK,
+                    TemporalChannel.WORLD_BORDER,
+                    TemporalChannel.WEATHER_AND_RAID,
+                    TemporalChannel.NATURAL_SPAWNING,
+                    TemporalChannel.DRAGON_FIGHT,
                     TemporalChannel.ENTITY,
                     TemporalChannel.BLOCK_ENTITY,
                     TemporalChannel.SCHEDULED_BLOCK,
                     TemporalChannel.SCHEDULED_FLUID,
                     TemporalChannel.RANDOM_TICK,
-                    TemporalChannel.WEATHER_AND_RAID,
                     TemporalChannel.BLOCK_EVENT,
                     TemporalChannel.ACADEMY_SCHEDULER
             )
@@ -105,10 +110,16 @@ public final class TemporalRuntime implements TemporalService {
             new HashMap<>();
     private final Map<String, AccumulatorState> serverClockAccumulators =
             new HashMap<>();
+    private final Map<ResourceKey<Level>, AccumulatorState>
+            worldBorderTickAccumulators = new HashMap<>();
     private final Map<ResourceKey<Level>, AccumulatorState> weatherTickAccumulators =
             new HashMap<>();
     private final Map<ResourceKey<Level>, AccumulatorState> raidTickAccumulators =
             new HashMap<>();
+    private final Map<ResourceKey<Level>, AccumulatorState>
+            customSpawnerTickAccumulators = new HashMap<>();
+    private final Map<ResourceKey<Level>, AccumulatorState>
+            dragonFightTickAccumulators = new HashMap<>();
     private final Map<BlockEventKey, AccumulatorState> blockEventAccumulators =
             new HashMap<>();
     private final Map<AcademySchedulerKey, AccumulatorState>
@@ -125,6 +136,8 @@ public final class TemporalRuntime implements TemporalService {
     private final ThreadLocal<Set<UUID>> scaledEntityTickStack =
             ThreadLocal.withInitial(HashSet::new);
     private final ThreadLocal<Set<ResourceKey<Level>>> scaledLevelClockStack =
+            ThreadLocal.withInitial(HashSet::new);
+    private final ThreadLocal<Set<ResourceKey<Level>>> scaledCustomSpawnerStack =
             ThreadLocal.withInitial(HashSet::new);
     private long heartbeat;
     private long stateRevision;
@@ -299,7 +312,10 @@ public final class TemporalRuntime implements TemporalService {
                         raidTickAccumulators.size(),
                         blockEventAccumulators.size(),
                         serverClockAccumulators.size(),
-                        academySchedulerAccumulators.size()
+                        academySchedulerAccumulators.size(),
+                        worldBorderTickAccumulators.size(),
+                        customSpawnerTickAccumulators.size(),
+                        dragonFightTickAccumulators.size()
                 ),
                 entityState
         );
@@ -605,6 +621,114 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
+    /** Runs one dimension's world-border interpolation at its local rate. */
+    public void dispatchWorldBorderTicks(
+            ServerLevel level,
+            Runnable vanillaWorldBorderTick
+    ) {
+        requireHookCaller("dispatchWorldBorderTicks", ServerLevel.class);
+        dispatchLevelSubsystemTicks(
+                level,
+                vanillaWorldBorderTick,
+                worldBorderTickAccumulators,
+                TemporalChannel.WORLD_BORDER
+        );
+    }
+
+    /** Scales one selected rain, snow, or ice update at its exact position. */
+    public void dispatchPrecipitationTicks(
+            ServerLevel level,
+            BlockPos position,
+            Runnable vanillaPrecipitationTick
+    ) {
+        requireHookCaller("dispatchPrecipitationTicks", ServerLevel.class);
+        dispatchStochasticTicks(
+                level,
+                position,
+                TemporalChannel.WEATHER_AND_RAID,
+                vanillaPrecipitationTick
+        );
+    }
+
+    /** Scales one chunk-local lightning attempt without pausing chunk I/O. */
+    public void dispatchThunderTicks(
+            ServerLevel level,
+            BlockPos chunkCenter,
+            Runnable vanillaThunderTick
+    ) {
+        requireHookCaller("dispatchThunderTicks", ServerChunkCache.class);
+        dispatchStochasticTicks(
+                level,
+                chunkCenter,
+                TemporalChannel.WEATHER_AND_RAID,
+                vanillaThunderTick
+        );
+    }
+
+    /** Scales one natural-spawn category attempt at its selected position. */
+    public void dispatchNaturalSpawningTicks(
+            ServerLevel level,
+            BlockPos position,
+            Runnable vanillaSpawnTick
+    ) {
+        requireHookCaller(
+                "dispatchNaturalSpawningTicks",
+                NaturalSpawner.class
+        );
+        dispatchStochasticTicks(
+                level,
+                position,
+                TemporalChannel.NATURAL_SPAWNING,
+                vanillaSpawnTick
+        );
+    }
+
+    /** Runs dimension-wide custom spawners at their logical rate. */
+    public boolean dispatchCustomSpawnerTicks(
+            ServerLevel level,
+            Runnable vanillaSpawnerTick
+    ) {
+        requireHookCaller("dispatchCustomSpawnerTicks", ServerLevel.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) return false;
+
+        var dimension = level.dimension();
+        var inProgress = scaledCustomSpawnerStack.get();
+        if (inProgress.contains(dimension)) return false;
+        var logicalTicks = logicalTicks(
+                customSpawnerTickAccumulators,
+                dimension,
+                effectiveScale(level, TemporalChannel.NATURAL_SPAWNING)
+        );
+        if (logicalTicks == 1) return false;
+        if (logicalTicks == 0) return true;
+
+        inProgress.add(dimension);
+        try {
+            for (var index = 0; index < logicalTicks; index++) {
+                vanillaSpawnerTick.run();
+            }
+        } finally {
+            inProgress.remove(dimension);
+            if (inProgress.isEmpty()) scaledCustomSpawnerStack.remove();
+        }
+        return true;
+    }
+
+    /** Runs the End dragon-fight state machine at its dimension rate. */
+    public void dispatchDragonFightTicks(
+            ServerLevel level,
+            Runnable vanillaDragonFightTick
+    ) {
+        requireHookCaller("dispatchDragonFightTicks", ServerLevel.class);
+        dispatchLevelSubsystemTicks(
+                level,
+                vanillaDragonFightTick,
+                dragonFightTickAccumulators,
+                TemporalChannel.DRAGON_FIGHT
+        );
+    }
+
     /** Runs the dimension raid manager at the same effective level rate. */
     public void dispatchRaidTicks(
             ServerLevel level,
@@ -756,7 +880,7 @@ public final class TemporalRuntime implements TemporalService {
             return;
         }
 
-        var invocations = TemporalRandomTickMath.invocationCount(
+        var invocations = TemporalStochasticTickMath.invocationCount(
                 effectiveScale(level, position, TemporalChannel.RANDOM_TICK),
                 random::nextDouble
         );
@@ -781,7 +905,7 @@ public final class TemporalRuntime implements TemporalService {
             return;
         }
 
-        var invocations = TemporalRandomTickMath.invocationCount(
+        var invocations = TemporalStochasticTickMath.invocationCount(
                 effectiveScale(level, position, TemporalChannel.RANDOM_TICK),
                 random::nextDouble
         );
@@ -1356,13 +1480,36 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
+    private void dispatchStochasticTicks(
+            ServerLevel level,
+            BlockPos position,
+            TemporalChannel channel,
+            Runnable vanillaTick
+    ) {
+        requireServerThread();
+        if (stopped || level.getServer() != server) {
+            vanillaTick.run();
+            return;
+        }
+        var invocations = TemporalStochasticTickMath.invocationCount(
+                effectiveScale(level, position, channel),
+                level.getRandom()::nextDouble
+        );
+        for (var index = 0; index < invocations; index++) {
+            vanillaTick.run();
+        }
+    }
+
     private void resetScaleAccumulators() {
         entityTickAccumulators.clear();
         blockEntityTickAccumulators.clear();
         levelClockAccumulators.clear();
         serverClockAccumulators.clear();
+        worldBorderTickAccumulators.clear();
         weatherTickAccumulators.clear();
         raidTickAccumulators.clear();
+        customSpawnerTickAccumulators.clear();
+        dragonFightTickAccumulators.clear();
         blockEventAccumulators.clear();
         academySchedulerAccumulators.clear();
     }
@@ -1381,10 +1528,19 @@ public final class TemporalRuntime implements TemporalService {
         serverClockAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
+        worldBorderTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
         weatherTickAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
         raidTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        customSpawnerTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        dragonFightTickAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
         blockEventAccumulators.values().removeIf(

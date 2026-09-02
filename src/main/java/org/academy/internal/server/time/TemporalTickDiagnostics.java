@@ -115,7 +115,10 @@ public record TemporalTickDiagnostics(
             int raids,
             int blockEvents,
             int serverClocks,
-            int academySchedulers
+            int academySchedulers,
+            int worldBorders,
+            int customSpawners,
+            int dragonFights
     ) {
     }
 

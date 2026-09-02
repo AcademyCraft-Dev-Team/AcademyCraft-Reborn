@@ -220,33 +220,72 @@ final class TemporalTickDebugCommands {
                                 "targets",
                                 EntityArgument.entities()
                         )
+                        .then(entityScaleAndOptions()));
+    }
+
+    private static RequiredArgumentBuilder<CommandSourceStack, Double>
+    entityScaleAndOptions() {
+        var scale = RequiredArgumentBuilder
+                .<CommandSourceStack, Double>argument(
+                        "scale",
+                        DoubleArgumentType.doubleArg(
+                                0.0D,
+                                TemporalScale.DEFAULT_MAX_SCALE
+                        )
+                )
+                .executes(context -> addEntityField(
+                        context,
+                        entityChannels(),
+                        TemporalPauseSource.ACADEMY_PAUSE
+                ));
+        scale.then(RequiredArgumentBuilder
+                .<CommandSourceStack, String>argument(
+                        "pause_source",
+                        StringArgumentType.word()
+                )
+                .suggests(TemporalTickDebugCommands::suggestSources)
+                .executes(context -> addEntityField(
+                        context,
+                        entityChannels(),
+                        parseSingleSource(StringArgumentType.getString(
+                                context,
+                                "pause_source"
+                        ))
+                )));
+        scale.then(LiteralArgumentBuilder
+                .<CommandSourceStack>literal("channels")
+                .then(RequiredArgumentBuilder
+                        .<CommandSourceStack, String>argument(
+                                "channels",
+                                StringArgumentType.word()
+                        )
+                        .suggests(TemporalTickDebugCommands::suggestChannels)
+                        .executes(context -> addEntityField(
+                                context,
+                                parseChannels(StringArgumentType.getString(
+                                        context,
+                                        "channels"
+                                )),
+                                TemporalPauseSource.ACADEMY_PAUSE
+                        ))
                         .then(RequiredArgumentBuilder
-                                .<CommandSourceStack, Double>argument(
-                                        "scale",
-                                        DoubleArgumentType.doubleArg(
-                                                0.0D,
-                                                TemporalScale.DEFAULT_MAX_SCALE
-                                        )
+                                .<CommandSourceStack, String>argument(
+                                        "pause_source",
+                                        StringArgumentType.word()
                                 )
+                                .suggests(TemporalTickDebugCommands::suggestSources)
                                 .executes(context -> addEntityField(
                                         context,
-                                        TemporalPauseSource.ACADEMY_PAUSE
-                                ))
-                                .then(RequiredArgumentBuilder
-                                        .<CommandSourceStack, String>argument(
-                                                "pause_source",
-                                                StringArgumentType.word()
-                                        )
-                                        .suggests(TemporalTickDebugCommands::suggestSources)
-                                        .executes(context -> addEntityField(
+                                        parseChannels(StringArgumentType.getString(
                                                 context,
-                                                parseSingleSource(
-                                                        StringArgumentType.getString(
-                                                                context,
-                                                                "pause_source"
-                                                        )
-                                                )
-                                        )))));
+                                                "channels"
+                                        )),
+                                        parseSingleSource(StringArgumentType.getString(
+                                                context,
+                                                "pause_source"
+                                        ))
+                                )))));
+        return scale;
     }
 
     private static RequiredArgumentBuilder<CommandSourceStack, Double>
@@ -349,6 +388,7 @@ final class TemporalTickDebugCommands {
 
     private static int addEntityField(
             CommandContext<CommandSourceStack> context,
+            Set<TemporalChannel> channels,
             TemporalPauseSource pauseSource
     ) throws CommandSyntaxException {
         var targets = EntityArgument.getEntities(context, "targets");
@@ -357,7 +397,7 @@ final class TemporalTickDebugCommands {
                 .toList());
         var field = new TemporalField(
                 scope,
-                Set.of(TemporalChannel.ENTITY),
+                channels,
                 DoubleArgumentType.getDouble(context, "scale"),
                 pauseSource
         );
@@ -465,6 +505,7 @@ final class TemporalTickDebugCommands {
                 inspect entities <selector>
                 inspect position <dimension> <x y z>
                 field add entities <selector> <scale> [pause_source]
+                field add entities <selector> <scale> channels <channels> [pause_source]
                 field add sphere <dimension> <x y z> <radius> <scale> <channels> [pause_source]
                 field add dimension <dimension> <scale> <channels> [pause_source]
                 field add save <scale> <channels> [pause_source]
@@ -598,6 +639,12 @@ final class TemporalTickDebugCommands {
                 .append(" serverClock=").append(accumulators.serverClocks())
                 .append(" academyScheduler=")
                 .append(accumulators.academySchedulers())
+                .append(" worldBorder=")
+                .append(accumulators.worldBorders())
+                .append(" customSpawner=")
+                .append(accumulators.customSpawners())
+                .append(" dragonFight=")
+                .append(accumulators.dragonFights())
                 .append(" debugImmunityGroups=")
                 .append(snapshot.debugImmunities().size());
         return text.toString();
@@ -684,14 +731,7 @@ final class TemporalTickDebugCommands {
             return TemporalChannel.worldSimulation();
         }
         if (normalized.equals("integrated")) {
-            return EnumSet.of(
-                    TemporalChannel.LEVEL_CLOCK,
-                    TemporalChannel.ENTITY,
-                    TemporalChannel.BLOCK_ENTITY,
-                    TemporalChannel.SCHEDULED_BLOCK,
-                    TemporalChannel.SCHEDULED_FLUID,
-                    TemporalChannel.RANDOM_TICK
-            );
+            return TemporalChannel.worldSimulation();
         }
         if (normalized.equals("spatial")) return spatialChannels();
         var channels = EnumSet.noneOf(TemporalChannel.class);
@@ -737,12 +777,23 @@ final class TemporalTickDebugCommands {
 
     private static Set<TemporalChannel> spatialChannels() {
         return Set.copyOf(EnumSet.of(
+                TemporalChannel.WEATHER_AND_RAID,
+                TemporalChannel.NATURAL_SPAWNING,
                 TemporalChannel.ENTITY,
                 TemporalChannel.BLOCK_ENTITY,
                 TemporalChannel.SCHEDULED_BLOCK,
                 TemporalChannel.SCHEDULED_FLUID,
-                TemporalChannel.RANDOM_TICK
+                TemporalChannel.RANDOM_TICK,
+                TemporalChannel.BLOCK_EVENT,
+                TemporalChannel.ACADEMY_SCHEDULER
         ));
+    }
+
+    private static Set<TemporalChannel> entityChannels() {
+        return Set.of(
+                TemporalChannel.ENTITY,
+                TemporalChannel.ACADEMY_SCHEDULER
+        );
     }
 
     private static CompletableFuture<Suggestions> suggestChannels(

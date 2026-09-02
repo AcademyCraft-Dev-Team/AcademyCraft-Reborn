@@ -217,11 +217,58 @@ public final class TemporalLevelSubsystemGameTests {
                             level.getDefaultClockTime() > resumedAt,
                             "Save clock did not resume after its field closed"
                     );
-                    helper.succeed();
                 } finally {
                     if (lease.isActive()) lease.close();
                 }
+                validateWorldBorderPause(helper);
             });
+        });
+    }
+
+    private static void validateWorldBorderPause(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var border = level.getWorldBorder();
+        var originalSize = border.getSize();
+        var lease = TemporalApi.get(level.getServer()).acquireField(
+                TemporalField.pause(
+                        TemporalScope.dimension(level.dimension()),
+                        Set.of(TemporalChannel.WORLD_BORDER),
+                        TemporalPauseSource.ACADEMY_PAUSE
+                )
+        );
+        border.lerpSizeBetween(
+                originalSize,
+                originalSize - 32.0D,
+                20L,
+                level.getGameTime()
+        );
+        var pausedRemaining = border.getLerpTime();
+        helper.runAfterDelay(3L, () -> {
+            try {
+                helper.assertValueEqual(
+                        border.getLerpTime(),
+                        pausedRemaining,
+                        "World border interpolation advanced during dimension pause"
+                );
+                lease.close();
+                var resumedRemaining = border.getLerpTime();
+                helper.runAfterDelay(3L, () -> {
+                    try {
+                        helper.assertTrue(
+                                border.getLerpTime() < resumedRemaining,
+                                "World border did not resume after its field closed"
+                        );
+                        helper.succeed();
+                    } finally {
+                        if (lease.isActive()) lease.close();
+                        border.setSize(originalSize);
+                    }
+                });
+            } catch (RuntimeException | Error throwable) {
+                if (lease.isActive()) lease.close();
+                border.setSize(originalSize);
+                throw throwable;
+            }
         });
     }
 

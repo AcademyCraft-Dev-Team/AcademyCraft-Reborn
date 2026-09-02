@@ -7,6 +7,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.raid.Raids;
 import net.minecraft.world.level.BlockEventData;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.dimension.end.EnderDragonFight;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.ticks.LevelTicks;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -63,6 +65,24 @@ public abstract class MixinServerLevelTemporalScaling {
             method = "tick",
             at = @At(
                     value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/border/WorldBorder;tick()V"
+            )
+    )
+    private void academy$dispatchWorldBorderTicks(WorldBorder border) {
+        var level = (ServerLevel) (Object) this;
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) {
+            border.tick();
+            return;
+        }
+        ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
+                .dispatchWorldBorderTicks(level, border::tick);
+    }
+
+    @Redirect(
+            method = "tick",
+            at = @At(
+                    value = "INVOKE",
                     target = "Lnet/minecraft/server/level/ServerLevel;advanceWeatherCycle()V"
             )
     )
@@ -94,6 +114,46 @@ public abstract class MixinServerLevelTemporalScaling {
         }
         ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
                 .dispatchRaidTicks(level, () -> raids.tick(level));
+    }
+
+    @Redirect(
+            method = "tick",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/dimension/end/EnderDragonFight;tick()V"
+            )
+    )
+    private void academy$dispatchDragonFightTicks(EnderDragonFight fight) {
+        var level = (ServerLevel) (Object) this;
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) {
+            fight.tick();
+            return;
+        }
+        ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
+                .dispatchDragonFightTicks(level, fight::tick);
+    }
+
+    @Inject(
+            method = "tickCustomSpawners",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void academy$dispatchCustomSpawnerTicks(
+            boolean spawnEnemies,
+            CallbackInfo ci
+    ) {
+        var level = (ServerLevel) (Object) this;
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) return;
+        var runtime = (TemporalRuntime) context.getAcademyCraftServer()
+                .getTemporalService();
+        if (runtime.dispatchCustomSpawnerTicks(
+                level,
+                () -> level.tickCustomSpawners(spawnEnemies)
+        )) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "doBlockEvent", at = @At("HEAD"), cancellable = true)
@@ -183,5 +243,29 @@ public abstract class MixinServerLevelTemporalScaling {
         }
         ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
                 .dispatchRandomFluidTick(state, level, position, random);
+    }
+
+    @Redirect(
+            method = "tickChunk",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/level/ServerLevel;tickPrecipitation(Lnet/minecraft/core/BlockPos;)V"
+            )
+    )
+    private void academy$dispatchPrecipitationTicks(
+            ServerLevel level,
+            BlockPos position
+    ) {
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) {
+            level.tickPrecipitation(position);
+            return;
+        }
+        ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
+                .dispatchPrecipitationTicks(
+                        level,
+                        position,
+                        () -> level.tickPrecipitation(position)
+                );
     }
 }
