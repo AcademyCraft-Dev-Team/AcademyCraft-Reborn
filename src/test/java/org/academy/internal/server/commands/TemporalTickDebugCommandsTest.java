@@ -106,7 +106,7 @@ class TemporalTickDebugCommandsTest {
                         false,
                         1
                 ),
-                new TemporalTickDiagnostics.AccumulatorState(1, 2, 1),
+                new TemporalTickDiagnostics.AccumulatorState(1, 2, 1, 1, 1, 2),
                 null
         );
 
@@ -117,5 +117,6 @@ class TemporalTickDebugCommandsTest {
         }
         assertTrue(report.contains("RANDOM_TICK 1.000x/§cPAUSED"));
         assertTrue(report.contains("Queue SCHEDULED_FLUID: pending=3 frozen=1"));
+        assertTrue(report.contains("weather=1 raid=1 blockEvent=2"));
     }
 }
