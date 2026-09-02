@@ -9,6 +9,8 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.AttackDecision;
+import org.academy.api.server.entity.SurvivalDefense;
+import org.academy.api.server.entity.SurvivalDefenseAspect;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.mentalout.control.ImpressionRidingManager;
@@ -252,16 +254,22 @@ public abstract class MixinEntity {
                 && VectorReflection.Server.usesFullInstanceProtection(player);
         var protectedByEntityControl = (Object) this instanceof LivingEntity living
                 && EntityControlApi.shouldPreventRemoval(living);
-        if ((protectedByReflection || protectedByEntityControl)
+        var protectedBySurvivalDefense = (Object) this instanceof LivingEntity living
+                && SurvivalDefense.protects(living, SurvivalDefenseAspect.REMOVAL);
+        if ((protectedByReflection || protectedByEntityControl || protectedBySurvivalDefense)
                 && reason != Entity.RemovalReason.CHANGED_DIMENSION
-                && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
+                && reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER
+                && reason != Entity.RemovalReason.UNLOADED_TO_CHUNK) {
             ci.cancel();
         }
     }
 
     @Inject(method = "isAlive", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionAlive(CallbackInfoReturnable<Boolean> cir) {
-        if ((Object) this instanceof ServerPlayer player && VectorReflection.Server.shouldForceAlive(player)) {
+        if ((Object) this instanceof LivingEntity living
+                && SurvivalDefense.protects(living, SurvivalDefenseAspect.DEATH_STATE)
+                || (Object) this instanceof ServerPlayer player
+                && VectorReflection.Server.shouldForceAlive(player)) {
             cir.setReturnValue(true);
         }
     }
@@ -293,7 +301,11 @@ public abstract class MixinEntity {
 
     @Inject(method = "kill", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionKill(ServerLevel level, CallbackInfo ci) {
-        if ((Object) this instanceof ServerPlayer player
+        if ((Object) this instanceof LivingEntity living
+                && SurvivalDefense.protects(living, SurvivalDefenseAspect.DEATH_STATE)) {
+            SurvivalDefense.repairNow(living);
+            ci.cancel();
+        } else if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.usesFullInstanceProtection(player)) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();

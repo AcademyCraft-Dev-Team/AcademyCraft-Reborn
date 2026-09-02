@@ -126,6 +126,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ProficiencyPolicy.SyncPacket>>
             PROFICIENCY_POLICY_SYNC = PACKET_TYPES.register("proficiency_policy_sync",
             () -> new PacketType<>(ProficiencyPolicy.SyncPacket.class, ProficiencyPolicy.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, TemporalImmunitySyncPacket>>
+            TEMPORAL_IMMUNITY_SYNC = PACKET_TYPES.register("temporal_immunity_sync",
+            () -> new PacketType<>(TemporalImmunitySyncPacket.class, TemporalImmunitySyncPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ProficiencySkillSettings.SetPacket>>
             PROFICIENCY_SKILL_OPTION_SET = PACKET_TYPES.register("proficiency_skill_option_set",

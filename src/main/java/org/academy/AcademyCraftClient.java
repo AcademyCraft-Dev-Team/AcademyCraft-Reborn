@@ -79,6 +79,7 @@ import org.academy.internal.client.hud.HudDebugScreen;
 import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.particle.*;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
+import org.academy.internal.client.time.TemporalClientRuntime;
 import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
 import org.academy.internal.client.render.vfx.*;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
@@ -92,6 +93,7 @@ import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
+import org.academy.internal.common.network.TemporalImmunitySyncPacket;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -133,6 +135,7 @@ public final class AcademyCraftClient {
         AbilitySystemClient.init();
         AbilityProgramEditorClient.init();
         InstantTeleportSyncPacket.initClient();
+        TemporalImmunitySyncPacket.initClient();
         SpawnVfxGraphPacket.initClient();
         ProficiencyPolicy.initClient();
         PvpSetting.initClient();
@@ -376,6 +379,7 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onClientStopped(ClientStoppedEvent event) {
+        TemporalClientRuntime.reset();
         MentaloutRosterClientState.clearLocal();
         if (isUiDebugEnvironment()) UiDebugSession.INSTANCE.close();
         ImGuiUtilApi.INSTANCE.close();
@@ -387,6 +391,11 @@ public final class AcademyCraftClient {
         VfxManager.INSTANCE.close();
         VfxGraphManager.INSTANCE.close();
         Render.close();
+    }
+
+    @SubscribeEvent
+    public static void onClientLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        TemporalClientRuntime.reset();
     }
 
     @SubscribeEvent
