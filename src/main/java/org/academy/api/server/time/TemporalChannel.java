@@ -6,9 +6,9 @@ import java.util.Set;
 /**
  * Independently controllable parts of world simulation.
  *
- * <p>The initial implementation wires entity freeze immunity. The remaining
- * channels define the stable boundary used by the later level and scheduled
- * tick integrations.</p>
+ * <p>Each dispatcher reads only its own channel, allowing skills to control
+ * entity, block-entity and scheduled simulation independently while sharing
+ * the same field and scope model.</p>
  */
 public enum TemporalChannel {
     SERVER_CLOCK,

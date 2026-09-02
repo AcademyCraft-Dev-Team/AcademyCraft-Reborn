@@ -26,6 +26,8 @@
     "common.MixinFoodData",
     "common.MixinGhast",
     "common.MixinLivingEntity",
+    "common.MixinLevelAccessorTemporalScaling",
+    "common.MixinLevelTicksTemporalScaling",
     "common.MixinLevelTemporalScaling",
     "common.MixinLevelTimeImmunity",
     "common.MixinMentalControlCanAttackOverrides",

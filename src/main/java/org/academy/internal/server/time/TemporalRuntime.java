@@ -7,8 +7,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.TickingBlockEntity;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.ticks.LevelTicks;
+import net.minecraft.world.ticks.ScheduledTick;
 import org.academy.AcademyCraft;
 import org.academy.api.server.time.TemporalAccumulator;
 import org.academy.api.server.time.TemporalApi;
@@ -19,17 +24,24 @@ import org.academy.api.server.time.TemporalImmunityLease;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.time.TemporalService;
 import org.academy.internal.common.network.TemporalImmunitySyncPacket;
+import org.academy.mixin.common.LevelTicksAccessor;
 
+import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.security.ProtectionDomain;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
+import java.util.function.BiConsumer;
 
 /**
  * Server-owned temporal state and anti-freeze heartbeat.
@@ -48,6 +60,10 @@ public final class TemporalRuntime implements TemporalService {
     private static final int MAX_WALL_CLOCK_FORCED_TICKS_PER_PASS = 2;
     private static final int MAX_LOGICAL_TICKS_PER_PASS = 8;
     private static final long STALE_ACCUMULATOR_HEARTBEATS = 400L;
+    private static final Map<LevelTicks<?>, ScheduledQueueBinding<?>>
+            SCHEDULED_QUEUE_BINDINGS = Collections.synchronizedMap(
+                    new WeakHashMap<>()
+            );
 
     private final MinecraftServer server;
     private final TemporalSavedData savedData;
@@ -94,6 +110,7 @@ public final class TemporalRuntime implements TemporalService {
         var owner = leaseOwnerAfterAcquire("acquireField");
         temporalFields.put(fieldId, field);
         resetScaleAccumulators();
+        rebaseScheduledQueues();
         return new FieldLease(fieldId, field, owner);
     }
 
@@ -260,6 +277,98 @@ public final class TemporalRuntime implements TemporalService {
         return true;
     }
 
+    /** Wraps one vanilla scheduled-tick queue pass with safe rebasing. */
+    public <T> void dispatchScheduledQueue(
+            ServerLevel level,
+            LevelTicks<T> queue,
+            long gameTime,
+            int maxTicks,
+            BiConsumer<BlockPos, T> callback
+    ) {
+        requireHookCaller("dispatchScheduledQueue", ServerLevel.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) {
+            queue.tick(gameTime, maxTicks, callback);
+            return;
+        }
+
+        var channel = scheduledChannel(level, queue);
+        if (channel == null) {
+            queue.tick(gameTime, maxTicks, callback);
+            return;
+        }
+        var binding = bindScheduledQueue(queue, level, channel);
+        ensureScheduledQueueRebased(binding);
+        binding.dispatching = true;
+        try {
+            queue.tick(gameTime, maxTicks, callback);
+        } finally {
+            binding.dispatching = false;
+            ensureScheduledQueueRebased(binding);
+        }
+    }
+
+    /**
+     * Rewrites a newly requested block/fluid delay into physical level ticks.
+     * Called only from the protected {@link LevelAccessor#createTick} hook.
+     */
+    public int scaleScheduledDelay(
+            ServerLevel level,
+            BlockPos position,
+            Object type,
+            int delay
+    ) {
+        requireHookCaller("scaleScheduledDelay", LevelAccessor.class);
+        requireServerThread();
+        if (stopped || level.getServer() != server) return delay;
+
+        var channel = scheduledChannel(type);
+        if (channel == null) return delay;
+        var queue = scheduledQueue(level, channel);
+        var binding = bindScheduledQueueUnchecked(queue, level, channel);
+        if (!binding.dispatching) ensureScheduledQueueRebasedUnchecked(binding);
+
+        var fields = binding.dispatching
+                ? binding.appliedFields : fieldSnapshot();
+        var relativeScale = scheduledRelativeScale(
+                fields,
+                level,
+                position,
+                channel
+        );
+        var key = new ScheduledTickKey(type, position);
+        if (relativeScale == 0.0D
+                && !hasScheduledTickUnchecked(queue, position, type)) {
+            binding.frozenRemaining.putIfAbsent(
+                    key,
+                    (double) Math.max(0, delay)
+            );
+        } else if (relativeScale > 0.0D
+                && !hasScheduledTickUnchecked(queue, position, type)) {
+            binding.frozenRemaining.remove(key);
+        }
+        return TemporalScheduledTickMath.scaleNewDelay(delay, relativeScale);
+    }
+
+    /**
+     * Prevents a collected tick from entering the callback queue while its
+     * local temporal channel is hard-paused.
+     */
+    public static <T> boolean deferScheduledTickIfPaused(
+            LevelTicks<T> queue,
+            ScheduledTick<T> tick
+    ) {
+        requireHookCaller("deferScheduledTickIfPaused", LevelTicks.class);
+        ScheduledQueueBinding<T> binding;
+        synchronized (SCHEDULED_QUEUE_BINDINGS) {
+            @SuppressWarnings("unchecked")
+            var found = (ScheduledQueueBinding<T>) SCHEDULED_QUEUE_BINDINGS.get(queue);
+            binding = found;
+        }
+        if (binding == null || binding.runtime.stopped) return false;
+        return binding.runtime.deferScheduledTick(binding, tick);
+    }
+
     /** Internal persistence boundary for ability-state reconciliation. */
     public void setPersistentImmunity(
             Entity entity,
@@ -328,6 +437,7 @@ public final class TemporalRuntime implements TemporalService {
         requireHookCaller("beginLevelTick", ServerLevel.class);
         requireServerThread();
         if (stopped || level.getServer() != server) return;
+        bindScheduledQueues(level);
         var snapshots = levelTickSnapshots.computeIfAbsent(
                 level,
                 ignored -> new HashMap<>()
@@ -416,6 +526,11 @@ public final class TemporalRuntime implements TemporalService {
         transientImmunities.clear();
         temporalFields.clear();
         resetScaleAccumulators();
+        synchronized (SCHEDULED_QUEUE_BINDINGS) {
+            SCHEDULED_QUEUE_BINDINGS.values().removeIf(
+                    binding -> binding.runtime == this
+            );
+        }
         serverTickSnapshots.clear();
         levelTickSnapshots.clear();
         lastFallbackHeartbeats.clear();
@@ -424,6 +539,260 @@ public final class TemporalRuntime implements TemporalService {
         fallbackTickStack.remove();
         scaledEntityTickStack.remove();
         scaledLevelClockStack.remove();
+    }
+
+    private void bindScheduledQueues(ServerLevel level) {
+        ensureScheduledQueueRebased(bindScheduledQueue(
+                level.getBlockTicks(),
+                level,
+                TemporalChannel.SCHEDULED_BLOCK
+        ));
+        ensureScheduledQueueRebased(bindScheduledQueue(
+                level.getFluidTicks(),
+                level,
+                TemporalChannel.SCHEDULED_FLUID
+        ));
+    }
+
+    private <T> ScheduledQueueBinding<T> bindScheduledQueue(
+            LevelTicks<T> queue,
+            ServerLevel level,
+            TemporalChannel channel
+    ) {
+        synchronized (SCHEDULED_QUEUE_BINDINGS) {
+            @SuppressWarnings("unchecked")
+            var existing = (ScheduledQueueBinding<T>)
+                    SCHEDULED_QUEUE_BINDINGS.get(queue);
+            if (existing != null
+                    && existing.runtime == this
+                    && existing.level == level
+                    && existing.channel == channel) {
+                return existing;
+            }
+            var binding = new ScheduledQueueBinding<T>(
+                    this,
+                    level,
+                    queue,
+                    channel
+            );
+            SCHEDULED_QUEUE_BINDINGS.put(queue, binding);
+            return binding;
+        }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private ScheduledQueueBinding<Object> bindScheduledQueueUnchecked(
+            LevelTicks<?> queue,
+            ServerLevel level,
+            TemporalChannel channel
+    ) {
+        return (ScheduledQueueBinding<Object>) bindScheduledQueue(
+                (LevelTicks) queue,
+                level,
+                channel
+        );
+    }
+
+    private void rebaseScheduledQueues() {
+        var ownedBindings = new ArrayList<ScheduledQueueBinding<?>>();
+        synchronized (SCHEDULED_QUEUE_BINDINGS) {
+            for (var binding : SCHEDULED_QUEUE_BINDINGS.values()) {
+                if (binding.runtime == this) ownedBindings.add(binding);
+            }
+        }
+        for (var binding : ownedBindings) {
+            if (!binding.dispatching) {
+                ensureScheduledQueueRebasedUnchecked(binding);
+            }
+        }
+    }
+
+    private <T> void ensureScheduledQueueRebased(
+            ScheduledQueueBinding<T> binding
+    ) {
+        var targetFields = fieldSnapshot();
+        if (binding.appliedFields.equals(targetFields)) return;
+        rebaseScheduledQueue(binding, targetFields);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void ensureScheduledQueueRebasedUnchecked(
+            ScheduledQueueBinding<?> binding
+    ) {
+        ensureScheduledQueueRebased((ScheduledQueueBinding) binding);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void rebaseScheduledQueue(
+            ScheduledQueueBinding<T> binding,
+            List<TemporalField> targetFields
+    ) {
+        var queue = binding.queueReference.get();
+        if (queue == null) {
+            binding.frozenRemaining.clear();
+            binding.appliedFields = targetFields;
+            return;
+        }
+        var containers = ((LevelTicksAccessor<T>) queue)
+                .academy$getAllContainers();
+        var queuedTicks = new ArrayList<ScheduledTick<T>>();
+        for (var container : containers.values()) {
+            container.getAll().forEach(queuedTicks::add);
+        }
+
+        var liveKeys = new HashSet<ScheduledTickKey>();
+        for (var tick : queuedTicks) {
+            liveKeys.add(new ScheduledTickKey(tick.type(), tick.pos()));
+        }
+        binding.frozenRemaining.keySet().retainAll(liveKeys);
+        if (queuedTicks.isEmpty()) {
+            binding.appliedFields = targetFields;
+            return;
+        }
+
+        for (var container : containers.values()) {
+            container.removeIf(ignored -> true);
+        }
+
+        var now = binding.level.getGameTime();
+        for (var tick : queuedTicks) {
+            var key = new ScheduledTickKey(tick.type(), tick.pos());
+            var oldRelativeScale = scheduledRelativeScale(
+                    binding.appliedFields,
+                    binding.level,
+                    tick.pos(),
+                    binding.channel
+            );
+            var temporalRemaining = TemporalScheduledTickMath.temporalRemaining(
+                    now,
+                    tick.triggerTick(),
+                    oldRelativeScale,
+                    binding.frozenRemaining.get(key)
+            );
+            var newRelativeScale = scheduledRelativeScale(
+                    targetFields,
+                    binding.level,
+                    tick.pos(),
+                    binding.channel
+            );
+            if (newRelativeScale == 0.0D) {
+                binding.frozenRemaining.put(key, temporalRemaining);
+            } else {
+                binding.frozenRemaining.remove(key);
+            }
+            queue.schedule(new ScheduledTick<>(
+                    tick.type(),
+                    tick.pos(),
+                    TemporalScheduledTickMath.rebasedTrigger(
+                            now,
+                            temporalRemaining,
+                            newRelativeScale
+                    ),
+                    tick.priority(),
+                    tick.subTickOrder()
+            ));
+        }
+        binding.appliedFields = targetFields;
+    }
+
+    private <T> boolean deferScheduledTick(
+            ScheduledQueueBinding<T> binding,
+            ScheduledTick<T> tick
+    ) {
+        requireServerThread();
+        if (stopped || binding.level.getServer() != server) return false;
+        var relativeScale = scheduledRelativeScale(
+                fieldSnapshot(),
+                binding.level,
+                tick.pos(),
+                binding.channel
+        );
+        if (relativeScale != 0.0D) return false;
+
+        var key = new ScheduledTickKey(tick.type(), tick.pos());
+        binding.frozenRemaining.putIfAbsent(key, 0.0D);
+        var now = binding.level.getGameTime();
+        var queue = binding.queueReference.get();
+        if (queue == null) return false;
+        queue.schedule(new ScheduledTick<>(
+                tick.type(),
+                tick.pos(),
+                TemporalScheduledTickMath.rebasedTrigger(
+                        now,
+                        binding.frozenRemaining.get(key),
+                        0.0D
+                ),
+                tick.priority(),
+                tick.subTickOrder()
+        ));
+        return true;
+    }
+
+    private List<TemporalField> fieldSnapshot() {
+        return List.copyOf(temporalFields.values());
+    }
+
+    private static double scheduledRelativeScale(
+            List<TemporalField> fields,
+            ServerLevel level,
+            BlockPos position,
+            TemporalChannel channel
+    ) {
+        var center = new Vec3(
+                position.getX() + 0.5D,
+                position.getY() + 0.5D,
+                position.getZ() + 0.5D
+        );
+        var scheduledScale = TemporalFieldResolver.resolve(
+                fields,
+                level.dimension(),
+                center,
+                channel,
+                ignored -> false
+        );
+        var levelClockScale = TemporalFieldResolver.resolve(
+                fields,
+                level.dimension(),
+                null,
+                TemporalChannel.LEVEL_CLOCK,
+                ignored -> false
+        );
+        return TemporalScheduledTickMath.relativeScale(
+                scheduledScale,
+                levelClockScale
+        );
+    }
+
+    private static TemporalChannel scheduledChannel(
+            ServerLevel level,
+            LevelTicks<?> queue
+    ) {
+        if (queue == level.getBlockTicks()) return TemporalChannel.SCHEDULED_BLOCK;
+        if (queue == level.getFluidTicks()) return TemporalChannel.SCHEDULED_FLUID;
+        return null;
+    }
+
+    private static TemporalChannel scheduledChannel(Object type) {
+        if (type instanceof Block) return TemporalChannel.SCHEDULED_BLOCK;
+        if (type instanceof Fluid) return TemporalChannel.SCHEDULED_FLUID;
+        return null;
+    }
+
+    private static LevelTicks<?> scheduledQueue(
+            ServerLevel level,
+            TemporalChannel channel
+    ) {
+        return channel == TemporalChannel.SCHEDULED_BLOCK
+                ? level.getBlockTicks() : level.getFluidTicks();
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static boolean hasScheduledTickUnchecked(
+            LevelTicks<?> queue,
+            BlockPos position,
+            Object type
+    ) {
+        return ((LevelTicks) queue).hasScheduledTick(position, type);
     }
 
     private double resolveScale(
@@ -711,6 +1080,40 @@ public final class TemporalRuntime implements TemporalService {
         private long lastAccessHeartbeat;
     }
 
+    private record ScheduledTickKey(Object type, BlockPos position) {
+        private ScheduledTickKey {
+            if (type == null || position == null) {
+                throw new IllegalArgumentException(
+                        "Scheduled tick key requires a type and position."
+                );
+            }
+            position = position.immutable();
+        }
+    }
+
+    private static final class ScheduledQueueBinding<T> {
+        private final TemporalRuntime runtime;
+        private final ServerLevel level;
+        private final WeakReference<LevelTicks<T>> queueReference;
+        private final TemporalChannel channel;
+        private final Map<ScheduledTickKey, Double> frozenRemaining =
+                new HashMap<>();
+        private List<TemporalField> appliedFields = List.of();
+        private boolean dispatching;
+
+        private ScheduledQueueBinding(
+                TemporalRuntime runtime,
+                ServerLevel level,
+                LevelTicks<T> queue,
+                TemporalChannel channel
+        ) {
+            this.runtime = runtime;
+            this.level = level;
+            queueReference = new WeakReference<>(queue);
+            this.channel = channel;
+        }
+    }
+
     private final class FieldLease implements TemporalFieldLease {
         private final UUID fieldId;
         private final TemporalField field;
@@ -753,6 +1156,7 @@ public final class TemporalRuntime implements TemporalService {
             active = false;
             if (!stopped && temporalFields.remove(fieldId) != null) {
                 resetScaleAccumulators();
+                rebaseScheduledQueues();
             }
         }
     }
