@@ -9,10 +9,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemUtils;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BucketPickup;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.HitResult;
-import org.academy.internal.common.world.level.material.Fluids;
+import org.academy.internal.common.world.level.block.ImagPhaseLiquidBlock;
 
 public final class EmptyUnitItem extends Item {
     public EmptyUnitItem(Properties properties) {
@@ -34,17 +33,16 @@ public final class EmptyUnitItem extends Item {
         var state = level.getBlockState(pos);
         if (!level.mayInteract(player, pos)
                 || !player.mayUseItemAt(pos, hitResult.getDirection(), stack)
-                || !state.getFluidState().isSourceOfType(Fluids.IMAG_PHASE.get())
-                || !(state.getBlock() instanceof BucketPickup bucketPickup)) {
+                || !(state.getBlock() instanceof ImagPhaseLiquidBlock liquidBlock)) {
             return InteractionResult.FAIL;
         }
 
-        var filled = bucketPickup.pickupBlock(player, level, pos, state);
+        var filled = liquidBlock.pickupWithEmptyUnit(level, pos, state);
         if (filled.isEmpty()) {
             return InteractionResult.FAIL;
         }
 
-        bucketPickup.getPickupSound(state).ifPresent(sound -> player.playSound(sound, 1.0F, 1.0F));
+        liquidBlock.getPickupSound(state).ifPresent(sound -> player.playSound(sound, 1.0F, 1.0F));
         level.gameEvent(player, GameEvent.FLUID_PICKUP, pos);
         var result = player.hasInfiniteMaterials()
                 ? stack
