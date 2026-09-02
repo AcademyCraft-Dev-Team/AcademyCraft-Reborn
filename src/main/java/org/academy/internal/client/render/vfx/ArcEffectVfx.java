@@ -19,7 +19,7 @@ public final class ArcEffectVfx implements Vfx {
 
     @Override
     public void update(float dt, VfxFrameContext ctx) {
-        if (arc.isRemoved() || !arc.isAlive()) {
+        if (arc.isRemoved() || !arc.isAlive() || arc.tickCount > arc.getLifeTime()) {
             expired = true;
         }
     }
