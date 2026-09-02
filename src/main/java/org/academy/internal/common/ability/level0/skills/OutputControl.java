@@ -206,6 +206,7 @@ public final class OutputControl extends Skill {
     private static float abilityOutput(DamageSource source) {
         if (isOutputAdjustmentBypassed()
                 || !(source instanceof SkillDamageSource skillSource)
+                || !skillSource.getSkill().isOutputAdjustableDamage()
                 || skillSource.getSkill() == Skills.WIDE_AREA_INTERFERENCE.get()
                 || !(skillSource.getEntity() instanceof ServerPlayer player)) {
             return Float.NaN;
