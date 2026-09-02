@@ -15,27 +15,33 @@ public class ArcEffect extends RenderOnlyEntity {
     public static final EntityDataAccessor<List<ArcPath>> ARC_PATHS = SynchedEntityData.defineId(
             ArcEffect.class, EntityDataSerializers.ARC_PATH.get()
     );
-    private final int lifeTime;
+    public static final EntityDataAccessor<Integer> LIFE_TIME = SynchedEntityData.defineId(
+            ArcEffect.class, net.minecraft.network.syncher.EntityDataSerializers.INT
+    );
 
     public ArcEffect(EntityType<?> entityType, Level level) {
         super(entityType, level);
-        lifeTime = -1;
     }
 
     public ArcEffect(Level level, int lifeTime) {
         super(EntityTypes.ARC_EFFECT.get(), level);
-        this.lifeTime = lifeTime;
+        entityData.set(LIFE_TIME, Math.max(1, lifeTime));
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(ARC_PATHS, List.of());
+        builder.define(LIFE_TIME, 20);
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide() && tickCount > lifeTime) discard();
+        if (tickCount > getLifeTime()) discard();
+    }
+
+    public int getLifeTime() {
+        return entityData.get(LIFE_TIME);
     }
 
     public void setArcPath(ArcPath arcPath) {
