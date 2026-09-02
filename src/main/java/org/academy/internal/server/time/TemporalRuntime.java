@@ -29,6 +29,7 @@ import org.academy.api.server.time.TemporalImmunityLease;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.time.TemporalService;
 import org.academy.api.server.time.TemporalScope;
+import org.academy.internal.common.ability.program.ServerProgramScheduler;
 import org.academy.internal.common.network.TemporalImmunitySyncPacket;
 import org.academy.mixin.common.LevelTicksAccessor;
 
@@ -71,13 +72,15 @@ public final class TemporalRuntime implements TemporalService {
     private static final Set<TemporalChannel> INTEGRATED_CHANNELS = Set.copyOf(
             EnumSet.of(
                     TemporalChannel.LEVEL_CLOCK,
+                    TemporalChannel.SERVER_CLOCK,
                     TemporalChannel.ENTITY,
                     TemporalChannel.BLOCK_ENTITY,
                     TemporalChannel.SCHEDULED_BLOCK,
                     TemporalChannel.SCHEDULED_FLUID,
                     TemporalChannel.RANDOM_TICK,
                     TemporalChannel.WEATHER_AND_RAID,
-                    TemporalChannel.BLOCK_EVENT
+                    TemporalChannel.BLOCK_EVENT,
+                    TemporalChannel.ACADEMY_SCHEDULER
             )
     );
     private static final Map<LevelTicks<?>, ScheduledQueueBinding<?>>
@@ -100,12 +103,16 @@ public final class TemporalRuntime implements TemporalService {
             new IdentityHashMap<>();
     private final Map<ResourceKey<Level>, AccumulatorState> levelClockAccumulators =
             new HashMap<>();
+    private final Map<String, AccumulatorState> serverClockAccumulators =
+            new HashMap<>();
     private final Map<ResourceKey<Level>, AccumulatorState> weatherTickAccumulators =
             new HashMap<>();
     private final Map<ResourceKey<Level>, AccumulatorState> raidTickAccumulators =
             new HashMap<>();
     private final Map<BlockEventKey, AccumulatorState> blockEventAccumulators =
             new HashMap<>();
+    private final Map<AcademySchedulerKey, AccumulatorState>
+            academySchedulerAccumulators = new HashMap<>();
     private final Map<UUID, TickSnapshot> serverTickSnapshots = new HashMap<>();
     private final Map<ServerLevel, Map<UUID, TickSnapshot>> levelTickSnapshots =
             new IdentityHashMap<>();
@@ -147,6 +154,9 @@ public final class TemporalRuntime implements TemporalService {
     @Override
     public double effectiveScale(ServerLevel level, TemporalChannel channel) {
         if (stopped || level == null || level.getServer() != server) return 1.0D;
+        if (channel == TemporalChannel.SERVER_CLOCK) {
+            return resolveSaveScale(channel);
+        }
         return resolveScale(level.dimension(), null, null, channel);
     }
 
@@ -156,6 +166,9 @@ public final class TemporalRuntime implements TemporalService {
                 || !(entity.level() instanceof ServerLevel level)
                 || level.getServer() != server) {
             return 1.0D;
+        }
+        if (channel == TemporalChannel.SERVER_CLOCK) {
+            return resolveSaveScale(channel);
         }
         return resolveScale(level.dimension(), entity.position(), entity, channel);
     }
@@ -169,6 +182,9 @@ public final class TemporalRuntime implements TemporalService {
         if (stopped || level == null || position == null
                 || level.getServer() != server) {
             return 1.0D;
+        }
+        if (channel == TemporalChannel.SERVER_CLOCK) {
+            return resolveSaveScale(channel);
         }
         var center = new Vec3(
                 position.getX() + 0.5D,
@@ -281,7 +297,9 @@ public final class TemporalRuntime implements TemporalService {
                         levelClockAccumulators.size(),
                         weatherTickAccumulators.size(),
                         raidTickAccumulators.size(),
-                        blockEventAccumulators.size()
+                        blockEventAccumulators.size(),
+                        serverClockAccumulators.size(),
+                        academySchedulerAccumulators.size()
                 ),
                 entityState
         );
@@ -519,6 +537,58 @@ public final class TemporalRuntime implements TemporalService {
             if (inProgress.isEmpty()) scaledLevelClockStack.remove();
         }
         return true;
+    }
+
+    /** Runs the vanilla save-global clock manager without stopping I/O. */
+    public void dispatchServerClockTicks(Runnable vanillaClockTick) {
+        requireHookCaller("dispatchServerClockTicks", MinecraftServer.class);
+        requireServerThread();
+        if (stopped) {
+            vanillaClockTick.run();
+            return;
+        }
+        var logicalTicks = logicalTicks(
+                serverClockAccumulators,
+                "server",
+                resolveSaveScale(TemporalChannel.SERVER_CLOCK)
+        );
+        for (var index = 0; index < logicalTicks; index++) {
+            vanillaClockTick.run();
+        }
+    }
+
+    /**
+     * Advances one owner-bound Academy program session at its local rate.
+     * The scheduler owns its logical age, so physical pauses cannot expire it.
+     */
+    public void dispatchAcademySchedulerTicks(
+            UUID ownerId,
+            UUID sessionId,
+            Runnable logicalTick
+    ) {
+        requireHookCaller(
+                "dispatchAcademySchedulerTicks",
+                ServerProgramScheduler.class
+        );
+        requireServerThread();
+        if (stopped) {
+            logicalTick.run();
+            return;
+        }
+
+        var owner = resolveEntity(ownerId);
+        var scale = owner == null
+                ? resolveSaveScale(TemporalChannel.ACADEMY_SCHEDULER)
+                : effectiveScale(owner, TemporalChannel.ACADEMY_SCHEDULER);
+        var key = new AcademySchedulerKey(ownerId, sessionId);
+        var logicalTicks = logicalTicks(
+                academySchedulerAccumulators,
+                key,
+                scale
+        );
+        for (var index = 0; index < logicalTicks; index++) {
+            logicalTick.run();
+        }
     }
 
     /** Runs the dimension weather state machine at its effective level rate. */
@@ -1241,6 +1311,13 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
+    private double resolveSaveScale(TemporalChannel channel) {
+        return TemporalFieldResolver.resolveSave(
+                temporalFields.values(),
+                channel
+        );
+    }
+
     private <K> int logicalTicks(
             Map<K, AccumulatorState> accumulators,
             K key,
@@ -1283,9 +1360,11 @@ public final class TemporalRuntime implements TemporalService {
         entityTickAccumulators.clear();
         blockEntityTickAccumulators.clear();
         levelClockAccumulators.clear();
+        serverClockAccumulators.clear();
         weatherTickAccumulators.clear();
         raidTickAccumulators.clear();
         blockEventAccumulators.clear();
+        academySchedulerAccumulators.clear();
     }
 
     private void pruneStaleAccumulators() {
@@ -1299,6 +1378,9 @@ public final class TemporalRuntime implements TemporalService {
         levelClockAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
+        serverClockAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
         weatherTickAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
@@ -1306,6 +1388,9 @@ public final class TemporalRuntime implements TemporalService {
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
         blockEventAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        academySchedulerAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
     }
@@ -1558,6 +1643,12 @@ public final class TemporalRuntime implements TemporalService {
             Block block,
             int paramA,
             int paramB
+    ) {
+    }
+
+    private record AcademySchedulerKey(
+            UUID ownerId,
+            UUID sessionId
     ) {
     }
 

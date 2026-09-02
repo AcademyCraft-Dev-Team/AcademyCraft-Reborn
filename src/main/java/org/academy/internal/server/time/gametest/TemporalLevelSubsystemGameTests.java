@@ -177,7 +177,6 @@ public final class TemporalLevelSubsystemGameTests {
                             != ShulkerBoxBlockEntity.AnimationStatus.CLOSED,
                     "Deferred block event was lost instead of resuming"
             );
-            helper.succeed();
         } finally {
             cleanup(
                     level,
@@ -188,6 +187,42 @@ public final class TemporalLevelSubsystemGameTests {
                     blockEventLease
             );
         }
+        validateServerClockPause(helper);
+    }
+
+    private static void validateServerClockPause(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var lease = TemporalApi.get(level.getServer()).acquireField(
+                TemporalField.pause(
+                        TemporalScope.save(),
+                        Set.of(TemporalChannel.SERVER_CLOCK),
+                        TemporalPauseSource.ACADEMY_PAUSE
+                )
+        );
+        var pausedAt = level.getDefaultClockTime();
+        helper.runAfterDelay(3L, () -> {
+            try {
+                helper.assertValueEqual(
+                        level.getDefaultClockTime(),
+                        pausedAt,
+                        "Save clock advanced while its temporal channel was paused"
+                );
+            } finally {
+                if (lease.isActive()) lease.close();
+            }
+            var resumedAt = level.getDefaultClockTime();
+            helper.runAfterDelay(3L, () -> {
+                try {
+                    helper.assertTrue(
+                            level.getDefaultClockTime() > resumedAt,
+                            "Save clock did not resume after its field closed"
+                    );
+                    helper.succeed();
+                } finally {
+                    if (lease.isActive()) lease.close();
+                }
+            });
+        });
     }
 
     private static ShulkerBoxBlockEntity shulkerBox(

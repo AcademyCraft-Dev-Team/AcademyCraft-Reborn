@@ -115,6 +115,27 @@ class ProgramSessionSchedulerTest {
         assertEquals(0, scheduler.size());
     }
 
+    @Test
+    void targetedTickAdvancesOnlyTheSelectedSession() {
+        var scheduler = new ProgramSessionScheduler<String>();
+        var program = compile(List.of(STOP));
+        assertTrue(scheduler.start(
+                "first", program, executors()::get, null, 4, 0, 10, (_, _) -> {
+                }
+        ));
+        assertTrue(scheduler.start(
+                "second", program, executors()::get, null, 4, 0, 10, (_, _) -> {
+                }
+        ));
+
+        scheduler.tick("first", 0);
+
+        assertFalse(scheduler.contains("first"));
+        assertTrue(scheduler.contains("second"));
+        scheduler.tick("second", 0);
+        assertEquals(0, scheduler.size());
+    }
+
     private static CompiledProgram compile(List<Identifier> flowNodes) {
         var nodes = new ArrayList<ProgramGraph.Node>();
         var edges = new ArrayList<ProgramGraph.Edge>();

@@ -595,6 +595,9 @@ final class TemporalTickDebugCommands {
                 .append(" weather=").append(accumulators.weather())
                 .append(" raid=").append(accumulators.raids())
                 .append(" blockEvent=").append(accumulators.blockEvents())
+                .append(" serverClock=").append(accumulators.serverClocks())
+                .append(" academyScheduler=")
+                .append(accumulators.academySchedulers())
                 .append(" debugImmunityGroups=")
                 .append(snapshot.debugImmunities().size());
         return text.toString();

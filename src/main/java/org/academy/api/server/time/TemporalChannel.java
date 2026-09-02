@@ -25,6 +25,7 @@ public enum TemporalChannel {
 
     private static final Set<TemporalChannel> WORLD_SIMULATION = Set.copyOf(
             EnumSet.of(
+                    SERVER_CLOCK,
                     LEVEL_CLOCK,
                     WEATHER_AND_RAID,
                     ENTITY,
@@ -38,8 +39,9 @@ public enum TemporalChannel {
     );
 
     /**
-     * All authoritative world-simulation channels. The independent server
-     * heartbeat and client-only presentation clock are intentionally excluded.
+     * All authoritative world-simulation channels. The physical server
+     * heartbeat is deliberately outside this channel model, while the
+     * client-only presentation clock remains excluded.
      */
     public static Set<TemporalChannel> worldSimulation() {
         return WORLD_SIMULATION;
