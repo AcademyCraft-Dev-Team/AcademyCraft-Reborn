@@ -2,7 +2,10 @@ package org.academy.mixin.common;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.ticks.LevelTicks;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.server.time.TemporalRuntime;
@@ -70,5 +73,49 @@ public abstract class MixinServerLevelTemporalScaling {
                         maxTicks,
                         callback
                 );
+    }
+
+    @Redirect(
+            method = "tickChunk",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/block/state/BlockState;randomTick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/util/RandomSource;)V"
+            )
+    )
+    private void academy$dispatchRandomBlockTick(
+            BlockState state,
+            ServerLevel level,
+            BlockPos position,
+            RandomSource random
+    ) {
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) {
+            state.randomTick(level, position, random);
+            return;
+        }
+        ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
+                .dispatchRandomBlockTick(state, level, position, random);
+    }
+
+    @Redirect(
+            method = "tickChunk",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/material/FluidState;randomTick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/util/RandomSource;)V"
+            )
+    )
+    private void academy$dispatchRandomFluidTick(
+            FluidState state,
+            ServerLevel level,
+            BlockPos position,
+            RandomSource random
+    ) {
+        var context = (MinecraftServerContext) level.getServer();
+        if (!context.hasAcademyCraftServer()) {
+            state.randomTick(level, position, random);
+            return;
+        }
+        ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
+                .dispatchRandomFluidTick(state, level, position, random);
     }
 }

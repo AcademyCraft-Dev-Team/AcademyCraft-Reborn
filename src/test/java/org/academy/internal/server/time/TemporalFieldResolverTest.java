@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -84,6 +85,49 @@ class TemporalFieldResolverTest {
                 Vec3.ZERO,
                 TemporalChannel.ENTITY,
                 source -> true
+        ), 1.0E-12D);
+    }
+
+    @Test
+    void entityScopeAppliesToEverySelectedSubjectAndNothingElse() {
+        var first = UUID.randomUUID();
+        var second = UUID.randomUUID();
+        var field = TemporalField.scale(
+                TemporalScope.entities(List.of(first, second)),
+                ENTITY,
+                0.25D
+        );
+
+        assertEquals(0.25D, TemporalFieldResolver.resolve(
+                List.of(field),
+                DIMENSION,
+                Vec3.ZERO,
+                first,
+                TemporalChannel.ENTITY,
+                ignored -> false
+        ), 1.0E-12D);
+        assertEquals(0.25D, TemporalFieldResolver.resolve(
+                List.of(field),
+                DIMENSION,
+                Vec3.ZERO,
+                second,
+                TemporalChannel.ENTITY,
+                ignored -> false
+        ), 1.0E-12D);
+        assertEquals(1.0D, TemporalFieldResolver.resolve(
+                List.of(field),
+                DIMENSION,
+                Vec3.ZERO,
+                UUID.randomUUID(),
+                TemporalChannel.ENTITY,
+                ignored -> false
+        ), 1.0E-12D);
+        assertEquals(1.0D, TemporalFieldResolver.resolve(
+                List.of(field),
+                DIMENSION,
+                Vec3.ZERO,
+                TemporalChannel.ENTITY,
+                ignored -> false
         ), 1.0E-12D);
     }
 }

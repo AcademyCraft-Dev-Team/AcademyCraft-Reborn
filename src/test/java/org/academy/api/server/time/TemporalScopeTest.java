@@ -7,6 +7,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,5 +66,20 @@ class TemporalScopeTest {
                 new Vec3(Double.NaN, 0.0D, 0.0D),
                 1.0D
         ));
+    }
+
+    @Test
+    void entityScopeMatchesEverySelectedUuidAcrossDimensions() {
+        var first = UUID.randomUUID();
+        var second = UUID.randomUUID();
+        var scope = TemporalScope.entities(List.of(first, second));
+
+        assertTrue(scope.contains(DIMENSION_A, Vec3.ZERO, first));
+        assertTrue(scope.contains(DIMENSION_B, null, second));
+        assertFalse(scope.contains(DIMENSION_A, Vec3.ZERO));
+        assertFalse(scope.contains(DIMENSION_A, Vec3.ZERO, UUID.randomUUID()));
+        assertFalse(scope.isSpatial());
+        assertThrows(IllegalArgumentException.class, () ->
+                TemporalScope.entities(List.of()));
     }
 }
