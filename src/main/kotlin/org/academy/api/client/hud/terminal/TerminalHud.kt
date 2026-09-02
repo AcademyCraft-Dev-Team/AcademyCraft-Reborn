@@ -587,7 +587,7 @@ class TerminalHud private constructor() {
 
                             apps.addChild("app_rows", appRows)
                             run {
-                                APPS.chunked(APPS_PER_ROW).forEachIndexed { rowIndex, rowApps ->
+                                (APPS + LAST_APPS).chunked(APPS_PER_ROW).forEachIndexed { rowIndex, rowApps ->
                                     val row = LinearLayoutWidget()
                                     row.orientation = Orientation.HORIZONTAL
                                     row.layoutParams = LinearLayoutWidget.LayoutParams()
@@ -806,9 +806,15 @@ class TerminalHud private constructor() {
         }
 
         private val APPS: MutableList<App> = ArrayList<App>()
+        private val LAST_APPS: MutableList<App> = ArrayList<App>()
 
         fun addApp(app: App) {
-            APPS.add(app)
+            if (app !in APPS && app !in LAST_APPS) APPS.add(app)
+        }
+
+        /** Adds an extension app after every regular terminal app. */
+        fun addLastApp(app: App) {
+            if (app !in APPS && app !in LAST_APPS) LAST_APPS.add(app)
         }
 
         fun initMain() {
