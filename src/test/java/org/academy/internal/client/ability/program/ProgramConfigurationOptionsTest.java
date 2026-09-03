@@ -57,6 +57,17 @@ class ProgramConfigurationOptionsTest {
                 ProgramConfigurationOptions.options(
                         catalog.entry(CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE),
                         "type", new JsonPrimitive("entity"))));
+        assertEquals(List.of("health", "cp", "sp"), values(
+                ProgramConfigurationOptions.options(
+                        catalog.entry(CommonProgramNodeIds.ENTITY_DATA),
+                        "data", new JsonPrimitive("health"))));
+        assertEquals(List.of("self", "all"), values(
+                ProgramConfigurationOptions.options(
+                        catalog.entry(CommonProgramNodeIds.DEBUG_OUTPUT),
+                        "audience", new JsonPrimitive("self"))));
+        assertEquals(14, ProgramConfigurationOptions.options(
+                catalog.entry(CommonProgramNodeIds.DEBUG_OUTPUT),
+                "value_type", new JsonPrimitive("entity")).size());
     }
 
     @Test

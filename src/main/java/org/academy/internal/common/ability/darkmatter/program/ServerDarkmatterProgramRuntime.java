@@ -13,6 +13,7 @@ import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisas
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 
@@ -24,7 +25,10 @@ import java.util.Optional;
  * Authoritative Minecraft-server adapter for Darkmatter programs.
  */
 public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRuntime {
-    public static final double MAX_QUERY_RANGE = 32.0;
+    public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            DarkmatterProgramNodeCatalog.DARKMATTER).queryRange();
+    public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            DarkmatterProgramNodeCatalog.DARKMATTER).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
@@ -287,12 +291,13 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
     }
 
     private static double disassembleBlockRange(float power) {
-        return ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0);
+        return Math.min(MAX_ACTION_RANGE,
+                ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0));
     }
 
     private static double disassembleEntityRange(float power) {
         ProgramPowerScale.require(power);
-        return 16.0;
+        return Math.min(MAX_ACTION_RANGE, 16.0);
     }
 
     private static float disassembleCost(float power) {
@@ -317,7 +322,8 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
     }
 
     private static double creationRange(float power) {
-        return ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0);
+        return Math.min(MAX_ACTION_RANGE,
+                ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0));
     }
 
     private static float creationCost(float power) {

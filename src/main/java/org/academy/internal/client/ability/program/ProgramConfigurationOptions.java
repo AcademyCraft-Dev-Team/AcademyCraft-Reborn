@@ -103,6 +103,26 @@ public final class ProgramConfigurationOptions {
                         "dot", "cross", "add");
             }
         }
+        if (id.equals(CommonProgramNodeIds.ENTITY_DATA) && field.equals("data")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.entity_data.",
+                    "health", "cp", "sp");
+        }
+        if (id.equals(CommonProgramNodeIds.DEBUG_OUTPUT)) {
+            if (field.equals("audience")) {
+                return stringOptions(
+                        "screen.academy.program.configuration.debug_audience.",
+                        "self", "all");
+            }
+            if (field.equals("value_type")) {
+                return stringOptions(
+                        "screen.academy.program.configuration.debug_value_type.",
+                        "boolean", "integer", "big_integer", "float", "identifier",
+                        "duration", "direction", "world_position", "block_position",
+                        "entity", "direction_list", "world_position_list",
+                        "block_position_list", "entity_list");
+            }
+        }
         if (id.equals(CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE)) {
             if (field.equals("type")) {
                 return stringOptions(

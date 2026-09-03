@@ -55,12 +55,12 @@ class PrecisionGraphTest {
     }
 
     @Test
-    void rangeNodesDefaultToThirtyTwoBlocks() {
-        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_ENTITIES.defaultParameter());
-        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_ALL_ENTITIES.defaultParameter());
-        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_ITEMS.defaultParameter());
-        assertEquals(32.0, PrecisionGraph.NodeKind.NEARBY_PROJECTILES.defaultParameter());
-        assertEquals(32.0, PrecisionGraph.NodeKind.DISTANCE.defaultParameter());
+    void mentaloutRangeNodesDefaultToSixtyFourBlocks() {
+        assertEquals(64.0, PrecisionGraph.NodeKind.NEARBY_ENTITIES.defaultParameter());
+        assertEquals(64.0, PrecisionGraph.NodeKind.NEARBY_ALL_ENTITIES.defaultParameter());
+        assertEquals(64.0, PrecisionGraph.NodeKind.NEARBY_ITEMS.defaultParameter());
+        assertEquals(64.0, PrecisionGraph.NodeKind.NEARBY_PROJECTILES.defaultParameter());
+        assertEquals(64.0, PrecisionGraph.NodeKind.DISTANCE.defaultParameter());
         assertEquals(1.0, PrecisionGraph.NodeKind.POSITION_OFFSET.defaultParameter());
     }
 

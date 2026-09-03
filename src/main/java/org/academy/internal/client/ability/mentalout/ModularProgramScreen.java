@@ -33,6 +33,7 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionOperatio
 import org.academy.internal.common.ability.program.AbilityProgramDefinition;
 import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.CommonProgramNodeCatalog;
 import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
 import org.academy.internal.common.ability.program.ProgramEditorDocument;
 import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
@@ -2164,7 +2165,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private TextBoxWidget createConfigurationInput(String field) {
-        var input = new TextBoxWidget(field.equals("selectors") ? 512 : 128);
+        var maximumLength = switch (field) {
+            case "selectors" -> 512;
+            case "text" -> CommonProgramNodeCatalog.DebugOutputConfiguration.MAX_TEXT_LENGTH;
+            default -> 128;
+        };
+        var input = new TextBoxWidget(maximumLength);
         input.setBaseFontSize(ProgramUiGraphics.BODY_FONT_SIZE);
         input.setBackground(null);
         input.setCoverAllPrev(true);

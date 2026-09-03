@@ -184,7 +184,15 @@ interface PrecisionProgramRuntimeView {
         }
 
         private AABB bounds(double range) {
-            return new AABB(player.position(), player.position()).inflate(range);
+            return new AABB(player.position(), player.position()).inflate(
+                    requireRange(range));
+        }
+
+        private static double requireRange(double range) {
+            if (!Double.isFinite(range) || range < 0.0 || range > PrecisionGraph.MAX_RANGE) {
+                throw new IllegalArgumentException("Precision query range is outside the allowed limit");
+            }
+            return range;
         }
 
         private static List<Entity> entitySet(List<? extends Entity> entities) {

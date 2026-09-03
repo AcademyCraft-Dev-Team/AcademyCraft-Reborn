@@ -40,6 +40,8 @@ public final class PrecisionOperationRuntime {
     private static final float UNLOCKED_DYNAMIC_COST_MULTIPLIER = 0.9f;
     private static final Identifier CONTROL_SOURCE = AcademyCraft.academy("precision_operation");
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
+    private static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            PrecisionProgramNodeCatalog.MENTALOUT).actionRange();
     private static final Map<UUID, ActiveContext[]> ACTIVE = new HashMap<>();
     private static long nextContextSequence;
 
@@ -180,7 +182,7 @@ public final class PrecisionOperationRuntime {
     ) {
         switch (action.kind) {
             case TARGET_MISIDENTIFICATION -> {
-                var target = actionEntity(inputs, "target");
+                var target = actionEntity(inputs, "target", player);
                 var subjects = requireSupportedSet(
                         actionSet(inputs, "subjects"),
                         ControlCapability.FORCE_TARGET,
@@ -210,17 +212,19 @@ public final class PrecisionOperationRuntime {
             case PERCEPTION_MASK -> {
                 requireSameEntities(
                         action.entities,
-                        requireSet(actionSet(inputs, "observers")),
+                        requireSet(actionSet(inputs, "observers"), player),
                         "observers"
                 );
-                requireSameEntity(action.entity, actionEntity(inputs, "hidden"), "hidden");
+                requireSameEntity(action.entity, actionEntity(inputs, "hidden", player), "hidden");
             }
-            case START_INTRUSION -> requireSameEntity(action.entity, actionEntity(inputs, "target"), "target");
+            case START_INTRUSION -> requireSameEntity(
+                    action.entity, actionEntity(inputs, "target", player), "target");
             case PATH_TO, GUARD_MODE -> {
                 var actual = requireDestination(inputs.requireCompatible(
                         "destination",
                         ProgramValueTypes.CONTROL_DESTINATION
                 ).value());
+                requireActionRange(player, actual);
                 var capability = action.kind == PrecisionGraph.NodeKind.PATH_TO
                         ? ControlCapability.PATH_CONTROL
                         : ControlCapability.GUARD_CONTROL;
@@ -234,7 +238,7 @@ public final class PrecisionOperationRuntime {
                 }
             }
             case VIEW_CONTROL -> {
-                var target = actionEntity(inputs, "target");
+                var target = actionEntity(inputs, "target", player);
                 var subjects = requireSupportedSet(
                         actionSet(inputs, "subjects"),
                         ControlCapability.VIEW_CONTROL,
@@ -285,11 +289,17 @@ public final class PrecisionOperationRuntime {
         ).value();
     }
 
-    private static LivingEntity actionEntity(ProgramInputView inputs, String port) {
-        return requireLivingEntity(inputs.requireCompatible(
+    private static LivingEntity actionEntity(
+            ProgramInputView inputs,
+            String port,
+            ServerPlayer player
+    ) {
+        var entity = requireLivingEntity(inputs.requireCompatible(
                 port,
                 ProgramValueTypes.ENTITY_REFERENCE
         ).value());
+        requireActionRange(player, entity);
+        return entity;
     }
 
     private static @Nullable ActiveAction applyPendingAction(
@@ -677,6 +687,7 @@ public final class PrecisionOperationRuntime {
                     var subjects = requireSupportedSet(
                             setInput(inputs, "subjects"), ControlCapability.FORCE_TARGET, player);
                     var target = entityInput(inputs, "target");
+                    requireActionRange(player, target);
                     subjects = subjects.stream().filter(subject -> subject != target).toList();
                     requireNonEmpty(subjects);
                     requireSkill(Skills.TARGET_MISIDENTIFICATION.get(), player);
@@ -701,8 +712,9 @@ public final class PrecisionOperationRuntime {
                             context.nodeId(), kind, subjects, expiresAt);
                 }
                 case PERCEPTION_MASK -> {
-                    var observers = requireSet(setInput(inputs, "observers"));
+                    var observers = requireSet(setInput(inputs, "observers"), player);
                     var hidden = entityInput(inputs, "hidden");
+                    requireActionRange(player, hidden);
                     ensureUnprotected(player, observers);
                     requireSkill(Skills.SENSORY_DISTORTION.get(), player);
                     addSubjects(uniqueSubjects, observers);
@@ -711,6 +723,7 @@ public final class PrecisionOperationRuntime {
                 }
                 case START_INTRUSION -> {
                     var target = entityInput(inputs, "target");
+                    requireActionRange(player, target);
                     ensureUnprotected(player, List.of(target));
                     requireSkill(Skills.MENTAL_INTRUSION.get(), player);
                     addSubjects(uniqueSubjects, List.of(target));
@@ -724,6 +737,7 @@ public final class PrecisionOperationRuntime {
                             setInput(inputs, "subjects"), capability, player);
                     var destination = requireDestination(value(
                             inputs, "destination", ProgramValueTypes.CONTROL_DESTINATION));
+                    requireActionRange(player, destination);
                     subjects = excludeDestinationTarget(subjects, destination);
                     requireNonEmpty(subjects);
                     addSubjects(uniqueSubjects, subjects);
@@ -734,6 +748,7 @@ public final class PrecisionOperationRuntime {
                     var subjects = requireSupportedSet(
                             setInput(inputs, "subjects"), ControlCapability.VIEW_CONTROL, player);
                     var target = entityInput(inputs, "target");
+                    requireActionRange(player, target);
                     subjects = subjects.stream().filter(subject -> subject != target).toList();
                     requireNonEmpty(subjects);
                     addSubjects(uniqueSubjects, subjects);
@@ -1084,6 +1099,7 @@ public final class PrecisionOperationRuntime {
                         var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.FORCE_TARGET, player);
                         var target = requireLivingEntity(input(program, values, node, 1));
+                        requireActionRange(player, target);
                         subjects = subjects.stream().filter(subject -> subject != target).toList();
                         if (subjects.isEmpty()) {
                             return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
@@ -1118,8 +1134,9 @@ public final class PrecisionOperationRuntime {
                         values.put(node.id(), Boolean.TRUE);
                     }
                     case PERCEPTION_MASK -> {
-                        var observers = requireSet(input(program, values, node, 0));
+                        var observers = requireSet(input(program, values, node, 0), player);
                         var hidden = requireLivingEntity(input(program, values, node, 1));
+                        requireActionRange(player, hidden);
                         ensureUnprotected(player, observers);
                         requireSkill(Skills.SENSORY_DISTORTION.get(), player);
                         var sensoryLevel = Math.clamp(Skills.SENSORY_DISTORTION.get().getLevel(player), 0, 2);
@@ -1131,6 +1148,7 @@ public final class PrecisionOperationRuntime {
                     }
                     case START_INTRUSION -> {
                         var target = requireLivingEntity(input(program, values, node, 0));
+                        requireActionRange(player, target);
                         ensureUnprotected(player, List.of(target));
                         requireSkill(Skills.MENTAL_INTRUSION.get(), player);
                         var intrusionLevel = Math.clamp(Skills.MENTAL_INTRUSION.get().getLevel(player), 0, 2);
@@ -1144,6 +1162,7 @@ public final class PrecisionOperationRuntime {
                         var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.PATH_CONTROL, player);
                         var destination = requireDestination(input(program, values, node, 1));
+                        requireActionRange(player, destination);
                         subjects = excludeDestinationTarget(subjects, destination);
                         if (subjects.isEmpty()) {
                             return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
@@ -1159,6 +1178,7 @@ public final class PrecisionOperationRuntime {
                         var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.VIEW_CONTROL, player);
                         var target = requireLivingEntity(input(program, values, node, 1));
+                        requireActionRange(player, target);
                         subjects = subjects.stream().filter(subject -> subject != target).toList();
                         if (subjects.isEmpty()) {
                             return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
@@ -1174,6 +1194,7 @@ public final class PrecisionOperationRuntime {
                         var subjects = requireSupportedSet(
                                 input(program, values, node, 0), ControlCapability.GUARD_CONTROL, player);
                         var destination = requireDestination(input(program, values, node, 1));
+                        requireActionRange(player, destination);
                         subjects = excludeDestinationTarget(subjects, destination);
                         if (subjects.isEmpty()) {
                             return Evaluation.error(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS, node.id());
@@ -1414,7 +1435,7 @@ public final class PrecisionOperationRuntime {
         return seconds == 0.0 ? Long.MAX_VALUE : now + (long) seconds * 20L;
     }
 
-    private static List<LivingEntity> requireSet(Object value) {
+    private static List<LivingEntity> requireSet(Object value, ServerPlayer player) {
         var entities = entitySet(value).stream()
                 .filter(LivingEntity.class::isInstance)
                 .map(LivingEntity.class::cast)
@@ -1422,7 +1443,7 @@ public final class PrecisionOperationRuntime {
         if (entities.isEmpty()) {
             throw new EvaluationFailure(PrecisionGraph.Diagnostic.NO_EFFECTIVE_SUBJECTS);
         }
-        for (var entity : entities) requireUsable(entity);
+        for (var entity : entities) requireActionRange(player, entity);
         return entities;
     }
 
@@ -1446,6 +1467,26 @@ public final class PrecisionOperationRuntime {
 
     private static void requireUsable(Entity entity) {
         if (entity == null || !entity.isAlive() || entity.isRemoved()) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE);
+        }
+    }
+
+    private static void requireActionRange(ServerPlayer player, Entity entity) {
+        requireUsable(entity);
+        if (entity.level() != player.level()
+                || entity.distanceToSqr(player) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+            throw new EvaluationFailure(PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE);
+        }
+    }
+
+    private static void requireActionRange(
+            ServerPlayer player,
+            ControlDestination destination
+    ) {
+        var resolved = resolvedPosition(destination, player);
+        if (!resolved.dimension().equals(player.level().dimension().identifier())
+                || resolved.value().distanceToSqr(player.position())
+                > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
             throw new EvaluationFailure(PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE);
         }
     }
@@ -1477,6 +1518,8 @@ public final class PrecisionOperationRuntime {
                 .filter(LivingEntity::isAlive)
                 .filter(entity -> !entity.isRemoved())
                 .filter(entity -> entity.level() == player.level())
+                .filter(entity -> entity.distanceToSqr(player)
+                        <= MAX_ACTION_RANGE * MAX_ACTION_RANGE)
                 .toList();
     }
 

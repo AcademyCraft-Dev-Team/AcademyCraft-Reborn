@@ -12,6 +12,8 @@ import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
+import org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog;
 
 import java.util.Comparator;
 import java.util.List;
@@ -24,7 +26,8 @@ import java.util.Optional;
  * around the caster. Results are deterministically ordered and capped before entering the VM.</p>
  */
 final class PrecisionProgramTargetResolver implements ProgramTargetResolver {
-    static final double MAX_QUERY_RANGE = 32.0;
+    static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            PrecisionProgramNodeCatalog.MENTALOUT).queryRange();
     static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;

@@ -7,11 +7,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ServerTeleportProgramRuntimeTest {
     @Test
-    void standardTargetTeleportSupportsSixtyFourBlocks() {
+    void targetTeleportNeverExceedsTheCategorySixtyFourBlockLimit() {
         assertEquals(8.0, ServerTeleportProgramRuntime.entityTargetRange(0.0f));
         assertEquals(64.0, ServerTeleportProgramRuntime.entityTargetRange(1.0f));
-        assertEquals(128.0, ServerTeleportProgramRuntime.entityTargetRange(2.0f));
+        assertEquals(64.0, ServerTeleportProgramRuntime.entityTargetRange(2.0f));
         assertEquals(64.0, ServerTeleportProgramRuntime.entityMoveRange(1.0f));
+        assertEquals(64.0, ServerTeleportProgramRuntime.entityMoveRange(2.0f));
     }
 
     @Test

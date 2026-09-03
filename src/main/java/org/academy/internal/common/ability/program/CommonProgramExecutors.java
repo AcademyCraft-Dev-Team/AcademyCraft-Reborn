@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
@@ -177,6 +178,31 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                             configuration.name(),
                             coerce(inputs.requireCompatible("value", configuration.type()), configuration.type())
                     );
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, CommonProgramNodeIds.DEBUG_OUTPUT,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.DebugOutputConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var caster = resolver(context).caster();
+                    if (!(caster instanceof ServerPlayer player)) {
+                        throw new IllegalStateException("Debug output requires a server player caster");
+                    }
+                    var message = Component.literal(ProgramDebugFormatter.render(
+                            configuration.text(),
+                            raw(inputs, "value", configuration.valueType().type())
+                    ));
+                    var frame = context.attachment(ProgramExecutionFrame.class).orElseThrow();
+                    frame.stage(context, () -> {
+                        if (configuration.audience()
+                                == CommonProgramNodeCatalog.DebugAudience.ALL) {
+                            player.level().getServer().getPlayerList()
+                                    .broadcastSystemMessage(message, false);
+                        } else {
+                            player.sendSystemMessage(message);
+                        }
+                        return ProgramActionTransaction.Undo.NONE;
+                    });
                     return ProgramNodeStep.next("flow");
                 });
     }
@@ -406,6 +432,20 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         ProgramValueTypes.DIRECTION,
                         direction
                 )).orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.ENTITY_DATA,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.EntityDataConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var entity = raw(inputs, "entity", ProgramValueTypes.ENTITY_REFERENCE);
+                    if (resolver(context).positionOf(entity).isEmpty()) return emptyData();
+                    return ProgramEntityDataQuery.query(
+                                entity,
+                                configuration.data())
+                        .stream()
+                        .mapToObj(value -> data("value", ProgramValueTypes.FLOAT, value))
+                        .findFirst()
+                        .orElseGet(CommonProgramExecutors::emptyData);
+                });
         put(result, CommonProgramNodeIds.ENTITIES_AROUND, (context, _, inputs) -> {
             var radius = nonNegative(floatValue(inputs, "radius"), "radius");
             var entities = resolver(context).entitiesAround(worldPosition(inputs, "center"), radius);

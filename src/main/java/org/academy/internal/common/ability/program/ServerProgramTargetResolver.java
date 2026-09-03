@@ -69,7 +69,7 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
 
     @Override
     public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
-        if (!(entityReference instanceof Entity entity) || !sameUsableLevel(entity)) {
+        if (!(entityReference instanceof Entity entity) || !sameQueryableEntity(entity)) {
             return Optional.empty();
         }
         return Optional.of(worldPosition(entity.position()));
@@ -77,7 +77,7 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
 
     @Override
     public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
-        if (!(entityReference instanceof Entity entity) || !sameUsableLevel(entity)) {
+        if (!(entityReference instanceof Entity entity) || !sameQueryableEntity(entity)) {
             return Optional.empty();
         }
         var look = entity.getLookAngle();
@@ -125,7 +125,7 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
             Object entityReference,
             double maximumDistance
     ) {
-        if (!(entityReference instanceof Entity entity) || !sameUsableLevel(entity)) {
+        if (!(entityReference instanceof Entity entity) || !sameQueryableEntity(entity)) {
             return Optional.empty();
         }
         var look = entity.getViewVector(1.0f);
@@ -185,11 +185,19 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         }
         var value = new Vec3(position.x(), position.y(), position.z());
         if (!finite(value)) throw new IllegalArgumentException("Position is not finite");
+        if (!isWithinRadius(player.position(), value, maximumRange)) {
+            throw new IllegalArgumentException("Query origin is outside the allowed area");
+        }
         return value;
     }
 
     public boolean sameUsableLevel(Entity entity) {
         return entity.level() == level() && entity.isAlive() && !entity.isRemoved();
+    }
+
+    private boolean sameQueryableEntity(Entity entity) {
+        return sameUsableLevel(entity)
+                && isWithinRadius(player.position(), entity.position(), maximumRange);
     }
 
     public ServerLevel level() {
