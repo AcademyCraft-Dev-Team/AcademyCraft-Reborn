@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.program;
 
 import org.academy.api.common.ability.program.ProgramNodeRole;
+import org.academy.api.common.ability.program.ProgramInputView;
+import org.academy.api.common.ability.program.ProgramNodeStep;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.jspecify.annotations.Nullable;

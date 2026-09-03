@@ -27,6 +27,7 @@ import org.academy.internal.common.ability.AbilityRegistrationValidator;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.*;
 import org.academy.internal.common.ability.program.AbilityProgramNodeTypes;
+import org.academy.internal.common.ability.program.ProgramNodeExtensionIndex;
 import org.academy.internal.common.arc.PathModifierTypes;
 import org.academy.internal.common.arc.PathTypes;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -123,6 +124,7 @@ public final class AcademyCraftRegister {
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            ProgramNodeExtensionIndex.freeze();
             if (ModList.get().isLoaded("curios")) {
                 MagneticHookCuriosCompat.register();
             }

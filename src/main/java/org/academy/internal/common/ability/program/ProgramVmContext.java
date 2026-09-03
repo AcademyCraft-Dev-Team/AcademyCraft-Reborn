@@ -1,13 +1,15 @@
 package org.academy.internal.common.ability.program;
 
 import net.minecraft.resources.Identifier;
+import org.academy.api.common.ability.program.ProgramExecutionContext;
+import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
 
-public final class ProgramVmContext {
+public final class ProgramVmContext implements ProgramExecutionContext {
     private final long gameTime;
     private final Map<String, ProgramValue<?>> variables;
     private final Map<String, Object> executorState;
@@ -42,6 +44,12 @@ public final class ProgramVmContext {
     public Identifier nodeType() {
         if (nodeType == null) throw new IllegalStateException("No program node is currently executing");
         return nodeType;
+    }
+
+    @Override
+    public Optional<ProgramTargetResolver> targetResolver() {
+        return attachment(ProgramExecutionFrame.class)
+                .flatMap(frame -> frame.environment(ProgramTargetResolver.class));
     }
 
     public Optional<ProgramValue<?>> variable(String name) {

@@ -92,6 +92,15 @@ public final class AbilityProgramManager {
                 && AbilityProgramDefinitions.find(category) != null;
     }
 
+    static boolean compatibleExtensionFingerprint(
+            Identifier category,
+            @Nullable String remoteFingerprint
+    ) {
+        var definition = AbilityProgramDefinitions.find(category);
+        return definition != null
+                && definition.extensionFingerprint().equals(remoteFingerprint);
+    }
+
     static boolean validBook(Identifier category, @Nullable ProgramBook book) {
         if (book == null
                 || book.schemaVersion() != ProgramBook.CURRENT_SCHEMA_VERSION
@@ -250,7 +259,10 @@ public final class AbilityProgramManager {
 
     private static void sync(ServerPlayer player, Identifier category, ProgramBook book) {
         MisakaNetworkServer.send(player, new SyncPacket(
-                category.toString(), ProgramBookCodec.encode(book)));
+                category.toString(),
+                AbilityProgramDefinitions.require(category).extensionFingerprint(),
+                ProgramBookCodec.encode(book)
+        ));
     }
 
     private static ExecutionOutcome executeAccelerator(
@@ -772,7 +784,12 @@ public final class AbilityProgramManager {
         @SubscribePacket
         public static void sync(SyncPacket packet) {
             var category = parseCategory(packet.category);
-            if (category != null) AbilityProgramEditorClient.handleSync(category, packet.book);
+            if (category == null) return;
+            if (!compatibleExtensionFingerprint(category, packet.extensionFingerprint)) {
+                AbilityProgramEditorClient.handleExtensionMismatch(category);
+                return;
+            }
+            AbilityProgramEditorClient.handleSync(category, packet.book);
         }
 
         @SubscribePacket
@@ -973,23 +990,36 @@ public final class AbilityProgramManager {
         public static final StreamCodec<ByteBuf, SyncPacket> CODEC = StreamCodec.of(
                 (buf, packet) -> {
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.category);
+                    ByteBufCodecs.STRING_UTF8.encode(buf, packet.extensionFingerprint);
                     writeBytes(buf, packet.book, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES);
                 },
                 buf -> new SyncPacket(
+                        ByteBufCodecs.STRING_UTF8.decode(buf),
                         ByteBufCodecs.STRING_UTF8.decode(buf),
                         readBytes(buf, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES)
                 )
         );
         private final String category;
+        private final String extensionFingerprint;
         private final byte[] book;
 
         public SyncPacket(String category, byte[] book) {
+            this(category, fingerprintFor(category), book);
+        }
+
+        private SyncPacket(String category, String extensionFingerprint, byte[] book) {
             this.category = category == null ? "" : category;
+            this.extensionFingerprint = extensionFingerprint == null
+                    ? "" : extensionFingerprint;
             this.book = book == null ? new byte[0] : book.clone();
         }
 
         String category() {
             return category;
+        }
+
+        String extensionFingerprint() {
+            return extensionFingerprint;
         }
 
         byte[] book() {
@@ -999,6 +1029,12 @@ public final class AbilityProgramManager {
         @Override
         public PacketType<ClientPacketListener, SyncPacket> getPacketType() {
             return PacketTypes.ABILITY_PROGRAM_SYNC.get();
+        }
+
+        private static String fingerprintFor(@Nullable String rawCategory) {
+            var category = rawCategory == null ? null : Identifier.tryParse(rawCategory);
+            var definition = category == null ? null : AbilityProgramDefinitions.find(category);
+            return definition == null ? "" : definition.extensionFingerprint();
         }
     }
 

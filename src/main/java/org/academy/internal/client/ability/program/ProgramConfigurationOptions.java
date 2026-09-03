@@ -4,6 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
+import org.academy.api.client.ability.program.ProgramNodeEditorOptions;
+import org.academy.api.common.ability.program.ProgramNodeEditorMetadata;
 import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeIds;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
@@ -47,6 +49,18 @@ public final class ProgramConfigurationOptions {
             String field,
             JsonElement currentValue
     ) {
+        var dynamicOptions = ProgramNodeEditorOptions.options(entry.id(), field, currentValue)
+                .stream()
+                .map(option -> new Option(option.value(), option.label()))
+                .toList();
+        if (!dynamicOptions.isEmpty()) return dynamicOptions;
+        var extensionOptions = entry.metadata(ProgramNodeEditorMetadata.class)
+                .map(metadata -> metadata.options(field).stream()
+                        .map(option -> new Option(
+                                option.value(), Component.translatable(option.translationKey())))
+                        .toList())
+                .orElse(List.of());
+        if (!extensionOptions.isEmpty()) return extensionOptions;
         if (currentValue != null
                 && currentValue.isJsonPrimitive()
                 && currentValue.getAsJsonPrimitive().isBoolean()) {
@@ -248,12 +262,15 @@ public final class ProgramConfigurationOptions {
      */
     public static Option step(List<Option> options, JsonElement currentValue, int direction) {
         if (options.isEmpty()) throw new IllegalArgumentException("Options must not be empty");
-        var currentIndex = 0;
+        var currentIndex = -1;
         for (var index = 0; index < options.size(); index++) {
             if (sameValue(options.get(index).value(), currentValue)) {
                 currentIndex = index;
                 break;
             }
+        }
+        if (currentIndex < 0) {
+            return direction < 0 ? options.getLast() : options.getFirst();
         }
         return options.get(Math.floorMod(currentIndex + Integer.signum(direction), options.size()));
     }
@@ -302,19 +319,19 @@ public final class ProgramConfigurationOptions {
     }
 
     private static Option option(boolean value, String translationKey) {
-        return new Option(new JsonPrimitive(value), translationKey);
+        return new Option(new JsonPrimitive(value), Component.translatable(translationKey));
     }
 
     private static Option option(int value, String translationKey) {
-        return new Option(new JsonPrimitive(value), translationKey);
+        return new Option(new JsonPrimitive(value), Component.translatable(translationKey));
     }
 
     private static Option option(double value, String translationKey) {
-        return new Option(new JsonPrimitive(value), translationKey);
+        return new Option(new JsonPrimitive(value), Component.translatable(translationKey));
     }
 
     private static Option option(String value, String translationKey) {
-        return new Option(new JsonPrimitive(value), translationKey);
+        return new Option(new JsonPrimitive(value), Component.translatable(translationKey));
     }
 
     private static boolean sameValue(JsonPrimitive option, JsonElement currentValue) {
@@ -322,9 +339,20 @@ public final class ProgramConfigurationOptions {
                 && option.equals(currentValue.getAsJsonPrimitive());
     }
 
-    public record Option(JsonPrimitive value, String translationKey) {
+    public record Option(JsonPrimitive value, Component label) {
+        public Option {
+            value = value.deepCopy();
+            label = label.copy();
+        }
+
+        @Override
+        public JsonPrimitive value() {
+            return value.deepCopy();
+        }
+
+        @Override
         public Component label() {
-            return Component.translatable(translationKey);
+            return label.copy();
         }
     }
 }

@@ -200,6 +200,10 @@ class ProgramConfigurationOptionsTest {
                 options, new JsonPrimitive("equal"), 1).value().getAsString());
         assertEquals("greater_equal", ProgramConfigurationOptions.step(
                 options, new JsonPrimitive("equal"), -1).value().getAsString());
+        assertEquals("equal", ProgramConfigurationOptions.step(
+                options, new JsonPrimitive("not_in_catalog"), 1).value().getAsString());
+        assertEquals("greater_equal", ProgramConfigurationOptions.step(
+                options, new JsonPrimitive("not_in_catalog"), -1).value().getAsString());
     }
 
     private static List<String> values(List<ProgramConfigurationOptions.Option> options) {
