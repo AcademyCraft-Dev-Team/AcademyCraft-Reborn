@@ -57,6 +57,8 @@ class CommonProgramNodesTest {
                 CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD,
                 CommonProgramNodeIds.RANDOM_NUMBER,
                 CommonProgramNodeIds.VEC3_OPERATION,
+                CommonProgramNodeIds.ENTITY_DATA,
+                CommonProgramNodeIds.DEBUG_OUTPUT,
                 CommonProgramNodeIds.BLOCK_VOLUME,
                 CommonProgramNodeIds.FILTER_ENTITY_EXACT,
                 CommonProgramNodeIds.FILTER_BLOCK_EXACT,
@@ -65,6 +67,32 @@ class CommonProgramNodesTest {
             assertNotNull(catalog.find(id), id.toString());
             assertNotNull(executors.find(id), id.toString());
         }
+    }
+
+    @Test
+    void entityDataAndDebugOutputExposeConfiguredTypedPorts() {
+        var catalog = AbilityProgramDefinitions.mentalout().editorCatalog();
+        var entityData = new JsonObject();
+        entityData.addProperty("data", "cp");
+        var entityDataSchema = catalog.schema(CommonProgramNodeIds.ENTITY_DATA, entityData);
+        assertNotNull(entityDataSchema);
+        assertEquals(ProgramValueTypes.ENTITY_REFERENCE,
+                entityDataSchema.inputs().getFirst().type());
+        assertEquals(ProgramValueTypes.FLOAT,
+                entityDataSchema.outputs().getFirst().type());
+
+        var debug = new JsonObject();
+        debug.addProperty("value_type", "world_position_list");
+        debug.addProperty("text", "targets={value}");
+        debug.addProperty("audience", "all");
+        var debugSchema = catalog.schema(CommonProgramNodeIds.DEBUG_OUTPUT, debug);
+        assertNotNull(debugSchema);
+        assertEquals(ProgramValueTypes.WORLD_POSITION_SET,
+                debugSchema.inputs().get(1).type());
+        assertEquals(ProgramValueTypes.FLOW,
+                debugSchema.inputs().getFirst().type());
+        assertEquals(ProgramValueTypes.FLOW,
+                debugSchema.outputs().getFirst().type());
     }
 
     @Test

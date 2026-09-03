@@ -19,6 +19,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -33,7 +34,10 @@ import java.util.Optional;
  * Authoritative Minecraft-server adapter for Aeromanip programs.
  */
 public final class ServerAeromanipProgramRuntime implements AeromanipProgramRuntime {
-    public static final double MAX_QUERY_RANGE = 32.0;
+    public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            AeromanipProgramNodeCatalog.AEROMANIP).queryRange();
+    public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            AeromanipProgramNodeCatalog.AEROMANIP).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
@@ -317,7 +321,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             if (!(targetReference instanceof Entity entity)
                     || !targets.sameUsableLevel(entity)
                     || entity instanceof HighSpeedJetNozzle
-                    || entity.distanceToSqr(player) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+                    || entity.distanceToSqr(player) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
                 throw new IllegalArgumentException(
                         "Entity cannot support a temporary jet nozzle");
             }
@@ -328,7 +332,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         }
         var center = targets.requireLocalPosition(new ProgramWorldPosition(
                 block.dimension(), block.x() + 0.5, block.y() + 0.5, block.z() + 0.5));
-        if (center.distanceToSqr(player.position()) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+        if (center.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
             throw new IllegalArgumentException("Temporary nozzle block is outside program range");
         }
         var pos = new BlockPos(block.x(), block.y(), block.z());

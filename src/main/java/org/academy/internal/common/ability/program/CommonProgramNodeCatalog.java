@@ -250,6 +250,19 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodeRole.CONTROL,
                 ProgramNodePurity.STATE
         ));
+        put(result, CommonProgramNodeIds.DEBUG_OUTPUT, type(
+                DebugOutputConfiguration.CODEC,
+                configuration -> new ProgramNodeSchema(
+                        List.of(
+                                flowInput(),
+                                ProgramPortDefinition.requiredInput(
+                                        "value", configuration.valueType().type())
+                        ),
+                        List.of(flowOutput("flow"))
+                ),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION
+        ));
     }
 
     private static void registerSpatial(Map<Identifier, ProgramNodeType<?>> result) {
@@ -397,6 +410,17 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 "direction",
                 ProgramValueTypes.DIRECTION
         )));
+        put(result, CommonProgramNodeIds.ENTITY_DATA, type(
+                EntityDataConfiguration.CODEC,
+                _ -> unarySchema(
+                        "entity",
+                        ProgramValueTypes.ENTITY_REFERENCE,
+                        "value",
+                        ProgramValueTypes.FLOAT
+                ),
+                ProgramNodeRole.QUERY,
+                ProgramNodePurity.WORLD_QUERY
+        ));
         put(result, CommonProgramNodeIds.ENTITIES_AROUND, queryType(new ProgramNodeSchema(
                 List.of(
                         ProgramPortDefinition.requiredInput("center", ProgramValueTypes.WORLD_POSITION),
@@ -1017,6 +1041,44 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ).apply(instance, Vec3OperationConfiguration::new));
     }
 
+    public record EntityDataConfiguration(EntityDataKind data) {
+        public static final Codec<EntityDataConfiguration> CODEC = EntityDataKind.CODEC
+                .fieldOf("data")
+                .xmap(EntityDataConfiguration::new, EntityDataConfiguration::data)
+                .codec();
+
+        public EntityDataConfiguration {
+            if (data == null) throw new IllegalArgumentException("Entity data kind is required");
+        }
+    }
+
+    public record DebugOutputConfiguration(
+            DebugValueType valueType,
+            String text,
+            DebugAudience audience
+    ) {
+        public static final int MAX_TEXT_LENGTH = 256;
+        public static final Codec<DebugOutputConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        DebugValueType.CODEC.fieldOf("value_type")
+                                .forGetter(DebugOutputConfiguration::valueType),
+                        Codec.STRING.optionalFieldOf("text", "{value}")
+                                .forGetter(DebugOutputConfiguration::text),
+                        DebugAudience.CODEC.optionalFieldOf("audience", DebugAudience.SELF)
+                                .forGetter(DebugOutputConfiguration::audience)
+                ).apply(instance, DebugOutputConfiguration::new));
+
+        public DebugOutputConfiguration {
+            if (valueType == null || audience == null) {
+                throw new IllegalArgumentException("Debug value type and audience are required");
+            }
+            if (text == null || text.length() > MAX_TEXT_LENGTH) {
+                throw new IllegalArgumentException(
+                        "Debug text cannot exceed " + MAX_TEXT_LENGTH + " characters");
+            }
+        }
+    }
+
     public record DistanceSortConfiguration(PointCollectionKind kind, SortOrder order) {
         public static final Codec<DistanceSortConfiguration> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
@@ -1345,6 +1407,88 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         private static Vec3Kind byName(String name) {
             for (var value : values()) if (value.wireName.equals(name)) return value;
             throw new IllegalArgumentException("Unknown vec3 type " + name);
+        }
+    }
+
+    public enum EntityDataKind {
+        HEALTH("health"), CP("cp"), SP("sp");
+
+        private static final Codec<EntityDataKind> CODEC = Codec.STRING.xmap(
+                EntityDataKind::byName, EntityDataKind::wireName);
+        private final String wireName;
+
+        EntityDataKind(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        private static EntityDataKind byName(String name) {
+            for (var value : values()) if (value.wireName.equals(name)) return value;
+            throw new IllegalArgumentException("Unknown entity data kind " + name);
+        }
+    }
+
+    public enum DebugAudience {
+        SELF("self"), ALL("all");
+
+        private static final Codec<DebugAudience> CODEC = Codec.STRING.xmap(
+                DebugAudience::byName, DebugAudience::wireName);
+        private final String wireName;
+
+        DebugAudience(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        private static DebugAudience byName(String name) {
+            for (var value : values()) if (value.wireName.equals(name)) return value;
+            throw new IllegalArgumentException("Unknown debug audience " + name);
+        }
+    }
+
+    public enum DebugValueType {
+        BOOLEAN("boolean", ProgramValueTypes.BOOLEAN),
+        INTEGER("integer", ProgramValueTypes.INTEGER),
+        BIG_INTEGER("big_integer", ProgramValueTypes.BIG_INTEGER),
+        FLOAT("float", ProgramValueTypes.FLOAT),
+        IDENTIFIER("identifier", ProgramValueTypes.IDENTIFIER),
+        DURATION("duration", ProgramValueTypes.DURATION),
+        DIRECTION("direction", ProgramValueTypes.DIRECTION),
+        WORLD_POSITION("world_position", ProgramValueTypes.WORLD_POSITION),
+        BLOCK_POSITION("block_position", ProgramValueTypes.BLOCK_POSITION),
+        ENTITY("entity", ProgramValueTypes.ENTITY_REFERENCE),
+        DIRECTION_LIST("direction_list", ProgramValueTypes.DIRECTION_SET),
+        WORLD_POSITION_LIST("world_position_list", ProgramValueTypes.WORLD_POSITION_SET),
+        BLOCK_POSITION_LIST("block_position_list", ProgramValueTypes.BLOCK_POSITION_SET),
+        ENTITY_LIST("entity_list", ProgramValueTypes.ENTITY_SET);
+
+        private static final Codec<DebugValueType> CODEC = Codec.STRING.xmap(
+                DebugValueType::byName, DebugValueType::wireName);
+        private final String wireName;
+        private final ProgramValueType type;
+
+        DebugValueType(String wireName, ProgramValueType type) {
+            this.wireName = wireName;
+            this.type = type;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        public ProgramValueType type() {
+            return type;
+        }
+
+        private static DebugValueType byName(String name) {
+            for (var value : values()) if (value.wireName.equals(name)) return value;
+            throw new IllegalArgumentException("Unknown debug value type " + name);
         }
     }
 

@@ -16,6 +16,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -33,7 +34,10 @@ import java.util.Optional;
  * Authoritative Minecraft-server adapter for Meltdowner programs.
  */
 public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRuntime {
-    public static final double MAX_QUERY_RANGE = 48.0;
+    public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            MeltdownerProgramNodeCatalog.MELTDOWNER).queryRange();
+    public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            MeltdownerProgramNodeCatalog.MELTDOWNER).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
 
     private final ServerPlayer player;
@@ -289,7 +293,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
         var origin = requestedOrigin == null
                 ? player.getEyePosition()
                 : targets.requireLocalPosition(requestedOrigin);
-        if (origin.distanceToSqr(player.position()) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+        if (origin.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
             throw new IllegalArgumentException("Beam origin is outside program range");
         }
         Vec3 direction;
@@ -396,7 +400,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
         if (!(value instanceof Entity entity) || !targets.sameUsableLevel(entity)) {
             throw new IllegalArgumentException("Atomic Jet entity target is invalid");
         }
-        if (entity.distanceToSqr(player) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+        if (entity.distanceToSqr(player) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
             throw new IllegalArgumentException("Atomic Jet target is outside program range");
         }
         return entity;
@@ -418,7 +422,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
 
     private static double electronBeamLength(float power) {
         ProgramPowerScale.require(power);
-        return 32.0;
+        return Math.min(MAX_ACTION_RANGE, 32.0);
     }
 
     private static float damageScale(float power) {
@@ -430,7 +434,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
     }
 
     private static double miningBeamRange(float power) {
-        return ProgramPowerScale.interpolate(power, 12.0, 28.0, 48.0);
+        return Math.min(MAX_ACTION_RANGE,
+                ProgramPowerScale.interpolate(power, 12.0, 28.0, 48.0));
     }
 
     private static float miningBeamCost(float power) {

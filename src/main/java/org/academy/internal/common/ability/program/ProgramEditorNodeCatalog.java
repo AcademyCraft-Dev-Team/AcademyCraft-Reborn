@@ -150,6 +150,12 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         } else if (id.equals(CommonProgramNodeIds.VEC3_OPERATION)) {
             configuration.addProperty("type", "direction");
             configuration.addProperty("operator", "add");
+        } else if (id.equals(CommonProgramNodeIds.ENTITY_DATA)) {
+            configuration.addProperty("data", "health");
+        } else if (id.equals(CommonProgramNodeIds.DEBUG_OUTPUT)) {
+            configuration.addProperty("value_type", "entity");
+            configuration.addProperty("text", "{value}");
+            configuration.addProperty("audience", "self");
         } else if (id.equals(CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE)) {
             configuration.addProperty("type", "entity");
             configuration.addProperty("order", "ascending");
@@ -242,6 +248,7 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
                 || path.contains("/query/")) return Group.TARGET;
         if (role == ProgramNodeRole.CONTROL || role == ProgramNodeRole.ENTRY
                 || path.contains("/flow/")) return Group.FLOW;
+        if (role == ProgramNodeRole.ACTION || path.contains("/action/")) return Group.ACTION;
         if (path.contains("/collection/")) return Group.COLLECTION;
         if (path.contains("/filter/")) return Group.FILTER;
         if (path.contains("/logic/") || path.contains("/state/")) return Group.LOGIC;

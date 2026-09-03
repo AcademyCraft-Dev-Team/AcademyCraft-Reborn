@@ -87,6 +87,7 @@ public final class CommonProgramNodeIds {
     public static final Identifier ENTITY_POSITION = id("query/entity_position");
     public static final Identifier ENTITY_LOOK_DIRECTION = id("query/entity_look_direction");
     public static final Identifier ENTITY_MOVEMENT_DIRECTION = id("query/entity_movement_direction");
+    public static final Identifier ENTITY_DATA = id("query/entity_data");
     public static final Identifier CASTER = id("query/caster");
     public static final Identifier DAMAGE_ATTACKER = id("query/damage_attacker");
     public static final Identifier LOOK_TARGET = id("query/look_target");
@@ -129,6 +130,7 @@ public final class CommonProgramNodeIds {
             id("collection/block_position/random");
     public static final Identifier RANDOM_DIRECTION = id("collection/direction/random");
     public static final Identifier SORT_POINTS_BY_DISTANCE = id("collection/point/distance_sort");
+    public static final Identifier DEBUG_OUTPUT = id("action/debug_output");
 
     private CommonProgramNodeIds() {
     }

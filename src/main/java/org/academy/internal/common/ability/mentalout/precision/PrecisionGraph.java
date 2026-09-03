@@ -1,10 +1,14 @@
 package org.academy.internal.common.ability.mentalout.precision;
 
 import org.academy.api.common.entitycontrol.ControlCapability;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
+import org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog;
 
 import java.util.*;
 
 public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
+    public static final double MAX_RANGE = AbilityProgramSpatialRanges.forCategory(
+            PrecisionProgramNodeCatalog.MENTALOUT).queryRange();
     public static final int MAX_NODES = 32;
     public static final int MAX_DATA_EDGES = 48;
     public static final int MAX_FLOW_EDGES = MAX_NODES - 1;
@@ -564,7 +568,7 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
 
         public boolean isParameterValid(double value) {
             return switch (parameterKind) {
-                case RANGE -> value >= 1.0 && value <= 32.0;
+                case RANGE -> value >= 1.0 && value <= MAX_RANGE;
                 case COUNT -> value >= 1.0 && value <= 8.0 && value == Math.rint(value);
                 case CAPABILITY -> value >= 0.0 && value < ControlCapability.values().length
                         && value == Math.rint(value);
@@ -580,7 +584,7 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
 
         public double defaultParameter() {
             return switch (parameterKind) {
-                case RANGE -> 32.0;
+                case RANGE -> MAX_RANGE;
                 case COUNT -> 4.0;
                 case HEALTH_PERCENT -> 50.0;
                 case DURATION_SECONDS -> 0.0;

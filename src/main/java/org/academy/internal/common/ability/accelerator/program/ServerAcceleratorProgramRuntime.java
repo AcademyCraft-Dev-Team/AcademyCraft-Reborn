@@ -23,9 +23,9 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
-import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -37,7 +37,10 @@ import java.util.*;
  * Authoritative Minecraft-server adapter for vector-manipulation programs.
  */
 public final class ServerAcceleratorProgramRuntime implements AcceleratorProgramRuntime {
-    public static final double MAX_QUERY_RANGE = 32.0;
+    public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            AcceleratorProgramNodeCatalog.ACCELERATOR).queryRange();
+    public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            AcceleratorProgramNodeCatalog.ACCELERATOR).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
     private static final double PROJECTILE_QUERY_RANGE = 16.0;
 
@@ -115,7 +118,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             public void validate() {
                 requireCasterReady(Skills.VECTOR_ACCEL.get());
                 target = requireMovableEntity(entityReference);
-                requireEntityInRange(target, MAX_QUERY_RANGE);
+                requireEntityInRange(target, MAX_ACTION_RANGE);
                 requireFriendlyMovement(target);
                 if (!isFiniteNonZero(impulse)) {
                     throw new IllegalArgumentException("Vector impulse is invalid");
@@ -180,7 +183,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                     throw new IllegalArgumentException("Projectile target is invalid");
                 }
                 projectile = value;
-                requireEntityInRange(projectile, MAX_QUERY_RANGE);
+                requireEntityInRange(projectile, MAX_ACTION_RANGE);
             }
 
             @Override
@@ -216,17 +219,17 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             public void validate() {
                 requireCasterReady(Skills.VECTOR_ACCEL.get());
                 target = requireMovableEntity(entityReference);
-                requireEntityInRange(target, MAX_QUERY_RANGE);
+                requireEntityInRange(target, MAX_ACTION_RANGE);
                 requireFriendlyMovement(target);
                 if (target.isPassenger() || target.isVehicle()) {
                     throw new IllegalArgumentException("Mounted entity displacement is not supported");
                 }
                 targetPosition = requireLocalPosition(destination);
-                requirePositionInRange(targetPosition, MAX_QUERY_RANGE);
+                requirePositionInRange(targetPosition, MAX_ACTION_RANGE);
                 if (target.position().distanceTo(targetPosition) > displacementRange(strength)) {
                     throw new IllegalArgumentException("Entity displacement exceeds its strength limit");
                 }
-                requireEntityDestination(target, targetPosition);
+                requireEntityMovementDestination(target, targetPosition);
             }
 
             @Override
@@ -235,18 +238,9 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                     throw new IllegalStateException("Target rejected forced movement");
                 }
                 charge(Skills.VECTOR_ACCEL.get(), displacementCost(strength));
-                var previousPosition = target.position();
-                var previousVelocity = target.getDeltaMovement();
-                var moved = EntityMotionGuard.callWithMotionSource(
-                        player, () -> TeleportSync.teleportInstantly(target, targetPosition));
-                if (!moved) throw new IllegalStateException("Entity displacement was rejected");
-                target.resetFallDistance();
-                return () -> {
-                    if (!sameUsableLevel(target)) return;
-                    EntityMotionGuard.runInternalCorrection(target, () ->
-                            TeleportSync.teleportInstantly(target, previousPosition));
-                    setVelocity(target, previousVelocity);
-                };
+                var movement = AcceleratorEntityMovementRuntime.start(
+                        player, target, targetPosition, entityMovementSpeed(strength));
+                return movement::rollback;
             }
         };
     }
@@ -274,8 +268,8 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                 if (sourcePos.equals(destinationPos)) {
                     throw new IllegalArgumentException("Block source and destination are equal");
                 }
-                requireBlockInRange(sourcePos, MAX_QUERY_RANGE);
-                requireBlockInRange(destinationPos, MAX_QUERY_RANGE);
+                requireBlockInRange(sourcePos, MAX_ACTION_RANGE);
+                requireBlockInRange(destinationPos, MAX_ACTION_RANGE);
                 if (Math.sqrt(sourcePos.distSqr(destinationPos)) > blockDisplacementRange(strength)) {
                     throw new IllegalArgumentException("Block displacement exceeds its strength limit");
                 }
@@ -320,7 +314,9 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
 
     @Override
     public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
-        if (!(entityReference instanceof Entity entity) || !sameUsableLevel(entity)) {
+        if (!(entityReference instanceof Entity entity)
+                || !sameUsableLevel(entity)
+                || entity.distanceToSqr(player) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
             return Optional.empty();
         }
         return Optional.of(worldPosition(entity.position()));
@@ -328,7 +324,9 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
 
     @Override
     public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
-        if (!(entityReference instanceof Entity entity) || !sameUsableLevel(entity)) {
+        if (!(entityReference instanceof Entity entity)
+                || !sameUsableLevel(entity)
+                || entity.distanceToSqr(player) > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
             return Optional.empty();
         }
         var look = entity.getLookAngle();
@@ -425,7 +423,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                     requireCasterLearned(Skills.KINETIC_ENERGY_APPLIED.get());
                 }
                 center = Objects.requireNonNull(position.get(), "Impact position");
-                requirePositionInRange(center, MAX_QUERY_RANGE);
+                requirePositionInRange(center, MAX_ACTION_RANGE);
                 var block = BlockPos.containing(center);
                 if (!level().hasChunkAt(block)
                         || !level().getWorldBorder().isWithinBounds(block)) {
@@ -508,13 +506,12 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         }
     }
 
-    private void requireEntityDestination(Entity entity, Vec3 destination) {
+    private void requireEntityMovementDestination(Entity entity, Vec3 destination) {
         var block = BlockPos.containing(destination);
         var moved = entity.getBoundingBox().move(destination.subtract(entity.position()));
         if (!level().hasChunkAt(block)
-                || !level().getWorldBorder().isWithinBounds(moved)
-                || !level().noCollision(entity, moved)) {
-            throw new IllegalArgumentException("Entity destination is unsafe");
+                || !level().getWorldBorder().isWithinBounds(moved)) {
+            throw new IllegalArgumentException("Entity movement destination is unavailable");
         }
     }
 
@@ -560,7 +557,14 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         if (!position.dimension().equals(level().dimension().identifier())) {
             throw new IllegalArgumentException("Position is in another dimension");
         }
-        return new Vec3(position.x(), position.y(), position.z());
+        var value = new Vec3(position.x(), position.y(), position.z());
+        if (!Double.isFinite(value.x)
+                || !Double.isFinite(value.y)
+                || !Double.isFinite(value.z)) {
+            throw new IllegalArgumentException("Position is not finite");
+        }
+        requirePositionInRange(value, MAX_QUERY_RANGE);
+        return value;
     }
 
     private BlockPos requireLocalBlock(ProgramBlockPosition position) {
@@ -637,6 +641,14 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             case CONTROLLED -> 8.0f;
             case STANDARD -> 16.0f;
             case MAXIMUM -> 30.0f;
+        };
+    }
+
+    private static double entityMovementSpeed(AcceleratorProgramStrength strength) {
+        return switch (Objects.requireNonNull(strength, "strength")) {
+            case CONTROLLED -> 0.35;
+            case STANDARD -> 0.7;
+            case MAXIMUM -> 1.2;
         };
     }
 

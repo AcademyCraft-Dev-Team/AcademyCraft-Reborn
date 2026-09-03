@@ -31,6 +31,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.ability.teleport.TeleportSafety;
@@ -48,7 +49,10 @@ import java.util.Optional;
  * Authoritative Minecraft-server adapter for Teleport programs.
  */
 public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime {
-    public static final double MAX_QUERY_RANGE = 128.0;
+    public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            TeleportProgramNodeCatalog.TELEPORT).queryRange();
+    public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            TeleportProgramNodeCatalog.TELEPORT).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
     private static final double BLOCK_CELL_CONTACT_EPSILON = 1.0e-7;
 
@@ -714,7 +718,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 || position.getY() < targets.level().getMinY()
                 || position.getY() >= targets.level().getMaxY()
                 || Vec3.atCenterOf(position).distanceToSqr(player.position())
-                > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+                > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
             throw new IllegalArgumentException("Teleport block is outside program range");
         }
         return position;
@@ -900,7 +904,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     }
 
     private static double selfRange(float power) {
-        return ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0);
+        return Math.min(MAX_ACTION_RANGE,
+                ProgramPowerScale.interpolate(power, 8.0, 16.0, 32.0));
     }
 
     private static float selfCost(float power) {
@@ -908,11 +913,13 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     }
 
     static double entityTargetRange(float power) {
-        return ProgramPowerScale.interpolate(power, 8.0, 64.0, 128.0);
+        return Math.min(MAX_ACTION_RANGE,
+                ProgramPowerScale.interpolate(power, 8.0, 64.0, 128.0));
     }
 
     static double entityMoveRange(float power) {
-        return ProgramPowerScale.interpolate(power, 8.0, 64.0, 128.0);
+        return Math.min(MAX_ACTION_RANGE,
+                ProgramPowerScale.interpolate(power, 8.0, 64.0, 128.0));
     }
 
     private static float entityBaseCost(float power) {

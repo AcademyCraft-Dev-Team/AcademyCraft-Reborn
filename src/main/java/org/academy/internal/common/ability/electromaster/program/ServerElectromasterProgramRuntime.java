@@ -25,6 +25,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -38,7 +39,10 @@ import java.util.*;
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class ServerElectromasterProgramRuntime implements ElectromasterProgramRuntime {
-    public static final double MAX_QUERY_RANGE = 32.0;
+    public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            ElectromasterProgramNodeCatalog.ELECTROMASTER).queryRange();
+    public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            ElectromasterProgramNodeCatalog.ELECTROMASTER).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
     private static final Map<UUID, Map<String, Entity>> CONTROLLED = new HashMap<>();
     private static final Map<UUID, ControlDestination> CONTROL_DESTINATIONS = new HashMap<>();
@@ -134,14 +138,14 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             public void validate() {
                 requireCasterReady(Skills.MAGNET_MANIPULATION.get());
                 targetPosition = targets.requireLocalPosition(destination);
-                requirePositionInRange(targetPosition, MAX_QUERY_RANGE);
+                requirePositionInRange(targetPosition, MAX_ACTION_RANGE);
                 if (targetType == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY) {
                     target = requireEntityTarget(targetReference);
                     targetKey = entityKey(target);
                     if (!MagnetManipulation.isMagnetic(target)) {
                         throw new IllegalArgumentException("Entity target is not magnetic");
                     }
-                    requireEntityInRange(target, MAX_QUERY_RANGE);
+                    requireEntityInRange(target, MAX_ACTION_RANGE);
                     requireMovementAllowed(target);
                 } else {
                     sourceBlock = requireLocalBlock(targetReference);
@@ -294,7 +298,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                         throw new IllegalArgumentException("Current Recharge needs a living entity");
                     }
                     entity = living;
-                    requireEntityInRange(entity, MAX_QUERY_RANGE);
+                    requireEntityInRange(entity, MAX_ACTION_RANGE);
                 } else {
                     block = requireLocalBlock(targetReference);
                 }
@@ -377,7 +381,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 || position.getY() < targets.level().getMinY()
                 || position.getY() >= targets.level().getMaxY()
                 || Vec3.atCenterOf(position).distanceToSqr(player.position())
-                > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+                    > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
             throw new IllegalArgumentException("Block target is outside program range");
         }
         return position;

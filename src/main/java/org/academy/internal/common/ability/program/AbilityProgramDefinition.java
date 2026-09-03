@@ -18,6 +18,7 @@ public final class AbilityProgramDefinition {
     private final ProgramExecutorLookup executors;
     private final ProgramEditorNodeCatalog editorCatalog;
     private final ProgramLimits limits;
+    private final ProgramSpatialLimits spatialLimits;
 
     public AbilityProgramDefinition(
             Identifier category,
@@ -26,10 +27,29 @@ public final class AbilityProgramDefinition {
             ProgramEditorNodeCatalog editorCatalog,
             ProgramLimits limits
     ) {
+        this(
+                category,
+                categoryNodeTypes,
+                categoryExecutors,
+                editorCatalog,
+                limits,
+                AbilityProgramSpatialRanges.forCategory(category)
+        );
+    }
+
+    public AbilityProgramDefinition(
+            Identifier category,
+            Map<Identifier, ProgramNodeType<?>> categoryNodeTypes,
+            ProgramExecutorLookup categoryExecutors,
+            ProgramEditorNodeCatalog editorCatalog,
+            ProgramLimits limits,
+            ProgramSpatialLimits spatialLimits
+    ) {
         this.category = Objects.requireNonNull(category, "category");
         this.categoryNodeTypes = Map.copyOf(categoryNodeTypes);
         this.editorCatalog = Objects.requireNonNull(editorCatalog, "editorCatalog");
         this.limits = Objects.requireNonNull(limits, "limits");
+        this.spatialLimits = Objects.requireNonNull(spatialLimits, "spatialLimits");
         Objects.requireNonNull(categoryExecutors, "categoryExecutors");
         if (this.categoryNodeTypes.isEmpty()) {
             throw new IllegalArgumentException("Ability program definition needs category nodes");
@@ -98,6 +118,10 @@ public final class AbilityProgramDefinition {
 
     public ProgramLimits limits() {
         return limits;
+    }
+
+    public ProgramSpatialLimits spatialLimits() {
+        return spatialLimits;
     }
 
     /**
