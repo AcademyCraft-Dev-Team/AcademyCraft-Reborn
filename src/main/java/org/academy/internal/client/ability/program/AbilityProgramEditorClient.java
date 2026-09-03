@@ -174,6 +174,11 @@ public final class AbilityProgramEditorClient {
             return;
         }
         if (AbilitySystemClient.getLevel().getLevelCode() < 5) return;
+        var state = state(minecraft.player.getUUID(), category.getKey());
+        if (!state.extensionCompatible) {
+            notify("message.academy.program.editor.extension_mismatch", ChatFormatting.RED);
+            return;
+        }
         MisakaNetworkClient.send(new AbilityProgramManager.ExecutePacket(
                 category.getKey(),
                 Math.clamp(slot, 0, SLOT_COUNT - 1),
@@ -273,6 +278,7 @@ public final class AbilityProgramEditorClient {
         var player = Minecraft.getInstance().player;
         if (player == null) return;
         var state = state(player.getUUID(), category);
+        state.extensionCompatible = true;
         if (!state.serverSynchronized
                 && shouldImportCachedBook(decoded.book(), state.saved)) {
             if (!state.importPending) {
@@ -299,6 +305,25 @@ public final class AbilityProgramEditorClient {
                             : state.drafts[selected],
                     state.saved.revision()
             );
+        }
+    }
+
+    public static void handleExtensionMismatch(Identifier category) {
+        var minecraft = Minecraft.getInstance();
+        var player = minecraft.player;
+        if (player != null) {
+            var state = state(player.getUUID(), category);
+            state.extensionCompatible = false;
+            state.serverSynchronized = false;
+            state.importPending = false;
+        }
+        notify("message.academy.program.editor.extension_mismatch", ChatFormatting.RED);
+        var currentCategory = AbilitySystemClient.category;
+        if (screen != null
+                && minecraft.gui.screen() == screen
+                && currentCategory != null
+                && currentCategory.getKey().equals(category)) {
+            minecraft.gui.setScreen(null);
         }
     }
 
@@ -457,6 +482,11 @@ public final class AbilityProgramEditorClient {
                 @Nullable AbilityProgram program,
                 long expectedRevision
         ) {
+            if (!state.extensionCompatible) {
+                AbilityProgramEditorClient.notify(
+                        "message.academy.program.editor.extension_mismatch", ChatFormatting.RED);
+                return;
+            }
             slot = Math.clamp(slot, 0, SLOT_COUNT - 1);
             if (state.saved.revision() != expectedRevision) {
                 AbilityProgramEditorClient.notify(
@@ -506,6 +536,7 @@ public final class AbilityProgramEditorClient {
         private ProgramBook saved;
         private boolean serverSynchronized;
         private boolean importPending;
+        private boolean extensionCompatible = true;
 
         private State(String storageKey, ProgramBook saved) {
             this.storageKey = storageKey;

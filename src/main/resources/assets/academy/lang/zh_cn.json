@@ -686,6 +686,7 @@
   "message.academy.precision_operation.unreachable_destination": "连续三次建路失败，目标不可达。",
   "message.academy.precision_operation.unsupported_movement_mode": "目标当前的移动模式不受寻路适配器支持。",
   "message.academy.precision_operation.unsupported_target": "目标不支持请求的心理操作。",
+  "message.academy.program.editor.extension_mismatch": "客户端与服务器的程序节点扩展不一致，编辑器已关闭。",
   "message.academy.program.editor.invalid_category": "该程序属于其他能力分类。",
   "message.academy.program.editor.invalid_program": "自定义技能包含无效或尚未解锁的节点。",
   "message.academy.program.editor.migrated": "本地自定义技能已迁移到服务端存档。",

@@ -1,18 +1,17 @@
-package org.academy.internal.common.ability.program;
-
-import org.academy.api.common.ability.program.ProgramValue;
-import org.academy.api.common.ability.program.ProgramValueType;
-import org.academy.api.common.ability.program.ProgramValueTypes;
+package org.academy.api.common.ability.program;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Immutable values resolved for one program-node invocation.
+ */
 public final class ProgramInputView {
     private final Map<String, List<ProgramValue<?>>> values;
 
-    ProgramInputView(Map<String, List<ProgramValue<?>>> values) {
+    public ProgramInputView(Map<String, List<ProgramValue<?>>> values) {
         this.values = values.entrySet().stream().collect(Collectors.toUnmodifiableMap(
                 Map.Entry::getKey,
                 entry -> List.copyOf(entry.getValue())

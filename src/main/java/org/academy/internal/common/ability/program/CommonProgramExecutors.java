@@ -16,6 +16,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramInputView;
+import org.academy.api.common.ability.program.ProgramNodeStep;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueType;

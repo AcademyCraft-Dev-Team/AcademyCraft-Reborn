@@ -38,21 +38,27 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
     }
 
     public List<Entry> entries() {
-        return orderedEntries;
+        var resolved = resolvedEntries();
+        if (resolved == entries) return orderedEntries;
+        return resolved.values().stream()
+                .sorted(Comparator.comparing(Entry::group)
+                        .thenComparingInt(ProgramEditorNodeCatalog::displayPriority)
+                        .thenComparing(entry -> entry.id().toString()))
+                .toList();
     }
 
     public @Nullable Entry entry(Identifier id) {
-        return entries.get(id);
+        return resolvedEntries().get(id);
     }
 
     @Override
     public @Nullable ProgramNodeType<?> find(Identifier id) {
-        var entry = entries.get(id);
+        var entry = resolvedEntries().get(id);
         return entry == null ? null : entry.type();
     }
 
     public @Nullable ProgramNodeSchema schema(Identifier id, JsonElement configuration) {
-        var entry = entries.get(id);
+        var entry = resolvedEntries().get(id);
         return entry == null ? null : decodeSchema(entry.type(), configuration);
     }
 
@@ -63,8 +69,30 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             Identifier id,
             JsonElement configuration
     ) {
-        var entry = entries.get(id);
+        var entry = resolvedEntries().get(id);
         return entry == null ? null : normalize(entry.type(), configuration);
+    }
+
+    private Map<Identifier, Entry> resolvedEntries() {
+        var extensions = ProgramNodeExtensionIndex.snapshot(category).registrations();
+        if (extensions.isEmpty()) return entries;
+        var resolved = new HashMap<>(entries);
+        for (var registration : extensions) {
+            if (resolved.containsKey(registration.id())) continue;
+            var metadata = registration.editorMetadata();
+            put(
+                    resolved,
+                    registration.id(),
+                    registration.extension(),
+                    metadata.defaultConfiguration(),
+                    Group.valueOf(metadata.group().name()),
+                    metadata.translationKey(),
+                    metadata.portTranslationPrefix(),
+                    metadata.visible(),
+                    metadata
+            );
+        }
+        return Map.copyOf(resolved);
     }
 
     public static Builder builder(Identifier category) {

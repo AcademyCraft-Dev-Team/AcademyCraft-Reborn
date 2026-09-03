@@ -58,9 +58,22 @@ public final class AbilityProgramDefinition {
                 throw new IllegalArgumentException("Editor catalog is missing common node " + id);
             }
         });
-        nodeLookup = ProgramNodeLookup.firstOf(this.categoryNodeTypes::get,
-                CommonProgramNodeCatalog.INSTANCE);
-        executors = ProgramExecutorLookup.firstOf(categoryExecutors, CommonProgramExecutors.INSTANCE);
+        nodeLookup = ProgramNodeLookup.firstOf(
+                this.categoryNodeTypes::get,
+                CommonProgramNodeCatalog.INSTANCE,
+                id -> {
+                    var registration = ProgramNodeExtensionIndex.snapshot(category).find(id);
+                    return registration == null ? null : registration.extension();
+                }
+        );
+        executors = ProgramExecutorLookup.firstOf(
+                categoryExecutors,
+                CommonProgramExecutors.INSTANCE,
+                id -> {
+                    var registration = ProgramNodeExtensionIndex.snapshot(category).find(id);
+                    return registration == null ? null : registration.executor();
+                }
+        );
     }
 
     public Identifier category() {
@@ -85,6 +98,13 @@ public final class AbilityProgramDefinition {
 
     public ProgramLimits limits() {
         return limits;
+    }
+
+    /**
+     * Deterministic compatibility fingerprint of all validated extension nodes for this category.
+     */
+    public String extensionFingerprint() {
+        return ProgramNodeExtensionIndex.snapshot(category).fingerprint();
     }
 
     public ProgramCompileResult compile(AbilityProgram program, Set<Identifier> capabilities) {

@@ -110,6 +110,15 @@ class AbilityProgramManagerTest {
                 new AbilityProgramManager.SyncPacket(category, book));
         var sync = AbilityProgramManager.SyncPacket.CODEC.decode(syncBuffer);
         assertEquals(category, sync.category());
+        assertEquals(
+                AbilityProgramDefinitions.require(Identifier.parse(category))
+                        .extensionFingerprint(),
+                sync.extensionFingerprint()
+        );
+        assertTrue(AbilityProgramManager.compatibleExtensionFingerprint(
+                Identifier.parse(category), sync.extensionFingerprint()));
+        assertFalse(AbilityProgramManager.compatibleExtensionFingerprint(
+                Identifier.parse(category), "0".repeat(64)));
         assertArrayEquals(book, sync.book());
 
         var resultBuffer = Unpooled.buffer();

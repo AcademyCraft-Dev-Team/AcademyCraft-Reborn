@@ -686,6 +686,7 @@
   "message.academy.precision_operation.unreachable_destination": "The destination is unreachable after three path attempts.",
   "message.academy.precision_operation.unsupported_movement_mode": "The target's current movement mode is not supported by its navigation adapter.",
   "message.academy.precision_operation.unsupported_target": "A target does not support the requested operation.",
+  "message.academy.program.editor.extension_mismatch": "Program-node extensions differ from the server; the editor was closed.",
   "message.academy.program.editor.invalid_category": "This program belongs to another ability category.",
   "message.academy.program.editor.invalid_program": "The custom skill contains invalid or unavailable nodes.",
   "message.academy.program.editor.migrated": "Local custom skills migrated to server storage.",

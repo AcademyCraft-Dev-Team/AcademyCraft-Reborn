@@ -1,10 +1,12 @@
-package org.academy.internal.common.ability.program;
+package org.academy.api.common.ability.program;
 
-import org.academy.api.common.ability.program.ProgramValue;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
+/**
+ * Immutable result of one program-node invocation.
+ */
 public record ProgramNodeStep(
         Directive directive,
         Map<String, ProgramValue<?>> outputs,
