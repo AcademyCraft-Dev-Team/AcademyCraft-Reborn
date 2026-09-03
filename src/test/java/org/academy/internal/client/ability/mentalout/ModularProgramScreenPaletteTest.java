@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModularProgramScreenPaletteTest {
@@ -55,5 +56,16 @@ class ModularProgramScreenPaletteTest {
             colors.add(ModularProgramScreen.portColor(type));
         }
         assertTrue(colors.size() >= 8);
+    }
+
+    @Test
+    void longConfigurationSignaturesRequestAFullValueAndExpandTheInspectorRow() {
+        assertTrue(ModularProgramScreen.configurationOptionNeedsTooltip(180.0f, 60));
+        assertFalse(ModularProgramScreen.configurationOptionNeedsTooltip(40.0f, 200));
+        assertFalse(ModularProgramScreen.configurationOptionNeedsTooltip(0.0f, 60));
+        assertTrue(ModularProgramScreen.expandedConfigurationRowHeight(2)
+                > ModularProgramScreen.expandedConfigurationRowHeight(0));
+        assertTrue(ModularProgramScreen.expandedConfigurationRowHeight(4)
+                > ModularProgramScreen.expandedConfigurationRowHeight(2));
     }
 }
