@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Util;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -206,10 +208,17 @@ public final class InputSystem {
     }
 
     public static boolean isBindingForSkill(String keyName, Skill skill) {
-        var skillName = skill.getKey().getPath();
+        return isBindingForSkill(keyName, skill.getKey());
+    }
+
+    static boolean isBindingForSkill(String keyName, Identifier skillKey) {
+        var skillName = skillKey.getPath();
+        var namespacedSkillName = Util.makeDescriptionId("key", skillKey);
         return keyName.equals(skillName)
                 || keyName.startsWith(skillName + "_")
-                || keyName.startsWith(skillName + ".");
+                || keyName.startsWith(skillName + ".")
+                || keyName.equals(namespacedSkillName)
+                || keyName.startsWith(namespacedSkillName + ".");
     }
 
     public static void markToggleKeyBinding(String keyName, Skill skill) {
@@ -218,7 +227,8 @@ public final class InputSystem {
 
     public static boolean hasToggleBindingForSkill(Skill skill) {
         return KEY_BINDINGS.keySet().stream().anyMatch(keyName ->
-                (isBindingForSkill(keyName, skill) && keyName.endsWith("_toggle"))
+                (isBindingForSkill(keyName, skill)
+                        && (keyName.endsWith("_toggle") || keyName.endsWith(".toggle")))
                         || EXPLICIT_TOGGLE_BINDINGS.get(keyName) == skill
         );
     }

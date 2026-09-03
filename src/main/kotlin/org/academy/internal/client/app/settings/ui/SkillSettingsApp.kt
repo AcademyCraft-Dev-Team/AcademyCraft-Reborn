@@ -414,11 +414,7 @@ object SkillSettingsApp : App {
                 lines += translate("app.academy.skill_settings.tooltip.passive")
             } else {
                 bindings.forEach { binding ->
-                    val actionKey = "key.academy.${binding.name()}"
-                    val localizedAction = L10n[actionKey]
-                    val actionName = if (localizedAction == actionKey) {
-                        binding.name().replace('_', ' ')
-                    } else localizedAction
+                    val actionName = bindingDisplayName(binding.name())
                     val phase = translate(
                         when (binding.combo().action) {
                             InputConstants.PRESS -> "app.academy.skill_settings.tooltip.phase.press"
@@ -477,9 +473,7 @@ object SkillSettingsApp : App {
             row.layoutParams = WidgetContainer.LayoutParams().widthMode(SizeMode.MATCH_PARENT)
 
             row.addChild(
-                "name", LabelWidget(
-                    L10n["key.academy.$bindingName"]
-                ).apply {
+                "name", LabelWidget(bindingDisplayName(bindingName)).apply {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
                         .height(10f)
@@ -951,7 +945,7 @@ object SkillSettingsApp : App {
                 val preview = buildPendingCombo()?.let(::displayBinding)
                     ?: translate("app.academy.skill_settings.capture.key")
                 translate("app.academy.skill_settings.capture.hint")
-                    .replace($$"%1$s", target.bindingName)
+                    .replace($$"%1$s", bindingDisplayName(target.bindingName))
                     .replace($$"%2$s", preview)
             }
             captureHint.visibility = if (target == null) Widget.Visibility.INVISIBLE else Widget.Visibility.VISIBLE
@@ -962,6 +956,17 @@ object SkillSettingsApp : App {
                     || key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL
                     || key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT
                     || key == GLFW.GLFW_KEY_LEFT_SUPER || key == GLFW.GLFW_KEY_RIGHT_SUPER
+        }
+
+        private fun bindingDisplayName(bindingName: String): String {
+            val translationKey = if (bindingName.startsWith("key.")) {
+                bindingName
+            } else {
+                "key.academy.$bindingName"
+            }
+            val localized = L10n[translationKey]
+            if (localized != translationKey) return localized
+            return bindingName.substringAfterLast('.').replace('_', ' ')
         }
     }
 }

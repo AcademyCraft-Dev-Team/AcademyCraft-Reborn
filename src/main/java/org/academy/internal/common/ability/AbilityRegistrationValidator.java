@@ -64,10 +64,15 @@ public final class AbilityRegistrationValidator {
             if (skill.getScope() == SkillScope.COMMON && attachedToOwner) {
                 throw new IllegalStateException("Common skill " + skillKey + " must not be attached to one category");
             }
-            if (skill.getScope() == SkillScope.CATEGORY
-                    && !SkillProficiencyProfiles.isDeclared(skill.getKeyString())) {
-                throw new IllegalStateException("Category skill " + skillKey
-                        + " has no explicit proficiency declaration");
+            if (skill.getScope() == SkillScope.CATEGORY) {
+                var isCoreSkill = AcademyCraft.MOD_ID.equals(skillKey.getNamespace());
+                var declared = isCoreSkill
+                        ? SkillProficiencyProfiles.isDeclared(skill.getKeyString())
+                        : skill.hasExplicitProficiencyProfile();
+                if (!declared) {
+                    throw new IllegalStateException("Category skill " + skillKey
+                            + " has no explicit proficiency declaration");
+                }
             }
             for (var dependency : skill.getDependencies()) {
                 if (!registeredSkills.contains(dependency)) {
@@ -86,13 +91,17 @@ public final class AbilityRegistrationValidator {
             }
         }
 
-        var categorySkillCount = registeredSkills.stream()
+        var coreCategorySkillCount = registeredSkills.stream()
                 .filter(skill -> skill.getScope() == SkillScope.CATEGORY)
+                .filter(skill -> {
+                    var key = Registries.SKILLS.getKey(skill);
+                    return key != null && AcademyCraft.MOD_ID.equals(key.getNamespace());
+                })
                 .count();
-        if (categorySkillCount != SkillProficiencyProfiles.declaredSkillPaths().size()) {
+        if (coreCategorySkillCount != SkillProficiencyProfiles.declaredSkillPaths().size()) {
             throw new IllegalStateException("Proficiency declaration count "
                     + SkillProficiencyProfiles.declaredSkillPaths().size()
-                    + " does not match registered category skill count " + categorySkillCount);
+                    + " does not match registered core category skill count " + coreCategorySkillCount);
         }
 
         validateAcyclic(

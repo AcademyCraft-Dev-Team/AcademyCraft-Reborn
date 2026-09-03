@@ -74,6 +74,7 @@ public abstract class Skill {
     private final boolean initiallyEnabled;
     private final float cpCost;
     private final SkillProficiencyProfile proficiencyProfile;
+    private final boolean explicitProficiencyProfile;
     private final Identifier icon;
     private final List<DevCondition> devConditions;
     @Nullable
@@ -99,6 +100,7 @@ public abstract class Skill {
         initiallyEnabled = builder.initiallyEnabled;
         cpCost = builder.cpCost;
         proficiencyProfile = builder.proficiencyProfile;
+        explicitProficiencyProfile = builder.explicitProficiencyProfile;
 
         dataFactory = builder.dataFactory;
         var dataClass = builder.dataClass;
@@ -584,6 +586,15 @@ public abstract class Skill {
         return resolvedProficiencyProfile();
     }
 
+    /**
+     * Returns whether this skill declared its proficiency behavior through its builder.
+     * External category skills must do so because the built-in profile catalog only
+     * covers skills owned by AcademyCraft itself.
+     */
+    public final boolean hasExplicitProficiencyProfile() {
+        return explicitProficiencyProfile;
+    }
+
     private SkillProficiencyProfile resolvedProficiencyProfile() {
         return proficiencyProfile == SkillProficiencyProfile.NONE
                 ? SkillProficiencyProfiles.forSkill(getKeyString())
@@ -690,6 +701,7 @@ public abstract class Skill {
         private boolean initiallyEnabled = true;
         private float cpCost = 0;
         private SkillProficiencyProfile proficiencyProfile = SkillProficiencyProfile.NONE;
+        private boolean explicitProficiencyProfile = false;
         private SkillScope scope = SkillScope.CATEGORY;
 
         private DataFactory dataFactory = CommonSkillData::new;
@@ -738,6 +750,7 @@ public abstract class Skill {
 
         public Builder proficiencyProfile(SkillProficiencyProfile proficiencyProfile) {
             this.proficiencyProfile = Objects.requireNonNull(proficiencyProfile);
+            explicitProficiencyProfile = true;
             return this;
         }
 
