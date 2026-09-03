@@ -166,6 +166,24 @@ public final class DarkmatterCreationData extends SkillData {
         return ids;
     }
 
+    /**
+     * Atomically detaches every current and legacy summon from its owner record.
+     *
+     * <p>The returned snapshot is safe to use for optional deferred entity cleanup. Repeating the
+     * operation is a no-op, which keeps logout, death, and entity-removal callbacks idempotent.</p>
+     */
+    public List<UUID> drainOwnedEntities() {
+        var owned = getOwnedBeetles().stream().distinct().toList();
+        var changed = summons != null && !summons.isEmpty()
+                || legacyOwnedBeetles != null && !legacyOwnedBeetles.isEmpty()
+                || !legacyMigrated;
+        summons = new ArrayList<>();
+        legacyOwnedBeetles = new ArrayList<>();
+        legacyMigrated = true;
+        if (changed) revision++;
+        return owned;
+    }
+
     public void clear() {
         if (summons == null) summons = new ArrayList<>();
         summons.clear();

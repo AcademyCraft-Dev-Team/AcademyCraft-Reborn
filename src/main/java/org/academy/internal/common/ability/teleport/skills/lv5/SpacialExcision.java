@@ -303,7 +303,11 @@ public final class SpacialExcision extends Skill {
 
         private void tickCombat(long now) {
             if (ended) return;
-            for (var segment : segments) {
+            // Damage and teleport callbacks may synchronously record another segment or end this
+            // context.  A per-tick snapshot gives those reentrant changes deterministic semantics:
+            // new segments start dealing damage next tick, and cleanup cannot invalidate iteration.
+            for (var segment : List.copyOf(segments)) {
+                if (ended) break;
                 querySegment(now, segment);
             }
         }

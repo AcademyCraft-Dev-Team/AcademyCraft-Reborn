@@ -75,6 +75,7 @@ public final class DarkmatterCreation extends Skill {
      */
     public static final float RESERVED_CP_PER_BEETLE = 40.0f;
     private static final double MAX_PROGRAM_RANGE = 32.0;
+    private static final long SLOW_CLEANUP_WARNING_NANOS = 50_000_000L;
 
     public static double followSpeed(int milestone) {
         return Math.clamp(milestone, 0, 3) >= 2 ? 1.20 : 1.0;
@@ -471,17 +472,26 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static void discardAll(ServerPlayer player) {
-            for (var record : data(player).map(DarkmatterCreationData::getSummons).orElseGet(List::of)) {
-                record.uuid().ifPresent(uuid -> discardOne(player, uuid));
-            }
-            var legacy = new ArrayList<UUID>();
-            updateData(player, mutable -> legacy.addAll(mutable.consumeLegacyOwned()));
-            var server = player.level().getServer();
-            if (server != null) for (var uuid : legacy)
-                for (var level : server.getAllLevels()) {
-                    if (level.getEntity(uuid) instanceof DarkmatterBeetle creature) creature.discard();
-                }
+            if (player == null) return;
+            var startedAt = System.nanoTime();
+            var drainedCount = new int[1];
+            updateData(player, mutable ->
+                    drainedCount[0] = mutable.drainOwnedEntities().size());
+            var dataClearedAt = System.nanoTime();
             replaceCreationOccupation(player, 0);
+            var finishedAt = System.nanoTime();
+
+            // Loaded constructs self-discard on their next tick because their authoritative record
+            // is gone (or their owner is unavailable). Unloaded constructs do the same when loaded.
+            // Keeping world traversal and entity callbacks out of logout makes this path bounded.
+            if (finishedAt - startedAt >= SLOW_CLEANUP_WARNING_NANOS) {
+                AcademyCraft.LOGGER.warn(
+                        "Slow darkmatter creation cleanup for {}: {} records, data={}ms, occupation={}ms",
+                        player.getUUID(), drainedCount[0],
+                        (dataClearedAt - startedAt) / 1_000_000.0,
+                        (finishedAt - dataClearedAt) / 1_000_000.0
+                );
+            }
         }
 
         private static void migrateLegacy(ServerPlayer player) {

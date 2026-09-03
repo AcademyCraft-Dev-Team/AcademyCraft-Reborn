@@ -45,4 +45,28 @@ class DarkmatterCreationDataTest {
         data.bumpRevision();
         assertEquals(before + 1, data.getRevision());
     }
+
+    @Test
+    void drainingOwnedEntitiesIsAtomicDeduplicatedAndIdempotent() {
+        var data = new DarkmatterCreationData();
+        var current = UUID.randomUUID();
+        var legacy = UUID.randomUUID();
+        data.addSummon(current, "current", 25, 0,
+                "minecraft:overworld", 1, 2, 3);
+        data.add(current);
+        data.add(legacy);
+        var before = data.getRevision();
+
+        var drained = data.drainOwnedEntities();
+
+        assertEquals(2, drained.size());
+        assertTrue(drained.contains(current));
+        assertTrue(drained.contains(legacy));
+        assertTrue(data.getOwnedBeetles().isEmpty());
+        assertEquals(before + 1, data.getRevision());
+
+        var afterFirstDrain = data.getRevision();
+        assertTrue(data.drainOwnedEntities().isEmpty());
+        assertEquals(afterFirstDrain, data.getRevision());
+    }
 }
