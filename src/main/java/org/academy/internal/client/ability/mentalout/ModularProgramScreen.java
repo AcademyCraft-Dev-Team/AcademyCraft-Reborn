@@ -63,6 +63,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private static final int PORT_ROW_H = 8;
     private static final int NODE_CONFIGURATION_ROW_H = 7;
     private static final int CONFIGURATION_ROW_H = 27;
+    private static final int CONFIGURATION_DETAIL_GAP = 3;
+    private static final int CONFIGURATION_DETAIL_LINE_H = 9;
     private static final int MIN_NODE_H = 26;
     private static final double MIN_ZOOM = 0.5;
     private static final double MAX_ZOOM = 1.6;
@@ -678,7 +680,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 x + 5, canvasY + descriptionOffset, DIM, width - 10);
         var configY = canvasY + inspectorConfigurationOffset(selected.entry, descriptionHeight);
         renderConfigurationEditor(graphics, selected, x + 5, configY, width - 10, mouseX, mouseY);
-        var portsY = configY + configurationEditorHeight(selected);
+        var portsY = configY + configurationEditorHeight(selected, width - 10);
         headingText(graphics, Component.translatable(
                         "screen.academy.precision_operation.ports").getString(),
                 x + 5, portsY - 1, DIM, width - 10);
@@ -706,9 +708,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     ) {
         var fields = configurationFields(node);
         if (fields.isEmpty()) return;
+        var rowY = y;
         for (var index = 0; index < fields.size(); index++) {
             var field = fields.get(index);
-            var rowY = y + index * CONFIGURATION_ROW_H;
             smallText(graphics, configurationFieldLabel(field).getString(),
                     x, rowY, TEXT, width);
             var currentValue = node.source.configuration().getAsJsonObject().get(field);
@@ -750,13 +752,31 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 renderControl(graphics, x + TOOL_SIZE + 2, valueY,
                         width - TOOL_SIZE * 2 - 4, TOOL_SIZE, true, true, false);
                 var selected = ProgramConfigurationOptions.selected(options, currentValue);
-                smallText(graphics, selected.label().getString(), x + TOOL_SIZE + 5, valueY + 4,
+                var selectedLabel = selected.label().getString();
+                smallText(graphics, selectedLabel, x + TOOL_SIZE + 5, valueY + 4,
                         TEXT, width - TOOL_SIZE * 2 - 10);
+                if (configurationOptionNeedsTooltip(
+                        LabelWidget.Companion.getTextWidth(
+                                selectedLabel, ProgramUiGraphics.BODY_FONT_SIZE),
+                        width - TOOL_SIZE * 2 - 10)) {
+                    var detailY = valueY + TOOL_SIZE + CONFIGURATION_DETAIL_GAP;
+                    var detailLines = ProgramUiGraphics.wrap(
+                            selectedLabel, width - 5, ProgramUiGraphics.BODY_FONT_SIZE);
+                    graphics.fill(x, detailY, x + 2,
+                            detailY + detailLines.size() * CONFIGURATION_DETAIL_LINE_H,
+                            accentColor);
+                    for (var lineIndex = 0; lineIndex < detailLines.size(); lineIndex++) {
+                        smallText(graphics, detailLines.get(lineIndex), x + 5,
+                                detailY + lineIndex * CONFIGURATION_DETAIL_LINE_H,
+                                DIM, width - 5);
+                    }
+                }
             } else {
                 var input = configurationInputs.get(field);
                 renderInput(graphics, x, rowY + 11, width, 15,
                         input != null && input.isFocused());
             }
+            rowY += configurationRowHeight(node, field, width);
         }
     }
 
@@ -866,6 +886,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 return tooltipLines(entries.get(paletteScroll + row), null);
             }
         }
+        var configurationTooltip = hoveredConfigurationTooltip(mouseX, mouseY);
+        if (!configurationTooltip.isEmpty()) return configurationTooltip;
         if (!inside(mouseX, mouseY, canvasX, canvasY, canvasW, canvasH)) return List.of();
         var endpoint = endpointAt(mouseX, mouseY);
         if (endpoint != null) {
@@ -888,9 +910,56 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                     : serverDiagnostic != PrecisionGraph.Diagnostic.OK
                     ? serverDiagnosticText()
                     : localDiagnostic(node, localError).getString();
-            return tooltipLines(node.entry, error);
+            return tooltipLines(node, error);
         }
         return List.of();
+    }
+
+    private List<TooltipLine> hoveredConfigurationTooltip(int mouseX, int mouseY) {
+        if (!inspectorVisible()) return List.of();
+        var selected = node(selectedNode);
+        if (selected == null) return List.of();
+        var fields = configurationFields(selected);
+        if (fields.isEmpty()) return List.of();
+        var width = inspectorWidth() - 10;
+        var descriptionHeight = ProgramUiGraphics.wrappedHeight(
+                nodeDescription(selected.entry).getString(), width,
+                ProgramUiGraphics.BODY_FONT_SIZE, 9.0f);
+        var y = canvasY + inspectorConfigurationOffset(selected.entry, descriptionHeight);
+        var x = inspectorX() + 5;
+        var rowY = y;
+        for (var field : fields) {
+            var currentValue = selected.source.configuration().getAsJsonObject().get(field);
+            var options = ProgramConfigurationOptions.options(
+                    selected.entry, field, currentValue);
+            if (options.isEmpty()
+                    || ProgramConfigurationOptions.isToggle(field, currentValue)
+                    || ProgramConfigurationOptions.isPowerSlider(field, currentValue)) {
+                rowY += configurationRowHeight(selected, field, width);
+                continue;
+            }
+            var controlX = x + TOOL_SIZE + 2;
+            var controlWidth = width - TOOL_SIZE * 2 - 4;
+            var controlY = rowY + 11;
+            if (!inside(mouseX, mouseY, controlX, controlY, controlWidth, TOOL_SIZE)) {
+                rowY += configurationRowHeight(selected, field, width);
+                continue;
+            }
+            var option = ProgramConfigurationOptions.selected(options, currentValue);
+            var label = option.label().getString();
+            var labelWidth = LabelWidget.Companion.getTextWidth(
+                    label, ProgramUiGraphics.BODY_FONT_SIZE);
+            if (!configurationOptionNeedsTooltip(labelWidth, controlWidth - 6)) return List.of();
+            return List.of(
+                    new TooltipLine(configurationFieldLabel(field).getString(), DIM),
+                    new TooltipLine(label, TEXT)
+            );
+        }
+        return List.of();
+    }
+
+    static boolean configurationOptionNeedsTooltip(float labelWidth, int availableWidth) {
+        return labelWidth > 0.0f && availableWidth > 0 && labelWidth > availableWidth;
     }
 
     private List<TooltipLine> tooltipLines(
@@ -903,6 +972,27 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             lines.add(new TooltipLine(categoryScopeLabel(entry).getString(), accentColor));
         }
         lines.add(new TooltipLine(nodeDescription(entry).getString(), DIM));
+        if (error != null) lines.add(new TooltipLine(error, ERROR));
+        return List.copyOf(lines);
+    }
+
+    private List<TooltipLine> tooltipLines(NodeView node, String error) {
+        var lines = new ArrayList<TooltipLine>();
+        lines.addAll(tooltipLines(node.entry, null));
+        if (node.source.configuration().isJsonObject()) {
+            for (var field : configurationFields(node)) {
+                var currentValue = node.source.configuration().getAsJsonObject().get(field);
+                var options = ProgramConfigurationOptions.options(
+                        node.entry, field, currentValue);
+                if (options.isEmpty()) continue;
+                var option = ProgramConfigurationOptions.selected(options, currentValue);
+                lines.add(new TooltipLine(
+                        configurationFieldLabel(field).getString() + ": "
+                                + option.label().getString(),
+                        DIM
+                ));
+            }
+        }
         if (error != null) lines.add(new TooltipLine(error, ERROR));
         return List.copyOf(lines);
     }
@@ -1227,11 +1317,11 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 ProgramUiGraphics.BODY_FONT_SIZE, 9.0f);
         var y = canvasY + inspectorConfigurationOffset(selected.entry, descriptionHeight);
         var x = inspectorX() + 5;
-        for (var index = 0; index < fields.size(); index++) {
-            var field = fields.get(index);
+        var rowY = y;
+        for (var field : fields) {
             var currentValue = selected.source.configuration().getAsJsonObject().get(field);
             var options = ProgramConfigurationOptions.options(selected.entry, field, currentValue);
-            var valueY = y + index * CONFIGURATION_ROW_H + 11;
+            var valueY = rowY + 11;
             if (ProgramConfigurationOptions.isToggle(field, currentValue)
                     && inside(mouseX, mouseY, x, valueY, width, TOOL_SIZE)) {
                 return toggleConfiguration(selected, field, currentValue);
@@ -1253,6 +1343,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                     && inside(mouseX, mouseY, x + width - TOOL_SIZE, valueY, TOOL_SIZE, TOOL_SIZE)) {
                 return stepConfiguration(selected, field, currentValue, options, 1);
             }
+            rowY += configurationRowHeight(selected, field, width);
         }
         return false;
     }
@@ -1908,9 +1999,38 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         return fieldCount == 0 ? 0 : 2 + fieldCount * NODE_CONFIGURATION_ROW_H;
     }
 
-    private static int configurationEditorHeight(NodeView node) {
-        var fieldCount = configurationFields(node).size();
-        return fieldCount == 0 ? 0 : fieldCount * CONFIGURATION_ROW_H + 3;
+    private static int configurationEditorHeight(NodeView node, int width) {
+        var fields = configurationFields(node);
+        if (fields.isEmpty()) return 0;
+        return fields.stream()
+                .mapToInt(field -> configurationRowHeight(node, field, width))
+                .sum() + 3;
+    }
+
+    private static int configurationRowHeight(NodeView node, String field, int width) {
+        var currentValue = node.source.configuration().getAsJsonObject().get(field);
+        var options = ProgramConfigurationOptions.options(node.entry, field, currentValue);
+        if (options.isEmpty()
+                || ProgramConfigurationOptions.isToggle(field, currentValue)
+                || ProgramConfigurationOptions.isPowerSlider(field, currentValue)) {
+            return CONFIGURATION_ROW_H;
+        }
+        var label = ProgramConfigurationOptions.selected(options, currentValue).label().getString();
+        var availableWidth = width - TOOL_SIZE * 2 - 10;
+        var labelWidth = LabelWidget.Companion.getTextWidth(
+                label, ProgramUiGraphics.BODY_FONT_SIZE);
+        if (!configurationOptionNeedsTooltip(labelWidth, availableWidth)) {
+            return CONFIGURATION_ROW_H;
+        }
+        var detailLines = ProgramUiGraphics.wrap(
+                label, width - 5, ProgramUiGraphics.BODY_FONT_SIZE).size();
+        return expandedConfigurationRowHeight(detailLines);
+    }
+
+    static int expandedConfigurationRowHeight(int detailLineCount) {
+        if (detailLineCount <= 0) return CONFIGURATION_ROW_H;
+        return CONFIGURATION_ROW_H + CONFIGURATION_DETAIL_GAP
+                + detailLineCount * CONFIGURATION_DETAIL_LINE_H;
     }
 
     private static int portIndex(List<ProgramPortDefinition> ports, String name) {
@@ -2006,10 +2126,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 nodeDescription(selected.entry).getString(), width,
                 ProgramUiGraphics.BODY_FONT_SIZE, 9.0f);
         var configurationY = canvasY + inspectorConfigurationOffset(selected.entry, descriptionHeight);
-        for (var index = 0; index < fields.size(); index++) {
-            var field = fields.get(index);
+        var rowY = configurationY;
+        for (var field : fields) {
             var currentValue = selected.source.configuration().getAsJsonObject().get(field);
             var options = ProgramConfigurationOptions.options(selected.entry, field, currentValue);
+            var fieldY = rowY;
+            rowY += configurationRowHeight(selected, field, width);
             if (ProgramConfigurationOptions.isPowerSlider(field, currentValue)
                     || !options.isEmpty()) {
                 var removed = configurationInputs.remove(field);
@@ -2023,7 +2145,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             var input = configurationInputs.computeIfAbsent(field, ignored -> createConfigurationInput(field));
             input.setVisibility(Widget.Visibility.VISIBLE);
             setTextBoxBounds(input, inspectorX() + 5,
-                    configurationY + index * CONFIGURATION_ROW_H + 11, width, 15);
+                    fieldY + 11, width, 15);
             var expected = currentValue.getAsString();
             if (!input.isFocused() && !input.getText().equals(expected)) {
                 updatingConfigurationInput = true;
