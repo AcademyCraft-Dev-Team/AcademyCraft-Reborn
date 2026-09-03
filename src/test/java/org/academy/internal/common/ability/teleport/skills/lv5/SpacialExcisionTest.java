@@ -71,6 +71,18 @@ class SpacialExcisionTest {
     }
 
     @Test
+    void combatTickUsesAStableSnapshotAndStopsAfterReentrantCleanup() throws IOException {
+        var source = Files.readString(Path.of(
+                "src/main/java/org/academy/internal/common/ability/teleport/skills/lv5/SpacialExcision.java"));
+        var tickCombat = section(source, "private void tickCombat(",
+                "\n        private void querySegment(");
+
+        assertTrue(tickCombat.contains("List.copyOf(segments)"));
+        assertTrue(tickCombat.contains("if (ended) break;"));
+        assertFalse(tickCombat.contains("for (var segment : segments)"));
+    }
+
+    @Test
     void serverOnlyFieldMathIsInternalToTheSkill() throws IOException {
         var skill = Files.readString(Path.of(
                 "src/main/java/org/academy/internal/common/ability/teleport/skills/lv5/SpacialExcision.java"));

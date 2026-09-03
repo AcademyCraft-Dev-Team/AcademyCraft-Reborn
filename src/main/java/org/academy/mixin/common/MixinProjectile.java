@@ -9,6 +9,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorAttackAttributionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileInterceptionService;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileCollisionPolicy;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileTargeting;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
@@ -65,12 +66,13 @@ public abstract class MixinProjectile {
     }
 
     @Inject(method = "canHitEntity", at = @At("HEAD"), cancellable = true)
-    private void academy$blockRedirectedVectorDefenderHit(
+    private void academy$blockUnsafeProjectileHit(
             Entity candidate,
             CallbackInfoReturnable<Boolean> cir
     ) {
         var projectile = (Projectile) (Object) this;
-        if (VectorProjectileTargeting.blocksVectorDefenderHit(projectile, candidate)) {
+        if (VectorProjectileTargeting.blocksVectorDefenderHit(projectile, candidate)
+                || VectorProjectileCollisionPolicy.blocksUnsafeHit(projectile, candidate)) {
             cir.setReturnValue(false);
         }
     }
