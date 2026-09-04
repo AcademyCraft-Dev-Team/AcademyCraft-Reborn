@@ -116,7 +116,7 @@ public final class DarkmatterPhaseTuning extends Skill {
                 new AbilitySystemClient.SkillInfo(
                         Skills.DARKMATTER_PHASE_TUNING.get(),
                         List.of(DarkmatterShaping.Client.SKILL_INFO),
-                        R.textures.darkmatter_shaping_icon,
+                        R.textures.darkmatter_phase_tuning_icon,
                         98,
                         40
                 )

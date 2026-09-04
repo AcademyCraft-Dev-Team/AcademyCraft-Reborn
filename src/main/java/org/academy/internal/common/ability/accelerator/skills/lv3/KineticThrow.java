@@ -186,7 +186,7 @@ public final class KineticThrow extends Skill {
                 new AbilitySystemClient.SkillInfo(
                         Skills.KINETIC_THROW.get(),
                         List.of(KineticEnergyApplied.Client.SKILL_INFO),
-                        R.textures.kinetic_energy_applied_icon,
+                        R.textures.kinetic_throw_icon,
                         150,
                         100
                 )
@@ -367,6 +367,7 @@ public final class KineticThrow extends Skill {
                         level.getGameTime() + HOVER_TICKS,
                         handle
                 ));
+                playKineticCue(structure);
             });
         }
 
@@ -396,6 +397,19 @@ public final class KineticThrow extends Skill {
                         createImpactExplosion(player, impact.structure(), held.tier);
                         impact.structure().beginGravitySettlement();
                     }
+            );
+            playKineticCue(held.structure);
+        }
+
+        private static void playKineticCue(BlockStructure structure) {
+            var entity = structure.asEntity();
+            entity.level().playSound(
+                    null,
+                    entity,
+                    org.academy.internal.common.sounds.SoundEvents.VECTOR_REFLECTION.get(),
+                    SoundSource.PLAYERS,
+                    1.0f,
+                    1.0f
             );
         }
 
