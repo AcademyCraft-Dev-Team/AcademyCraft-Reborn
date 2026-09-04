@@ -5,7 +5,8 @@ public record BlockStructureKineticOptions(
         int durationTicks,
         double maximumSpeed,
         int impactCooldownTicks,
-        boolean gravityAfter
+        boolean gravityAfter,
+        boolean preventSettlementWhileActive
 ) {
     public static final int MAXIMUM_DURATION_TICKS = 72_000;
 
@@ -21,5 +22,14 @@ public record BlockStructureKineticOptions(
             throw new IllegalArgumentException(
                     "impactCooldownTicks must be between 0 and 1200");
         }
+    }
+
+    public BlockStructureKineticOptions(
+            int durationTicks,
+            double maximumSpeed,
+            int impactCooldownTicks,
+            boolean gravityAfter
+    ) {
+        this(durationTicks, maximumSpeed, impactCooldownTicks, gravityAfter, false);
     }
 }

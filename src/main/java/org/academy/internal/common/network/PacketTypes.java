@@ -22,6 +22,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrikeVisualPacket;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
@@ -494,6 +495,16 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.AttackWavePacket>>
             KINETIC_ENERGY_APPLIED_ATTACK_WAVE = PACKET_TYPES.register("kinetic_energy_applied_attack_wave",
             () -> new PacketType<>(KineticEnergyApplied.AttackWavePacket.class, KineticEnergyApplied.AttackWavePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.StartPacket>>
+            KINETIC_THROW_START = PACKET_TYPES.register("kinetic_throw_start",
+            () -> new PacketType<>(KineticThrow.StartPacket.class, KineticThrow.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.ReleasePacket>>
+            KINETIC_THROW_RELEASE = PACKET_TYPES.register("kinetic_throw_release",
+            () -> new PacketType<>(KineticThrow.ReleasePacket.class, KineticThrow.ReleasePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.ThrowPacket>>
+            KINETIC_THROW_THROW = PACKET_TYPES.register("kinetic_throw_throw",
+            () -> new PacketType<>(KineticThrow.ThrowPacket.class, KineticThrow.ThrowPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorReflection.TogglePacket>>
             VECTOR_REFLECTION_TOGGLE = PACKET_TYPES.register("vector_reflection_toggle",

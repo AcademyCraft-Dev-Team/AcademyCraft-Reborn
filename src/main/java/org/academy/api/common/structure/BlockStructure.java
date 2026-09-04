@@ -35,6 +35,13 @@ public interface BlockStructure {
     /** Moves the entity pose to the nearest placement-compatible grid pose. */
     void alignToGrid();
 
+    /**
+     * Ends active propulsion and dematerializes at the nearest grid pose. Natural cells marked
+     * for gravity become vanilla falling blocks from the lowest layer upward; fixed building
+     * cells restore directly. Cells that cannot enter the world become item drops.
+     */
+    void beginGravitySettlement();
+
     default BlockStructureRestoreResult restoreToGrid() {
         return restoreToGrid(BlockStructurePlacementPolicy.AIR_ONLY);
     }

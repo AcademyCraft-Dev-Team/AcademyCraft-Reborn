@@ -3,10 +3,12 @@ package org.academy.mixin.common;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.level.EntityGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.api.common.structure.BlockStructureCollision;
+import org.academy.internal.common.structure.BlockStructureCollisionRuntime;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -32,21 +34,38 @@ public interface MixinEntityGetter {
         Predicate<Entity> predicate = source == null
                 ? EntitySelector.CAN_BE_COLLIDED_WITH
                 : EntitySelector.NO_SPECTATORS.and(source::canCollideWith);
+        var queryBounds = bounds.inflate(1.0e-7);
         var entities = ((EntityGetter) this).getEntities(
                 source,
-                bounds.inflate(1.0e-7),
+                queryBounds,
                 predicate
         );
-        if (entities.isEmpty()) {
-            cir.setReturnValue(List.of());
-            return;
-        }
-        var shapes = new ArrayList<VoxelShape>(entities.size());
+        var level = (Object) this instanceof Level currentLevel ? currentLevel : null;
+        var indexedStructures = level == null
+                ? List.<Entity>of()
+                : BlockStructureCollisionRuntime.query(level, queryBounds);
+        var shapes = new ArrayList<VoxelShape>(entities.size() + indexedStructures.size());
+        var emittedStructures = indexedStructures.isEmpty()
+                ? null
+                : java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<Entity, Boolean>());
         for (var entity : entities) {
             if (entity instanceof BlockStructureCollision structureCollision) {
-                structureCollision.collectCollisionShapes(bounds, shapes::add);
+                if (emittedStructures != null) emittedStructures.add(entity);
+                if (!BlockStructureCollisionRuntime.isIgnored(structureCollision)) {
+                    structureCollision.collectCollisionShapes(bounds, shapes::add);
+                }
             } else {
                 shapes.add(Shapes.create(entity.getBoundingBox()));
+            }
+        }
+        for (var entity : indexedStructures) {
+            if (!emittedStructures.add(entity)
+                    || entity == source
+                    || !predicate.test(entity)) continue;
+            var structureCollision = (BlockStructureCollision) entity;
+            if (!BlockStructureCollisionRuntime.isIgnored(structureCollision)) {
+                structureCollision.collectCollisionShapes(bounds, shapes::add);
             }
         }
         cir.setReturnValue(List.copyOf(shapes));

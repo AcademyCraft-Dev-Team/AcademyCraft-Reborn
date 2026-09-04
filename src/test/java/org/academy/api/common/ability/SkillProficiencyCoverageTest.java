@@ -39,7 +39,7 @@ class SkillProficiencyCoverageTest {
 
     @Test
     void allNonCommonSkillsDeclareAProficiencyPlan() {
-        assertEquals(88, SkillProficiencyProfiles.declaredSkillPaths().size());
+        assertEquals(89, SkillProficiencyProfiles.declaredSkillPaths().size());
         for (var path : SkillProficiencyProfiles.declaredSkillPaths()) {
             var id = "academy:" + path;
             assertTrue(SkillProficiencyProfiles.isDeclared(id), path);

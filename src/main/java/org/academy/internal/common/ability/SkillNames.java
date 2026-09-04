@@ -45,6 +45,7 @@ public final class SkillNames {
     public static final String CROSSING_THE_ABYSS = "crossing_the_abyss";
     public static final String PLASMA_GENERATION = "plasma_generation";
     public static final String KINETIC_ENERGY_APPLIED = "kinetic_energy_applied";
+    public static final String KINETIC_THROW = "kinetic_throw";
     public static final String DIR_STRIKE = "dir_strike";
     public static final String MAGNET_MANIPULATION = "magnet_manipulation";
     public static final String MINE_DETECT = "mine_detect";
