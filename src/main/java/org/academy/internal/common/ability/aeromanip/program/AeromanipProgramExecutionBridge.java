@@ -180,6 +180,27 @@ public final class AeromanipProgramExecutionBridge {
                     stage(context, runtime(context).fireJets(configuration.duration()));
                     return ProgramNodeStep.next("flow");
                 });
+        put(result, AeromanipProgramNodeIds.OWNED_JET_NOZZLE_COUNT,
+                (context, _, inputs) -> data(
+                        "count",
+                        ProgramValueTypes.INTEGER,
+                        runtime(context).ownedJetNozzleCount(
+                                worldPosition(inputs, "center"),
+                                floatValue(inputs, "radius"),
+                                optionalDirection(inputs, "direction")
+                        )
+                ));
+        put(result, AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE,
+                (ProgramVmContext context,
+                 AeromanipProgramNodeCatalog.BlockStructureLaunchConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    stage(context, runtime(context).launchBlockStructure(
+                            blockPosition(inputs, "block"),
+                            direction(inputs, "direction"),
+                            configuration
+                    ));
+                    return ProgramNodeStep.next("flow");
+                });
         return Map.copyOf(result);
     }
 
@@ -235,6 +256,14 @@ public final class AeromanipProgramExecutionBridge {
         return inputs.first(port)
                 .map(value -> (ProgramDirection) value.value())
                 .orElse(null);
+    }
+
+    private static double floatValue(ProgramInputView inputs, String port) {
+        var value = inputs.requireCompatible(port, ProgramValueTypes.FLOAT).value();
+        if (!(value instanceof Number number) || !Double.isFinite(number.doubleValue())) {
+            throw new IllegalArgumentException("Program float input is invalid");
+        }
+        return number.doubleValue();
     }
 
     private static ProgramWorldPosition optionalWorldPosition(

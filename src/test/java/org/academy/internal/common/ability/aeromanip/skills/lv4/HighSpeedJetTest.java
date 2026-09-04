@@ -1,8 +1,12 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv4;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.core.Direction;
+import org.academy.api.client.input.InputSystem;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,5 +67,30 @@ class HighSpeedJetTest {
         assertFalse(HighSpeedJet.isOutsideNozzleRetentionRange(owner, Vec3.ZERO));
         assertTrue(HighSpeedJet.isOutsideNozzleRetentionRange(
                 owner.add(0.0, 0.001, 0.0), Vec3.ZERO));
+    }
+
+    @Test
+    void activationPacketRetainsExplicitStructureLaunchMode() {
+        ByteBuf buffer = Unpooled.buffer();
+        try {
+            HighSpeedJet.ActivatePacket.CODEC.encode(
+                    buffer, new HighSpeedJet.ActivatePacket(true));
+
+            var decoded = HighSpeedJet.ActivatePacket.CODEC.decode(buffer);
+
+            assertTrue(decoded.launchStructure());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    void structureLaunchUsesAnExplicitShiftReleaseBinding() {
+        var binding = HighSpeedJet.defaultStructureLaunchBinding();
+
+        assertEquals(InputSystem.InputType.KEYBOARD, binding.type());
+        assertEquals(InputConstants.RELEASE, binding.action());
+        assertEquals(InputConstants.MOD_SHIFT, binding.modifiers());
+        assertEquals(java.util.Set.of(InputConstants.KEY_H), binding.keys());
     }
 }

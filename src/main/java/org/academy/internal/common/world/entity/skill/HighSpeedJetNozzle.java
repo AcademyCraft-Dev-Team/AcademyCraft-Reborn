@@ -12,17 +12,21 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.structure.BlockStructure;
+import org.academy.api.common.structure.BlockStructureGridAlignment;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.sounds.SoundEvents;
 
@@ -47,6 +51,8 @@ public final class HighSpeedJetNozzle extends Entity {
     private UUID ownerUuid;
     private BlockPos supportPos = BlockPos.ZERO;
     private UUID supportEntityUuid;
+    private BlockPos structureSupportOffset;
+    private Direction structureSupportFace;
     private int missingSupportTicks;
     private boolean temporary;
 
@@ -69,6 +75,8 @@ public final class HighSpeedJetNozzle extends Entity {
         this.ownerUuid = ownerUuid;
         this.supportPos = supportPos.immutable();
         supportEntityUuid = null;
+        structureSupportOffset = null;
+        structureSupportFace = null;
         entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
         entityData.set(SUPPORT_POS, this.supportPos);
         entityData.set(SUPPORT_ENTITY_ID, -1);
@@ -83,10 +91,34 @@ public final class HighSpeedJetNozzle extends Entity {
         if (support == null) throw new IllegalArgumentException("support entity cannot be null");
         this.ownerUuid = ownerUuid;
         supportEntityUuid = support.getUUID();
+        structureSupportOffset = null;
+        structureSupportFace = null;
         entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
         entityData.set(SUPPORT_POS, BlockPos.ZERO);
         entityData.set(SUPPORT_ENTITY_ID, support.getId());
         setDirection(direction);
+        snapToSurface();
+    }
+
+    /** Attaches the nozzle to the captured block that originally supported it. */
+    public void attachToStructure(
+            UUID ownerUuid,
+            BlockStructure support,
+            BlockPos supportOffset,
+            Direction face
+    ) {
+        if (support == null || support.asEntity().isRemoved()
+                || supportOffset == null || face == null) {
+            throw new IllegalArgumentException("Invalid block structure nozzle support");
+        }
+        this.ownerUuid = ownerUuid;
+        supportEntityUuid = support.asEntity().getUUID();
+        structureSupportOffset = supportOffset.immutable();
+        structureSupportFace = face;
+        entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
+        entityData.set(SUPPORT_ENTITY_ID, support.asEntity().getId());
+        entityData.set(FACE, face.get3DDataValue());
+        setDirection(Vec3.atLowerCornerOf(face.getUnitVec3i()));
         snapToSurface();
     }
 
@@ -196,15 +228,12 @@ public final class HighSpeedJetNozzle extends Entity {
         if (isEntityMounted()) {
             support = supportEntity();
             if (support == null || !support.isAlive()) return;
-            if (support != owner) {
-                var mountedTarget = support;
-                EntityMotionGuard.runWithMotionSource(owner, () ->
-                        AeromanipTargeting.accelerateAlong(
-                                mountedTarget,
-                                HighSpeedJet.entityThrustDirection(direction),
-                                acceleration,
-                                MAX_JET_SPEED,
-                                MAX_JET_SPEED));
+            if (support != owner && structureSupportOffset == null) {
+                accelerateTarget(
+                        owner,
+                        support,
+                        HighSpeedJet.entityThrustDirection(direction),
+                        acceleration);
                 support.resetFallDistance();
             }
         }
@@ -221,11 +250,36 @@ public final class HighSpeedJetNozzle extends Entity {
                         && !(target instanceof HighSpeedJetNozzle))) {
             if (!insideCapsule(target.getBoundingBox().getCenter(), origin, resolvedEnd,
                     JET_RADIUS * rangeScale + target.getBbWidth() * 0.5)) continue;
-            EntityMotionGuard.runWithMotionSource(owner, () ->
-                    AeromanipTargeting.accelerateAlong(
-                            target, direction, acceleration, MAX_JET_SPEED, MAX_JET_SPEED));
+            accelerateTarget(owner, target, direction, acceleration);
             target.resetFallDistance();
         }
+    }
+
+    private static void accelerateTarget(
+            ServerPlayer owner,
+            Entity target,
+            Vec3 direction,
+            double acceleration
+    ) {
+        EntityMotionGuard.runWithMotionSource(owner, () -> {
+            AeromanipTargeting.accelerateAlong(
+                    target, direction, acceleration, MAX_JET_SPEED, MAX_JET_SPEED);
+            if (target instanceof Projectile projectile) {
+                VectorProjectileStateAdapter.resumeFlight(
+                        projectile, projectile.getDeltaMovement());
+            }
+        });
+    }
+
+    /** Returns whether this nozzle's current jet corridor reaches the supplied bounds. */
+    public boolean jetIntersects(AABB bounds, ServerPlayer owner) {
+        if (bounds == null || owner == null || owner.level() != level()) return false;
+        var direction = direction();
+        var rangeScale = AeromanipConfig.rangeMultiplier(owner, SkillNames.HIGH_SPEED_JET);
+        var origin = position().add(direction.scale(0.18));
+        var end = origin.add(direction.scale(JET_LENGTH * rangeScale));
+        var expanded = bounds.inflate(JET_RADIUS * rangeScale);
+        return expanded.contains(origin) || expanded.clip(origin, end).isPresent();
     }
 
     private void spawnVfx(ServerLevel level) {
@@ -237,7 +291,18 @@ public final class HighSpeedJetNozzle extends Entity {
     private boolean hasSupport() {
         if (supportEntityUuid != null || entityData.get(SUPPORT_ENTITY_ID) >= 0) {
             var support = supportEntity();
-            return support != null && support.isAlive() && !support.isRemoved();
+            if (support != null && support.isAlive() && !support.isRemoved()) return true;
+            if (structureSupportOffset != null
+                    && !level().getBlockState(supportPos).isAir()
+                    && level().getBlockState(supportPos)
+                    .isFaceSturdy(level(), supportPos, face())) {
+                supportEntityUuid = null;
+                structureSupportOffset = null;
+                structureSupportFace = null;
+                entityData.set(SUPPORT_ENTITY_ID, -1);
+                return true;
+            }
+            return false;
         }
         return !level().getBlockState(supportPos).isAir()
                 && level().getBlockState(supportPos)
@@ -245,12 +310,63 @@ public final class HighSpeedJetNozzle extends Entity {
     }
 
     private void snapToSurface() {
-        var direction = direction();
         var support = supportEntity();
+        if (support instanceof BlockStructure structure
+                && structureSupportOffset != null
+                && structureSupportFace != null) {
+            var direction = rotateHorizontal(
+                    Vec3.atLowerCornerOf(structureSupportFace.getUnitVec3i()),
+                    structure.yawDegrees()
+            ).normalize();
+            setDirection(direction);
+            entityData.set(FACE, HighSpeedJet.nearestFace(direction).get3DDataValue());
+            var snapshot = structure.snapshot();
+            var localCenter = new Vec3(
+                    structureSupportOffset.getX() + 0.5,
+                    structureSupportOffset.getY() + 0.5,
+                    structureSupportOffset.getZ() + 0.5
+            );
+            var rotatedCenter = rotateHorizontal(
+                    localCenter,
+                    snapshot.pivotX(),
+                    snapshot.pivotZ(),
+                    structure.yawDegrees()
+            );
+            var center = structure.position().add(rotatedCenter).add(direction.scale(0.535));
+            var alignment = BlockStructureGridAlignment.nearest(
+                    snapshot, structure.position(), structure.yawDegrees());
+            supportPos = alignment.target(structureSupportOffset);
+            entityData.set(SUPPORT_POS, supportPos);
+            setPos(center.x, center.y, center.z);
+            return;
+        }
+        var direction = direction();
         var center = support == null
                 ? Vec3.atCenterOf(supportPos).add(direction.scale(0.535))
                 : AeromanipTargeting.pointOutside(support.getBoundingBox(), direction, 0.08);
         setPos(center.x, center.y, center.z);
+    }
+
+    private static Vec3 rotateHorizontal(Vec3 value, float yawDegrees) {
+        return rotateHorizontal(value, 0.0, 0.0, yawDegrees);
+    }
+
+    private static Vec3 rotateHorizontal(
+            Vec3 value,
+            double pivotX,
+            double pivotZ,
+            float yawDegrees
+    ) {
+        var radians = Math.toRadians(yawDegrees);
+        var sine = Math.sin(radians);
+        var cosine = Math.cos(radians);
+        var offsetX = value.x - pivotX;
+        var offsetZ = value.z - pivotZ;
+        return new Vec3(
+                pivotX + offsetX * cosine - offsetZ * sine,
+                value.y,
+                pivotZ + offsetX * sine + offsetZ * cosine
+        );
     }
 
     private Entity supportEntity() {
@@ -317,6 +433,17 @@ public final class HighSpeedJetNozzle extends Entity {
         supportEntityUuid = input.getString("academy_support_entity")
                 .map(HighSpeedJetNozzle::parseUuid)
                 .orElse(null);
+        if (input.getBooleanOr("academy_has_structure_support", false)) {
+            structureSupportOffset = new BlockPos(
+                    input.getIntOr("academy_structure_support_x", 0),
+                    input.getIntOr("academy_structure_support_y", 0),
+                    input.getIntOr("academy_structure_support_z", 0));
+            structureSupportFace = Direction.from3DDataValue(input.getIntOr(
+                    "academy_structure_support_face", Direction.UP.get3DDataValue()));
+        } else {
+            structureSupportOffset = null;
+            structureSupportFace = null;
+        }
         entityData.set(SUPPORT_ENTITY_ID, -1);
         entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
         entityData.set(SUPPORT_POS, supportPos);
@@ -340,6 +467,14 @@ public final class HighSpeedJetNozzle extends Entity {
         output.putInt("academy_support_z", supportPos.getZ());
         if (supportEntityUuid != null) {
             output.putString("academy_support_entity", supportEntityUuid.toString());
+        }
+        if (structureSupportOffset != null && structureSupportFace != null) {
+            output.putBoolean("academy_has_structure_support", true);
+            output.putInt("academy_structure_support_x", structureSupportOffset.getX());
+            output.putInt("academy_structure_support_y", structureSupportOffset.getY());
+            output.putInt("academy_structure_support_z", structureSupportOffset.getZ());
+            output.putInt("academy_structure_support_face",
+                    structureSupportFace.get3DDataValue());
         }
         output.putInt("academy_face", face().get3DDataValue());
         output.putInt("academy_active_ticks", activeTicks());

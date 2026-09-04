@@ -37,6 +37,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -277,6 +278,9 @@ public final class PneumaticGrasp extends Skill {
                 if (entity instanceof ItemEntity || entity instanceof ExperienceOrb || entity instanceof Projectile) {
                     return true;
                 }
+                if (entity instanceof BlockStructure) {
+                    return AeromanipTargeting.canAffectNegatively(player, entity);
+                }
                 if (!(entity instanceof LivingEntity living)
                         || AeromanipTargeting.isBoss(living)
                         || !AeromanipTargeting.canAffectNegatively(player, living)) {
@@ -309,6 +313,7 @@ public final class PneumaticGrasp extends Skill {
                 var lightTarget = target instanceof ItemEntity
                         || target instanceof ExperienceOrb
                         || target instanceof Projectile;
+                var structureTarget = target instanceof BlockStructure;
                 var hostileLiving = target instanceof Enemy;
                 var forceMultiplier = AeromanipTargeting.forceMultiplier(player, target);
                 if (target instanceof LivingEntity living && living.onGround()
@@ -316,11 +321,15 @@ public final class PneumaticGrasp extends Skill {
                     forceMultiplier *= 0.5;
                 }
                 if (forceMultiplier <= 0.0) return;
-                var response = (lightTarget ? 0.52 : hostileLiving ? 0.28 + skillLevel * 0.04 : 0.3)
+                var response = (lightTarget ? 0.52
+                        : structureTarget ? 0.22
+                        : hostileLiving ? 0.28 + skillLevel * 0.04 : 0.3)
                         * forceMultiplier;
                 if (!lightTarget && Skills.PNEUMATIC_GRASP.get().hasProficiencyMilestone(player, 2)) response *= 1.2;
                 var projectileSpeed = target instanceof Projectile ? Math.max(0.1, controlledSpeedCap) : 1.35;
-                var targetSpeed = (lightTarget ? projectileSpeed : hostileLiving ? 0.6 + skillLevel * 0.1 : 0.7)
+                var targetSpeed = (lightTarget ? projectileSpeed
+                        : structureTarget ? 0.85
+                        : hostileLiving ? 0.6 + skillLevel * 0.1 : 0.7)
                         * forceMultiplier;
                 AeromanipTargeting.steerVelocity(target, delta, response, targetSpeed);
                 target.resetFallDistance();

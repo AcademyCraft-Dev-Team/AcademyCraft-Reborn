@@ -24,6 +24,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -254,36 +255,45 @@ public final class RejectingWind extends Skill {
                     * AeromanipConfig.damageMultiplier(player, SkillNames.REJECTING_WIND)
                     * power;
             var center = player.getBoundingBox().getCenter();
-            var targets = level.getEntitiesOfClass(
-                    LivingEntity.class,
+            var targets = level.getEntities(
+                    player,
                     player.getBoundingBox().inflate(radius),
-                    target -> target != player && target.isAlive()
+                    target -> (target instanceof LivingEntity
+                            || target instanceof BlockStructure)
+                            && target.isAlive()
                             && target.distanceToSqr(player) <= radius * radius
                             && AeromanipTargeting.canAffectNegatively(player, target));
             var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
             var handled = 0;
             for (var target : targets) {
                 if (handled++ >= cap) break;
-                if (!target.hurtServer(level, source, damage)) continue;
-                skill.onHurt(player, target, damage);
+                if (target instanceof LivingEntity living) {
+                    if (!living.hurtServer(level, source, damage)) continue;
+                    skill.onHurt(player, living, damage);
+                }
                 var radial = target.getBoundingBox().getCenter().subtract(center);
                 if (radial.lengthSqr() <= 1.0e-8) radial = player.getLookAngle();
                 radial = new Vec3(radial.x, 0.0, radial.z);
                 if (radial.lengthSqr() <= 1.0e-8) radial = new Vec3(0.0, 0.0, 1.0);
                 var force = AeromanipTargeting.forceMultiplier(player, target);
                 if (force > 0.0) {
-                    AeromanipTargeting.addClampedVelocity(target,
-                            radial.normalize().scale(horizontalForce(tier, milestone >= 3) * force)
-                                    .add(0.0, verticalForce(tier) * force, 0.0));
+                    var impulse = radial.normalize()
+                            .scale(horizontalForce(tier, milestone >= 3) * force)
+                            .add(0.0, verticalForce(tier) * force, 0.0);
+                    EntityMotionGuard.runWithMotionSource(player, () ->
+                            AeromanipTargeting.addClampedVelocity(target, impulse));
                 }
-                var slowDuration = Math.max(1, Math.round(
-                        (tier == AeromanipChargeTier.INSTANT ? 40 : 60) * durationScale));
-                target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, slowDuration,
-                        tier == AeromanipChargeTier.INSTANT ? 0 : 1));
-                if (tier == AeromanipChargeTier.FULL) {
-                    var liftDuration = Math.max(1, Math.round(50 * durationScale));
-                    target.addEffect(new MobEffectInstance(MobEffects.LEVITATION, liftDuration, 0));
-                    beginLowDrag(player, target, milestone >= 3 ? liftDuration + 20 : liftDuration);
+                if (target instanceof LivingEntity living) {
+                    var slowDuration = Math.max(1, Math.round(
+                            (tier == AeromanipChargeTier.INSTANT ? 40 : 60) * durationScale));
+                    living.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, slowDuration,
+                            tier == AeromanipChargeTier.INSTANT ? 0 : 1));
+                    if (tier == AeromanipChargeTier.FULL) {
+                        var liftDuration = Math.max(1, Math.round(50 * durationScale));
+                        living.addEffect(new MobEffectInstance(MobEffects.LEVITATION, liftDuration, 0));
+                        beginLowDrag(player, living,
+                                milestone >= 3 ? liftDuration + 20 : liftDuration);
+                    }
                 }
             }
             level.playSound(null, player.blockPosition(), SoundEvents.AIRFLOW_IMPACT.get(),

@@ -8,6 +8,7 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.structure.BlockStructure;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 
 import java.util.Locale;
@@ -65,7 +66,8 @@ public final class VectorExternalAttackClassifier {
 
         var profileEntry = VectorCompatProfileRegistry.find(source).orElse(null);
         if (profileEntry != null && profileEntry.profile().deny()) return Optional.empty();
-        var nativeExact = source instanceof SkillDamageSource;
+        var nativeExact = source instanceof SkillDamageSource
+                || source.getDirectEntity() instanceof BlockStructure;
         var resolvedAttribution = VectorAttackAttributionResolver.resolve(defender, source);
         if (!nativeExact
                 && profileEntry == null
@@ -161,6 +163,7 @@ public final class VectorExternalAttackClassifier {
             return "denied_by_profile=" + profile.id();
         }
         if (!(source instanceof SkillDamageSource)
+                && !(source.getDirectEntity() instanceof BlockStructure)
                 && profile == null
                 && VectorCompatProfileRegistry.mode() == VectorCompatibilityMode.STRICT) {
             return "strict_requires_profile";

@@ -40,4 +40,16 @@ public interface AeromanipProgramRuntime extends ProgramTargetResolver {
     );
 
     ProgramActionTransaction.ProgramAction fireJets(int durationSeconds);
+
+    int ownedJetNozzleCount(
+            ProgramWorldPosition center,
+            double radius,
+            @Nullable ProgramDirection direction
+    );
+
+    ProgramActionTransaction.ProgramAction launchBlockStructure(
+            org.academy.api.common.ability.program.ProgramBlockPosition seed,
+            ProgramDirection direction,
+            AeromanipProgramNodeCatalog.BlockStructureLaunchConfiguration configuration
+    );
 }

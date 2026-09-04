@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.common.structure.BlockStructureCaptureOptions;
@@ -15,6 +16,8 @@ import org.academy.api.common.structure.BlockStructureCaptureResult;
 import org.academy.api.common.structure.BlockStructureGridAlignment;
 import org.academy.api.common.structure.BlockStructurePlacementPolicy;
 import org.academy.api.common.structure.BlockStructureRestoreResult;
+import org.academy.api.common.structure.BlockStructureSelectionResult;
+import org.academy.api.common.structure.BlockStructureSettlementResult;
 import org.academy.api.common.structure.BlockStructureSnapshot;
 import org.academy.internal.common.world.entity.structure.BlockStructureEntity;
 
@@ -26,6 +29,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
 import static net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE;
@@ -45,8 +49,35 @@ public final class BlockStructureManager {
             BlockPos seed,
             BlockStructureCaptureOptions options
     ) {
-        if (level == null || seed == null || options == null) {
-            throw new IllegalArgumentException("level, seed, and options cannot be null");
+        if (options == null) throw new IllegalArgumentException("options cannot be null");
+        var selection = selectConnected(
+                level, seed, options.maximumBlocks(), options.policy());
+        if (selection.succeeded()) {
+            return capture(level, selection.positions(), options);
+        }
+        var status = switch (selection.status()) {
+            case EMPTY -> BlockStructureCaptureResult.Status.EMPTY;
+            case TOO_LARGE -> BlockStructureCaptureResult.Status.TOO_LARGE;
+            case UNLOADED -> BlockStructureCaptureResult.Status.UNLOADED;
+            case OUT_OF_WORLD -> BlockStructureCaptureResult.Status.OUT_OF_WORLD;
+            case SUCCESS -> throw new IllegalStateException("Successful selection has no positions");
+        };
+        return BlockStructureCaptureResult.failure(
+                status, selection.problemPosition().orElse(null));
+    }
+
+    public static BlockStructureSelectionResult selectConnected(
+            ServerLevel level,
+            BlockPos seed,
+            int maximumBlocks,
+            BlockStructureCaptureOptions.CapturePolicy policy
+    ) {
+        if (level == null || seed == null || policy == null) {
+            throw new IllegalArgumentException("level, seed, and policy cannot be null");
+        }
+        if (maximumBlocks < 1 || maximumBlocks > BlockStructureSnapshot.MAX_BLOCKS) {
+            throw new IllegalArgumentException("maximumBlocks must be between 1 and "
+                    + BlockStructureSnapshot.MAX_BLOCKS);
         }
         var selected = new LinkedHashSet<BlockPos>();
         var visited = new HashSet<BlockPos>();
@@ -56,19 +87,19 @@ public final class BlockStructureManager {
             var position = frontier.removeFirst();
             if (!visited.add(position)) continue;
             if (!level.isInWorldBounds(position)) {
-                return BlockStructureCaptureResult.failure(
-                        BlockStructureCaptureResult.Status.OUT_OF_WORLD, position);
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.OUT_OF_WORLD, position);
             }
             if (!level.isLoaded(position)) {
-                return BlockStructureCaptureResult.failure(
-                        BlockStructureCaptureResult.Status.UNLOADED, position);
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.UNLOADED, position);
             }
             var state = level.getBlockState(position);
             var blockEntity = level.getBlockEntity(position);
-            if (!options.policy().canCapture(level, position, state, blockEntity)) continue;
-            if (selected.size() >= options.maximumBlocks()) {
-                return BlockStructureCaptureResult.failure(
-                        BlockStructureCaptureResult.Status.TOO_LARGE, position);
+            if (!policy.canCapture(level, position, state, blockEntity)) continue;
+            if (selected.size() >= maximumBlocks) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.TOO_LARGE, position);
             }
             selected.add(position);
             for (var direction : Direction.values()) {
@@ -76,7 +107,98 @@ public final class BlockStructureManager {
                 if (!visited.contains(adjacent)) frontier.addLast(adjacent.immutable());
             }
         }
-        return capture(level, selected, options);
+        return selected.isEmpty()
+                ? BlockStructureSelectionResult.failure(
+                BlockStructureSelectionResult.Status.EMPTY, seed)
+                : BlockStructureSelectionResult.success(List.copyOf(selected));
+    }
+
+    public static BlockStructureSelectionResult selectSphere(
+            ServerLevel level,
+            BlockPos center,
+            double radius,
+            BlockStructureCaptureOptions.CapturePolicy policy
+    ) {
+        if (level == null || center == null || policy == null) {
+            throw new IllegalArgumentException("level, center, and policy cannot be null");
+        }
+        if (!Double.isFinite(radius) || radius < 0.5 || radius > 32.0) {
+            throw new IllegalArgumentException("radius must be between 0.5 and 32");
+        }
+        var selected = new ArrayList<BlockPos>();
+        for (var position : positionsInSphere(center, radius)) {
+            if (!level.isInWorldBounds(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.OUT_OF_WORLD, position);
+            }
+            if (!level.isLoaded(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.UNLOADED, position);
+            }
+            var state = level.getBlockState(position);
+            var blockEntity = level.getBlockEntity(position);
+            if (!policy.canCapture(level, position, state, blockEntity)) continue;
+            if (selected.size() >= BlockStructureSnapshot.MAX_BLOCKS) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.TOO_LARGE, position);
+            }
+            selected.add(position.immutable());
+        }
+        return selected.isEmpty()
+                ? BlockStructureSelectionResult.failure(
+                BlockStructureSelectionResult.Status.EMPTY, center)
+                : BlockStructureSelectionResult.success(List.copyOf(selected));
+    }
+
+    public static List<BlockPos> cropImmediatelyBlocked(
+            ServerLevel level,
+            Iterable<BlockPos> candidates,
+            Direction movementDirection
+    ) {
+        if (level == null || candidates == null || movementDirection == null) {
+            throw new IllegalArgumentException(
+                    "level, candidates, and movementDirection cannot be null");
+        }
+        return cropImmediatelyBlocked(candidates, movementDirection, position -> {
+            if (!level.isInWorldBounds(position) || !level.isLoaded(position)) return true;
+            return !level.getBlockState(position).isAir();
+        });
+    }
+
+    static List<BlockPos> positionsInSphere(BlockPos center, double radius) {
+        var extent = (int) Math.ceil(radius);
+        var radiusSquared = radius * radius + 1.0e-9;
+        var positions = new ArrayList<BlockPos>();
+        for (var y = -extent; y <= extent; y++) {
+            for (var x = -extent; x <= extent; x++) {
+                for (var z = -extent; z <= extent; z++) {
+                    if ((double) x * x + (double) y * y + (double) z * z
+                            <= radiusSquared) {
+                        positions.add(center.offset(x, y, z));
+                    }
+                }
+            }
+        }
+        return List.copyOf(positions);
+    }
+
+    static List<BlockPos> cropImmediatelyBlocked(
+            Iterable<BlockPos> candidates,
+            Direction movementDirection,
+            Predicate<BlockPos> externalBlocker
+    ) {
+        var movable = new LinkedHashSet<BlockPos>();
+        for (var position : candidates) {
+            if (position != null) movable.add(position.immutable());
+        }
+        boolean changed;
+        do {
+            changed = movable.removeIf(position -> {
+                var adjacent = position.relative(movementDirection);
+                return !movable.contains(adjacent) && externalBlocker.test(adjacent);
+            });
+        } while (changed && !movable.isEmpty());
+        return List.copyOf(movable);
     }
 
     public static BlockStructureCaptureResult capture(
@@ -270,8 +392,118 @@ public final class BlockStructureManager {
             level.setBlockEntity(blockEntity);
         }
         updateBoundaries(level, placements.stream().map(value -> value.position).toList());
+        BlockStructureKineticRuntime.stop(entity);
         entity.discard();
         return BlockStructureRestoreResult.success(placements.size());
+    }
+
+    /**
+     * Terminal, best-effort restoration used when a structure stops moving.
+     * Unlike {@link #restore(BlockStructureEntity, BlockStructurePlacementPolicy)},
+     * this operation cannot leave the entity behind: each cell is either placed
+     * independently or emitted as a block item before the structure is discarded.
+     */
+    public static BlockStructureSettlementResult settle(
+            BlockStructureEntity entity,
+            BlockStructurePlacementPolicy placementPolicy
+    ) {
+        if (!(entity.level() instanceof ServerLevel level)) {
+            return BlockStructureSettlementResult.failure(
+                    BlockStructureSettlementResult.Status.WRONG_LEVEL);
+        }
+        var snapshot = entity.snapshot();
+        if (snapshot.isEmpty()) {
+            BlockStructureKineticRuntime.stop(entity);
+            entity.discard();
+            return BlockStructureSettlementResult.failure(
+                    BlockStructureSettlementResult.Status.INVALID_STRUCTURE);
+        }
+        if (placementPolicy == null) {
+            throw new IllegalArgumentException("placementPolicy cannot be null");
+        }
+
+        var alignment = BlockStructureGridAlignment.nearest(
+                snapshot, entity.position(), entity.getYRot());
+        var placements = snapshot.blocks().stream()
+                .map(block -> new SettlementPlacement(
+                        alignment.target(block.relativePosition()),
+                        block.state().rotate(alignment.rotation()),
+                        block.blockEntityData().orElse(null)))
+                .sorted(Comparator.comparingInt(value -> value.position.getY()))
+                .toList();
+        var occupiedTargets = new HashSet<BlockPos>();
+        var changedPositions = new ArrayList<BlockPos>();
+        var dropPosition = entity.blockPosition().immutable();
+        var placedBlocks = 0;
+        var droppedBlocks = 0;
+
+        for (var placement : placements) {
+            if (settleCell(level, placement, placementPolicy,
+                    occupiedTargets, changedPositions)) placedBlocks++;
+            else {
+                dropBlock(level, dropPosition, placement.state);
+                droppedBlocks++;
+            }
+        }
+
+        try {
+            updateBoundaries(level, changedPositions);
+        } finally {
+            BlockStructureKineticRuntime.stop(entity);
+            entity.discard();
+        }
+        return BlockStructureSettlementResult.success(placedBlocks, droppedBlocks);
+    }
+
+    private static boolean settleCell(
+            ServerLevel level,
+            SettlementPlacement placement,
+            BlockStructurePlacementPolicy placementPolicy,
+            HashSet<BlockPos> occupiedTargets,
+            ArrayList<BlockPos> changedPositions
+    ) {
+        if (!occupiedTargets.add(placement.position)
+                || !level.isInWorldBounds(placement.position)
+                || !level.isLoaded(placement.position)) return false;
+        BlockState previousState = null;
+        CompoundTag previousBlockEntityData = null;
+        var changed = false;
+        try {
+            previousState = level.getBlockState(placement.position);
+            if (!placementPolicy.canReplace(level, placement.position, previousState)) return false;
+            previousBlockEntityData = saveBlockEntity(
+                    level.getBlockEntity(placement.position), level);
+            if (!level.setBlock(placement.position, placement.state, BULK_UPDATE_FLAGS)) {
+                return false;
+            }
+            changed = true;
+            changedPositions.add(placement.position);
+            if (placement.blockEntityData == null) return true;
+            var blockEntity = BlockEntity.loadStatic(
+                    placement.position,
+                    placement.state,
+                    placement.blockEntityData,
+                    level.registryAccess()
+            );
+            if (blockEntity == null) {
+                restoreCell(level, placement.position, previousState,
+                        previousBlockEntityData);
+                return false;
+            }
+            level.setBlockEntity(blockEntity);
+            blockEntity.setChanged();
+            return true;
+        } catch (RuntimeException ignored) {
+            if (changed && previousState != null) {
+                try {
+                    restoreCell(level, placement.position, previousState,
+                            previousBlockEntityData);
+                } catch (RuntimeException ignoredRestoreFailure) {
+                    // The entity still terminates; this cell is represented by its dropped item.
+                }
+            }
+            return false;
+        }
     }
 
     private static List<BlockPos> normalizedPositions(Iterable<BlockPos> positions) {
@@ -335,6 +567,36 @@ public final class BlockStructureManager {
         updateBoundaries(level, placements.stream().map(value -> value.position).toList());
     }
 
+    private static void restoreCell(
+            ServerLevel level,
+            BlockPos position,
+            BlockState previousState,
+            CompoundTag previousBlockEntityData
+    ) {
+        level.setBlock(position, previousState, BULK_UPDATE_FLAGS);
+        if (previousBlockEntityData == null) return;
+        var blockEntity = BlockEntity.loadStatic(
+                position,
+                previousState,
+                previousBlockEntityData,
+                level.registryAccess()
+        );
+        if (blockEntity != null) level.setBlockEntity(blockEntity);
+    }
+
+    private static void dropBlock(
+            ServerLevel level,
+            BlockPos dropPosition,
+            BlockState state
+    ) {
+        try {
+            var stack = new ItemStack(state.getBlock());
+            if (!stack.isEmpty()) Block.popResource(level, dropPosition, stack);
+        } catch (RuntimeException ignored) {
+            // A third-party block must not keep the structure entity alive forever.
+        }
+    }
+
     private static CompoundTag saveBlockEntity(BlockEntity blockEntity, ServerLevel level) {
         return blockEntity == null ? null
                 : blockEntity.saveWithFullMetadata(level.registryAccess());
@@ -368,6 +630,13 @@ public final class BlockStructureManager {
             CompoundTag blockEntityData,
             BlockState previousState,
             CompoundTag previousBlockEntityData
+    ) {
+    }
+
+    private record SettlementPlacement(
+            BlockPos position,
+            BlockState state,
+            CompoundTag blockEntityData
     ) {
     }
 }

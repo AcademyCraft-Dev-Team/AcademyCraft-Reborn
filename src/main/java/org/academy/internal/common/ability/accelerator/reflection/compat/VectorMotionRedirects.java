@@ -4,6 +4,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.api.common.structure.BlockStructure;
+import org.academy.api.common.structure.BlockStructureKinetics;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -40,8 +43,10 @@ public final class VectorMotionRedirects {
     }
 
     public static boolean redirectProfiledEntity(VectorRedirectPlan plan) {
-        if (!plan.attack().executionPolicy().safeMotionRedirect()) return false;
         var direct = plan.attack().attribution().directEntity();
+        var structure = direct instanceof BlockStructure value ? value : null;
+        if (structure == null
+                && !plan.attack().executionPolicy().safeMotionRedirect()) return false;
         if (direct == null
                 || direct instanceof Projectile
                 || direct.isRemoved()
@@ -53,9 +58,17 @@ public final class VectorMotionRedirects {
         var direction = plan.redirectedDirection();
         if (!Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1.0E-8) return false;
         direction = direction.normalize();
-        var pushDistance = Math.max(direct.getBbWidth(), plan.redirector().getBbWidth()) + 0.5;
-        direct.setDeltaMovement(direction.scale(speed));
-        direct.setPos(plan.mirrorPoint().add(direction.scale(pushDistance)));
+        var pushDistance = Math.max(
+                Math.max(direct.getBoundingBox().getXsize(), direct.getBoundingBox().getZsize()),
+                plan.redirector().getBbWidth()
+        ) + 0.5;
+        var redirectedVelocity = direction.scale(speed);
+        var redirectedPosition = plan.mirrorPoint().add(direction.scale(pushDistance));
+        if (structure != null) BlockStructureKinetics.stop(structure);
+        EntityMotionGuard.runWithMotionSource(plan.redirector(), () -> {
+            direct.setDeltaMovement(redirectedVelocity);
+            direct.setPos(redirectedPosition);
+        });
         direct.hurtMarked = true;
         direct.needsSync = true;
         direct.syncPosition = true;

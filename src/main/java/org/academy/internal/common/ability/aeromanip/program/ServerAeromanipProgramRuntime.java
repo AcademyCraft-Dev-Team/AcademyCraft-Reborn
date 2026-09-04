@@ -16,6 +16,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.HighSpeedJetStructureService;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
@@ -224,6 +225,71 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     }
 
     @Override
+    public int ownedJetNozzleCount(
+            ProgramWorldPosition center,
+            double radius,
+            @Nullable ProgramDirection direction
+    ) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        var resolvedCenter = targets.requireLocalPosition(center);
+        if (resolvedCenter.distanceToSqr(player.position())
+                > MAX_QUERY_RANGE * MAX_QUERY_RANGE) {
+            throw new IllegalArgumentException("Jet nozzle query center is outside program range");
+        }
+        if (!Double.isFinite(radius) || radius < 1.0 || radius > 32.0) {
+            throw new IllegalArgumentException("Jet nozzle query radius must be between 1 and 32");
+        }
+        return HighSpeedJetStructureService.countOwnedNozzles(
+                player,
+                resolvedCenter,
+                radius,
+                direction == null ? null : normalizedVector(direction)
+        );
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction launchBlockStructure(
+            ProgramBlockPosition seedReference,
+            ProgramDirection direction,
+            AeromanipProgramNodeCatalog.BlockStructureLaunchConfiguration configuration
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private BlockPos seed;
+            private Vec3 launchDirection;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.HIGH_SPEED_JET.get());
+                seed = requireLaunchSeed(seedReference);
+                launchDirection = normalizedVector(direction);
+                Objects.requireNonNull(configuration, "configuration");
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                requireCasterReady(Skills.HIGH_SPEED_JET.get());
+                seed = requireLaunchSeed(seedReference);
+                launchDirection = normalizedVector(direction);
+                var launched = HighSpeedJetStructureService.launch(
+                        player,
+                        new HighSpeedJetStructureService.LaunchRequest(
+                                seed,
+                                null,
+                                launchDirection,
+                                configuration.structureRadius(),
+                                configuration.power(),
+                                configuration.duration() * 20,
+                                configuration.restoreWhenSettled()
+                        ),
+                        costMultiplier
+                ).orElseThrow(() -> new IllegalStateException(
+                        "Block structure launch was rejected"));
+                return launched::close;
+            }
+        };
+    }
+
+    @Override
     public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
         return targets.positionOf(entityReference);
     }
@@ -399,6 +465,23 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             throw new IllegalArgumentException("Temporary nozzle block is not loaded");
         }
         return pos;
+    }
+
+    private BlockPos requireLaunchSeed(ProgramBlockPosition block) {
+        if (block == null) {
+            throw new IllegalArgumentException("Block structure seed is missing");
+        }
+        var center = targets.requireLocalPosition(new ProgramWorldPosition(
+                block.dimension(), block.x() + 0.5, block.y() + 0.5, block.z() + 0.5));
+        if (center.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+            throw new IllegalArgumentException("Block structure seed is outside program range");
+        }
+        var position = new BlockPos(block.x(), block.y(), block.z());
+        if (!targets.level().hasChunkAt(position)
+                || !targets.level().isInWorldBounds(position)) {
+            throw new IllegalArgumentException("Block structure seed is unavailable");
+        }
+        return position;
     }
 
     private static int requireJetDuration(int durationSeconds) {
