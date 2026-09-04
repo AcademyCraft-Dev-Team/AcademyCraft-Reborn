@@ -42,7 +42,7 @@ public final class SkillProficiencyProfiles {
             Map.entry("flow_sense", "range, cadence and synchronization budgets are resolved together"),
             Map.entry("pneumatic_grasp", "continuous costs depend on the selected entity class"),
             Map.entry("breathing_bubble", "compressed-air upkeep, sharing and active radius milestones are resolved together"),
-            Map.entry("turbulent_cavitation", "damage and armor wear are derived from actual attributed displacement"),
+            Map.entry("turbulent_cavitation", "refreshable marks batch distance, block-collision damage, and armor wear"),
             Map.entry("tailwind_field", "release mode, field radius, duration and force milestones are resolved together"),
             Map.entry("rejecting_wind", "release-tier force, control effects and low-drag duration are resolved together"),
             Map.entry("high_speed_jet", "nozzle count, duration and stacked acceleration milestones are resolved together"),
