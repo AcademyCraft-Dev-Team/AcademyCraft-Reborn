@@ -143,6 +143,7 @@ public final class R {
         public static final Identifier teleport_cursor = academy("textures/ability/teleport/effect/teleport_cursor.png");
         public static final Identifier darkmatter_shaping_icon = academy("textures/ability/darkmatter/skill/darkmatter_shaping/icon.png");
         public static final Identifier darkmatter_disassemble_icon = academy("textures/ability/darkmatter/skill/darkmatter_disassemble/icon.png");
+        public static final Identifier darkmatter_phase_tuning_icon = academy("textures/ability/darkmatter/skill/darkmatter_phase_tuning/icon.png");
         public static final Identifier darkmatter_cut_icon = academy("textures/ability/darkmatter/skill/darkmatter_cut/icon.png");
         public static final Identifier darkmatter_cut_slash_effect_1 = academy("textures/ability/darkmatter/skill/darkmatter_cut/effect/darkmatter_cut_slash_1.png");
         public static final Identifier darkmatter_cut_slash_effect_2 = academy("textures/ability/darkmatter/skill/darkmatter_cut/effect/darkmatter_cut_slash_2.png");
@@ -157,6 +158,7 @@ public final class R {
         public static final Identifier reflection_filter_icon = academy("textures/ability/accelerator/skill/reflection_filter/icon.png");
         public static final Identifier vector_blast_icon = academy("textures/ability/accelerator/skill/vector_blast/icon.png");
         public static final Identifier kinetic_energy_applied_icon = academy("textures/ability/accelerator/skill/kinetic_energy_applied/icon.png");
+        public static final Identifier kinetic_throw_icon = academy("textures/ability/accelerator/skill/kinetic_throw/icon.png");
         public static final Identifier black_wing_icon = academy("textures/ability/accelerator/skill/black_wing/icon.png");
         public static final Identifier white_wing_icon = academy("textures/ability/accelerator/skill/white_wing/icon.png");
         public static final Identifier platinum_wing_icon = academy("textures/ability/accelerator/skill/platinum_wing/icon.png");
