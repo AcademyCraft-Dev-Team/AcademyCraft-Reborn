@@ -162,6 +162,43 @@ class DarkmatterProgramExecutionBridgeTest {
         transaction.release();
     }
 
+    @Test
+    void disassemblyFieldStagesOnlyConfiguredTargetsInSetOrder() {
+        var field = new JsonObject();
+        field.addProperty("power", 1.5f);
+        field.addProperty("maximum_targets", 2);
+        var graph = new ProgramGraph(
+                List.of(
+                        worldPositionNode(1, 0.0, 64.0, 0.0),
+                        floatNode(2, 8.0),
+                        node(3, CommonProgramNodeIds.ENTITIES_AROUND, new JsonObject()),
+                        node(4, DarkmatterProgramNodeIds.DISASSEMBLY_FIELD, field)
+                ),
+                List.of(
+                        edge(1, "position", 3, "center"),
+                        edge(2, "value", 3, "radius"),
+                        edge(3, "entities", 4, "entities")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        DarkmatterProgramNodeCatalog.DARKMATTER)
+                .compile(graph, Set.of(DarkmatterProgramCapabilities.DISASSEMBLY_FIELD));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var runtime = new FakeRuntime();
+        var transaction = new ProgramActionTransaction();
+
+        var result = DarkmatterProgramExecutionBridge.execute(
+                compiled.program(), 100L, runtime, transaction);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(2, transaction.size());
+        assertTrue(transaction.commit().successful());
+        assertEquals(List.of(
+                "disassemble_entity:first:1.5",
+                "disassemble_entity:second:1.5"), runtime.applied);
+        transaction.release();
+    }
+
     private static ProgramGraph.Node node(
             int id,
             Identifier type,
@@ -224,6 +261,12 @@ class DarkmatterProgramExecutionBridgeTest {
         return node(id, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, configuration);
     }
 
+    private static ProgramGraph.Node floatNode(int id, double value) {
+        var configuration = new JsonObject();
+        configuration.addProperty("value", value);
+        return node(id, CommonProgramNodeIds.FLOAT_CONSTANT, configuration);
+    }
+
     private static ProgramGraph.Edge edge(
             int fromNode,
             String fromPort,
@@ -247,6 +290,11 @@ class DarkmatterProgramExecutionBridgeTest {
         @Override
         public Optional<Object> lookTarget() {
             return Optional.of("look_target");
+        }
+
+        @Override
+        public PhaseState phaseState() {
+            return new PhaseState(1.0, 2.0, 3.0, 40.0, 100.0);
         }
 
         @Override
@@ -296,7 +344,7 @@ class DarkmatterProgramExecutionBridgeTest {
 
         @Override
         public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
-            return List.of();
+            return List.of("first", "second", "third");
         }
 
         @Override

@@ -40,13 +40,16 @@ public final class DarkmatterProgramDefinition {
                     || id.equals(DarkmatterProgramNodeIds.DARKMATTER_CUT)
                     || id.equals(DarkmatterProgramNodeIds.CREATE_BEETLE)) {
                 configuration.addProperty("power", 1.0f);
+            } else if (id.equals(DarkmatterProgramNodeIds.DISASSEMBLY_FIELD)) {
+                configuration.addProperty("power", 1.0f);
+                configuration.addProperty("maximum_targets", 4);
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
             editor.add(
                     id,
                     type,
                     configuration,
-                    id.getPath().contains("/target/")
+                    id.getPath().contains("/target/") || id.getPath().contains("/query/")
                             ? ProgramEditorNodeCatalog.Group.TARGET
                             : ProgramEditorNodeCatalog.Group.ACTION,
                     "screen.academy.program.darkmatter.node." + suffix,
