@@ -1,12 +1,15 @@
 package org.academy.internal.common.structure;
 
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlockStructureCollisionGeometryTest {
@@ -58,6 +61,37 @@ class BlockStructureCollisionGeometryTest {
                 surface,
                 new AABB(1.1, 0.5, 0.2, 1.7, 2.3, 0.8),
                 0.01
+        ));
+    }
+
+    @Test
+    void sweepFindsEarliestPositiveAxisImpact() {
+        var hit = BlockStructureCollisionGeometry.sweep(
+                new AABB(0, 0, 0, 1, 1, 1),
+                new AABB(2, 0, 0, 3, 1, 1),
+                new Vec3(2, 0, 0)
+        );
+
+        assertNotNull(hit);
+        assertEquals(0.5, hit.time(), 1.0e-9);
+        assertEquals(new Vec3(-1, 0, 0), hit.normal());
+    }
+
+    @Test
+    void sweepFindsNegativeAxisImpactAndRejectsParallelMiss() {
+        var hit = BlockStructureCollisionGeometry.sweep(
+                new AABB(3, 0, 0, 4, 1, 1),
+                new AABB(1, 0, 0, 2, 1, 1),
+                new Vec3(-2, 0, 0)
+        );
+
+        assertNotNull(hit);
+        assertEquals(0.5, hit.time(), 1.0e-9);
+        assertEquals(new Vec3(1, 0, 0), hit.normal());
+        assertNull(BlockStructureCollisionGeometry.sweep(
+                new AABB(0, 0, 0, 1, 1, 1),
+                new AABB(2, 2, 0, 3, 3, 1),
+                new Vec3(2, 0, 0)
         ));
     }
 

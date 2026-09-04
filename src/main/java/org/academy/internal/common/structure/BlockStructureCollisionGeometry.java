@@ -2,6 +2,8 @@ package org.academy.internal.common.structure;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.BlockStructureSnapshot;
@@ -40,6 +42,12 @@ public final class BlockStructureCollisionGeometry {
         }
         var merged = new ArrayList<AABB>();
         for (var boxes : partitions.values()) merged.addAll(mergeBoxes(boxes));
+        merged.sort(Comparator.comparingDouble((AABB box) -> box.minX)
+                .thenComparingDouble(box -> box.minY)
+                .thenComparingDouble(box -> box.minZ)
+                .thenComparingDouble(box -> box.maxX)
+                .thenComparingDouble(box -> box.maxY)
+                .thenComparingDouble(box -> box.maxZ));
         return merged.isEmpty() ? EMPTY : new BlockStructureCollisionGeometry(merged);
     }
 
@@ -124,6 +132,46 @@ public final class BlockStructureCollisionGeometry {
         return false;
     }
 
+    public Vec3 collideWithWorld(
+            Entity entity,
+            Level level,
+            Vec3 position,
+            float yawDegrees,
+            BlockStructureSnapshot snapshot,
+            Vec3 requestedMovement
+    ) {
+        var movement = requestedMovement;
+        for (var box : worldBoxes(position, yawDegrees, snapshot)) {
+            if (movement.lengthSqr() <= 1.0e-14) return Vec3.ZERO;
+            movement = Entity.collideBoundingBox(
+                    entity,
+                    movement,
+                    box,
+                    level,
+                    List.of()
+            );
+        }
+        return movement;
+    }
+
+    public BlockStructureSweepHit firstSweepHit(
+            AABB target,
+            Vec3 position,
+            float yawDegrees,
+            BlockStructureSnapshot snapshot,
+            Vec3 movement
+    ) {
+        if (target == null || movement == null || movement.lengthSqr() <= 1.0e-14) return null;
+        BlockStructureSweepHit earliest = null;
+        for (var box : worldBoxes(position, yawDegrees, snapshot)) {
+            var hit = sweep(box, target, movement);
+            if (hit != null && (earliest == null || hit.time() < earliest.time())) {
+                earliest = hit;
+            }
+        }
+        return earliest;
+    }
+
     static List<AABB> mergeBoxes(List<AABB> input) {
         if (input.isEmpty()) return List.of();
         var result = new ArrayList<>(input);
@@ -167,6 +215,57 @@ public final class BlockStructureCollisionGeometry {
                 minimumX, box.minY, minimumZ,
                 maximumX, box.maxY, maximumZ
         );
+    }
+
+    static BlockStructureSweepHit sweep(AABB moving, AABB target, Vec3 movement) {
+        if (moving.intersects(target)) {
+            var normal = movement.lengthSqr() <= 1.0e-14
+                    ? Vec3.ZERO
+                    : movement.normalize().scale(-1.0);
+            return new BlockStructureSweepHit(0.0, moving.getCenter(), normal);
+        }
+        var x = axisSweep(
+                moving.minX, moving.maxX, target.minX, target.maxX, movement.x,
+                new Vec3(-Math.signum(movement.x), 0.0, 0.0));
+        var y = axisSweep(
+                moving.minY, moving.maxY, target.minY, target.maxY, movement.y,
+                new Vec3(0.0, -Math.signum(movement.y), 0.0));
+        var z = axisSweep(
+                moving.minZ, moving.maxZ, target.minZ, target.maxZ, movement.z,
+                new Vec3(0.0, 0.0, -Math.signum(movement.z)));
+        if (x == null || y == null || z == null) return null;
+        var entry = Math.max(x.entry, Math.max(y.entry, z.entry));
+        var exit = Math.min(x.exit, Math.min(y.exit, z.exit));
+        if (entry > exit + MERGE_EPSILON || exit < 0.0 || entry > 1.0) return null;
+        var time = Math.max(0.0, entry);
+        var normal = x.entry >= y.entry && x.entry >= z.entry
+                ? x.normal
+                : y.entry >= z.entry ? y.normal : z.normal;
+        return new BlockStructureSweepHit(
+                time,
+                moving.getCenter().add(movement.scale(time)),
+                normal
+        );
+    }
+
+    private static AxisSweep axisSweep(
+            double movingMinimum,
+            double movingMaximum,
+            double targetMinimum,
+            double targetMaximum,
+            double movement,
+            Vec3 normal
+    ) {
+        if (Math.abs(movement) <= MERGE_EPSILON) {
+            return movingMaximum > targetMinimum && movingMinimum < targetMaximum
+                    ? new AxisSweep(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, Vec3.ZERO)
+                    : null;
+        }
+        var first = (targetMinimum - movingMaximum) / movement;
+        var second = (targetMaximum - movingMinimum) / movement;
+        return first <= second
+                ? new AxisSweep(first, second, normal)
+                : new AxisSweep(second, first, normal);
     }
 
     private static ArrayList<AABB> mergeAlong(
@@ -257,5 +356,11 @@ public final class BlockStructureCollisionGeometry {
                     position.getZ() >> 4
             );
         }
+    }
+
+    public record BlockStructureSweepHit(double time, Vec3 point, Vec3 normal) {
+    }
+
+    private record AxisSweep(double entry, double exit, Vec3 normal) {
     }
 }

@@ -31,6 +31,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -43,6 +44,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -369,11 +371,15 @@ public final class AirflowJet extends Skill {
                         * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, skill);
                 living.hurtServer(player.level(), source, damage);
-                var force = AeromanipTargeting.forceMultiplier(player, living);
+            }
+            if (target instanceof LivingEntity || target instanceof BlockStructure) {
+                var force = AeromanipTargeting.forceMultiplier(player, target);
                 if (force > 0.0) {
                     var strength = skill.hasProficiencyMilestone(player, 1) ? 1.4 : 1.1;
-                    AeromanipTargeting.addClampedVelocity(living,
-                            player.getLookAngle().normalize().scale(strength * force).add(0.0, 0.12, 0.0));
+                    EntityMotionGuard.runWithMotionSource(player, () ->
+                            AeromanipTargeting.addClampedVelocity(target,
+                                    player.getLookAngle().normalize().scale(strength * force)
+                                            .add(0.0, 0.12, 0.0)));
                 }
             }
             var eye = player.getEyePosition();
@@ -397,6 +403,8 @@ public final class AirflowJet extends Skill {
                     player.level(), player, eye, rayEnd,
                     new AABB(eye, rayEnd).inflate(0.8),
                     entity -> entity instanceof PaperAirplane && !entity.isRemoved()
+                            || entity instanceof BlockStructure && entity.isAlive()
+                            && AeromanipTargeting.canAffectNegatively(player, entity)
                             || entity instanceof LivingEntity living && living.isAlive()
                             && AeromanipTargeting.canAffectNegatively(player, living),
                     0.3f);
@@ -425,15 +433,20 @@ public final class AirflowJet extends Skill {
             var center = player.position().add(0.0, player.getBbHeight() * 0.5, 0.0);
             var range = FULL_RADIUS * AeromanipConfig.rangeMultiplier(player, SkillNames.AIRFLOW_JET);
             var bounds = new AABB(center, center).inflate(range);
-            for (var living : level.getEntitiesOfClass(LivingEntity.class, bounds,
-                    living -> AeromanipTargeting.canAffectNegatively(player, living))) {
-                var delta = living.getBoundingBox().getCenter().subtract(center);
+            for (var target : level.getEntities(player, bounds,
+                    target -> (target instanceof LivingEntity
+                            || target instanceof BlockStructure)
+                            && target.isAlive()
+                            && AeromanipTargeting.canAffectNegatively(player, target))) {
+                var delta = target.getBoundingBox().getCenter().subtract(center);
                 if (delta.lengthSqr() > range * range) continue;
                 if (delta.lengthSqr() <= 1.0e-8) delta = new Vec3(0.0, 1.0, 0.0);
-                var force = AeromanipTargeting.forceMultiplier(player, living);
+                var force = AeromanipTargeting.forceMultiplier(player, target);
                 if (force > 0.0) {
-                    AeromanipTargeting.addClampedVelocity(living,
-                            delta.normalize().scale(1.25 * force).add(0.0, 0.2 * force, 0.0));
+                    var impulse = delta.normalize().scale(1.25 * force)
+                            .add(0.0, 0.2 * force, 0.0);
+                    EntityMotionGuard.runWithMotionSource(player, () ->
+                            AeromanipTargeting.addClampedVelocity(target, impulse));
                 }
             }
             AeromanipVfx.burst(level, center, range * 0.72);

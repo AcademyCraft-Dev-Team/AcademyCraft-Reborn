@@ -4,10 +4,12 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -18,13 +20,23 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.common.structure.BlockStructureCollision;
 import org.academy.api.common.structure.BlockStructureGridAlignment;
+import org.academy.api.common.structure.BlockStructureImpact;
 import org.academy.api.common.structure.BlockStructurePlacementPolicy;
 import org.academy.api.common.structure.BlockStructureRestoreResult;
+import org.academy.api.common.structure.BlockStructureSettlementResult;
 import org.academy.api.common.structure.BlockStructureSnapshot;
-import org.academy.internal.common.structure.BlockStructureManager;
+import org.academy.api.common.structure.BlockStructureKinetics;
+import org.academy.api.server.team.TeamRelations;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.structure.BlockStructureCollisionGeometry;
+import org.academy.internal.common.structure.BlockStructureKineticRuntime;
+import org.academy.internal.common.structure.BlockStructureManager;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 /** Server-authoritative entity representation of a captured block structure. */
@@ -45,10 +57,15 @@ public final class BlockStructureEntity extends Entity
     private static final double REST_SPEED_SQUARED = 0.0004;
     private static final int RESTORE_DELAY_TICKS = 20;
     private static final double PLATFORM_EPSILON = 0.18;
+    private static final int GENERIC_IMPACT_COOLDOWN_TICKS = 10;
+    private static final int MOTION_CONTROLLER_TICKS = 100;
 
     private BlockStructureSnapshot structure = BlockStructureSnapshot.EMPTY;
     private BlockStructureCollisionGeometry collisionGeometry =
             BlockStructureCollisionGeometry.EMPTY;
+    private final Map<UUID, Long> genericImpactTicks = new HashMap<>();
+    private UUID motionControllerId;
+    private long motionControllerExpiresAt;
     private int settledTicks;
 
     public BlockStructureEntity(EntityType<? extends BlockStructureEntity> type, Level level) {
@@ -100,19 +117,37 @@ public final class BlockStructureEntity extends Entity
             if (!level().isClientSide()) discard();
             return;
         }
+        if (!level().isClientSide()) BlockStructureKineticRuntime.beginTick(this);
         if (!isNoGravity()) applyGravity();
         var oldPosition = position();
         var oldBounds = getBoundingBox();
         var requestedMovement = finiteVelocity(getDeltaMovement());
         setDeltaMovement(requestedMovement);
-        move(MoverType.SELF, requestedMovement);
-        var actualMovement = position().subtract(oldPosition);
+        var actualMovement = collisionGeometry.collideWithWorld(
+                this,
+                level(),
+                oldPosition,
+                getYRot(),
+                structure,
+                requestedMovement
+        );
+        setPos(oldPosition.add(actualMovement));
+        horizontalCollision = !Mth.equal(requestedMovement.x, actualMovement.x)
+                || !Mth.equal(requestedMovement.z, actualMovement.z);
+        verticalCollision = !Mth.equal(requestedMovement.y, actualMovement.y);
+        setOnGroundWithMovement(
+                verticalCollision && requestedMovement.y < 0.0,
+                actualMovement
+        );
         if (!level().isClientSide() && actualMovement.lengthSqr() > 1.0e-12) {
             moveStandingEntities(oldBounds, oldPosition, actualMovement);
+            handleEntityImpacts(oldBounds, oldPosition, actualMovement);
         }
 
-        var velocity = requestedMovement;
-        if (horizontalCollision) {
+        var postImpactVelocity = finiteVelocity(getDeltaMovement());
+        var externallyRedirected = postImpactVelocity.distanceToSqr(requestedMovement) > 1.0e-12;
+        var velocity = externallyRedirected ? postImpactVelocity : requestedMovement;
+        if (!externallyRedirected && horizontalCollision) {
             velocity = new Vec3(
                     Math.abs(actualMovement.x) + 1.0e-7 < Math.abs(requestedMovement.x)
                             ? 0.0 : velocity.x,
@@ -121,18 +156,129 @@ public final class BlockStructureEntity extends Entity
                             ? 0.0 : velocity.z
             );
         }
-        if (verticalCollision) velocity = new Vec3(velocity.x, 0.0, velocity.z);
+        if (!externallyRedirected && verticalCollision) {
+            velocity = new Vec3(velocity.x, 0.0, velocity.z);
+        }
         setDeltaMovement(velocity.scale(LINEAR_DRAG));
         refreshStructureBounds();
+        if (!level().isClientSide()) BlockStructureKineticRuntime.endTick(this);
 
-        if (!level().isClientSide() && entityData.get(RESTORE_WHEN_SETTLED)) {
-            if (onGround() && getDeltaMovement().lengthSqr() <= REST_SPEED_SQUARED) {
+        if (!level().isClientSide()) {
+            var stopped = getDeltaMovement().lengthSqr() <= REST_SPEED_SQUARED;
+            var fullyStopped = getDeltaMovement().lengthSqr() <= 1.0e-12;
+            var externallyControlled = recentMotionController((ServerLevel) level()) != null;
+            var propulsionFinished = BlockStructureKineticRuntime.controller(this) == null
+                    && !externallyControlled;
+            if (stopped && (fullyStopped
+                    || horizontalCollision || verticalCollision || propulsionFinished)) {
                 settledTicks++;
-                if (settledTicks >= RESTORE_DELAY_TICKS) restoreToGrid();
+                if (settledTicks >= RESTORE_DELAY_TICKS) settleToGrid();
             } else {
                 settledTicks = 0;
             }
         }
+    }
+
+    private void handleEntityImpacts(
+            AABB oldBounds,
+            Vec3 oldPosition,
+            Vec3 movement
+    ) {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        var kineticController = BlockStructureKineticRuntime.controller(this);
+        var controller = kineticController == null
+                ? recentMotionController(serverLevel)
+                : kineticController;
+        var query = oldBounds.expandTowards(movement).inflate(1.0e-4);
+        for (var target : level().getEntities(
+                this,
+                query,
+                target -> target != controller
+                        && target.isAlive()
+                        && !target.isSpectator()
+                        && !target.noPhysics)) {
+            var hit = collisionGeometry.firstSweepHit(
+                    target.getBoundingBox(),
+                    oldPosition,
+                    getYRot(),
+                    structure,
+                    movement
+            );
+            if (hit == null) continue;
+            var relativeMovement = movement.subtract(target.getDeltaMovement());
+            var closingSpeed = Math.max(0.0, -relativeMovement.dot(hit.normal()));
+            if (closingSpeed <= 1.0e-7) continue;
+            var impact = new BlockStructureImpact(
+                    this,
+                    controller,
+                    target,
+                    hit.point(),
+                    hit.normal(),
+                    movement,
+                    closingSpeed
+            );
+            if (kineticController != null) {
+                BlockStructureKineticRuntime.handleImpact(impact);
+            } else {
+                handleGenericImpact(serverLevel, impact);
+            }
+        }
+    }
+
+    private void handleGenericImpact(
+            ServerLevel level,
+            BlockStructureImpact impact
+    ) {
+        var target = impact.target();
+        var now = level.getGameTime();
+        var previous = genericImpactTicks.get(target.getUUID());
+        if (previous != null && now - previous < GENERIC_IMPACT_COOLDOWN_TICKS) return;
+        if (genericImpactTicks.size() > 256) {
+            genericImpactTicks.entrySet().removeIf(entry -> now - entry.getValue() > 200L);
+        }
+
+        var controller = impact.controller();
+        if (controller instanceof ServerPlayer player
+                && (PvpSetting.shouldPrevent(player, target)
+                || TeamRelations.areAllied(player, target))) return;
+        genericImpactTicks.put(target.getUUID(), now);
+        var blockCount = structure.blockCount();
+        var damage = BlockStructureKinetics.collisionDamage(
+                blockCount, impact.closingSpeed());
+        if (target instanceof LivingEntity living && damage > 0.0f) {
+            var original = controller instanceof ServerPlayer player
+                    ? player.damageSources().playerAttack(player)
+                    : level.damageSources().generic();
+            var source = new DamageSource(
+                    original.typeHolder(), this, controller);
+            if (!living.hurtServer(level, source, damage)) return;
+        }
+
+        var knockback = BlockStructureKinetics.collisionKnockback(
+                blockCount, impact.closingSpeed());
+        if (knockback <= 0.0 || impact.movement().lengthSqr() <= 1.0e-8
+                || controller != null
+                && !EntityMotionGuard.canApplyMotionFrom(controller, target)) return;
+        var impulse = impact.movement().normalize().scale(knockback)
+                .add(0.0, 0.08, 0.0);
+        EntityMotionGuard.runWithMotionSource(controller, () -> {
+            target.setDeltaMovement(target.getDeltaMovement().add(impulse));
+            target.hurtMarked = true;
+        });
+    }
+
+    private Entity recentMotionController(ServerLevel level) {
+        if (motionControllerId == null
+                || level.getGameTime() > motionControllerExpiresAt) {
+            motionControllerId = null;
+            return null;
+        }
+        var controller = level.getEntity(motionControllerId);
+        if (controller == null || controller.isRemoved()) {
+            motionControllerId = null;
+            return null;
+        }
+        return controller;
     }
 
     private void moveStandingEntities(AABB oldBounds, Vec3 oldPosition, Vec3 movement) {
@@ -229,6 +375,17 @@ public final class BlockStructureEntity extends Entity
     }
 
     @Override
+    public void setDeltaMovement(Vec3 velocity) {
+        super.setDeltaMovement(finiteVelocity(velocity));
+        if (level().isClientSide()) return;
+        var source = EntityMotionGuard.currentMotionSourceEntity();
+        if (source == null || source == this || source.isRemoved()
+                || source.level() != level()) return;
+        motionControllerId = source.getUUID();
+        motionControllerExpiresAt = level().getGameTime() + MOTION_CONTROLLER_TICKS;
+    }
+
+    @Override
     public Entity asEntity() {
         return this;
     }
@@ -306,6 +463,13 @@ public final class BlockStructureEntity extends Entity
             BlockStructurePlacementPolicy placementPolicy
     ) {
         return BlockStructureManager.restore(this, placementPolicy);
+    }
+
+    @Override
+    public BlockStructureSettlementResult settleToGrid(
+            BlockStructurePlacementPolicy placementPolicy
+    ) {
+        return BlockStructureManager.settle(this, placementPolicy);
     }
 
     @Override

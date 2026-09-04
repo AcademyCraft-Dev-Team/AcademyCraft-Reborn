@@ -54,6 +54,14 @@ class AeromanipProgramExecutionBridgeTest {
                 AeromanipProgramNodeCatalog.INSTANCE
                         .find(AeromanipProgramNodeIds.FIRE_JETS)
                         .scope().requiredCapabilities());
+        assertEquals(Set.of(AeromanipProgramCapabilities.HIGH_SPEED_JET),
+                AeromanipProgramNodeCatalog.INSTANCE
+                        .find(AeromanipProgramNodeIds.OWNED_JET_NOZZLE_COUNT)
+                        .scope().requiredCapabilities());
+        assertEquals(Set.of(AeromanipProgramCapabilities.HIGH_SPEED_JET),
+                AeromanipProgramNodeCatalog.INSTANCE
+                        .find(AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE)
+                        .scope().requiredCapabilities());
 
         var laminar = (AeromanipProgramNodeCatalog.LaminarCutConfiguration)
                 AeromanipProgramNodeCatalog.INSTANCE
@@ -89,6 +97,22 @@ class AeromanipProgramExecutionBridgeTest {
                                         .defaultConfiguration())
                         .result().orElseThrow();
         assertEquals(8, fireJets.duration());
+        var launch = (AeromanipProgramNodeCatalog.BlockStructureLaunchConfiguration)
+                AeromanipProgramNodeCatalog.INSTANCE
+                        .find(AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE)
+                        .configurationCodec()
+                        .parse(JsonOps.INSTANCE,
+                                catalog.entry(AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE)
+                                        .defaultConfiguration())
+                        .result().orElseThrow();
+        assertEquals(1.0f, launch.power());
+        assertEquals(2, launch.structureRadius());
+        assertEquals(8, launch.duration());
+        assertTrue(launch.restoreWhenSettled());
+        assertFalse(catalog.schema(AeromanipProgramNodeIds.OWNED_JET_NOZZLE_COUNT,
+                        catalog.entry(AeromanipProgramNodeIds.OWNED_JET_NOZZLE_COUNT)
+                                .defaultConfiguration())
+                .input("direction").orElseThrow().required());
 
         var blockNozzle = new JsonObject();
         blockNozzle.addProperty("target_type", "block");
@@ -274,6 +298,42 @@ class AeromanipProgramExecutionBridgeTest {
         transaction.release();
     }
 
+    @Test
+    void blockStructureLaunchStagesConfiguredTransactionalAction() {
+        var configuration = new JsonObject();
+        configuration.addProperty("power", 1.5f);
+        configuration.addProperty("radius", 4);
+        configuration.addProperty("duration", 6);
+        configuration.addProperty("restore_when_settled", false);
+        var graph = new ProgramGraph(
+                List.of(
+                        blockPositionNode(1, 2, 64, 4),
+                        directionNode(2, 1.0, 0.0, 0.0),
+                        node(3, AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE, configuration)
+                ),
+                List.of(
+                        edge(1, "position", 3, "block"),
+                        edge(2, "direction", 3, "direction")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        AeromanipProgramNodeCatalog.AEROMANIP)
+                .compile(graph, Set.of(AeromanipProgramCapabilities.HIGH_SPEED_JET));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var runtime = new FakeRuntime();
+        var transaction = new ProgramActionTransaction();
+
+        var result = AeromanipProgramExecutionBridge.execute(
+                compiled.program(), 100L, runtime, transaction);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(1, transaction.size());
+        assertTrue(transaction.commit().successful());
+        assertEquals(List.of(
+                "launch:2,64,4:1.0,0.0,0.0:1.5:4:6:false"), runtime.applied);
+        transaction.release();
+    }
+
     private static ProgramGraph.Node node(
             int id,
             Identifier type,
@@ -320,6 +380,20 @@ class AeromanipProgramExecutionBridgeTest {
         configuration.addProperty("y", y);
         configuration.addProperty("z", z);
         return node(id, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, configuration);
+    }
+
+    private static ProgramGraph.Node blockPositionNode(
+            int id,
+            int x,
+            int y,
+            int z
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("dimension", "minecraft:overworld");
+        configuration.addProperty("x", x);
+        configuration.addProperty("y", y);
+        configuration.addProperty("z", z);
+        return node(id, CommonProgramNodeIds.BLOCK_POSITION_CONSTANT, configuration);
     }
 
     private static ProgramGraph.Node floatNode(int id, double value) {
@@ -390,6 +464,29 @@ class AeromanipProgramExecutionBridgeTest {
         @Override
         public ProgramActionTransaction.ProgramAction fireJets(int durationSeconds) {
             return action("fire:" + durationSeconds);
+        }
+
+        @Override
+        public int ownedJetNozzleCount(
+                ProgramWorldPosition center,
+                double radius,
+                ProgramDirection direction
+        ) {
+            return direction == null ? 4 : 3;
+        }
+
+        @Override
+        public ProgramActionTransaction.ProgramAction launchBlockStructure(
+                ProgramBlockPosition seed,
+                ProgramDirection direction,
+                AeromanipProgramNodeCatalog.BlockStructureLaunchConfiguration configuration
+        ) {
+            return action("launch:" + seed.x() + "," + seed.y() + "," + seed.z()
+                    + ":" + vector(direction)
+                    + ":" + configuration.power()
+                    + ":" + configuration.structureRadius()
+                    + ":" + configuration.duration()
+                    + ":" + configuration.restoreWhenSettled());
         }
 
         @Override

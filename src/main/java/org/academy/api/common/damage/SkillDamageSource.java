@@ -35,6 +35,28 @@ public class SkillDamageSource extends DamageSource {
     }
 
     /**
+     * Creates skill damage attributed to the player while retaining the actual
+     * moving entity as the direct source. This lets defenses redirect that entity.
+     */
+    public static SkillDamageSource ofDirect(
+            ServerPlayer player,
+            Skill skill,
+            Entity directEntity
+    ) {
+        if (directEntity == null) throw new IllegalArgumentException("directEntity cannot be null");
+        var categoryType = SkillDamageTypeResolver.resolve(skill);
+        if (categoryType != null) {
+            var registry = player.level().registryAccess()
+                    .lookupOrThrow(Registries.DAMAGE_TYPE);
+            return new SkillDamageSource(
+                    registry.getOrThrow(categoryType), directEntity, player, skill);
+        }
+        var original = player.damageSources().playerAttack(player);
+        return new SkillDamageSource(
+                original.typeHolder(), directEntity, player, skill);
+    }
+
+    /**
      * 创建一个指定伤害类型的技能伤害源
      *
      * @param player  受影响的玩家

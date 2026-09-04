@@ -40,4 +40,15 @@ public interface BlockStructure {
     }
 
     BlockStructureRestoreResult restoreToGrid(BlockStructurePlacementPolicy placementPolicy);
+
+    /**
+     * Ends the entity representation at the nearest grid pose. Placeable cells
+     * become world blocks and every remaining cell becomes a dropped block item.
+     */
+    default BlockStructureSettlementResult settleToGrid() {
+        return settleToGrid(BlockStructurePlacementPolicy.AIR_ONLY);
+    }
+
+    BlockStructureSettlementResult settleToGrid(
+            BlockStructurePlacementPolicy placementPolicy);
 }

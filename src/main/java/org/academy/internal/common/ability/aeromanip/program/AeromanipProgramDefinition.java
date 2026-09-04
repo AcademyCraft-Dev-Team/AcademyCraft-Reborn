@@ -51,13 +51,18 @@ public final class AeromanipProgramDefinition {
                 configuration.addProperty("target_type", "entity");
             } else if (id.equals(AeromanipProgramNodeIds.FIRE_JETS)) {
                 configuration.addProperty("duration", 8);
+            } else if (id.equals(AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE)) {
+                configuration.addProperty("power", 1.0f);
+                configuration.addProperty("radius", 2);
+                configuration.addProperty("duration", 8);
+                configuration.addProperty("restore_when_settled", true);
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
             editor.add(
                     id,
                     type,
                     configuration,
-                    id.getPath().contains("/target/")
+                    id.getPath().contains("/target/") || id.getPath().contains("/query/")
                             ? ProgramEditorNodeCatalog.Group.TARGET
                             : ProgramEditorNodeCatalog.Group.ACTION,
                     "screen.academy.program.aeromanip.node." + suffix,

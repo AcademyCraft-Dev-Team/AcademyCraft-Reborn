@@ -21,8 +21,25 @@ public final class VectorProjectileStateAdapter {
 
     public static void applyRedirect(Projectile projectile, Vec3 redirectedVelocity,
                                      Entity previousOwner) {
-        if (projectile == null || !isFiniteMotion(redirectedVelocity)) return;
-        projectile.setDeltaMovement(redirectedVelocity);
+        if (!resumeFlight(projectile, redirectedVelocity)) return;
+
+        if (projectile instanceof ShulkerBullet bullet) {
+            var target = previousOwner != null && previousOwner.isAlive()
+                    && previousOwner != projectile.getOwner() ? previousOwner : null;
+            var accessor = (ShulkerBulletVectorAccessor) bullet;
+            accessor.academy$setFinalTarget(
+                    target == null ? null : EntityReference.of(target));
+            var direction = accessor.academy$getCurrentMoveDirection();
+            accessor.academy$selectNextMoveDirection(
+                    direction == null ? null : direction.getAxis(), target);
+        }
+        VectorProjectileTargeting.retargetAfterRedirect(projectile, previousOwner);
+    }
+
+    /** Restarts embedded or resting projectiles without changing their owner or target. */
+    public static boolean resumeFlight(Projectile projectile, Vec3 velocity) {
+        if (projectile == null || !isFiniteMotion(velocity)) return false;
+        projectile.setDeltaMovement(velocity);
         projectile.setOnGround(false);
         projectile.needsSync = true;
         projectile.syncPosition = true;
@@ -41,18 +58,7 @@ public final class VectorProjectileStateAdapter {
             // This Minecraft version derives acceleration direction from current velocity each tick.
             hurtingProjectile.accelerationPower = Math.abs(hurtingProjectile.accelerationPower);
         }
-
-        if (projectile instanceof ShulkerBullet bullet) {
-            var target = previousOwner != null && previousOwner.isAlive()
-                    && previousOwner != projectile.getOwner() ? previousOwner : null;
-            var accessor = (ShulkerBulletVectorAccessor) bullet;
-            accessor.academy$setFinalTarget(
-                    target == null ? null : EntityReference.of(target));
-            var direction = accessor.academy$getCurrentMoveDirection();
-            accessor.academy$selectNextMoveDirection(
-                    direction == null ? null : direction.getAxis(), target);
-        }
-        VectorProjectileTargeting.retargetAfterRedirect(projectile, previousOwner);
+        return true;
     }
 
     private static boolean isFiniteMotion(Vec3 velocity) {

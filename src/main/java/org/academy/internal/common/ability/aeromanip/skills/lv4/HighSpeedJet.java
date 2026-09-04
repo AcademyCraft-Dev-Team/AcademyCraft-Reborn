@@ -6,12 +6,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -40,6 +43,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.HighSpeedJetStructureService;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -78,11 +82,11 @@ public final class HighSpeedJet extends Skill {
         return milestone >= 2 ? 60 : 40;
     }
 
-    static float activationCpCost(int nozzleCount) {
+    public static float activationCpCost(int nozzleCount) {
         return 8.0f + Math.max(0, nozzleCount) * 2.0f;
     }
 
-    static float activationAirCost(int nozzleCount) {
+    public static float activationAirCost(int nozzleCount) {
         return Math.max(0, nozzleCount) * 8.0f;
     }
 
@@ -110,6 +114,15 @@ public final class HighSpeedJet extends Skill {
         var distanceSqr = ownerPosition.distanceToSqr(nozzlePosition);
         return Double.isFinite(distanceSqr)
                 && distanceSqr > NOZZLE_RETENTION_RANGE * NOZZLE_RETENTION_RANGE;
+    }
+
+    static InputSystem.KeyCombination defaultStructureLaunchBinding() {
+        return InputSystem.combo(
+                InputSystem.InputType.KEYBOARD,
+                InputConstants.KEY_H,
+                InputConstants.RELEASE,
+                InputConstants.MOD_SHIFT
+        );
     }
 
     @Override
@@ -154,7 +167,15 @@ public final class HighSpeedJet extends Skill {
         InputSystem.addKeyBinding(
                 Client.KEY_NAME_ACTIVATE,
                 activationBinding,
-                _ -> Client.activate());
+                _ -> Client.activate(false));
+        var defaultStructureLaunchBinding = defaultStructureLaunchBinding();
+        var structureLaunchBinding = Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_LAUNCH_STRUCTURE,
+                defaultStructureLaunchBinding);
+        InputSystem.addKeyBinding(
+                Client.KEY_NAME_LAUNCH_STRUCTURE,
+                structureLaunchBinding,
+                _ -> Client.activate(true));
     }
 
     @Override
@@ -174,6 +195,8 @@ public final class HighSpeedJet extends Skill {
                                 136));
         public static final String KEY_NAME_PLACE = SkillNames.HIGH_SPEED_JET + "_place";
         public static final String KEY_NAME_ACTIVATE = SkillNames.HIGH_SPEED_JET + "_activate";
+        public static final String KEY_NAME_LAUNCH_STRUCTURE =
+                SkillNames.HIGH_SPEED_JET + "_launch_structure";
         public static Config CONFIG = new Config();
         private static PlacementContext placementContext;
 
@@ -199,9 +222,9 @@ public final class HighSpeedJet extends Skill {
             if (hasTarget && !ClientUtil.hasScreen()) MisakaNetworkClient.send(PlacePacket.INSTANCE);
         }
 
-        private static void activate() {
+        private static void activate(boolean launchStructure) {
             if (AbilitySystemClient.canUseSkill(Skills.HIGH_SPEED_JET.get())) {
-                MisakaNetworkClient.send(ActivatePacket.INSTANCE);
+                MisakaNetworkClient.send(new ActivatePacket(launchStructure));
             }
         }
 
@@ -312,17 +335,67 @@ public final class HighSpeedJet extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.HIGH_SPEED_JET.get();
             if (!(player.level() instanceof ServerLevel level) || !skill.isEnabled(player)) return;
+            if (packet.launchStructure()) {
+                var target = resolvePlacementTarget(player, 0.0f);
+                if (target instanceof EntityPlacement entity
+                        && entity.entity() instanceof Projectile projectile) {
+                    var projectileNozzles = ownedNozzles(level, player).stream()
+                            .filter(nozzle -> nozzle.isAttachedTo(projectile))
+                            .toList();
+                    if (!activateNozzles(player, skill, projectileNozzles)) {
+                        player.sendOverlayMessage(Component.translatable(
+                                "message.academy.high_speed_jet.projectile_launch_rejected"));
+                    }
+                    return;
+                }
+                if (!(target instanceof BlockPlacement block)) {
+                    player.sendOverlayMessage(Component.translatable(
+                            "message.academy.high_speed_jet.structure_target_required"));
+                    return;
+                }
+                var duration = Math.max(1, Math.round(
+                        activationDuration(skill.getEffectiveProficiencyMilestone(player))
+                                * AeromanipConfig.durationMultiplier(
+                                player, SkillNames.HIGH_SPEED_JET)));
+                var launched = HighSpeedJetStructureService.launch(
+                        player,
+                        new HighSpeedJetStructureService.LaunchRequest(
+                                block.pos(),
+                                block.face(),
+                                null,
+                                HighSpeedJetStructureService.DEFAULT_STRUCTURE_RADIUS,
+                                1.0f,
+                                duration,
+                                true
+                        ),
+                        1.0f
+                );
+                if (launched.isEmpty()) {
+                    player.sendOverlayMessage(Component.translatable(
+                            "message.academy.high_speed_jet.structure_launch_rejected"));
+                }
+                return;
+            }
             var nozzles = ownedNozzles(level, player);
-            if (nozzles.isEmpty()) return;
+            activateNozzles(player, skill, nozzles);
+        }
+
+        private static boolean activateNozzles(
+                ServerPlayer player,
+                HighSpeedJet skill,
+                List<HighSpeedJetNozzle> requestedNozzles
+        ) {
+            if (requestedNozzles == null || requestedNozzles.isEmpty()) return false;
             var maximum = resolvedMaximumNozzles(player, skill);
-            if (nozzles.size() > maximum) nozzles = nozzles.subList(0, maximum);
-            var resolvedNozzles = List.copyOf(nozzles);
+            var resolvedNozzles = List.copyOf(requestedNozzles.size() > maximum
+                    ? requestedNozzles.subList(0, maximum)
+                    : requestedNozzles);
             var count = resolvedNozzles.size();
             var duration = Math.max(1, Math.round(
                     activationDuration(skill.getEffectiveProficiencyMilestone(player))
                             * AeromanipConfig.durationMultiplier(
                             player, SkillNames.HIGH_SPEED_JET)));
-            skill.executeActiveWithResource(
+            return skill.executeActiveWithResource(
                     player,
                     _ -> activationCpCost(count)
                             * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET),
@@ -395,6 +468,26 @@ public final class HighSpeedJet extends Skill {
                     (_, _) -> nozzles.forEach(nozzle -> nozzle.activate(durationTicks)));
             if (!activated) throw new IllegalStateException("Jet activation was rejected");
             return nozzles;
+        }
+
+        /** Runs a shared High-Speed Jet effect through the skill's resource gate. */
+        public static boolean executeWithResources(
+                ServerPlayer player,
+                float cpCost,
+                float airCost,
+                Runnable action
+        ) {
+            if (player == null || action == null
+                    || !Float.isFinite(cpCost) || cpCost < 0.0f
+                    || !Float.isFinite(airCost) || airCost < 0.0f) return false;
+            var skill = Skills.HIGH_SPEED_JET.get();
+            if (!skill.isEnabled(player)) return false;
+            return skill.executeActiveWithResource(
+                    player,
+                    _ -> cpCost,
+                    _ -> airCost,
+                    (_, _) -> action.run()
+            );
         }
 
         private static HighSpeedJetNozzle requirePlacedNozzle(
@@ -566,10 +659,16 @@ public final class HighSpeedJet extends Skill {
     @PacketTarget(ThreadType.SERVER)
     public static final class ActivatePacket
             extends Packet<ServerGamePacketListenerImpl, ActivatePacket> {
-        public static final ActivatePacket INSTANCE = new ActivatePacket();
-        public static final StreamCodec<ByteBuf, ActivatePacket> CODEC = StreamCodec.unit(INSTANCE);
+        public static final StreamCodec<ByteBuf, ActivatePacket> CODEC = ByteBufCodecs.BOOL
+                .map(ActivatePacket::new, ActivatePacket::launchStructure);
+        private final boolean launchStructure;
 
-        private ActivatePacket() {
+        public ActivatePacket(boolean launchStructure) {
+            this.launchStructure = launchStructure;
+        }
+
+        public boolean launchStructure() {
+            return launchStructure;
         }
 
         @Override

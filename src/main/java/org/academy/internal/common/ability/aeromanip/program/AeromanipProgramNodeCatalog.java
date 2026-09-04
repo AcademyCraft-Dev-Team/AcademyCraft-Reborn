@@ -52,6 +52,15 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
         put(result, AeromanipProgramNodeIds.FIRE_JETS, fixedType(
                 JetActivationConfiguration.CODEC,
                 fireJetsSchema(), AeromanipProgramCapabilities.HIGH_SPEED_JET));
+        put(result, AeromanipProgramNodeIds.OWNED_JET_NOZZLE_COUNT, unitType(
+                ownedJetNozzleCountSchema(),
+                ProgramNodeRole.QUERY,
+                ProgramNodePurity.WORLD_QUERY,
+                capabilityScope(AeromanipProgramCapabilities.HIGH_SPEED_JET)));
+        put(result, AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE, fixedType(
+                BlockStructureLaunchConfiguration.CODEC,
+                launchBlockStructureSchema(),
+                AeromanipProgramCapabilities.HIGH_SPEED_JET));
         types = Map.copyOf(result);
     }
 
@@ -129,6 +138,34 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
     private static ProgramNodeSchema fireJetsSchema() {
         return new ProgramNodeSchema(
                 List.of(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW)),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
+    private static ProgramNodeSchema ownedJetNozzleCountSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput(
+                                "center", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.requiredInput(
+                                "radius", ProgramValueTypes.FLOAT),
+                        ProgramPortDefinition.optionalInput(
+                                "direction", ProgramValueTypes.DIRECTION)
+                ),
+                List.of(ProgramPortDefinition.output(
+                        "count", ProgramValueTypes.INTEGER))
+        );
+    }
+
+    private static ProgramNodeSchema launchBlockStructureSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "block", ProgramValueTypes.BLOCK_POSITION),
+                        ProgramPortDefinition.requiredInput(
+                                "direction", ProgramValueTypes.DIRECTION)
+                ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
     }
@@ -254,6 +291,25 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                 .optionalFieldOf("duration", 8)
                 .xmap(JetActivationConfiguration::new, JetActivationConfiguration::duration)
                 .codec();
+    }
+
+    public record BlockStructureLaunchConfiguration(
+            float power,
+            int structureRadius,
+            int duration,
+            boolean restoreWhenSettled
+    ) {
+        public static final Codec<BlockStructureLaunchConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.floatRange(0.0f, 2.0f).optionalFieldOf("power", 1.0f)
+                                .forGetter(BlockStructureLaunchConfiguration::power),
+                        Codec.intRange(2, 8).optionalFieldOf("radius", 2)
+                                .forGetter(BlockStructureLaunchConfiguration::structureRadius),
+                        Codec.intRange(1, 60).optionalFieldOf("duration", 8)
+                                .forGetter(BlockStructureLaunchConfiguration::duration),
+                        Codec.BOOL.optionalFieldOf("restore_when_settled", true)
+                                .forGetter(BlockStructureLaunchConfiguration::restoreWhenSettled)
+                ).apply(instance, BlockStructureLaunchConfiguration::new));
     }
 
     public enum ChargeTier {

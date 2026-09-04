@@ -15,6 +15,10 @@ public final class AeromanipProgramNodeIds {
     public static final Identifier PLACE_TEMPORARY_JET_NOZZLE =
             id("action/place_temporary_jet_nozzle");
     public static final Identifier FIRE_JETS = id("action/fire_jets");
+    public static final Identifier OWNED_JET_NOZZLE_COUNT =
+            id("query/owned_jet_nozzle_count");
+    public static final Identifier LAUNCH_BLOCK_STRUCTURE =
+            id("action/launch_block_structure");
 
     private AeromanipProgramNodeIds() {
     }

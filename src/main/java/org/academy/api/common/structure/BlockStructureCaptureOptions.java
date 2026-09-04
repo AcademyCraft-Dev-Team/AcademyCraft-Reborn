@@ -31,6 +31,12 @@ public record BlockStructureCaptureOptions(
         if (policy == null) throw new IllegalArgumentException("policy cannot be null");
     }
 
+    /** Compatibility value retained for saved program data; settlement is unconditional. */
+    @Override
+    public boolean restoreWhenSettled() {
+        return restoreWhenSettled;
+    }
+
     public static BlockStructureCaptureOptions defaults() {
         return new BlockStructureCaptureOptions(
                 DEFAULT_MAXIMUM_BLOCKS,
