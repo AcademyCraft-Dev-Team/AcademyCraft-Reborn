@@ -75,7 +75,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
             @Nullable ProgramDirection direction,
             @Nullable ProgramWorldPosition target,
             float power,
-            boolean destroyBlocks
+            boolean destroyBlocks,
+            boolean destroyProjectiles
     ) {
         return new ProgramActionTransaction.ProgramAction() {
             private BeamPlan plan;
@@ -101,6 +102,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                         SingleHighSpeedElectronBeam.MAX_HEALTH_DAMAGE_RATIO
                                 * damageScale(power),
                         destroyBlocks && DestroyBlocksSetting.canDestroyBlocks(player, skill),
+                        destroyProjectiles,
                         Skills.RADIATION_INTENSIFY.get().isEnabled(player),
                         electronBeamScale(power),
                         configuredBeamAttackDelayTicks()
@@ -141,6 +143,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                         0.0f,
                         0.0f,
                         true,
+                        false,
                         false,
                         miningBeamScale(power),
                         configuredBeamAttackDelayTicks()
@@ -186,6 +189,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                         SingleHighSpeedElectronBeam.BASE_DAMAGE * damageScale(power),
                         0.0f,
                         destroyBlocks && DestroyBlocksSetting.canDestroyBlocks(player, skill),
+                        false,
                         false,
                         electronBeamScale(power),
                         0
@@ -317,6 +321,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
             float baseDamage,
             float maximumHealthRatio,
             boolean destroysBlocks,
+            boolean destroysProjectiles,
             boolean radiationEnabled,
             float scale,
             int attackDelayTicks
@@ -337,6 +342,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
                 skill.getEffectiveProficiencyMilestone(player)
         );
         beam.setAttackDelayTicks(attackDelayTicks);
+        beam.setDestroysProjectiles(destroysProjectiles);
         beam.setBeamLength((float) length);
         beam.setBeamScale(scale);
         beam.setPos(origin);

@@ -34,6 +34,9 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
         put(result, MeltdownerProgramNodeIds.ELECTRON_BEAM, beamType(
                 BeamConfiguration.CODEC, MeltdownerProgramNodeCatalog::electronBeamSchema,
                 MeltdownerProgramCapabilities.ELECTRON_BEAM));
+        put(result, MeltdownerProgramNodeIds.ELECTRON_FAN, beamType(
+                ElectronFanConfiguration.CODEC, _ -> electronFanSchema(),
+                MeltdownerProgramCapabilities.ELECTRON_FAN));
         put(result, MeltdownerProgramNodeIds.MINING_BEAM, beamType(
                 MiningBeamConfiguration.CODEC, MeltdownerProgramNodeCatalog::miningBeamSchema,
                 MeltdownerProgramCapabilities.MINING_BEAM));
@@ -89,6 +92,17 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
         }
         return new ProgramNodeSchema(
                 List.copyOf(inputs),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
+    private static ProgramNodeSchema electronFanSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.optionalInput("origin", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.requiredInput("direction", ProgramValueTypes.DIRECTION)
+                ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
     }
@@ -171,7 +185,12 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
                 .codec();
     }
 
-    public record BeamConfiguration(float power, AimMode aimMode, boolean destroyBlocks) {
+    public record BeamConfiguration(
+            float power,
+            AimMode aimMode,
+            boolean destroyBlocks,
+            boolean destroyProjectiles
+    ) {
         public static final Codec<BeamConfiguration> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
                         Codec.floatRange(0.0f, 2.0f).fieldOf("power")
@@ -179,7 +198,9 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
                         AimMode.CODEC.optionalFieldOf("aim_mode", AimMode.DIRECTION)
                                 .forGetter(BeamConfiguration::aimMode),
                         Codec.BOOL.optionalFieldOf("destroy_blocks", true)
-                                .forGetter(BeamConfiguration::destroyBlocks)
+                                .forGetter(BeamConfiguration::destroyBlocks),
+                        Codec.BOOL.optionalFieldOf("destroy_projectiles", false)
+                                .forGetter(BeamConfiguration::destroyProjectiles)
                 ).apply(instance, BeamConfiguration::new));
     }
 
@@ -191,6 +212,25 @@ public final class MeltdownerProgramNodeCatalog implements ProgramNodeLookup {
                         AimMode.CODEC.optionalFieldOf("aim_mode", AimMode.DIRECTION)
                                 .forGetter(MiningBeamConfiguration::aimMode)
                 ).apply(instance, MiningBeamConfiguration::new));
+    }
+
+    public record ElectronFanConfiguration(
+            float power,
+            int beamCount,
+            float spreadDegrees,
+            boolean destroyBlocks
+    ) {
+        public static final Codec<ElectronFanConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(ElectronFanConfiguration::power),
+                        Codec.intRange(2, 8).optionalFieldOf("beam_count", 5)
+                                .forGetter(ElectronFanConfiguration::beamCount),
+                        Codec.floatRange(0.0f, 30.0f).optionalFieldOf("spread_degrees", 12.0f)
+                                .forGetter(ElectronFanConfiguration::spreadDegrees),
+                        Codec.BOOL.optionalFieldOf("destroy_blocks", true)
+                                .forGetter(ElectronFanConfiguration::destroyBlocks)
+                ).apply(instance, ElectronFanConfiguration::new));
     }
 
     public record AtomicJetConfiguration(float power, boolean destroyBlocks) {
