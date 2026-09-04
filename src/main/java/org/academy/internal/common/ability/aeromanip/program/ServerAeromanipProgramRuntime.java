@@ -24,6 +24,7 @@ import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
+import org.jspecify.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -113,30 +114,44 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
 
     @Override
     public ProgramActionTransaction.ProgramAction laminarCut(
+            @Nullable ProgramWorldPosition origin,
             ProgramDirection direction,
             float power,
-            AeromanipChargeTier chargeTier
+            AeromanipChargeTier chargeTier,
+            float chargeCostMultiplier,
+            @Nullable ProgramDirection planeDirection,
+            AeromanipProgramNodeCatalog.BladePlaneMode planeMode
     ) {
         return new ProgramActionTransaction.ProgramAction() {
+            private Vec3 castOrigin;
             private Vec3 normalizedDirection;
 
             @Override
             public void validate() {
                 requireCasterReady(Skills.LAMINAR_CUTTER.get());
+                castOrigin = requireLaminarOrigin(origin);
                 normalizedDirection = vector(direction);
+                requireChargeCostMultiplier(chargeCostMultiplier);
+                requireBladePlane(normalizedDirection, planeDirection, planeMode, false);
             }
 
             @Override
             public ProgramActionTransaction.Undo apply() {
                 requireCasterReady(Skills.LAMINAR_CUTTER.get());
+                castOrigin = requireLaminarOrigin(origin);
                 normalizedDirection = vector(direction);
+                var bladePlane = requireBladePlane(
+                        normalizedDirection, planeDirection, planeMode, true);
                 if (!LaminarCutter.Server.tryProgramCast(
                         player,
+                        castOrigin,
                         normalizedDirection,
                         laminarRange(power),
                         laminarDamageScale(power),
-                        laminarCost(power) * costMultiplier,
-                        chargeTier
+                        laminarCost(power) * costMultiplier
+                                * requireChargeCostMultiplier(chargeCostMultiplier),
+                        chargeTier,
+                        bladePlane
                 )) {
                     throw new IllegalStateException("Laminar Cutter program cast was rejected");
                 }
@@ -287,6 +302,50 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             throw new IllegalArgumentException("Program cost multiplier must be positive");
         }
         return multiplier;
+    }
+
+    private static float requireChargeCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier < 1.0f || multiplier > 2.0f) {
+            throw new IllegalArgumentException(
+                    "Laminar charge cost multiplier must be between 1 and 2");
+        }
+        return multiplier;
+    }
+
+    private Vec3 requireLaminarOrigin(@Nullable ProgramWorldPosition origin) {
+        var value = origin == null ? player.getEyePosition() : targets.requireLocalPosition(origin);
+        if (value.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+            throw new IllegalArgumentException("Laminar Cut origin is outside program range");
+        }
+        return value;
+    }
+
+    private @Nullable Vec3 requireBladePlane(
+            Vec3 attackDirection,
+            @Nullable ProgramDirection requestedDirection,
+            AeromanipProgramNodeCatalog.BladePlaneMode mode,
+            boolean resolveRandom
+    ) {
+        Objects.requireNonNull(mode, "mode");
+        if (mode == AeromanipProgramNodeCatalog.BladePlaneMode.DISABLED) return null;
+        if (mode == AeromanipProgramNodeCatalog.BladePlaneMode.DIRECTION) {
+            if (requestedDirection == null) {
+                throw new IllegalArgumentException(
+                        "Laminar Cut plane direction is required");
+            }
+            var value = normalizedVector(requestedDirection);
+            if (value.subtract(attackDirection.scale(value.dot(attackDirection)))
+                    .lengthSqr() <= 1.0e-8) {
+                throw new IllegalArgumentException(
+                        "Laminar Cut plane direction cannot be parallel to its attack direction");
+            }
+            return value;
+        }
+        if (!resolveRandom) return null;
+        var right = LaminarCutter.Server.bladeRight(attackDirection);
+        var normal = attackDirection.cross(right).normalize();
+        var angle = player.getRandom().nextDouble() * Math.PI * 2.0;
+        return right.scale(Math.cos(angle)).add(normal.scale(Math.sin(angle)));
     }
 
     private void spawnPushEffect(Entity target) {

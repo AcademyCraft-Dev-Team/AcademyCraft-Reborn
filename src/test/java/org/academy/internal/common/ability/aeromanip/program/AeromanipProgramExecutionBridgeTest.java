@@ -65,6 +65,21 @@ class AeromanipProgramExecutionBridgeTest {
                         .result().orElseThrow();
         assertEquals(AeromanipProgramNodeCatalog.ChargeTier.INSTANT,
                 laminar.chargeTier());
+        assertEquals(AeromanipProgramNodeCatalog.ChargeAcceleration.STANDARD,
+                laminar.chargeAcceleration());
+        assertEquals(AeromanipProgramNodeCatalog.BladePlaneMode.DISABLED,
+                laminar.planeMode());
+        assertFalse(catalog.schema(AeromanipProgramNodeIds.LAMINAR_CUT,
+                catalog.entry(AeromanipProgramNodeIds.LAMINAR_CUT).defaultConfiguration())
+                .input("origin").orElseThrow().required());
+        var directedPlane = catalog.entry(AeromanipProgramNodeIds.LAMINAR_CUT)
+                .defaultConfiguration().getAsJsonObject().deepCopy();
+        directedPlane.addProperty("plane_mode", "direction");
+        assertTrue(catalog.schema(AeromanipProgramNodeIds.LAMINAR_CUT, directedPlane)
+                .input("plane_direction").orElseThrow().required());
+        directedPlane.addProperty("plane_mode", "random");
+        assertTrue(catalog.schema(AeromanipProgramNodeIds.LAMINAR_CUT, directedPlane)
+                .input("plane_direction").isEmpty());
         var fireJets = (AeromanipProgramNodeCatalog.JetActivationConfiguration)
                 AeromanipProgramNodeCatalog.INSTANCE
                         .find(AeromanipProgramNodeIds.FIRE_JETS)
@@ -128,12 +143,20 @@ class AeromanipProgramExecutionBridgeTest {
         var configuration = new JsonObject();
         configuration.addProperty("power", 2);
         configuration.addProperty("charge_tier", "full");
+        configuration.addProperty("charge_acceleration", "instant");
+        configuration.addProperty("plane_mode", "direction");
         var graph = new ProgramGraph(
                 List.of(
                         directionNode(1, 0.0, 0.0, 1.0),
+                        worldPositionNode(3, 2.0, 65.0, 4.0),
+                        directionNode(4, 0.0, 1.0, 0.0),
                         node(2, AeromanipProgramNodeIds.LAMINAR_CUT, configuration)
                 ),
-                List.of(edge(1, "direction", 2, "direction"))
+                List.of(
+                        edge(1, "direction", 2, "direction"),
+                        edge(3, "position", 2, "origin"),
+                        edge(4, "direction", 2, "plane_direction")
+                )
         );
         var compiled = AbilityProgramDefinitions.require(
                         AeromanipProgramNodeCatalog.AEROMANIP)
@@ -147,8 +170,29 @@ class AeromanipProgramExecutionBridgeTest {
 
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
         assertTrue(transaction.commit().successful());
-        assertEquals(List.of("cut:0.0,0.0,1.0:2.0:FULL"), runtime.applied);
+        assertEquals(List.of(
+                "cut:2.0,65.0,4.0:0.0,0.0,1.0:2.0:FULL:2.0:DIRECTION:0.0,1.0,0.0"),
+                runtime.applied);
         transaction.release();
+    }
+
+    @Test
+    void laminarChargeAccelerationTradesCostForDelay() {
+        assertEquals(24L, AeromanipProgramExecutionBridge.chargeDelayTicks(
+                AeromanipProgramNodeCatalog.ChargeTier.FULL,
+                AeromanipProgramNodeCatalog.ChargeAcceleration.STANDARD));
+        assertEquals(12L, AeromanipProgramExecutionBridge.chargeDelayTicks(
+                AeromanipProgramNodeCatalog.ChargeTier.FULL,
+                AeromanipProgramNodeCatalog.ChargeAcceleration.ACCELERATED));
+        assertEquals(0L, AeromanipProgramExecutionBridge.chargeDelayTicks(
+                AeromanipProgramNodeCatalog.ChargeTier.FULL,
+                AeromanipProgramNodeCatalog.ChargeAcceleration.INSTANT));
+        assertEquals(1.0f,
+                AeromanipProgramNodeCatalog.ChargeAcceleration.STANDARD.costMultiplier());
+        assertEquals(1.5f,
+                AeromanipProgramNodeCatalog.ChargeAcceleration.ACCELERATED.costMultiplier());
+        assertEquals(2.0f,
+                AeromanipProgramNodeCatalog.ChargeAcceleration.INSTANT.costMultiplier());
     }
 
     @Test
@@ -191,6 +235,45 @@ class AeromanipProgramExecutionBridgeTest {
         transaction.release();
     }
 
+    @Test
+    void convergingAirflowDerivesPerTargetDirectionsTowardCenter() {
+        var configuration = new JsonObject();
+        configuration.addProperty("power", 1.0f);
+        configuration.addProperty("maximum_targets", 2);
+        var graph = new ProgramGraph(
+                List.of(
+                        worldPositionNode(1, 0.0, 64.0, 2.0),
+                        floatNode(2, 8.0),
+                        node(3, CommonProgramNodeIds.ENTITIES_AROUND, new JsonObject()),
+                        node(4, AeromanipProgramNodeIds.CONVERGING_AIRFLOW, configuration)
+                ),
+                List.of(
+                        edge(1, "position", 3, "center"),
+                        edge(2, "value", 3, "radius"),
+                        edge(3, "entities", 4, "entities"),
+                        edge(1, "position", 4, "center")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        AeromanipProgramNodeCatalog.AEROMANIP)
+                .compile(graph, Set.of(AeromanipProgramCapabilities.CONVERGING_AIRFLOW));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var runtime = new FakeRuntime();
+        var transaction = new ProgramActionTransaction();
+
+        var result = AeromanipProgramExecutionBridge.execute(
+                compiled.program(), 80L, runtime, transaction);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(2, transaction.size());
+        assertTrue(transaction.commit().successful());
+        assertEquals(List.of(
+                "push:first:0.0,0.0,1.0:1.0",
+                "push:second:-0.7071067811865475,0.0,0.7071067811865475:1.0"
+        ), runtime.applied);
+        transaction.release();
+    }
+
     private static ProgramGraph.Node node(
             int id,
             Identifier type,
@@ -223,6 +306,26 @@ class AeromanipProgramExecutionBridgeTest {
         configuration.addProperty("y", y);
         configuration.addProperty("z", z);
         return node(id, CommonProgramNodeIds.DIRECTION_CONSTANT, configuration);
+    }
+
+    private static ProgramGraph.Node worldPositionNode(
+            int id,
+            double x,
+            double y,
+            double z
+    ) {
+        var configuration = new JsonObject();
+        configuration.addProperty("dimension", "minecraft:overworld");
+        configuration.addProperty("x", x);
+        configuration.addProperty("y", y);
+        configuration.addProperty("z", z);
+        return node(id, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, configuration);
+    }
+
+    private static ProgramGraph.Node floatNode(int id, double value) {
+        var configuration = new JsonObject();
+        configuration.addProperty("value", value);
+        return node(id, CommonProgramNodeIds.FLOAT_CONSTANT, configuration);
     }
 
     private static ProgramGraph.Edge edge(
@@ -261,11 +364,18 @@ class AeromanipProgramExecutionBridgeTest {
 
         @Override
         public ProgramActionTransaction.ProgramAction laminarCut(
+                ProgramWorldPosition origin,
                 ProgramDirection direction,
                 float power,
-                AeromanipChargeTier chargeTier
+                AeromanipChargeTier chargeTier,
+                float chargeCostMultiplier,
+                ProgramDirection planeDirection,
+                AeromanipProgramNodeCatalog.BladePlaneMode planeMode
         ) {
-            return action("cut:" + vector(direction) + ":" + power + ":" + chargeTier);
+            return action("cut:" + origin.x() + "," + origin.y() + "," + origin.z()
+                    + ":" + vector(direction) + ":" + power + ":" + chargeTier
+                    + ":" + chargeCostMultiplier + ":" + planeMode + ":"
+                    + (planeDirection == null ? "none" : vector(planeDirection)));
         }
 
         @Override
@@ -284,7 +394,13 @@ class AeromanipProgramExecutionBridgeTest {
 
         @Override
         public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
-            return Optional.empty();
+            return switch (String.valueOf(entityReference)) {
+                case "first" -> Optional.of(new ProgramWorldPosition(
+                        Identifier.parse("minecraft:overworld"), 0.0, 64.0, 0.0));
+                case "second" -> Optional.of(new ProgramWorldPosition(
+                        Identifier.parse("minecraft:overworld"), 2.0, 64.0, 0.0));
+                default -> Optional.empty();
+            };
         }
 
         @Override
@@ -294,7 +410,7 @@ class AeromanipProgramExecutionBridgeTest {
 
         @Override
         public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
-            return List.of();
+            return List.of("first", "second", "third");
         }
 
         @Override

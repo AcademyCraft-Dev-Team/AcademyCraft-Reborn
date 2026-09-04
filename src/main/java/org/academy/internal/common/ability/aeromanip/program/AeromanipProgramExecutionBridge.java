@@ -7,6 +7,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.program.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,20 +39,35 @@ public final class AeromanipProgramExecutionBridge {
             ServerPlayer player,
             float costMultiplier
     ) {
+        return executeServer(program, player, costMultiplier, null);
+    }
+
+    public static ServerExecutionResult executeServer(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier,
+            ProgramInvocationContext invocation
+    ) {
         Objects.requireNonNull(player, "player");
         var transaction = new ProgramActionTransaction();
-        var vmResult = execute(
+        var execution = ServerProgramExecution.execute(
                 program,
-                player.level().getGameTime(),
-                new ServerAeromanipProgramRuntime(player, costMultiplier),
-                transaction
+                player,
+                AeromanipProgramNodeCatalog.AEROMANIP,
+                MAX_FUEL,
+                AbilityProgramDefinitions.require(
+                        AeromanipProgramNodeCatalog.AEROMANIP).executors(),
+                new ProgramExecutionFrame(
+                        transaction,
+                        new ServerAeromanipProgramRuntime(player, costMultiplier),
+                        invocation,
+                        player.level()::getGameTime
+                ),
+                transaction,
+                invocation
         );
-        if (vmResult.status() != ProgramVmResult.Status.COMPLETED) {
-            return new ServerExecutionResult(vmResult, Optional.empty());
-        }
-        var commit = transaction.commit();
-        if (commit.successful()) transaction.release();
-        return new ServerExecutionResult(vmResult, Optional.of(commit));
+        return new ServerExecutionResult(
+                execution.vmResult(), execution.transactionResult());
     }
 
     public static ProgramVmResult execute(
@@ -59,6 +75,17 @@ public final class AeromanipProgramExecutionBridge {
             long gameTime,
             AeromanipProgramRuntime runtime,
             ProgramActionTransaction transaction
+    ) {
+        return execute(program, gameTime, runtime, transaction, null, null);
+    }
+
+    private static ProgramVmResult execute(
+            CompiledProgram program,
+            long gameTime,
+            AeromanipProgramRuntime runtime,
+            ProgramActionTransaction transaction,
+            ProgramInvocationContext invocation,
+            java.util.function.LongSupplier worldGameTime
     ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");
@@ -68,7 +95,7 @@ public final class AeromanipProgramExecutionBridge {
                 MAX_FUEL,
                 AbilityProgramDefinitions.require(
                         AeromanipProgramNodeCatalog.AEROMANIP).executors(),
-                new ProgramExecutionFrame(transaction, runtime)
+                new ProgramExecutionFrame(transaction, runtime, invocation, worldGameTime)
         );
     }
 
@@ -91,15 +118,46 @@ public final class AeromanipProgramExecutionBridge {
                             configuration.power()));
                     return ProgramNodeStep.next("flow");
                 });
+        put(result, AeromanipProgramNodeIds.CONVERGING_AIRFLOW,
+                (ProgramVmContext context,
+                 AeromanipProgramNodeCatalog.ConvergingAirflowConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var runtime = runtime(context);
+                    var center = worldPosition(inputs, "center");
+                    var targets = entities(inputs, "entities");
+                    for (var index = 0;
+                         index < Math.min(targets.size(), configuration.maximumTargets());
+                         index++) {
+                        var entity = targets.get(index);
+                        var position = runtime.positionOf(entity).orElse(null);
+                        if (position == null
+                                || !position.dimension().equals(center.dimension())
+                                || squaredDistance(position, center) < 1.0e-12) continue;
+                        stage(context, runtime.airflowPush(
+                                entity,
+                                ProgramDirection.between(position, center),
+                                configuration.power()));
+                    }
+                    return ProgramNodeStep.next("flow");
+                });
         put(result, AeromanipProgramNodeIds.LAMINAR_CUT,
                 (ProgramVmContext context,
                  AeromanipProgramNodeCatalog.LaminarCutConfiguration configuration,
                  ProgramInputView inputs) -> {
                     stage(context, runtime(context).laminarCut(
+                            optionalWorldPosition(inputs, "origin"),
                             direction(inputs, "direction"),
                             configuration.power(),
-                            chargeTier(configuration.chargeTier())));
-                    return ProgramNodeStep.next("flow");
+                            chargeTier(configuration.chargeTier()),
+                            configuration.chargeAcceleration().costMultiplier(),
+                            optionalDirection(inputs, "plane_direction"),
+                            configuration.planeMode()));
+                    var delay = chargeDelayTicks(
+                            configuration.chargeTier(),
+                            configuration.chargeAcceleration());
+                    return delay == 0
+                            ? ProgramNodeStep.next("flow")
+                            : ProgramNodeStep.yield("flow", delay);
                 });
         put(result, AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE,
                 (ProgramVmContext context,
@@ -145,9 +203,63 @@ public final class AeromanipProgramExecutionBridge {
         return inputs.requireCompatible(port, ProgramValueTypes.ENTITY_REFERENCE).value();
     }
 
+    private static List<?> entities(ProgramInputView inputs, String port) {
+        var value = inputs.requireCompatible(port, ProgramValueTypes.ENTITY_SET).value();
+        if (!(value instanceof List<?> list)) {
+            throw new IllegalArgumentException("Program entity set input is invalid");
+        }
+        return list;
+    }
+
+    private static ProgramWorldPosition worldPosition(ProgramInputView inputs, String port) {
+        return (ProgramWorldPosition) inputs.requireCompatible(
+                port, ProgramValueTypes.WORLD_POSITION).value();
+    }
+
+    private static double squaredDistance(
+            ProgramWorldPosition left,
+            ProgramWorldPosition right
+    ) {
+        var x = left.x() - right.x();
+        var y = left.y() - right.y();
+        var z = left.z() - right.z();
+        return x * x + y * y + z * z;
+    }
+
     private static ProgramDirection direction(ProgramInputView inputs, String port) {
         return (ProgramDirection) inputs.requireCompatible(
                 port, ProgramValueTypes.DIRECTION).value();
+    }
+
+    private static ProgramDirection optionalDirection(ProgramInputView inputs, String port) {
+        return inputs.first(port)
+                .map(value -> (ProgramDirection) value.value())
+                .orElse(null);
+    }
+
+    private static ProgramWorldPosition optionalWorldPosition(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .map(value -> (ProgramWorldPosition) value.value())
+                .orElse(null);
+    }
+
+    static long chargeDelayTicks(
+            AeromanipProgramNodeCatalog.ChargeTier tier,
+            AeromanipProgramNodeCatalog.ChargeAcceleration acceleration
+    ) {
+        var baseTicks = switch (tier) {
+            case INSTANT -> 0;
+            case HALF -> AeromanipChargeTier.HALF_CHARGE_TICKS;
+            case FULL -> AeromanipChargeTier.FULL_CHARGE_TICKS;
+        };
+        return switch (acceleration) {
+            case STANDARD -> baseTicks;
+            case ACCELERATED -> (baseTicks + 1L) / 2L;
+            case INSTANT -> 0L;
+        };
     }
 
     private static ProgramBlockPosition blockPosition(ProgramInputView inputs, String port) {
@@ -191,7 +303,9 @@ public final class AeromanipProgramExecutionBridge {
             Optional<ProgramActionTransaction.Result> transactionResult
     ) {
         public boolean successful() {
-            return vmResult.status() == ProgramVmResult.Status.COMPLETED
+            return vmResult.status() == ProgramVmResult.Status.SUSPENDED
+                    || vmResult.status() == ProgramVmResult.Status.FUEL_EXHAUSTED
+                    || vmResult.status() == ProgramVmResult.Status.COMPLETED
                     && transactionResult.map(ProgramActionTransaction.Result::successful)
                     .orElse(false);
         }
