@@ -56,20 +56,35 @@ public final class AcceleratorProgramExecutionBridge {
             ServerPlayer player,
             float costMultiplier
     ) {
+        return executeServer(program, player, costMultiplier, null);
+    }
+
+    public static ServerExecutionResult executeServer(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier,
+            ProgramInvocationContext invocation
+    ) {
         Objects.requireNonNull(player, "player");
         var transaction = new ProgramActionTransaction();
-        var vmResult = execute(
+        var execution = ServerProgramExecution.execute(
                 program,
-                player.level().getGameTime(),
-                new ServerAcceleratorProgramRuntime(player, costMultiplier),
-                transaction
+                player,
+                AcceleratorProgramNodeCatalog.ACCELERATOR,
+                MAX_FUEL,
+                AbilityProgramDefinitions.require(
+                        AcceleratorProgramNodeCatalog.ACCELERATOR).executors(),
+                new ProgramExecutionFrame(
+                        transaction,
+                        new ServerAcceleratorProgramRuntime(player, costMultiplier),
+                        invocation,
+                        player.level()::getGameTime
+                ),
+                transaction,
+                invocation
         );
-        if (vmResult.status() != ProgramVmResult.Status.COMPLETED) {
-            return new ServerExecutionResult(vmResult, Optional.empty());
-        }
-        var commit = transaction.commit();
-        if (commit.successful()) transaction.release();
-        return new ServerExecutionResult(vmResult, Optional.of(commit));
+        return new ServerExecutionResult(
+                execution.vmResult(), execution.transactionResult());
     }
 
     /**
@@ -82,6 +97,17 @@ public final class AcceleratorProgramExecutionBridge {
             AcceleratorProgramRuntime runtime,
             ProgramActionTransaction transaction
     ) {
+        return execute(program, gameTime, runtime, transaction, null, null);
+    }
+
+    private static ProgramVmResult execute(
+            CompiledProgram program,
+            long gameTime,
+            AcceleratorProgramRuntime runtime,
+            ProgramActionTransaction transaction,
+            ProgramInvocationContext invocation,
+            java.util.function.LongSupplier worldGameTime
+    ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");
         Objects.requireNonNull(transaction, "transaction");
@@ -90,7 +116,7 @@ public final class AcceleratorProgramExecutionBridge {
                 MAX_FUEL,
                 AbilityProgramDefinitions.require(
                         AcceleratorProgramNodeCatalog.ACCELERATOR).executors(),
-                new ProgramExecutionFrame(transaction, runtime)
+                new ProgramExecutionFrame(transaction, runtime, invocation, worldGameTime)
         );
     }
 
@@ -113,6 +139,21 @@ public final class AcceleratorProgramExecutionBridge {
                         "Accelerator runtime returned a null projectile set"
                 ))
         ));
+        put(result, AcceleratorProgramNodeIds.OBSERVATION_INVERSE, (_, _, inputs) -> {
+            var correction = vector(inputs, "expected").subtract(vector(inputs, "observed"));
+            return ProgramNodeStep.data(Map.of(
+                    "correction", new ProgramValue<>(ProgramValueTypes.VECTOR, correction),
+                    "magnitude", new ProgramValue<>(ProgramValueTypes.FLOAT, correction.length())
+            ));
+        });
+        put(result, AcceleratorProgramNodeIds.VECTOR_REFLECTION, (_, _, inputs) -> {
+            var incident = vector(inputs, "incident");
+            var normal = direction(inputs, "normal");
+            var normalVector = ProgramVector.of(normal);
+            var reflected = incident.subtract(normalVector.scale(
+                    2.0 * incident.dot(normalVector)));
+            return data("reflected", ProgramValueTypes.VECTOR, reflected);
+        });
         put(result, AcceleratorProgramNodeIds.APPLY_VECTOR,
                 (ProgramVmContext context,
                  AcceleratorProgramNodeCatalog.StrengthConfiguration configuration,
@@ -122,6 +163,17 @@ public final class AcceleratorProgramExecutionBridge {
                             entity(inputs, "entity"),
                             direction(inputs),
                             configuration.tier()
+                    ));
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, AcceleratorProgramNodeIds.REWRITE_MOTION,
+                (ProgramVmContext context,
+                 AcceleratorProgramNodeCatalog.PowerConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    stage(context, runtime(context).rewriteMotion(
+                            entity(inputs, "entity"),
+                            vector(inputs, "motion"),
+                            configuration.power()
                     ));
                     return ProgramNodeStep.next("flow");
                 });
@@ -208,8 +260,17 @@ public final class AcceleratorProgramExecutionBridge {
     }
 
     private static ProgramDirection direction(ProgramInputView inputs) {
+        return direction(inputs, "direction");
+    }
+
+    private static ProgramDirection direction(ProgramInputView inputs, String port) {
         return (ProgramDirection) inputs.requireCompatible(
-                "direction", ProgramValueTypes.DIRECTION).value();
+                port, ProgramValueTypes.DIRECTION).value();
+    }
+
+    private static ProgramVector vector(ProgramInputView inputs, String port) {
+        return (ProgramVector) inputs.requireCompatible(
+                port, ProgramValueTypes.VECTOR).value();
     }
 
     private static ProgramWorldPosition worldPosition(ProgramInputView inputs, String port) {
@@ -258,7 +319,9 @@ public final class AcceleratorProgramExecutionBridge {
             Optional<ProgramActionTransaction.Result> transactionResult
     ) {
         public boolean successful() {
-            return vmResult.status() == ProgramVmResult.Status.COMPLETED
+            return vmResult.status() == ProgramVmResult.Status.SUSPENDED
+                    || vmResult.status() == ProgramVmResult.Status.FUEL_EXHAUSTED
+                    || vmResult.status() == ProgramVmResult.Status.COMPLETED
                     && transactionResult.map(ProgramActionTransaction.Result::successful)
                     .orElse(false);
         }

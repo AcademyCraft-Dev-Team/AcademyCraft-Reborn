@@ -45,8 +45,16 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodePurity.WORLD_QUERY,
                 categoryScope()
         ));
+        put(result, AcceleratorProgramNodeIds.OBSERVATION_INVERSE, unitType(
+                observationInverseSchema(), ProgramNodeRole.VALUE, ProgramNodePurity.PURE,
+                categoryScope()));
+        put(result, AcceleratorProgramNodeIds.VECTOR_REFLECTION, unitType(
+                vectorReflectionSchema(), ProgramNodeRole.VALUE, ProgramNodePurity.PURE,
+                categoryScope()));
         put(result, AcceleratorProgramNodeIds.APPLY_VECTOR, strengthType(
                 actionSchema("entity"), AcceleratorProgramCapabilities.APPLY_VECTOR));
+        put(result, AcceleratorProgramNodeIds.REWRITE_MOTION, powerType(
+                rewriteMotionSchema(), AcceleratorProgramCapabilities.REWRITE_MOTION));
         put(result, AcceleratorProgramNodeIds.KINETIC_IMPACT, strengthType(
                 actionSchema("entity"), AcceleratorProgramCapabilities.KINETIC_IMPACT));
         put(result, AcceleratorProgramNodeIds.KINETIC_SHOCKWAVE, shockwaveType());
@@ -88,6 +96,41 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
                                 entityPort, ProgramValueTypes.ENTITY_REFERENCE),
                         ProgramPortDefinition.requiredInput(
                                 "direction", ProgramValueTypes.DIRECTION)
+                ),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
+    private static ProgramNodeSchema observationInverseSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("observed", ProgramValueTypes.VECTOR),
+                        ProgramPortDefinition.requiredInput("expected", ProgramValueTypes.VECTOR)
+                ),
+                List.of(
+                        ProgramPortDefinition.output("correction", ProgramValueTypes.VECTOR),
+                        ProgramPortDefinition.output("magnitude", ProgramValueTypes.FLOAT)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema vectorReflectionSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("incident", ProgramValueTypes.VECTOR),
+                        ProgramPortDefinition.requiredInput("normal", ProgramValueTypes.DIRECTION)
+                ),
+                List.of(ProgramPortDefinition.output("reflected", ProgramValueTypes.VECTOR))
+        );
+    }
+
+    private static ProgramNodeSchema rewriteMotionSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "entity", ProgramValueTypes.ENTITY_REFERENCE),
+                        ProgramPortDefinition.requiredInput("motion", ProgramValueTypes.VECTOR)
                 ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
@@ -138,6 +181,19 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
     ) {
         return new FixedNodeType<>(
                 StrengthConfiguration.CODEC,
+                schema,
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(capability)
+        );
+    }
+
+    private static ProgramNodeType<PowerConfiguration> powerType(
+            ProgramNodeSchema schema,
+            Identifier capability
+    ) {
+        return new FixedNodeType<>(
+                PowerConfiguration.CODEC,
                 schema,
                 ProgramNodeRole.ACTION,
                 ProgramNodePurity.ACTION,
@@ -197,6 +253,13 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
         public AcceleratorProgramStrength tier() {
             return AcceleratorProgramStrength.byWireId(strength);
         }
+    }
+
+    public record PowerConfiguration(float power) {
+        public static final Codec<PowerConfiguration> CODEC = Codec.floatRange(0.0f, 2.0f)
+                .fieldOf("power")
+                .xmap(PowerConfiguration::new, PowerConfiguration::power)
+                .codec();
     }
 
     /**

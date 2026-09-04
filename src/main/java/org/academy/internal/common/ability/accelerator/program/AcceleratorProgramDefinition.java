@@ -42,6 +42,8 @@ public final class AcceleratorProgramDefinition {
                     || id.equals(AcceleratorProgramNodeIds.DISPLACE_BLOCK)) {
                 configuration.addProperty(
                         "strength", AcceleratorProgramStrength.STANDARD.wireId());
+            } else if (id.equals(AcceleratorProgramNodeIds.REWRITE_MOTION)) {
+                configuration.addProperty("power", 1.0f);
             } else if (id.equals(AcceleratorProgramNodeIds.KINETIC_SHOCKWAVE)) {
                 configuration.addProperty("power", 1.0f);
                 configuration.addProperty("destroy_blocks", false);
@@ -54,6 +56,8 @@ public final class AcceleratorProgramDefinition {
                     configuration,
                     id.getPath().contains("/target/")
                             ? ProgramEditorNodeCatalog.Group.TARGET
+                            : id.getPath().contains("/logic/")
+                            ? ProgramEditorNodeCatalog.Group.LOGIC
                             : ProgramEditorNodeCatalog.Group.ACTION,
                     "screen.academy.program.accelerator.node." + suffix,
                     "screen.academy.program.port.",

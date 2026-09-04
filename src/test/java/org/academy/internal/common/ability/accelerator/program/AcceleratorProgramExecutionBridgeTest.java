@@ -157,7 +157,8 @@ class AcceleratorProgramExecutionBridgeTest {
         var result = AcceleratorProgramExecutionBridge.execute(
                 compiled.program(), 40L, runtime, transaction);
 
-        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
+                () -> String.valueOf(result.diagnostic()));
         assertEquals(2, transaction.size());
         assertTrue(runtime.applied.isEmpty());
         assertTrue(transaction.commit().successful());
@@ -165,6 +166,63 @@ class AcceleratorProgramExecutionBridgeTest {
                 "vector:caster:CONTROLLED:1.0,0.0,0.0",
                 "impact:caster:MAXIMUM:1.0,0.0,0.0"
         ), runtime.applied);
+        transaction.release();
+    }
+
+    @Test
+    void observationInverseAndReflectionDriveMotionRewrite() {
+        var rewrite = new JsonObject();
+        rewrite.addProperty("power", 1.0f);
+        var graph = new ProgramGraph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                AcceleratorProgramNodeCatalog.ACCELERATOR), new JsonObject()),
+                        node(1, AcceleratorProgramNodeIds.CASTER, new JsonObject()),
+                        floatNode(2, 1.0),
+                        floatNode(3, 2.0),
+                        floatNode(4, 3.0),
+                        floatNode(5, 4.0),
+                        floatNode(6, 2.0),
+                        floatNode(7, -1.0),
+                        node(8, CommonProgramNodeIds.VECTOR_CONSTRUCT, new JsonObject()),
+                        node(9, CommonProgramNodeIds.VECTOR_CONSTRUCT, new JsonObject()),
+                        node(10, AcceleratorProgramNodeIds.OBSERVATION_INVERSE, new JsonObject()),
+                        directionNode(11, 0.0, 0.0, 1.0),
+                        node(12, AcceleratorProgramNodeIds.VECTOR_REFLECTION, new JsonObject()),
+                        node(13, AcceleratorProgramNodeIds.REWRITE_MOTION, rewrite)
+                ),
+                List.of(
+                        edge(0, "flow", 13, "flow"),
+                        edge(1, "entity", 13, "entity"),
+                        edge(2, "value", 8, "x"),
+                        edge(3, "value", 8, "y"),
+                        edge(4, "value", 8, "z"),
+                        edge(5, "value", 9, "x"),
+                        edge(6, "value", 9, "y"),
+                        edge(7, "value", 9, "z"),
+                        edge(8, "vector", 10, "observed"),
+                        edge(9, "vector", 10, "expected"),
+                        edge(10, "correction", 12, "incident"),
+                        edge(11, "direction", 12, "normal"),
+                        edge(12, "reflected", 13, "motion")
+                )
+        );
+        var definition = AbilityProgramDefinitions.require(
+                AcceleratorProgramNodeCatalog.ACCELERATOR);
+        var compiled = definition.compile(
+                graph, Set.of(AcceleratorProgramCapabilities.REWRITE_MOTION));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var runtime = new FakeRuntime(List.of());
+        var transaction = new ProgramActionTransaction();
+
+        var result = AcceleratorProgramExecutionBridge.execute(
+                compiled.program(), 60L, runtime, transaction);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
+                () -> String.valueOf(result.diagnostic()));
+        assertEquals(1, transaction.size());
+        assertTrue(transaction.commit().successful());
+        assertEquals(List.of("rewrite:caster:3.0,0.0,4.0:1.0"), runtime.applied);
         transaction.release();
     }
 
@@ -362,6 +420,12 @@ class AcceleratorProgramExecutionBridgeTest {
         return node(id, CommonProgramNodeIds.DIRECTION_CONSTANT, configuration);
     }
 
+    private static ProgramGraph.Node floatNode(int id, double value) {
+        var configuration = new JsonObject();
+        configuration.addProperty("value", value);
+        return node(id, CommonProgramNodeIds.FLOAT_CONSTANT, configuration);
+    }
+
     private static ProgramGraph.Node worldPositionNode(
             int id,
             double x,
@@ -432,6 +496,16 @@ class AcceleratorProgramExecutionBridgeTest {
                 AcceleratorProgramStrength strength
         ) {
             return action("vector:" + entity + ":" + strength + ":" + directionKey(direction));
+        }
+
+        @Override
+        public ProgramActionTransaction.ProgramAction rewriteMotion(
+                Object entity,
+                ProgramVector motion,
+                float power
+        ) {
+            return action("rewrite:" + entity + ":" + motion.x() + "," + motion.y()
+                    + "," + motion.z() + ":" + power);
         }
 
         @Override
