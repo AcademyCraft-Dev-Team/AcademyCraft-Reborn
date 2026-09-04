@@ -8,7 +8,9 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
@@ -53,6 +55,20 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
     @Override
     public Optional<Object> lookTarget() {
         return targets.lookTarget();
+    }
+
+    @Override
+    public PhaseState phaseState() {
+        var phase = DarkmatterPhase.snapshot(player);
+        var matter = AbilitySystemServer.getSystem(player)
+                .getDarkmatterResourceManager().getView(player);
+        return new PhaseState(
+                phase.alphaPower(),
+                phase.betaPower(),
+                phase.activeGammaPower(),
+                matter.totalMatter(),
+                matter.effectiveCapacity()
+        );
     }
 
     @Override

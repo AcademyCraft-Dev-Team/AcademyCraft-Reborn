@@ -16,6 +16,8 @@ public interface DarkmatterProgramRuntime extends ProgramTargetResolver {
 
     Optional<Object> lookTarget();
 
+    PhaseState phaseState();
+
     ProgramActionTransaction.ProgramAction disassembleBlock(
             ProgramBlockPosition block,
             float power
@@ -35,4 +37,13 @@ public interface DarkmatterProgramRuntime extends ProgramTargetResolver {
             ProgramWorldPosition position,
             float power
     );
+
+    record PhaseState(
+            double alpha,
+            double beta,
+            double gamma,
+            double matter,
+            double capacity
+    ) {
+    }
 }

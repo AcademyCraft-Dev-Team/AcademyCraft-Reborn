@@ -12,6 +12,7 @@ public final class DarkmatterProgramCapabilities {
             AcademyCraft.academy(SkillNames.DARKMATTER_DISASSEMBLE);
     public static final Identifier DISASSEMBLE_ENTITY =
             AcademyCraft.academy(SkillNames.DARKMATTER_DISASSEMBLE);
+    public static final Identifier DISASSEMBLY_FIELD = DISASSEMBLE_ENTITY;
     public static final Identifier DARKMATTER_CUT =
             AcademyCraft.academy(SkillNames.DARKMATTER_CUT);
     public static final Identifier CREATE_BEETLE =

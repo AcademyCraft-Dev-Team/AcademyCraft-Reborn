@@ -9,10 +9,12 @@ import org.academy.AcademyCraft;
 public final class DarkmatterProgramNodeIds {
     public static final Identifier CASTER = id("target/caster");
     public static final Identifier LOOK_TARGET = id("target/look_target");
+    public static final Identifier PHASE_STATE = id("query/phase_state");
     public static final Identifier DISASSEMBLE_BLOCK = id("action/disassemble_block");
     public static final Identifier DISASSEMBLE_ENTITY = id("action/disassemble_entity");
     public static final Identifier DARKMATTER_CUT = id("action/darkmatter_cut");
     public static final Identifier CREATE_BEETLE = id("action/create_beetle");
+    public static final Identifier DISASSEMBLY_FIELD = id("action/disassembly_field");
 
     private DarkmatterProgramNodeIds() {
     }

@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.darkmatter.program;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.*;
@@ -32,6 +33,9 @@ public final class DarkmatterProgramNodeCatalog implements ProgramNodeLookup {
         put(result, DarkmatterProgramNodeIds.LOOK_TARGET, unitType(
                 querySchema(), ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY,
                 categoryScope()));
+        put(result, DarkmatterProgramNodeIds.PHASE_STATE, unitType(
+                phaseStateSchema(), ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY,
+                categoryScope()));
         put(result, DarkmatterProgramNodeIds.DISASSEMBLE_BLOCK, powerType(
                 disassembleBlockSchema(), DarkmatterProgramCapabilities.DISASSEMBLE_BLOCK));
         put(result, DarkmatterProgramNodeIds.DISASSEMBLE_ENTITY, powerType(
@@ -40,6 +44,7 @@ public final class DarkmatterProgramNodeCatalog implements ProgramNodeLookup {
                 darkmatterCutSchema(), DarkmatterProgramCapabilities.DARKMATTER_CUT));
         put(result, DarkmatterProgramNodeIds.CREATE_BEETLE, powerType(
                 createBeetleSchema(), DarkmatterProgramCapabilities.CREATE_BEETLE));
+        put(result, DarkmatterProgramNodeIds.DISASSEMBLY_FIELD, fieldType());
         types = Map.copyOf(result);
     }
 
@@ -57,6 +62,19 @@ public final class DarkmatterProgramNodeCatalog implements ProgramNodeLookup {
                 List.of(),
                 List.of(ProgramPortDefinition.output(
                         "entity", ProgramValueTypes.ENTITY_REFERENCE))
+        );
+    }
+
+    private static ProgramNodeSchema phaseStateSchema() {
+        return new ProgramNodeSchema(
+                List.of(),
+                List.of(
+                        ProgramPortDefinition.output("alpha", ProgramValueTypes.FLOAT),
+                        ProgramPortDefinition.output("beta", ProgramValueTypes.FLOAT),
+                        ProgramPortDefinition.output("gamma", ProgramValueTypes.FLOAT),
+                        ProgramPortDefinition.output("matter", ProgramValueTypes.FLOAT),
+                        ProgramPortDefinition.output("capacity", ProgramValueTypes.FLOAT)
+                )
         );
     }
 
@@ -104,6 +122,16 @@ public final class DarkmatterProgramNodeCatalog implements ProgramNodeLookup {
         );
     }
 
+    private static ProgramNodeSchema disassemblyFieldSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET)
+                ),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
     private static ProgramNodeType<PowerConfiguration> powerType(
             ProgramNodeSchema schema,
             Identifier capability
@@ -114,6 +142,16 @@ public final class DarkmatterProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodeRole.ACTION,
                 ProgramNodePurity.ACTION,
                 capabilityScope(capability)
+        );
+    }
+
+    private static ProgramNodeType<FieldConfiguration> fieldType() {
+        return new FixedNodeType<>(
+                FieldConfiguration.CODEC,
+                disassemblyFieldSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(DarkmatterProgramCapabilities.DISASSEMBLY_FIELD)
         );
     }
 
@@ -155,6 +193,16 @@ public final class DarkmatterProgramNodeCatalog implements ProgramNodeLookup {
                 .fieldOf("power")
                 .xmap(PowerConfiguration::new, PowerConfiguration::power)
                 .codec();
+    }
+
+    public record FieldConfiguration(float power, int maximumTargets) {
+        public static final Codec<FieldConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(FieldConfiguration::power),
+                        Codec.intRange(1, 16).optionalFieldOf("maximum_targets", 4)
+                                .forGetter(FieldConfiguration::maximumTargets)
+                ).apply(instance, FieldConfiguration::new));
     }
 
     private enum EmptyConfiguration {
