@@ -29,6 +29,7 @@ public final class ProgramConfigurationOptions {
             "float",
             "identifier",
             "duration",
+            "vector",
             "direction",
             "world_position",
             "block_position",
@@ -95,12 +96,12 @@ public final class ProgramConfigurationOptions {
             if (field.equals("type")) {
                 return stringOptions(
                         "screen.academy.program.configuration.vec3_type.",
-                        "direction", "world_position");
+                        "vector", "direction", "world_position");
             }
             if (field.equals("operator")) {
                 return stringOptions(
                         "screen.academy.program.configuration.vec3_operator.",
-                        "dot", "cross", "add");
+                        "dot", "cross", "add", "subtract", "scale", "length", "normalize");
             }
         }
         if (id.equals(CommonProgramNodeIds.ENTITY_DATA) && field.equals("data")) {
@@ -118,7 +119,7 @@ public final class ProgramConfigurationOptions {
                 return stringOptions(
                         "screen.academy.program.configuration.debug_value_type.",
                         "boolean", "integer", "big_integer", "float", "identifier",
-                        "duration", "direction", "world_position", "block_position",
+                        "duration", "vector", "direction", "world_position", "block_position",
                         "entity", "direction_list", "world_position_list",
                         "block_position_list", "entity_list");
             }
@@ -196,6 +197,20 @@ public final class ProgramConfigurationOptions {
                     "instant", "half", "full"
             );
         }
+        if (id.equals(AeromanipProgramNodeIds.LAMINAR_CUT)
+                && field.equals("charge_acceleration")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.charge_acceleration.",
+                    "standard", "accelerated", "instant"
+            );
+        }
+        if (id.equals(AeromanipProgramNodeIds.LAMINAR_CUT)
+                && field.equals("plane_mode")) {
+            return stringOptions(
+                    "screen.academy.program.configuration.blade_plane.",
+                    "disabled", "direction", "random"
+            );
+        }
         if (id.equals(AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE)
                 && field.equals("target_type")) {
             return stringOptions(
@@ -204,6 +219,7 @@ public final class ProgramConfigurationOptions {
             );
         }
         if ((id.equals(ElectromasterProgramNodeIds.ENERGY_DETECTION)
+                || id.equals(ElectromasterProgramNodeIds.ENERGY_LEVEL)
                 || id.equals(ElectromasterProgramNodeIds.CURRENT_RECHARGE)
                 || id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE))
                 && field.equals("target_type")) {
@@ -241,7 +257,8 @@ public final class ProgramConfigurationOptions {
             );
         }
         if ((id.equals(CommonProgramNodeIds.VARIABLE_GET)
-                || id.equals(CommonProgramNodeIds.VARIABLE_SET)) && field.equals("type")) {
+                || id.equals(CommonProgramNodeIds.VARIABLE_SET)
+                || id.equals(CommonProgramNodeIds.SELECT_VALUE)) && field.equals("type")) {
             return VARIABLE_TYPE_PATHS.stream().map(path -> option(
                     AcademyCraft.academy("program_type/" + path).toString(),
                     "screen.academy.program.configuration.value_type." + path

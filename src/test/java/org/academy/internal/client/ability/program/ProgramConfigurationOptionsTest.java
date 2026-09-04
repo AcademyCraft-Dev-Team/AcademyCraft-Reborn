@@ -45,11 +45,12 @@ class ProgramConfigurationOptionsTest {
                 values(ProgramConfigurationOptions.options(
                         comparison, "operator", new JsonPrimitive("equal")))
         );
-        assertEquals(List.of("direction", "world_position"), values(
+        assertEquals(List.of("vector", "direction", "world_position"), values(
                 ProgramConfigurationOptions.options(
                         catalog.entry(CommonProgramNodeIds.VEC3_OPERATION),
                         "type", new JsonPrimitive("direction"))));
-        assertEquals(List.of("dot", "cross", "add"), values(
+        assertEquals(List.of(
+                "dot", "cross", "add", "subtract", "scale", "length", "normalize"), values(
                 ProgramConfigurationOptions.options(
                         catalog.entry(CommonProgramNodeIds.VEC3_OPERATION),
                         "operator", new JsonPrimitive("add"))));
@@ -65,7 +66,7 @@ class ProgramConfigurationOptionsTest {
                 ProgramConfigurationOptions.options(
                         catalog.entry(CommonProgramNodeIds.DEBUG_OUTPUT),
                         "audience", new JsonPrimitive("self"))));
-        assertEquals(14, ProgramConfigurationOptions.options(
+        assertEquals(15, ProgramConfigurationOptions.options(
                 catalog.entry(CommonProgramNodeIds.DEBUG_OUTPUT),
                 "value_type", new JsonPrimitive("entity")).size());
     }
@@ -115,8 +116,13 @@ class ProgramConfigurationOptionsTest {
                 ))
         );
 
-        assertEquals(16, ProgramConfigurationOptions.options(
+        assertEquals(17, ProgramConfigurationOptions.options(
                 mentalout.entry(CommonProgramNodeIds.VARIABLE_GET),
+                "type",
+                new JsonPrimitive("academy:program_type/boolean")
+        ).size());
+        assertEquals(17, ProgramConfigurationOptions.options(
+                mentalout.entry(CommonProgramNodeIds.SELECT_VALUE),
                 "type",
                 new JsonPrimitive("academy:program_type/boolean")
         ).size());
@@ -189,6 +195,14 @@ class ProgramConfigurationOptionsTest {
                 ProgramConfigurationOptions.options(
                         aeromanip.entry(AeromanipProgramNodeIds.LAMINAR_CUT),
                         "charge_tier", new JsonPrimitive("instant"))));
+        assertEquals(List.of("standard", "accelerated", "instant"), values(
+                ProgramConfigurationOptions.options(
+                        aeromanip.entry(AeromanipProgramNodeIds.LAMINAR_CUT),
+                        "charge_acceleration", new JsonPrimitive("standard"))));
+        assertEquals(List.of("disabled", "direction", "random"), values(
+                ProgramConfigurationOptions.options(
+                        aeromanip.entry(AeromanipProgramNodeIds.LAMINAR_CUT),
+                        "plane_mode", new JsonPrimitive("disabled"))));
         assertEquals(List.of("entity", "block"), values(
                 ProgramConfigurationOptions.options(
                         aeromanip.entry(AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE),
