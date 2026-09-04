@@ -53,7 +53,11 @@ public final class CommonProgramNodeIds {
     public static final Identifier BOOLEAN_AND = id("logic/boolean/and");
     public static final Identifier BOOLEAN_OR = id("logic/boolean/or");
     public static final Identifier BOOLEAN_XOR = id("logic/boolean/xor");
+    public static final Identifier SELECT_VALUE = id("logic/select_value");
     public static final Identifier BRANCH = id("flow/branch");
+    public static final Identifier BREAK_LOOP = id("flow/break_loop");
+    public static final Identifier CONTINUE_LOOP = id("flow/continue_loop");
+    public static final Identifier WAIT = id("flow/wait");
     public static final Identifier STOP = id("flow/stop");
     public static final Identifier TRIGGER_HURT = id("flow/trigger/hurt");
     public static final Identifier TRIGGER_LOOP = id("flow/trigger/loop");
@@ -81,15 +85,23 @@ public final class CommonProgramNodeIds {
     public static final Identifier DIRECTION_BETWEEN = id("spatial/direction_between");
     public static final Identifier DIRECTION_OPPOSITE = id("spatial/direction_opposite");
     public static final Identifier DIRECTION_DOT = id("spatial/direction_dot");
+    public static final Identifier VECTOR_CONSTRUCT = id("spatial/vector_construct");
+    public static final Identifier VECTOR_COMPONENTS = id("spatial/vector_components");
     public static final Identifier VEC3_OPERATION = id("spatial/vec3_operation");
     public static final Identifier BLOCK_VOLUME = id("query/block_volume");
 
     public static final Identifier ENTITY_POSITION = id("query/entity_position");
     public static final Identifier ENTITY_LOOK_DIRECTION = id("query/entity_look_direction");
     public static final Identifier ENTITY_MOVEMENT_DIRECTION = id("query/entity_movement_direction");
+    public static final Identifier ENTITY_MOTION = id("query/entity_motion");
+    public static final Identifier ENTITY_HEIGHT = id("query/entity_height");
     public static final Identifier ENTITY_DATA = id("query/entity_data");
     public static final Identifier CASTER = id("query/caster");
     public static final Identifier DAMAGE_ATTACKER = id("query/damage_attacker");
+    public static final Identifier DAMAGE_AMOUNT = id("query/damage_amount");
+    public static final Identifier GAME_TIME = id("query/game_time");
+    public static final Identifier LOOP_INDEX = id("query/loop_index");
+    public static final Identifier MELEE_TARGET = id("query/melee_target");
     public static final Identifier LOOK_TARGET = id("query/look_target");
     public static final Identifier ENTITIES_AROUND = id("query/entities_around");
     public static final Identifier RAYCAST_BLOCK = id("query/raycast_block");

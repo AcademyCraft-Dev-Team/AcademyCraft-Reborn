@@ -4,6 +4,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 
 import java.math.BigDecimal;
@@ -46,6 +47,9 @@ public final class ProgramDebugFormatter {
                     + position.y() + ", " + position.z() + ")";
         }
         if (value instanceof ProgramDirection direction) {
+            return vector(direction.x(), direction.y(), direction.z());
+        }
+        if (value instanceof ProgramVector direction) {
             return vector(direction.x(), direction.y(), direction.z());
         }
         if (value instanceof Collection<?> collection) {

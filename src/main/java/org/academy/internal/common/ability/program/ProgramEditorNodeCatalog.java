@@ -170,6 +170,8 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
                 || id.equals(CommonProgramNodeIds.VARIABLE_SET)) {
             configuration.addProperty("name", "value");
             configuration.addProperty("type", ProgramValueTypes.BOOLEAN.id().toString());
+        } else if (id.equals(CommonProgramNodeIds.SELECT_VALUE)) {
+            configuration.addProperty("type", ProgramValueTypes.BOOLEAN.id().toString());
         } else if (id.equals(CommonProgramNodeIds.FILTER_ENTITY_TYPE)) {
             configuration.addProperty("type", "living");
         } else if (id.equals(CommonProgramNodeIds.FILTER_ENTITY_EXACT)) {

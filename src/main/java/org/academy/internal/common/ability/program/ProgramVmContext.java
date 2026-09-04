@@ -30,7 +30,8 @@ public final class ProgramVmContext implements ProgramExecutionContext {
     }
 
     public long gameTime() {
-        return gameTime;
+        var frame = attachment(ProgramExecutionFrame.class).orElse(null);
+        return frame == null ? gameTime : frame.gameTime().orElse(gameTime);
     }
 
     /**
@@ -77,6 +78,10 @@ public final class ProgramVmContext implements ProgramExecutionContext {
 
     void removeExecutorState(String name) {
         executorState.remove(name);
+    }
+
+    static String structuredLoopStateKey(int nodeId) {
+        return "foreach:" + nodeId;
     }
 
     public <T> Optional<T> attachment(Class<T> type) {

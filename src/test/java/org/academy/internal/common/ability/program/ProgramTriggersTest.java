@@ -61,8 +61,8 @@ class ProgramTriggersTest {
     }
 
     @Test
-    void onlyManualCompatibleEntryKindsAcceptKeyExecution() {
-        assertTrue(ProgramTriggers.acceptsManualExecution(compiled(
+    void periodicTriggersToggleInsteadOfRunningAsManualPrograms() {
+        assertFalse(ProgramTriggers.acceptsManualExecution(compiled(
                 CommonProgramNodeIds.TRIGGER_LOOP, configuration("interval", 20))));
         assertTrue(ProgramTriggers.acceptsManualExecution(compiled(
                 CommonProgramNodeIds.TRIGGER_MOVEMENT, configuration("condition", "jump"))));
@@ -70,6 +70,37 @@ class ProgramTriggersTest {
                 CommonProgramNodeIds.TRIGGER_MELEE, new JsonObject())));
         assertFalse(ProgramTriggers.acceptsManualExecution(compiled(
                 CommonProgramNodeIds.TRIGGER_HURT, new JsonObject())));
+    }
+
+    @Test
+    void togglingPeriodicTriggerPersistsEnabledStateWithoutMutatingOldSnapshot() {
+        var configuration = configuration("interval", 20);
+        configuration.addProperty("enabled", true);
+        var original = program(CommonProgramNodeIds.TRIGGER_LOOP, configuration);
+
+        var disabled = ProgramTriggers.toggleLoop(original).orElseThrow();
+
+        assertFalse(disabled.enabled());
+        assertFalse(ProgramTriggers.matches(
+                disabled.program(), ProgramTriggers.Type.LOOP, null, 20));
+        assertTrue(ProgramTriggers.matches(
+                original, ProgramTriggers.Type.LOOP, null, 20));
+        assertEquals(original.id(), disabled.program().id());
+        assertEquals(original.name(), disabled.program().name());
+        assertEquals(original.category(), disabled.program().category());
+        assertEquals(original.editorLayout(), disabled.program().editorLayout());
+        assertEquals(original.graph().edges(), disabled.program().graph().edges());
+        assertEquals(20, disabled.program().graph().nodes().getFirst()
+                .configuration().getAsJsonObject().get("interval").getAsInt());
+
+        var enabled = ProgramTriggers.toggleLoop(disabled.program()).orElseThrow();
+        assertTrue(enabled.enabled());
+        assertTrue(ProgramTriggers.matches(
+                enabled.program(), ProgramTriggers.Type.LOOP, null, 20));
+        assertTrue(ProgramTriggers.toggleLoop(program(
+                CommonProgramNodeIds.TRIGGER_MOVEMENT,
+                configuration("condition", "jump")
+        )).isEmpty());
     }
 
     @Test

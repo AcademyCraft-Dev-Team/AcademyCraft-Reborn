@@ -72,6 +72,17 @@ public final class PrecisionOperationRuntime {
             boolean feedback,
             float costMultiplier
     ) {
+        return execute(player, slot, program, feedback, costMultiplier, null);
+    }
+
+    public static ExecutionResult execute(
+            ServerPlayer player,
+            int slot,
+            CompiledProgram program,
+            boolean feedback,
+            float costMultiplier,
+            ProgramInvocationContext invocation
+    ) {
         if (player == null || slot < 0 || slot >= SLOT_COUNT || program == null) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
         }
@@ -80,7 +91,6 @@ public final class PrecisionOperationRuntime {
         }
         var slots = ACTIVE.computeIfAbsent(player.getUUID(), _ -> new ActiveContext[SLOT_COUNT]);
         var previous = slots[slot];
-        var skill = Skills.WIDE_AREA_INTERFERENCE.get();
         if (AbilitySystemServer.getSystem(player).getPlayerLevel(player.getUUID()) < 5) {
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE);
         }
@@ -90,15 +100,83 @@ public final class PrecisionOperationRuntime {
         var activeActions = new ArrayList<ActiveAction>();
         var transaction = new ProgramActionTransaction();
         var planner = new NativePlanner(
-                player, targetLimit, now, transaction, activeActions, costMultiplier);
-        var nativeResult = PrecisionProgramExecutionBridge.executeNative(
+                player, targetLimit, transaction, activeActions, costMultiplier);
+        var nativeExecution = PrecisionProgramExecutionBridge.prepareNative(
                 program,
-                now,
                 PrecisionProgramRuntimeView.server(player),
                 new PrecisionProgramTargetResolver(player),
                 transaction,
-                planner
+                planner,
+                invocation,
+                player.level()::getGameTime
         );
+        var vmResult = nativeExecution.run(now);
+        if (vmResult.status() == ProgramVmResult.Status.SUSPENDED
+                || vmResult.status() == ProgramVmResult.Status.FUEL_EXHAUSTED) {
+            if (invocation == null) {
+                return ExecutionResult.failed(PrecisionGraph.Diagnostic.ADAPTER_ERROR);
+            }
+            var scheduled = ServerProgramScheduler.resume(
+                    player.level().getServer(),
+                    new ServerProgramScheduler.SessionKey(
+                            player.getUUID(),
+                            PrecisionProgramNodeCatalog.MENTALOUT,
+                            invocation.programId(),
+                            invocation.slot()
+                    ),
+                    nativeExecution.session(),
+                    AbilityProgramDefinitions.mentalout().executors(),
+                    nativeExecution.frame(),
+                    PrecisionGraph.MAX_NODES * PrecisionGraph.MAX_NODES + 1,
+                    now + 1L,
+                    ServerProgramExecution.MAX_LIFETIME_TICKS,
+                    (_, termination) -> {
+                        if (termination.kind()
+                                != ProgramSessionScheduler.TerminationKind.COMPLETED) return;
+                        completeNativeExecution(
+                                player,
+                                slot,
+                                slots,
+                                previous,
+                                feedback,
+                                costMultiplier,
+                                transaction,
+                                activeActions,
+                                planner,
+                                PrecisionProgramExecutionBridge.NativeResult.success()
+                        );
+                    }
+            );
+            return scheduled
+                    ? ExecutionResult.started()
+                    : ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
+        }
+        return completeNativeExecution(
+                player,
+                slot,
+                slots,
+                previous,
+                feedback,
+                costMultiplier,
+                transaction,
+                activeActions,
+                planner,
+                PrecisionProgramExecutionBridge.nativeResult(vmResult)
+        );
+    }
+
+    private static ExecutionResult completeNativeExecution(
+            ServerPlayer player,
+            int slot,
+            ActiveContext[] slots,
+            ActiveContext previous,
+            boolean feedback,
+            float costMultiplier,
+            ProgramActionTransaction transaction,
+            ArrayList<ActiveAction> activeActions,
+            NativePlanner planner,
+            PrecisionProgramExecutionBridge.NativeResult nativeResult
+    ) {
         var evaluated = planner.finish(nativeResult);
         if (!evaluated.valid()) {
             return ExecutionResult.failed(
@@ -110,9 +188,11 @@ public final class PrecisionOperationRuntime {
         }
 
         var removedSubjects = removedSubjects(evaluated.actions);
+        var now = player.level().getGameTime();
         var occupationPlan = projectedOccupationPlan(
                 player, slots, slot, evaluated, removedSubjects, now, costMultiplier);
         var system = AbilitySystemServer.getSystem(player);
+        var skill = Skills.WIDE_AREA_INTERFERENCE.get();
         if (!system.canReplacePermanentOccupationAndAddTimedOccupations(
                 player.getUUID(),
                 skill,
@@ -484,7 +564,6 @@ public final class PrecisionOperationRuntime {
             implements PrecisionProgramExecutionBridge.NativeNodeHandler {
         private final ServerPlayer player;
         private final int targetLimit;
-        private final long now;
         private final ProgramActionTransaction transaction;
         private final List<ActiveAction> activeActions;
         private final float costMultiplier;
@@ -497,14 +576,12 @@ public final class PrecisionOperationRuntime {
         private NativePlanner(
                 ServerPlayer player,
                 int targetLimit,
-                long now,
                 ProgramActionTransaction transaction,
                 List<ActiveAction> activeActions,
                 float costMultiplier
         ) {
             this.player = player;
             this.targetLimit = targetLimit;
-            this.now = now;
             this.transaction = transaction;
             this.activeActions = activeActions;
             this.costMultiplier = costMultiplier;
@@ -680,7 +757,7 @@ public final class PrecisionOperationRuntime {
                 double parameter,
                 ProgramInputView inputs
         ) {
-            var expiresAt = actionExpiresAt(now, parameter);
+            var expiresAt = actionExpiresAt(now(), parameter);
             PendingAction action;
             switch (kind) {
                 case TARGET_MISIDENTIFICATION -> {
@@ -759,11 +836,11 @@ public final class PrecisionOperationRuntime {
                     var subjects = usableSet(setInput(inputs, "subjects"), player);
                     requireNonEmpty(subjects);
                     addSubjects(uniqueSubjects, subjects);
-                    action = PendingAction.withSet(context.nodeId(), kind, subjects, now + 1L);
+                    action = PendingAction.withSet(context.nodeId(), kind, subjects, now() + 1L);
                 }
                 case END_INTRUSION -> {
                     endIntrusion = true;
-                    action = PendingAction.empty(context.nodeId(), kind, now + 1L);
+                    action = PendingAction.empty(context.nodeId(), kind, now() + 1L);
                 }
                 default -> throw new IllegalStateException("Unsupported precision action " + kind);
             }
@@ -815,6 +892,10 @@ public final class PrecisionOperationRuntime {
                     Map.of(),
                     List.of()
             );
+        }
+
+        private long now() {
+            return player.level().getGameTime();
         }
 
         private void recordFailure(PrecisionGraph.Diagnostic diagnostic, int nodeId) {

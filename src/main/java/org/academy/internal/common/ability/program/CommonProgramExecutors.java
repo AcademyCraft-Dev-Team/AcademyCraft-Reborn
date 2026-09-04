@@ -23,6 +23,7 @@ import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.jspecify.annotations.Nullable;
@@ -153,6 +154,20 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         booleanBinary(result, CommonProgramNodeIds.BOOLEAN_AND, (left, right) -> left && right);
         booleanBinary(result, CommonProgramNodeIds.BOOLEAN_OR, (left, right) -> left || right);
         booleanBinary(result, CommonProgramNodeIds.BOOLEAN_XOR, (left, right) -> left ^ right);
+        put(result, CommonProgramNodeIds.SELECT_VALUE,
+                (ProgramVmContext _,
+                 CommonProgramNodeCatalog.ValueTypeConfiguration configuration,
+                 ProgramInputView inputs) -> data(
+                        "value",
+                        coerce(
+                                inputs.requireCompatible(
+                                        booleanValue(inputs, "condition")
+                                                ? "when_true" : "when_false",
+                                        configuration.type()
+                                ),
+                                configuration.type()
+                        )
+                ));
     }
 
     private static void registerControlAndState(
@@ -161,7 +176,18 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         put(result, CommonProgramNodeIds.BRANCH, (_, _, inputs) -> ProgramNodeStep.next(
                 Boolean.toString(booleanValue(inputs, "condition"))
         ));
+        put(result, CommonProgramNodeIds.BREAK_LOOP,
+                (_, _, _) -> ProgramNodeStep.breakLoop());
+        put(result, CommonProgramNodeIds.CONTINUE_LOOP,
+                (_, _, _) -> ProgramNodeStep.continueLoop());
         put(result, CommonProgramNodeIds.STOP, (_, _, _) -> ProgramNodeStep.stop());
+        put(result, CommonProgramNodeIds.WAIT, (_, _, inputs) -> {
+            var ticks = integer(inputs, "ticks");
+            if (ticks < 1 || ticks > 72_000) {
+                throw new IllegalArgumentException("Wait duration must be between 1 and 72000 ticks");
+            }
+            return ProgramNodeStep.yield("flow", ticks);
+        });
         put(result, CommonProgramNodeIds.VARIABLE_GET,
                 (ProgramVmContext context,
                  CommonProgramNodeCatalog.VariableConfiguration configuration,
@@ -365,6 +391,23 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 ProgramValueTypes.FLOAT,
                 direction(inputs, "left").dot(direction(inputs, "right"))
         ));
+        put(result, CommonProgramNodeIds.VECTOR_CONSTRUCT, (_, _, inputs) -> data(
+                "vector",
+                ProgramValueTypes.VECTOR,
+                new ProgramVector(
+                        floatValue(inputs, "x"),
+                        floatValue(inputs, "y"),
+                        floatValue(inputs, "z")
+                )
+        ));
+        put(result, CommonProgramNodeIds.VECTOR_COMPONENTS, (_, _, inputs) -> {
+            var vector = (ProgramVector) raw(inputs, "value", ProgramValueTypes.VECTOR);
+            return ProgramNodeStep.data(Map.of(
+                    "x", value(ProgramValueTypes.FLOAT, vector.x()),
+                    "y", value(ProgramValueTypes.FLOAT, vector.y()),
+                    "z", value(ProgramValueTypes.FLOAT, vector.z())
+            ));
+        });
         put(result, CommonProgramNodeIds.VEC3_OPERATION,
                 (ProgramVmContext _, CommonProgramNodeCatalog.Vec3OperationConfiguration configuration,
                  ProgramInputView inputs) -> vec3Operation(inputs, configuration));
@@ -377,12 +420,35 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 resolver(context).caster()
         ));
         put(result, CommonProgramNodeIds.DAMAGE_ATTACKER, (context, _, _) ->
-                AbilityProgramTriggerRuntime.currentDamageAttacker(resolver(context).caster())
+                damageAttacker(context)
                         .map(entity -> data(
                                 "entity",
                                 ProgramValueTypes.ENTITY_REFERENCE,
                                 entity
                         )).orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.DAMAGE_AMOUNT, (context, _, _) ->
+                damageAmount(context)
+                        .stream()
+                        .mapToObj(amount -> data(
+                                "amount", ProgramValueTypes.FLOAT, amount))
+                        .findFirst()
+                        .orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.GAME_TIME, (context, _, _) -> data(
+                "time", ProgramValueTypes.BIG_INTEGER, BigInteger.valueOf(context.gameTime())
+        ));
+        put(result, CommonProgramNodeIds.LOOP_INDEX, (context, _, _) -> data(
+                "loop_index",
+                ProgramValueTypes.BIG_INTEGER,
+                BigInteger.valueOf(context.attachment(ProgramExecutionFrame.class)
+                        .flatMap(ProgramExecutionFrame::invocation)
+                        .map(ProgramInvocationContext::loopIndex)
+                        .orElse(0L))
+        ));
+        put(result, CommonProgramNodeIds.MELEE_TARGET, (context, _, _) ->
+                meleeTarget(context)
+                        .map(entity -> data(
+                                "entity", ProgramValueTypes.ENTITY_REFERENCE, entity))
+                        .orElseGet(CommonProgramExecutors::emptyData));
         put(result, CommonProgramNodeIds.LOOK_TARGET,
                 (ProgramVmContext context,
                  CommonProgramNodeCatalog.LookTargetConfiguration configuration,
@@ -432,6 +498,25 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         ProgramValueTypes.DIRECTION,
                         direction
                 )).orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.ENTITY_MOTION, (context, _, inputs) ->
+                resolver(context).motionOf(raw(
+                        inputs,
+                        "entity",
+                        ProgramValueTypes.ENTITY_REFERENCE
+                )).map(motion -> ProgramNodeStep.data(Map.of(
+                        "vector", value(ProgramValueTypes.VECTOR, motion),
+                        "speed", value(ProgramValueTypes.FLOAT, motion.length())
+                ))).orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.ENTITY_HEIGHT, (context, _, inputs) ->
+                resolver(context).heightOf(raw(
+                                inputs,
+                                "entity",
+                                ProgramValueTypes.ENTITY_REFERENCE
+                        )).stream()
+                        .mapToObj(height -> data(
+                                "height", ProgramValueTypes.FLOAT, height))
+                        .findFirst()
+                        .orElseGet(CommonProgramExecutors::emptyData));
         put(result, CommonProgramNodeIds.ENTITY_DATA,
                 (ProgramVmContext context,
                  CommonProgramNodeCatalog.EntityDataConfiguration configuration,
@@ -754,36 +839,86 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             ProgramInputView inputs,
             CommonProgramNodeCatalog.Vec3OperationConfiguration configuration
     ) {
-        if (configuration.kind() == CommonProgramNodeCatalog.Vec3Kind.DIRECTION) {
-            var left = direction(inputs, "left");
-            var right = direction(inputs, "right");
-            return switch (configuration.operator()) {
-                case DOT -> data("result", ProgramValueTypes.FLOAT, left.dot(right));
-                case CROSS -> data("result", ProgramValueTypes.DIRECTION, new ProgramDirection(
-                        left.y() * right.z() - left.z() * right.y(),
-                        left.z() * right.x() - left.x() * right.z(),
-                        left.x() * right.y() - left.y() * right.x()));
-                case ADD -> data("result", ProgramValueTypes.DIRECTION, new ProgramDirection(
-                        left.x() + right.x(), left.y() + right.y(), left.z() + right.z()));
-            };
+        var operator = configuration.operator();
+        if (operator == CommonProgramNodeCatalog.Vec3Operator.LENGTH) {
+            return data("result", ProgramValueTypes.FLOAT,
+                    vector(inputs, "value", configuration.kind()).length());
         }
+        if (operator == CommonProgramNodeCatalog.Vec3Operator.NORMALIZE) {
+            return data("result", ProgramValueTypes.DIRECTION,
+                    vector(inputs, "value", configuration.kind()).direction());
+        }
+        if (operator == CommonProgramNodeCatalog.Vec3Operator.SCALE) {
+            var scaled = vector(inputs, "value", configuration.kind())
+                    .scale(floatValue(inputs, "scalar"));
+            return vectorResult(configuration.kind(), scaled,
+                    worldDimension(inputs, "value", configuration.kind()));
+        }
+
+        var left = vector(inputs, "left", configuration.kind());
+        var right = vector(inputs, "right", configuration.kind());
+        var dimension = sharedWorldDimension(inputs, configuration.kind());
+        return switch (operator) {
+            case DOT -> data("result", ProgramValueTypes.FLOAT, left.dot(right));
+            case CROSS -> vectorResult(configuration.kind(), left.cross(right), dimension);
+            case ADD -> vectorResult(configuration.kind(), left.add(right), dimension);
+            case SUBTRACT -> vectorResult(
+                    configuration.kind(), left.subtract(right), dimension);
+            case SCALE, LENGTH, NORMALIZE -> throw new IllegalStateException(
+                    "Unary vec3 operation reached binary execution");
+        };
+    }
+
+    private static ProgramVector vector(
+            ProgramInputView inputs,
+            String port,
+            CommonProgramNodeCatalog.Vec3Kind kind
+    ) {
+        return switch (kind) {
+            case VECTOR -> (ProgramVector) raw(inputs, port, ProgramValueTypes.VECTOR);
+            case DIRECTION -> ProgramVector.of(direction(inputs, port));
+            case WORLD_POSITION -> ProgramVector.of(worldPosition(inputs, port));
+        };
+    }
+
+    private static ProgramNodeStep vectorResult(
+            CommonProgramNodeCatalog.Vec3Kind kind,
+            ProgramVector result,
+            @Nullable Identifier dimension
+    ) {
+        return switch (kind) {
+            case VECTOR -> data("result", ProgramValueTypes.VECTOR, result);
+            case DIRECTION -> data("result", ProgramValueTypes.DIRECTION, result.direction());
+            case WORLD_POSITION -> data(
+                    "result",
+                    ProgramValueTypes.WORLD_POSITION,
+                    new ProgramWorldPosition(
+                            Objects.requireNonNull(dimension, "Vector world dimension"),
+                            result.x(), result.y(), result.z())
+            );
+        };
+    }
+
+    private static @Nullable Identifier worldDimension(
+            ProgramInputView inputs,
+            String port,
+            CommonProgramNodeCatalog.Vec3Kind kind
+    ) {
+        return kind == CommonProgramNodeCatalog.Vec3Kind.WORLD_POSITION
+                ? worldPosition(inputs, port).dimension() : null;
+    }
+
+    private static @Nullable Identifier sharedWorldDimension(
+            ProgramInputView inputs,
+            CommonProgramNodeCatalog.Vec3Kind kind
+    ) {
+        if (kind != CommonProgramNodeCatalog.Vec3Kind.WORLD_POSITION) return null;
         var left = worldPosition(inputs, "left");
         var right = worldPosition(inputs, "right");
         if (!left.dimension().equals(right.dimension())) {
             throw new IllegalArgumentException("Vec3 positions are in different dimensions");
         }
-        return switch (configuration.operator()) {
-            case DOT -> data("result", ProgramValueTypes.FLOAT,
-                    left.x() * right.x() + left.y() * right.y() + left.z() * right.z());
-            case CROSS -> data("result", ProgramValueTypes.WORLD_POSITION,
-                    new ProgramWorldPosition(left.dimension(),
-                            left.y() * right.z() - left.z() * right.y(),
-                            left.z() * right.x() - left.x() * right.z(),
-                            left.x() * right.y() - left.y() * right.x()));
-            case ADD -> data("result", ProgramValueTypes.WORLD_POSITION,
-                    new ProgramWorldPosition(left.dimension(),
-                            left.x() + right.x(), left.y() + right.y(), left.z() + right.z()));
-        };
+        return left.dimension();
     }
 
     private static Object randomNumber(
@@ -954,7 +1089,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             return data("value", domain.elementType(), values.get(index));
         });
         put(result, domain.id("foreach"), (context, _, inputs) -> {
-            var key = "foreach:" + context.nodeId();
+            var key = ProgramVmContext.structuredLoopStateKey(context.nodeId());
             var state = context.executorState(key)
                     .map(IterationState.class::cast)
                     .orElseGet(() -> new IterationState(
@@ -968,7 +1103,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             context.setExecutorState(key, new IterationState(state.values, state.index + 1));
             return ProgramNodeStep.call("body", Map.of(
                     "value",
-                    value(domain.elementType(), state.values.get(state.index))
+                    value(domain.elementType(), state.values.get(state.index)),
+                    "index",
+                    value(ProgramValueTypes.INTEGER, state.index + 1)
             ));
         });
     }
@@ -1084,6 +1221,33 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         return context.attachment(ProgramExecutionFrame.class)
                 .flatMap(frame -> frame.environment(ProgramTargetResolver.class))
                 .orElseThrow(() -> new IllegalStateException("No program target resolver is available"));
+    }
+
+    private static java.util.Optional<Object> damageAttacker(ProgramVmContext context) {
+        var invocation = context.attachment(ProgramExecutionFrame.class)
+                .flatMap(ProgramExecutionFrame::invocation)
+                .orElse(null);
+        return invocation == null
+                ? AbilityProgramTriggerRuntime.currentDamageAttacker(resolver(context).caster())
+                : invocation.damageAttacker();
+    }
+
+    private static java.util.OptionalDouble damageAmount(ProgramVmContext context) {
+        var invocation = context.attachment(ProgramExecutionFrame.class)
+                .flatMap(ProgramExecutionFrame::invocation)
+                .orElse(null);
+        return invocation == null
+                ? AbilityProgramTriggerRuntime.currentDamageAmount(resolver(context).caster())
+                : invocation.damageAmount();
+    }
+
+    private static java.util.Optional<Object> meleeTarget(ProgramVmContext context) {
+        var invocation = context.attachment(ProgramExecutionFrame.class)
+                .flatMap(ProgramExecutionFrame::invocation)
+                .orElse(null);
+        return invocation == null
+                ? AbilityProgramTriggerRuntime.currentMeleeTarget(resolver(context).caster())
+                : invocation.meleeTarget();
     }
 
     private static boolean booleanValue(ProgramInputView inputs, String port) {

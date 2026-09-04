@@ -181,6 +181,22 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 CommonProgramNodeIds.BOOLEAN_XOR
         ))
             put(result, id, unitType(binarySchema(ProgramValueTypes.BOOLEAN, ProgramValueTypes.BOOLEAN)));
+        put(result, CommonProgramNodeIds.SELECT_VALUE, type(
+                ValueTypeConfiguration.CODEC,
+                configuration -> new ProgramNodeSchema(
+                        List.of(
+                                ProgramPortDefinition.requiredInput(
+                                        "condition", ProgramValueTypes.BOOLEAN),
+                                ProgramPortDefinition.requiredInput(
+                                        "when_true", configuration.type()),
+                                ProgramPortDefinition.requiredInput(
+                                        "when_false", configuration.type())
+                        ),
+                        List.of(ProgramPortDefinition.output("value", configuration.type()))
+                ),
+                ProgramNodeRole.VALUE,
+                ProgramNodePurity.PURE
+        ));
     }
 
     private static void registerControlAndState(Map<Identifier, ProgramNodeType<?>> result) {
@@ -226,11 +242,33 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodeRole.CONTROL,
                 ProgramNodePurity.PURE
         ));
+        for (var id : List.of(
+                CommonProgramNodeIds.BREAK_LOOP,
+                CommonProgramNodeIds.CONTINUE_LOOP
+        )) put(result, id, type(
+                unitCodec(),
+                _ -> new ProgramNodeSchema(List.of(flowInput()), List.of()),
+                ProgramNodeRole.CONTROL,
+                ProgramNodePurity.STATE
+        ));
         put(result, CommonProgramNodeIds.STOP, type(
                 unitCodec(),
                 _ -> new ProgramNodeSchema(List.of(flowInput()), List.of()),
                 ProgramNodeRole.CONTROL,
                 ProgramNodePurity.PURE
+        ));
+        put(result, CommonProgramNodeIds.WAIT, type(
+                unitCodec(),
+                _ -> new ProgramNodeSchema(
+                        List.of(
+                                flowInput(),
+                                ProgramPortDefinition.requiredInput(
+                                        "ticks", ProgramValueTypes.INTEGER)
+                        ),
+                        List.of(flowOutput("flow"))
+                ),
+                ProgramNodeRole.SUSPEND,
+                ProgramNodePurity.SUSPEND
         ));
         put(result, CommonProgramNodeIds.VARIABLE_GET, type(
                 VariableConfiguration.CODEC,
@@ -359,13 +397,17 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.DIRECTION,
                 ProgramValueTypes.FLOAT
         )));
+        put(result, CommonProgramNodeIds.VECTOR_CONSTRUCT, unitType(constructSchema(
+                ProgramValueTypes.FLOAT,
+                ProgramValueTypes.VECTOR
+        )));
+        put(result, CommonProgramNodeIds.VECTOR_COMPONENTS, unitType(componentSchema(
+                ProgramValueTypes.VECTOR,
+                ProgramValueTypes.FLOAT
+        )));
         put(result, CommonProgramNodeIds.VEC3_OPERATION, type(
                 Vec3OperationConfiguration.CODEC,
-                configuration -> binarySchema(
-                        configuration.kind().type(),
-                        configuration.operator() == Vec3Operator.DOT
-                                ? ProgramValueTypes.FLOAT : configuration.kind().type()
-                ),
+                CommonProgramNodeCatalog::vec3Schema,
                 ProgramNodeRole.VALUE,
                 ProgramNodePurity.PURE
         ));
@@ -376,6 +418,18 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 "entity", ProgramValueTypes.ENTITY_REFERENCE
         )));
         put(result, CommonProgramNodeIds.DAMAGE_ATTACKER, queryType(outputSchema(
+                "entity", ProgramValueTypes.ENTITY_REFERENCE
+        )));
+        put(result, CommonProgramNodeIds.DAMAGE_AMOUNT, queryType(outputSchema(
+                "amount", ProgramValueTypes.FLOAT
+        )));
+        put(result, CommonProgramNodeIds.GAME_TIME, queryType(outputSchema(
+                "time", ProgramValueTypes.BIG_INTEGER
+        )));
+        put(result, CommonProgramNodeIds.LOOP_INDEX, queryType(outputSchema(
+                "loop_index", ProgramValueTypes.BIG_INTEGER
+        )));
+        put(result, CommonProgramNodeIds.MELEE_TARGET, queryType(outputSchema(
                 "entity", ProgramValueTypes.ENTITY_REFERENCE
         )));
         put(result, CommonProgramNodeIds.LOOK_TARGET, type(
@@ -409,6 +463,20 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.ENTITY_REFERENCE,
                 "direction",
                 ProgramValueTypes.DIRECTION
+        )));
+        put(result, CommonProgramNodeIds.ENTITY_MOTION, queryType(new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput(
+                        "entity", ProgramValueTypes.ENTITY_REFERENCE)),
+                List.of(
+                        ProgramPortDefinition.output("vector", ProgramValueTypes.VECTOR),
+                        ProgramPortDefinition.output("speed", ProgramValueTypes.FLOAT)
+                )
+        )));
+        put(result, CommonProgramNodeIds.ENTITY_HEIGHT, queryType(unarySchema(
+                "entity",
+                ProgramValueTypes.ENTITY_REFERENCE,
+                "height",
+                ProgramValueTypes.FLOAT
         )));
         put(result, CommonProgramNodeIds.ENTITY_DATA, type(
                 EntityDataConfiguration.CODEC,
@@ -670,7 +738,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 List.of(
                         flowOutput("body"),
                         flowOutput("done"),
-                        ProgramPortDefinition.output("value", domain.elementType)
+                        ProgramPortDefinition.output("value", domain.elementType),
+                        ProgramPortDefinition.output("index", ProgramValueTypes.INTEGER)
                 )
         );
         put(result, domain.id("empty"), type(
@@ -714,6 +783,29 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         );
     }
 
+    private static ProgramNodeSchema vec3Schema(Vec3OperationConfiguration configuration) {
+        var valueType = configuration.kind().type();
+        var inputs = switch (configuration.operator()) {
+            case LENGTH, NORMALIZE -> List.of(
+                    ProgramPortDefinition.requiredInput("value", valueType));
+            case SCALE -> List.of(
+                    ProgramPortDefinition.requiredInput("value", valueType),
+                    ProgramPortDefinition.requiredInput("scalar", ProgramValueTypes.FLOAT));
+            default -> List.of(
+                    ProgramPortDefinition.requiredInput("left", valueType),
+                    ProgramPortDefinition.requiredInput("right", valueType));
+        };
+        var outputType = switch (configuration.operator()) {
+            case DOT, LENGTH -> ProgramValueTypes.FLOAT;
+            case NORMALIZE -> ProgramValueTypes.DIRECTION;
+            default -> valueType;
+        };
+        return new ProgramNodeSchema(
+                inputs,
+                List.of(ProgramPortDefinition.output("result", outputType))
+        );
+    }
+
     private static ProgramNodeSchema entrySchema() {
         return new ProgramNodeSchema(
                 List.of(),
@@ -744,7 +836,10 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                         ProgramPortDefinition.requiredInput("z", componentType)
                 ),
                 List.of(ProgramPortDefinition.output(
-                        outputType.equals(ProgramValueTypes.DIRECTION) ? "direction" : "position",
+                        outputType.equals(ProgramValueTypes.DIRECTION)
+                                ? "direction"
+                                : outputType.equals(ProgramValueTypes.VECTOR)
+                                ? "vector" : "position",
                         outputType
                 ))
         );
@@ -756,7 +851,10 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
     ) {
         return new ProgramNodeSchema(
                 List.of(ProgramPortDefinition.requiredInput(
-                        inputType.equals(ProgramValueTypes.DIRECTION) ? "direction" : "position",
+                        inputType.equals(ProgramValueTypes.DIRECTION)
+                                ? "direction"
+                                : inputType.equals(ProgramValueTypes.VECTOR)
+                                ? "value" : "position",
                         inputType
                 )),
                 List.of(
@@ -824,6 +922,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.FLOAT,
                 ProgramValueTypes.IDENTIFIER,
                 ProgramValueTypes.DURATION,
+                ProgramValueTypes.VECTOR,
                 ProgramValueTypes.DIRECTION,
                 ProgramValueTypes.WORLD_POSITION,
                 ProgramValueTypes.BLOCK_POSITION,
@@ -943,6 +1042,21 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 Codec.intRange(0, 1200).fieldOf("interval")
                         .forGetter(LoopTriggerConfiguration::interval)
         ).apply(instance, LoopTriggerConfiguration::new));
+    }
+
+    public record ValueTypeConfiguration(Identifier typeId) {
+        public static final Codec<ValueTypeConfiguration> CODEC = IDENTIFIER_CODEC
+                .fieldOf("type")
+                .xmap(ValueTypeConfiguration::new, ValueTypeConfiguration::typeId)
+                .codec();
+
+        public ValueTypeConfiguration {
+            variableType(typeId);
+        }
+
+        public ProgramValueType type() {
+            return variableType(typeId);
+        }
     }
 
     public record CollectionBuilderConfiguration(int inputs) {
@@ -1383,6 +1497,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
     }
 
     public enum Vec3Kind {
+        VECTOR("vector", ProgramValueTypes.VECTOR),
         DIRECTION("direction", ProgramValueTypes.DIRECTION),
         WORLD_POSITION("world_position", ProgramValueTypes.WORLD_POSITION);
 
@@ -1459,6 +1574,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         FLOAT("float", ProgramValueTypes.FLOAT),
         IDENTIFIER("identifier", ProgramValueTypes.IDENTIFIER),
         DURATION("duration", ProgramValueTypes.DURATION),
+        VECTOR("vector", ProgramValueTypes.VECTOR),
         DIRECTION("direction", ProgramValueTypes.DIRECTION),
         WORLD_POSITION("world_position", ProgramValueTypes.WORLD_POSITION),
         BLOCK_POSITION("block_position", ProgramValueTypes.BLOCK_POSITION),
@@ -1493,7 +1609,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
     }
 
     public enum Vec3Operator {
-        DOT("dot"), CROSS("cross"), ADD("add");
+        DOT("dot"), CROSS("cross"), ADD("add"), SUBTRACT("subtract"),
+        SCALE("scale"), LENGTH("length"), NORMALIZE("normalize");
 
         private static final Codec<Vec3Operator> CODEC = Codec.STRING.xmap(
                 Vec3Operator::byName, Vec3Operator::wireName);

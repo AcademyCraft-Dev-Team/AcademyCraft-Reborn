@@ -11,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 
@@ -18,6 +19,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * Shared bounded world-query implementation for server-owned ability program runtimes.
@@ -83,6 +85,22 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         var look = entity.getLookAngle();
         if (!finiteNonZero(look)) return Optional.empty();
         return Optional.of(new ProgramDirection(look.x, look.y, look.z));
+    }
+
+    @Override
+    public Optional<ProgramVector> motionOf(Object entityReference) {
+        if (!(entityReference instanceof Entity entity) || !sameQueryableEntity(entity)) {
+            return Optional.empty();
+        }
+        return ProgramTargetResolver.super.motionOf(entity);
+    }
+
+    @Override
+    public OptionalDouble heightOf(Object entityReference) {
+        if (!(entityReference instanceof Entity entity) || !sameQueryableEntity(entity)) {
+            return OptionalDouble.empty();
+        }
+        return ProgramTargetResolver.super.heightOf(entity);
     }
 
     @Override
