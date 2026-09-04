@@ -14,16 +14,22 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.api.common.structure.BlockStructure;
+import org.academy.api.common.structure.BlockStructureCollision;
 import org.academy.api.common.structure.BlockStructureGridAlignment;
 import org.academy.api.common.structure.BlockStructurePlacementPolicy;
 import org.academy.api.common.structure.BlockStructureRestoreResult;
 import org.academy.api.common.structure.BlockStructureSnapshot;
 import org.academy.internal.common.structure.BlockStructureManager;
+import org.academy.internal.common.structure.BlockStructureCollisionGeometry;
 import org.academy.internal.common.world.entity.EntityTypes;
 
+import java.util.function.Consumer;
+
 /** Server-authoritative entity representation of a captured block structure. */
-public final class BlockStructureEntity extends Entity implements BlockStructure {
+public final class BlockStructureEntity extends Entity
+        implements BlockStructure, BlockStructureCollision {
     private static final EntityDataAccessor<BlockStructureSnapshot> STRUCTURE =
             SynchedEntityData.defineId(
                     BlockStructureEntity.class,
@@ -41,6 +47,8 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
     private static final double PLATFORM_EPSILON = 0.18;
 
     private BlockStructureSnapshot structure = BlockStructureSnapshot.EMPTY;
+    private BlockStructureCollisionGeometry collisionGeometry =
+            BlockStructureCollisionGeometry.EMPTY;
     private int settledTicks;
 
     public BlockStructureEntity(EntityType<? extends BlockStructureEntity> type, Level level) {
@@ -62,6 +70,7 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
             throw new IllegalArgumentException("A block structure entity requires a non-empty snapshot");
         }
         structure = snapshot;
+        collisionGeometry = BlockStructureCollisionGeometry.create(snapshot);
         entityData.set(STRUCTURE, snapshot);
         entityData.set(RESTORE_WHEN_SETTLED, restoreWhenSettled);
         setGravityEnabled(gravityEnabled);
@@ -79,6 +88,7 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
         super.onSyncedDataUpdated(accessor);
         if (STRUCTURE.equals(accessor)) {
             structure = entityData.get(STRUCTURE);
+            collisionGeometry = BlockStructureCollisionGeometry.create(structure);
             refreshStructureBounds();
         }
     }
@@ -98,7 +108,7 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
         move(MoverType.SELF, requestedMovement);
         var actualMovement = position().subtract(oldPosition);
         if (!level().isClientSide() && actualMovement.lengthSqr() > 1.0e-12) {
-            moveStandingEntities(oldBounds, actualMovement);
+            moveStandingEntities(oldBounds, oldPosition, actualMovement);
         }
 
         var velocity = requestedMovement;
@@ -125,24 +135,24 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
         }
     }
 
-    private void moveStandingEntities(AABB oldBounds, Vec3 movement) {
+    private void moveStandingEntities(AABB oldBounds, Vec3 oldPosition, Vec3 movement) {
         var searchBounds = oldBounds.expandTowards(movement).inflate(0.02, PLATFORM_EPSILON, 0.02);
         for (var entity : level().getEntities(
-                this, searchBounds, entity -> wasStandingOn(entity, oldBounds))) {
+                this, searchBounds, entity -> wasStandingOn(entity, oldPosition))) {
             entity.move(MoverType.SHULKER_BOX, movement);
             entity.setOnGroundWithMovement(true, movement);
         }
     }
 
-    private boolean wasStandingOn(Entity entity, AABB structureBounds) {
+    private boolean wasStandingOn(Entity entity, Vec3 structurePosition) {
         if (!entity.isAlive() || entity.isPassenger() || entity.noPhysics) return false;
-        var entityBounds = entity.getBoundingBox();
-        var topDifference = entityBounds.minY - structureBounds.maxY;
-        return topDifference >= -PLATFORM_EPSILON && topDifference <= PLATFORM_EPSILON
-                && entityBounds.maxX > structureBounds.minX
-                && entityBounds.minX < structureBounds.maxX
-                && entityBounds.maxZ > structureBounds.minZ
-                && entityBounds.minZ < structureBounds.maxZ;
+        return collisionGeometry.supports(
+                entity.getBoundingBox(),
+                PLATFORM_EPSILON,
+                structurePosition,
+                getYRot(),
+                structure
+        );
     }
 
     @Override
@@ -156,35 +166,17 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
         if (snapshot == null || snapshot.isEmpty()) {
             return AABB.ofSize(position.add(0.0, 0.5, 0.0), 1.0, 1.0, 1.0);
         }
-        var radians = Math.toRadians(getYRot());
-        var sine = Math.sin(radians);
-        var cosine = Math.cos(radians);
-        var pivotX = snapshot.pivotX();
-        var pivotZ = snapshot.pivotZ();
-        var minimumX = Double.POSITIVE_INFINITY;
-        var minimumZ = Double.POSITIVE_INFINITY;
-        var maximumX = Double.NEGATIVE_INFINITY;
-        var maximumZ = Double.NEGATIVE_INFINITY;
-        for (var x : new double[]{0.0, snapshot.width()}) {
-            for (var z : new double[]{0.0, snapshot.depth()}) {
-                var offsetX = x - pivotX;
-                var offsetZ = z - pivotZ;
-                var rotatedX = pivotX + offsetX * cosine - offsetZ * sine;
-                var rotatedZ = pivotZ + offsetX * sine + offsetZ * cosine;
-                minimumX = Math.min(minimumX, rotatedX);
-                minimumZ = Math.min(minimumZ, rotatedZ);
-                maximumX = Math.max(maximumX, rotatedX);
-                maximumZ = Math.max(maximumZ, rotatedZ);
-            }
-        }
-        return new AABB(
-                position.x + minimumX,
+        var geometry = collisionGeometry;
+        return geometry == null
+                ? new AABB(
+                position.x,
                 position.y,
-                position.z + minimumZ,
-                position.x + maximumX,
+                position.z,
+                position.x + snapshot.width(),
                 position.y + snapshot.height(),
-                position.z + maximumZ
-        );
+                position.z + snapshot.depth()
+        )
+                : geometry.worldBounds(position, getYRot(), snapshot);
     }
 
     private void refreshStructureBounds() {
@@ -209,6 +201,26 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
     @Override
     public boolean canBeCollidedWith(Entity other) {
         return other != this && !isRemoved();
+    }
+
+    @Override
+    public void collectCollisionShapes(AABB bounds, Consumer<VoxelShape> output) {
+        if (bounds == null || output == null || collisionGeometry.isEmpty()) return;
+        var query = bounds.inflate(1.0e-7);
+        for (var box : collisionGeometry.worldBoxes(position(), getYRot(), structure)) {
+            if (box.intersects(query)) output.accept(net.minecraft.world.phys.shapes.Shapes.create(box));
+        }
+    }
+
+    @Override
+    public boolean supports(AABB entityBounds, double tolerance) {
+        return entityBounds != null && collisionGeometry.supports(
+                entityBounds,
+                tolerance,
+                position(),
+                getYRot(),
+                structure
+        );
     }
 
     @Override
@@ -299,6 +311,7 @@ public final class BlockStructureEntity extends Entity implements BlockStructure
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
         structure = BlockStructureSnapshot.load(input.childOrEmpty("academy_structure"));
+        collisionGeometry = BlockStructureCollisionGeometry.create(structure);
         entityData.set(STRUCTURE, structure);
         entityData.set(RESTORE_WHEN_SETTLED,
                 input.getBooleanOr("academy_restore_when_settled", false));
