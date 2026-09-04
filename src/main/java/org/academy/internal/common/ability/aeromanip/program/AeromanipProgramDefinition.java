@@ -39,8 +39,14 @@ public final class AeromanipProgramDefinition {
                     || id.equals(AeromanipProgramNodeIds.LAMINAR_CUT)) {
                 configuration.addProperty("power", 1.0f);
             }
+            if (id.equals(AeromanipProgramNodeIds.CONVERGING_AIRFLOW)) {
+                configuration.addProperty("power", 1.0f);
+                configuration.addProperty("maximum_targets", 6);
+            }
             if (id.equals(AeromanipProgramNodeIds.LAMINAR_CUT)) {
                 configuration.addProperty("charge_tier", "instant");
+                configuration.addProperty("charge_acceleration", "standard");
+                configuration.addProperty("plane_mode", "disabled");
             } else if (id.equals(AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE)) {
                 configuration.addProperty("target_type", "entity");
             } else if (id.equals(AeromanipProgramNodeIds.FIRE_JETS)) {

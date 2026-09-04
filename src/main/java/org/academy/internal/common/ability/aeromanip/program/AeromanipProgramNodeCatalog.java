@@ -34,9 +34,15 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                 categoryScope()));
         put(result, AeromanipProgramNodeIds.AIRFLOW_PUSH, powerType(
                 airflowPushSchema(), AeromanipProgramCapabilities.AIRFLOW_PUSH));
-        put(result, AeromanipProgramNodeIds.LAMINAR_CUT, fixedType(
+        put(result, AeromanipProgramNodeIds.CONVERGING_AIRFLOW, fixedType(
+                ConvergingAirflowConfiguration.CODEC,
+                convergingAirflowSchema(), AeromanipProgramCapabilities.CONVERGING_AIRFLOW));
+        put(result, AeromanipProgramNodeIds.LAMINAR_CUT, dynamicType(
                 LaminarCutConfiguration.CODEC,
-                laminarCutSchema(), AeromanipProgramCapabilities.LAMINAR_CUT));
+                configuration -> laminarCutSchema(configuration.planeMode()),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.LAMINAR_CUT)));
         put(result, AeromanipProgramNodeIds.PLACE_TEMPORARY_JET_NOZZLE, dynamicType(
                 TemporaryNozzleConfiguration.CODEC,
                 configuration -> temporaryNozzleSchema(configuration.targetType()),
@@ -79,12 +85,29 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
         );
     }
 
-    private static ProgramNodeSchema laminarCutSchema() {
+    private static ProgramNodeSchema laminarCutSchema(BladePlaneMode planeMode) {
+        var inputs = new java.util.ArrayList<ProgramPortDefinition>();
+        inputs.add(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW));
+        inputs.add(ProgramPortDefinition.optionalInput(
+                "origin", ProgramValueTypes.WORLD_POSITION));
+        inputs.add(ProgramPortDefinition.requiredInput(
+                "direction", ProgramValueTypes.DIRECTION));
+        if (planeMode == BladePlaneMode.DIRECTION) {
+            inputs.add(ProgramPortDefinition.requiredInput(
+                    "plane_direction", ProgramValueTypes.DIRECTION));
+        }
+        return new ProgramNodeSchema(
+                List.copyOf(inputs),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
+        );
+    }
+
+    private static ProgramNodeSchema convergingAirflowSchema() {
         return new ProgramNodeSchema(
                 List.of(
                         ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
-                        ProgramPortDefinition.requiredInput(
-                                "direction", ProgramValueTypes.DIRECTION)
+                        ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET),
+                        ProgramPortDefinition.requiredInput("center", ProgramValueTypes.WORLD_POSITION)
                 ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
@@ -187,14 +210,35 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                 .codec();
     }
 
-    public record LaminarCutConfiguration(float power, ChargeTier chargeTier) {
+    public record LaminarCutConfiguration(
+            float power,
+            ChargeTier chargeTier,
+            ChargeAcceleration chargeAcceleration,
+            BladePlaneMode planeMode
+    ) {
         public static final Codec<LaminarCutConfiguration> CODEC =
                 RecordCodecBuilder.create(instance -> instance.group(
                         Codec.floatRange(0.0f, 2.0f).fieldOf("power")
                                 .forGetter(LaminarCutConfiguration::power),
                         ChargeTier.CODEC.optionalFieldOf("charge_tier", ChargeTier.INSTANT)
-                                .forGetter(LaminarCutConfiguration::chargeTier)
+                                .forGetter(LaminarCutConfiguration::chargeTier),
+                        ChargeAcceleration.CODEC.optionalFieldOf(
+                                        "charge_acceleration", ChargeAcceleration.STANDARD)
+                                .forGetter(LaminarCutConfiguration::chargeAcceleration),
+                        BladePlaneMode.CODEC.optionalFieldOf(
+                                        "plane_mode", BladePlaneMode.DISABLED)
+                                .forGetter(LaminarCutConfiguration::planeMode)
                 ).apply(instance, LaminarCutConfiguration::new));
+    }
+
+    public record ConvergingAirflowConfiguration(float power, int maximumTargets) {
+        public static final Codec<ConvergingAirflowConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(ConvergingAirflowConfiguration::power),
+                        Codec.intRange(1, 16).optionalFieldOf("maximum_targets", 6)
+                                .forGetter(ConvergingAirflowConfiguration::maximumTargets)
+                ).apply(instance, ConvergingAirflowConfiguration::new));
     }
 
     public record TemporaryNozzleConfiguration(NozzleTargetType targetType) {
@@ -230,6 +274,61 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
         private static ChargeTier byName(String value) {
             for (var tier : values()) if (tier.wireName.equals(value)) return tier;
             throw new IllegalArgumentException("Unknown Laminar Cut charge tier " + value);
+        }
+    }
+
+    public enum ChargeAcceleration {
+        STANDARD("standard", 1.0f),
+        ACCELERATED("accelerated", 1.5f),
+        INSTANT("instant", 2.0f);
+
+        private static final Codec<ChargeAcceleration> CODEC = Codec.STRING.xmap(
+                ChargeAcceleration::byName, ChargeAcceleration::wireName);
+        private final String wireName;
+        private final float costMultiplier;
+
+        ChargeAcceleration(String wireName, float costMultiplier) {
+            this.wireName = wireName;
+            this.costMultiplier = costMultiplier;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        public float costMultiplier() {
+            return costMultiplier;
+        }
+
+        private static ChargeAcceleration byName(String value) {
+            for (var acceleration : values()) {
+                if (acceleration.wireName.equals(value)) return acceleration;
+            }
+            throw new IllegalArgumentException(
+                    "Unknown Laminar Cut charge acceleration " + value);
+        }
+    }
+
+    public enum BladePlaneMode {
+        DISABLED("disabled"),
+        DIRECTION("direction"),
+        RANDOM("random");
+
+        private static final Codec<BladePlaneMode> CODEC = Codec.STRING.xmap(
+                BladePlaneMode::byName, BladePlaneMode::wireName);
+        private final String wireName;
+
+        BladePlaneMode(String wireName) {
+            this.wireName = wireName;
+        }
+
+        public String wireName() {
+            return wireName;
+        }
+
+        private static BladePlaneMode byName(String value) {
+            for (var mode : values()) if (mode.wireName.equals(value)) return mode;
+            throw new IllegalArgumentException("Unknown Laminar Cut blade plane mode " + value);
         }
     }
 

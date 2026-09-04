@@ -31,4 +31,16 @@ class LaminarCutterChargeTest {
         assertEquals(0.0, slopedRight.dot(facingSouthAndDown), 1.0e-8);
         assertEquals(1.0, slopedRight.length(), 1.0e-8);
     }
+
+    @Test
+    void configuredPlaneDirectionIsProjectedAroundAttackAxis() {
+        var attack = new Vec3(0.0, 0.0, 1.0);
+        var bladeRight = LaminarCutter.Server.bladeRight(
+                attack, new Vec3(1.0, 1.0, 1.0));
+
+        assertEquals(Math.sqrt(0.5), bladeRight.x, 1.0e-8);
+        assertEquals(Math.sqrt(0.5), bladeRight.y, 1.0e-8);
+        assertEquals(0.0, bladeRight.z, 1.0e-8);
+        assertEquals(0.0, bladeRight.dot(attack), 1.0e-8);
+    }
 }

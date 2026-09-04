@@ -19,7 +19,9 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -60,6 +62,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -177,8 +180,9 @@ public final class LaminarCutter extends Skill {
                 float damageScale,
                 float baseCost
         ) {
-            return tryCast(player, direction, maximumRange, damageScale, baseCost,
-                    AeromanipChargeTier.INSTANT);
+            return player != null && tryCast(player, player.getEyePosition(), direction,
+                    maximumRange, damageScale, baseCost,
+                    AeromanipChargeTier.INSTANT, null);
         }
 
         public static boolean tryProgramCast(
@@ -189,7 +193,41 @@ public final class LaminarCutter extends Skill {
                 float baseCost,
                 AeromanipChargeTier tier
         ) {
-            return tryCast(player, direction, maximumRange, damageScale, baseCost, tier);
+            return player != null && tryCast(player, player.getEyePosition(), direction,
+                    maximumRange, damageScale, baseCost, tier, null);
+        }
+
+        /**
+         * Program-facing cast entry point with an explicit, server-validated blade origin.
+         */
+        public static boolean tryProgramCast(
+                ServerPlayer player,
+                Vec3 origin,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                float baseCost,
+                AeromanipChargeTier tier
+        ) {
+            return tryProgramCast(player, origin, direction,
+                    maximumRange, damageScale, baseCost, tier, null);
+        }
+
+        /**
+         * Program-facing cast entry point with an explicit blade-plane direction.
+         */
+        public static boolean tryProgramCast(
+                ServerPlayer player,
+                Vec3 origin,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                float baseCost,
+                AeromanipChargeTier tier,
+                @Nullable Vec3 bladePlaneDirection
+        ) {
+            return tryCast(player, origin, direction,
+                    maximumRange, damageScale, baseCost, tier, bladePlaneDirection);
         }
 
         static double bladeHalfWidth(AeromanipChargeTier tier) {
@@ -208,7 +246,7 @@ public final class LaminarCutter extends Skill {
             return tier == AeromanipChargeTier.INSTANT ? 0.55 : 1.25;
         }
 
-        static Vec3 bladeRight(Vec3 direction) {
+        public static Vec3 bladeRight(Vec3 direction) {
             if (direction == null || !Double.isFinite(direction.x)
                     || !Double.isFinite(direction.y) || !Double.isFinite(direction.z)) {
                 return new Vec3(1.0, 0.0, 0.0);
@@ -226,7 +264,8 @@ public final class LaminarCutter extends Skill {
 
             @Override
             protected void onReleased(AeromanipChargeTier tier, long chargeTicks) {
-                tryCast(player, player.getLookAngle(), -1.0f, 1.0f, -1.0f, tier);
+                tryCast(player, player.getEyePosition(), player.getLookAngle(),
+                        -1.0f, 1.0f, -1.0f, tier, null);
             }
 
             @Override
@@ -244,13 +283,18 @@ public final class LaminarCutter extends Skill {
 
         private static boolean tryCast(
                 ServerPlayer player,
+                Vec3 origin,
                 Vec3 direction,
                 float maximumRange,
                 float damageScale,
                 float baseCost,
-                AeromanipChargeTier tier
+                AeromanipChargeTier tier,
+                @Nullable Vec3 bladePlaneDirection
         ) {
-            if (player == null || direction == null
+            if (player == null || origin == null || direction == null
+                    || !Double.isFinite(origin.x)
+                    || !Double.isFinite(origin.y)
+                    || !Double.isFinite(origin.z)
                     || !Double.isFinite(direction.x)
                     || !Double.isFinite(direction.y)
                     || !Double.isFinite(direction.z)
@@ -261,7 +305,8 @@ public final class LaminarCutter extends Skill {
                     || (maximumRange != -1.0f
                     && (maximumRange <= 0.0f || maximumRange > 64.0f))
                     || damageScale < 0.0f
-                    || damageScale > 2.0f || tier == null) {
+                    || damageScale > 2.0f || tier == null
+                    || !validBladePlane(direction, bladePlaneDirection)) {
                 return false;
             }
             var skill = Skills.LAMINAR_CUTTER.get();
@@ -282,33 +327,36 @@ public final class LaminarCutter extends Skill {
                     _ -> tierAir,
                     (context, _) -> executeCut(
                             player,
+                            origin,
                             normalizedDirection,
                             maximumRange,
                             damageScale,
                             context,
-                            tier
+                            tier,
+                            bladePlaneDirection
                     ));
         }
 
         private static void executeCut(
                 ServerPlayer player,
+                Vec3 origin,
                 Vec3 direction,
                 float maximumRange,
                 float damageScale,
                 Skill.SkillContext context,
-                AeromanipChargeTier tier
+                AeromanipChargeTier tier,
+                @Nullable Vec3 bladePlaneDirection
         ) {
             if (!(player.level() instanceof ServerLevel level)) return;
             var skill = Skills.LAMINAR_CUTTER.get();
-            var eye = player.getEyePosition();
             var cutterLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
             var length = (24.0 + cutterLevel * 4.0)
                     * AeromanipConfig.rangeMultiplier(player, SkillNames.LAMINAR_CUTTER);
             if (context.milestone() >= 2) length *= 1.2;
             if (maximumRange > 0.0f) length = Math.min(length, maximumRange);
             var resolvedLength = length;
-            var end = eye.add(direction.scale(length));
-            var bladeRight = bladeRight(direction);
+            var end = origin.add(direction.scale(length));
+            var bladeRight = bladeRight(direction, bladePlaneDirection);
             var bladeNormal = direction.cross(bladeRight).normalize();
             var halfWidth = bladeHalfWidth(tier);
             var bladeArea = new BladeArea(bladeRight, bladeNormal, halfWidth);
@@ -323,14 +371,18 @@ public final class LaminarCutter extends Skill {
             for (var target : ViewTargetScanner.scan(
                     level,
                     LivingEntity.class,
-                    eye,
+                    origin,
                     direction,
                     resolvedLength,
                     bladeArea,
                     living -> living != player
                             && living.isAlive()
                             && AeromanipTargeting.canAffectNegatively(player, living)
-                            && player.hasLineOfSight(living)
+                            && hasClearPath(
+                                    level,
+                                    player,
+                                    origin,
+                                    living.getBoundingBox().getCenter())
             )) {
                 var hurt = tier == AeromanipChargeTier.FULL
                         ? SkillDamageUtil.applyDirect(level, target, source, damage)
@@ -352,9 +404,50 @@ public final class LaminarCutter extends Skill {
                 }
             }
             if (tier != AeromanipChargeTier.INSTANT) {
-                clearSoftBlocks(player, level, eye, end, direction, bladeRight, bladeNormal, tier);
+                clearSoftBlocks(player, level, origin, end,
+                        direction, bladeRight, bladeNormal, tier);
             }
-            spawnBladeVisual(level, eye, direction, bladeRight, length);
+            spawnBladeVisual(level, origin, direction, bladeRight, length);
+        }
+
+        static Vec3 bladeRight(Vec3 direction, @Nullable Vec3 bladePlaneDirection) {
+            if (bladePlaneDirection == null) return bladeRight(direction);
+            var normalizedDirection = direction.normalize();
+            var projected = bladePlaneDirection.subtract(
+                    normalizedDirection.scale(bladePlaneDirection.dot(normalizedDirection)));
+            return projected.lengthSqr() <= 1.0e-8
+                    ? bladeRight(normalizedDirection)
+                    : projected.normalize();
+        }
+
+        private static boolean validBladePlane(
+                Vec3 direction,
+                @Nullable Vec3 bladePlaneDirection
+        ) {
+            if (bladePlaneDirection == null) return true;
+            if (!Double.isFinite(bladePlaneDirection.x)
+                    || !Double.isFinite(bladePlaneDirection.y)
+                    || !Double.isFinite(bladePlaneDirection.z)
+                    || bladePlaneDirection.lengthSqr() <= 1.0e-12) return false;
+            var normalizedDirection = direction.normalize();
+            return bladePlaneDirection.subtract(
+                    normalizedDirection.scale(bladePlaneDirection.dot(normalizedDirection)))
+                    .lengthSqr() > 1.0e-8;
+        }
+
+        private static boolean hasClearPath(
+                ServerLevel level,
+                ServerPlayer player,
+                Vec3 origin,
+                Vec3 target
+        ) {
+            return level.clip(new ClipContext(
+                    origin,
+                    target,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    player
+            )).getType() == HitResult.Type.MISS;
         }
 
         private static boolean intersectsBlade(LivingEntity target, Vec3 start, Vec3 direction,

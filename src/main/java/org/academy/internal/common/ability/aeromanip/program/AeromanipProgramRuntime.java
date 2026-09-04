@@ -2,8 +2,10 @@ package org.academy.internal.common.ability.aeromanip.program;
 
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
+import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -22,9 +24,13 @@ public interface AeromanipProgramRuntime extends ProgramTargetResolver {
     );
 
     ProgramActionTransaction.ProgramAction laminarCut(
+            @Nullable ProgramWorldPosition origin,
             ProgramDirection direction,
             float power,
-            AeromanipChargeTier chargeTier
+            AeromanipChargeTier chargeTier,
+            float chargeCostMultiplier,
+            @Nullable ProgramDirection planeDirection,
+            AeromanipProgramNodeCatalog.BladePlaneMode planeMode
     );
 
     ProgramActionTransaction.ProgramAction placeTemporaryJetNozzle(
