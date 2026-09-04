@@ -100,6 +100,7 @@ public final class BlockStructureManager {
         var origin = minimumCorner(positions);
         var blocks = new ArrayList<BlockStructureSnapshot.BlockData>(positions.size());
         var blockEntityBytes = 0L;
+        var collisionBoxCount = 0;
         for (var position : positions) {
             if (!level.isInWorldBounds(position)) {
                 return BlockStructureCaptureResult.failure(
@@ -126,8 +127,26 @@ public final class BlockStructureManager {
                     );
                 }
             }
+            var collisionBoxes = state.getCollisionShape(level, position).toAabbs();
+            if (collisionBoxes.size() > BlockStructureSnapshot.MAX_COLLISION_BOXES_PER_BLOCK) {
+                return BlockStructureCaptureResult.failure(
+                        BlockStructureCaptureResult.Status.COLLISION_DATA_TOO_LARGE,
+                        position
+                );
+            }
+            collisionBoxCount += collisionBoxes.size();
+            if (collisionBoxCount > BlockStructureSnapshot.MAX_COLLISION_BOXES) {
+                return BlockStructureCaptureResult.failure(
+                        BlockStructureCaptureResult.Status.COLLISION_DATA_TOO_LARGE,
+                        position
+                );
+            }
             blocks.add(new BlockStructureSnapshot.BlockData(
-                    position.subtract(origin), state, blockEntityData));
+                    position.subtract(origin),
+                    state,
+                    blockEntityData,
+                    collisionBoxes
+            ));
         }
         var snapshot = new BlockStructureSnapshot(blocks);
         var removed = new ArrayList<BlockPos>(positions.size());

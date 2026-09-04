@@ -48,6 +48,7 @@ public record BlockStructureCaptureResult(
         OUT_OF_WORLD,
         REJECTED,
         BLOCK_ENTITY_DATA_TOO_LARGE,
+        COLLISION_DATA_TOO_LARGE,
         WORLD_CHANGE_FAILED,
         ENTITY_SPAWN_FAILED
     }

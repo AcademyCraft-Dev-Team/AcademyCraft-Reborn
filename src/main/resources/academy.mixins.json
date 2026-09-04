@@ -23,6 +23,7 @@
     "common.MixinDragonStrafePlayerPhase",
     "common.MixinEnderDragon",
     "common.MixinEntity",
+    "common.MixinEntityGetter",
     "common.MixinFoodData",
     "common.MixinGhast",
     "common.MixinLivingEntity",

@@ -7,11 +7,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -23,6 +25,8 @@ import java.util.Optional;
 /** Immutable, origin-relative block and block-entity data for a movable structure. */
 public final class BlockStructureSnapshot {
     public static final int MAX_BLOCKS = 4_096;
+    public static final int MAX_COLLISION_BOXES_PER_BLOCK = 64;
+    public static final int MAX_COLLISION_BOXES = 16_384;
     public static final BlockStructureSnapshot EMPTY = new BlockStructureSnapshot(List.of(), true);
     public static final StreamCodec<RegistryFriendlyByteBuf, BlockStructureSnapshot> STREAM_CODEC =
             StreamCodec.of(BlockStructureSnapshot::encode, BlockStructureSnapshot::decode);
@@ -50,6 +54,7 @@ public final class BlockStructureSnapshot {
         var maximumX = 0;
         var maximumY = 0;
         var maximumZ = 0;
+        var collisionBoxCount = 0;
         for (var block : blocks) {
             if (block == null) throw new IllegalArgumentException("Structure blocks cannot be null");
             var position = block.relativePosition();
@@ -58,6 +63,11 @@ public final class BlockStructureSnapshot {
             }
             if (!positions.add(position)) {
                 throw new IllegalArgumentException("Duplicate structure position " + position);
+            }
+            collisionBoxCount += block.collisionBoxes.size();
+            if (collisionBoxCount > MAX_COLLISION_BOXES) {
+                throw new IllegalArgumentException("A structure can contain at most "
+                        + MAX_COLLISION_BOXES + " collision boxes");
             }
             copy.add(block.copy());
             maximumX = Math.max(maximumX, position.getX());
@@ -119,6 +129,17 @@ public final class BlockStructureSnapshot {
             if (block.blockEntityData != null) {
                 child.store("block_entity", CompoundTag.CODEC, block.blockEntityData);
             }
+            child.putBoolean("has_collision_snapshot", true);
+            var collision = child.childrenList("collision");
+            for (var box : block.collisionBoxes) {
+                var boxOutput = collision.addChild();
+                boxOutput.putDouble("min_x", box.minX);
+                boxOutput.putDouble("min_y", box.minY);
+                boxOutput.putDouble("min_z", box.minZ);
+                boxOutput.putDouble("max_x", box.maxX);
+                boxOutput.putDouble("max_y", box.maxY);
+                boxOutput.putDouble("max_z", box.maxZ);
+            }
         }
     }
 
@@ -134,7 +155,10 @@ public final class BlockStructureSnapshot {
                     child.getIntOr("z", 0)
             );
             var blockEntityData = child.read("block_entity", CompoundTag.CODEC).orElse(null);
-            blocks.add(new BlockData(position, state, blockEntityData));
+            var collisionBoxes = readCollisionBoxes(child);
+            blocks.add(collisionBoxes == null
+                    ? new BlockData(position, state, blockEntityData)
+                    : new BlockData(position, state, blockEntityData, collisionBoxes));
         }
         try {
             return blocks.isEmpty() ? EMPTY : new BlockStructureSnapshot(blocks);
@@ -158,6 +182,15 @@ public final class BlockStructureSnapshot {
             if (block.blockEntityData != null) {
                 ByteBufCodecs.COMPOUND_TAG.encode(buffer, block.blockEntityData);
             }
+            buffer.writeVarInt(block.collisionBoxes.size());
+            for (var box : block.collisionBoxes) {
+                buffer.writeFloat((float) box.minX);
+                buffer.writeFloat((float) box.minY);
+                buffer.writeFloat((float) box.minZ);
+                buffer.writeFloat((float) box.maxX);
+                buffer.writeFloat((float) box.maxY);
+                buffer.writeFloat((float) box.maxZ);
+            }
         }
     }
 
@@ -168,6 +201,7 @@ public final class BlockStructureSnapshot {
         }
         if (count == 0) return EMPTY;
         var blocks = new ArrayList<BlockData>(count);
+        var collisionBoxCount = 0;
         for (var index = 0; index < count; index++) {
             var position = new BlockPos(
                     buffer.readVarInt(),
@@ -178,7 +212,27 @@ public final class BlockStructureSnapshot {
             var blockEntityData = buffer.readBoolean()
                     ? ByteBufCodecs.COMPOUND_TAG.decode(buffer)
                     : null;
-            blocks.add(new BlockData(position, state, blockEntityData));
+            var collisionCount = buffer.readVarInt();
+            if (collisionCount < 0 || collisionCount > MAX_COLLISION_BOXES_PER_BLOCK) {
+                throw new DecoderException("Invalid block collision box count " + collisionCount);
+            }
+            collisionBoxCount += collisionCount;
+            if (collisionBoxCount > MAX_COLLISION_BOXES) {
+                throw new DecoderException("Block structure exceeds "
+                        + MAX_COLLISION_BOXES + " collision boxes");
+            }
+            var collisionBoxes = new ArrayList<AABB>(collisionCount);
+            for (var collisionIndex = 0; collisionIndex < collisionCount; collisionIndex++) {
+                collisionBoxes.add(new AABB(
+                        buffer.readFloat(),
+                        buffer.readFloat(),
+                        buffer.readFloat(),
+                        buffer.readFloat(),
+                        buffer.readFloat(),
+                        buffer.readFloat()
+                ));
+            }
+            blocks.add(new BlockData(position, state, blockEntityData, collisionBoxes));
         }
         try {
             return new BlockStructureSnapshot(blocks);
@@ -191,18 +245,46 @@ public final class BlockStructureSnapshot {
         private final BlockPos relativePosition;
         private final BlockState state;
         private final @Nullable CompoundTag blockEntityData;
+        private final List<AABB> collisionBoxes;
 
         public BlockData(
                 BlockPos relativePosition,
                 BlockState state,
                 @Nullable CompoundTag blockEntityData
         ) {
+            this(
+                    relativePosition,
+                    state,
+                    blockEntityData,
+                    defaultCollisionBoxes(state)
+            );
+        }
+
+        public BlockData(
+                BlockPos relativePosition,
+                BlockState state,
+                @Nullable CompoundTag blockEntityData,
+                List<AABB> collisionBoxes
+        ) {
             if (relativePosition == null || state == null) {
                 throw new IllegalArgumentException("Block position and state cannot be null");
+            }
+            if (collisionBoxes == null
+                    || collisionBoxes.size() > MAX_COLLISION_BOXES_PER_BLOCK) {
+                throw new IllegalArgumentException("A block can contain at most "
+                        + MAX_COLLISION_BOXES_PER_BLOCK + " collision boxes");
             }
             this.relativePosition = relativePosition.immutable();
             this.state = state;
             this.blockEntityData = blockEntityData == null ? null : blockEntityData.copy();
+            var validatedCollision = new ArrayList<AABB>(collisionBoxes.size());
+            for (var box : collisionBoxes) {
+                if (!validCollisionBox(box)) {
+                    throw new IllegalArgumentException("Invalid collision box " + box);
+                }
+                validatedCollision.add(box);
+            }
+            this.collisionBoxes = List.copyOf(validatedCollision);
         }
 
         public BlockPos relativePosition() {
@@ -217,8 +299,49 @@ public final class BlockStructureSnapshot {
             return Optional.ofNullable(blockEntityData).map(CompoundTag::copy);
         }
 
-        private BlockData copy() {
-            return new BlockData(relativePosition, state, blockEntityData);
+        public List<AABB> collisionBoxes() {
+            return collisionBoxes;
         }
+
+        private BlockData copy() {
+            return new BlockData(relativePosition, state, blockEntityData, collisionBoxes);
+        }
+
+        private static List<AABB> defaultCollisionBoxes(BlockState state) {
+            return state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs();
+        }
+    }
+
+    private static List<AABB> readCollisionBoxes(ValueInput input) {
+        if (!input.getBooleanOr("has_collision_snapshot", false)) return null;
+        var collisionInput = input.childrenList("collision");
+        if (collisionInput.isEmpty()) return List.of();
+        var boxes = new ArrayList<AABB>();
+        for (var child : collisionInput.get()) {
+            if (boxes.size() >= MAX_COLLISION_BOXES_PER_BLOCK) return null;
+            boxes.add(new AABB(
+                    child.getDoubleOr("min_x", 0.0),
+                    child.getDoubleOr("min_y", 0.0),
+                    child.getDoubleOr("min_z", 0.0),
+                    child.getDoubleOr("max_x", 0.0),
+                    child.getDoubleOr("max_y", 0.0),
+                    child.getDoubleOr("max_z", 0.0)
+            ));
+        }
+        return boxes;
+    }
+
+    private static boolean validCollisionBox(AABB box) {
+        return box != null
+                && !box.hasNaN()
+                && Double.isFinite(box.minX)
+                && Double.isFinite(box.minY)
+                && Double.isFinite(box.minZ)
+                && Double.isFinite(box.maxX)
+                && Double.isFinite(box.maxY)
+                && Double.isFinite(box.maxZ)
+                && box.maxX > box.minX
+                && box.maxY > box.minY
+                && box.maxZ > box.minZ;
     }
 }
