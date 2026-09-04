@@ -9,8 +9,8 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
 
 /**
- * 空力使 VFX Graph 入口。所有气流共享低密度白雾材质，技能只选择空间造型与尺度，
- * 避免重新散落 vanilla 粒子参数。
+ * 空力使 VFX Graph 入口。常规气流共享低密度白雾材质；需要明确轮廓的技能可以在图资产内
+ * 组合专用遮罩层，技能逻辑仍只负责空间造型与尺度，避免重新散落 vanilla 粒子参数。
  */
 public final class AeromanipVfx {
     private static final Vec3 UP = new Vec3(0, 1, 0);
@@ -45,7 +45,7 @@ public final class AeromanipVfx {
         spawn(level, MIST_STREAM, origin, direction, Math.max(0.18, length / 5.5), 0.95f);
     }
 
-    /** 切割图的局部 +Y 长度为 5 格。 */
+    /** 切割图的局部 +Y 长度为 5 格，局部 +X 为默认的横向气流刃轴。 */
     public static void blade(ServerLevel level, Vec3 origin, Vec3 direction, double length) {
         spawn(level, MIST_BLADE, origin, direction, Math.max(0.05, length / 5.0), 0.8f);
     }
