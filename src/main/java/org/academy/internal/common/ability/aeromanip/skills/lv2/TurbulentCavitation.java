@@ -29,14 +29,14 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 
-/** Passive cavitation damage resolved by {@code AeromanipDisplacementTracker}. */
+/** Refreshable cavitation marks resolved in ten-tick batches by the displacement tracker. */
 public final class TurbulentCavitation extends Skill {
     public TurbulentCavitation() {
         super(Builder.of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
                 .passive()
-                .iterationTicks(1)
+                .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.BREATHING_BUBBLE)
                 .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL2)));

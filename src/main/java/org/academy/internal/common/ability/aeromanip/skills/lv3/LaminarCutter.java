@@ -393,8 +393,9 @@ public final class LaminarCutter extends Skill {
                     }
                     var force = AeromanipTargeting.forceMultiplier(player, target);
                     if (force > 0.0) {
-                        AeromanipTargeting.addClampedVelocity(
-                                target, direction.scale(knockback(tier) * force));
+                        EntityMotionGuard.runWithMotionSource(player, () ->
+                                AeromanipTargeting.addClampedVelocity(
+                                        target, direction.scale(knockback(tier) * force)));
                     }
                     if (tier == AeromanipChargeTier.FULL) {
                         damageEquipment(target, 80);

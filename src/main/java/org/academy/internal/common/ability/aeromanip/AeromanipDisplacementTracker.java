@@ -19,10 +19,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** Measures actual entity travel caused by Aeromanipulation motion and resolves cavitation. */
+/** Tracks refreshable Turbulent Cavitation marks and resolves their batched damage. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AeromanipDisplacementTracker {
-    private static final int DEFAULT_LINGER_TICKS = 20;
+    static final int MARK_DURATION_TICKS = 100;
+    static final int SETTLEMENT_INTERVAL_TICKS = 10;
+    static final double DISTANCE_PER_DAMAGE_STEP = 0.2;
+    static final float DAMAGE_PER_DISTANCE_STEP = 2.0f;
+    private static final double MOTION_EPSILON_SQUARED = 1.0e-8;
     private static final Map<UUID, Ticket> TICKETS = new HashMap<>();
     private static final EquipmentSlot[] ARMOR_SLOTS = {
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
@@ -32,29 +36,54 @@ public final class AeromanipDisplacementTracker {
     }
 
     public static void mark(ServerPlayer owner, Entity target) {
-        mark(owner, target, DEFAULT_LINGER_TICKS);
+        if (target == null) return;
+        var velocity = target.getDeltaMovement();
+        mark(owner, target, velocity, velocity);
     }
 
-    public static void mark(ServerPlayer owner, Entity target, int lingerTicks) {
+    /**
+     * Applies or refreshes a five-second mark after an Aeromanipulation movement operation.
+     * The before/after velocities retain enough information to measure a block-obstructed push
+     * on the target's next entity tick.
+     */
+    public static void mark(
+            ServerPlayer owner,
+            Entity target,
+            Vec3 previousVelocity,
+            Vec3 appliedVelocity
+    ) {
         if (owner == null || target == null || target == owner || target.isRemoved()
-                || !(target instanceof LivingEntity) || owner.level() != target.level()) return;
+                || !(target instanceof LivingEntity) || owner.level() != target.level()
+                || !finite(previousVelocity) || !finite(appliedVelocity)
+                || !Skills.TURBULENT_CAVITATION.get().isEnabled(owner)
+                || !AeromanipTargeting.canAffectNegatively(owner, target)) return;
         var now = target.level().getGameTime();
         var current = TICKETS.get(target.getUUID());
         if (current != null && current.ownerId.equals(owner.getUUID())
                 && current.dimension.equals(target.level().dimension())) {
-            current.expiresAt = Math.max(current.expiresAt, now + Math.max(1, lingerTicks));
+            current.expiresAt = now + MARK_DURATION_TICKS;
+            current.recordAppliedMotion(previousVelocity, appliedVelocity);
             return;
         }
-        TICKETS.put(target.getUUID(), new Ticket(
+        var ticket = new Ticket(
                 owner.getUUID(), target.level().dimension(), target.position(),
-                now + Math.max(1, lingerTicks)));
+                now + MARK_DURATION_TICKS, now + SETTLEMENT_INTERVAL_TICKS);
+        ticket.recordAppliedMotion(previousVelocity, appliedVelocity);
+        TICKETS.put(target.getUUID(), ticket);
     }
 
-    static float damageForDistance(double distance, int milestone) {
+    static float damageForDistance(double distance) {
         if (!Double.isFinite(distance) || distance <= 0.0) return 0.0f;
-        var perBlock = milestone >= 1 ? 2.0 : 1.0;
-        var cap = milestone >= 3 ? 5.0 : 4.0;
-        return (float) Math.min(cap, distance * perBlock);
+        var steps = Math.floor((distance + 1.0e-9) / DISTANCE_PER_DAMAGE_STEP);
+        return (float) Math.min(Float.MAX_VALUE, steps * DAMAGE_PER_DISTANCE_STEP);
+    }
+
+    static float settlementDamage(double distance, double collisionSpeed) {
+        var distanceDamage = damageForDistance(distance);
+        var collisionDamage = Double.isFinite(collisionSpeed)
+                ? Math.max(0.0, collisionSpeed)
+                : 0.0;
+        return (float) Math.min(Float.MAX_VALUE, distanceDamage + collisionDamage);
     }
 
     static int armorWearForDistance(double distance, int milestone) {
@@ -64,11 +93,24 @@ public final class AeromanipDisplacementTracker {
                 Math.max(1, (int) Math.ceil(distance * perBlock)));
     }
 
-    static double accountableDistance(Vec3 previous, Vec3 current, int milestone) {
-        if (previous == null || current == null) return 0.0;
-        var distance = previous.distanceTo(current);
-        if (!Double.isFinite(distance)) return 0.0;
-        return Math.min(milestone >= 3 ? 4.0 : 3.0, Math.max(0.0, distance));
+    static double collisionSpeed(
+            Vec3 requestedVelocity,
+            Vec3 actualMovement,
+            Vec3 airflowDelta,
+            boolean horizontalCollision,
+            boolean verticalCollision
+    ) {
+        if ((!horizontalCollision && !verticalCollision)
+                || !finite(requestedVelocity) || !finite(actualMovement)
+                || !finite(airflowDelta) || airflowDelta.lengthSqr() <= MOTION_EPSILON_SQUARED) {
+            return 0.0;
+        }
+        var blockedVelocity = new Vec3(
+                horizontalCollision ? requestedVelocity.x - actualMovement.x : 0.0,
+                verticalCollision ? requestedVelocity.y - actualMovement.y : 0.0,
+                horizontalCollision ? requestedVelocity.z - actualMovement.z : 0.0
+        );
+        return Math.max(0.0, blockedVelocity.dot(airflowDelta.normalize()));
     }
 
     @SubscribeEvent
@@ -91,12 +133,22 @@ public final class AeromanipDisplacementTracker {
         }
 
         var current = target.position();
-        var milestone = skill.getEffectiveProficiencyMilestone(owner);
-        var distance = accountableDistance(ticket.lastPosition, current, milestone);
+        var movement = current.subtract(ticket.lastPosition);
         ticket.lastPosition = current;
-        if (distance <= 0.01) return;
+        if (finite(movement)) ticket.accumulatedDistance += movement.length();
+        ticket.collisionSpeed = Math.max(ticket.collisionSpeed, collisionSpeed(
+                ticket.requestedVelocity,
+                movement,
+                ticket.airflowDelta,
+                target.horizontalCollision,
+                target.verticalCollision
+        ));
+        ticket.clearAppliedMotion();
+        if (now < ticket.nextSettlementAt) return;
 
-        var damage = damageForDistance(distance, milestone)
+        var accumulatedDistance = ticket.accumulatedDistance;
+        var baseDamage = settlementDamage(accumulatedDistance, ticket.collisionSpeed);
+        var damage = baseDamage
                 * AeromanipConfig.damageMultiplier(owner, skill.getKey().getPath())
                 * org.academy.api.server.ability.AbilitySystemServer.getSystem(owner)
                 .getPlayerDamageMultiplier(owner.getUUID());
@@ -107,10 +159,18 @@ public final class AeromanipDisplacementTracker {
                     SkillDamageSource.of(owner, skill),
                     damage);
         }
-        damageArmor(target, armorWearForDistance(distance, milestone));
-        AeromanipVfx.burst(level,
-                target.position().add(0.0, target.getBbHeight() * 0.5, 0.0),
-                Math.max(0.35, Math.min(1.4, distance * 0.35)));
+        damageArmor(target, armorWearForDistance(
+                accumulatedDistance,
+                skill.getEffectiveProficiencyMilestone(owner)
+        ));
+        if (baseDamage > 0.0f) {
+            AeromanipVfx.burst(level,
+                    target.position().add(0.0, target.getBbHeight() * 0.5, 0.0),
+                    Math.max(0.35, Math.min(1.4, baseDamage * 0.035)));
+        }
+        ticket.accumulatedDistance = 0.0;
+        ticket.collisionSpeed = 0.0;
+        ticket.nextSettlementAt = now + SETTLEMENT_INTERVAL_TICKS;
     }
 
     private static void damageArmor(LivingEntity target, int amount) {
@@ -129,22 +189,51 @@ public final class AeromanipDisplacementTracker {
         TICKETS.values().removeIf(ticket -> ticket.expiresAt < now);
     }
 
+    private static boolean finite(Vec3 value) {
+        return value != null
+                && Double.isFinite(value.x)
+                && Double.isFinite(value.y)
+                && Double.isFinite(value.z);
+    }
+
     private static final class Ticket {
         private final UUID ownerId;
         private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
         private Vec3 lastPosition;
         private long expiresAt;
+        private long nextSettlementAt;
+        private double accumulatedDistance;
+        private double collisionSpeed;
+        private Vec3 requestedVelocity = Vec3.ZERO;
+        private Vec3 airflowDelta = Vec3.ZERO;
 
         private Ticket(
                 UUID ownerId,
                 net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension,
                 Vec3 lastPosition,
-                long expiresAt
+                long expiresAt,
+                long nextSettlementAt
         ) {
             this.ownerId = ownerId;
             this.dimension = dimension;
             this.lastPosition = lastPosition;
             this.expiresAt = expiresAt;
+            this.nextSettlementAt = nextSettlementAt;
+        }
+
+        private void recordAppliedMotion(Vec3 previousVelocity, Vec3 appliedVelocity) {
+            requestedVelocity = appliedVelocity;
+            var delta = appliedVelocity.subtract(previousVelocity);
+            if (delta.lengthSqr() > MOTION_EPSILON_SQUARED) airflowDelta = airflowDelta.add(delta);
+            else if (airflowDelta.lengthSqr() <= MOTION_EPSILON_SQUARED
+                    && appliedVelocity.lengthSqr() > MOTION_EPSILON_SQUARED) {
+                airflowDelta = appliedVelocity;
+            }
+        }
+
+        private void clearAppliedMotion() {
+            requestedVelocity = Vec3.ZERO;
+            airflowDelta = Vec3.ZERO;
         }
     }
 }

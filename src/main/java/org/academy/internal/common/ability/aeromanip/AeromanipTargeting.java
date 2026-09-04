@@ -181,10 +181,12 @@ public final class AeromanipTargeting {
 
     private static void setClampedVelocity(Entity entity, Vec3 velocity, double maxSpeed) {
         if (entity == null || !finite(velocity)) return;
+        var previousVelocity = entity.getDeltaMovement();
+        var appliedVelocity = clampVelocity(velocity, maxSpeed);
         if (EntityMotionGuard.currentMotionSourceEntity() instanceof ServerPlayer owner) {
-            AeromanipDisplacementTracker.mark(owner, entity);
+            AeromanipDisplacementTracker.mark(owner, entity, previousVelocity, appliedVelocity);
         }
-        entity.setDeltaMovement(clampVelocity(velocity, maxSpeed));
+        entity.setDeltaMovement(appliedVelocity);
         entity.hurtMarked = true;
         if (entity instanceof ServerPlayer player) {
             player.connection.send(new ClientboundSetEntityMotionPacket(player));
