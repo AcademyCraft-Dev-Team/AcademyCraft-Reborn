@@ -8,6 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlockStructureKineticsTest {
     @Test
+    void legacyKineticOptionsDoNotSuppressSettlement() {
+        var legacy = new BlockStructureKineticOptions(20, 2.0, 5, true);
+        var holding = new BlockStructureKineticOptions(200, 1.0, 5, true, true);
+
+        assertFalse(legacy.preventSettlementWhileActive());
+        assertTrue(holding.preventSettlementWhileActive());
+    }
+
+    @Test
     void collisionResponseHasASpeedGateAndCaps() {
         assertEquals(0.0f, BlockStructureKinetics.collisionDamage(4, 0.34));
         assertEquals(2.4f,

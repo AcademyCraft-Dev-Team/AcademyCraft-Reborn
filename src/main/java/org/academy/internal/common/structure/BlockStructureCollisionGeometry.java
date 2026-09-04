@@ -6,12 +6,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.academy.api.common.structure.BlockStructureCollision;
 import org.academy.api.common.structure.BlockStructureSnapshot;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.OptionalDouble;
+import java.util.function.Consumer;
 
 /** Cached section-partitioned collision boxes for one immutable structure snapshot. */
 public final class BlockStructureCollisionGeometry {
@@ -21,12 +26,17 @@ public final class BlockStructureCollisionGeometry {
     private static final int MAX_MERGE_PASSES = 6;
 
     private final List<AABB> localBoxes;
+    private final AABB collisionLocalBounds;
     private Vec3 cachedPosition;
     private float cachedYaw = Float.NaN;
     private List<AABB> cachedWorldBoxes = List.of();
+    private List<VoxelShape> cachedWorldShapes = List.of();
 
     private BlockStructureCollisionGeometry(List<AABB> localBoxes) {
         this.localBoxes = List.copyOf(localBoxes);
+        AABB bounds = null;
+        for (var box : localBoxes) bounds = bounds == null ? box : bounds.minmax(box);
+        collisionLocalBounds = bounds;
     }
 
     public static BlockStructureCollisionGeometry create(BlockStructureSnapshot snapshot) {
@@ -77,7 +87,27 @@ public final class BlockStructureCollisionGeometry {
         cachedPosition = position;
         cachedYaw = yawDegrees;
         cachedWorldBoxes = List.copyOf(transformed);
+        cachedWorldShapes = List.of();
         return cachedWorldBoxes;
+    }
+
+    public void collectCollisionShapes(
+            AABB bounds,
+            Vec3 position,
+            float yawDegrees,
+            BlockStructureSnapshot snapshot,
+            Consumer<VoxelShape> output
+    ) {
+        var boxes = worldBoxes(position, yawDegrees, snapshot);
+        if (cachedWorldShapes.size() != boxes.size()) {
+            var shapes = new ArrayList<VoxelShape>(boxes.size());
+            for (var box : boxes) shapes.add(Shapes.create(box));
+            cachedWorldShapes = List.copyOf(shapes);
+        }
+        var query = bounds.inflate(MERGE_EPSILON);
+        for (var index = 0; index < boxes.size(); index++) {
+            if (boxes.get(index).intersects(query)) output.accept(cachedWorldShapes.get(index));
+        }
     }
 
     public AABB worldBounds(
@@ -85,17 +115,17 @@ public final class BlockStructureCollisionGeometry {
             float yawDegrees,
             BlockStructureSnapshot snapshot
     ) {
-        var bounds = rotateBox(
-                new AABB(0.0, 0.0, 0.0,
-                        snapshot.width(), snapshot.height(), snapshot.depth()),
+        var localBounds = new AABB(
+                0.0, 0.0, 0.0,
+                snapshot.width(), snapshot.height(), snapshot.depth()
+        );
+        if (collisionLocalBounds != null) localBounds = localBounds.minmax(collisionLocalBounds);
+        return rotateBox(
+                localBounds,
                 snapshot.pivotX(),
                 snapshot.pivotZ(),
                 yawDegrees
         ).move(position);
-        for (var box : worldBoxes(position, yawDegrees, snapshot)) {
-            bounds = bounds.minmax(box);
-        }
-        return bounds;
     }
 
     public boolean supports(
@@ -112,12 +142,36 @@ public final class BlockStructureCollisionGeometry {
         );
     }
 
+    public OptionalDouble supportSurfaceY(
+            AABB entityBounds,
+            double tolerance,
+            Vec3 position,
+            float yawDegrees,
+            BlockStructureSnapshot snapshot
+    ) {
+        return supportSurfaceY(
+                worldBoxes(position, yawDegrees, snapshot),
+                entityBounds,
+                tolerance
+        );
+    }
+
     static boolean supports(
             List<AABB> collisionBoxes,
             AABB entityBounds,
             double tolerance
     ) {
+        return supportSurfaceY(collisionBoxes, entityBounds, tolerance).isPresent();
+    }
+
+    static OptionalDouble supportSurfaceY(
+            List<AABB> collisionBoxes,
+            AABB entityBounds,
+            double tolerance
+    ) {
         var safeTolerance = Math.max(0.0, tolerance);
+        var bestSurface = Double.NaN;
+        var bestDistance = Double.POSITIVE_INFINITY;
         for (var box : collisionBoxes) {
             var topDifference = entityBounds.minY - box.maxY;
             if (topDifference >= -safeTolerance
@@ -126,10 +180,18 @@ public final class BlockStructureCollisionGeometry {
                     && entityBounds.minX < box.maxX - MERGE_EPSILON
                     && entityBounds.maxZ > box.minZ + MERGE_EPSILON
                     && entityBounds.minZ < box.maxZ - MERGE_EPSILON) {
-                return true;
+                var distance = Math.abs(topDifference);
+                if (distance + MERGE_EPSILON < bestDistance
+                        || (Math.abs(distance - bestDistance) <= MERGE_EPSILON
+                        && box.maxY > bestSurface)) {
+                    bestSurface = box.maxY;
+                    bestDistance = distance;
+                }
             }
         }
-        return false;
+        return Double.isNaN(bestSurface)
+                ? OptionalDouble.empty()
+                : OptionalDouble.of(bestSurface);
     }
 
     public Vec3 collideWithWorld(
@@ -140,18 +202,54 @@ public final class BlockStructureCollisionGeometry {
             BlockStructureSnapshot snapshot,
             Vec3 requestedMovement
     ) {
-        var movement = requestedMovement;
-        for (var box : worldBoxes(position, yawDegrees, snapshot)) {
-            if (movement.lengthSqr() <= 1.0e-14) return Vec3.ZERO;
-            movement = Entity.collideBoundingBox(
-                    entity,
-                    movement,
-                    box,
-                    level,
-                    List.of()
+        if (requestedMovement.lengthSqr() <= 1.0e-14) return Vec3.ZERO;
+        var boxes = worldBoxes(position, yawDegrees, snapshot);
+        if (boxes.isEmpty()) return requestedMovement;
+        var searchBounds = worldBounds(position, yawDegrees, snapshot)
+                .expandTowards(requestedMovement)
+                .inflate(MERGE_EPSILON);
+        var colliders = new ArrayList<VoxelShape>();
+        level.getBlockCollisions(entity, searchBounds).forEach(colliders::add);
+        var worldBorder = level.getWorldBorder();
+        if (worldBorder.isInsideCloseToBorder(entity, searchBounds)) {
+            colliders.add(worldBorder.getCollisionShape());
+        }
+        for (var candidate : level.getEntities(
+                entity,
+                searchBounds,
+                candidate -> candidate instanceof BlockStructureCollision
+                        && entity.canCollideWith(candidate)
+        )) {
+            ((BlockStructureCollision) candidate).collectCollisionShapes(
+                    searchBounds,
+                    colliders::add
             );
         }
-        return movement;
+        return collideBoxes(boxes, colliders, requestedMovement);
+    }
+
+    static Vec3 collideBoxes(
+            List<AABB> boxes,
+            List<VoxelShape> colliders,
+            Vec3 requestedMovement
+    ) {
+        if (boxes.isEmpty() || colliders.isEmpty()) return requestedMovement;
+        var resolvedMovement = Vec3.ZERO;
+        for (var axis : Direction.axisStepOrder(requestedMovement)) {
+            var axisMovement = requestedMovement.get(axis);
+            if (axisMovement == 0.0) continue;
+            for (var box : boxes) {
+                axisMovement = Shapes.collide(
+                        axis,
+                        box.move(resolvedMovement),
+                        colliders,
+                        axisMovement
+                );
+                if (axisMovement == 0.0) break;
+            }
+            resolvedMovement = resolvedMovement.with(axis, axisMovement);
+        }
+        return resolvedMovement;
     }
 
     public BlockStructureSweepHit firstSweepHit(

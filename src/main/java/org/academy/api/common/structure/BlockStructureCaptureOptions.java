@@ -15,7 +15,8 @@ public record BlockStructureCaptureOptions(
         int maximumBlockEntityBytes,
         boolean gravityEnabled,
         boolean restoreWhenSettled,
-        CapturePolicy policy
+        CapturePolicy policy,
+        BlockStructureSettlementPolicy settlementPolicy
 ) {
     public static final int DEFAULT_MAXIMUM_BLOCKS = 256;
     public static final int DEFAULT_MAXIMUM_BLOCK_ENTITY_BYTES = 1_048_576;
@@ -28,7 +29,27 @@ public record BlockStructureCaptureOptions(
         if (maximumBlockEntityBytes < 0) {
             throw new IllegalArgumentException("maximumBlockEntityBytes cannot be negative");
         }
-        if (policy == null) throw new IllegalArgumentException("policy cannot be null");
+        if (policy == null || settlementPolicy == null) {
+            throw new IllegalArgumentException("capture and settlement policies cannot be null");
+        }
+    }
+
+    /** Compatibility constructor using natural-only falling settlement. */
+    public BlockStructureCaptureOptions(
+            int maximumBlocks,
+            int maximumBlockEntityBytes,
+            boolean gravityEnabled,
+            boolean restoreWhenSettled,
+            CapturePolicy policy
+    ) {
+        this(
+                maximumBlocks,
+                maximumBlockEntityBytes,
+                gravityEnabled,
+                restoreWhenSettled,
+                policy,
+                BlockStructureSettlementPolicy.NATURAL_BLOCKS
+        );
     }
 
     /** Compatibility value retained for saved program data; settlement is unconditional. */
@@ -43,7 +64,8 @@ public record BlockStructureCaptureOptions(
                 DEFAULT_MAXIMUM_BLOCK_ENTITY_BYTES,
                 true,
                 false,
-                CapturePolicy.MOVABLE
+                CapturePolicy.MOVABLE,
+                BlockStructureSettlementPolicy.NATURAL_BLOCKS
         );
     }
 
@@ -53,7 +75,8 @@ public record BlockStructureCaptureOptions(
                 maximumBlockEntityBytes,
                 gravityEnabled,
                 restoreWhenSettled,
-                newPolicy
+                newPolicy,
+                settlementPolicy
         );
     }
 
@@ -63,7 +86,8 @@ public record BlockStructureCaptureOptions(
                 maximumBlockEntityBytes,
                 enabled,
                 restoreWhenSettled,
-                policy
+                policy,
+                settlementPolicy
         );
     }
 
@@ -73,7 +97,21 @@ public record BlockStructureCaptureOptions(
                 maximumBlockEntityBytes,
                 gravityEnabled,
                 enabled,
-                policy
+                policy,
+                settlementPolicy
+        );
+    }
+
+    public BlockStructureCaptureOptions withSettlementPolicy(
+            BlockStructureSettlementPolicy newPolicy
+    ) {
+        return new BlockStructureCaptureOptions(
+                maximumBlocks,
+                maximumBlockEntityBytes,
+                gravityEnabled,
+                restoreWhenSettled,
+                policy,
+                newPolicy
         );
     }
 

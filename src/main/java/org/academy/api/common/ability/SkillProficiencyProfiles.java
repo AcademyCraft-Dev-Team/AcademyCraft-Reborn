@@ -16,7 +16,7 @@ public final class SkillProficiencyProfiles {
             "pneumatic_grasp", "tailwind_field", "laminar_cutter", "rejecting_wind", "vortex_pull",
             "high_speed_jet", "turbulent_cavitation", "flight", "vacuum_domain", "adiabatic_compression",
             "vector_reflection", "reflection_filter", "vector_blast", "vector_accel", "vector_deviation",
-            "kinetic_energy_applied", "dir_strike", "bloodflow_reverse", "black_wing", "white_wing",
+            "kinetic_energy_applied", "kinetic_throw", "dir_strike", "bloodflow_reverse", "black_wing", "white_wing",
             "platinum_wing", "crossing_the_abyss", "storm_wing", "plasma_generation",
             "arc_generate", "magnet_manipulation", "mine_detect", "magnetic_weapon", "current_symbiosis",
             "bioelectric_operation", "electromagnetic_shield", "iron_sand_arsenal", "thunder_lance",
@@ -101,7 +101,7 @@ public final class SkillProficiencyProfiles {
                 "mental_takeover", "sensory_distortion");
         put(profiles, continuous(0.9f), "adiabatic_compression");
         put(profiles, cast(0.9f), "laminar_cutter", "vortex_pull",
-                "vector_blast", "vector_accel", "dir_strike", "bloodflow_reverse", "plasma_generation",
+                "vector_blast", "vector_accel", "kinetic_throw", "dir_strike", "bloodflow_reverse", "plasma_generation",
                 "arc_generate", "thunder_lance", "railgun", "ball_lightning", "lightning_nova",
                 "lightning_storm", "thunderclap", "single_high_speed_electron_beam", "scatter_bomb",
                 "jet_strike", "disintegrate", "threatening_teleport", "self_teleport", "piercing_teleportation",

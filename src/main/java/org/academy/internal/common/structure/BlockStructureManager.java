@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -18,6 +19,7 @@ import org.academy.api.common.structure.BlockStructurePlacementPolicy;
 import org.academy.api.common.structure.BlockStructureRestoreResult;
 import org.academy.api.common.structure.BlockStructureSelectionResult;
 import org.academy.api.common.structure.BlockStructureSettlementResult;
+import org.academy.api.common.structure.BlockStructureSettlementMode;
 import org.academy.api.common.structure.BlockStructureSnapshot;
 import org.academy.internal.common.world.entity.structure.BlockStructureEntity;
 
@@ -150,6 +152,128 @@ public final class BlockStructureManager {
                 : BlockStructureSelectionResult.success(List.copyOf(selected));
     }
 
+    public static BlockStructureSelectionResult selectEllipsoid(
+            ServerLevel level,
+            BlockPos center,
+            double xRadius,
+            double yRadius,
+            double zRadius,
+            BlockStructureCaptureOptions.CapturePolicy policy
+    ) {
+        if (level == null || center == null || policy == null) {
+            throw new IllegalArgumentException("level, center, and policy cannot be null");
+        }
+        validateEllipsoidRadius(xRadius, "xRadius");
+        validateEllipsoidRadius(yRadius, "yRadius");
+        validateEllipsoidRadius(zRadius, "zRadius");
+        var selected = new ArrayList<BlockPos>();
+        for (var position : positionsInEllipsoid(center, xRadius, yRadius, zRadius)) {
+            if (!level.isInWorldBounds(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.OUT_OF_WORLD, position);
+            }
+            if (!level.isLoaded(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.UNLOADED, position);
+            }
+            var state = level.getBlockState(position);
+            var blockEntity = level.getBlockEntity(position);
+            if (!policy.canCapture(level, position, state, blockEntity)) continue;
+            if (selected.size() >= BlockStructureSnapshot.MAX_BLOCKS) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.TOO_LARGE, position);
+            }
+            selected.add(position.immutable());
+        }
+        return selected.isEmpty()
+                ? BlockStructureSelectionResult.failure(
+                BlockStructureSelectionResult.Status.EMPTY, center)
+                : BlockStructureSelectionResult.success(List.copyOf(selected));
+    }
+
+    public static BlockStructureSelectionResult selectEllipsoidWithCubeCore(
+            ServerLevel level,
+            BlockPos center,
+            double xRadius,
+            double yRadius,
+            double zRadius,
+            int cubeRadius,
+            BlockStructureCaptureOptions.CapturePolicy policy
+    ) {
+        if (level == null || center == null || policy == null) {
+            throw new IllegalArgumentException("level, center, and policy cannot be null");
+        }
+        var selected = new ArrayList<BlockPos>();
+        for (var position : positionsInEllipsoidWithCubeCore(
+                center, xRadius, yRadius, zRadius, cubeRadius)) {
+            if (!level.isInWorldBounds(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.OUT_OF_WORLD, position);
+            }
+            if (!level.isLoaded(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.UNLOADED, position);
+            }
+            var state = level.getBlockState(position);
+            var blockEntity = level.getBlockEntity(position);
+            if (!policy.canCapture(level, position, state, blockEntity)) continue;
+            if (selected.size() >= BlockStructureSnapshot.MAX_BLOCKS) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.TOO_LARGE, position);
+            }
+            selected.add(position.immutable());
+        }
+        return selected.isEmpty()
+                ? BlockStructureSelectionResult.failure(
+                BlockStructureSelectionResult.Status.EMPTY, center)
+                : BlockStructureSelectionResult.success(List.copyOf(selected));
+    }
+
+    public static BlockStructureSelectionResult selectLowerEllipsoidWithUpperCylinder(
+            ServerLevel level,
+            BlockPos center,
+            double xRadius,
+            double yRadius,
+            double zRadius,
+            double cylinderRadius,
+            int cylinderHeight,
+            BlockStructureCaptureOptions.CapturePolicy policy
+    ) {
+        if (level == null || center == null || policy == null) {
+            throw new IllegalArgumentException("level, center, and policy cannot be null");
+        }
+        var selected = new ArrayList<BlockPos>();
+        for (var position : positionsInLowerEllipsoidWithUpperCylinder(
+                center,
+                xRadius,
+                yRadius,
+                zRadius,
+                cylinderRadius,
+                cylinderHeight
+        )) {
+            if (!level.isInWorldBounds(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.OUT_OF_WORLD, position);
+            }
+            if (!level.isLoaded(position)) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.UNLOADED, position);
+            }
+            var state = level.getBlockState(position);
+            var blockEntity = level.getBlockEntity(position);
+            if (!policy.canCapture(level, position, state, blockEntity)) continue;
+            if (selected.size() >= BlockStructureSnapshot.MAX_BLOCKS) {
+                return BlockStructureSelectionResult.failure(
+                        BlockStructureSelectionResult.Status.TOO_LARGE, position);
+            }
+            selected.add(position.immutable());
+        }
+        return selected.isEmpty()
+                ? BlockStructureSelectionResult.failure(
+                BlockStructureSelectionResult.Status.EMPTY, center)
+                : BlockStructureSelectionResult.success(List.copyOf(selected));
+    }
+
     public static List<BlockPos> cropImmediatelyBlocked(
             ServerLevel level,
             Iterable<BlockPos> candidates,
@@ -182,6 +306,98 @@ public final class BlockStructureManager {
         return List.copyOf(positions);
     }
 
+    static List<BlockPos> positionsInEllipsoid(
+            BlockPos center,
+            double xRadius,
+            double yRadius,
+            double zRadius
+    ) {
+        if (center == null) throw new IllegalArgumentException("center cannot be null");
+        validateEllipsoidRadius(xRadius, "xRadius");
+        validateEllipsoidRadius(yRadius, "yRadius");
+        validateEllipsoidRadius(zRadius, "zRadius");
+        var xExtent = (int) Math.ceil(xRadius);
+        var yExtent = (int) Math.ceil(yRadius);
+        var zExtent = (int) Math.ceil(zRadius);
+        var positions = new ArrayList<BlockPos>();
+        for (var y = -yExtent; y <= yExtent; y++) {
+            for (var x = -xExtent; x <= xExtent; x++) {
+                for (var z = -zExtent; z <= zExtent; z++) {
+                    var normalizedDistance = x * x / (xRadius * xRadius)
+                            + y * y / (yRadius * yRadius)
+                            + z * z / (zRadius * zRadius);
+                    if (normalizedDistance <= 1.0 + 1.0e-9) {
+                        positions.add(center.offset(x, y, z));
+                    }
+                }
+            }
+        }
+        return List.copyOf(positions);
+    }
+
+    static List<BlockPos> positionsInEllipsoidWithCubeCore(
+            BlockPos center,
+            double xRadius,
+            double yRadius,
+            double zRadius,
+            int cubeRadius
+    ) {
+        if (cubeRadius < 0 || cubeRadius > 32) {
+            throw new IllegalArgumentException("cubeRadius must be between 0 and 32");
+        }
+        var positions = new LinkedHashSet<>(
+                positionsInEllipsoid(center, xRadius, yRadius, zRadius));
+        for (var y = -cubeRadius; y <= cubeRadius; y++) {
+            for (var x = -cubeRadius; x <= cubeRadius; x++) {
+                for (var z = -cubeRadius; z <= cubeRadius; z++) {
+                    positions.add(center.offset(x, y, z));
+                }
+            }
+        }
+        return List.copyOf(positions);
+    }
+
+    static List<BlockPos> positionsInLowerEllipsoidWithUpperCylinder(
+            BlockPos center,
+            double xRadius,
+            double yRadius,
+            double zRadius,
+            double cylinderRadius,
+            int cylinderHeight
+    ) {
+        if (center == null) throw new IllegalArgumentException("center cannot be null");
+        validateEllipsoidRadius(xRadius, "xRadius");
+        validateEllipsoidRadius(yRadius, "yRadius");
+        validateEllipsoidRadius(zRadius, "zRadius");
+        validateEllipsoidRadius(cylinderRadius, "cylinderRadius");
+        if (cylinderHeight < 1 || cylinderHeight > 32) {
+            throw new IllegalArgumentException("cylinderHeight must be between 1 and 32");
+        }
+        var positions = new LinkedHashSet<BlockPos>();
+        var lowerEllipsoid = positionsInEllipsoid(center, xRadius, yRadius, zRadius);
+        for (var position : lowerEllipsoid) {
+            if (position.getY() <= center.getY()) positions.add(position);
+        }
+        var extent = (int) Math.ceil(cylinderRadius);
+        var radiusSquared = cylinderRadius * cylinderRadius + 1.0e-9;
+        for (var y = 1; y <= cylinderHeight; y++) {
+            for (var x = -extent; x <= extent; x++) {
+                for (var z = -extent; z <= extent; z++) {
+                    if ((double) x * x + (double) z * z <= radiusSquared) {
+                        positions.add(center.offset(x, y, z));
+                    }
+                }
+            }
+        }
+        return List.copyOf(positions);
+    }
+
+    private static void validateEllipsoidRadius(double radius, String name) {
+        if (!Double.isFinite(radius) || radius < 0.5 || radius > 32.0) {
+            throw new IllegalArgumentException(name + " must be between 0.5 and 32");
+        }
+    }
+
     static List<BlockPos> cropImmediatelyBlocked(
             Iterable<BlockPos> candidates,
             Direction movementDirection,
@@ -199,6 +415,33 @@ public final class BlockStructureManager {
             });
         } while (changed && !movable.isEmpty());
         return List.copyOf(movable);
+    }
+
+    public static List<BlockPos> cropToForwardHalfSpace(
+            Iterable<BlockPos> candidates,
+            Vec3 origin,
+            Vec3 forward,
+            double minimumForwardDistance
+    ) {
+        if (candidates == null || !finite(origin) || !finite(forward)
+                || forward.lengthSqr() <= 1.0e-8
+                || !Double.isFinite(minimumForwardDistance)
+                || minimumForwardDistance < 0.0
+                || minimumForwardDistance > 256.0) {
+            throw new IllegalArgumentException("Invalid forward-half-space crop arguments");
+        }
+        var direction = forward.normalize();
+        var cropped = new LinkedHashSet<BlockPos>();
+        for (var candidate : candidates) {
+            if (candidate == null) continue;
+            var forwardDistance = Vec3.atCenterOf(candidate)
+                    .subtract(origin)
+                    .dot(direction);
+            if (forwardDistance + 1.0e-9 >= minimumForwardDistance) {
+                cropped.add(candidate.immutable());
+            }
+        }
+        return List.copyOf(cropped);
     }
 
     public static BlockStructureCaptureResult capture(
@@ -267,7 +510,13 @@ public final class BlockStructureManager {
                     position.subtract(origin),
                     state,
                     blockEntityData,
-                    collisionBoxes
+                    collisionBoxes,
+                    options.settlementPolicy().settlementMode(
+                            level,
+                            position,
+                            state,
+                            blockEntity
+                    )
             ));
         }
         var snapshot = new BlockStructureSnapshot(blocks);
@@ -428,7 +677,8 @@ public final class BlockStructureManager {
                 .map(block -> new SettlementPlacement(
                         alignment.target(block.relativePosition()),
                         block.state().rotate(alignment.rotation()),
-                        block.blockEntityData().orElse(null)))
+                        block.blockEntityData().orElse(null),
+                        block.settlementMode()))
                 .sorted(Comparator.comparingInt(value -> value.position.getY()))
                 .toList();
         var occupiedTargets = new HashSet<BlockPos>();
@@ -453,6 +703,86 @@ public final class BlockStructureManager {
             entity.discard();
         }
         return BlockStructureSettlementResult.success(placedBlocks, droppedBlocks);
+    }
+
+    /**
+     * Dematerializes a stopped structure. Fixed building cells restore directly, while natural
+     * terrain cells become vanilla falling-block entities from the lowest layer upward. Cells
+     * that cannot be emitted safely become block-item drops instead.
+     */
+    public static void beginGravitySettlement(BlockStructureEntity entity) {
+        if (entity == null || entity.isRemoved()) return;
+        if (!(entity.level() instanceof ServerLevel level)) {
+            entity.discard();
+            return;
+        }
+        var snapshot = entity.snapshot();
+        if (snapshot.isEmpty()) {
+            BlockStructureKineticRuntime.stop(entity);
+            entity.discard();
+            return;
+        }
+        var alignment = BlockStructureGridAlignment.nearest(
+                snapshot, entity.position(), entity.getYRot());
+        var cells = snapshot.blocks().stream()
+                .map(block -> new SettlementPlacement(
+                        alignment.target(block.relativePosition()),
+                        block.state().rotate(alignment.rotation()),
+                        block.blockEntityData().orElse(null),
+                        block.settlementMode()))
+                .sorted((left, right) -> BlockStructureSettlementMotion.compareBottomUp(
+                        left.position, right.position))
+                .toList();
+        var dropPosition = entity.blockPosition().immutable();
+        BlockStructureKineticRuntime.stop(entity);
+        entity.discard();
+
+        var occupiedTargets = new HashSet<BlockPos>();
+        var changedPositions = new ArrayList<BlockPos>();
+        for (var cell : cells) {
+            if (cell.settlementMode != BlockStructureSettlementMode.FIXED) continue;
+            if (!settleCell(
+                    level,
+                    cell,
+                    BlockStructurePlacementPolicy.AIR_ONLY,
+                    occupiedTargets,
+                    changedPositions
+            )) {
+                dropBlock(level, dropPosition, cell.state);
+            }
+        }
+        updateBoundaries(level, changedPositions);
+        for (var cell : cells) {
+            if (cell.settlementMode != BlockStructureSettlementMode.FALLING) continue;
+            if (!occupiedTargets.add(cell.position)
+                    || !level.isInWorldBounds(cell.position)
+                    || !level.isLoaded(cell.position)
+                    || !level.getBlockState(cell.position).isAir()
+                    || !spawnFallingCell(level, cell)) {
+                dropBlock(level, dropPosition, cell.state);
+            }
+        }
+    }
+
+    private static boolean spawnFallingCell(
+            ServerLevel level,
+            SettlementPlacement cell
+    ) {
+        try {
+            if (!level.setBlock(cell.position, cell.state, BULK_UPDATE_FLAGS)) return false;
+            var falling = FallingBlockEntity.fall(level, cell.position, cell.state);
+            falling.dropItem = true;
+            if (cell.blockEntityData != null) {
+                falling.blockData = cell.blockEntityData.copy();
+            }
+            return true;
+        } catch (RuntimeException ignored) {
+            if (level.isLoaded(cell.position)
+                    && level.getBlockState(cell.position).equals(cell.state)) {
+                level.setBlock(cell.position, Blocks.AIR.defaultBlockState(), BULK_UPDATE_FLAGS);
+            }
+            return false;
+        }
     }
 
     private static boolean settleCell(
@@ -636,7 +966,8 @@ public final class BlockStructureManager {
     private record SettlementPlacement(
             BlockPos position,
             BlockState state,
-            CompoundTag blockEntityData
+            CompoundTag blockEntityData,
+            BlockStructureSettlementMode settlementMode
     ) {
     }
 }

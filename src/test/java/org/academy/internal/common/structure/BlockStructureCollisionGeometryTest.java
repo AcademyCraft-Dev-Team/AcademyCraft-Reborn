@@ -2,6 +2,7 @@ package org.academy.internal.common.structure;
 
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -65,6 +66,34 @@ class BlockStructureCollisionGeometryTest {
     }
 
     @Test
+    void supportSurfaceFindsAndCorrectsAFeetPenetration() {
+        var surface = List.of(new AABB(0, 0, 0, 1, 1, 1));
+        var entity = new AABB(0.2, 0.92, 0.2, 0.8, 2.72, 0.8);
+
+        var supportY = BlockStructureCollisionGeometry.supportSurfaceY(
+                surface, entity, 0.18);
+
+        assertTrue(supportY.isPresent());
+        assertEquals(1.0, supportY.getAsDouble(), 1.0e-9);
+        assertEquals(0.08, supportY.getAsDouble() - entity.minY, 1.0e-9);
+    }
+
+    @Test
+    void supportSurfaceSelectsTheNearestOverlappingFloor() {
+        var surfaces = List.of(
+                new AABB(0, 0, 0, 1, 1, 1),
+                new AABB(0, 1.25, 0, 1, 1.5, 1)
+        );
+        var entity = new AABB(0.2, 1.42, 0.2, 0.8, 3.22, 0.8);
+
+        var supportY = BlockStructureCollisionGeometry.supportSurfaceY(
+                surfaces, entity, 0.5);
+
+        assertTrue(supportY.isPresent());
+        assertEquals(1.5, supportY.getAsDouble(), 1.0e-9);
+    }
+
+    @Test
     void sweepFindsEarliestPositiveAxisImpact() {
         var hit = BlockStructureCollisionGeometry.sweep(
                 new AABB(0, 0, 0, 1, 1, 1),
@@ -93,6 +122,33 @@ class BlockStructureCollisionGeometryTest {
                 new AABB(2, 2, 0, 3, 3, 1),
                 new Vec3(2, 0, 0)
         ));
+    }
+
+    @Test
+    void rigidBoxSetUsesTheMostRestrictiveWorldCollision() {
+        var movement = BlockStructureCollisionGeometry.collideBoxes(
+                List.of(
+                        new AABB(0, 0, 0, 1, 1, 1),
+                        new AABB(2, 0, 0, 3, 1, 1)
+                ),
+                List.of(Shapes.create(new AABB(4, 0, 0, 5, 1, 1))),
+                new Vec3(2, 0, 0)
+        );
+
+        assertEquals(new Vec3(1, 0, 0), movement);
+    }
+
+    @Test
+    void rigidBoxSetKeepsRequestedMovementWhenWorldIsClear() {
+        var requested = new Vec3(1.5, -0.25, 2.0);
+
+        var movement = BlockStructureCollisionGeometry.collideBoxes(
+                List.of(new AABB(0, 0, 0, 1, 1, 1)),
+                List.of(),
+                requested
+        );
+
+        assertEquals(requested, movement);
     }
 
     private static void assertBox(AABB expected, AABB actual) {

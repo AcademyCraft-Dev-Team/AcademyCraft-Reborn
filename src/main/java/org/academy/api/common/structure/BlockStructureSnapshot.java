@@ -129,6 +129,10 @@ public final class BlockStructureSnapshot {
             if (block.blockEntityData != null) {
                 child.store("block_entity", CompoundTag.CODEC, block.blockEntityData);
             }
+            child.putBoolean(
+                    "falls_during_settlement",
+                    block.settlementMode == BlockStructureSettlementMode.FALLING
+            );
             child.putBoolean("has_collision_snapshot", true);
             var collision = child.childrenList("collision");
             for (var box : block.collisionBoxes) {
@@ -156,9 +160,22 @@ public final class BlockStructureSnapshot {
             );
             var blockEntityData = child.read("block_entity", CompoundTag.CODEC).orElse(null);
             var collisionBoxes = readCollisionBoxes(child);
+            var settlementMode = child.getBooleanOr(
+                    "falls_during_settlement",
+                    BlockStructureSettlementPolicy.naturalMode(
+                            state,
+                            blockEntityData != null
+                    ) == BlockStructureSettlementMode.FALLING
+            ) ? BlockStructureSettlementMode.FALLING : BlockStructureSettlementMode.FIXED;
             blocks.add(collisionBoxes == null
-                    ? new BlockData(position, state, blockEntityData)
-                    : new BlockData(position, state, blockEntityData, collisionBoxes));
+                    ? new BlockData(position, state, blockEntityData, settlementMode)
+                    : new BlockData(
+                    position,
+                    state,
+                    blockEntityData,
+                    collisionBoxes,
+                    settlementMode
+            ));
         }
         try {
             return blocks.isEmpty() ? EMPTY : new BlockStructureSnapshot(blocks);
@@ -182,6 +199,7 @@ public final class BlockStructureSnapshot {
             if (block.blockEntityData != null) {
                 ByteBufCodecs.COMPOUND_TAG.encode(buffer, block.blockEntityData);
             }
+            buffer.writeBoolean(block.settlementMode == BlockStructureSettlementMode.FALLING);
             buffer.writeVarInt(block.collisionBoxes.size());
             for (var box : block.collisionBoxes) {
                 buffer.writeFloat((float) box.minX);
@@ -212,6 +230,9 @@ public final class BlockStructureSnapshot {
             var blockEntityData = buffer.readBoolean()
                     ? ByteBufCodecs.COMPOUND_TAG.decode(buffer)
                     : null;
+            var settlementMode = buffer.readBoolean()
+                    ? BlockStructureSettlementMode.FALLING
+                    : BlockStructureSettlementMode.FIXED;
             var collisionCount = buffer.readVarInt();
             if (collisionCount < 0 || collisionCount > MAX_COLLISION_BOXES_PER_BLOCK) {
                 throw new DecoderException("Invalid block collision box count " + collisionCount);
@@ -232,7 +253,13 @@ public final class BlockStructureSnapshot {
                         buffer.readFloat()
                 ));
             }
-            blocks.add(new BlockData(position, state, blockEntityData, collisionBoxes));
+            blocks.add(new BlockData(
+                    position,
+                    state,
+                    blockEntityData,
+                    collisionBoxes,
+                    settlementMode
+            ));
         }
         try {
             return new BlockStructureSnapshot(blocks);
@@ -246,6 +273,7 @@ public final class BlockStructureSnapshot {
         private final BlockState state;
         private final @Nullable CompoundTag blockEntityData;
         private final List<AABB> collisionBoxes;
+        private final BlockStructureSettlementMode settlementMode;
 
         public BlockData(
                 BlockPos relativePosition,
@@ -256,7 +284,26 @@ public final class BlockStructureSnapshot {
                     relativePosition,
                     state,
                     blockEntityData,
-                    defaultCollisionBoxes(state)
+                    defaultCollisionBoxes(state),
+                    BlockStructureSettlementPolicy.naturalMode(
+                            state,
+                            blockEntityData != null
+                    )
+            );
+        }
+
+        public BlockData(
+                BlockPos relativePosition,
+                BlockState state,
+                @Nullable CompoundTag blockEntityData,
+                BlockStructureSettlementMode settlementMode
+        ) {
+            this(
+                    relativePosition,
+                    state,
+                    blockEntityData,
+                    defaultCollisionBoxes(state),
+                    settlementMode
             );
         }
 
@@ -266,11 +313,31 @@ public final class BlockStructureSnapshot {
                 @Nullable CompoundTag blockEntityData,
                 List<AABB> collisionBoxes
         ) {
+            this(
+                    relativePosition,
+                    state,
+                    blockEntityData,
+                    collisionBoxes,
+                    BlockStructureSettlementPolicy.naturalMode(
+                            state,
+                            blockEntityData != null
+                    )
+            );
+        }
+
+        public BlockData(
+                BlockPos relativePosition,
+                BlockState state,
+                @Nullable CompoundTag blockEntityData,
+                List<AABB> collisionBoxes,
+                BlockStructureSettlementMode settlementMode
+        ) {
             if (relativePosition == null || state == null) {
                 throw new IllegalArgumentException("Block position and state cannot be null");
             }
             if (collisionBoxes == null
-                    || collisionBoxes.size() > MAX_COLLISION_BOXES_PER_BLOCK) {
+                    || collisionBoxes.size() > MAX_COLLISION_BOXES_PER_BLOCK
+                    || settlementMode == null) {
                 throw new IllegalArgumentException("A block can contain at most "
                         + MAX_COLLISION_BOXES_PER_BLOCK + " collision boxes");
             }
@@ -285,6 +352,7 @@ public final class BlockStructureSnapshot {
                 validatedCollision.add(box);
             }
             this.collisionBoxes = List.copyOf(validatedCollision);
+            this.settlementMode = settlementMode;
         }
 
         public BlockPos relativePosition() {
@@ -303,8 +371,18 @@ public final class BlockStructureSnapshot {
             return collisionBoxes;
         }
 
+        public BlockStructureSettlementMode settlementMode() {
+            return settlementMode;
+        }
+
         private BlockData copy() {
-            return new BlockData(relativePosition, state, blockEntityData, collisionBoxes);
+            return new BlockData(
+                    relativePosition,
+                    state,
+                    blockEntityData,
+                    collisionBoxes,
+                    settlementMode
+            );
         }
 
         private static List<AABB> defaultCollisionBoxes(BlockState state) {

@@ -9,6 +9,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
@@ -140,6 +141,8 @@ public final class Skills {
     public static final DeferredHolder<Skill, VectorAccel> VECTOR_ACCEL = SKILLS.register(SkillNames.VECTOR_ACCEL, VectorAccel::new);
     public static final DeferredHolder<Skill, VectorDeviation> VECTOR_DEVIATION = SKILLS.register(SkillNames.VECTOR_DEVIATION, VectorDeviation::new);
     public static final DeferredHolder<Skill, KineticEnergyApplied> KINETIC_ENERGY_APPLIED = SKILLS.register(SkillNames.KINETIC_ENERGY_APPLIED, KineticEnergyApplied::new);
+    public static final DeferredHolder<Skill, KineticThrow> KINETIC_THROW =
+            SKILLS.register(SkillNames.KINETIC_THROW, KineticThrow::new);
     public static final DeferredHolder<Skill, DirStrike> DIR_STRIKE = SKILLS.register(SkillNames.DIR_STRIKE, DirStrike::new);
     public static final DeferredHolder<Skill, BloodflowReverse> BLOODFLOW_REVERSE = SKILLS.register(SkillNames.BLOODFLOW_REVERSE, BloodflowReverse::new);
     public static final DeferredHolder<Skill, BlackWing> BLACK_WING = SKILLS.register(SkillNames.BLACK_WING, BlackWing::new);

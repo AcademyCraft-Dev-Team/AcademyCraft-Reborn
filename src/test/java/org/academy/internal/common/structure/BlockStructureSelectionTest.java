@@ -2,6 +2,8 @@ package org.academy.internal.common.structure;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.structure.BlockStructureSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -40,6 +42,66 @@ class BlockStructureSelectionTest {
                 }
             }
         }
+    }
+
+    @Test
+    void ellipsoidUsesIndependentHorizontalAndVerticalRadii() {
+        var center = new BlockPos(10, 20, 30);
+
+        var positions = BlockStructureManager.positionsInEllipsoid(
+                center, 3.0, 1.0, 3.0);
+
+        assertTrue(positions.contains(center.offset(3, 0, 0)));
+        assertTrue(positions.contains(center.offset(0, 1, 0)));
+        assertFalse(positions.contains(center.offset(1, 1, 0)));
+        assertFalse(positions.contains(center.offset(0, 2, 0)));
+        assertFalse(positions.contains(center.offset(3, 0, 1)));
+    }
+
+    @Test
+    void cubeCorePreservesCornersOutsideFlattenedEllipsoid() {
+        var center = new BlockPos(10, 20, 30);
+
+        var positions = BlockStructureManager.positionsInEllipsoidWithCubeCore(
+                center, 5.0, 2.0, 5.0, 1);
+
+        assertTrue(positions.contains(center.offset(5, 0, 0)));
+        assertTrue(positions.contains(center.offset(0, 2, 0)));
+        assertTrue(positions.contains(center.offset(1, 1, 1)));
+        assertFalse(positions.contains(center.offset(2, 2, 2)));
+        assertFalse(positions.contains(center.offset(0, 3, 0)));
+    }
+
+    @Test
+    void lowerEllipsoidAndUpperCylinderFormAHouseMovingVolume() {
+        var center = new BlockPos(10, 20, 30);
+
+        var positions = BlockStructureManager.positionsInLowerEllipsoidWithUpperCylinder(
+                center, 5.0, 2.0, 5.0, 5.0, 5);
+
+        assertTrue(positions.contains(center.offset(0, -2, 0)));
+        assertTrue(positions.contains(center.offset(5, 0, 0)));
+        assertFalse(positions.contains(center.offset(0, -3, 0)));
+        assertTrue(positions.contains(center.offset(5, 5, 0)));
+        assertTrue(positions.contains(center.offset(0, 5, 5)));
+        assertFalse(positions.contains(center.offset(5, 5, 5)));
+        assertFalse(positions.contains(center.offset(0, 6, 0)));
+        assertFalse(positions.contains(center.offset(0, 1, 6)));
+    }
+
+    @Test
+    void allHouseMovingTiersFitTheStructureSnapshotLimit() {
+        var center = BlockPos.ZERO;
+        var small = BlockStructureManager.positionsInLowerEllipsoidWithUpperCylinder(
+                center, 5.0, 2.0, 5.0, 5.0, 5).size();
+        var medium = BlockStructureManager.positionsInLowerEllipsoidWithUpperCylinder(
+                center, 7.0, 4.0, 7.0, 7.0, 7).size();
+        var large = BlockStructureManager.positionsInLowerEllipsoidWithUpperCylinder(
+                center, 9.0, 6.0, 9.0, 9.0, 9).size();
+
+        assertTrue(small < medium);
+        assertTrue(medium < large);
+        assertTrue(large <= BlockStructureSnapshot.MAX_BLOCKS);
     }
 
     @Test
@@ -91,5 +153,28 @@ class BlockStructureSelectionTest {
         );
 
         assertEquals(List.of(new BlockPos(0, 0, 0)), cropped);
+    }
+
+    @Test
+    void forwardPlaneLeavesOneBlockOfPlayerClearance() {
+        var candidates = List.of(
+                new BlockPos(0, 0, -2),
+                new BlockPos(0, 0, -1),
+                new BlockPos(0, 0, 0),
+                new BlockPos(0, 0, 1),
+                new BlockPos(0, 0, 2)
+        );
+
+        var cropped = BlockStructureManager.cropToForwardHalfSpace(
+                candidates,
+                new Vec3(0.5, 0.0, 0.5),
+                new Vec3(0.0, 0.0, 1.0),
+                1.0
+        );
+
+        assertEquals(List.of(
+                new BlockPos(0, 0, 1),
+                new BlockPos(0, 0, 2)
+        ), cropped);
     }
 }
