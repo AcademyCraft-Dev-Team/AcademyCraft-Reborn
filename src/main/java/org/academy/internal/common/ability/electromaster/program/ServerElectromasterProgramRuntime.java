@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -44,6 +45,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
             ElectromasterProgramNodeCatalog.ELECTROMASTER).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
+    static final float FORCED_MAGNETIZATION_COST = 24.0f;
     private static final Map<UUID, Map<String, Entity>> CONTROLLED = new HashMap<>();
     private static final Map<UUID, ControlDestination> CONTROL_DESTINATIONS = new HashMap<>();
 
@@ -122,7 +124,8 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             ProgramWorldPosition destination,
             float power,
             ElectromasterProgramNodeCatalog.EnergyTargetType targetType,
-            ElectromasterProgramNodeCatalog.MagneticMode mode
+            ElectromasterProgramNodeCatalog.MagneticMode mode,
+            boolean forceMagnetize
     ) {
         return new ProgramActionTransaction.ProgramAction() {
             private Entity target;
@@ -131,12 +134,14 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             private String targetKey;
             private Vec3 targetPosition;
             private boolean createdBlockEntity;
+            private boolean forcedMagnetizationApplied;
             private boolean wasControlled;
             private ControlDestination previousControl;
 
             @Override
             public void validate() {
                 requireCasterReady(Skills.MAGNET_MANIPULATION.get());
+                forcedMagnetizationApplied = false;
                 targetPosition = targets.requireLocalPosition(destination);
                 requirePositionInRange(targetPosition, MAX_ACTION_RANGE);
                 if (targetType == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY) {
@@ -153,12 +158,17 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                     target = controlled().get(targetKey);
                     if (target == null) {
                         sourceState = targets.level().getBlockState(sourceBlock);
-                        if (!MagnetManipulation.isMagnetic(sourceState)
-                                || sourceState.isAir()
+                        if (sourceState.isAir()
+                                || !sourceState.getFluidState().isEmpty()
                                 || sourceState.hasBlockEntity()
                                 || sourceState.getDestroySpeed(targets.level(), sourceBlock) < 0.0f
-                                || !targets.level().mayInteract(player, sourceBlock)) {
+                                || !isEditableBlock(sourceBlock, sourceState)) {
                             throw new IllegalArgumentException("Block target is not magnetically movable");
+                        }
+                        forcedMagnetizationApplied = !MagnetManipulation.isMagnetic(sourceState);
+                        if (forcedMagnetizationApplied && !forceMagnetize) {
+                            throw new IllegalArgumentException(
+                                    "Block target requires forced magnetization");
                         }
                     }
                 }
@@ -179,6 +189,8 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 var roster = controlled();
                 wasControlled = roster.containsKey(targetKey);
                 previousControl = CONTROL_DESTINATIONS.get(player.getUUID());
+                charge(Skills.MAGNET_MANIPULATION.get(), magneticMoveCost(power)
+                        + (forcedMagnetizationApplied ? FORCED_MAGNETIZATION_COST : 0.0f));
                 if (target == null) {
                     if (!targets.level().getBlockState(sourceBlock).equals(sourceState)) {
                         throw new IllegalStateException("Magnetic block changed before execution");
@@ -191,7 +203,6 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                     throw new IllegalStateException("Target rejected magnetic movement");
                 }
                 var previous = new HashMap<Entity, Vec3>();
-                charge(Skills.MAGNET_MANIPULATION.get(), magneticMoveCost(power));
                 if (mode == ElectromasterProgramNodeCatalog.MagneticMode.PULL) {
                     roster.put(targetKey, target);
                     roster.entrySet().removeIf(entry -> !entry.getValue().isAlive()
@@ -260,6 +271,16 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             result.add(new ProgramBlockPosition(dimension, pos.getX(), pos.getY(), pos.getZ()));
         }
         return List.copyOf(result);
+    }
+
+    @Override
+    public List<?> magneticEntitiesAround(ProgramWorldPosition center, double radius) {
+        return targets.entitiesAround(center, Math.clamp(radius, 0.0, MAX_QUERY_RANGE)).stream()
+                .filter(Entity.class::isInstance)
+                .map(Entity.class::cast)
+                .filter(MagnetManipulation::isMagnetic)
+                .limit(MAX_QUERY_RESULTS)
+                .toList();
     }
 
     @Override
@@ -385,6 +406,14 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             throw new IllegalArgumentException("Block target is outside program range");
         }
         return position;
+    }
+
+    private boolean isEditableBlock(BlockPos position, BlockState state) {
+        return targets.level().mayInteract(player, position)
+                && !player.blockActionRestricted(
+                targets.level(), position, player.gameMode.getGameModeForPlayer())
+                && (!(state.getBlock() instanceof GameMasterBlock)
+                || player.canUseGameMasterBlocks());
     }
 
     private Map<String, Entity> controlled() {

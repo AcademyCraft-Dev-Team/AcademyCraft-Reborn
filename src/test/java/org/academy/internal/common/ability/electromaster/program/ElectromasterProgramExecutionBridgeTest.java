@@ -100,11 +100,14 @@ class ElectromasterProgramExecutionBridgeTest {
 
     @Test
     void magneticMoveReceivesTypedDestination() {
+        var magnetic = new JsonObject();
+        magnetic.addProperty("power", 0);
+        magnetic.addProperty("force_magnetize", true);
         var graph = new ProgramGraph(
                 List.of(
                         node(1, ElectromasterProgramNodeIds.CASTER, new JsonObject()),
                         worldPositionNode(2, 4.5, 65.0, -2.5),
-                        powerNode(3, ElectromasterProgramNodeIds.MAGNETIC_MOVE, 0)
+                        node(3, ElectromasterProgramNodeIds.MAGNETIC_MOVE, magnetic)
                 ),
                 List.of(
                         edge(1, "entity", 3, "entity"),
@@ -123,7 +126,44 @@ class ElectromasterProgramExecutionBridgeTest {
 
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
         assertTrue(transaction.commit().successful());
-        assertEquals(List.of("magnetic:caster:4.5,65.0,-2.5:0.0"),
+        assertEquals(List.of("magnetic:caster:4.5,65.0,-2.5:0.0:true"),
+                runtime.applied);
+        transaction.release();
+    }
+
+    @Test
+    void magneticScanDrivesAttenuatingChainDischarge() {
+        var chain = new JsonObject();
+        chain.addProperty("power", 2.0f);
+        chain.addProperty("maximum_jumps", 2);
+        var graph = new ProgramGraph(
+                List.of(
+                        worldPositionNode(1, 0.0, 64.0, 0.0),
+                        floatNode(2, 12.0),
+                        node(3, ElectromasterProgramNodeIds.MAGNETIC_ENTITIES,
+                                new JsonObject()),
+                        node(4, ElectromasterProgramNodeIds.CHAIN_DISCHARGE, chain)
+                ),
+                List.of(
+                        edge(1, "position", 3, "center"),
+                        edge(2, "value", 3, "radius"),
+                        edge(3, "entities", 4, "entities")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        ElectromasterProgramNodeCatalog.ELECTROMASTER)
+                .compile(graph, Set.of(ElectromasterProgramCapabilities.CHAIN_DISCHARGE));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var runtime = new FakeRuntime();
+        var transaction = new ProgramActionTransaction();
+
+        var result = ElectromasterProgramExecutionBridge.execute(
+                compiled.program(), 80L, runtime, transaction);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(2, transaction.size());
+        assertTrue(transaction.commit().successful());
+        assertEquals(List.of("arc:iron_item:2.0", "arc:armored_target:1.7"),
                 runtime.applied);
         transaction.release();
     }
@@ -161,6 +201,12 @@ class ElectromasterProgramExecutionBridgeTest {
         configuration.addProperty("y", y);
         configuration.addProperty("z", z);
         return node(id, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, configuration);
+    }
+
+    private static ProgramGraph.Node floatNode(int id, double value) {
+        var configuration = new JsonObject();
+        configuration.addProperty("value", value);
+        return node(id, CommonProgramNodeIds.FLOAT_CONSTANT, configuration);
     }
 
     private static ProgramGraph.Edge edge(
@@ -202,10 +248,12 @@ class ElectromasterProgramExecutionBridgeTest {
                 ProgramWorldPosition destination,
                 float power,
                 ElectromasterProgramNodeCatalog.EnergyTargetType targetType,
-                ElectromasterProgramNodeCatalog.MagneticMode mode
+                ElectromasterProgramNodeCatalog.MagneticMode mode,
+                boolean forceMagnetize
         ) {
             return action("magnetic:" + target + ":" + destination.x() + ","
-                    + destination.y() + "," + destination.z() + ":" + power);
+                    + destination.y() + "," + destination.z() + ":" + power
+                    + ":" + forceMagnetize);
         }
 
         @Override
@@ -214,6 +262,11 @@ class ElectromasterProgramExecutionBridgeTest {
                 double radius
         ) {
             return List.of();
+        }
+
+        @Override
+        public List<?> magneticEntitiesAround(ProgramWorldPosition center, double radius) {
+            return List.of("iron_item", "armored_target");
         }
 
         @Override

@@ -27,13 +27,16 @@ public interface ElectromasterProgramRuntime extends ProgramTargetResolver {
             ProgramWorldPosition destination,
             float power,
             ElectromasterProgramNodeCatalog.EnergyTargetType targetType,
-            ElectromasterProgramNodeCatalog.MagneticMode mode
+            ElectromasterProgramNodeCatalog.MagneticMode mode,
+            boolean forceMagnetize
     );
 
     List<ProgramBlockPosition> chargeableBlocksAround(
             ProgramWorldPosition center,
             double radius
     );
+
+    List<?> magneticEntitiesAround(ProgramWorldPosition center, double radius);
 
     OptionalDouble entityEnergyFraction(Object entity);
 
