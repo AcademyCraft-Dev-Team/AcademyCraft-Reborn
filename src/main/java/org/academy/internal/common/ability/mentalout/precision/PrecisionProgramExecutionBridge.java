@@ -33,13 +33,58 @@ final class PrecisionProgramExecutionBridge {
             ProgramActionTransaction transaction,
             NativeNodeHandler nodeHandler
     ) {
-        var environment = new NativeEnvironment(runtimeView, targetResolver, nodeHandler);
-        var result = new ProgramVm.Session(program).run(
+        return executeNative(
+                program,
                 gameTime,
-                MAX_FUEL,
-                AbilityProgramDefinitions.mentalout().executors(),
-                new ProgramExecutionFrame(transaction, environment)
+                runtimeView,
+                targetResolver,
+                transaction,
+                nodeHandler,
+                null,
+                null
         );
+    }
+
+    static NativeResult executeNative(
+            CompiledProgram program,
+            long gameTime,
+            PrecisionProgramRuntimeView runtimeView,
+            ProgramTargetResolver targetResolver,
+            ProgramActionTransaction transaction,
+            NativeNodeHandler nodeHandler,
+            ProgramInvocationContext invocation,
+            java.util.function.LongSupplier worldGameTime
+    ) {
+        var execution = prepareNative(
+                program,
+                runtimeView,
+                targetResolver,
+                transaction,
+                nodeHandler,
+                invocation,
+                worldGameTime
+        );
+        return nativeResult(execution.run(gameTime));
+    }
+
+    static NativeExecution prepareNative(
+            CompiledProgram program,
+            PrecisionProgramRuntimeView runtimeView,
+            ProgramTargetResolver targetResolver,
+            ProgramActionTransaction transaction,
+            NativeNodeHandler nodeHandler,
+            ProgramInvocationContext invocation,
+            java.util.function.LongSupplier worldGameTime
+    ) {
+        var environment = new NativeEnvironment(runtimeView, targetResolver, nodeHandler);
+        return new NativeExecution(
+                new ProgramVm.Session(program),
+                new ProgramExecutionFrame(
+                        transaction, environment, invocation, worldGameTime)
+        );
+    }
+
+    static NativeResult nativeResult(ProgramVmResult result) {
         if (result.status() == ProgramVmResult.Status.COMPLETED) {
             return NativeResult.success();
         }
@@ -47,6 +92,17 @@ final class PrecisionProgramExecutionBridge {
                 ? PrecisionGraph.Diagnostic.PLANNING_BUDGET_EXHAUSTED
                 : PrecisionGraph.Diagnostic.ADAPTER_ERROR;
         return NativeResult.failure(diagnostic, result.nodeId(), result.diagnostic());
+    }
+
+    record NativeExecution(ProgramVm.Session session, ProgramExecutionFrame frame) {
+        ProgramVmResult run(long gameTime) {
+            return session.run(
+                    gameTime,
+                    MAX_FUEL,
+                    AbilityProgramDefinitions.mentalout().executors(),
+                    frame
+            );
+        }
     }
 
     static ReplayResult replay(
@@ -145,7 +201,7 @@ final class PrecisionProgramExecutionBridge {
             int nodeId,
             ProgramVmDiagnostic vmDiagnostic
     ) {
-        private static NativeResult success() {
+        static NativeResult success() {
             return new NativeResult(
                     true,
                     PrecisionGraph.Diagnostic.OK,

@@ -49,6 +49,45 @@ public final class ServerProgramScheduler {
         return state != null && state.cancel(key);
     }
 
+    public static boolean contains(MinecraftServer server, SessionKey key) {
+        requireServerThread(server);
+        var state = SCHEDULERS.get(server);
+        return state != null && state.contains(key);
+    }
+
+    public static boolean resume(
+            MinecraftServer server,
+            SessionKey key,
+            ProgramVm.Session session,
+            ProgramExecutorLookup executors,
+            @Nullable Object attachment,
+            int fuelPerTick,
+            long logicalTick,
+            long maxLifetimeTicks,
+            ProgramSessionScheduler.SessionListener<SessionKey> listener
+    ) {
+        requireServerThread(server);
+        return SCHEDULERS.computeIfAbsent(server, _ -> new SchedulerState()).resume(
+                key,
+                session,
+                executors,
+                attachment,
+                fuelPerTick,
+                logicalTick,
+                maxLifetimeTicks,
+                listener
+        );
+    }
+
+    public static void cancelOwner(MinecraftServer server, UUID ownerId) {
+        requireServerThread(server);
+        var state = SCHEDULERS.get(server);
+        if (state == null) return;
+        for (var key : state.keys()) {
+            if (key.ownerId().equals(ownerId)) state.cancel(key);
+        }
+    }
+
     public static void tick(MinecraftServer server) {
         requireServerThread(server);
         var state = SCHEDULERS.get(server);
@@ -109,6 +148,33 @@ public final class ServerProgramScheduler {
             return started;
         }
 
+        private boolean resume(
+                SessionKey key,
+                ProgramVm.Session session,
+                ProgramExecutorLookup executors,
+                @Nullable Object attachment,
+                int fuelPerTick,
+                long logicalTick,
+                long maxLifetimeTicks,
+                ProgramSessionScheduler.SessionListener<SessionKey> listener
+        ) {
+            var started = scheduler.start(
+                    key,
+                    session,
+                    executors,
+                    attachment,
+                    fuelPerTick,
+                    logicalTick,
+                    maxLifetimeTicks,
+                    listener
+            );
+            if (started) {
+                logicalTicks.put(key, logicalTick);
+                sessionIds.put(key, UUID.randomUUID());
+            }
+            return started;
+        }
+
         private void tick(SessionKey key) {
             var logicalTick = logicalTicks.get(key);
             if (logicalTick == null || !scheduler.contains(key)) {
@@ -131,6 +197,10 @@ public final class ServerProgramScheduler {
             return scheduler.cancel(key);
         }
 
+        private boolean contains(SessionKey key) {
+            return scheduler.contains(key);
+        }
+
         private void clear() {
             scheduler.clear();
             logicalTicks.clear();
@@ -147,10 +217,17 @@ public final class ServerProgramScheduler {
         }
     }
 
-    public record SessionKey(UUID ownerId, Identifier category, UUID programId) {
+    public record SessionKey(UUID ownerId, Identifier category, UUID programId, int slot) {
+        public SessionKey(UUID ownerId, Identifier category, UUID programId) {
+            this(ownerId, category, programId, -1);
+        }
+
         public SessionKey {
             if (ownerId == null || category == null || programId == null) {
                 throw new IllegalArgumentException("Program session key fields cannot be null");
+            }
+            if (slot < -1 || slot >= AbilityProgramManager.SLOT_COUNT) {
+                throw new IllegalArgumentException("Program session slot is out of range");
             }
         }
     }

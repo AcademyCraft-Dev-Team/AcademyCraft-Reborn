@@ -52,6 +52,40 @@ class ProgramSessionSchedulerTest {
     }
 
     @Test
+    void resumesAnAlreadyStartedVmWithoutResettingItsWakeTick() {
+        var program = compile(List.of(YIELD, STOP));
+        var session = new ProgramVm.Session(program);
+        assertEquals(
+                ProgramVmResult.Status.SUSPENDED,
+                session.run(100, 8, executors()::get, null).status()
+        );
+        assertEquals(103L, session.wakeAt());
+
+        var scheduler = new ProgramSessionScheduler<String>();
+        var terminations = new ArrayList<ProgramSessionScheduler.Termination>();
+        assertTrue(scheduler.start(
+                "session",
+                session,
+                executors()::get,
+                null,
+                8,
+                101,
+                10,
+                (_, termination) -> terminations.add(termination)
+        ));
+
+        scheduler.tick(101);
+        scheduler.tick(102);
+        assertTrue(scheduler.contains("session"));
+        scheduler.tick(103);
+        assertFalse(scheduler.contains("session"));
+        assertEquals(
+                ProgramSessionScheduler.TerminationKind.COMPLETED,
+                terminations.getFirst().kind()
+        );
+    }
+
+    @Test
     void expiresFuelBoundInfiniteProgramAndRejectsDuplicateKey() {
         var scheduler = new ProgramSessionScheduler<String>();
         var terminations = new ArrayList<ProgramSessionScheduler.Termination>();

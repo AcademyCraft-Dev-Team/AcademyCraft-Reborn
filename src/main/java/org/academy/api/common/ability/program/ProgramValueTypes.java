@@ -13,6 +13,7 @@ public final class ProgramValueTypes {
     public static final ProgramValueType FLOAT = type("float");
     public static final ProgramValueType IDENTIFIER = type("identifier");
     public static final ProgramValueType DURATION = type("duration");
+    public static final ProgramValueType VECTOR = type("vector");
     public static final ProgramValueType DIRECTION = type("direction");
     public static final ProgramValueType DIRECTION_SET = type("direction_set");
     public static final ProgramValueType CONTROL_DESTINATION = type("control_destination");

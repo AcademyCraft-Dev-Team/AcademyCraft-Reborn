@@ -35,8 +35,30 @@ public final class ProgramSessionScheduler<K> {
             long maxLifetimeTicks,
             SessionListener<K> listener
     ) {
+        return start(
+                key,
+                new ProgramVm.Session(program),
+                executors,
+                attachment,
+                fuelPerTick,
+                startedAt,
+                maxLifetimeTicks,
+                listener
+        );
+    }
+
+    public boolean start(
+            K key,
+            ProgramVm.Session session,
+            ProgramExecutorLookup executors,
+            @Nullable Object attachment,
+            int fuelPerTick,
+            long startedAt,
+            long maxLifetimeTicks,
+            SessionListener<K> listener
+    ) {
         Objects.requireNonNull(key, "key");
-        Objects.requireNonNull(program, "program");
+        Objects.requireNonNull(session, "session");
         Objects.requireNonNull(executors, "executors");
         Objects.requireNonNull(listener, "listener");
         if (fuelPerTick < 1) throw new IllegalArgumentException("Session fuel must be positive");
@@ -46,7 +68,7 @@ public final class ProgramSessionScheduler<K> {
         }
         if (sessions.containsKey(key) || sessions.size() >= maxSessions) return false;
         sessions.put(key, new RunningSession<>(
-                new ProgramVm.Session(program),
+                session,
                 executors,
                 attachment,
                 fuelPerTick,

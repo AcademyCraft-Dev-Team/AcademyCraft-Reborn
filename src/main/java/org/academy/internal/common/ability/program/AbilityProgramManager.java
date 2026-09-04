@@ -59,6 +59,7 @@ public final class AbilityProgramManager {
     private static final int MAX_BOOK_BASE64_LENGTH =
             (ProgramBookCodec.MAX_BOOK_ENCODED_BYTES + 2) / 3 * 4;
     private static final Map<UUID, Long> LAST_EXECUTION_SEQUENCE = new HashMap<>();
+    private static final Map<LoopExecutionKey, Long> LOOP_EXECUTION_COUNTS = new HashMap<>();
     private static final Map<Identifier, CategoryExecutionAdapter> EXECUTION_ADAPTERS = Map.of(
             AcceleratorProgramNodeCatalog.ACCELERATOR,
             AbilityProgramManager::executeAccelerator,
@@ -174,21 +175,46 @@ public final class AbilityProgramManager {
                     ? ProgramTriggers.matchesHealth(program, player, category, slot)
                     : ProgramTriggers.matches(program, trigger, movement, gameTime);
             if (!matches) continue;
+            var sessionKey = new ServerProgramScheduler.SessionKey(
+                    player.getUUID(), category, program.id(), slot);
+            if (ServerProgramScheduler.contains(
+                    player.level().getServer(), sessionKey)) continue;
             var compiled = definition.compile(program, capabilities);
             var executionSlot = slot;
-            if (compiled.valid()) OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(
-                    compiled.program(), player, ProgramTriggers.costMultiplier(program), executionSlot));
+            if (!compiled.valid()) continue;
+            var loopKey = new LoopExecutionKey(player.getUUID(), category, slot, program.id());
+            var loopIndex = trigger == ProgramTriggers.Type.LOOP
+                    ? LOOP_EXECUTION_COUNTS.getOrDefault(loopKey, 0L) : 0L;
+            var invocation = AbilityProgramTriggerRuntime.invocation(
+                    player, program.id(), slot, trigger, movement, loopIndex);
+            var outcome = OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(
+                    compiled.program(),
+                    player,
+                    ProgramTriggers.costMultiplier(program),
+                    executionSlot,
+                    invocation
+            ));
+            if (trigger == ProgramTriggers.Type.LOOP && outcome.successful()) {
+                LOOP_EXECUTION_COUNTS.put(
+                        loopKey,
+                        loopIndex == Long.MAX_VALUE ? Long.MAX_VALUE : loopIndex + 1L
+                );
+            }
         }
     }
 
     public static void clear() {
         LAST_EXECUTION_SEQUENCE.clear();
+        LOOP_EXECUTION_COUNTS.clear();
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         LAST_EXECUTION_SEQUENCE.remove(event.getEntity().getUUID());
+        LOOP_EXECUTION_COUNTS.keySet().removeIf(
+                key -> key.ownerId().equals(event.getEntity().getUUID()));
         if (event.getEntity() instanceof ServerPlayer player) {
+            ServerProgramScheduler.cancelOwner(player.level().getServer(), player.getUUID());
             ServerElectromasterProgramRuntime.releaseControlled(player);
         }
     }
@@ -269,13 +295,16 @@ public final class AbilityProgramManager {
             CompiledProgram program,
             ServerPlayer player,
             float costMultiplier,
-            int slot
+            int slot,
+            ProgramInvocationContext invocation
     ) {
         var execution = AcceleratorProgramExecutionBridge.executeServer(
-                program, player, costMultiplier);
-        if (execution.successful()) return ExecutionOutcome.success();
+                program, player, costMultiplier, invocation);
+        if (execution.successful()) return ExecutionOutcome.success(
+                execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
+                false,
                 false,
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
@@ -286,13 +315,16 @@ public final class AbilityProgramManager {
             CompiledProgram program,
             ServerPlayer player,
             float costMultiplier,
-            int slot
+            int slot,
+            ProgramInvocationContext invocation
     ) {
         var execution = AeromanipProgramExecutionBridge.executeServer(
-                program, player, costMultiplier);
-        if (execution.successful()) return ExecutionOutcome.success();
+                program, player, costMultiplier, invocation);
+        if (execution.successful()) return ExecutionOutcome.success(
+                execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
+                false,
                 false,
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
@@ -303,13 +335,16 @@ public final class AbilityProgramManager {
             CompiledProgram program,
             ServerPlayer player,
             float costMultiplier,
-            int slot
+            int slot,
+            ProgramInvocationContext invocation
     ) {
         var execution = DarkmatterProgramExecutionBridge.executeServer(
-                program, player, costMultiplier);
-        if (execution.successful()) return ExecutionOutcome.success();
+                program, player, costMultiplier, invocation);
+        if (execution.successful()) return ExecutionOutcome.success(
+                execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
+                false,
                 false,
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
@@ -320,13 +355,16 @@ public final class AbilityProgramManager {
             CompiledProgram program,
             ServerPlayer player,
             float costMultiplier,
-            int slot
+            int slot,
+            ProgramInvocationContext invocation
     ) {
         var execution = ElectromasterProgramExecutionBridge.executeServer(
-                program, player, costMultiplier);
-        if (execution.successful()) return ExecutionOutcome.success();
+                program, player, costMultiplier, invocation);
+        if (execution.successful()) return ExecutionOutcome.success(
+                execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
+                false,
                 false,
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
@@ -337,13 +375,16 @@ public final class AbilityProgramManager {
             CompiledProgram program,
             ServerPlayer player,
             float costMultiplier,
-            int slot
+            int slot,
+            ProgramInvocationContext invocation
     ) {
         var execution = TeleportProgramExecutionBridge.executeServer(
-                program, player, costMultiplier);
-        if (execution.successful()) return ExecutionOutcome.success();
+                program, player, costMultiplier, invocation);
+        if (execution.successful()) return ExecutionOutcome.success(
+                execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
+                false,
                 false,
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
@@ -354,13 +395,16 @@ public final class AbilityProgramManager {
             CompiledProgram program,
             ServerPlayer player,
             float costMultiplier,
-            int slot
+            int slot,
+            ProgramInvocationContext invocation
     ) {
         var execution = MeltdownerProgramExecutionBridge.executeServer(
-                program, player, costMultiplier);
-        if (execution.successful()) return ExecutionOutcome.success();
+                program, player, costMultiplier, invocation);
+        if (execution.successful()) return ExecutionOutcome.success(
+                execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
         var transaction = execution.transactionResult().orElse(null);
         return new ExecutionOutcome(
+                false,
                 false,
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
@@ -371,14 +415,24 @@ public final class AbilityProgramManager {
             CompiledProgram program,
             ServerPlayer player,
             float costMultiplier,
-            int slot
+            int slot,
+            ProgramInvocationContext invocation
     ) {
         var execution = PrecisionOperationRuntime.execute(
-                player, slot, program, false, costMultiplier);
+                player, slot, program, false, costMultiplier, invocation);
         if (execution.state() != PrecisionOperationRuntime.ExecutionState.FAILED) {
-            return ExecutionOutcome.success();
+            return ExecutionOutcome.success(ServerProgramScheduler.contains(
+                    player.level().getServer(),
+                    new ServerProgramScheduler.SessionKey(
+                            player.getUUID(),
+                            PrecisionProgramNodeCatalog.MENTALOUT,
+                            invocation.programId(),
+                            invocation.slot()
+                    )
+            ));
         }
         return new ExecutionOutcome(
+                false,
                 false,
                 execution.nodeId(),
                 ProgramVmDiagnostic.ACTION_REJECTED
@@ -566,7 +620,10 @@ public final class AbilityProgramManager {
         SAVE,
         IMPORT,
         COMPLETED,
-        ERROR
+        ERROR,
+        LOOP_ENABLED,
+        LOOP_DISABLED,
+        DEFERRED
     }
 
     public enum ResultCode {
@@ -643,6 +700,17 @@ public final class AbilityProgramManager {
                     decoded.book().selectedSlot(),
                     decoded.book().slots()
             );
+            for (var slot = 0; slot < current.slots().size(); slot++) {
+                var previousProgram = current.slot(slot).program();
+                if (previousProgram == null) continue;
+                LOOP_EXECUTION_COUNTS.remove(new LoopExecutionKey(
+                        player.getUUID(), category, slot, previousProgram.id()));
+                ServerProgramScheduler.cancel(
+                        player.level().getServer(),
+                        new ServerProgramScheduler.SessionKey(
+                                player.getUUID(), category, previousProgram.id(), slot)
+                );
+            }
             store(playerData, category, imported);
             result(player, packet.category, imported.selectedSlot(), FeedbackType.IMPORT,
                     imported.revision(), ResultCode.OK, null, -1, ProgramVmDiagnostic.NONE);
@@ -698,6 +766,21 @@ public final class AbilityProgramManager {
                     return;
                 }
             }
+            var previousProgram = current.slot(packet.slot).program();
+            if (previousProgram != null) {
+                var key = new LoopExecutionKey(
+                        player.getUUID(), category, packet.slot, previousProgram.id());
+                LOOP_EXECUTION_COUNTS.remove(key);
+                ServerProgramScheduler.cancel(
+                        player.level().getServer(),
+                        new ServerProgramScheduler.SessionKey(
+                                player.getUUID(), category, previousProgram.id(), packet.slot)
+                );
+            }
+            if (program != null) {
+                LOOP_EXECUTION_COUNTS.remove(new LoopExecutionKey(
+                        player.getUUID(), category, packet.slot, program.id()));
+            }
             var changed = current.replaceSlot(packet.slot, program).select(packet.slot);
             store(playerData, category, changed);
             result(player, packet.category, packet.slot, FeedbackType.SAVE,
@@ -736,7 +819,44 @@ public final class AbilityProgramManager {
                         diagnostic.code(), diagnostic.nodeId(), ProgramVmDiagnostic.NONE);
                 return;
             }
+            var loopToggle = ProgramTriggers.toggleLoop(program).orElse(null);
+            if (loopToggle != null) {
+                LOOP_EXECUTION_COUNTS.remove(new LoopExecutionKey(
+                        player.getUUID(), category, packet.slot, program.id()));
+                ServerProgramScheduler.cancel(
+                        player.level().getServer(),
+                        new ServerProgramScheduler.SessionKey(
+                                player.getUUID(), category, program.id(), packet.slot)
+                );
+                var changed = current.replaceSlot(packet.slot, loopToggle.program())
+                        .select(packet.slot);
+                store(playerData, category, changed);
+                result(
+                        player,
+                        packet.category,
+                        packet.slot,
+                        loopToggle.enabled()
+                                ? FeedbackType.LOOP_ENABLED : FeedbackType.LOOP_DISABLED,
+                        changed.revision(),
+                        ResultCode.OK,
+                        null,
+                        -1,
+                        ProgramVmDiagnostic.NONE
+                );
+                sync(player, category, changed);
+                return;
+            }
             if (!ProgramTriggers.acceptsManualExecution(compiled.program())) return;
+            if (ServerProgramScheduler.contains(
+                    player.level().getServer(),
+                    new ServerProgramScheduler.SessionKey(
+                            player.getUUID(), category, program.id(), packet.slot)
+            )) {
+                result(player, packet.category, packet.slot, FeedbackType.ERROR,
+                        current.revision(), ResultCode.EXECUTION_FAILED,
+                        null, -1, ProgramVmDiagnostic.ACTION_REJECTED);
+                return;
+            }
             var adapter = EXECUTION_ADAPTERS.get(category);
             if (adapter == null) {
                 result(player, packet.category, packet.slot, FeedbackType.ERROR,
@@ -745,9 +865,26 @@ public final class AbilityProgramManager {
                 return;
             }
             var outcome = OutputControl.callWithoutOutputAdjustment(
-                    () -> adapter.execute(compiled.program(), player, 1.0f, packet.slot));
+                    () -> adapter.execute(
+                            compiled.program(),
+                            player,
+                            1.0f,
+                            packet.slot,
+                            new ProgramInvocationContext(
+                                    program.id(),
+                                    packet.slot,
+                                    null,
+                                    null,
+                                    0L,
+                                    null,
+                                    null,
+                                    null
+                            )
+                    ));
             result(player, packet.category, packet.slot,
-                    outcome.successful ? FeedbackType.COMPLETED : FeedbackType.ERROR,
+                    outcome.successful
+                            ? outcome.deferred ? FeedbackType.DEFERRED : FeedbackType.COMPLETED
+                            : FeedbackType.ERROR,
                     current.revision(),
                     outcome.successful ? ResultCode.OK : ResultCode.EXECUTION_FAILED,
                     null, outcome.nodeId, outcome.vmDiagnostic);
@@ -1137,17 +1274,27 @@ public final class AbilityProgramManager {
                 CompiledProgram program,
                 ServerPlayer player,
                 float costMultiplier,
-                int slot
+                int slot,
+                ProgramInvocationContext invocation
         );
+    }
+
+    private record LoopExecutionKey(
+            UUID ownerId,
+            Identifier category,
+            int slot,
+            UUID programId
+    ) {
     }
 
     private record ExecutionOutcome(
             boolean successful,
+            boolean deferred,
             int nodeId,
             ProgramVmDiagnostic vmDiagnostic
     ) {
-        private static ExecutionOutcome success() {
-            return new ExecutionOutcome(true, -1, ProgramVmDiagnostic.NONE);
+        private static ExecutionOutcome success(boolean deferred) {
+            return new ExecutionOutcome(true, deferred, -1, ProgramVmDiagnostic.NONE);
         }
     }
 }

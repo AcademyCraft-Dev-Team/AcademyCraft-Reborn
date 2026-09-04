@@ -19,9 +19,11 @@ import java.util.*;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AbilityProgramTriggerRuntime {
     private static final Map<UUID, MovementState> MOVEMENT = new HashMap<>();
-    private static final Set<UUID> PENDING_MELEE = new HashSet<>();
+    private static final Map<UUID, Object> PENDING_MELEE = new HashMap<>();
     private static final Set<UUID> EXECUTING = new HashSet<>();
     private static final Map<UUID, Object> DAMAGE_ATTACKERS = new HashMap<>();
+    private static final Map<UUID, Float> DAMAGE_AMOUNTS = new HashMap<>();
+    private static final Map<UUID, Object> MELEE_TARGETS = new HashMap<>();
 
     private AbilityProgramTriggerRuntime() {
     }
@@ -29,7 +31,7 @@ public final class AbilityProgramTriggerRuntime {
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            PENDING_MELEE.add(player.getUUID());
+            PENDING_MELEE.put(player.getUUID(), event.getTarget());
         }
     }
 
@@ -48,6 +50,7 @@ public final class AbilityProgramTriggerRuntime {
             if (attacker == null) attacker = event.getSource().getDirectEntity();
             var id = player.getUUID();
             var previous = DAMAGE_ATTACKERS.get(id);
+            var previousAmount = DAMAGE_AMOUNTS.put(id, event.getAmount());
             if (attacker == null) DAMAGE_ATTACKERS.remove(id);
             else DAMAGE_ATTACKERS.put(id, attacker);
             try {
@@ -55,6 +58,8 @@ public final class AbilityProgramTriggerRuntime {
             } finally {
                 if (previous == null) DAMAGE_ATTACKERS.remove(id);
                 else DAMAGE_ATTACKERS.put(id, previous);
+                if (previousAmount == null) DAMAGE_AMOUNTS.remove(id);
+                else DAMAGE_AMOUNTS.put(id, previousAmount);
             }
         }
     }
@@ -62,6 +67,38 @@ public final class AbilityProgramTriggerRuntime {
     static java.util.Optional<Object> currentDamageAttacker(Object entity) {
         if (!(entity instanceof ServerPlayer player)) return java.util.Optional.empty();
         return java.util.Optional.ofNullable(DAMAGE_ATTACKERS.get(player.getUUID()));
+    }
+
+    static OptionalDouble currentDamageAmount(Object entity) {
+        if (!(entity instanceof ServerPlayer player)) return OptionalDouble.empty();
+        var amount = DAMAGE_AMOUNTS.get(player.getUUID());
+        return amount == null ? OptionalDouble.empty() : OptionalDouble.of(amount);
+    }
+
+    static Optional<Object> currentMeleeTarget(Object entity) {
+        if (!(entity instanceof ServerPlayer player)) return Optional.empty();
+        return Optional.ofNullable(MELEE_TARGETS.get(player.getUUID()));
+    }
+
+    static ProgramInvocationContext invocation(
+            ServerPlayer player,
+            UUID programId,
+            int slot,
+            ProgramTriggers.Type trigger,
+            CommonProgramNodeCatalog.MovementCondition movement,
+            long loopIndex
+    ) {
+        var id = player.getUUID();
+        return new ProgramInvocationContext(
+                programId,
+                slot,
+                trigger,
+                movement,
+                loopIndex,
+                DAMAGE_ATTACKERS.get(id),
+                DAMAGE_AMOUNTS.get(id),
+                MELEE_TARGETS.get(id)
+        );
     }
 
     @SubscribeEvent
@@ -88,8 +125,15 @@ public final class AbilityProgramTriggerRuntime {
                         CommonProgramNodeCatalog.MovementCondition.SWIM);
             }
         }
-        if (PENDING_MELEE.remove(id)) {
-            dispatch(player, ProgramTriggers.Type.MELEE, null);
+        var meleeTarget = PENDING_MELEE.remove(id);
+        if (meleeTarget != null) {
+            var previousTarget = MELEE_TARGETS.put(id, meleeTarget);
+            try {
+                dispatch(player, ProgramTriggers.Type.MELEE, null);
+            } finally {
+                if (previousTarget == null) MELEE_TARGETS.remove(id);
+                else MELEE_TARGETS.put(id, previousTarget);
+            }
         }
         dispatch(player, ProgramTriggers.Type.LOOP, null);
         dispatch(player, ProgramTriggers.Type.HEALTH, null);
@@ -102,6 +146,8 @@ public final class AbilityProgramTriggerRuntime {
         PENDING_MELEE.remove(id);
         EXECUTING.remove(id);
         DAMAGE_ATTACKERS.remove(id);
+        DAMAGE_AMOUNTS.remove(id);
+        MELEE_TARGETS.remove(id);
         ProgramTriggers.clear(id);
     }
 

@@ -21,6 +21,8 @@ class ProgramVmTest {
     private static final Identifier ENTRY = AcademyCraft.academy("test/entry");
     private static final Identifier LOOP = AcademyCraft.academy("test/loop");
     private static final Identifier CALL_LOOP = AcademyCraft.academy("test/call_loop");
+    private static final Identifier CONTINUE_LOOP = AcademyCraft.academy("test/continue_loop");
+    private static final Identifier BREAK_LOOP = AcademyCraft.academy("test/break_loop");
     private static final Identifier INCREMENT = AcademyCraft.academy("test/increment");
     private static final Identifier YIELD = AcademyCraft.academy("test/yield");
     private static final Identifier STOP = AcademyCraft.academy("test/stop");
@@ -95,6 +97,24 @@ class ProgramVmTest {
     }
 
     @Test
+    void terminalYieldStillWaitsBeforeCompleting() {
+        var graph = new ProgramGraph(
+                List.of(node(1, YIELD)),
+                List.of()
+        );
+        var session = new ProgramVm.Session(compile(graph));
+        var executors = executors();
+
+        var yielded = session.run(100, 10, executors::get, null);
+        var early = session.run(102, 10, executors::get, null);
+        var resumed = session.run(103, 10, executors::get, null);
+
+        assertEquals(ProgramVmResult.Status.SUSPENDED, yielded.status());
+        assertEquals(ProgramVmResult.Status.SUSPENDED, early.status());
+        assertEquals(ProgramVmResult.Status.COMPLETED, resumed.status());
+    }
+
+    @Test
     void executesUniqueOpenActionFlowRootWithoutExplicitEntry() {
         var graph = new ProgramGraph(
                 List.of(node(2, INCREMENT)),
@@ -131,6 +151,58 @@ class ProgramVmTest {
 
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
         assertEquals(3, session.variables().get("counter").value());
+        assertTrue((Boolean) session.variables().get("stopped").value());
+    }
+
+    @Test
+    void continueLoopReturnsToTheNearestStructuredLoop() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, ENTRY),
+                        node(2, CALL_LOOP),
+                        node(3, INCREMENT),
+                        node(4, CONTINUE_LOOP),
+                        node(5, STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 2, "flow"),
+                        edge(2, "body", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(2, "done", 5, "flow")
+                )
+        );
+        var session = new ProgramVm.Session(compile(graph));
+
+        var result = session.run(0, 30, executors()::get, null);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(3, session.variables().get("counter").value());
+        assertTrue((Boolean) session.variables().get("stopped").value());
+    }
+
+    @Test
+    void breakLoopJumpsToTheNearestStructuredLoopDoneFlow() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, ENTRY),
+                        node(2, CALL_LOOP),
+                        node(3, INCREMENT),
+                        node(4, BREAK_LOOP),
+                        node(5, STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 2, "flow"),
+                        edge(2, "body", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(2, "done", 5, "flow")
+                )
+        );
+        var session = new ProgramVm.Session(compile(graph));
+
+        var result = session.run(0, 30, executors()::get, null);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(1, session.variables().get("counter").value());
         assertTrue((Boolean) session.variables().get("stopped").value());
     }
 
@@ -175,6 +247,22 @@ class ProgramVmTest {
                         List.of(flowOutput("flow"))
                 )
         ));
+        result.put(CONTINUE_LOOP, type(
+                ProgramNodeRole.CONTROL,
+                new ProgramNodeSchema(
+                        List.of(ProgramPortDefinition.requiredInput(
+                                "flow", ProgramValueTypes.FLOW)),
+                        List.of()
+                )
+        ));
+        result.put(BREAK_LOOP, type(
+                ProgramNodeRole.CONTROL,
+                new ProgramNodeSchema(
+                        List.of(ProgramPortDefinition.requiredInput(
+                                "flow", ProgramValueTypes.FLOW)),
+                        List.of()
+                )
+        ));
         result.put(YIELD, type(
                 ProgramNodeRole.SUSPEND,
                 new ProgramNodeSchema(
@@ -216,6 +304,8 @@ class ProgramVmTest {
             return ProgramNodeStep.next("flow");
         });
         result.put(YIELD, (_, _, _) -> ProgramNodeStep.yield("flow", 3));
+        result.put(CONTINUE_LOOP, (_, _, _) -> ProgramNodeStep.continueLoop());
+        result.put(BREAK_LOOP, (_, _, _) -> ProgramNodeStep.breakLoop());
         result.put(STOP, (context, _, _) -> {
             context.setVariable("stopped", new ProgramValue<>(ProgramValueTypes.BOOLEAN, true));
             return ProgramNodeStep.stop();

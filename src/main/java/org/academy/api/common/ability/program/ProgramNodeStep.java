@@ -54,11 +54,23 @@ public record ProgramNodeStep(
         return new ProgramNodeStep(Directive.STOP, Map.of(), null, 0);
     }
 
+    /** Skips the remainder of the nearest enclosing structured loop body. */
+    public static ProgramNodeStep continueLoop() {
+        return new ProgramNodeStep(Directive.LOOP_CONTINUE, Map.of(), null, 0);
+    }
+
+    /** Ends the nearest enclosing structured loop and follows its done output. */
+    public static ProgramNodeStep breakLoop() {
+        return new ProgramNodeStep(Directive.LOOP_BREAK, Map.of(), null, 0);
+    }
+
     public enum Directive {
         DATA,
         CONTINUE,
         CALL,
         YIELD,
+        LOOP_CONTINUE,
+        LOOP_BREAK,
         STOP
     }
 }

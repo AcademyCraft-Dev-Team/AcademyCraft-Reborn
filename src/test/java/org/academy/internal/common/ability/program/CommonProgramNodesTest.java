@@ -10,12 +10,14 @@ import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.api.common.ability.program.ProgramLimits;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -57,8 +59,20 @@ class CommonProgramNodesTest {
                 CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD,
                 CommonProgramNodeIds.RANDOM_NUMBER,
                 CommonProgramNodeIds.VEC3_OPERATION,
+                CommonProgramNodeIds.VECTOR_CONSTRUCT,
+                CommonProgramNodeIds.VECTOR_COMPONENTS,
                 CommonProgramNodeIds.ENTITY_DATA,
+                CommonProgramNodeIds.ENTITY_MOTION,
+                CommonProgramNodeIds.ENTITY_HEIGHT,
+                CommonProgramNodeIds.DAMAGE_AMOUNT,
+                CommonProgramNodeIds.GAME_TIME,
+                CommonProgramNodeIds.LOOP_INDEX,
+                CommonProgramNodeIds.MELEE_TARGET,
                 CommonProgramNodeIds.DEBUG_OUTPUT,
+                CommonProgramNodeIds.SELECT_VALUE,
+                CommonProgramNodeIds.BREAK_LOOP,
+                CommonProgramNodeIds.CONTINUE_LOOP,
+                CommonProgramNodeIds.WAIT,
                 CommonProgramNodeIds.BLOCK_VOLUME,
                 CommonProgramNodeIds.FILTER_ENTITY_EXACT,
                 CommonProgramNodeIds.FILTER_BLOCK_EXACT,
@@ -93,6 +107,23 @@ class CommonProgramNodesTest {
                 debugSchema.inputs().getFirst().type());
         assertEquals(ProgramValueTypes.FLOW,
                 debugSchema.outputs().getFirst().type());
+
+        var vectorScale = new JsonObject();
+        vectorScale.addProperty("type", "vector");
+        vectorScale.addProperty("operator", "scale");
+        var scaleSchema = catalog.schema(CommonProgramNodeIds.VEC3_OPERATION, vectorScale);
+        assertNotNull(scaleSchema);
+        assertEquals(List.of(ProgramValueTypes.VECTOR, ProgramValueTypes.FLOAT),
+                scaleSchema.inputs().stream().map(port -> port.type()).toList());
+        assertEquals(ProgramValueTypes.VECTOR, scaleSchema.outputs().getFirst().type());
+
+        var normalize = new JsonObject();
+        normalize.addProperty("type", "world_position");
+        normalize.addProperty("operator", "normalize");
+        var normalizeSchema = catalog.schema(CommonProgramNodeIds.VEC3_OPERATION, normalize);
+        assertNotNull(normalizeSchema);
+        assertEquals(1, normalizeSchema.inputs().size());
+        assertEquals(ProgramValueTypes.DIRECTION, normalizeSchema.outputs().getFirst().type());
     }
 
     @Test
@@ -215,6 +246,112 @@ class CommonProgramNodesTest {
         );
 
         assertEquals(35, run(graph, null).variables().get("result").value());
+    }
+
+    @Test
+    void conditionalValueSelectUsesTheConfiguredType() {
+        var selectConfiguration = new JsonObject();
+        selectConfiguration.addProperty("type", ProgramValueTypes.INTEGER.id().toString());
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        new ProgramGraph.Node(
+                                2, CommonProgramNodeIds.BOOLEAN_CONSTANT, 1,
+                                configuration("value", true)),
+                        integerNode(3, 7),
+                        integerNode(4, 5),
+                        new ProgramGraph.Node(
+                                5, CommonProgramNodeIds.SELECT_VALUE, 1,
+                                selectConfiguration),
+                        variableNode(6, CommonProgramNodeIds.VARIABLE_SET, "selected",
+                                ProgramValueTypes.INTEGER.id()),
+                        node(7, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 6, "flow"),
+                        edge(2, "value", 5, "condition"),
+                        edge(3, "value", 5, "when_true"),
+                        edge(4, "value", 5, "when_false"),
+                        edge(5, "value", 6, "value"),
+                        edge(6, "flow", 7, "flow")
+                )
+        );
+
+        assertEquals(7, run(graph, null).variables().get("selected").value());
+    }
+
+    @Test
+    void waitSuspendsUntilItsConfiguredTickAndThenContinues() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        integerNode(2, 3),
+                        node(3, CommonProgramNodeIds.WAIT),
+                        node(4, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 3, "flow"),
+                        edge(2, "value", 3, "ticks"),
+                        edge(3, "flow", 4, "flow")
+                )
+        );
+        var compiled = ProgramCompiler.compile(
+                graph,
+                new ProgramCompileContext(CATEGORY, Set.of(), ProgramLimits.DEFAULT),
+                id -> {
+                    var common = CommonProgramNodeCatalog.INSTANCE.find(id);
+                    return common != null ? common : PrecisionProgramNodeCatalog.INSTANCE.find(id);
+                }
+        );
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var session = new ProgramVm.Session(compiled.program());
+
+        assertEquals(ProgramVmResult.Status.SUSPENDED,
+                session.run(10, 1_000, CommonProgramExecutors.INSTANCE, null).status());
+        assertEquals(13L, session.wakeAt());
+        assertEquals(ProgramVmResult.Status.SUSPENDED,
+                session.run(12, 1_000, CommonProgramExecutors.INSTANCE, null).status());
+        assertEquals(ProgramVmResult.Status.COMPLETED,
+                session.run(13, 1_000, CommonProgramExecutors.INSTANCE, null).status());
+    }
+
+    @Test
+    void loopIndexAndWorldClockComeFromThePersistentInvocationFrame() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        node(2, CommonProgramNodeIds.LOOP_INDEX),
+                        variableNode(3, CommonProgramNodeIds.VARIABLE_SET, "index",
+                                ProgramValueTypes.BIG_INTEGER.id()),
+                        node(4, CommonProgramNodeIds.GAME_TIME),
+                        variableNode(5, CommonProgramNodeIds.VARIABLE_SET, "time",
+                                ProgramValueTypes.BIG_INTEGER.id()),
+                        node(6, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 3, "flow"),
+                        edge(2, "loop_index", 3, "value"),
+                        edge(3, "flow", 5, "flow"),
+                        edge(4, "time", 5, "value"),
+                        edge(5, "flow", 6, "flow")
+                )
+        );
+        var invocation = new ProgramInvocationContext(
+                java.util.UUID.randomUUID(),
+                2,
+                ProgramTriggers.Type.LOOP,
+                null,
+                41L,
+                null,
+                null,
+                null
+        );
+        var frame = new ProgramExecutionFrame(
+                new ProgramActionTransaction(), null, invocation, () -> 12_345L);
+        var variables = run(graph, frame).variables();
+
+        assertEquals(BigInteger.valueOf(41L), variables.get("index").value());
+        assertEquals(BigInteger.valueOf(12_345L), variables.get("time").value());
     }
 
     @Test
@@ -392,6 +529,72 @@ class CommonProgramNodesTest {
                 new ProgramWorldPosition(OVERWORLD, 2.0, 64.0, 0.0),
                 new ProgramWorldPosition(OVERWORLD, 10.0, 64.0, 0.0)
         ), variables.get("sorted").value());
+    }
+
+    @Test
+    void vectorConstructionScalingLengthAndComponentsCompose() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        floatNode(2, 3.0),
+                        floatNode(3, 4.0),
+                        floatNode(4, 0.0),
+                        node(5, CommonProgramNodeIds.VECTOR_CONSTRUCT),
+                        vec3OperationNode(6, "vector", "length"),
+                        variableNode(7, CommonProgramNodeIds.VARIABLE_SET, "length",
+                                ProgramValueTypes.FLOAT.id()),
+                        floatNode(8, 2.0),
+                        vec3OperationNode(9, "vector", "scale"),
+                        variableNode(10, CommonProgramNodeIds.VARIABLE_SET, "scaled",
+                                ProgramValueTypes.VECTOR.id()),
+                        node(11, CommonProgramNodeIds.VECTOR_COMPONENTS),
+                        variableNode(12, CommonProgramNodeIds.VARIABLE_SET, "scaled_x",
+                                ProgramValueTypes.FLOAT.id()),
+                        node(13, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 7, "flow"),
+                        edge(2, "value", 5, "x"),
+                        edge(3, "value", 5, "y"),
+                        edge(4, "value", 5, "z"),
+                        edge(5, "vector", 6, "value"),
+                        edge(6, "result", 7, "value"),
+                        edge(7, "flow", 10, "flow"),
+                        edge(5, "vector", 9, "value"),
+                        edge(8, "value", 9, "scalar"),
+                        edge(9, "result", 10, "value"),
+                        edge(10, "flow", 12, "flow"),
+                        edge(9, "result", 11, "value"),
+                        edge(11, "x", 12, "value"),
+                        edge(12, "flow", 13, "flow")
+                )
+        );
+
+        var variables = run(graph, null).variables();
+
+        assertEquals(5.0, (Double) variables.get("length").value(), 1.0E-9);
+        assertEquals(new ProgramVector(6.0, 8.0, 0.0), variables.get("scaled").value());
+        assertEquals(6.0, (Double) variables.get("scaled_x").value(), 1.0E-9);
+    }
+
+    @Test
+    void gameTimeQueryExposesTheExecutionTickAsABigInteger() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        node(2, CommonProgramNodeIds.GAME_TIME),
+                        variableNode(3, CommonProgramNodeIds.VARIABLE_SET, "time",
+                                ProgramValueTypes.BIG_INTEGER.id()),
+                        node(4, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 3, "flow"),
+                        edge(2, "time", 3, "value"),
+                        edge(3, "flow", 4, "flow")
+                )
+        );
+
+        assertEquals(BigInteger.ZERO, run(graph, null).variables().get("time").value());
     }
 
     @Test
@@ -901,6 +1104,40 @@ class CommonProgramNodesTest {
     }
 
     @Test
+    void foreachExposesOneBasedIterationIndex() {
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        worldPositionNode(2, OVERWORLD, 0.0, 64.0, 0.0),
+                        worldPositionNode(3, OVERWORLD, 1.0, 64.0, 0.0),
+                        worldPositionNode(4, OVERWORLD, 2.0, 64.0, 0.0),
+                        collectionBuilderNode(
+                                5,
+                                CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION.id("empty"),
+                                3
+                        ),
+                        node(6, CommonProgramNodeCatalog.CollectionDomain.WORLD_POSITION.id("foreach")),
+                        variableNode(7, CommonProgramNodeIds.VARIABLE_SET, "last_index",
+                                ProgramValueTypes.INTEGER.id()),
+                        node(8, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 6, "flow"),
+                        edge(2, "position", 5, "value_1"),
+                        edge(3, "position", 5, "value_2"),
+                        edge(4, "position", 5, "value_3"),
+                        edge(5, "values", 6, "values"),
+                        edge(6, "body", 7, "flow"),
+                        edge(6, "index", 7, "value"),
+                        edge(7, "flow", 6, "flow"),
+                        edge(6, "done", 8, "flow")
+                )
+        );
+
+        assertEquals(3, run(graph, null).variables().get("last_index").value());
+    }
+
+    @Test
     void raycastsAndEntityProjectionExposePositionLookAndMovement() {
         var graph = new ProgramGraph(
                 List.of(
@@ -925,6 +1162,14 @@ class CommonProgramNodesTest {
                         node(14, CommonProgramNodeIds.ENTITY_MOVEMENT_DIRECTION),
                         variableNode(15, CommonProgramNodeIds.VARIABLE_SET, "target_movement",
                                 ProgramValueTypes.DIRECTION.id()),
+                        node(17, CommonProgramNodeIds.ENTITY_MOTION),
+                        variableNode(18, CommonProgramNodeIds.VARIABLE_SET, "target_motion",
+                                ProgramValueTypes.VECTOR.id()),
+                        variableNode(19, CommonProgramNodeIds.VARIABLE_SET, "target_speed",
+                                ProgramValueTypes.FLOAT.id()),
+                        node(20, CommonProgramNodeIds.ENTITY_HEIGHT),
+                        variableNode(21, CommonProgramNodeIds.VARIABLE_SET, "target_height",
+                                ProgramValueTypes.FLOAT.id()),
                         node(16, CommonProgramNodeIds.STOP)
                 ),
                 List.of(
@@ -947,12 +1192,21 @@ class CommonProgramNodesTest {
                         edge(13, "flow", 15, "flow"),
                         edge(7, "value", 14, "entity"),
                         edge(14, "direction", 15, "value"),
-                        edge(15, "flow", 16, "flow")
+                        edge(15, "flow", 18, "flow"),
+                        edge(7, "value", 17, "entity"),
+                        edge(17, "vector", 18, "value"),
+                        edge(18, "flow", 19, "flow"),
+                        edge(17, "speed", 19, "value"),
+                        edge(19, "flow", 21, "flow"),
+                        edge(7, "value", 20, "entity"),
+                        edge(20, "height", 21, "value"),
+                        edge(21, "flow", 16, "flow")
                 )
         );
         var targetPosition = new ProgramWorldPosition(OVERWORLD, 2.0, 64.0, 0.0);
         var targetDirection = new ProgramDirection(0.0, -1.0, 0.0);
         var targetMovement = new ProgramDirection(1.0, 1.0, 0.0);
+        var targetMotion = new ProgramVector(0.25, -0.5, 0.75);
         var targetBlock = new ProgramBlockPosition(OVERWORLD, 2, 63, 0);
         var resolver = new ProgramTargetResolver() {
             @Override
@@ -974,6 +1228,20 @@ class CommonProgramNodesTest {
                 return entityReference.equals("target")
                         ? Optional.of(targetMovement)
                         : Optional.empty();
+            }
+
+            @Override
+            public Optional<ProgramVector> motionOf(Object entityReference) {
+                return entityReference.equals("target")
+                        ? Optional.of(targetMotion)
+                        : Optional.empty();
+            }
+
+            @Override
+            public OptionalDouble heightOf(Object entityReference) {
+                return entityReference.equals("target")
+                        ? OptionalDouble.of(1.8)
+                        : OptionalDouble.empty();
             }
 
             @Override
@@ -1006,6 +1274,10 @@ class CommonProgramNodesTest {
         assertEquals(targetPosition, session.variables().get("target_position").value());
         assertEquals(targetDirection, session.variables().get("target_direction").value());
         assertEquals(targetMovement, session.variables().get("target_movement").value());
+        assertEquals(targetMotion, session.variables().get("target_motion").value());
+        assertEquals(targetMotion.length(),
+                (Double) session.variables().get("target_speed").value(), 1.0E-9);
+        assertEquals(1.8, (Double) session.variables().get("target_height").value(), 1.0E-9);
         assertEquals(targetBlock, session.variables().get("target_block").value());
     }
 
@@ -1027,6 +1299,12 @@ class CommonProgramNodesTest {
 
     private static ProgramGraph.Node node(int id, Identifier type) {
         return new ProgramGraph.Node(id, type, 1, new JsonObject());
+    }
+
+    private static JsonObject configuration(String name, boolean value) {
+        var configuration = new JsonObject();
+        configuration.addProperty(name, value);
+        return configuration;
     }
 
     private static ProgramGraph.Node integerNode(int id, int value) {

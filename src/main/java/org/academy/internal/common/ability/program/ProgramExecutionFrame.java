@@ -4,6 +4,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalLong;
+import java.util.function.LongSupplier;
 
 /**
  * Per-invocation server execution frame shared by node executors.
@@ -15,13 +17,26 @@ import java.util.Optional;
 public final class ProgramExecutionFrame {
     private final ProgramActionTransaction transaction;
     private final @Nullable Object environment;
+    private final @Nullable ProgramInvocationContext invocation;
+    private final @Nullable LongSupplier gameTime;
 
     public ProgramExecutionFrame(
             ProgramActionTransaction transaction,
             @Nullable Object environment
     ) {
+        this(transaction, environment, null, null);
+    }
+
+    public ProgramExecutionFrame(
+            ProgramActionTransaction transaction,
+            @Nullable Object environment,
+            @Nullable ProgramInvocationContext invocation,
+            @Nullable LongSupplier gameTime
+    ) {
         this.transaction = Objects.requireNonNull(transaction, "transaction");
         this.environment = environment;
+        this.invocation = invocation;
+        this.gameTime = gameTime;
     }
 
     public ProgramActionTransaction transaction() {
@@ -39,5 +54,15 @@ public final class ProgramExecutionFrame {
         return type.isInstance(environment)
                 ? Optional.of(type.cast(environment))
                 : Optional.empty();
+    }
+
+    public Optional<ProgramInvocationContext> invocation() {
+        return Optional.ofNullable(invocation);
+    }
+
+    public OptionalLong gameTime() {
+        return gameTime == null
+                ? OptionalLong.empty()
+                : OptionalLong.of(gameTime.getAsLong());
     }
 }

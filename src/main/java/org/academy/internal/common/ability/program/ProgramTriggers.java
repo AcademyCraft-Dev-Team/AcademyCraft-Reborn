@@ -24,7 +24,39 @@ public final class ProgramTriggers {
         var entry = program.nodes().get(program.entryNodeId());
         if (entry == null) return false;
         var type = type(entry.typeId());
-        return type == null || type == Type.LOOP || type == Type.MOVEMENT;
+        return type == null || type == Type.MOVEMENT;
+    }
+
+    /**
+     * Toggles the saved enabled flag of a periodic-trigger program.
+     */
+    public static java.util.Optional<LoopToggle> toggleLoop(AbilityProgram program) {
+        var entry = triggerEntry(program);
+        if (entry == null || type(entry.type()) != Type.LOOP) return java.util.Optional.empty();
+        var decoded = CommonProgramNodeCatalog.LoopTriggerConfiguration.CODEC
+                .parse(JsonOps.INSTANCE, entry.configuration())
+                .result()
+                .orElse(null);
+        if (decoded == null) return java.util.Optional.empty();
+        var configuration = entry.configuration().getAsJsonObject().deepCopy();
+        configuration.addProperty("enabled", !decoded.enabled());
+        var nodes = program.graph().nodes().stream()
+                .map(node -> node.id() == entry.id()
+                        ? new ProgramGraph.Node(
+                        node.id(), node.type(), node.schemaVersion(), configuration)
+                        : node)
+                .toList();
+        return java.util.Optional.of(new LoopToggle(
+                new AbilityProgram(
+                        program.schemaVersion(),
+                        program.id(),
+                        program.name(),
+                        program.category(),
+                        new ProgramGraph(nodes, program.graph().edges()),
+                        program.editorLayout()
+                ),
+                !decoded.enabled()
+        ));
     }
 
     public static boolean matches(
@@ -133,6 +165,9 @@ public final class ProgramTriggers {
         MOVEMENT,
         HURT,
         HEALTH
+    }
+
+    public record LoopToggle(AbilityProgram program, boolean enabled) {
     }
 
     private record HealthLatchKey(UUID playerId, Identifier category, int slot) {

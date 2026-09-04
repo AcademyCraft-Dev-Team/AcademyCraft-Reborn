@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.program;
 
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,8 @@ class ProgramDebugFormatterTest {
     void templatesFormatDirectionsPositionsAndListsDeterministically() {
         assertEquals("direction=(1, 0, 0)", ProgramDebugFormatter.render(
                 "direction={value}", new ProgramDirection(1.0, 0.0, 0.0)));
+        assertEquals("vector=(3, 4, 0)", ProgramDebugFormatter.render(
+                "vector={value}", new ProgramVector(3.0, 4.0, 0.0)));
         assertEquals("minecraft:overworld @ (1.25, 64, -2)",
                 ProgramDebugFormatter.formatValue(new ProgramWorldPosition(
                         Identifier.parse("minecraft:overworld"), 1.25, 64.0, -2.0)));

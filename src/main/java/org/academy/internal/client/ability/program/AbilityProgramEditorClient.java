@@ -355,6 +355,12 @@ public final class AbilityProgramEditorClient {
             notify("message.academy.program.editor.migrated", ChatFormatting.WHITE);
         } else if (type == AbilityProgramManager.FeedbackType.COMPLETED) {
             notify("message.academy.program.execution.completed", ChatFormatting.WHITE, slot + 1);
+        } else if (type == AbilityProgramManager.FeedbackType.DEFERRED) {
+            notify("message.academy.program.execution.deferred", ChatFormatting.GRAY, slot + 1);
+        } else if (type == AbilityProgramManager.FeedbackType.LOOP_ENABLED) {
+            notify("message.academy.program.execution.loop_enabled", ChatFormatting.WHITE, slot + 1);
+        } else if (type == AbilityProgramManager.FeedbackType.LOOP_DISABLED) {
+            notify("message.academy.program.execution.loop_disabled", ChatFormatting.GRAY, slot + 1);
         } else {
             var key = switch (code) {
                 case INVALID_CATEGORY -> "message.academy.program.editor.invalid_category";

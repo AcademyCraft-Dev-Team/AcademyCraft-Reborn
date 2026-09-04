@@ -24,6 +24,7 @@ public final class ProgramVm {
         private final ArrayDeque<Integer> returnNodes = new ArrayDeque<>();
         private int currentNodeId;
         private long wakeAt;
+        private boolean completeAfterWake;
         private boolean completed;
         private boolean failed;
 
@@ -60,6 +61,7 @@ public final class ProgramVm {
                         ProgramVmDiagnostic.NONE
                 );
             }
+            if (completeAfterWake) return complete();
 
             var budget = new Fuel(fuel);
             var context = new ProgramVmContext(gameTime, variables, executorState, attachment);
@@ -110,6 +112,30 @@ public final class ProgramVm {
                         case STOP -> {
                             return complete();
                         }
+                        case LOOP_CONTINUE -> {
+                            var loop = nearestStructuredLoop();
+                            if (loop == null) {
+                                return fail(ProgramVmDiagnostic.INVALID_FLOW_OUTPUT);
+                            }
+                            returnNodes.pop();
+                            currentNodeId = loop.id();
+                        }
+                        case LOOP_BREAK -> {
+                            var loop = nearestStructuredLoop();
+                            if (loop == null) {
+                                return fail(ProgramVmDiagnostic.INVALID_FLOW_OUTPUT);
+                            }
+                            returnNodes.pop();
+                            executorState.remove(ProgramVmContext.structuredLoopStateKey(loop.id()));
+                            var target = program.flowTarget(loop.id(), "done");
+                            if (target != null) {
+                                currentNodeId = target;
+                            } else if (returnNodes.isEmpty()) {
+                                return complete();
+                            } else {
+                                currentNodeId = returnNodes.pop();
+                            }
+                        }
                         case CALL -> {
                             var target = program.flowTarget(node.id(), step.flowOutput());
                             if (target == null) {
@@ -121,14 +147,22 @@ public final class ProgramVm {
                         }
                         case CONTINUE, YIELD -> {
                             var target = program.flowTarget(node.id(), step.flowOutput());
+                            var terminalYield = false;
                             if (target == null) {
-                                if (returnNodes.isEmpty()) return complete();
-                                currentNodeId = returnNodes.pop();
+                                if (returnNodes.isEmpty()) {
+                                    if (step.directive() == ProgramNodeStep.Directive.CONTINUE) {
+                                        return complete();
+                                    }
+                                    terminalYield = true;
+                                } else {
+                                    currentNodeId = returnNodes.pop();
+                                }
                             } else {
                                 currentNodeId = target;
                             }
                             if (step.directive() == ProgramNodeStep.Directive.YIELD) {
                                 wakeAt = gameTime + step.delayTicks();
+                                completeAfterWake = terminalYield;
                                 return new ProgramVmResult(
                                         ProgramVmResult.Status.SUSPENDED,
                                         currentNodeId,
@@ -149,6 +183,18 @@ public final class ProgramVm {
                     return fail(ProgramVmDiagnostic.EXECUTOR_ERROR);
                 }
             }
+        }
+
+        private CompiledProgram.CompiledNode nearestStructuredLoop() {
+            if (returnNodes.isEmpty()) return null;
+            var caller = program.nodes().get(returnNodes.peek());
+            if (caller == null) return null;
+            var body = caller.schema().output("body").orElse(null);
+            var done = caller.schema().output("done").orElse(null);
+            return body != null && done != null
+                    && body.type().equals(ProgramValueTypes.FLOW)
+                    && done.type().equals(ProgramValueTypes.FLOW)
+                    ? caller : null;
         }
 
         public Map<String, ProgramValue<?>> variables() {

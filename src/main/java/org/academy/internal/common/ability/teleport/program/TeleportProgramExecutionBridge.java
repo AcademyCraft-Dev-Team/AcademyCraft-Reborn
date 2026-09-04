@@ -37,20 +37,35 @@ public final class TeleportProgramExecutionBridge {
             ServerPlayer player,
             float costMultiplier
     ) {
+        return executeServer(program, player, costMultiplier, null);
+    }
+
+    public static ServerExecutionResult executeServer(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier,
+            ProgramInvocationContext invocation
+    ) {
         Objects.requireNonNull(player, "player");
         var transaction = new ProgramActionTransaction();
-        var vmResult = execute(
+        var execution = ServerProgramExecution.execute(
                 program,
-                player.level().getGameTime(),
-                new ServerTeleportProgramRuntime(player, costMultiplier),
-                transaction
+                player,
+                TeleportProgramNodeCatalog.TELEPORT,
+                MAX_FUEL,
+                AbilityProgramDefinitions.require(
+                        TeleportProgramNodeCatalog.TELEPORT).executors(),
+                new ProgramExecutionFrame(
+                        transaction,
+                        new ServerTeleportProgramRuntime(player, costMultiplier),
+                        invocation,
+                        player.level()::getGameTime
+                ),
+                transaction,
+                invocation
         );
-        if (vmResult.status() != ProgramVmResult.Status.COMPLETED) {
-            return new ServerExecutionResult(vmResult, Optional.empty());
-        }
-        var commit = transaction.commit();
-        if (commit.successful()) transaction.release();
-        return new ServerExecutionResult(vmResult, Optional.of(commit));
+        return new ServerExecutionResult(
+                execution.vmResult(), execution.transactionResult());
     }
 
     public static ProgramVmResult execute(
@@ -58,6 +73,17 @@ public final class TeleportProgramExecutionBridge {
             long gameTime,
             TeleportProgramRuntime runtime,
             ProgramActionTransaction transaction
+    ) {
+        return execute(program, gameTime, runtime, transaction, null, null);
+    }
+
+    private static ProgramVmResult execute(
+            CompiledProgram program,
+            long gameTime,
+            TeleportProgramRuntime runtime,
+            ProgramActionTransaction transaction,
+            ProgramInvocationContext invocation,
+            java.util.function.LongSupplier worldGameTime
     ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");
@@ -67,7 +93,7 @@ public final class TeleportProgramExecutionBridge {
                 MAX_FUEL,
                 AbilityProgramDefinitions.require(
                         TeleportProgramNodeCatalog.TELEPORT).executors(),
-                new ProgramExecutionFrame(transaction, runtime)
+                new ProgramExecutionFrame(transaction, runtime, invocation, worldGameTime)
         );
     }
 
@@ -185,7 +211,9 @@ public final class TeleportProgramExecutionBridge {
             Optional<ProgramActionTransaction.Result> transactionResult
     ) {
         public boolean successful() {
-            return vmResult.status() == ProgramVmResult.Status.COMPLETED
+            return vmResult.status() == ProgramVmResult.Status.SUSPENDED
+                    || vmResult.status() == ProgramVmResult.Status.FUEL_EXHAUSTED
+                    || vmResult.status() == ProgramVmResult.Status.COMPLETED
                     && transactionResult.map(ProgramActionTransaction.Result::successful)
                     .orElse(false);
         }
