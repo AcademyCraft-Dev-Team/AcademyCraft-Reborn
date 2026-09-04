@@ -14,6 +14,7 @@ import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProj
 import org.academy.internal.common.world.entity.projectile.DarkmatterSpearProjectile;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.*;
+import org.academy.internal.common.world.entity.structure.BlockStructureEntity;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 
 import static org.academy.AcademyCraft.MODID;
@@ -110,6 +111,15 @@ public class EntityTypes {
     public static final DeferredHolder<EntityType<?>, EntityType<CleaningRobot>> CLEANING_ROBOT =
             ENTITY_TYPES.registerEntityType(
                     "cleaning_robot", CleaningRobot::new, MobCategory.MISC
+            );
+    public static final DeferredHolder<EntityType<?>, EntityType<BlockStructureEntity>> BLOCK_STRUCTURE =
+            ENTITY_TYPES.registerEntityType(
+                    "block_structure",
+                    BlockStructureEntity::new,
+                    MobCategory.MISC,
+                    builder -> builder.sized(1.0f, 1.0f)
+                            .clientTrackingRange(160)
+                            .updateInterval(1)
             );
 
     private EntityTypes() {
