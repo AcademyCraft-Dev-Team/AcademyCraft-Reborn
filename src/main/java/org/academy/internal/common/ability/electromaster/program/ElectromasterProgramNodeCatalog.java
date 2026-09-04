@@ -37,9 +37,16 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
         put(result, ElectromasterProgramNodeIds.CHARGEABLE_BLOCKS, unitType(
                 chargeableBlocksSchema(), ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY,
                 categoryScope()));
+        put(result, ElectromasterProgramNodeIds.MAGNETIC_ENTITIES, unitType(
+                spatialEntityQuerySchema(), ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY,
+                categoryScope()));
         put(result, ElectromasterProgramNodeIds.ENERGY_DETECTION, dynamicType(
                 EnergyDetectionConfiguration.CODEC,
                 configuration -> energyDetectionSchema(configuration.targetType()),
+                ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY, categoryScope()));
+        put(result, ElectromasterProgramNodeIds.ENERGY_LEVEL, dynamicType(
+                EnergyLevelConfiguration.CODEC,
+                configuration -> energyLevelSchema(configuration.targetType()),
                 ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY, categoryScope()));
         put(result, ElectromasterProgramNodeIds.REDSTONE_DETECTION, dynamicType(
                 RedstoneDetectionConfiguration.CODEC,
@@ -47,6 +54,7 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                 ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY, categoryScope()));
         put(result, ElectromasterProgramNodeIds.ARC_DISCHARGE, powerType(
                 arcSchema(), ElectromasterProgramCapabilities.ARC_DISCHARGE));
+        put(result, ElectromasterProgramNodeIds.CHAIN_DISCHARGE, chainType());
         put(result, ElectromasterProgramNodeIds.MAGNETIC_MOVE, dynamicType(
                 MagneticConfiguration.CODEC,
                 ElectromasterProgramNodeCatalog::magneticMoveSchema,
@@ -98,11 +106,42 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
         );
     }
 
+    private static ProgramNodeSchema spatialEntityQuerySchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("center", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.requiredInput("radius", ProgramValueTypes.FLOAT)
+                ),
+                List.of(ProgramPortDefinition.output("entities", ProgramValueTypes.ENTITY_SET))
+        );
+    }
+
     private static ProgramNodeSchema energyDetectionSchema(EnergyTargetType targetType) {
         return new ProgramNodeSchema(
                 List.of(ProgramPortDefinition.requiredInput(
                         targetType.port(), targetType.valueType())),
                 List.of(ProgramPortDefinition.output("result", ProgramValueTypes.BOOLEAN))
+        );
+    }
+
+    private static ProgramNodeSchema energyLevelSchema(EnergyTargetType targetType) {
+        return new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput(
+                        targetType.port(), targetType.valueType())),
+                List.of(
+                        ProgramPortDefinition.output("percent", ProgramValueTypes.FLOAT),
+                        ProgramPortDefinition.output("available", ProgramValueTypes.BOOLEAN)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema chainDischargeSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput("entities", ProgramValueTypes.ENTITY_SET)
+                ),
+                List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
     }
 
@@ -157,6 +196,16 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                 ProgramNodeRole.ACTION,
                 ProgramNodePurity.ACTION,
                 capabilityScope(capability)
+        );
+    }
+
+    private static ProgramNodeType<ChainConfiguration> chainType() {
+        return new FixedNodeType<>(
+                ChainConfiguration.CODEC,
+                chainDischargeSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(ElectromasterProgramCapabilities.CHAIN_DISCHARGE)
         );
     }
 
@@ -217,6 +266,23 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                 ).apply(instance, EnergyDetectionConfiguration::new));
     }
 
+    public record EnergyLevelConfiguration(EnergyTargetType targetType) {
+        public static final Codec<EnergyLevelConfiguration> CODEC = EnergyTargetType.CODEC
+                .optionalFieldOf("target_type", EnergyTargetType.ENTITY)
+                .xmap(EnergyLevelConfiguration::new, EnergyLevelConfiguration::targetType)
+                .codec();
+    }
+
+    public record ChainConfiguration(float power, int maximumJumps) {
+        public static final Codec<ChainConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.floatRange(0.0f, 2.0f).fieldOf("power")
+                                .forGetter(ChainConfiguration::power),
+                        Codec.intRange(1, 8).optionalFieldOf("maximum_jumps", 4)
+                                .forGetter(ChainConfiguration::maximumJumps)
+                ).apply(instance, ChainConfiguration::new));
+    }
+
     public record RedstoneDetectionConfiguration(ComparisonMode mode, int level) {
         public static final Codec<RedstoneDetectionConfiguration> CODEC =
                 RecordCodecBuilder.create(instance -> instance.group(
@@ -238,7 +304,8 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
     public record MagneticConfiguration(
             float power,
             EnergyTargetType targetType,
-            MagneticMode mode
+            MagneticMode mode,
+            boolean forceMagnetize
     ) {
         public static final Codec<MagneticConfiguration> CODEC =
                 RecordCodecBuilder.create(instance -> instance.group(
@@ -248,7 +315,9 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                                         "target_type", EnergyTargetType.ENTITY)
                                 .forGetter(MagneticConfiguration::targetType),
                         MagneticMode.CODEC.optionalFieldOf("mode", MagneticMode.PULL)
-                                .forGetter(MagneticConfiguration::mode)
+                                .forGetter(MagneticConfiguration::mode),
+                        Codec.BOOL.optionalFieldOf("force_magnetize", false)
+                                .forGetter(MagneticConfiguration::forceMagnetize)
                 ).apply(instance, MagneticConfiguration::new));
     }
 

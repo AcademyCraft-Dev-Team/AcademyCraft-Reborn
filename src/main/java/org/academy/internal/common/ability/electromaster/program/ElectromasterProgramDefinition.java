@@ -39,9 +39,14 @@ public final class ElectromasterProgramDefinition {
                     || id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE)) {
                 configuration.addProperty("power", 1.0f);
             }
+            if (id.equals(ElectromasterProgramNodeIds.CHAIN_DISCHARGE)) {
+                configuration.addProperty("power", 1.0f);
+                configuration.addProperty("maximum_jumps", 4);
+            }
             if (id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE)) {
                 configuration.addProperty("target_type", "entity");
                 configuration.addProperty("mode", "pull");
+                configuration.addProperty("force_magnetize", false);
             } else if (id.equals(ElectromasterProgramNodeIds.ENERGY_DETECTION)) {
                 configuration.addProperty("target_type", "entity");
                 configuration.addProperty("mode", "below");
@@ -50,6 +55,8 @@ public final class ElectromasterProgramDefinition {
                 configuration.addProperty("mode", "below");
                 configuration.addProperty("level", 8);
             } else if (id.equals(ElectromasterProgramNodeIds.CURRENT_RECHARGE)) {
+                configuration.addProperty("target_type", "entity");
+            } else if (id.equals(ElectromasterProgramNodeIds.ENERGY_LEVEL)) {
                 configuration.addProperty("target_type", "entity");
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);

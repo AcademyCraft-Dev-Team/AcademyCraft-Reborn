@@ -6,6 +6,7 @@ import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.program.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,20 +38,35 @@ public final class ElectromasterProgramExecutionBridge {
             ServerPlayer player,
             float costMultiplier
     ) {
+        return executeServer(program, player, costMultiplier, null);
+    }
+
+    public static ServerExecutionResult executeServer(
+            CompiledProgram program,
+            ServerPlayer player,
+            float costMultiplier,
+            ProgramInvocationContext invocation
+    ) {
         Objects.requireNonNull(player, "player");
         var transaction = new ProgramActionTransaction();
-        var vmResult = execute(
+        var execution = ServerProgramExecution.execute(
                 program,
-                player.level().getGameTime(),
-                new ServerElectromasterProgramRuntime(player, costMultiplier),
-                transaction
+                player,
+                ElectromasterProgramNodeCatalog.ELECTROMASTER,
+                MAX_FUEL,
+                AbilityProgramDefinitions.require(
+                        ElectromasterProgramNodeCatalog.ELECTROMASTER).executors(),
+                new ProgramExecutionFrame(
+                        transaction,
+                        new ServerElectromasterProgramRuntime(player, costMultiplier),
+                        invocation,
+                        player.level()::getGameTime
+                ),
+                transaction,
+                invocation
         );
-        if (vmResult.status() != ProgramVmResult.Status.COMPLETED) {
-            return new ServerExecutionResult(vmResult, Optional.empty());
-        }
-        var commit = transaction.commit();
-        if (commit.successful()) transaction.release();
-        return new ServerExecutionResult(vmResult, Optional.of(commit));
+        return new ServerExecutionResult(
+                execution.vmResult(), execution.transactionResult());
     }
 
     public static ProgramVmResult execute(
@@ -58,6 +74,17 @@ public final class ElectromasterProgramExecutionBridge {
             long gameTime,
             ElectromasterProgramRuntime runtime,
             ProgramActionTransaction transaction
+    ) {
+        return execute(program, gameTime, runtime, transaction, null, null);
+    }
+
+    private static ProgramVmResult execute(
+            CompiledProgram program,
+            long gameTime,
+            ElectromasterProgramRuntime runtime,
+            ProgramActionTransaction transaction,
+            ProgramInvocationContext invocation,
+            java.util.function.LongSupplier worldGameTime
     ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");
@@ -67,7 +94,7 @@ public final class ElectromasterProgramExecutionBridge {
                 MAX_FUEL,
                 AbilityProgramDefinitions.require(
                         ElectromasterProgramNodeCatalog.ELECTROMASTER).executors(),
-                new ProgramExecutionFrame(transaction, runtime)
+                new ProgramExecutionFrame(transaction, runtime, invocation, worldGameTime)
         );
     }
 
@@ -87,6 +114,13 @@ public final class ElectromasterProgramExecutionBridge {
                         runtime(context).chargeableBlocksAround(
                                 worldPosition(inputs, "center"),
                                 floatValue(inputs, "radius"))));
+        put(result, ElectromasterProgramNodeIds.MAGNETIC_ENTITIES,
+                (context, _, inputs) -> data(
+                        "entities",
+                        ProgramValueTypes.ENTITY_SET,
+                        runtime(context).magneticEntitiesAround(
+                                worldPosition(inputs, "center"),
+                                floatValue(inputs, "radius"))));
         put(result, ElectromasterProgramNodeIds.ENERGY_DETECTION,
                 (ProgramVmContext context,
                  ElectromasterProgramNodeCatalog.EnergyDetectionConfiguration configuration,
@@ -101,6 +135,21 @@ public final class ElectromasterProgramExecutionBridge {
                         case BELOW -> fraction.getAsDouble() < threshold;
                     };
                     return data("result", ProgramValueTypes.BOOLEAN, matches);
+                });
+        put(result, ElectromasterProgramNodeIds.ENERGY_LEVEL,
+                (ProgramVmContext context,
+                 ElectromasterProgramNodeCatalog.EnergyLevelConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var fraction = configuration.targetType()
+                            == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY
+                            ? runtime(context).entityEnergyFraction(entity(inputs, "entity"))
+                            : runtime(context).blockEnergyFraction(blockPosition(inputs, "block"));
+                    return ProgramNodeStep.data(Map.of(
+                            "percent", new ProgramValue<>(ProgramValueTypes.FLOAT,
+                                    fraction.orElse(0.0) * 100.0),
+                            "available", new ProgramValue<>(ProgramValueTypes.BOOLEAN,
+                                    fraction.isPresent())
+                    ));
                 });
         put(result, ElectromasterProgramNodeIds.REDSTONE_DETECTION,
                 (ProgramVmContext context,
@@ -121,6 +170,21 @@ public final class ElectromasterProgramExecutionBridge {
                             entity(inputs, "entity"), configuration.power()));
                     return ProgramNodeStep.next("flow");
                 });
+        put(result, ElectromasterProgramNodeIds.CHAIN_DISCHARGE,
+                (ProgramVmContext context,
+                 ElectromasterProgramNodeCatalog.ChainConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var runtime = runtime(context);
+                    var targets = entities(inputs, "entities");
+                    for (var index = 0;
+                         index < Math.min(targets.size(), configuration.maximumJumps());
+                         index++) {
+                        var attenuation = Math.max(0.35f, 1.0f - index * 0.15f);
+                        stage(context, runtime.arcDischarge(
+                                targets.get(index), configuration.power() * attenuation));
+                    }
+                    return ProgramNodeStep.next("flow");
+                });
         put(result, ElectromasterProgramNodeIds.MAGNETIC_MOVE,
                 (ProgramVmContext context,
                  ElectromasterProgramNodeCatalog.MagneticConfiguration configuration,
@@ -133,7 +197,8 @@ public final class ElectromasterProgramExecutionBridge {
                             worldPosition(inputs, "destination"),
                             configuration.power(),
                             configuration.targetType(),
-                            configuration.mode()));
+                            configuration.mode(),
+                            configuration.forceMagnetize()));
                     return ProgramNodeStep.next("flow");
                 });
         put(result, ElectromasterProgramNodeIds.CURRENT_RECHARGE,
@@ -169,6 +234,14 @@ public final class ElectromasterProgramExecutionBridge {
 
     private static Object entity(ProgramInputView inputs, String port) {
         return inputs.requireCompatible(port, ProgramValueTypes.ENTITY_REFERENCE).value();
+    }
+
+    private static List<?> entities(ProgramInputView inputs, String port) {
+        var value = inputs.requireCompatible(port, ProgramValueTypes.ENTITY_SET).value();
+        if (!(value instanceof List<?> list)) {
+            throw new IllegalArgumentException("Program entity set input is invalid");
+        }
+        return list;
     }
 
     private static ProgramWorldPosition worldPosition(ProgramInputView inputs, String port) {
@@ -215,7 +288,9 @@ public final class ElectromasterProgramExecutionBridge {
             Optional<ProgramActionTransaction.Result> transactionResult
     ) {
         public boolean successful() {
-            return vmResult.status() == ProgramVmResult.Status.COMPLETED
+            return vmResult.status() == ProgramVmResult.Status.SUSPENDED
+                    || vmResult.status() == ProgramVmResult.Status.FUEL_EXHAUSTED
+                    || vmResult.status() == ProgramVmResult.Status.COMPLETED
                     && transactionResult.map(ProgramActionTransaction.Result::successful)
                     .orElse(false);
         }

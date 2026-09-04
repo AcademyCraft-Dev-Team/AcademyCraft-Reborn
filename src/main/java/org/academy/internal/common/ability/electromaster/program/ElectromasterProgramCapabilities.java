@@ -10,6 +10,7 @@ import org.academy.internal.common.ability.SkillNames;
 public final class ElectromasterProgramCapabilities {
     public static final Identifier ARC_DISCHARGE =
             AcademyCraft.academy(SkillNames.ARC_GENERATE);
+    public static final Identifier CHAIN_DISCHARGE = ARC_DISCHARGE;
     public static final Identifier MAGNETIC_MOVE =
             AcademyCraft.academy(SkillNames.MAGNET_MANIPULATION);
     public static final Identifier CURRENT_RECHARGE =
