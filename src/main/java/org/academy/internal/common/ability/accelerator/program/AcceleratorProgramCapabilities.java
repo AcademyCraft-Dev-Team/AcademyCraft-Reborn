@@ -10,6 +10,7 @@ import org.academy.internal.common.ability.SkillNames;
 public final class AcceleratorProgramCapabilities {
     public static final Identifier APPLY_VECTOR =
             AcademyCraft.academy(SkillNames.VECTOR_ACCEL);
+    public static final Identifier REWRITE_MOTION = APPLY_VECTOR;
     public static final Identifier KINETIC_IMPACT =
             AcademyCraft.academy(SkillNames.KINETIC_ENERGY_APPLIED);
     public static final Identifier KINETIC_SHOCKWAVE = KINETIC_IMPACT;

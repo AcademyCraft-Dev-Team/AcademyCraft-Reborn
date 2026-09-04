@@ -10,7 +10,10 @@ public final class AcceleratorProgramNodeIds {
     public static final Identifier CASTER = id("target/caster");
     public static final Identifier LOOK_TARGET = id("target/look_target");
     public static final Identifier INCOMING_PROJECTILES = id("target/incoming_projectiles");
+    public static final Identifier OBSERVATION_INVERSE = id("logic/observation_inverse");
+    public static final Identifier VECTOR_REFLECTION = id("logic/vector_reflection");
     public static final Identifier APPLY_VECTOR = id("action/apply_vector");
+    public static final Identifier REWRITE_MOTION = id("action/rewrite_motion");
     public static final Identifier KINETIC_IMPACT = id("action/kinetic_impact");
     public static final Identifier KINETIC_SHOCKWAVE = id("action/kinetic_shockwave");
     public static final Identifier REDIRECT_PROJECTILE = id("action/redirect_projectile");

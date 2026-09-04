@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.accelerator.program;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 
@@ -27,6 +28,12 @@ public interface AcceleratorProgramRuntime extends ProgramTargetResolver {
             Object entity,
             ProgramDirection direction,
             AcceleratorProgramStrength strength
+    );
+
+    ProgramActionTransaction.ProgramAction rewriteMotion(
+            Object entity,
+            ProgramVector motion,
+            float power
     );
 
     ProgramActionTransaction.ProgramAction kineticImpact(

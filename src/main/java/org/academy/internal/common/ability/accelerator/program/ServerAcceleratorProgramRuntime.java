@@ -18,6 +18,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
@@ -133,6 +134,52 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
                 charge(Skills.VECTOR_ACCEL.get(), vectorCost(strength));
                 var previous = target.getDeltaMovement();
                 setVelocity(target, previous.add(impulse));
+                return () -> {
+                    if (sameUsableLevel(target)) setVelocity(target, previous);
+                };
+            }
+        };
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction rewriteMotion(
+            Object entityReference,
+            ProgramVector motion,
+            float power
+    ) {
+        var requested = new Vec3(motion.x(), motion.y(), motion.z());
+        var maximumSpeed = ProgramPowerScale.interpolate(power, 0.4, 1.2, 2.4);
+        return new ProgramActionTransaction.ProgramAction() {
+            private Entity target;
+            private Vec3 boundedMotion;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.VECTOR_ACCEL.get());
+                target = requireMovableEntity(entityReference);
+                requireEntityInRange(target, MAX_ACTION_RANGE);
+                requireFriendlyMovement(target);
+                if (!Double.isFinite(requested.x)
+                        || !Double.isFinite(requested.y)
+                        || !Double.isFinite(requested.z)) {
+                    throw new IllegalArgumentException("Requested motion is invalid");
+                }
+                boundedMotion = requested.lengthSqr() > maximumSpeed * maximumSpeed
+                        ? requested.normalize().scale(maximumSpeed)
+                        : requested;
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                validate();
+                if (!EntityMotionGuard.canApplyMotionFrom(player, target)) {
+                    throw new IllegalStateException("Target rejected forced movement");
+                }
+                var previous = target.getDeltaMovement();
+                var delta = boundedMotion.subtract(previous).length();
+                charge(Skills.VECTOR_ACCEL.get(), ProgramPowerScale.cost(
+                        8.0f + (float) delta * 4.0f, power));
+                setVelocity(target, boundedMotion);
                 return () -> {
                     if (sameUsableLevel(target)) setVelocity(target, previous);
                 };
