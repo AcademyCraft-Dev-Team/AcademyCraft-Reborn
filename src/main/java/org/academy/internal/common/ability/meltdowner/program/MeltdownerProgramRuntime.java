@@ -22,7 +22,8 @@ public interface MeltdownerProgramRuntime extends ProgramTargetResolver {
             @Nullable ProgramDirection direction,
             @Nullable ProgramWorldPosition target,
             float power,
-            boolean destroyBlocks
+            boolean destroyBlocks,
+            boolean destroyProjectiles
     );
 
     ProgramActionTransaction.ProgramAction fireMiningBeam(

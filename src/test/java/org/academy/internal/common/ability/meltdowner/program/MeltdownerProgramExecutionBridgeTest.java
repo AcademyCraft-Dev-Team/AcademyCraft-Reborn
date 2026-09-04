@@ -73,10 +73,13 @@ class MeltdownerProgramExecutionBridgeTest {
 
     @Test
     void openElectronBeamRootStagesAndCommitsTypedDirection() {
+        var beam = new JsonObject();
+        beam.addProperty("power", 2);
+        beam.addProperty("destroy_projectiles", true);
         var graph = new ProgramGraph(
                 List.of(
                         directionNode(1, 0.0, 0.5, 1.0),
-                        powerNode(2, MeltdownerProgramNodeIds.ELECTRON_BEAM, 2)
+                        node(2, MeltdownerProgramNodeIds.ELECTRON_BEAM, beam)
                 ),
                 List.of(edge(1, "direction", 2, "direction"))
         );
@@ -94,7 +97,8 @@ class MeltdownerProgramExecutionBridgeTest {
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
         assertEquals(1, transaction.size());
         assertTrue(transaction.commit().successful());
-        assertEquals(List.of("electron:0.0,0.4472135954999579,0.8944271909999159:2.0"),
+        assertEquals(List.of(
+                        "electron:0.0,0.4472135954999579,0.8944271909999159:2.0:true"),
                 runtime.applied);
         transaction.release();
     }
@@ -122,6 +126,40 @@ class MeltdownerProgramExecutionBridgeTest {
         assertTrue(transaction.commit().successful());
         assertEquals(List.of("mining:minecraft:overworld:8,70,3:0.0"),
                 runtime.applied);
+        transaction.release();
+    }
+
+    @Test
+    void electronFanStagesBoundedBeamPattern() {
+        var fan = new JsonObject();
+        fan.addProperty("power", 1.0f);
+        fan.addProperty("beam_count", 3);
+        fan.addProperty("spread_degrees", 0.0f);
+        fan.addProperty("destroy_blocks", false);
+        var graph = new ProgramGraph(
+                List.of(
+                        directionNode(1, 0.0, 0.0, 1.0),
+                        node(2, MeltdownerProgramNodeIds.ELECTRON_FAN, fan)
+                ),
+                List.of(edge(1, "direction", 2, "direction"))
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        MeltdownerProgramNodeCatalog.MELTDOWNER)
+                .compile(graph, Set.of(MeltdownerProgramCapabilities.ELECTRON_FAN));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var runtime = new FakeRuntime();
+        var transaction = new ProgramActionTransaction();
+
+        var result = MeltdownerProgramExecutionBridge.execute(
+                compiled.program(), 60L, runtime, transaction);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(3, transaction.size());
+        assertTrue(transaction.commit().successful());
+        assertEquals(List.of(
+                "electron:0.0,0.0,1.0:1.0:false",
+                "electron:0.0,0.0,1.0:1.0:false",
+                "electron:0.0,0.0,1.0:1.0:false"), runtime.applied);
         transaction.release();
     }
 
@@ -204,10 +242,11 @@ class MeltdownerProgramExecutionBridgeTest {
                 ProgramDirection direction,
                 ProgramWorldPosition target,
                 float power,
-                boolean destroyBlocks
+                boolean destroyBlocks,
+                boolean destroyProjectiles
         ) {
             return action("electron:" + direction.x() + "," + direction.y() + ","
-                    + direction.z() + ":" + power);
+                    + direction.z() + ":" + power + ":" + destroyProjectiles);
         }
 
         @Override

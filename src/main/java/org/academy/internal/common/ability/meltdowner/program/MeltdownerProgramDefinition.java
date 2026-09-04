@@ -40,8 +40,15 @@ public final class MeltdownerProgramDefinition {
                 configuration.addProperty("power", 1.0f);
                 configuration.addProperty("aim_mode", "direction");
             }
+            if (id.equals(MeltdownerProgramNodeIds.ELECTRON_FAN)) {
+                configuration.addProperty("power", 1.0f);
+                configuration.addProperty("beam_count", 5);
+                configuration.addProperty("spread_degrees", 12.0f);
+                configuration.addProperty("destroy_blocks", true);
+            }
             if (id.equals(MeltdownerProgramNodeIds.ELECTRON_BEAM)) {
                 configuration.addProperty("destroy_blocks", true);
+                configuration.addProperty("destroy_projectiles", false);
             }
             if (id.equals(MeltdownerProgramNodeIds.ATOMIC_JET)) {
                 configuration.addProperty("power", 1.0f);

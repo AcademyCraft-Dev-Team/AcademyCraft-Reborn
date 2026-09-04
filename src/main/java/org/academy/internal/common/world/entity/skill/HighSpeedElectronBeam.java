@@ -11,11 +11,13 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
@@ -108,6 +110,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private boolean radiationEnabled;
     private boolean betaTrailOnFire;
     private boolean outputAdjustmentBypassed;
+    private boolean destroysProjectiles;
     private int proficiencyMilestone;
 
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
@@ -361,6 +364,9 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         var attack = LinearReflectionResolver.resolve(level, new LinearSegment(start, end), payload);
 
         if (destroysBlocks()) destroyBlocks(level, owner, attack.outbound());
+        if (destroysProjectiles) {
+            destroyProjectiles(level, owner, attack.outbound());
+        }
         var outboundResult = LinearAttackExecutor.executeOutbound(level, attack, payload);
         if (destroysBlocks() && attack.isReflected()) {
             destroyBlocks(
@@ -370,6 +376,13 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             );
         }
         if (attack.isReflected()) {
+            if (destroysProjectiles) {
+                destroyProjectiles(
+                        level,
+                        attack.reflectionCandidate().orElseThrow().reflector(),
+                        attack.returnSegment().orElseThrow()
+                );
+            }
             setReflection(
                     (float) attack.outbound().length(),
                     (float) attack.returnVisualLength(),
@@ -458,6 +471,36 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
 
     public boolean destroysBlocks() {
         return entityData.get(DESTROYS_BLOCKS);
+    }
+
+    /** Enables defensive interception only for program-created attack beams. */
+    public void setDestroysProjectiles(boolean destroysProjectiles) {
+        this.destroysProjectiles = destroysProjectiles;
+    }
+
+    private static void destroyProjectiles(
+            ServerLevel level,
+            ServerPlayer effectiveOwner,
+            LinearSegment segment
+    ) {
+        if (effectiveOwner == null || !segment.hasFiniteCoordinates()) return;
+        var pointSegment = !(segment.lengthSqr() > 1.0E-12);
+        for (var projectile : ViewTargetScanner.scanOrdered(
+                level,
+                effectiveOwner,
+                Projectile.class,
+                segment.start(),
+                pointSegment ? new Vec3(0.0, 1.0, 0.0) : segment.direction(),
+                segment.length(),
+                ViewTargetScanner.inflatedAabbSegment(0.125),
+                candidate -> candidate.isAlive()
+                        && candidate.getOwner() != effectiveOwner
+                        && (candidate.getOwner() == null
+                        || MeltdownerTargeting.canAffectNegatively(
+                        effectiveOwner, candidate.getOwner()))
+        )) {
+            projectile.discard();
+        }
     }
 
     public void setBetaTrailOnFire(boolean betaTrailOnFire) {
