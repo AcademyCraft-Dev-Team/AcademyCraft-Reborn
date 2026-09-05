@@ -1728,16 +1728,28 @@ public final class VfxBlocks {
             float time = ctx.time() + phase;
             rotation.identity().rotateY(ctx.paramFloat(sweepParam, 0f) * Mth.DEG_TO_RAD)
                     .rotateZ(ctx.paramFloat(pitchParam, 0f) * Mth.DEG_TO_RAD);
-            int attackMode = Math.clamp(Math.round(ctx.paramFloat("attack_mode", 0f)), 0, 3);
+            int attackMode = Math.clamp(Math.round(ctx.paramFloat("attack_mode", 0f)), 0, 5);
             float attackProgress = ctx.paramFloat("attack_progress", 1f);
             // Negative progress is reserved for standalone looping attack previews in the editor.
-            if (attackProgress < 0f) attackProgress = (ctx.time() % 2f) / 2f;
+            if (attackProgress < 0f) {
+                float duration = org.academy.api.common.ability.VortexAttackPattern.byId(attackMode).durationSeconds();
+                attackProgress = (ctx.time() % duration) / duration;
+            }
+            // Single-wing lateral strokes leave the opposite emitter in its exact idle state.
+            if (attackMode == 4 && side > 0f || attackMode == 5 && side < 0f) attackMode = 0;
             int branchCount = attackMode == 3 && attackProgress > 0f && attackProgress < 1f ? 2 : 1;
             for (int branch = 0; branch < branchCount; branch++) {
+                float targetX = ctx.paramFloat("attack_target_x", 0f);
+                float targetY = ctx.paramFloat("attack_target_y", -1.2f);
+                float targetZ = ctx.paramFloat("attack_target_z", 12f);
+                if (attackMode == 3) {
+                    String corner = "attack_corner_" + ((side < 0f ? 0 : 2) + branch);
+                    targetX = ctx.paramVec3(corner, 0, side * 6f);
+                    targetY = ctx.paramVec3(corner, 1, -1.2f);
+                    targetZ = ctx.paramVec3(corner, 2, branch == 0 ? 6f : -6f);
+                }
                 shape.configure(attackMode, attackProgress, branch,
-                        ctx.paramFloat("attack_target_x", 0f) * side,
-                        ctx.paramFloat("attack_target_y", -1.2f),
-                        ctx.paramFloat("attack_target_z", 12f),
+                        targetX * side - root, targetY, targetZ,
                         length * axial * spread, rise * axial, back * axial,
                         radius * radial, turns, speed, time);
                 float branchAlpha = branch == 0 ? 1f : shape.activity();

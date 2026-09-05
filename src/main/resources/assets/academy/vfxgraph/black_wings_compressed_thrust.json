@@ -119,6 +119,50 @@
         "type": "FLOAT",
         "value": 12
       }
+    },
+    {
+      "id": "attack_corner_0",
+      "name": "attack corner 0",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": -6,
+        "y": -1.2,
+        "z": 6
+      }
+    },
+    {
+      "id": "attack_corner_1",
+      "name": "attack corner 1",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": -6,
+        "y": -1.2,
+        "z": -6
+      }
+    },
+    {
+      "id": "attack_corner_2",
+      "name": "attack corner 2",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 6,
+        "y": -1.2,
+        "z": 6
+      }
+    },
+    {
+      "id": "attack_corner_3",
+      "name": "attack corner 3",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 6,
+        "y": -1.2,
+        "z": -6
+      }
     }
   ],
   "contexts": [
