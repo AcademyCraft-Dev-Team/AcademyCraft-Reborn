@@ -32,7 +32,7 @@ class BlackWingsVfxTest {
         var sim = simulator();
         sim.step(1f / 60);
         int count = sim.arcBuffer().count();
-        assertEquals(102, count);
+        assertEquals(110, count);
         float original = core(sim, false).y(60);
         for (int i = 0; i < 900; i++) {
             sim.step(i % 2 == 0 ? 1f / 30 : 1f / 144);
@@ -72,7 +72,7 @@ class BlackWingsVfxTest {
         sim.setLiveParam("radial_scale", Value.of(1f));
         sim.setLiveParam("sweep_left", Value.of(0f));
         sim.step(0f);
-        assertEquals(102, sim.arcBuffer().count());
+        assertEquals(110, sim.arcBuffer().count());
         assertEquals(leftZ, core(sim, true).z(70), 0.0001f);
     }
 
@@ -85,7 +85,7 @@ class BlackWingsVfxTest {
         for (int p = 1; p < core.size(); p++) {
             if (core.segment(p) != core.segment(p - 1)) disconnectedEdges++;
         }
-        assertTrue(disconnectedEdges >= 12 && disconnectedEdges <= 24,
+        assertTrue(disconnectedEdges >= 6 && disconnectedEdges <= 12,
                 "local holes must remove triangles across the core, not merely darken them");
         assertEquals(0, core.segment(0), "keep the scapula root connected");
         var pulse = curve(sim, 1000, false);
@@ -95,9 +95,43 @@ class BlackWingsVfxTest {
         sim.step(0f);
         assertNotEquals(pulseStart, curve(sim, 1000, false).x(0), 0.005f,
                 "highlight must travel along the jet rather than stay on a static ridge");
-        // Every fourth outer filament remains continuous across the hollow core.
-        var bridge = curve(sim, 5, false);
+        // Every third outer filament remains continuous across the smaller hollow core.
+        var bridge = curve(sim, 4, false);
         for (int p = 1; p < bridge.size(); p++) assertEquals(bridge.segment(p - 1), bridge.segment(p));
+    }
+
+    @Test
+    void fineHighlightsStayNarrowAndSmallOpeningsShiftDuringPlayback() throws Exception {
+        var sim = simulator();
+        int firstOpening = -1;
+        int furthestOpening = -1;
+        for (int frame = 0; frame < 120; frame++) {
+            sim.setTime(frame / 20f);
+            sim.step(0f);
+            for (boolean left : new boolean[]{false, true}) {
+                for (int h = 0; h < (left ? 14 : 10); h++) {
+                    var pulse = curve(sim, 1000 + h, left);
+                    for (int p = 0; p < pulse.size(); p++) {
+                        assertTrue(pulse.width(p) >= 0f && pulse.width(p) <= 0.01201f,
+                                "purple must remain a fine trace even at the broad funnel tip");
+                    }
+                }
+                var spine = core(sim, left);
+                int gapPoints = 0;
+                int opening = -1;
+                for (int p = 0; p < spine.size(); p++) {
+                    if (spine.segment(p) == 0) continue;
+                    gapPoints++;
+                    if (opening < 0) opening = p;
+                }
+                assertTrue(gapPoints >= 6 && gapPoints <= 10, "retain small local openings at all phases");
+                if (!left) {
+                    if (firstOpening < 0) firstOpening = opening;
+                    furthestOpening = Math.max(furthestOpening, Math.abs(opening - firstOpening));
+                }
+            }
+        }
+        assertTrue(furthestOpening >= 6, "openings must visibly drift along the wing");
     }
 
     private ArcCurve core(VfxSystemSimulator sim, boolean left) {
