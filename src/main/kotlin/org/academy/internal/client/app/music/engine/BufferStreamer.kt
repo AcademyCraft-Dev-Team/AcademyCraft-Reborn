@@ -35,7 +35,7 @@ internal class BufferStreamer(
 
     fun update() {
         if (isFinished) return
-        if (!isPrimed) primeInitialBuffers() else streamNextBuffers()
+        if (!isPrimed) primeInitialBuffers() else if (alPlayer.isPlaying) streamNextBuffers()
     }
 
     private fun primeInitialBuffers() {
@@ -91,7 +91,7 @@ internal class BufferStreamer(
     }
 
     private fun updateSampleOffset(bufferId: Int) {
-        if (channels > 0) {
+        if (channels > 0 && alPlayer.isPlaying) {
             val bytesInBuf = alPlayer.getBufferSize(bufferId)
             val framesInBuf = bytesInBuf / (channels * 2)
             baseSampleOffset += framesInBuf

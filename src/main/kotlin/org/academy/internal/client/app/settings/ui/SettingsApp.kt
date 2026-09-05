@@ -13,6 +13,7 @@ import org.academy.api.client.config.KeyBindingConfig
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
 import org.academy.api.client.gui.animation.StateListAnimator
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.event.KeyEvent
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
@@ -53,7 +54,7 @@ object SettingsApp : App {
     }
 
     private class Context : WidgetContext {
-        private val panelContainer = FrameLayoutWidget()
+        private lateinit var panelContainer: FrameLayoutWidget
         private var capturing: CaptureTarget? = null
         private var pendingType: InputSystem.InputType? = null
         private val pendingKeys: MutableSet<Int> = linkedSetOf()
@@ -90,127 +91,117 @@ object SettingsApp : App {
         )
 
         private fun createRoot(): FrameLayoutWidget {
-            val root = FrameLayoutWidget()
-            root.layoutParams = WidgetContainer.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-            run {
-                val content = LinearLayoutWidget()
-                content.orientation = Orientation.VERTICAL
-                content.spacing = 1f
-                content.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                root.addChild("content", content)
-                run {
-                    val topBar = LinearLayoutWidget()
-                    topBar.orientation = Orientation.HORIZONTAL
-                    topBar.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                    content.addChild("top_bar", topBar)
-                    run {
-                        val backButton = ButtonWidget()
-                        backButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                            .margin(2f, 2f, 2f, 0f)
-                            .size(16f, 16f)
-                        backButton.onClickListener = {
-                            TerminalHud.INSTANCE.closeApp()
-                        }
-                        topBar.addChild("back_button", backButton)
-                        run {
-                            val arrow = ImageWidget(R.textures.gui.icon.arrow_back)
-                            arrow.setSampler(FilterMode.LINEAR, false)
-                            arrow.layoutParams = FrameLayoutWidget.LayoutParams()
-                                .sizeMode(SizeMode.MATCH_PARENT)
-                            backButton.addChild("arrow", arrow)
+            return standaloneFrame {
+                matchParent()
+
+                column("content") {
+                    spacing = 1f
+                    sizeMode(SizeMode.MATCH_PARENT)
+
+                    row("top_bar") {
+                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+
+                        button("back_button") {
+                            margin(2f, 2f, 2f, 0f)
+                            size(16f, 16f)
+                            onClick {
+                                TerminalHud.INSTANCE.closeApp()
+                            }
+                            image(R.textures.gui.icon.arrow_back, "arrow") {
+                                sampler(FilterMode.LINEAR, false)
+                                sizeMode(SizeMode.MATCH_PARENT)
+                            }
                         }
 
-                        val title = LabelWidget(name())
-                        title.layoutParams = LinearLayoutWidget.LayoutParams()
-                            .weight(1f)
-                            .height(0f)
-                            .gravity(Gravity.CENTER)
-                        topBar.addChild("title", title)
+                        label(name(), "title") {
+                            weight(1f)
+                            height(0f)
+                            gravity(Gravity.CENTER)
+                        }
                     }
 
-                    val splitLine = FillWidget(-0x1)
-                    splitLine.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .height(1f)
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .padding(2f, 0f)
-                    content.addChild("split_line", splitLine)
+                    fill(-0x1, "split_line") {
+                        height(1f)
+                        widthMode(SizeMode.MATCH_PARENT)
+                        padding(2f, 0f)
+                    }
 
-                    content.addChild("tab_bar", createTabBar())
-                    captureHint.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .height(10f)
-                        .gravity(Gravity.CENTER)
-                    content.addChild("capture_hint", captureHint)
-                    panelContainer.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .weight(1f)
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .padding(2f)
-                    content.addChild("panel", panelContainer)
+                    createTabBar()
+
+                    add("capture_hint", captureHint) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                        gravity(Gravity.CENTER)
+                    }
+
+                    panelContainer = frame("panel") {
+                        weight(1f)
+                        widthMode(SizeMode.MATCH_PARENT)
+                        padding(2f)
+                    }
 
                     showPage(PAGE_GENERAL)
                 }
+
+                add("capture_layer", captureLayer) {
+                    matchParent()
+                    isEnabled = false
+                    visibility = Widget.Visibility.INVISIBLE
+                }
             }
-
-            captureLayer.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-            captureLayer.isEnabled = false
-            captureLayer.visibility = Widget.Visibility.INVISIBLE
-            root.addChild("capture_layer", captureLayer)
-
-            return root
         }
 
-        private fun createTabBar(): RadioGroupWidget {
-            val tabBar = RadioGroupWidget()
-            tabBar.orientation = Orientation.HORIZONTAL
-            tabBar.spacing = 2f
-            tabBar.layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-            tabBar.addChild(
-                "general", createTabButton(
-                    L10n["app.academy.settings.tab.general"],
-                    PAGE_GENERAL
-                )
-            )
-            tabBar.addChild(
-                "keybindings", createTabButton(
-                    L10n["app.academy.settings.tab.keybindings"],
-                    PAGE_KEYBINDINGS
-                )
-            )
-            tabBar.addChild("about", createTabButton("About", PAGE_ABOUT))
-            tabBar.selectButton(tabBar.children.values.first() as RadioButtonWidget)
-            return tabBar
+        private fun WidgetContainer.createTabBar(): RadioGroupWidget {
+            return radioGroup("tab_bar") {
+                orientation = Orientation.HORIZONTAL
+                spacing = 2f
+                widthMode(SizeMode.MATCH_PARENT)
+
+                val general = add(
+                    "general", createTabButton(
+                        L10n["app.academy.settings.tab.general"],
+                        PAGE_GENERAL
+                    )
+                ) {
+                    weight(1f)
+                    height(14f)
+                }
+                add(
+                    "keybindings", createTabButton(
+                        L10n["app.academy.settings.tab.keybindings"],
+                        PAGE_KEYBINDINGS
+                    )
+                ) {
+                    weight(1f)
+                    height(14f)
+                }
+                add("about", createTabButton("About", PAGE_ABOUT)) {
+                    weight(1f)
+                    height(14f)
+                }
+                selectButton(general)
+            }
         }
 
         private fun createTabButton(text: String, page: Int): RadioButtonWidget {
-            val button = RadioButtonWidget()
-            button.layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .height(14f)
-            button.onClickListener = { _: Widget? ->
-                showPage(page)
-            }
-            run {
-                val back = FillWidget(0)
-                back.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                button.addChild("back", back)
+            return RadioButtonWidget().apply {
+                onClick {
+                    showPage(page)
+                }
+                val back = fill(0, "back") {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                }
 
-                button.addChild("text", LabelWidget(text).apply {
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT)
-                        .gravity(Gravity.CENTER)
-                })
+                label(text, "text") {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    gravity(Gravity.CENTER)
+                }
 
                 val progressState = AtomicReference(0f)
                 val updateState = Consumer<Float> { progress ->
                     progressState.set(progress)
                     val alpha = (progress * 0.5f * 255).toInt()
-                    back.setColor(ARGB.color(alpha, 255, 255, 255))
+                    back.setColor(ARGB.color(alpha, 0, 0, 0))
                 }
                 val animator = StateListAnimator()
                 animator.addState(
@@ -225,91 +216,76 @@ object SettingsApp : App {
                         .setDuration(100)
                         .setInterpolator(EasingFunctions.EASE_OUT_SINE)
                 )
-                button.stateListAnimator = animator
+                stateListAnimator = animator
             }
-            return button
         }
 
         private fun showPage(page: Int) {
             panelContainer.clearChildren()
             when (page) {
-                PAGE_GENERAL -> panelContainer.addChild("general", createGeneralPage())
-                PAGE_KEYBINDINGS -> panelContainer.addChild("keybindings", createKeybindPage())
-                PAGE_ABOUT -> panelContainer.addChild("about", createAboutPage())
+                PAGE_GENERAL -> panelContainer.add("general", createGeneralPage())
+                PAGE_KEYBINDINGS -> panelContainer.add("keybindings", createKeybindPage())
+                PAGE_ABOUT -> panelContainer.add("about", createAboutPage())
             }
         }
 
         private fun createGeneralPage(): LinearLayoutWidget {
-            val page = LinearLayoutWidget()
-            page.orientation = Orientation.VERTICAL
-            page.spacing = 3f
-            page.layoutParams = WidgetContainer.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
+            return standaloneColumn(3f) {
+                sizeMode(SizeMode.MATCH_PARENT)
 
-            val player = Minecraft.getInstance().player
-            val pvpEnabled = player?.let(PvpSetting::isPvpEnabled) ?: true
-            page.addChild(
-                "pvp", createSettingToggle(
-                    L10n["app.academy.settings.general.pvp"],
-                    pvpEnabled,
-                    authoritativeState = { PvpSetting.clientPvpEnabled(pvpEnabled) }
-                ) { enabled ->
-                    PvpSetting.expectClientPvpEnabled(enabled)
-                    MisakaNetworkClient.send(PvpSetting.SetPacket(enabled))
-                })
-            page.addChild(
-                "friendly_fire", createSettingToggle(
-                    L10n["app.academy.settings.general.friendly_fire"],
-                    player?.let(FriendlyFireSetting::isFriendlyFireEnabled) ?: true
-                ) { enabled ->
-                    MisakaNetworkClient.send(FriendlyFireSetting.SetPacket(enabled))
-                })
-            page.addChild(
-                "destroy_blocks", createSettingToggle(
-                    L10n["app.academy.settings.general.destroy_blocks"],
-                    player?.let(DestroyBlocksSetting::isDestroyBlocksEnabled) ?: true
-                ) { enabled ->
-                    MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
-                })
-            page.addChild("hud_layout", createHudLayoutRow())
-            return page
+                val player = Minecraft.getInstance().player
+                val pvpEnabled = player?.let(PvpSetting::isPvpEnabled) ?: true
+                add(
+                    "pvp", createSettingToggle(
+                        L10n["app.academy.settings.general.pvp"],
+                        pvpEnabled,
+                        authoritativeState = { PvpSetting.clientPvpEnabled(pvpEnabled) }
+                    ) { enabled ->
+                        PvpSetting.expectClientPvpEnabled(enabled)
+                        MisakaNetworkClient.send(PvpSetting.SetPacket(enabled))
+                    })
+                add(
+                    "friendly_fire", createSettingToggle(
+                        L10n["app.academy.settings.general.friendly_fire"],
+                        player?.let(FriendlyFireSetting::isFriendlyFireEnabled) ?: true
+                    ) { enabled ->
+                        MisakaNetworkClient.send(FriendlyFireSetting.SetPacket(enabled))
+                    })
+                add(
+                    "destroy_blocks", createSettingToggle(
+                        L10n["app.academy.settings.general.destroy_blocks"],
+                        player?.let(DestroyBlocksSetting::isDestroyBlocksEnabled) ?: true
+                    ) { enabled ->
+                        MisakaNetworkClient.send(DestroyBlocksSetting.SetPacket(enabled))
+                    })
+                add("hud_layout", createHudLayoutRow())
+            }
         }
 
         private fun createHudLayoutRow(): LinearLayoutWidget {
-            val row = LinearLayoutWidget()
-            row.orientation = Orientation.HORIZONTAL
-            row.spacing = 4f
-            row.layoutParams = WidgetContainer.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(18f)
-            row.addChild(
-                "label", LabelWidget(
-                    L10n["app.academy.settings.general.hud_layout"]
-                ).apply {
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .weight(1f)
-                        .height(0f)
-                        .gravity(Gravity.CENTER_LEFT)
-                })
-            row.addChild("open", ButtonWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .size(72f, 14f)
-                    .gravity(Gravity.CENTER)
-                onClickListener = {
-                    val minecraft = Minecraft.getInstance()
-                    minecraft.gui.setScreen(HudLayoutEditorScreen(minecraft.gui.screen()))
+            return standaloneRow(4f) {
+                widthMode(SizeMode.MATCH_PARENT)
+                height(18f)
+
+                label(L10n["app.academy.settings.general.hud_layout"], "label") {
+                    weight(1f)
+                    height(0f)
+                    gravity(Gravity.CENTER_LEFT)
                 }
-                addChild(
-                    "text", LabelWidget(
-                        L10n["app.academy.settings.general.hud_layout.open"]
-                    ).apply {
+                button("open") {
+                    size(72f, 14f)
+                    gravity(Gravity.CENTER)
+                    onClick {
+                        val minecraft = Minecraft.getInstance()
+                        minecraft.gui.setScreen(HudLayoutEditorScreen(minecraft.gui.screen()))
+                    }
+                    label(L10n["app.academy.settings.general.hud_layout.open"], "text") {
                         scale = 0.65f
-                        layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                            .gravity(Gravity.CENTER)
-                    })
-            })
-            return row
+                        sizeMode(SizeMode.MATCH_PARENT)
+                        gravity(Gravity.CENTER)
+                    }
+                }
+            }
         }
 
         private fun createSettingToggle(
@@ -318,102 +294,81 @@ object SettingsApp : App {
             authoritativeState: (() -> Boolean)? = null,
             onChanged: (Boolean) -> Unit
         ): LinearLayoutWidget {
-            val row = LinearLayoutWidget()
-            row.orientation = Orientation.HORIZONTAL
-            row.spacing = 4f
-            row.layoutParams = WidgetContainer.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(18f)
+            return standaloneRow(4f) {
+                widthMode(SizeMode.MATCH_PARENT)
+                height(18f)
 
-            row.addChild("label", LabelWidget(text).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(0f)
-                    .gravity(Gravity.CENTER_LEFT)
-            })
-            var applyingAuthoritativeState = false
-            val toggle = ToggleButtonWidget().apply {
-                setFrameUpdate {
-                    val expected = authoritativeState?.invoke()
-                    if (expected != null && isChecked != expected) {
-                        applyingAuthoritativeState = true
-                        setChecked(expected)
-                        applyingAuthoritativeState = false
-                    }
-                    true
+                label(text, "label") {
+                    weight(1f)
+                    height(0f)
+                    gravity(Gravity.CENTER_LEFT)
                 }
-                setChecked(checked)
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .size(20f, 10f)
-                    .gravity(Gravity.CENTER)
-                setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
-                    override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
+                var applyingAuthoritativeState = false
+                toggle(checked, "toggle") {
+                    setFrameUpdate {
+                        val expected = authoritativeState?.invoke()
+                        if (expected != null && isChecked != expected) {
+                            applyingAuthoritativeState = true
+                            setChecked(expected)
+                            applyingAuthoritativeState = false
+                        }
+                        true
+                    }
+                    size(20f, 10f)
+                    gravity(Gravity.CENTER)
+                    onCheckedChange { isChecked ->
                         if (!applyingAuthoritativeState) onChanged(isChecked)
                     }
-                })
+                }
             }
-            row.addChild("toggle", toggle)
-            return row
         }
 
         private fun createKeybindPage(): LinearLayoutWidget {
-            val page = LinearLayoutWidget()
-            page.orientation = Orientation.VERTICAL
-            page.spacing = 1f
-            page.layoutParams = WidgetContainer.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
+            return standaloneColumn(1f) {
+                sizeMode(SizeMode.MATCH_PARENT)
 
-            val columnHeader = LinearLayoutWidget()
-            columnHeader.orientation = Orientation.HORIZONTAL
-            columnHeader.spacing = 2f
-            columnHeader.layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-            columnHeader.addChild("spacer", FillWidget(0).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(0f)
-            })
-            columnHeader.addChild("key_spacer", FillWidget(0).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().size(44f, 0f)
-            })
-            columnHeader.addChild(
-                "toggle_title", LabelWidget(
-                    L10n["app.academy.settings.keybind.toggle"]
-                ).apply {
-                    scale = 0.65f
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .width(22f)
-                        .height(10f)
-                        .gravity(Gravity.CENTER)
-                })
-            columnHeader.addChild("rebind_spacer", FillWidget(0).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
-            })
-            columnHeader.addChild("reset_spacer", FillWidget(0).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().size(26f, 0f)
-            })
-            page.addChild("column_header", columnHeader)
+                row("column_header") {
+                    spacing = 2f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(10f)
 
-            val panel = ScrollPanelWidget()
-            panel.layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .widthMode(SizeMode.MATCH_PARENT)
+                    fill(0, "spacer") {
+                        weight(1f)
+                        height(0f)
+                    }
+                    fill(0, "key_spacer") {
+                        size(44f, 0f)
+                    }
+                    label(
+                        L10n["app.academy.settings.keybind.toggle"],
+                        "toggle_title"
+                    ) {
+                        scale = 0.65f
+                        size(22f, 10f)
+                        gravity(Gravity.CENTER)
+                    }
+                    fill(0, "rebind_spacer") {
+                        size(26f, 0f)
+                    }
+                    fill(0, "reset_spacer") {
+                        size(26f, 0f)
+                    }
+                }
 
-            val list = LinearLayoutWidget()
-            list.orientation = Orientation.VERTICAL
-            list.spacing = 2f
-            list.layoutParams = WidgetContainer.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                val list = standaloneColumn(2f) {
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
-            for (section in createGeneralSections()) {
-                if (section.config.keyBindings.keys.all(section.hiddenBindings::contains)) continue
-                list.addChild(section.id, createBindingSection(section))
+                    for (section in createGeneralSections()) {
+                        if (section.config.keyBindings.keys.all(section.hiddenBindings::contains)) continue
+                        add(section.id, createBindingSection(section))
+                    }
+                }
+
+                scrollPanel(Orientation.VERTICAL, "bindings", list) {
+                    weight(1f)
+                    widthMode(SizeMode.MATCH_PARENT)
+                }
             }
-
-            panel.setContent(list)
-            page.addChild("bindings", panel)
-            return page
         }
 
         private fun createGeneralSections(): List<BindingSection> {
@@ -474,38 +429,30 @@ object SettingsApp : App {
         }
 
         private fun createBindingSection(sectionInfo: BindingSection): LinearLayoutWidget {
-            val section = LinearLayoutWidget()
-            section.orientation = Orientation.VERTICAL
-            section.spacing = 1f
-            section.layoutParams = WidgetContainer.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+            return standaloneColumn(1f) {
+                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
 
-            val header = LinearLayoutWidget()
-            header.orientation = Orientation.HORIZONTAL
-            header.spacing = 2f
-            header.layoutParams = WidgetContainer.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-            section.addChild("header", header)
-            run {
-                val icon = ImageWidget(sectionInfo.icon)
-                icon.setSampler(FilterMode.LINEAR, false)
-                icon.layoutParams = LinearLayoutWidget.LayoutParams()
-                    .size(16f, 16f)
-                header.addChild("icon", icon)
+                row("header") {
+                    spacing = 2f
+                    widthMode(SizeMode.MATCH_PARENT)
 
-                val name = LabelWidget(sectionInfo.title)
-                name.layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(0f)
-                    .gravity(Gravity.CENTER_LEFT)
-                header.addChild("name", name)
+                    image(sectionInfo.icon, "icon") {
+                        sampler(FilterMode.LINEAR, false)
+                        size(16f, 16f)
+                    }
+
+                    label(sectionInfo.title, "name") {
+                        weight(1f)
+                        height(0f)
+                        gravity(Gravity.CENTER_LEFT)
+                    }
+                }
+
+                for ((bindingName, combo) in sectionInfo.config.keyBindings) {
+                    if (bindingName in sectionInfo.hiddenBindings) continue
+                    add(bindingName, createBindingRow(sectionInfo, bindingName, combo))
+                }
             }
-
-            for ((bindingName, combo) in sectionInfo.config.keyBindings) {
-                if (bindingName in sectionInfo.hiddenBindings) continue
-                section.addChild(bindingName, createBindingRow(sectionInfo, bindingName, combo))
-            }
-            return section
         }
 
         private fun createBindingRow(
@@ -513,118 +460,91 @@ object SettingsApp : App {
             bindingName: String,
             combo: InputSystem.KeyCombination
         ): LinearLayoutWidget {
-            val row = LinearLayoutWidget()
-            row.orientation = Orientation.HORIZONTAL
-            row.spacing = 2f
-            row.layoutParams = WidgetContainer.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
+            return standaloneRow(2f) {
+                widthMode(SizeMode.MATCH_PARENT)
 
-            val name = LabelWidget(
-                L10n["key.academy.$bindingName"]
-            )
-            name.layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .height(10f)
-                .gravity(Gravity.CENTER_LEFT)
-            row.addChild("name", name)
-
-            val keyLabel = LabelWidget(displayBinding(combo))
-            keyLabel.scale = 0.7f
-            keyLabel.layoutParams = LinearLayoutWidget.LayoutParams()
-                .width(44f)
-                .height(10f)
-                .gravity(Gravity.CENTER)
-            row.addChild("key", keyLabel)
-
-            val toggle = ToggleButtonWidget()
-            toggle.setChecked(section.config.isKeyBindingEnabled(bindingName))
-            toggle.layoutParams = LinearLayoutWidget.LayoutParams()
-                .size(16f, 9f)
-                .gravity(Gravity.CENTER)
-            toggle.setOnCheckedChangeListener(object : ToggleButtonWidget.OnCheckedChangeListener {
-                override fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean) {
-                    section.config.setKeyBindingEnabled(bindingName, isChecked)
-                    InputSystem.setKeyBindingEnabled(bindingName, isChecked)
-                    section.persist(section.config)
-                    AcademyCraftClient.Config.INSTANCE.save()
+                label(
+                    L10n["key.academy.$bindingName"],
+                    "name"
+                ) {
+                    weight(1f)
+                    height(10f)
+                    gravity(Gravity.CENTER_LEFT)
                 }
-            })
-            row.addChild("toggle", toggle)
 
-            val rebindButton = ButtonWidget()
-            rebindButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                .size(26f, 12f)
-                .gravity(Gravity.CENTER)
-            rebindButton.onClickListener = { _: Widget? ->
-                startCapture(section, bindingName, keyLabel)
-            }
-            rebindButton.addChild(
-                "text", LabelWidget(
-                    L10n["app.academy.settings.keybind.rebind"]
-                ).apply {
+                val keyLabel = label(displayBinding(combo), "key") {
                     scale = 0.7f
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT)
-                        .gravity(Gravity.CENTER)
-                })
-            row.addChild("rebind", rebindButton)
+                    width(44f)
+                    height(10f)
+                    gravity(Gravity.CENTER)
+                }
 
-            val resetButton = ButtonWidget()
-            resetButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                .size(26f, 12f)
-                .gravity(Gravity.CENTER)
-            resetButton.onClickListener = { _: Widget? ->
-                resetBinding(section, bindingName, keyLabel)
+                toggle(section.config.isKeyBindingEnabled(bindingName), "toggle") {
+                    size(16f, 9f)
+                    gravity(Gravity.CENTER)
+                    onCheckedChange { isChecked ->
+                        section.config.setKeyBindingEnabled(bindingName, isChecked)
+                        InputSystem.setKeyBindingEnabled(bindingName, isChecked)
+                        section.persist(section.config)
+                        AcademyCraftClient.Config.INSTANCE.save()
+                    }
+                }
+
+                button("rebind") {
+                    size(26f, 12f)
+                    gravity(Gravity.CENTER)
+                    onClick {
+                        startCapture(section, bindingName, keyLabel)
+                    }
+                    label(
+                        L10n["app.academy.settings.keybind.rebind"],
+                        "text"
+                    ) {
+                        scale = 0.7f
+                        sizeMode(SizeMode.MATCH_PARENT)
+                        gravity(Gravity.CENTER)
+                    }
+                }
+
+                button("reset") {
+                    size(26f, 12f)
+                    gravity(Gravity.CENTER)
+                    onClick {
+                        resetBinding(section, bindingName, keyLabel)
+                    }
+                    label(
+                        L10n["app.academy.settings.keybind.reset"],
+                        "text"
+                    ) {
+                        scale = 0.7f
+                        sizeMode(SizeMode.MATCH_PARENT)
+                        gravity(Gravity.CENTER)
+                    }
+                }
             }
-            resetButton.addChild(
-                "text", LabelWidget(
-                    L10n["app.academy.settings.keybind.reset"]
-                ).apply {
-                    scale = 0.7f
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT)
-                        .gravity(Gravity.CENTER)
-                })
-            row.addChild("reset", resetButton)
-
-            return row
         }
 
         private fun createAboutPage(): LinearLayoutWidget {
-            val page = LinearLayoutWidget()
-            page.orientation = Orientation.VERTICAL
-            page.spacing = 2f
-            page.layoutParams = WidgetContainer.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
+            return standaloneColumn(2f) {
+                sizeMode(SizeMode.MATCH_PARENT)
 
-            val icon = ImageWidget(R.textures.gui.icon.icon_settings)
-            icon.setSampler(FilterMode.LINEAR, false)
-            icon.layoutParams = LinearLayoutWidget.LayoutParams()
-                .size(48f, 48f)
-                .gravity(Gravity.CENTER)
-                .marginTop(12f)
-            page.addChild("icon", icon)
+                image(R.textures.gui.icon.icon_settings, "icon") {
+                    size(48f, 48f)
+                    gravity(Gravity.CENTER)
+                    marginTop(12f)
+                }
 
-            val title = LabelWidget(AcademyCraft.MOD_NAME)
-            title.layoutParams = LinearLayoutWidget.LayoutParams()
-                .height(12f)
-                .gravity(Gravity.CENTER)
-            page.addChild("title", title)
+                label(AcademyCraft.MOD_NAME, "title") {
+                    height(12f)
+                    gravity(Gravity.CENTER)
+                }
 
-            val version = LabelWidget("Version " + getModVersion())
-            version.scale = 0.7f
-            version.layoutParams = LinearLayoutWidget.LayoutParams()
-                .height(10f)
-                .gravity(Gravity.CENTER)
-            page.addChild("version", version)
-
-            val desc = LabelWidget("A superpower academy mod. Reborn.")
-            desc.layoutParams = LinearLayoutWidget.LayoutParams()
-                .height(10f)
-                .gravity(Gravity.CENTER)
-            page.addChild("desc", desc)
-
-            return page
+                label("Version " + getModVersion(), "version") {
+                    scale = 0.7f
+                    height(10f)
+                    gravity(Gravity.CENTER)
+                }
+            }
         }
 
         private fun getModVersion(): String {
