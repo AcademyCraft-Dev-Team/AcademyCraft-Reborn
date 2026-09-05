@@ -134,6 +134,26 @@ class BlackWingsVfxTest {
         assertTrue(furthestOpening >= 6, "openings must visibly drift along the wing");
     }
 
+    @Test
+    void replacingRightWingCannotPaintBlackOverLeftHighlights() throws Exception {
+        var sim = simulator();
+        for (int frame = 0; frame < 90; frame++) {
+            sim.step(1f / 60f);
+            for (boolean left : new boolean[]{true, false}) {
+                boolean highlightSeen = false;
+                for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                    var arc = sim.arcBuffer().arc(i);
+                    if ((arc.x(0) < 0f) != left) continue;
+                    if (arc.seed() >= 1000) highlightSeen = true;
+                    if (arc.seed() >= 1 && arc.seed() <= 19) {
+                        assertFalse(highlightSeen, "opaque ink after highlight hides one wing in translucent rendering");
+                    }
+                }
+                assertTrue(highlightSeen);
+            }
+        }
+    }
+
     private ArcCurve core(VfxSystemSimulator sim, boolean left) {
         return curve(sim, 1, left);
     }

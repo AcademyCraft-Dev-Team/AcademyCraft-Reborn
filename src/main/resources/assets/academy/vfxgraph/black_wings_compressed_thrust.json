@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "vfx",
-  "id": "black_wings",
+  "id": "black_wings_compressed_thrust",
   "parameters": [
     {
       "id": "radial_scale",
@@ -81,7 +81,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 0
+        "value": 2
       }
     },
     {
@@ -90,7 +90,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 1
+        "value": -1
       }
     },
     {
