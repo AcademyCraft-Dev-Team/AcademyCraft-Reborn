@@ -160,6 +160,9 @@ public final class Items {
     public static final DeferredHolder<Item, ImagPhaseUnitItem> IMAG_PHASE_UNIT =
             ITEMS.registerItem("imag_phase_unit", ImagPhaseUnitItem::new);
 
+    public static final DeferredHolder<Item, SpatialStorageUnitItem> SPATIAL_STORAGE_UNIT =
+            ITEMS.registerItem("spatial_storage_unit", SpatialStorageUnitItem::new);
+
     private Items() {
     }
 }

@@ -18,6 +18,17 @@ public final class AcademyCraftRecipeProvider extends RecipeProvider {
 
     @Override
     protected void buildRecipes() {
+        shaped(RecipeCategory.TOOLS, Items.SPATIAL_STORAGE_UNIT.get())
+                .define('P', Items.IMAG_PHASE_PLATE.get())
+                .define('E', ENDER_PEARL)
+                .define('C', Items.IMAG_PHASE_CIRCUIT.get())
+                .define('U', Items.EMPTY_UNIT.get())
+                .pattern("PEP")
+                .pattern("CUC")
+                .pattern("PEP")
+                .unlockedBy("has_imag_phase_plate", has(Items.IMAG_PHASE_PLATE.get()))
+                .save(output);
+
         shaped(RecipeCategory.MISC, Items.ICON.get())
                 .define('A', AMETHYST_SHARD)
                 .define('P', PAPER)

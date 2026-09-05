@@ -524,7 +524,7 @@ public final class DarkmatterBeetle extends Monster {
                 > Math.pow(8.0 + betaPower(limbsAlpha), 2.0)) return;
         var hardness = level.getBlockState(pos).getDestroySpeed(level, pos);
         if (hardness < 0.0f || hardness > 10.0f + 10.0f * alphaPower(limbsAlpha)) return;
-        if (owner.gameMode.destroyBlock(pos)) {
+        if (org.academy.api.server.ability.AbilityBlockDrops.run(owner, () -> owner.gameMode.destroyBlock(pos))) {
             var alpha = alphaPower(limbsAlpha);
             nextExcavationTick = tickCount
                     + Math.max(4, Math.round(20.0f / (1.0f + 0.25f * alpha)));

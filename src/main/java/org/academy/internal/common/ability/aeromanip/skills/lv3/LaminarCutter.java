@@ -546,7 +546,7 @@ public final class LaminarCutter extends Skill {
                         || state.is(BlockTags.LEAVES);
                 if (!predefinedSoft && (tier != AeromanipChargeTier.FULL || state.getDestroySpeed(level, pos) < 0.0f
                         || state.getDestroySpeed(level, pos) > 1.5f)) continue;
-                level.destroyBlock(pos.immutable(), true, player);
+                org.academy.api.server.ability.AbilityBlockDrops.destroyBlock(level, pos.immutable(), true, player);
             }
         }
 

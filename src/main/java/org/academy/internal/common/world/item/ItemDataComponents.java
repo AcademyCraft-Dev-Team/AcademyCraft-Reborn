@@ -45,6 +45,14 @@ public final class ItemDataComponents {
                     .persistent(DarkmatterBlockProfile.CODEC)
                     .networkSynchronized(DarkmatterBlockProfile.STREAM_CODEC));
 
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<java.util.UUID>> SPATIAL_STORAGE_ID =
+            DATA_COMPONENTS.registerComponentType("spatial_storage_id", builder -> builder
+                    .persistent(net.minecraft.core.UUIDUtil.CODEC)
+                    .networkSynchronized(net.minecraft.core.UUIDUtil.STREAM_CODEC));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> SPATIAL_STORAGE_ENABLED =
+            DATA_COMPONENTS.registerComponentType("spatial_storage_enabled", builder -> builder
+                    .persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
+
     private ItemDataComponents() {
     }
 }

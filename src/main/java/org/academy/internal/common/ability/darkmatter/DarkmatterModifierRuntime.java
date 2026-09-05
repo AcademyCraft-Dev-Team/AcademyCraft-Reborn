@@ -419,16 +419,17 @@ public final class DarkmatterModifierRuntime {
                     }
                     var second = bottom.above();
                     if (world.getBlockState(second).is(STACKABLE_HARVESTABLES)) {
-                        changed |= player.gameMode.destroyBlock(second);
+                        changed |= org.academy.api.server.ability.AbilityBlockDrops.run(
+                                player, () -> player.gameMode.destroyBlock(second));
                     }
                     continue;
                 }
                 var crop = state.getBlock() instanceof CropBlock cropBlock && cropBlock.isMaxAge(state);
                 if (!(crop || state.is(ADDITIONAL_HARVESTABLE_CROPS)
                         || state.is(BlockTags.CROPS))) continue;
-                if (!player.gameMode.destroyBlock(pos)) continue;
+                if (!org.academy.api.server.ability.AbilityBlockDrops.run(player, () -> player.gameMode.destroyBlock(pos))) continue;
                 changed = true;
-                if (consumeNearbySeed(world, pos)) {
+                if (consumeNearbySeed(world, pos, player)) {
                     world.setBlock(pos, crop
                             ? ((CropBlock) state.getBlock()).getStateForAge(0)
                             : state.getBlock().defaultBlockState(), 3);
@@ -451,7 +452,13 @@ public final class DarkmatterModifierRuntime {
         return true;
     }
 
-    private static boolean consumeNearbySeed(ServerLevel level, BlockPos pos) {
+    private static boolean consumeNearbySeed(ServerLevel level, BlockPos pos, ServerPlayer player) {
+        for (var unit : org.academy.internal.server.storage.SpatialStorageService.carriedUnits(player)) {
+            if (!org.academy.internal.common.world.item.SpatialStorageUnitItem.isEnabled(unit)) continue;
+            var id = unit.get(org.academy.internal.common.world.item.ItemDataComponents.SPATIAL_STORAGE_ID.get());
+            if (id != null && org.academy.internal.server.storage.SpatialStorageSavedData.get(level.getServer())
+                    .consumeOne(id, resource -> resource.toStack().is(HARVEST_REPLANT_ITEMS))) return true;
+        }
         for (var item : level.getEntitiesOfClass(ItemEntity.class,
                 new AABB(pos).inflate(1.5), entity ->
                         entity.isAlive() && entity.getItem().is(HARVEST_REPLANT_ITEMS))) {

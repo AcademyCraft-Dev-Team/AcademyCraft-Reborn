@@ -127,6 +127,7 @@ public final class AcademyCraftRegister {
             ProgramNodeExtensionIndex.freeze();
             if (ModList.get().isLoaded("curios")) {
                 MagneticHookCuriosCompat.register();
+                org.academy.internal.common.compatibility.SpatialStorageCuriosCompat.register();
             }
             MentalControlApi.registerAdapter(
                     Identifier.fromNamespaceAndPath(MODID, "warden"),

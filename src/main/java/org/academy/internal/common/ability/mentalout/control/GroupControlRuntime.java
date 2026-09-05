@@ -561,8 +561,10 @@ public final class GroupControlRuntime {
             if (canBreak(controller, level, currentBlock)) {
                 var drops = Block.getDrops(
                         state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
-                if (level.destroyBlock(currentBlock, false, subject)) {
+                if (org.academy.api.server.ability.AbilityBlockDrops.run(
+                        controller, () -> level.destroyBlock(currentBlock, false, subject))) {
                     drops.stream().filter(stack -> !stack.isEmpty())
+                            .filter(stack -> !org.academy.internal.server.storage.SpatialStorageService.collect(controller, stack))
                             .map(ItemStack::copy).forEach(bufferedDrops::add);
                     if (settings != null) ControlledEquipment.damageRealTool(subject, tool, 1);
                 }
@@ -787,7 +789,8 @@ public final class GroupControlRuntime {
             subject.swing(InteractionHand.MAIN_HAND);
             var drops = Block.getDrops(
                     state, level, pos, level.getBlockEntity(pos), subject, subject.getMainHandItem());
-            if (!level.destroyBlock(pos, false, subject)) return;
+            if (!org.academy.api.server.ability.AbilityBlockDrops.run(
+                    controller, () -> level.destroyBlock(pos, false, subject))) return;
             if (settings == null) level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
             else if (settings.replant()) {
                 var seed = drops.stream().filter(stack -> stack.getItem() instanceof BlockItem item
@@ -798,6 +801,7 @@ public final class GroupControlRuntime {
                 }
             }
             drops.stream().filter(stack -> !stack.isEmpty())
+                    .filter(stack -> !org.academy.internal.server.storage.SpatialStorageService.collect(controller, stack))
                     .map(ItemStack::copy).forEach(bufferedDrops::add);
         }
 
