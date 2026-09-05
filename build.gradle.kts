@@ -130,6 +130,7 @@ val generateModsToml = tasks.register("generateModsToml") {
         addDep("kotlinforforge", loaderVersionRange)
         addDep("misaka_network", misakaVersion)
         addDep("curios", "[16.0.0,)", "optional")
+        addDep("beyonddimensions", "*", "optional")
 
         config.set<MutableList<Config>>(listOf("dependencies", modId), dependencies)
 

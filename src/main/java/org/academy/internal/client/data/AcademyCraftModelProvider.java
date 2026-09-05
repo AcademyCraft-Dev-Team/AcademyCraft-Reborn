@@ -209,6 +209,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.DARK_MATTER_LEGGINGS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_BOOTS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.SPATIAL_STORAGE_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.itemModelOutput.accept(Items.PAPER_AIRPLANE.get(), ItemModelUtils.plainModel(
                 ModelTemplates.FLAT_ITEM.create(

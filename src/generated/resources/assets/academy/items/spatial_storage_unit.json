@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "academy:item/spatial_storage_unit"
+  }
+}

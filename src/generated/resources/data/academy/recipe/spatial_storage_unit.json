@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "academy:imag_phase_circuit",
+    "E": "minecraft:ender_pearl",
+    "P": "academy:imag_phase_plate",
+    "U": "academy:empty_unit"
+  },
+  "pattern": [
+    "PEP",
+    "CUC",
+    "PEP"
+  ],
+  "result": {
+    "id": "academy:spatial_storage_unit"
+  }
+}

@@ -957,7 +957,7 @@ public class KineticEnergyApplied extends Skill {
             if (state.getDestroySpeed(level, pos) < 0.0f) {
                 return clearFluid(level, player, pos, state);
             }
-            return level.destroyBlock(pos, dropBlocks, player);
+            return org.academy.api.server.ability.AbilityBlockDrops.destroyBlock(level, pos, dropBlocks, player);
         }
 
         private boolean clearFluid(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state) {

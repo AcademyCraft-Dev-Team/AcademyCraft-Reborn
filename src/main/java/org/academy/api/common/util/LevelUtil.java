@@ -356,21 +356,24 @@ public class LevelUtil {
             if (dist < minBlockedDist) {
                 var blockState = level.getBlockState(pos);
                 if (!canAbilityBreak(level, pos, blockState, breaker)) continue;
-                // Capture BE before setting block to air meow
-                var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
+                try (var dropScope = org.academy.api.server.ability.AbilityBlockDrops.capture(breaker)) {
+                    // Capture BE before setting block to air meow
+                    var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
 
-                if (dropBlock) {
-                    var handled = breaker != null && level instanceof ServerLevel serverLevel
-                            && dropHandler != null
-                            && dropHandler.drop(serverLevel, pos, blockState, blockEntity, breaker);
-                    if (!handled) Block.dropResources(blockState, level, pos, blockEntity, null, ItemStack.EMPTY);
-                }
-                if (removeUnsupportedBlocksSilently) {
-                    removeBlockAndUnsupportedNeighbors(level, pos, blockState, air, breaker);
-                } else {
-                    level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
-                    if (spawnParticles) {
-                        level.levelEvent(2001, pos, Block.getId(blockState));
+                    if (dropBlock || breaker != null
+                            && org.academy.internal.server.storage.SpatialStorageService.hasEnabledUnit(breaker)) {
+                        var handled = breaker != null && level instanceof ServerLevel serverLevel
+                                && dropHandler != null
+                                && dropHandler.drop(serverLevel, pos, blockState, blockEntity, breaker);
+                        if (!handled) Block.dropResources(blockState, level, pos, blockEntity, breaker, ItemStack.EMPTY);
+                    }
+                    if (removeUnsupportedBlocksSilently) {
+                        removeBlockAndUnsupportedNeighbors(level, pos, blockState, air, breaker);
+                    } else {
+                        level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
+                        if (spawnParticles) {
+                            level.levelEvent(2001, pos, Block.getId(blockState));
+                        }
                     }
                 }
             }
@@ -400,6 +403,9 @@ public class LevelUtil {
             var candidateState = level.getBlockState(candidate);
             if (candidateState.isAir() || candidateState.canSurvive(level, candidate)) continue;
             if (!canAbilityBreak(level, candidate, candidateState, breaker)) continue;
+            if (breaker != null && org.academy.internal.server.storage.SpatialStorageService.hasEnabledUnit(breaker)) {
+                Block.dropResources(candidateState, level, candidate, level.getBlockEntity(candidate), breaker, ItemStack.EMPTY);
+            }
             if (!level.setBlock(candidate, air, SILENT_BLOCK_UPDATE_FLAGS)) continue;
 
             removedBlocks.add(new RemovedBlock(candidate, candidateState.getBlock()));
