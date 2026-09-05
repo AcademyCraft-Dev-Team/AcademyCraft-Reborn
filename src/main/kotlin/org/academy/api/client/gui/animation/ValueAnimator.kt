@@ -48,6 +48,12 @@ open class ValueAnimator protected constructor() : Animator() {
         updateListeners.remove(listener)
     }
 
+    fun snapToEnd() {
+        animatedValue = endValue
+        for (listener in updateListeners) listener.accept(this)
+        if (isRunning) end()
+    }
+
     override fun onStartInternal() {
         isReversing = false
         currentIteration = 0
