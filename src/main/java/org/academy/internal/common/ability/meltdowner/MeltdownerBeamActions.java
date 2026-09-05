@@ -86,6 +86,8 @@ public final class MeltdownerBeamActions {
     ) {
         var source = SkillDamageSource.of(player, skill);
         return LinearAttackPayload.builder(player, skill, source, radius)
+                .maximumHealthDamage(target -> target instanceof LivingEntity living
+                        ? living.getMaxHealth() * Math.max(0.0f, maxHealthRatio) : 0.0f)
                 .targetFilter(targetFilter)
                 .outboundTargetFilter(target -> MeltdownerTargeting.canAffectNegatively(player, target))
                 .damage(target -> {

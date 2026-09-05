@@ -17,6 +17,7 @@ public final class LinearAttackPayload {
     private final DamageSource outgoingDamageSource;
     private final float radius;
     private final DamageCalculator damageCalculator;
+    private final DamageCalculator maximumHealthCalculator;
     private final Predicate<Entity> targetFilter;
     private final Predicate<Entity> outboundTargetFilter;
     private final Predicate<Entity> returnTargetFilter;
@@ -28,6 +29,7 @@ public final class LinearAttackPayload {
         outgoingDamageSource = builder.outgoingDamageSource;
         radius = builder.radius;
         damageCalculator = builder.damageCalculator;
+        maximumHealthCalculator = builder.maximumHealthCalculator;
         targetFilter = builder.targetFilter;
         outboundTargetFilter = builder.outboundTargetFilter;
         returnTargetFilter = builder.returnTargetFilter;
@@ -64,6 +66,11 @@ public final class LinearAttackPayload {
         return Float.isFinite(damage) ? Math.max(0.0f, damage) : 0.0f;
     }
 
+    public float maximumHealthDamage(Entity target) {
+        var value = maximumHealthCalculator.calculate(target);
+        return Float.isFinite(value) ? Math.max(0.0f, value) : 0.0f;
+    }
+
     boolean canTarget(Entity target, boolean reflected, @Nullable ServerPlayer reflector) {
         if (target == null || !target.isAlive() || !targetFilter.test(target)) return false;
         var effectiveAttacker = reflected ? reflector : attacker;
@@ -97,6 +104,7 @@ public final class LinearAttackPayload {
         private final DamageSource outgoingDamageSource;
         private final float radius;
         private DamageCalculator damageCalculator = _ -> 0.0f;
+        private DamageCalculator maximumHealthCalculator = _ -> 0.0f;
         private Predicate<Entity> targetFilter = _ -> true;
         private Predicate<Entity> outboundTargetFilter = _ -> true;
         private Predicate<Entity> returnTargetFilter = _ -> true;
@@ -120,6 +128,11 @@ public final class LinearAttackPayload {
 
         public Builder damage(DamageCalculator damageCalculator) {
             this.damageCalculator = Objects.requireNonNull(damageCalculator, "damageCalculator");
+            return this;
+        }
+
+        public Builder maximumHealthDamage(DamageCalculator calculator) {
+            maximumHealthCalculator = Objects.requireNonNull(calculator, "calculator");
             return this;
         }
 

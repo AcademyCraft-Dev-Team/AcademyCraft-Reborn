@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.electromaster.skills.lv5;
 
+import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
@@ -399,12 +400,12 @@ public class BallLightning extends Skill {
                     var damageSource = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
                     var system = AbilitySystemServer.getSystem(player);
                     for (var entity : entities) {
-                        entity.hurtServer(level, damageSource,
+                        DamageComposition.hurt(entity, level, damageSource,
                                 calculateImpactDamage(
                                         entity.getMaxHealth(),
                                         system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                                         system.getPlayerDamageMultiplier(player.getUUID())
-                                ));
+                                ), entity.getMaxHealth() * IMPACT_DAMAGE.maxHealthRatio());
                         QuantumUtil.enableQuantum(entity, 0.5f, 0x3366FF);
                     }
                     if (proficiencyMilestone >= 3) {
@@ -452,11 +453,13 @@ public class BallLightning extends Skill {
                     orb.setPos(position);
                     if (!targets.isEmpty() && position.distanceToSqr(targets.getFirst().position()) <= 4.0) {
                         var system = AbilitySystemServer.getSystem(player);
-                        var source = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
+                        var source = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get()).withElectricalChargePoints(1);
                         for (var target : MathUtil.getEntitiesInSphereByHP(level(), position, 3.0, entity -> entity != player)) {
-                            target.hurtServer(level(), source, calculateImpactDamage(target.getMaxHealth(),
+                            DamageComposition.hurt(
+                                    target, level(), source, calculateImpactDamage(target.getMaxHealth(),
                                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                                    system.getPlayerDamageMultiplier(player.getUUID())) * 0.3f);
+                                    system.getPlayerDamageMultiplier(player.getUUID())) * 0.3f,
+                                    target.getMaxHealth() * IMPACT_DAMAGE.maxHealthRatio() * 0.3f);
                         }
                         endMini();
                     }

@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.damagesource;
 
+import org.academy.api.common.damage.DamageComposition;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -63,14 +64,21 @@ public final class CTAEntityActuallyHurt {
                 ? PlayerAttributeRuntime.reduceDamage(player, amount, 0.08)
                 : amount;
         var adjustedAmount = OutputControl.adjustDamage(source, reducedAmount);
+        if (adjustedAmount > reducedAmount) {
+            var percentage = Math.min(amount,
+                    DamageComposition.maximumHealthPart(entity, source));
+            adjustedAmount = reducedAmount + (adjustedAmount - reducedAmount) * (1.0f - percentage / amount);
+        }
+        adjustedAmount = CategoryDamageRuntime.outgoingDamage(source, adjustedAmount);
         if (!(adjustedAmount > 0.0f) || !Float.isFinite(adjustedAmount)) return false;
         if (notifyCustomHurt) {
             TrueDamageCompatibility.notifyCustomHurt(entity, level, source, adjustedAmount);
         }
+        var finalAmount = adjustedAmount;
         var applied = new boolean[1];
         OutputControl.runWithoutDamageScaling(
                 () -> PlayerAttributeRuntime.runWithoutResistance(
-                        () -> applied[0] = apply(level, source, adjustedAmount)
+                        () -> applied[0] = apply(level, source, finalAmount)
                 )
         );
         return applied[0];

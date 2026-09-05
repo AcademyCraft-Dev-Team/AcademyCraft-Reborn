@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.electromaster.skills.lv1;
 
+import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.particles.ParticleTypes;
@@ -223,9 +224,11 @@ public class ElectricalContact extends Skill {
                                     && !PvpSetting.shouldPrevent(attacker, candidate))
                     .stream().min(Comparator.comparingDouble(target::distanceToSqr)).orElse(null);
             if (chained != null) {
-                chained.hurtServer(level, SkillDamageSource.of(attacker, skillSource.getSkill(),
-                                DamageTypes.ELECTRO_DAMAGE),
-                        event.getAmount() * 0.5f);
+                var percentage = DamageComposition.maximumHealthPart(target, event.getSource());
+                DamageComposition.hurt(
+                        chained, level, SkillDamageSource.of(attacker, skillSource.getSkill(), DamageTypes.ELECTRO_DAMAGE)
+                                .withElectricalChargePoints(1),
+                        event.getAmount() * 0.5f, percentage * 0.5f);
             }
         }
     }

@@ -551,14 +551,7 @@ public final class LaminarCutter extends Skill {
         }
 
         private static void damageEquipment(LivingEntity target, int amount) {
-            for (var slot : new EquipmentSlot[]{
-                    EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
-                    EquipmentSlot.FEET, EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND}) {
-                var stack = target.getItemBySlot(slot);
-                if (!stack.isEmpty() && stack.isDamageableItem()) {
-                    stack.hurtAndBreak(amount, target, slot);
-                }
-            }
+            org.academy.api.common.damage.AbilityHitEffects.damageEquipment(target, amount, true);
         }
 
         private static void disarm(ServerPlayer owner, LivingEntity target) {

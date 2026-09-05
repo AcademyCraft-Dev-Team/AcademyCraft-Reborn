@@ -67,7 +67,7 @@ public final class TemporalPlayerTickGameTests {
         var data = new TestData<>(
                 environment,
                 Identifier.withDefaultNamespace("empty"),
-                90,
+                620,
                 0,
                 true,
                 Rotation.NONE,
@@ -131,6 +131,8 @@ public final class TemporalPlayerTickGameTests {
         private final ServerPlayer reference;
         @Nullable
         private TemporalFieldLease lease;
+        private org.academy.api.common.damage.ReactionSlowdown reactionA;
+        private org.academy.api.common.damage.ReactionSlowdown reactionB;
         private int controlledTicks;
         private int controlledPlayTime;
         private int referencePlayTime;
@@ -149,7 +151,7 @@ public final class TemporalPlayerTickGameTests {
         private void start() {
             controlledPlayTime = playTime(controlled);
             referencePlayTime = playTime(reference);
-            helper.runAtTickTime(89L, this::cleanup);
+            helper.runAtTickTime(619L, this::cleanup);
             helper.runAfterDelay(3L, () -> guarded(this::beginPause));
         }
 
@@ -160,6 +162,8 @@ public final class TemporalPlayerTickGameTests {
                     "Connected test players did not receive baseline simulation ticks"
             );
             lease = field(Set.of(controlled.getUUID()), 0.0D);
+            helper.assertTrue(!((org.academy.internal.server.time.TemporalRuntime) TemporalApi.get(controlled))
+                    .isPlayerActionTick(controlled), "A new hard pause must block actions immediately");
             snapshot();
             helper.runAfterDelay(4L, () -> guarded(this::validatePause));
         }
@@ -198,6 +202,51 @@ public final class TemporalPlayerTickGameTests {
         private void validateSlowdown() {
             assertDeltas(3, "Half-speed player tick plan was not deterministic");
             closeLease();
+            reactionA = org.academy.api.common.damage.ReactionSlowdown.acquire(controlled);
+            reactionB = org.academy.api.common.damage.ReactionSlowdown.acquire(controlled);
+            var stick = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK);
+            var dirt = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT);
+            controlled.getInventory().setItem(0, stick);
+            controlled.getInventory().setItem(1, dirt);
+            controlled.getCooldowns().addCooldown(stick, 300);
+            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(controlled, 5);
+            helper.assertTrue(controlled.getCooldowns().isOnCooldown(dirt),
+                    "Paralysis must cool down carried items");
+            helper.runAfterDelay(10L, () -> guarded(() -> {
+                helper.assertTrue(!org.academy.api.common.damage.AbilityHitEffects.isParalyzed(controlled),
+                        "Paralysis must end after ten physical ticks even at two-thirds speed");
+                helper.assertTrue(!controlled.getCooldowns().isOnCooldown(dirt),
+                        "Paralysis-owned cooldown must end on the physical clock");
+                helper.assertTrue(controlled.getCooldowns().isOnCooldown(stick),
+                        "Ending paralysis must preserve a longer pre-existing cooldown");
+            }));
+            snapshot();
+            for (var tick = 11L; tick < 41L; tick++) {
+                helper.runAfterDelay(tick, () -> guarded(() -> {
+                    var unrelated = field(Set.of(reference.getUUID()), 0.5D);
+                    unrelated.close();
+                }));
+            }
+            helper.runAfterDelay(300L, () -> guarded(this::validateTwoThirds));
+        }
+
+        private void validateTwoThirds() {
+            assertDeltas(200, "Two-thirds player rate must execute 200 ticks in 300 heartbeats");
+            helper.assertValueEqual(playTime(reference) - referencePlayTime, 300,
+                    "Reaction slowdown leaked to an unrelated player");
+            helper.assertTrue(controlled.connection.isAcceptingMessages(),
+                    "Reaction slowdown stopped network transport");
+            var remaining = controlled.getCooldowns().getCooldownPercent(
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK), 0);
+            helper.assertTrue(Math.abs(remaining - 1.0f / 3.0f) < 0.001f,
+                    "Item cooldown did not follow the player's logical clock");
+            reactionA.close();
+            reactionA = null;
+            helper.assertTrue(Math.abs(TemporalApi.get(controlled).effectiveScale(
+                    controlled, TemporalChannel.ENTITY) - 2.0D / 3.0D) < 1.0E-9,
+                    "Closing one caster removed another caster's slowdown");
+            reactionB.close();
+            reactionB = null;
             lease = field(
                     Set.of(controlled.getUUID(), reference.getUUID()),
                     2.0D
@@ -220,8 +269,42 @@ public final class TemporalPlayerTickGameTests {
 
         private void validateRollback() {
             assertDeltas(2, "Full-speed rollback retained stale temporal state");
-            cleanup();
-            helper.succeed();
+            beginMindDestruction();
+            helper.runAfterDelay(21L, () -> guarded(() -> {
+                helper.assertTrue(Math.abs(TemporalApi.get(controlled).effectiveScale(
+                        controlled, TemporalChannel.ENTITY) - 2.0D / 3.0D) < 1.0E-9,
+                        "Mind Destruction must slow its target after the first damaging pulse");
+            }));
+            helper.runAfterDelay(201L, () -> guarded(() -> {
+                helper.assertTrue(TemporalApi.get(controlled).effectiveScale(
+                        controlled, TemporalChannel.ENTITY) == 1.0D,
+                        "Mind Destruction must release its clock at skill expiry");
+                beginMindDestruction();
+                helper.runAfterDelay(21L, () -> guarded(() -> {
+                    org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction
+                            .releaseEntity(reference.getUUID());
+                    helper.assertTrue(TemporalApi.get(controlled).effectiveScale(
+                            controlled, TemporalChannel.ENTITY) == 1.0D,
+                            "Cancelling Mind Destruction must immediately release its clock");
+                    cleanup();
+                    helper.succeed();
+                }));
+            }));
+        }
+
+        private void beginMindDestruction() {
+            org.academy.internal.common.world.damagesource.PvpSetting.trySetPvpEnabled(controlled, true);
+            org.academy.internal.common.world.damagesource.PvpSetting.trySetPvpEnabled(reference, true);
+            controlled.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1000);
+            controlled.setHealth(1000);
+            try {
+                var start = org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction.class
+                        .getDeclaredMethod("start", ServerPlayer.class, net.minecraft.world.entity.LivingEntity.class, boolean.class);
+                start.setAccessible(true);
+                start.invoke(null, reference, controlled, false);
+            } catch (ReflectiveOperationException error) {
+                throw new IllegalStateException("Could not start the actual Mind Destruction effect", error);
+            }
         }
 
         private TemporalFieldLease field(Set<UUID> playerIds, double scale) {
@@ -273,6 +356,8 @@ public final class TemporalPlayerTickGameTests {
             if (cleaned) return;
             cleaned = true;
             closeLease();
+            if (reactionA != null) reactionA.close();
+            if (reactionB != null) reactionB.close();
             var server = helper.getLevel().getServer();
             var players = server.getPlayerList();
             server.getConnection().getConnections().remove(

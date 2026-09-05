@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.damagesource;
 
+import org.academy.api.common.damage.DamageComposition;
 import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -41,9 +42,26 @@ public final class SkillDamageUtil {
             return applyVerifiedTrueHealth(target, source, amount);
         }
         if (DamageTypes.usesDirectActuallyHurt(type)) {
-            return applyDirectWithFallback(level, attacker, target, skill, source, amount);
+            return applyDirectDamage(level, attacker, target, skill, source, amount);
         }
         return target.hurtServer(level, source, amount);
+    }
+
+    public static boolean apply(ServerPlayer attacker, LivingEntity target, Skill skill,
+                                ResourceKey<DamageType> type, float amount, float maximumHealthPart) {
+        if (attacker == null || target == null || skill == null || type == null) return false;
+        if (!(target.level() instanceof ServerLevel level) || !target.isAlive()
+                || target == attacker || PvpSetting.shouldPrevent(attacker, target)
+                || DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)
+                || !(amount > 0.0f) || !Float.isFinite(amount)) return false;
+        var source = SkillDamageSource.of(attacker, skill, type);
+        return DamageComposition.withMaximumHealthPart(
+                target, source, maximumHealthPart,
+                () -> DamageTypes.usesVerifiedTrueHealth(source)
+                        ? applyVerifiedTrueHealth(target, source, amount)
+                        : DamageTypes.usesDirectActuallyHurt(source)
+                        ? applyDirectDamage(level, attacker, target, skill, source, amount)
+                        : target.hurtServer(level, source, amount));
     }
 
     public static boolean applyDirect(ServerLevel level, LivingEntity target,
@@ -80,7 +98,7 @@ public final class SkillDamageUtil {
                     ? handler.actuallyHurt(source, amount, true)
                     : handler.actuallyHurtFromHurtServer(source, amount, true);
         }
-        return applyDirectWithFallback(level, attacker, target, source.getSkill(), source, amount);
+        return applyDirectDamage(level, attacker, target, source.getSkill(), source, amount);
     }
 
     /**
@@ -105,7 +123,7 @@ public final class SkillDamageUtil {
         return new CTAEntityActuallyHurt(target).actuallyHurt(source, amount, true);
     }
 
-    private static boolean applyDirectWithFallback(ServerLevel level, ServerPlayer attacker,
+    private static boolean applyDirectDamage(ServerLevel level, ServerPlayer attacker,
                                                    LivingEntity target, Skill skill,
                                                    DamageSource source, float amount) {
         var beforeHealth = target.getHealth();
@@ -115,13 +133,11 @@ public final class SkillDamageUtil {
         var container = new DamageContainer(source, amount);
         containers.push(container);
 
-        var completed = false;
         try {
             invoker.academy$actuallyHurt(level, source, amount);
-            completed = true;
         } catch (Throwable error) {
             AcademyCraft.getLogger().warn(
-                    "Direct actuallyHurt failed for {}; falling back when no damage was committed",
+                    "Direct actuallyHurt failed for {}; preserving any damage already committed",
                     target.getStringUUID(),
                     error
             );
@@ -134,24 +150,17 @@ public final class SkillDamageUtil {
         var healthDamage = Math.max(0.0f, beforeHealth - target.getHealth());
         var absorptionDamage = Math.max(0.0f, beforeAbsorption - target.getAbsorptionAmount());
         var committed = healthDamage > EPSILON || absorptionDamage > EPSILON;
-        if (!completed && !committed) {
-            return target.hurtServer(level, attacker.damageSources().playerAttack(attacker), amount);
-        }
-        if (!committed) {
-            return target.hurtServer(level, attacker.damageSources().playerAttack(attacker), amount);
-        }
+        // Zero damage can be an intentional Academy defense. Never retry as ordinary melee,
+        // which would lose category identity and re-enter external mutable events.
+        if (!committed) return false;
 
         completeDirectDamage(
                 level, target, source, amount, healthDamage + absorptionDamage,
                 attacker, skill, target.isDeadOrDying(), true
         );
         DamageCompletionDeclaration.publish(
-                target,
-                source,
-                container.getOriginalDamage(),
-                container.getInflictedDamage(),
-                container.getNewDamage()
-        );
+                target, source, container.getOriginalDamage(),
+                healthDamage + absorptionDamage, healthDamage);
         return true;
     }
 

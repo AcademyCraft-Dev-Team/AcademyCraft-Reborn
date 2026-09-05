@@ -108,11 +108,12 @@ public abstract class MixinServerGamePacketListenerImpl {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
         var context = (MinecraftServerContext) player.level().getServer();
         var temporallyPaused = context.hasAcademyCraftServer()
-                && ((TemporalRuntime) context.getAcademyCraftServer()
-                .getTemporalService()).isPlayerSimulationPaused(player);
+                && !((TemporalRuntime) context.getAcademyCraftServer()
+                .getTemporalService()).isPlayerActionTick(player);
         return PlayerControlSessionManager.blocksUntrustedWorldAction(player)
                 || MentalControlRuntime
                 .isFrozen(player)
-                || temporallyPaused;
+                || temporallyPaused
+                || org.academy.api.common.damage.AbilityHitEffects.isParalyzed(player);
     }
 }

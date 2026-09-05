@@ -64,6 +64,9 @@ public final class Flashing extends Skill {
     static final double DASH_DISTANCE = 8.0;
     static final int REPEAT_TICKS = 6;
     static final int DASH_INVULNERABILITY_TICKS = 4;
+    static final double DASH_TRUE_RESISTANCE = 8.0;
+    private static final net.minecraft.resources.Identifier DASH_RESISTANCE_ID =
+            AcademyCraft.academy("flashing_true_resistance");
     static final int AUTO_ESCAPE_COOLDOWN_TICKS = 200;
     private static final double[] AUTO_ESCAPE_ANGLE_OFFSETS = {
             0.0,
@@ -266,7 +269,7 @@ public final class Flashing extends Skill {
             if (skill.hasProficiencyMilestone(player, 3)) {
                 var queue = DASH_QUEUES.computeIfAbsent(player.getUUID(), ignored -> new ArrayDeque<>());
                 if (queue.size() < 3) {
-                    beginDashInvulnerability(player.getUUID());
+                    beginDashInvulnerability(player);
                     queue.addLast(packet.direction);
                 }
                 return;
@@ -288,7 +291,7 @@ public final class Flashing extends Skill {
                 return;
             }
 
-            if (!protectionStarted) beginDashInvulnerability(playerId);
+            if (!protectionStarted) beginDashInvulnerability(player);
             var completed = new boolean[1];
             try {
                 var direction = directionFromLook(player.getLookAngle(), player.getYRot(), requestedDirection);
@@ -359,7 +362,7 @@ public final class Flashing extends Skill {
             var destination = findAutoEscapeDestination(player, sourcePosition);
             if (destination == null) return false;
 
-            beginDashInvulnerability(playerId);
+            beginDashInvulnerability(player);
             var completed = new boolean[1];
             try {
                 skill.executeActive(player, (context, actualCost) -> {
@@ -424,6 +427,21 @@ public final class Flashing extends Skill {
             LAST_AUTO_ESCAPE.remove(playerId);
         }
 
+        public static void beginDashInvulnerability(ServerPlayer player) {
+            beginDashInvulnerability(player.getUUID());
+            var state = DASH_INVULNERABILITY.get(player.getUUID());
+            state.player = new java.lang.ref.WeakReference<>(player);
+            syncDashResistance(state);
+        }
+
+        private static void syncDashResistance(DashInvulnerabilityState state) {
+            var player = state.player == null ? null : state.player.get();
+            if (player == null) return;
+            org.academy.internal.common.attribute.PlayerAttributeRuntime.syncTrueResistanceModifier(
+                    player, DASH_RESISTANCE_ID, DASH_TRUE_RESISTANCE,
+                    isDashInvulnerable(player.getUUID(), player.level().getGameTime()));
+        }
+
         static void beginDashInvulnerability(UUID playerId) {
             DASH_INVULNERABILITY.computeIfAbsent(
                     playerId,
@@ -441,6 +459,7 @@ public final class Flashing extends Skill {
                     state.graceEndTick,
                     completionTick + DASH_INVULNERABILITY_TICKS
             );
+            syncDashResistance(state);
         }
 
         static boolean isDashInvulnerable(UUID playerId, long now) {
@@ -463,7 +482,8 @@ public final class Flashing extends Skill {
         }
 
         static void clearDashInvulnerability(UUID playerId) {
-            DASH_INVULNERABILITY.remove(playerId);
+            var state = DASH_INVULNERABILITY.remove(playerId);
+            if (state != null) syncDashResistance(state);
         }
 
         private static void clearExpiredDashInvulnerability(UUID playerId, long now) {
@@ -477,7 +497,9 @@ public final class Flashing extends Skill {
                 long now
         ) {
             if (state.pendingDashes == 0 && now >= state.graceEndTick) {
-                DASH_INVULNERABILITY.remove(playerId);
+                clearDashInvulnerability(playerId);
+            } else {
+                syncDashResistance(state);
             }
         }
 
@@ -489,6 +511,7 @@ public final class Flashing extends Skill {
         }
 
         private static final class DashInvulnerabilityState {
+            private java.lang.ref.WeakReference<ServerPlayer> player;
             private int pendingDashes;
             private long graceEndTick = Long.MIN_VALUE;
         }
@@ -515,6 +538,13 @@ public final class Flashing extends Skill {
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
         private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTickPre(PlayerTickEvent.Pre event) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                Server.clearExpiredDashInvulnerability(player.getUUID(), player.level().getGameTime());
+            }
         }
 
         @SubscribeEvent
@@ -554,10 +584,25 @@ public final class Flashing extends Skill {
         }
 
         @SubscribeEvent
+        public static void onDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            Server.clearDashInvulnerability(player.getUUID());
+            Server.DASH_QUEUES.remove(player.getUUID());
+        }
+
+        @SubscribeEvent
+        public static void onClone(PlayerEvent.Clone event) {
+            Server.clearDashInvulnerability(event.getEntity().getUUID());
+            Server.DASH_QUEUES.remove(event.getEntity().getUUID());
+        }
+
+        @SubscribeEvent
         public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
             var playerId = event.getEntity().getUUID();
             Server.clearDashInvulnerability(playerId);
             Server.clearAutoEscapeCooldown(playerId);
+            Server.DASH_QUEUES.remove(playerId);
+            Server.LAST_DASH.remove(playerId);
         }
     }
 

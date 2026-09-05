@@ -36,6 +36,22 @@ class TemporalAccumulatorTest {
     }
 
     @Test
+    void twoThirdsRunsExactlyTwoTicksInEveryThreeHeartbeats() {
+        var accumulator = new TemporalAccumulator();
+        var total = 0;
+        for (var group = 0; group < 100; group++) {
+            var ticks = accumulator.advance(2.0D / 3.0D, 8)
+                    + accumulator.advance(2.0D / 3.0D, 8)
+                    + accumulator.advance(2.0D / 3.0D, 8);
+            assertEquals(2, ticks);
+            total += ticks;
+        }
+        assertEquals(200, total);
+        accumulator.reset();
+        assertEquals(1, accumulator.advance(1.0D, 8));
+    }
+
+    @Test
     void rejectsInvalidInputs() {
         var accumulator = new TemporalAccumulator();
         assertThrows(IllegalArgumentException.class, () -> accumulator.advance(-1.0D, 8));

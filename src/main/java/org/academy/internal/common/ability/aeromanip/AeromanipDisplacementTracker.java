@@ -194,13 +194,7 @@ public final class AeromanipDisplacementTracker {
     }
 
     private static void damageArmor(LivingEntity target, int amount) {
-        if (amount <= 0) return;
-        for (var slot : ARMOR_SLOTS) {
-            var stack = target.getItemBySlot(slot);
-            if (!stack.isEmpty() && stack.isDamageableItem()) {
-                stack.hurtAndBreak(amount, target, slot);
-            }
-        }
+        org.academy.api.common.damage.AbilityHitEffects.damageEquipment(target, amount, false);
     }
 
     @SubscribeEvent
