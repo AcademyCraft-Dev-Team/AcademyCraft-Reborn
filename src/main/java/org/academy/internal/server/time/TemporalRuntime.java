@@ -71,6 +71,7 @@ public final class TemporalRuntime implements TemporalService {
     private static final int MAX_WALL_CLOCK_FORCED_TICKS_PER_PASS = 2;
     private static final int MAX_LOGICAL_TICKS_PER_PASS = 8;
     private static final long STALE_ACCUMULATOR_HEARTBEATS = 400L;
+    private static final long CLIENT_STATE_REFRESH_HEARTBEATS = 100L;
     private static final Set<TemporalChannel> INTEGRATED_CHANNELS = Set.copyOf(
             EnumSet.of(
                     TemporalChannel.LEVEL_CLOCK,
@@ -104,6 +105,9 @@ public final class TemporalRuntime implements TemporalService {
             new LinkedHashMap<>();
     private final Map<UUID, AccumulatorState> entityTickAccumulators =
             new HashMap<>();
+    private final Map<UUID, AccumulatorState> playerTickAccumulators =
+            new HashMap<>();
+    private final Map<UUID, PlayerTickPlan> playerTickPlans = new HashMap<>();
     private final Map<TickingBlockEntity, AccumulatorState> blockEntityTickAccumulators =
             new IdentityHashMap<>();
     private final Map<ResourceKey<Level>, AccumulatorState> levelClockAccumulators =
@@ -139,8 +143,12 @@ public final class TemporalRuntime implements TemporalService {
             ThreadLocal.withInitial(HashSet::new);
     private final ThreadLocal<Set<ResourceKey<Level>>> scaledCustomSpawnerStack =
             ThreadLocal.withInitial(HashSet::new);
+    private final UUID clientStateSessionId = UUID.randomUUID();
+    private Map<UUID, Integer> lastPublishedImmunityMasks = Map.of();
+    private Map<UUID, Float> lastPublishedPlayerScales = Map.of();
     private long heartbeat;
     private long stateRevision;
+    private boolean clientStateDirty;
     private boolean stopped;
 
     public TemporalRuntime(MinecraftServer server) {
@@ -161,6 +169,7 @@ public final class TemporalRuntime implements TemporalService {
         temporalFields.put(fieldId, field);
         resetScaleAccumulators();
         rebaseScheduledQueues();
+        clientStateDirty = true;
         return new FieldLease(fieldId, field, owner);
     }
 
@@ -305,7 +314,7 @@ public final class TemporalRuntime implements TemporalService {
                         TemporalChannel.SCHEDULED_FLUID
                 ),
                 new TemporalTickDiagnostics.AccumulatorState(
-                        entityTickAccumulators.size(),
+                        entityTickAccumulators.size() + playerTickAccumulators.size(),
                         blockEntityTickAccumulators.size(),
                         levelClockAccumulators.size(),
                         weatherTickAccumulators.size(),
@@ -474,8 +483,13 @@ public final class TemporalRuntime implements TemporalService {
         var inProgress = scaledEntityTickStack.get();
         if (inProgress.contains(entityId)) return false;
 
-        var scale = effectiveScale(entity, TemporalChannel.ENTITY);
-        var logicalTicks = logicalTicks(entityTickAccumulators, entityId, scale);
+        var logicalTicks = entity instanceof ServerPlayer player
+                ? playerTickPlan(player).logicalTicks()
+                : logicalTicks(
+                        entityTickAccumulators,
+                        entityId,
+                        effectiveScale(entity, TemporalChannel.ENTITY)
+                );
         if (logicalTicks == 1) return false;
         if (logicalTicks == 0) return true;
 
@@ -489,6 +503,39 @@ public final class TemporalRuntime implements TemporalService {
             if (inProgress.isEmpty()) scaledEntityTickStack.remove();
         }
         return true;
+    }
+
+    /**
+     * Runs only the authoritative player simulation portion of the connection
+     * tick. Network transport, keepalive, throttlers, movement bookkeeping and
+     * disconnect checks deliberately remain on the physical server clock.
+     */
+    public void dispatchPlayerSimulationTicks(
+            ServerPlayer player,
+            Runnable vanillaPlayerTick
+    ) {
+        requireHookCaller(
+                "dispatchPlayerSimulationTicks",
+                net.minecraft.server.network.ServerGamePacketListenerImpl.class
+        );
+        requireServerThread();
+        if (stopped || player.level().getServer() != server) {
+            vanillaPlayerTick.run();
+            return;
+        }
+
+        var logicalTicks = playerTickPlan(player).logicalTicks();
+        for (var index = 0; index < logicalTicks && !player.isRemoved(); index++) {
+            vanillaPlayerTick.run();
+        }
+    }
+
+    /** Server-authoritative hard-pause check used by packet action guards. */
+    public boolean isPlayerSimulationPaused(ServerPlayer player) {
+        requireServerThread();
+        return !stopped
+                && player.level().getServer() == server
+                && effectiveScale(player, TemporalChannel.ENTITY) == 0.0D;
     }
 
     /** Runs a block-entity ticker according to its effective local scale. */
@@ -938,9 +985,19 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /** Immutable transport snapshot used by the client compensation runtime. */
+    /** Immutable, full transport snapshot used by the client temporal runtime. */
     public ClientStateSnapshot clientStateSnapshot() {
         requireServerThread();
+        return new ClientStateSnapshot(
+                clientStateSessionId,
+                stateRevision,
+                heartbeat,
+                collectImmunityMasks(),
+                collectPlayerScales()
+        );
+    }
+
+    private Map<UUID, Integer> collectImmunityMasks() {
         var masks = new HashMap<UUID, Integer>();
         for (var entityId : protectedEntityIds()) {
             var sources = EnumSet.noneOf(TemporalPauseSource.class);
@@ -950,7 +1007,18 @@ public final class TemporalRuntime implements TemporalService {
             for (var source : sources) mask |= 1 << source.ordinal();
             if (mask != 0) masks.put(entityId, mask);
         }
-        return new ClientStateSnapshot(stateRevision, Map.copyOf(masks));
+        return Map.copyOf(masks);
+    }
+
+    private Map<UUID, Float> collectPlayerScales() {
+        var scales = new HashMap<UUID, Float>();
+        for (var player : server.getPlayerList().getPlayers()) {
+            var scale = (float) effectiveScale(player, TemporalChannel.ENTITY);
+            if (Float.compare(scale, 1.0F) != 0) {
+                scales.put(player.getUUID(), scale);
+            }
+        }
+        return Map.copyOf(scales);
     }
 
     /** Captures the independent server heartbeat before vanilla child ticking. */
@@ -959,6 +1027,12 @@ public final class TemporalRuntime implements TemporalService {
         requireServerThread();
         if (stopped) return;
         heartbeat++;
+        preparePlayerTickPlans();
+        publishClientState(
+                clientStateDirty
+                        || heartbeat % CLIENT_STATE_REFRESH_HEARTBEATS == 0L
+        );
+        clientStateDirty = false;
         if (heartbeat % 200L == 0L) pruneStaleAccumulators();
         snapshotTrackedEntities(null, serverTickSnapshots);
         if (heartbeat % 40L == 0L) {
@@ -1084,6 +1158,9 @@ public final class TemporalRuntime implements TemporalService {
         levelTickSnapshots.clear();
         lastFallbackHeartbeats.clear();
         wallClockDebtStates.clear();
+        playerTickPlans.clear();
+        lastPublishedImmunityMasks = Map.of();
+        lastPublishedPlayerScales = Map.of();
         guardBypassStack.remove();
         fallbackTickStack.remove();
         scaledEntityTickStack.remove();
@@ -1459,6 +1536,33 @@ public final class TemporalRuntime implements TemporalService {
         return state.accumulator.advance(scale, MAX_LOGICAL_TICKS_PER_PASS);
     }
 
+    private void preparePlayerTickPlans() {
+        playerTickPlans.clear();
+        var online = new HashSet<UUID>();
+        for (var player : server.getPlayerList().getPlayers()) {
+            online.add(player.getUUID());
+            createPlayerTickPlan(player);
+        }
+        playerTickAccumulators.keySet().removeIf(entityId -> !online.contains(entityId));
+    }
+
+    private PlayerTickPlan playerTickPlan(ServerPlayer player) {
+        var existing = playerTickPlans.get(player.getUUID());
+        if (existing != null && existing.heartbeat() == heartbeat) return existing;
+        return createPlayerTickPlan(player);
+    }
+
+    private PlayerTickPlan createPlayerTickPlan(ServerPlayer player) {
+        var scale = effectiveScale(player, TemporalChannel.ENTITY);
+        var plan = new PlayerTickPlan(
+                heartbeat,
+                scale,
+                logicalTicks(playerTickAccumulators, player.getUUID(), scale)
+        );
+        playerTickPlans.put(player.getUUID(), plan);
+        return plan;
+    }
+
     private void dispatchLevelSubsystemTicks(
             ServerLevel level,
             Runnable vanillaTick,
@@ -1502,6 +1606,7 @@ public final class TemporalRuntime implements TemporalService {
 
     private void resetScaleAccumulators() {
         entityTickAccumulators.clear();
+        playerTickAccumulators.clear();
         blockEntityTickAccumulators.clear();
         levelClockAccumulators.clear();
         serverClockAccumulators.clear();
@@ -1517,6 +1622,9 @@ public final class TemporalRuntime implements TemporalService {
     private void pruneStaleAccumulators() {
         var oldestHeartbeat = heartbeat - STALE_ACCUMULATOR_HEARTBEATS;
         entityTickAccumulators.values().removeIf(
+                state -> state.lastAccessHeartbeat < oldestHeartbeat
+        );
+        playerTickAccumulators.values().removeIf(
                 state -> state.lastAccessHeartbeat < oldestHeartbeat
         );
         blockEntityTickAccumulators.values().removeIf(
@@ -1647,8 +1755,27 @@ public final class TemporalRuntime implements TemporalService {
     }
 
     private void publishClientState() {
+        publishClientState(false);
+    }
+
+    private void publishClientState(boolean force) {
+        var masks = collectImmunityMasks();
+        var playerScales = collectPlayerScales();
+        if (!force
+                && masks.equals(lastPublishedImmunityMasks)
+                && playerScales.equals(lastPublishedPlayerScales)) {
+            return;
+        }
+        lastPublishedImmunityMasks = masks;
+        lastPublishedPlayerScales = playerScales;
         stateRevision++;
-        TemporalImmunitySyncPacket.broadcast(server, clientStateSnapshot());
+        TemporalImmunitySyncPacket.broadcast(server, new ClientStateSnapshot(
+                clientStateSessionId,
+                stateRevision,
+                heartbeat,
+                masks,
+                playerScales
+        ));
     }
 
     private Entity resolveEntity(UUID entityId) {
@@ -1885,6 +2012,7 @@ public final class TemporalRuntime implements TemporalService {
             if (!stopped && temporalFields.remove(fieldId) != null) {
                 resetScaleAccumulators();
                 rebaseScheduledQueues();
+                clientStateDirty = true;
             }
         }
     }
@@ -1936,9 +2064,23 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    public record ClientStateSnapshot(long revision, Map<UUID, Integer> masks) {
+    private record PlayerTickPlan(
+            long heartbeat,
+            double scale,
+            int logicalTicks
+    ) {
+    }
+
+    public record ClientStateSnapshot(
+            UUID sessionId,
+            long revision,
+            long heartbeat,
+            Map<UUID, Integer> masks,
+            Map<UUID, Float> playerScales
+    ) {
         public ClientStateSnapshot {
             masks = Map.copyOf(masks);
+            playerScales = Map.copyOf(playerScales);
         }
     }
 }

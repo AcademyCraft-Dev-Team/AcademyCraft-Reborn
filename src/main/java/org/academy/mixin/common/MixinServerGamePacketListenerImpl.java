@@ -2,10 +2,12 @@ package org.academy.mixin.common;
 
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
+import org.academy.internal.server.time.TemporalRuntime;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -104,8 +106,13 @@ public abstract class MixinServerGamePacketListenerImpl {
 
     private boolean academy$blocksUntrustedAction() {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
+        var context = (MinecraftServerContext) player.level().getServer();
+        var temporallyPaused = context.hasAcademyCraftServer()
+                && ((TemporalRuntime) context.getAcademyCraftServer()
+                .getTemporalService()).isPlayerSimulationPaused(player);
         return PlayerControlSessionManager.blocksUntrustedWorldAction(player)
                 || MentalControlRuntime
-                .isFrozen(player);
+                .isFrozen(player)
+                || temporallyPaused;
     }
 }
