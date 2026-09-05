@@ -69,13 +69,13 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.arc_bolt", "vfx.block.arc_orbit", "vfx.block.arc_surface", "vfx.block.output_arc",
                 "vfx.block.arc_contact", "vfx.block.arc_spark", "vfx.block.arc_tornado", "vfx.block.tornado_volume",
                 "vfx.block.plasma_convergence", "vfx.block.arc_plasma_shell", "vfx.block.arc_shockwave",
-                "vfx.block.arc_radial_ripple", "vfx.block.arc_collapsing_box"
+                "vfx.block.arc_radial_ripple", "vfx.block.arc_collapsing_box", "vfx.block.vortex_jet"
         };
         for (var id : expected) {
             assertNotNull(blocks.find(id), "block should be registered: " + id);
         }
-        assertEquals(57, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
-        assertEquals(57, countBlocks());
+        assertEquals(58, blocks.find("vfx.block.spawn_rate") != null ? countBlocks() : 0);
+        assertEquals(58, countBlocks());
     }
 
     @Test

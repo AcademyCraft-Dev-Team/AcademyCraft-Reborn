@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "black_wings",
+  "parameters": [
+    {
+      "id": "radial_scale",
+      "name": "radial scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "length_scale",
+      "name": "length scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "spread_scale",
+      "name": "spread scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "sweep_left",
+      "name": "sweep left",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "sweep_right",
+      "name": "sweep right",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "pitch_left",
+      "name": "pitch left",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "pitch_right",
+      "name": "pitch right",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Scapula jets / curved ink vortices",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "left_vortex",
+          "type": "vfx.block.vortex_jet",
+          "properties": {
+            "side": "-1",
+            "root_x": "0.18",
+            "length": "5.2",
+            "rise": "3",
+            "back": "2.5",
+            "radius": "0.65",
+            "turns": "5.5",
+            "speed": "8",
+            "filaments": "18",
+            "segments": "100",
+            "flecks": "24",
+            "phase": "0",
+            "sweep_param": "sweep_left",
+            "pitch_param": "pitch_left",
+            "color": "0.009,0.008,0.016,1",
+            "highlight_count": "8",
+            "highlight_speed": "0.22",
+            "highlight_color": "0.64,0.12,1.0,0.95",
+            "hollow": "0.8"
+          }
+        },
+        {
+          "id": "right_vortex",
+          "type": "vfx.block.vortex_jet",
+          "properties": {
+            "side": "1",
+            "root_x": "0.18",
+            "length": "5.2",
+            "rise": "3",
+            "back": "2.5",
+            "radius": "0.65",
+            "turns": "5.5",
+            "speed": "8",
+            "filaments": "18",
+            "segments": "100",
+            "flecks": "24",
+            "phase": "1.73",
+            "sweep_param": "sweep_right",
+            "pitch_param": "pitch_right",
+            "color": "0.009,0.008,0.016,1",
+            "highlight_count": "8",
+            "highlight_speed": "0.22",
+            "highlight_color": "0.64,0.12,1.0,0.95",
+            "hollow": "0.8"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_out",
+      "type": "OUTPUT",
+      "name": "Black ink / deep violet creases",
+      "x": 580,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "out_ink",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "blend": "translucent",
+            "vertex": "academy:core/vfxgraph_ink_storm",
+            "shader": "academy:core/vfxgraph_ink_storm",
+            "sparks": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "segments": "8",
+            "overall_scale": "1",
+            "thickness": "1",
+            "emission": "1",
+            "branch_depth": "0",
+            "branch_count": "0"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx_spawn",
+      "to": "ctx_out"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "out_ink"
+  ]
+}
