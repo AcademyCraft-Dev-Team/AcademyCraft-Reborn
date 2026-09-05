@@ -103,7 +103,7 @@
             "sweep_param": "sweep_left",
             "pitch_param": "pitch_left",
             "color": "0.009,0.008,0.016,1",
-            "highlight_count": "8",
+            "highlight_count": "14",
             "highlight_speed": "0.22",
             "highlight_color": "0.64,0.12,1.0,0.95",
             "hollow": "0.8"
@@ -128,7 +128,7 @@
             "sweep_param": "sweep_right",
             "pitch_param": "pitch_right",
             "color": "0.009,0.008,0.016,1",
-            "highlight_count": "8",
+            "highlight_count": "10",
             "highlight_speed": "0.22",
             "highlight_color": "0.64,0.12,1.0,0.95",
             "hollow": "0.8"

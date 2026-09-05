@@ -48,10 +48,11 @@ public final class VortexJetGeometry {
 
     /** Local openings through the dense core; a few outer filaments bridge each opening. */
     public static boolean hollow(float u, float time, int strand, float amount) {
-        if (amount <= 0f || (strand > 0 && strand % 4 == 0)) return false;
-        float first = 0.34f + 0.035f * (float) Math.sin(time * 0.8f);
-        float second = 0.70f + 0.045f * (float) Math.sin(time * 0.63f + 1.7f);
-        return Math.abs(u - first) < 0.052f * amount
-                || Math.abs(u - second) < 0.062f * amount;
+        if (amount <= 0f || (strand > 0 && strand % 3 == 0)) return false;
+        float stagger = strand == 0 ? 0f : 0.009f * (float) Math.sin(strand * 2.4f + time * 0.7f);
+        float first = 0.34f + 0.075f * (float) Math.sin(time * 0.8f) + stagger;
+        float second = 0.70f + 0.09f * (float) Math.sin(time * 0.63f + 1.7f) - stagger;
+        return Math.abs(u - first) < 0.023f * amount
+                || Math.abs(u - second) < 0.028f * amount;
     }
 }

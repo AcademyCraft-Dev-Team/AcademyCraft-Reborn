@@ -498,7 +498,7 @@ public final class VfxBlocks {
                         prop("filaments", ValueType.INT, Value.of(18)),
                         prop("segments", ValueType.INT, Value.of(100)),
                         prop("flecks", ValueType.INT, Value.of(24)),
-                        prop("highlight_count", ValueType.INT, Value.of(8)),
+                        prop("highlight_count", ValueType.INT, Value.of(10)),
                         prop("highlight_speed", ValueType.FLOAT, Value.of(0.22f)),
                         prop("highlight_color", ValueType.COLOR, Value.color(0.64f, 0.12f, 1f, 0.95f)),
                         prop("hollow", ValueType.FLOAT, Value.of(0.8f)),
@@ -1705,7 +1705,7 @@ public final class VfxBlocks {
         int filaments = Math.clamp(propInt(block, "filaments", 18), 3, 48);
         int segments = Math.clamp(propInt(block, "segments", 100), 24, 192);
         int flecks = Math.clamp(propInt(block, "flecks", 24), 0, 96);
-        int highlights = Math.clamp(propInt(block, "highlight_count", 8), 0, 24);
+        int highlights = Math.clamp(propInt(block, "highlight_count", 10), 0, 24);
         float highlightSpeed = Math.max(0f, propFloat(block, "highlight_speed", 0.22f));
         float[] highlightColor = propColor(block, "highlight_color");
         float hollow = clamp01(propFloat(block, "hollow", 0.8f));
@@ -1714,6 +1714,8 @@ public final class VfxBlocks {
         float[] color = propColor(block, "color");
         long group = NEXT_TRANSIENT_ARC_GROUP.getAndIncrement();
         var point = new org.joml.Vector3f();
+        var spine = new org.joml.Vector3f();
+        var surfaceNormal = new org.joml.Vector3f();
         var rotation = new org.joml.Quaternionf();
         return (buf, ctx) -> {
             ctx.arcs().removeGroup(group);
@@ -1760,7 +1762,8 @@ public final class VfxBlocks {
                 float strandPhase = strand * 2.399963f + phase;
                 float orbit = 0.70f + 0.32f * stableUnit(strand, 3.17f);
                 float start = (stableUnit(highlight, 4.71f) + time * highlightSpeed) % 1f;
-                float pulseLength = 0.045f + 0.035f * stableUnit(highlight, 7.31f);
+                // 10 rather than 8 traces, with 4% longer coverage: 1.25 * 1.04 = 1.30.
+                float pulseLength = 1.04f * (0.045f + 0.035f * stableUnit(highlight, 7.31f));
                 float fade = Math.min(1f, start * 16f) * Math.min(1f, (1f - start) * 14f);
                 var arc = ctx.arcs().add(group);
                 for (int j = 0; j <= 12; j++) {
@@ -1768,14 +1771,21 @@ public final class VfxBlocks {
                     VortexJetGeometry.sample(u, time, strandPhase, orbit,
                             length * axial * spread, rise * axial, back * axial,
                             radius * radial, turns, speed, point);
-                    point.x *= side;
-                    rotation.transform(point);
                     float width = VortexJetGeometry.radius(u, radius * radial)
                             * (0.12f + 0.05f * stableUnit(strand, 6.1f));
                     width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
                     width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f));
-                    // A close-fitting bright skin on the same strand, with dark tapered ends.
-                    width *= j == 0 || j == 12 ? 0f : 1.12f;
+                    // Place a fine trace on the outward surface, instead of painting the whole
+                    // thick filament purple. Simply shrinking a concentric tube would bury it.
+                    VortexJetGeometry.sample(u, time, strandPhase, 0f,
+                            length * axial * spread, rise * axial, back * axial,
+                            radius * radial, turns, speed, spine);
+                    point.sub(spine, surfaceNormal).normalize();
+                    point.fma(width * 0.98f, surfaceNormal);
+                    point.x *= side;
+                    rotation.transform(point);
+                    width = Math.min(width * 0.20f, 0.012f * radial)
+                            * (float) Math.sin(Math.PI * j / 12f);
                     int run = VortexJetGeometry.hollow(u, time, strand, hollow) ? j + 1 : 0;
                     arc.addPoint(point.x + side * root, point.y, point.z, width, 0f, run);
                 }
