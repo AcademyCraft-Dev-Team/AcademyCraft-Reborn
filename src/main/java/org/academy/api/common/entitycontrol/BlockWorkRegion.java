@@ -32,9 +32,9 @@ public record BlockWorkRegion(
         );
         minimum = min;
         maximum = max;
-        var sizeX = max.getX() - min.getX() + 1;
-        var sizeY = max.getY() - min.getY() + 1;
-        var sizeZ = max.getZ() - min.getZ() + 1;
+        var sizeX = (long) max.getX() - min.getX() + 1;
+        var sizeY = (long) max.getY() - min.getY() + 1;
+        var sizeZ = (long) max.getZ() - min.getZ() + 1;
         if (sizeX > MAX_AXIS_LENGTH || sizeY > MAX_AXIS_LENGTH
                 || sizeZ > MAX_AXIS_LENGTH || (long) sizeX * sizeY * sizeZ > MAX_VOLUME) {
             throw new IllegalArgumentException("Block work region exceeds its safety limit");

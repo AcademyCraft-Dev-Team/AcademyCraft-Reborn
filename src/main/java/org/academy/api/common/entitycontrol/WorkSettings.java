@@ -15,10 +15,21 @@ import java.util.Optional;
 /** Immutable, validated settings shared by RTS orders, adapters and precision programs. */
 public record WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean replant,
                            boolean denyList, List<String> filters,
-                           Optional<BlockPos> input, Optional<BlockPos> output) {
+                           Optional<BlockPos> input, Optional<BlockPos> output, MiningReach miningReach) {
     public enum Mode {
         MINING, FARMING, LOGGING, SUGAR_CANE, CLEARING, SHEARING, MILKING, FEEDING, COLLECT;
         public boolean animals() { return this == SHEARING || this == MILKING || this == FEEDING; }
+    }
+
+    public enum MiningReach { ADAPTIVE, AREA, NEARBY }
+
+    public WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean replant,
+                        boolean denyList, List<String> filters, Optional<BlockPos> input, Optional<BlockPos> output) {
+        this(mode, repeat, harvest, replant, denyList, filters, input, output, MiningReach.ADAPTIVE);
+    }
+
+    public boolean minesBlocks() {
+        return mode == Mode.MINING || mode == Mode.LOGGING || mode == Mode.SUGAR_CANE || mode == Mode.CLEARING;
     }
 
     public static final Codec<WorkSettings> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -29,11 +40,14 @@ public record WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean r
             Codec.BOOL.fieldOf("deny_list").forGetter(WorkSettings::denyList),
             Codec.STRING.listOf().fieldOf("filters").forGetter(WorkSettings::filters),
             BlockPos.CODEC.optionalFieldOf("input").forGetter(WorkSettings::input),
-            BlockPos.CODEC.optionalFieldOf("output").forGetter(WorkSettings::output)
+            BlockPos.CODEC.optionalFieldOf("output").forGetter(WorkSettings::output),
+            Codec.STRING.xmap(MiningReach::valueOf, MiningReach::name)
+                    .optionalFieldOf("mining_reach", MiningReach.ADAPTIVE).forGetter(WorkSettings::miningReach)
     ).apply(instance, WorkSettings::new));
 
     public WorkSettings {
         java.util.Objects.requireNonNull(mode);
+        java.util.Objects.requireNonNull(miningReach);
         filters = List.copyOf(filters);
         if (filters.size() > 32) throw new IllegalArgumentException("Too many filters");
         for (var filter : filters) {

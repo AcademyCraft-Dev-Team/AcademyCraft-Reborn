@@ -25,5 +25,13 @@ public final class WorkOrderClientState {
         var states = snapshot.getAsJsonObject("states");
         return states != null && states.has(id.toString()) ? states.get(id.toString()).getAsString() : "none";
     }
+    public static Optional<org.academy.api.common.entitycontrol.MiningWorkPlan.Progress> progress() {
+        try {
+            var value = snapshot.getAsJsonObject("progress");
+            return value == null ? Optional.empty() : Optional.of(new org.academy.api.common.entitycontrol.MiningWorkPlan.Progress(
+                    value.get("completed").getAsInt(), value.get("remaining").getAsInt(),
+                    value.get("blocked").getAsInt(), value.get("active").getAsInt()));
+        } catch (RuntimeException ignored) { return Optional.empty(); }
+    }
     public static void clear() { snapshot = new JsonObject(); }
 }

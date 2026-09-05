@@ -61,6 +61,7 @@ public final class WideAreaInterferenceClientState {
     private static float godYaw = 45.0f;
     private static double godDistance = 24.0;
     private static double godTargetDistance = 24.0;
+    private static double viewportNdcX, viewportNdcY, orbitRight, orbitUp;
     private static double moveForward;
     private static double moveRight;
     private static double velocityForward;
@@ -269,8 +270,7 @@ public final class WideAreaInterferenceClientState {
     }
 
     public static Vec3 cameraPosition() {
-        var forward = Vec3.directionFromRotation(godPitch, godYaw);
-        return godFocus.subtract(forward.scale(godDistance));
+        return RtsOrbitGeometry.cameraPosition(godFocus, godDistance, godPitch, godYaw, orbitRight, orbitUp);
     }
 
     public static float cameraYaw() {
@@ -302,6 +302,7 @@ public final class WideAreaInterferenceClientState {
         FRAME_INVERSE_VIEW.set(viewRotation).invert();
         FRAME_INVERSE_PROJECTION.set(projection).invert();
         frameCameraValid = true;
+        updateOrbitOffsets();
     }
 
     public static @Nullable ScreenProjection projectWorld(
@@ -354,6 +355,40 @@ public final class WideAreaInterferenceClientState {
         pan(deltaY * scale, -deltaX * scale);
     }
 
+    public static void setViewportCenter(double x, double y, double width, double height) {
+        if (width <= 0 || height <= 0) return;
+        viewportNdcX = x * 2 / width - 1;
+        viewportNdcY = 1 - y * 2 / height;
+        if (frameCameraValid) updateOrbitOffsets();
+        else {
+            var tangent = Math.tan(Math.toRadians(Minecraft.getInstance().options.fov().get()) / 2);
+            orbitRight = viewportNdcX * tangent * width / height;
+            orbitUp = viewportNdcY * tangent;
+        }
+    }
+
+    private static void updateOrbitOffsets() {
+        var point = new Vector4f((float) viewportNdcX, (float) viewportNdcY, 1, 1).mul(FRAME_INVERSE_PROJECTION);
+        if (Float.isFinite(point.z) && Math.abs(point.z) > 1.0e-6) {
+            orbitRight = point.x / -point.z;
+            orbitUp = point.y / -point.z;
+        }
+    }
+
+    public static void anchorOrbit(Vec3 pivot, boolean preserveZoom) {
+        if (mode != Mode.RTS || pivot == null) return;
+        var position = Minecraft.getInstance().gameRenderer.mainCamera().position();
+        var zoomRatio = preserveZoom ? godTargetDistance / godDistance : 1.0;
+        godFocus = pivot;
+        godDistance = Math.clamp(position.distanceTo(pivot), 0.5, 16384);
+        godTargetDistance = Math.clamp(godDistance * zoomRatio, 0.5, 16384);
+        stopPan();
+    }
+
+    public static void stopPan() {
+        velocityForward = velocityRight = moveForward = moveRight = 0;
+    }
+
     public static void rotate(float amount) {
         if (mode == Mode.RTS) godYaw += amount;
     }
@@ -374,8 +409,9 @@ public final class WideAreaInterferenceClientState {
 
     public static void orbit(double horizontal, double vertical) {
         if (mode != Mode.RTS) return;
-        godYaw += (float) horizontal * 0.3f;
-        godPitch = Math.clamp(godPitch + (float) vertical * 0.3f, 5.0f, 89.0f);
+        godYaw += (float) horizontal * 0.20f;
+        var minimumPitch = Math.max(5.0f, 5.0f + (float) Math.toDegrees(Math.atan(orbitUp)));
+        godPitch = Math.clamp(godPitch + (float) vertical * 0.18f, Math.min(89.0f, minimumPitch), 89.0f);
     }
 
     public static void elevate(double amount) {

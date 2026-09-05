@@ -303,6 +303,117 @@ public final class MentaloutGameTests {
                 });
             }
         },
+        WORK_EXCAVATION("work_excavation", 1600) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.VILLAGER, 1, 2, 1);
+                var min = helper.absolutePos(new BlockPos(4, 2, 1));
+                var max = helper.absolutePos(new BlockPos(7, 8, 4));
+                for (var block : BlockPos.betweenClosed(min, max)) helper.getLevel().setBlock(block, Blocks.DIRT.defaultBlockState(), 3);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), min, max);
+                var settings = new WorkSettings(WorkSettings.Mode.MINING, false, true, false, false,
+                        List.of("minecraft:dirt"), java.util.Optional.empty(), java.util.Optional.empty());
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, settings), 1000));
+                helper.runAtTickTime(1450, () -> {
+                    for (var block : BlockPos.betweenClosed(min, max)) helper.assertTrue(helper.getLevel().getBlockState(block).isAir(),
+                            "Excavation left a block at " + block);
+                    helper.assertValueEqual(controller.getInventory().countItem(net.minecraft.world.item.Items.DIRT), 112,
+                            "All excavation drops must be delivered exactly once");
+                    helper.assertFalse(MentalControlApi.hasAiTakeover(worker), "Finished excavation retained control");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_MASS_EXCAVATION("work_mass_excavation", 1100) {
+            @Override void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                for (int x = 0; x <= 28; x++) for (int z = 0; z <= 18; z++) helper.setBlock(x, 1, z, Blocks.STONE);
+                var workers = new java.util.ArrayList<LivingEntity>();
+                for (int i = 0; i < 64; i++) {
+                    LivingEntity worker = i < 4 ? helper.spawn(EntityTypes.RAVAGER, i % 8 + 1, 2, i / 8 + 1)
+                            : helper.spawn(EntityTypes.CREEPER, i % 8 + 1, 2, i / 8 + 1);
+                    workers.add(worker);
+                }
+                var min = helper.absolutePos(new BlockPos(11, 2, 1));
+                var max = min.offset(15, 15, 15);
+                for (var block : BlockPos.betweenClosed(min, max)) helper.getLevel().setBlock(block, Blocks.DIRT.defaultBlockState(), 3);
+                var marker = min.west();
+                helper.getLevel().setBlock(marker, Blocks.DIRT.defaultBlockState(), 3);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), min, max);
+                var settings = new WorkSettings(WorkSettings.Mode.MINING, false, true, false, false,
+                        List.of("minecraft:dirt"), java.util.Optional.empty(), java.util.Optional.empty(), WorkSettings.MiningReach.AREA);
+                var result = GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, workers,
+                        new GroupControlCommand.Work(region, settings), 1000));
+                helper.assertValueEqual(result.applied(), 64, "All workers must accept area excavation");
+                helper.succeedWhen(() -> {
+                    for (var block : BlockPos.betweenClosed(min, max)) helper.assertTrue(helper.getLevel().getBlockState(block).isAir(),
+                            "Maximum-size excavation left a block at " + block);
+                    var spilled = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                            controller.getBoundingBox().inflate(10), entity -> entity.getItem().is(net.minecraft.world.item.Items.DIRT))
+                            .stream().mapToInt(entity -> entity.getItem().getCount()).sum();
+                    helper.assertValueEqual(controller.getInventory().countItem(net.minecraft.world.item.Items.DIRT) + spilled,
+                            4096, "Shared targets and drops must be processed exactly once");
+                    helper.assertTrue(helper.getLevel().getBlockState(marker).is(Blocks.DIRT), "Area work escaped the selected bounds");
+                    for (var worker : workers) helper.assertFalse(MentalControlApi.hasAiTakeover(worker), "Finished group retained AI lease");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                });
+            }
+        },
+        WORK_REACH_POLICY("work_reach_policy", 250) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.VILLAGER, 1, 2, 1);
+                var block = helper.absolutePos(new BlockPos(3, 12, 1));
+                helper.getLevel().setBlock(block, Blocks.STONE.defaultBlockState(), 3);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), block, block);
+                var nearby = new WorkSettings(WorkSettings.Mode.MINING, false, true, false, false,
+                        List.of(), java.util.Optional.empty(), java.util.Optional.empty(), WorkSettings.MiningReach.NEARBY);
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, nearby), 1000));
+                helper.runAtTickTime(80, () -> {
+                    helper.assertTrue(helper.getLevel().getBlockState(block).is(Blocks.STONE), "Nearby mode ignored the reach limit");
+                    helper.assertTrue(MentalControlApi.hasAiTakeover(worker), "Unreachable nearby task falsely completed");
+                    var area = new WorkSettings(WorkSettings.Mode.MINING, false, true, false, false,
+                            List.of(), java.util.Optional.empty(), java.util.Optional.empty(), WorkSettings.MiningReach.AREA);
+                    GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                            new GroupControlCommand.Work(region, area), 1000));
+                });
+                helper.runAtTickTime(180, () -> {
+                    helper.assertTrue(helper.getLevel().getBlockState(block).isAir(), "Area mode failed to clear inaccessible block");
+                    helper.assertFalse(MentalControlApi.hasAiTakeover(worker), "Completed area task retained control");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_BLOCKED_TARGET("work_blocked_target", 160) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.VILLAGER, 1, 2, 1);
+                var low = helper.absolutePos(new BlockPos(3, 2, 1));
+                var high = low.above();
+                helper.getLevel().setBlock(low, Blocks.DIRT.defaultBlockState(), 3);
+                helper.getLevel().setBlock(high, Blocks.OBSIDIAN.defaultBlockState(), 3);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), low, high);
+                var settings = new WorkSettings(WorkSettings.Mode.MINING, false, true, false, false,
+                        List.of(), java.util.Optional.empty(), java.util.Optional.empty(), WorkSettings.MiningReach.AREA);
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, settings), 1000));
+                helper.runAtTickTime(100, () -> {
+                    helper.assertTrue(helper.getLevel().getBlockState(low).isAir(), "Blocked upper target starved mineable dirt");
+                    helper.assertTrue(helper.getLevel().getBlockState(high).is(Blocks.OBSIDIAN), "Iron fallback exceeded its tier");
+                    helper.assertTrue(MentalControlApi.hasAiTakeover(worker), "Blocked one-shot work falsely completed");
+                    GroupControlApi.cancelWork(helper.getLevel().getServer(), controller.getUUID(), java.util.Set.of(worker.getUUID()));
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
         WORK_DEFAULT_EQUIPMENT("work_default_equipment", 100) {
             @Override void run(GameTestHelper helper) {
                 prepareArena(helper);

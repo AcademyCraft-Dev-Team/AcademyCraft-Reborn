@@ -211,10 +211,18 @@ public final class WideAreaInterference extends Skill {
                     if (!entry.controller().equals(controller.getUUID().toString())
                             || !packet.targets.contains(UUID.fromString(entry.subject()))) continue;
                     states.addProperty(entry.subject(), GroupControlRuntime.workStatus(entry));
-                    if (!payload.has("settings")) {
+                    if (!packet.targets.isEmpty() && entry.subject().equals(packet.targets.getFirst().toString()) && !payload.has("settings")) {
                         payload.add("settings", WorkSettings.CODEC.encodeStart(JsonOps.INSTANCE, entry.settings()).getOrThrow());
                         payload.add("first", BlockPos.CODEC.encodeStart(JsonOps.INSTANCE, entry.minimum()).getOrThrow());
                         payload.add("last", BlockPos.CODEC.encodeStart(JsonOps.INSTANCE, entry.maximum()).getOrThrow());
+                        GroupControlRuntime.miningProgress(entry).ifPresent(progress -> {
+                            var summary = new JsonObject();
+                            summary.addProperty("completed", progress.completed());
+                            summary.addProperty("remaining", progress.remaining());
+                            summary.addProperty("blocked", progress.blocked());
+                            summary.addProperty("active", progress.active());
+                            payload.add("progress", summary);
+                        });
                     }
                 }
                 payload.add("states", states);
