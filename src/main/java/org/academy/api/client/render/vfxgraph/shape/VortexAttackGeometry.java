@@ -44,10 +44,12 @@ public final class VortexAttackGeometry {
         this.turns = turns;
         this.speed = speed;
         this.time = time;
-        activity = mode == 0 ? 0f : smooth(0f, 0.24f, this.progress)
-                * (1f - smooth(0.82f, 1f, this.progress));
         float delay = mode == 3 ? branch * 0.045f : 0f;
-        strike = smooth(0.32f + delay, 0.70f + delay, this.progress);
+        // Overlap windup with the start of the stroke; start recovery as soon as contact is reached.
+        float recoveryStart = mode == 3 ? 0.745f : mode == 2 ? 0.70f : 0.71f;
+        activity = mode == 0 ? 0f : ease(0f, 0.20f + delay, this.progress)
+                * (1f - ease(recoveryStart, 1f, this.progress));
+        strike = ease(0.18f + delay, 0.70f + delay, this.progress);
         if (isWhip() && activity > 0f) buildWhip();
     }
 
@@ -151,14 +153,14 @@ public final class VortexAttackGeometry {
             if (swingNormal.lengthSquared() < 0.001f) swingNormal.set(1f, 0f, 0f);
         }
         swingNormal.normalize();
-        float extension = smooth(0.32f, 0.71f, progress);
+        float extension = ease(0.18f, 0.71f, progress);
         float segmentLength = mix(11f, Math.max(0.25f, reach), extension) / WHIP_SEGMENTS;
         whipX[0] = whipY[0] = whipZ[0] = 0f;
         for (int i = 1; i <= WHIP_SEGMENTS; i++) {
             float u = (i - 0.5f) / WHIP_SEGMENTS;
-            float localStrike = smooth(0.30f + 0.24f * u, 0.47f + 0.24f * u, progress);
+            float localStrike = ease(0.14f + 0.24f * u, 0.47f + 0.24f * u, progress);
             float curl = 0.85f + 1.50f * u + 0.5f * (float) Math.sin(u * Math.PI * 2);
-            float followThrough = -0.22f * smooth(0.73f + 0.04f * u, 0.83f + 0.04f * u, progress);
+            float followThrough = -0.22f * ease(0.71f + 0.02f * u, 0.90f + 0.02f * u, progress);
             float angle = curl * (1f - localStrike) + followThrough;
             float along = (float) Math.cos(angle) * segmentLength;
             float across = (float) Math.sin(angle) * segmentLength;
@@ -183,6 +185,12 @@ public final class VortexAttackGeometry {
     }
 
     private static float mix(float a, float b, float t) { return a + (b - a) * t; }
+
+    /** Zero velocity and acceleration at phase boundaries, without inserting a held pose. */
+    private static float ease(float a, float b, float t) {
+        float u = Math.clamp((t - a) / (b - a), 0f, 1f);
+        return u * u * u * (u * (u * 6f - 15f) + 10f);
+    }
 
     private static float smooth(float a, float b, float t) {
         float u = Math.clamp((t - a) / (b - a), 0f, 1f);
